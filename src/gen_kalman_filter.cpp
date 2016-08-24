@@ -62,6 +62,7 @@ int vecmin(const T x){
   return *it;
 }
 
+//' Function to perform one iteration of the Kalman filter in parallel
 //' @export
 // [[Rcpp::export]]
 List gen_kalman_filter_cpp(const arma::colvec &a_0, const arma::mat &Q_0, const arma::mat &Q, const arma::mat &F_,

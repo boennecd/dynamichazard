@@ -10,8 +10,10 @@ LazyData: TRUE
 Imports:
     Rcpp (>= 0.12.6),
     benssurvutils,
-    RcppArmadillo
-LinkingTo: Rcpp,
+    RcppArmadillo,
+    survival
+LinkingTo:
+    Rcpp,
     RcppArmadillo
 RoxygenNote: 5.0.1
 Suggests: testthat
