@@ -2,7 +2,8 @@
 % Please edit documentation in R/ddhazard_fit.R
 \name{ddhazard_fit}
 \alias{ddhazard_fit}
-\title{Function to perform EM algorithm for dynamic discrete hazard models}
+\title{Function to perform EM algorithm for dynamic discrete hazard models. This
+version perform no validation}
 \usage{
 ddhazard_fit(X, Y, a_0 = rep(0, n_parems), Q_0 = diag(0.1, n_parems),
   F_ = diag(1, n_parems), Q = Q_0, risk_sets, n_parems, n_max = 10^2,
@@ -10,6 +11,7 @@ ddhazard_fit(X, Y, a_0 = rep(0, n_parems), Q_0 = diag(0.1, n_parems),
   est_Q_0 = T)
 }
 \description{
-Function to perform EM algorithm for dynamic discrete hazard models
+Function to perform EM algorithm for dynamic discrete hazard models. This
+version perform no validation
 }
 

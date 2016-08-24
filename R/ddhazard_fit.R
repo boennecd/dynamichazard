@@ -1,4 +1,5 @@
-#' Function to perform EM algorithm for dynamic discrete hazard models
+#' Function to perform EM algorithm for dynamic discrete hazard models. This
+#' version perform no validation
 #' @export
 ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
                         Q_0 = diag(.1, n_parems), # something large
@@ -48,16 +49,16 @@ ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
     with(inner_output, {
       a_0 <<- a_t_d_s[1, ]
       if(est_Q_0)
-        Q_0 <<- V_t_d_s[1, , ]
+        Q_0 <<- V_t_d_s[, , 1]
 
       Q_ =  Q
       Q_[, ] = 0
       for(t in 2:(d + 1)){
         delta_t = risk_sets$I_len[t - 1]
-        B = B_s[t - 1, , ]
+        B = B_s[, , t - 1]
 
-        V_less = V_t_d_s[t - 1, , ]
-        V = V_t_d_s[t, , ]
+        V_less = V_t_d_s[, , t - 1]
+        V = V_t_d_s[, , t]
 
         a_less = a_t_d_s[t - 1, ]
         a = a_t_d_s[t, ]
@@ -90,7 +91,7 @@ ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
     if(save_all_output)
       all_output[[i]] = c(inner_output, list(conv_values = conv_values[i]))
 
-    if(verbose || i %% 25 == 0)
+    if(verbose && i %% 5 == 0)
       message("Finished iteration ", i, " with convergence criteria ", conv_values[i])
     if(conv_values[i] < eps){
       break
@@ -121,7 +122,7 @@ ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
   # Set names
   tmp_names = rep(colnames(X), order_)
   colnames(inner_output$a_t_d_s) = tmp_names
-  dimnames(inner_output$V_t_d_s) = list(NULL, tmp_names, tmp_names)
+  dimnames(inner_output$V_t_d_s) = list(tmp_names, tmp_names, NULL)
   dimnames(Q) = dimnames(Q_0) = list(tmp_names, tmp_names)
 
   if(save_all_output)
