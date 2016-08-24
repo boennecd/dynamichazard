@@ -1,4 +1,3 @@
-#####
 # Load data example to play arround with and validate against
 is_censored = c(6, 27, 34, 36, 42, 46, 48:51,
                 51 + c(15, 30:28, 33, 35:37, 39, 40, 42:45))
@@ -20,3 +19,133 @@ head_neck_cancer = data.frame(
 rm(is_censored)
 
 head_neck_cancer$group = factor(head_neck_cancer$group, levels = c(2, 1))
+
+# Simple function to make sure that we do not call rexp to many times
+get_exp_draw <- with(new.env(), {
+  n_max <- n_draws <- 10^5
+  n_cur <- 1
+  exp_draws <- rexp(n = n_draws, rate = 1)
+  #env_p <- environment()
+
+  function(n, re_draw = F){
+    if(re_draw){
+      n_max <<- n_draws
+      n_cur <<- 1
+      exp_draws <<- rexp(n = n_draws, rate = 1)
+
+      return(NULL)
+    }
+
+    # Draw if needed
+    if(n > n_max - n_cur){ # we forget about the - 1
+      n_max <<- n + n_draws
+      n_cur <<- 1
+      exp_draws <<- rexp(n = n + n_draws, rate = 1)
+    }
+
+    tmp <- n_cur
+    n_cur <<- n_cur + n
+    exp_draws[tmp:(tmp + (n - 1))]
+  }
+})
+
+get_unif_draw <- with(new.env(), {
+  n_max <- n_draws <- 10^5
+  n_cur <- 1
+  exp_draws <- runif(n_draws)
+  #env_p <- environment()
+
+  function(n, re_draw = F){
+    if(re_draw){
+      n_max <<- n_draws
+      n_cur <<- 1
+      exp_draws <<- runif(n = n_draws)
+
+      return(NULL)
+    }
+
+    # Draw if needed
+    if(n > n_max - n_cur){ # we forget about the - 1
+      n_max <<- n + n_draws
+      n_cur <<- 1
+      exp_draws <<- runif(n = n + n_draws)
+    }
+
+    tmp <- n_cur
+    n_cur <<- n_cur + n
+    exp_draws[tmp:(tmp + (n - 1))]
+  }
+})
+
+# library(microbenchmark)
+# microbenchmark(get_exp_draw(1), rexp(1,1))
+# microbenchmark(get_exp_draw(010), rexp(100,1))
+
+get_exp_draw = compiler::cmpfun(get_exp_draw, options = list(
+  optimize = 3, suppressAll = T))
+get_unif_draw = compiler::cmpfun(get_unif_draw, options = list(
+  optimize = 3, suppressAll = T))
+
+# microbenchmark(get_exp_draw(1), rexp(1,1))
+# microbenchmark(get_exp_draw(100), rexp(100,1))
+# microbenchmark(get_unif_draw(1), runif(1))
+# microbenchmark(get_unif_draw(100), runif(100))
+
+# Define function to simulate outcomes
+test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = -.05,
+                                re_draw = T){
+  # Make output matrix
+  n_row_max <- n_row_inc <- 10^5
+  res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
+                dimnames = list(NULL, c("id", "tstart", "tstop", "event", paste0("x", 1:n_vars))))
+  cur_row <- 1
+
+  if(re_draw){
+    get_unif_draw(re_draw = T)
+    get_exp_draw(re_draw = T)
+  }
+
+  # draw betas, cumsum and standardize so they sum to one
+  betas <- matrix(get_exp_draw((t_max - t_0) * n_vars), ncol = n_vars, nrow = t_max - t_0)
+  betas <- apply(betas, 2, cumsum)
+  betas <- betas / rowSums(betas)
+
+  # Simulate
+  for(id in 1:n_series){
+    tstart <- tstop <- t_0
+    repeat{
+      tstop <- tstart + get_exp_draw(1)
+
+      x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
+      x_vars_sum <- (betas[min(floor(tstart), t_max) + 1 + t_0, ] %*% x_vars)[1, 1]
+
+      event <- x_vars_sum > get_unif_draw(1)
+
+      res[cur_row, ] <- c(id, tstart, tstop, event, x_vars)
+
+      if(cur_row == n_row_max){
+        n_row_max <- n_row_max + n_row_inc
+        res = rbind(res, matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars))
+      }
+      cur_row <- cur_row + 1
+
+      if(event || tstop > t_max)
+        break
+
+      tstart <- tstop
+    }
+  }
+
+  list(res = res[1:(cur_row - 1), ], betas = betas)
+}
+
+test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
+
+
+# tmp_file <- tempfile()
+# Rprof(tmp_file)
+# tmp <- test_sim_func_logit(10^5)
+# Rprof(NULL)
+# summaryRprof(tmp_file)
+#
+# sum(tmp$res[, "event"])

@@ -14,9 +14,9 @@ result = ddhazard(
   max_T = 45
 )
 
-# # # hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by
-# # # as search for '(?<=\d)\s+(?=\d)' and replace with ','
-# # # or be lazy and use this function
+# # hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by
+# # as search for '(?<=\d)\s+(?=\d)' and replace with ','
+# # or be lazy and use this function
 # str_func <- function(x){
 #   tmp <- capture.output(print(c(x), digits = 16))
 #   tmp <- sapply(tmp, gsub, pattern = "\\s*\\[1\\]\\s", replacement = "", USE.NAMES = F)
@@ -122,4 +122,11 @@ test_that("Testing previous computed values vs. current on head and neck cancer 
                   , -0.0198916154467032036, -0.0198916154467032036, 0.0977389611802057523
                   ,  0.8366982297826955906, -0.0179580979280018482, -0.0179580979280018482
                   ,  0.1003735699436583140))
+})
+
+test_that("Testing names of output from ddhazard on head and neck cancer dataset", {
+  expect_equal(colnames(result$a_t_d_s), c("(Intercept)", "group1"))
+  expect_equal(unlist(dimnames(result$V_t_d_s)), unlist(list(c("(Intercept)", "group1"), c("(Intercept)", "group1"), NULL)))
+  expect_equal(unlist(dimnames(result$Q)), rep(c("(Intercept)", "group1"), 2))
+  expect_equal(unlist(dimnames(result$Q_0)), rep(c("(Intercept)", "group1"), 2))
 })
