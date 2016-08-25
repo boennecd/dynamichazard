@@ -24,14 +24,14 @@ head_neck_cancer$group = factor(head_neck_cancer$group, levels = c(2, 1))
 get_exp_draw <- with(new.env(), {
   n_max <- n_draws <- 10^5
   n_cur <- 1
-  exp_draws <- rexp(n = n_draws, rate = 1)
+  draws <- rexp(n = n_draws, rate = 1)
   #env_p <- environment()
 
   function(n, re_draw = F){
     if(re_draw){
       n_max <<- n_draws
       n_cur <<- 1
-      exp_draws <<- rexp(n = n_draws, rate = 1)
+      draws <<- rexp(n = n_draws, rate = 1)
 
       return(NULL)
     }
@@ -40,26 +40,26 @@ get_exp_draw <- with(new.env(), {
     if(n > n_max - n_cur){ # we forget about the - 1
       n_max <<- n + n_draws
       n_cur <<- 1
-      exp_draws <<- rexp(n = n + n_draws, rate = 1)
+      draws <<- rexp(n = n + n_draws, rate = 1)
     }
 
     tmp <- n_cur
     n_cur <<- n_cur + n
-    exp_draws[tmp:(tmp + (n - 1))]
+    draws[tmp:(tmp + (n - 1))]
   }
 })
 
-get_unif_draw <- with(new.env(), {
+get_norm_draw <- with(new.env(), {
   n_max <- n_draws <- 10^5
   n_cur <- 1
-  exp_draws <- runif(n_draws)
+  draws <- rnorm(n = n_draws)
   #env_p <- environment()
 
   function(n, re_draw = F){
     if(re_draw){
       n_max <<- n_draws
       n_cur <<- 1
-      exp_draws <<- runif(n = n_draws)
+      draws <<- rnorm(n = n_draws)
 
       return(NULL)
     }
@@ -68,12 +68,39 @@ get_unif_draw <- with(new.env(), {
     if(n > n_max - n_cur){ # we forget about the - 1
       n_max <<- n + n_draws
       n_cur <<- 1
-      exp_draws <<- runif(n = n + n_draws)
+      draws <<- rnorm(n = n + n_draws, rate = 1)
     }
 
     tmp <- n_cur
     n_cur <<- n_cur + n
-    exp_draws[tmp:(tmp + (n - 1))]
+    draws[tmp:(tmp + (n - 1))]
+  }
+})
+get_unif_draw <- with(new.env(), {
+  n_max <- n_draws <- 10^5
+  n_cur <- 1
+  draws <- runif(n_draws)
+  #env_p <- environment()
+
+  function(n, re_draw = F){
+    if(re_draw){
+      n_max <<- n_draws
+      n_cur <<- 1
+      draws <<- runif(n = n_draws)
+
+      return(NULL)
+    }
+
+    # Draw if needed
+    if(n > n_max - n_cur){ # we forget about the - 1
+      n_max <<- n + n_draws
+      n_cur <<- 1
+      draws <<- runif(n = n + n_draws)
+    }
+
+    tmp <- n_cur
+    n_cur <<- n_cur + n
+    draws[tmp:(tmp + (n - 1))]
   }
 })
 
@@ -85,6 +112,8 @@ get_exp_draw = compiler::cmpfun(get_exp_draw, options = list(
   optimize = 3, suppressAll = T))
 get_unif_draw = compiler::cmpfun(get_unif_draw, options = list(
   optimize = 3, suppressAll = T))
+get_norm_draw = compiler::cmpfun(get_norm_draw, options = list(
+  optimize = 3, suppressAll = T))
 
 # microbenchmark(get_exp_draw(1), rexp(1,1))
 # microbenchmark(get_exp_draw(100), rexp(100,1))
@@ -92,8 +121,8 @@ get_unif_draw = compiler::cmpfun(get_unif_draw, options = list(
 # microbenchmark(get_unif_draw(100), runif(100))
 
 # Define function to simulate outcomes
-test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = -.05,
-                                re_draw = T){
+test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = .1, x_mean = -.1,
+                                re_draw = T, beta_start = 3){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
@@ -103,23 +132,32 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
   if(re_draw){
     get_unif_draw(re_draw = T)
     get_exp_draw(re_draw = T)
+    get_norm_draw(re_draw = T)
   }
 
-  # draw betas, cumsum and standardize so they sum to one
-  betas <- matrix(get_exp_draw((t_max - t_0) * n_vars), ncol = n_vars, nrow = t_max - t_0)
+  # draw betas
+  betas <- matrix(get_norm_draw((t_max - t_0) * n_vars), ncol = n_vars, nrow = t_max - t_0)
+  betas[1, ] <- beta_start
   betas <- apply(betas, 2, cumsum)
-  betas <- betas / rowSums(betas)
 
   # Simulate
   for(id in 1:n_series){
     tstart <- tstop <- t_0
     repeat{
-      tstop <- tstart + get_exp_draw(1)
+      tstop <- tstart + get_exp_draw(1) + 1
 
       x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
-      x_vars_sum <- (betas[min(floor(tstart), t_max) + 1 + t_0, ] %*% x_vars)[1, 1]
+      tmp_t <- tstart
+      while(tmp_t < tstop && tmp_t < t_max){
+        exp_eta <- exp((betas[floor(tmp_t) + 1 + t_0, ] %*% x_vars)[1, 1])
+        event <- exp_eta / (1 + exp_eta) > get_unif_draw(1)
+        if(event){
+          tstop <- tmp_t + 1
+          break
+        }
 
-      event <- x_vars_sum > get_unif_draw(1)
+        tmp_t <- tmp_t + 1
+      }
 
       res[cur_row, ] <- c(id, tstart, tstop, event, x_vars)
 
@@ -141,11 +179,33 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
 
 test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
 
-
 # tmp_file <- tempfile()
 # Rprof(tmp_file)
 # tmp <- test_sim_func_logit(10^5)
 # Rprof(NULL)
 # summaryRprof(tmp_file)
-#
+# #
 # sum(tmp$res[, "event"])
+
+# hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by
+# as search for '(?<=\d)\s+(?=\d)' and replace with ','
+# or be lazy and use this function
+str_func <- function(x){
+  tmp <- capture.output(print(c(x), digits = 16))
+  tmp <- sapply(tmp, gsub, pattern = "\\s*\\[1\\]\\s", replacement = "", USE.NAMES = F)
+  tmp <- sapply(tmp, gsub, pattern = "\\s*\\[\\d+\\]\\s", replacement = ",\\ ", USE.NAMES = F)
+  tmp <- sapply(tmp, gsub, pattern = "(?<=\\d)\\s+(?=\\d|-)", replacement = ",\\ ", perl = T, USE.NAMES = F)
+  paste0(c("c(", tmp, " )"), collapse = "")
+}
+
+get_expect_equal <- function(x){
+  arg_name <- deparse(substitute(x))
+  expects <- unlist(lapply(x, str_func))
+  expects <- mapply(function(e, index_name)
+    paste0("expect_equal(c(", arg_name, "$", index_name, "),\n", e, ")", collapse = ""),
+    e = expects, index_name = names(expects))
+
+  out <- paste0(c("{", paste0(expects, collapse = "\n\n"), "}\n"), collapse = "\n")
+  cat(out)
+  invisible()
+}
