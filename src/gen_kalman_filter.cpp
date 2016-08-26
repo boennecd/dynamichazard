@@ -236,6 +236,15 @@ if(is_run_parallel || i_am == 0){
   }
 }
 
+/*if(t < d + 1 && i_am < 2){ TODO: delete
+  Rcpp::Rcout << " t = " << t << std::endl;
+  U.print();
+  u.print();
+  V_t_less_s.slice(t - 1).print();
+  V_t_t_s.slice(t).print();
+  a_t_t_s.col(t).print();
+}*/
+
 #pragma omp barrier //TODO is barrier needed after master?
       }
     }
