@@ -79,6 +79,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const int order = 1, const bool est_Q_0 = true){
   // Initalize constants
   const int d = Rcpp::as<int>(risk_obj["d"]);
+  const double event_eps = d * std::numeric_limits<double>::epsilon();
   const Rcpp::List &risk_sets = Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]);
   const int n_parems = a_0.size() / order;
 
@@ -223,7 +224,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             // Compute local result
             for(i = 0; i < exp_eta.size(); i++){
               exp_eta_it = exp_eta(i);
-              if(i_events(i) && i_stop(i) == event_time){
+              if(i_events(i) && std::abs(i_stop(i) - event_time) < event_eps){
                 u_ = u_ + i_x_.unsafe_col(i) * (1.0 - exp_eta_it / (exp_eta_it + 1.0));
               }
               else {
@@ -352,12 +353,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   if(it == n_max)
     throw std::runtime_error("EM algorithm did not converge within the n_max number of iterations");
 
-  Rcpp::List inner_output = Rcpp::List::create(Rcpp::Named("V_t_d_s") = Rcpp::wrap(V_t_t_s),
-                                               Rcpp::Named("a_t_d_s") = Rcpp::wrap(a_t_t_s.t()),
-                                               Rcpp::Named("B_s") = Rcpp::wrap(B_s),
-                                               Rcpp::Named("lag_one_cor") = Rcpp::wrap(lag_one_cor));
-
-  return(Rcpp::List::create(Rcpp::Named("inner_output") = inner_output,
+  return(Rcpp::List::create(Rcpp::Named("V_t_d_s") = Rcpp::wrap(V_t_t_s),
+                            Rcpp::Named("a_t_d_s") = Rcpp::wrap(a_t_t_s.t()),
+                            Rcpp::Named("B_s") = Rcpp::wrap(B_s),
+                            Rcpp::Named("lag_one_cor") = Rcpp::wrap(lag_one_cor),
 
                             Rcpp::Named("n_iter") = it,
                             Rcpp::Named("conv_values") = conv_values,

@@ -30,3 +30,15 @@ res_new <- ddhazard_fit_cpp_prelim(
   eps = 10^-4, n_max = 10^4,
   order = 1,
   est_Q_0 = F)
+
+res_new$a_t_d_s
+res$a_t_d_s
+
+par(mfcol = c(2, 2))
+plot(res$a_t_d_s[, 1], type = "l")
+lines(seq_len(nrow(sims$betas) + 1), res_new$a_t_d_s[, 1], col = "blue")
+for(i in 1:3){
+  plot(res$a_t_d_s[, i + 1], type = "l", ylim = range(sims$betas[, i ], res$a_t_d_s[, i + 1], res_new$a_t_d_s[, i + 1]))
+  lines(x = seq_len(nrow(sims$betas)), sims$betas[, i], col = "red")
+  lines(x = seq_len(nrow(sims$betas) + 1), res_new$a_t_d_s[, i + 1], col = "blue")
+}
