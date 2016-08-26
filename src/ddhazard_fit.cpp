@@ -61,7 +61,7 @@ inline int vecmin(const T x){
 
 // Define convergence criteria
 double relative_norm_change(const arma::vec &prev_est, const arma::vec &new_est){
-  return arma::norm(prev_est - new_est, 2) / (arma::norm(prev_est, 2) + 0.0000000001);
+  return arma::norm(prev_est - new_est, 2) / (arma::norm(prev_est, 2) + 1.0e-10);
 }
 double (*conv_criteria)(const arma::vec&, const arma::vec&) = relative_norm_change;
 
@@ -104,7 +104,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::cube B_s(n_parems * order, n_parems * order, d);
 
   a_t_t_s.col(0) = a_0;
-  V_t_t_s.slice(0) = Q_0;
 
   arma::colvec u(n_parems * order);
   arma::mat U(n_parems * order, n_parems * order);
@@ -143,6 +142,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   //EM algorithm
   do
   {
+    V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
+
     // E-step
     event_time = vecmin(tstart);
 #pragma omp parallel                                                                                           \
@@ -249,7 +250,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             // E-step: scoring step: update values
             V_t_less_s_inv = inv_sympd(V_t_less_s.slice(t - 1));
             V_t_t_s.slice(t) = inv_sympd(V_t_less_s_inv + U);
-            a_t_t_s.unsafe_col(t) = a_t_less_s.unsafe_col(t - 1) + V_t_t_s.slice(t) * u;
+            a_t_t_s.col(t) = a_t_less_s.unsafe_col(t - 1) + V_t_t_s.slice(t) * u;
             B_s.slice(t - 1) = V_t_t_s.slice(t - 1) * T_F * V_t_less_s_inv;
 
             if(t == d){
@@ -261,6 +262,15 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
               lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(U)) - K_d * z_dot.t()) * F * V_t_t_s.slice(t - 1);
             }
           }
+
+          /*if(t < d + 1 && i_am < 2){ TODO: delete
+            Rcpp::Rcout << "It = " << it << " t = " << t << std::endl;
+            U.print();
+            u.print();
+            V_t_less_s.slice(t - 1).print();
+            V_t_t_s.slice(t).print();
+            a_t_t_s.col(t).print();
+          } */
 
 #pragma omp barrier //TODO is barrier needed after master?
         }
