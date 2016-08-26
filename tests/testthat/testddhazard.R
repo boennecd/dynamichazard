@@ -63,14 +63,6 @@ test_that("Testing names of output from ddhazard on head and neck cancer dataset
   expect_equal(unlist(dimnames(result$Q_0)), rep(c("(Intercept)", "group1"), 2))
 })
 
-# Try second order model
-result = ddhazard(
-  formula = Surv(start, stop, event) ~ group,
-  data = head_neck_cancer,
-  by = 1, # Use by month intervals
-  n_max = 10^4, eps = 10^-4,
-  a_0 = rep(0, 4), Q_0 = diag(1, 4), # Initial value
-  est_Q_0 = T,
-  max_T = 45,
-  id = head_neck_cancer$id, order_ = 2
-)
+
+test_that("Implement test for second order",
+          expect_true(F))
