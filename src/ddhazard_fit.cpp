@@ -26,15 +26,14 @@
 // R now defines NDEBUG which suppresses a number of useful
 // Armadillo tests Users can still defined it later, and/or
 // define ARMA_NO_DEBUG
-//TODO: comment back!
-/*#if defined(NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
-#endif */
+#endif
 
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
 const double lower_trunc_exp_log_thres = sqrt(log(std::numeric_limits<double>::max())) - 1.1;
 const double lower_trunc_exp_exp_thres = exp(lower_trunc_exp_log_thres);
-void in_place_lower_trunc_exp(arma::colvec & result)
+inline void in_place_lower_trunc_exp(arma::colvec & result)
 {
   double *x;
 
@@ -53,7 +52,7 @@ void in_place_lower_trunc_exp(arma::colvec & result)
 
 // from http://gallery.rcpp.org/articles/vector-minimum/
 template<typename T>
-int vecmin(const T x){
+inline int vecmin(const T x){
   // Rcpp supports STL-style iterators
   auto it = std::min_element(x.begin(), x.end());
   // we want the value so dereference
@@ -66,6 +65,7 @@ double relative_norm_change(const arma::vec &prev_est, const arma::vec &new_est)
 }
 double (*conv_criteria)(const arma::vec&, const arma::vec&) = relative_norm_change;
 
+//' @export
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec &tstart,
                                    const arma::vec &tstop, const arma::ivec &events, // armadillo have no boolean vector
@@ -89,7 +89,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
   // Declare and maybe intialize non constants
   double event_time, delta_t, test_max_diff;
-  arma::mat tmp_mat;
 
   Rcpp::NumericVector conv_values;
 
@@ -299,17 +298,25 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
         - (F * *B * *V).t()
         + F * *V_less * T_F) / delta_t;
     }
-
     Q /= d;
 
-    tmp_mat = Q - Q.t();
-    if((test_max_diff = tmp_mat.max()) > 1.0-14)
-      Rcpp::warning("Q - Q.t() maximal element difference was yeta in iteration yeta");
-    tmp_mat = Q_0 - Q_0.t();
-    if((test_max_diff = tmp_mat.max()) > 1.0-14)
-      Rcpp::warning("Q_0 - Q_0.t() maximal element difference was yeta in iteration yeta");
+    if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > 1.0e-15){
+      std::ostringstream warning;
+      warning << "Q - Q.t() maximal element difference was " << test_max_diff <<
+        " in iteration " << it + 1;
+      Rcpp::warning(warning.str());
+    }
 
-    //TODO: need to check that Q and Q_0
+    if((test_max_diff = static_cast<arma::mat>(Q_0 - Q_0.t()).max()) > 1.0e-15){
+      std::ostringstream warning;
+      warning << "Q_0 - Q_0.t() maximal element difference was " << test_max_diff <<
+        " in iteration " << it + 1;
+      Rcpp::warning(warning.str());
+    }
+
+    //TODO: better way to ensure that Q and Q_0 are symmetric?
+    Q = (Q + Q.t()) / 2.0;
+    Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
     if(order > 1){ // CHANGED # TODO: I figure I should set the primaery element to zero, right?
       arma::mat tmp_Q = Q.submat(0, 0, n_parems - 1, n_parems - 1);
@@ -371,15 +378,23 @@ sims$res <- as.data.frame(sims$res)
 design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
 rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
-res_new <- ddhazard_fit_cpp_prelim(
-  X = design_mat$X,
-  tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
-  a_0 = rep(0, ncol(design_mat$X)),
-  Q_0 = diag(10, ncol(design_mat$X)), # something large
-  Q = diag(1, ncol(design_mat$X)), # something large
-  F = diag(1, ncol(design_mat$X)), # first order random walk
-  risk_obj = rist_sets,
-  eps = 10^-4, n_max = 10^4,
-  order = 1,
-  est_Q_0 = F)
+log_file = file("debug.log")
+sink(log_file)
+
+tryCatch({
+  res_new <- ddhazard_fit_cpp_prelim(
+    X = design_mat$X,
+    tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+    a_0 = rep(0, ncol(design_mat$X)),
+    Q_0 = diag(10, ncol(design_mat$X)), # something large
+    Q = diag(1, ncol(design_mat$X)), # something large
+    F = diag(1, ncol(design_mat$X)), # first order random walk
+    risk_obj = rist_sets,
+    eps = 10^-4, n_max = 10^4,
+    order = 1,
+    est_Q_0 = F)
+}, finally = function(...){
+  close(log_file)
+  sink()
+  })
 */

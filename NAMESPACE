@@ -2,6 +2,7 @@
 
 export(ddhazard)
 export(ddhazard_fit)
+export(ddhazard_fit_cpp_prelim)
 export(gen_kalman_filter_cpp)
 importFrom(Rcpp,sourceCpp)
 useDynLib(dynamichazard)

@@ -1,3 +1,5 @@
+# library(survival); library(benssurvutils); library(dynamichazard); source("R/test_utils.R")
+
 # Simulate series to work with
 set.seed(2972)
 sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
@@ -94,3 +96,8 @@ test_that("Testing versus previously computed values after rounding", {
   expect_equal(c(new_res$Q_0),
                c(10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10))
 })
+
+test_that("Implement tests for second order random walks",
+          expect_true(FALSE))
+test_that("Implement tests for non-integer start and stop times",
+          expect_true(FALSE))
