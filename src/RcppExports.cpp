@@ -6,6 +6,31 @@
 
 using namespace Rcpp;
 
+// ddhazard_fit_cpp_prelim
+Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::ivec& events, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F, const int n_max, const double eps, const bool verbose, const bool save_all_output, const int order, const bool est_Q_0);
+RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP eventsSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP save_all_outputSEXP, SEXP orderSEXP, SEXP est_Q_0SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tstart(tstartSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tstop(tstopSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type events(eventsSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type a_0(a_0SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q_0(Q_0SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type risk_obj(risk_objSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type F(FSEXP);
+    Rcpp::traits::input_parameter< const int >::type n_max(n_maxSEXP);
+    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< const bool >::type save_all_output(save_all_outputSEXP);
+    Rcpp::traits::input_parameter< const int >::type order(orderSEXP);
+    Rcpp::traits::input_parameter< const bool >::type est_Q_0(est_Q_0SEXP);
+    __result = Rcpp::wrap(ddhazard_fit_cpp_prelim(X, tstart, tstop, events, a_0, Q_0, Q, risk_obj, F, n_max, eps, verbose, save_all_output, order, est_Q_0));
+    return __result;
+END_RCPP
+}
 // gen_kalman_filter_cpp
 List gen_kalman_filter_cpp(const arma::colvec& a_0, const arma::mat& Q_0, const arma::mat& Q, const arma::mat& F_, const List& risk_sets, const NumericVector& I_len, const int d, const NumericMatrix& X, const IntegerVector& start, const arma::ivec& stop, const arma::ivec& events, const int& order_);
 RcppExport SEXP dynamichazard_gen_kalman_filter_cpp(SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP F_SEXP, SEXP risk_setsSEXP, SEXP I_lenSEXP, SEXP dSEXP, SEXP XSEXP, SEXP startSEXP, SEXP stopSEXP, SEXP eventsSEXP, SEXP order_SEXP) {
