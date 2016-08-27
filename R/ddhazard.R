@@ -82,7 +82,7 @@ ddhazard = function(formula, data, by,
 
   result = ddhazard_fit(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose, save_all_output = save_all_output,
                         Q = Q, n_max = n_max,
-                        risk_set = risk_set, eps = eps, X = X_Y$X,
+                        risk_obj = risk_set, eps = eps, X = X_Y$X,
                         tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], events = X_Y$Y[, 3],
                         order_ = order_,
                         est_Q_0 = est_Q_0)

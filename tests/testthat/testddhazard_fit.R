@@ -25,7 +25,7 @@ res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = desig
                     Q_0 = diag(10, ncol(design_mat$X)), # something large
                     Q = diag(1, ncol(design_mat$X)), # something large
                     F_= diag(1, ncol(design_mat$X)), # first order random walk
-                    risk_sets = rist_sets,
+                    risk_obj = rist_sets,
                     eps = 10^-4, n_max = 10^4,
                     order_ = 1,
                     est_Q_0 = F)
@@ -67,7 +67,7 @@ res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = desig
                     Q_0 = diag(10, ncol(design_mat$X)), # something large
                     Q = diag(1, ncol(design_mat$X)), # something large
                     F_= diag(1, ncol(design_mat$X)), # first order random walk
-                    risk_sets = rist_sets,
+                    risk_obj = rist_sets,
                     eps = 10^-4, n_max = 10^4,
                     order_ = 1,
                     est_Q_0 = T)
@@ -122,7 +122,7 @@ res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = desig
                     Q_0 = Q_0,
                     Q = Q,
                     F_= F_, # first order random walk
-                    risk_sets = rist_sets,
+                    risk_obj = rist_sets,
                     eps = 10^-4, n_max = 10^4,
                     order_ = 2,
                     est_Q_0 = F)
@@ -163,7 +163,7 @@ res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = desig
                     Q_0 = Q_0,
                     Q = Q,
                     F_= F_, # first order random walk
-                    risk_sets = rist_sets,
+                    risk_obj = rist_sets,
                     eps = 10^-4, n_max = 10^4,
                     order_ = 2,
                     est_Q_0 = T)

@@ -76,13 +76,13 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const arma::mat &F_,
                                    const int n_max = 100, const double eps = 0.001,
                                    const bool verbose = false, const bool save_all_output = false,
-                                   const int order = 1, const bool est_Q_0 = true){
+                                   const int order_ = 1, const bool est_Q_0 = true){
   // Initalize constants
   const int d = Rcpp::as<int>(risk_obj["d"]);
   const double event_eps = d * std::numeric_limits<double>::epsilon();
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
   const Rcpp::List &risk_sets = Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]);
-  const int n_parems = a_0.size() / order;
+  const int n_parems = a_0.size() / order_;
 
   const arma::mat T_F_ = F_.t();
   const arma::mat _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
@@ -97,17 +97,17 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::colvec a_prev(a_0.begin(), a_0.size());
   Rcpp::List all_output; // only need if save_all_output = true
 
-  arma::mat a_t_t_s(n_parems * order, d + 1);
-  arma::mat a_t_less_s(n_parems * order, d);
+  arma::mat a_t_t_s(n_parems * order_, d + 1);
+  arma::mat a_t_less_s(n_parems * order_, d);
 
-  arma::cube V_t_t_s(n_parems * order, n_parems * order, d + 1);
-  arma::cube V_t_less_s(n_parems * order, n_parems * order, d);
-  arma::cube B_s(n_parems * order, n_parems * order, d);
+  arma::cube V_t_t_s(n_parems * order_, n_parems * order_, d + 1);
+  arma::cube V_t_less_s(n_parems * order_, n_parems * order_, d);
+  arma::cube B_s(n_parems * order_, n_parems * order_, d);
 
   a_t_t_s.col(0) = a_0;
 
-  arma::colvec u(n_parems * order);
-  arma::mat U(n_parems * order, n_parems * order);
+  arma::colvec u(n_parems * order_);
+  arma::mat U(n_parems * order_, n_parems * order_);
 
   arma::uvec r_set;
   arma::colvec exp_eta;
@@ -118,7 +118,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat z_dot;
   arma::vec H_diag_inv;
   arma::mat K_d;
-  arma::cube lag_one_cor(n_parems * order, n_parems * order, d);
+  arma::cube lag_one_cor(n_parems * order_, n_parems * order_, d);
 
   // Parallel settings and variables
   const int n_threads = omp_get_num_procs() - 1;
@@ -178,7 +178,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
             if(t == d){
               H_diag_inv = arma::vec(n_cols);
-              z_dot = arma::mat(n_parems * order, n_cols);
+              z_dot = arma::mat(n_parems * order_, n_cols);
               z_dot.zeros();
             }
 
@@ -336,7 +336,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     Q = (Q + Q.t()) / 2.0;
     Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
-    if(order > 1){ // CHANGED # TODO: I figure I should set the primaery element to zero, right?
+    if(order_ > 1){ // CHANGED # TODO: I figure I should set the primaery element to zero, right?
       arma::mat tmp_Q = Q.submat(0, 0, n_parems - 1, n_parems - 1);
       Q.zeros();
       Q.submat(0, 0, n_parems - 1, n_parems - 1) = tmp_Q;
@@ -411,7 +411,7 @@ tryCatch({
     F_ = diag(1, ncol(design_mat$X)), # first order random walk
     risk_obj = rist_sets,
     eps = 10^-4, n_max = 10^4,
-    order = 1,
+    order_ = 1,
     est_Q_0 = F_)
 }, finally = function(...){
   close(log_file)
