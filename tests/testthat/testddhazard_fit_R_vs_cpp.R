@@ -18,11 +18,11 @@ design_mat$Y[, 3] <- rist_sets$new_events_flags
 # tmp_file <- file("testddhazard_fit_R_vs_cpp_1.log")
 # sink(tmp_file)
 tmp_time <- Sys.time()
-res <- ddhazard_fit(X = design_mat$X, Y = design_mat$Y,
+res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
                     a_0 = rep(0, ncol(design_mat$X)),
                     Q_0 = diag(10, ncol(design_mat$X)), # something large
                     Q = diag(1, ncol(design_mat$X)), # something large
-                    F_= diag(1, ncol(design_mat$X)), # first order random walk
+                    F_ = diag(1, ncol(design_mat$X)), # first order random walk
                     risk_sets = rist_sets,
                     eps = 10^-4, n_max = 10^4,
                     order_ = 1,
@@ -40,7 +40,7 @@ res_new <- ddhazard_fit_cpp_prelim(
   a_0 = rep(0, ncol(design_mat$X)),
   Q_0 = diag(10, ncol(design_mat$X)), # something large
   Q = diag(1, ncol(design_mat$X)), # something large
-  F = diag(1, ncol(design_mat$X)), # first order random walk
+  F_ = diag(1, ncol(design_mat$X)), # first order random walk
   risk_obj = rist_sets,
   eps = 10^-4, n_max = 10^4,
   order = 1,
@@ -67,7 +67,7 @@ test_that("Expecting similar outcome with new and old method", {
 # tmp_file <- file("testddhazard_fit_R_vs_cpp_1.log")
 # sink(tmp_file)
 tmp_time <- Sys.time()
-res <- ddhazard_fit(X = design_mat$X, Y = design_mat$Y,
+res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
                     a_0 = rep(0, ncol(design_mat$X)),
                     Q_0 = diag(10, ncol(design_mat$X)), # something large
                     Q = diag(1, ncol(design_mat$X)), # something large
@@ -89,7 +89,7 @@ res_new <- ddhazard_fit_cpp_prelim(
   a_0 = rep(0, ncol(design_mat$X)),
   Q_0 = diag(10, ncol(design_mat$X)), # something large
   Q = diag(1, ncol(design_mat$X)), # something large
-  F = diag(1, ncol(design_mat$X)), # first order random walk
+  F_ = diag(1, ncol(design_mat$X)), # first order random walk
   risk_obj = rist_sets,
   eps = 10^-4, n_max = 10^4,
   order = 1,
@@ -134,7 +134,7 @@ eps <- 1.0e-3
 # tmp_file <- file("tests/testthat/testddhazard_fit_R_vs_cpp_1.log")
 # sink(tmp_file)
 tmp_time <- Sys.time()
-res <- ddhazard_fit(X = design_mat$X, Y = design_mat$Y,
+res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
                     a_0 = a_0,
                     Q_0 = Q_0,
                     Q = Q,
@@ -156,7 +156,7 @@ res_new <- ddhazard_fit_cpp_prelim(
   a_0 = a_0,
   Q_0 = Q_0,
   Q = Q,
-  F = F_,
+  F_ = F_,
   risk_obj = rist_sets,
   eps = eps, n_max = 10^5,
   order = 2,
@@ -179,7 +179,7 @@ test_that("Expecting similar outcome with new and old method", {
 # Test order 2 and est_Q_0 = T
 
 tmp_time <- Sys.time()
-res <- ddhazard_fit(X = design_mat$X, Y = design_mat$Y,
+res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
                     a_0 = a_0,
                     Q_0 = Q_0,
                     Q = Q,
@@ -197,7 +197,7 @@ res_new <- ddhazard_fit_cpp_prelim(
   a_0 = a_0,
   Q_0 = Q_0,
   Q = Q,
-  F = F_,
+  F_ = F_,
   risk_obj = rist_sets,
   eps = eps, n_max = 10^5,
   order = 2,

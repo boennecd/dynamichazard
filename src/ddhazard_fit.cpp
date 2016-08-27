@@ -73,7 +73,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    arma::mat Q_0, // by value copy. This  is key cuz we will change it if est_Q_0 = T
                                    arma::mat Q, // similary this is a copy
                                    const Rcpp::List &risk_obj,
-                                   const arma::mat &F,
+                                   const arma::mat &F_,
                                    const int n_max = 100, const double eps = 0.001,
                                    const bool verbose = false, const bool save_all_output = false,
                                    const int order = 1, const bool est_Q_0 = true){
@@ -84,7 +84,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   const Rcpp::List &risk_sets = Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]);
   const int n_parems = a_0.size() / order;
 
-  const arma::mat T_F = F.t();
+  const arma::mat T_F_ = F_.t();
   const arma::mat _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
 
   const std::vector<double> I_len = Rcpp::as<std::vector<double> >(risk_obj["I_len"]);
@@ -166,8 +166,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             //Rcpp::Rcout << "made "; //TODO: delete me
 
             // E-step: Filter step
-            a_t_less_s.col(t - 1) = F *  a_t_t_s.unsafe_col(t - 1);
-            V_t_less_s.slice(t - 1) = F * V_t_t_s.slice(t - 1) * T_F + delta_t * Q;
+            a_t_less_s.col(t - 1) = F_ *  a_t_t_s.unsafe_col(t - 1);
+            V_t_less_s.slice(t - 1) = F_ * V_t_t_s.slice(t - 1) * T_F_ + delta_t * Q;
 
             // E-step: scoring step: information matrix and scoring vector
             r_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
@@ -252,15 +252,15 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             V_t_less_s_inv = inv_sympd(V_t_less_s.slice(t - 1));
             V_t_t_s.slice(t) = inv_sympd(V_t_less_s_inv + U);
             a_t_t_s.col(t) = a_t_less_s.unsafe_col(t - 1) + V_t_t_s.slice(t) * u;
-            B_s.slice(t - 1) = V_t_t_s.slice(t - 1) * T_F * V_t_less_s_inv;
+            B_s.slice(t - 1) = V_t_t_s.slice(t - 1) * T_F_ * V_t_less_s_inv;
 
             if(t == d){
               K_d = V_t_less_s.slice(t - 1) * inv(arma::eye<arma::mat>(size(U)) + U * V_t_less_s.slice(t - 1)) * z_dot * diagmat(H_diag_inv);
               // Parenthesis is key here to avoid making a n x n matrix for large n
-              K_d = (F * V_t_less_s.slice(t - 1) * z_dot * diagmat(H_diag_inv) * z_dot.t()) * K_d;
-              K_d = F * V_t_less_s.slice(t - 1) * z_dot * diagmat(H_diag_inv) -  K_d;
+              K_d = (F_ * V_t_less_s.slice(t - 1) * z_dot * diagmat(H_diag_inv) * z_dot.t()) * K_d;
+              K_d = F_ * V_t_less_s.slice(t - 1) * z_dot * diagmat(H_diag_inv) -  K_d;
 
-              lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(U)) - K_d * z_dot.t()) * F * V_t_t_s.slice(t - 1);
+              lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(U)) - K_d * z_dot.t()) * F_ * V_t_t_s.slice(t - 1);
             }
           }
 
@@ -282,7 +282,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       // we need to compute the correlation matrix first
       if(t > 0){
         lag_one_cor.slice(t - 1) = V_t_t_s.slice(t) * B_s.slice(t - 1).t() +  B_s.slice(t) * (
-          lag_one_cor.slice(t) - F * V_t_t_s.slice(t)) * B_s.slice(t - 1).t();
+          lag_one_cor.slice(t) - F_ * V_t_t_s.slice(t)) * B_s.slice(t - 1).t();
       }
 
       a_t_t_s.col(t) = a_t_t_s.unsafe_col(t) + B_s.slice(t) *
@@ -311,10 +311,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       a_less = a_t_t_s.unsafe_col(t - 1);
       a = a_t_t_s.unsafe_col(t);
 
-      Q += ((a - F * a_less) * (a - F * a_less).t() + *V
-        - F * *B * *V
-        - (F * *B * *V).t()
-        + F * *V_less * T_F) / delta_t;
+      Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
+        - F_ * *B * *V
+        - (F_ * *B * *V).t()
+        + F_ * *V_less * T_F_) / delta_t;
     }
     Q /= d;
 
@@ -408,11 +408,11 @@ tryCatch({
     a_0 = rep(0, ncol(design_mat$X)),
     Q_0 = diag(10, ncol(design_mat$X)), # something large
     Q = diag(1, ncol(design_mat$X)), # something large
-    F = diag(1, ncol(design_mat$X)), # first order random walk
+    F_ = diag(1, ncol(design_mat$X)), # first order random walk
     risk_obj = rist_sets,
     eps = 10^-4, n_max = 10^4,
     order = 1,
-    est_Q_0 = F)
+    est_Q_0 = F_)
 }, finally = function(...){
   close(log_file)
   sink()

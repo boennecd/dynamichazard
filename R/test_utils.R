@@ -190,12 +190,18 @@ test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
 # hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by
 # as search for '(?<=\d)\s+(?=\d)' and replace with ','
 # or be lazy and use this function
-str_func <- function(x){
-  tmp <- capture.output(print(c(x), digits = 16))
+str_func <- function(x, n_digist = 16){
+  tmp <- capture.output(print(c(x), digits = n_digist))
   tmp <- sapply(tmp, gsub, pattern = "\\s*\\[1\\]\\s", replacement = "", USE.NAMES = F)
   tmp <- sapply(tmp, gsub, pattern = "\\s*\\[\\d+\\]\\s", replacement = ",\\ ", USE.NAMES = F)
   tmp <- sapply(tmp, gsub, pattern = "(?<=\\d)\\s+(?=\\d|-)", replacement = ",\\ ", perl = T, USE.NAMES = F)
-  paste0(c("c(", tmp, " )"), collapse = "")
+
+  tmp <- paste0(c("c(", tmp, " )"), collapse = "")
+
+  max_lengt <- floor(8191 * .75)
+  n_nums_before_break = floor(max_lengt / (n_digist + 4))
+  gsub(pattern = paste0("((\\d,\\ .*?){", n_nums_before_break - 1, "})(,\\ )"), replacement = "\\1,\n\\ ",
+       x = tmp, perl = T)
 }
 
 get_expect_equal <- function(x){

@@ -2,8 +2,8 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' @export
-ddhazard_fit_cpp_prelim <- function(X, tstart, tstop, events, a_0, Q_0, Q, risk_obj, F, n_max = 100L, eps = 0.001, verbose = FALSE, save_all_output = FALSE, order = 1L, est_Q_0 = TRUE) {
-    .Call('dynamichazard_ddhazard_fit_cpp_prelim', PACKAGE = 'dynamichazard', X, tstart, tstop, events, a_0, Q_0, Q, risk_obj, F, n_max, eps, verbose, save_all_output, order, est_Q_0)
+ddhazard_fit_cpp_prelim <- function(X, tstart, tstop, events, a_0, Q_0, Q, risk_obj, F_, n_max = 100L, eps = 0.001, verbose = FALSE, save_all_output = FALSE, order = 1L, est_Q_0 = TRUE) {
+    .Call('dynamichazard_ddhazard_fit_cpp_prelim', PACKAGE = 'dynamichazard', X, tstart, tstop, events, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, save_all_output, order, est_Q_0)
 }
 
 #' Function to perform one iteration of the Kalman filter in parallel

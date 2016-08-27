@@ -62,7 +62,3 @@ test_that("Testing names of output from ddhazard on head and neck cancer dataset
   expect_equal(unlist(dimnames(result$Q)), rep(c("(Intercept)", "group1"), 2))
   expect_equal(unlist(dimnames(result$Q_0)), rep(c("(Intercept)", "group1"), 2))
 })
-
-
-test_that("Implement test for second order",
-          expect_true(F))
