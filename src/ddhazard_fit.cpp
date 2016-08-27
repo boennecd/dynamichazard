@@ -80,6 +80,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   // Initalize constants
   const int d = Rcpp::as<int>(risk_obj["d"]);
   const double event_eps = d * std::numeric_limits<double>::epsilon();
+  const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
   const Rcpp::List &risk_sets = Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]);
   const int n_parems = a_0.size() / order;
 
@@ -128,7 +129,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::vec i_stop;
   arma::ivec i_events;
 
-  unsigned int i, it;
+  unsigned int i, it = 0;
   arma::colvec u_(n_parems);
   arma::mat U_(n_parems, n_parems);
   bool is_run_parallel;
@@ -263,13 +264,13 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             }
           }
 
-          /*if(t < d + 1 && i_am < 2){ TODO: delete
-            Rcpp::Rcout << "It = " << it << " t = " << t << std::endl;
-            U.print();
-            u.print();
-            V_t_less_s.slice(t - 1).print();
-            V_t_t_s.slice(t).print();
-            a_t_t_s.col(t).print();
+          /* if(t < d + 1 && i_am < 2){ // TODO: Delete
+            Rcpp::Rcout << std::setprecision(17) << "It = " << it << " t = " << t << std::endl;
+            U.raw_print(Rcpp::Rcout);
+            u.raw_print(Rcpp::Rcout);
+            V_t_less_s.slice(t - 1).raw_print(Rcpp::Rcout);
+            V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
+            a_t_t_s.col(t).raw_print(Rcpp::Rcout);
           } */
 
 #pragma omp barrier //TODO is barrier needed after master?
@@ -284,10 +285,16 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
           lag_one_cor.slice(t) - F * V_t_t_s.slice(t)) * B_s.slice(t - 1).t();
       }
 
-      a_t_t_s.unsafe_col(t) = a_t_t_s.unsafe_col(t) + B_s.slice(t) *
+      a_t_t_s.col(t) = a_t_t_s.unsafe_col(t) + B_s.slice(t) *
         (a_t_t_s.unsafe_col(t + 1) - a_t_less_s.unsafe_col(t));
       V_t_t_s.slice(t) = V_t_t_s.slice(t) + B_s.slice(t) *
         (V_t_t_s.slice(t + 1) - V_t_less_s.slice(t)) * B_s.slice(t).t();
+
+      /*if(t < d + 1 && i_am < 2){ // TODO: Delete
+       Rcpp::Rcout << std::setprecision(17) << "It = " << it << " t = " << t << std::endl;
+       V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
+       a_t_t_s.col(t).raw_print(Rcpp::Rcout);
+      }*/
     }
 
     // M-step
@@ -311,14 +318,14 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     }
     Q /= d;
 
-    if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > 1.0e-15){
+    if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > Q_warn_eps){
       std::ostringstream warning;
       warning << "Q - Q.t() maximal element difference was " << test_max_diff <<
         " in iteration " << it + 1;
       Rcpp::warning(warning.str());
     }
 
-    if((test_max_diff = static_cast<arma::mat>(Q_0 - Q_0.t()).max()) > 1.0e-15){
+    if((test_max_diff = static_cast<arma::mat>(Q_0 - Q_0.t()).max()) > Q_warn_eps){
       std::ostringstream warning;
       warning << "Q_0 - Q_0.t() maximal element difference was " << test_max_diff <<
         " in iteration " << it + 1;
@@ -334,6 +341,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       Q.zeros();
       Q.submat(0, 0, n_parems - 1, n_parems - 1) = tmp_Q;
     }
+
+    /*Rcpp::Rcout << std::setprecision(16) << "It " << it + 1 << std::endl; //TODO: delete
+    Q.raw_print(Rcpp::Rcout);
+    Q_0.raw_print(Rcpp::Rcout);*/
 
     conv_values.push_back(conv_criteria(a_prev, a_t_t_s.unsafe_col(0)));
 

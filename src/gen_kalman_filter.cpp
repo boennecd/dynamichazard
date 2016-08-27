@@ -236,13 +236,13 @@ if(is_run_parallel || i_am == 0){
   }
 }
 
-/*if(t < d + 1 && i_am < 2){ TODO: delete
-  Rcpp::Rcout << " t = " << t << std::endl;
-  U.print();
-  u.print();
-  V_t_less_s.slice(t - 1).print();
-  V_t_t_s.slice(t).print();
-  a_t_t_s.col(t).print();
+/*if(t < d + 1 && i_am < 2){ //TODO: delete
+  Rcpp::Rcout << std::setprecision(17) << " t = " << t << std::endl;
+  U.raw_print(Rcpp::Rcout);
+  u.raw_print(Rcpp::Rcout);
+  V_t_less_s.slice(t - 1).raw_print(Rcpp::Rcout);
+  V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
+  a_t_t_s.col(t).raw_print(Rcpp::Rcout);
 }*/
 
 #pragma omp barrier //TODO is barrier needed after master?
@@ -261,6 +261,12 @@ if(is_run_parallel || i_am == 0){
       (a_t_t_s.col(t + 1) - a_t_less_s.col(t));
     V_t_t_s.slice(t) = V_t_t_s.slice(t) + B_s.slice(t) *
       (V_t_t_s.slice(t + 1) - V_t_less_s.slice(t)) * B_s.slice(t).t();
+
+    /*if(t < d + 1 && i_am < 2){ // TODO: Delete
+      Rcpp::Rcout << std::setprecision(17) << "t = " << t << std::endl;
+      V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
+      a_t_t_s.col(t).raw_print(Rcpp::Rcout);
+    }*/
   }
 
   return(List::create(Named("V_t_d_s") = wrap(V_t_t_s),
