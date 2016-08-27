@@ -66,7 +66,7 @@ ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
         Q_ = Q_ + ((a - F_ %*% a_less) %*% t(a - F_ %*% a_less) +
                      V -
                      F_ %*% B %*% V -
-                     t(V) %*% t(B) %*% t(F_) +
+                     t(F_ %*% B %*% V) +
                      F_ %*% V_less %*% t(F_)) / delta_t
       }
 
@@ -75,7 +75,7 @@ ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
 
     if(max((Q - t(Q))[1:n_parems, 1:n_parems]) >  sqrt(.Machine$double.eps))
       warning("Max diff in Q - Q^T is: ", max(Q - t(Q)))
-    if(max(Q_0 - t(Q_0)) >  10^2 * sqrt(.Machine$double.eps))
+    if(max(Q_0 - t(Q_0)) >  sqrt(.Machine$double.eps))
       warning("Max diff in Q_0 - Q^T_0 is: ", max(Q_0 - t(Q_0)))
 
     Q = (Q + t(Q)) / 2.0
