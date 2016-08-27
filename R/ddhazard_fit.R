@@ -1,7 +1,8 @@
 #' Function to perform EM algorithm for dynamic discrete hazard models. This
 #' version perform no validation
 #' @export
-ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
+ddhazard_fit = function(X, tstart, tstop, events,
+                        a_0 = rep(0, n_parems), # ignorant prior
                         Q_0 = diag(.1, n_parems), # something large
                         F_ = diag(1, n_parems), # assume first order AR
                         Q = Q_0, risk_sets, n_parems,
@@ -26,11 +27,6 @@ ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
   if(save_all_output)
     all_output = list()
 
-  # Add references once: Turned out to be a notable improvments in performance
-  start_ = Y[, 1]
-  stop_ = Y[, 2]
-  events_ = Y[, 3]
-
   # Run EM
   repeat{
     i = i + 1
@@ -41,8 +37,8 @@ ddhazard_fit = function(X, Y, a_0 = rep(0, n_parems), # ignorant prior
                             risk_sets = risk_sets$risk_sets,
                             I_len =  risk_sets$I_len,
                             d = risk_sets$d,
-                            X = X, start = start_,
-                            stop = stop_, events = events_,
+                            X = X, start = tstart,
+                            stop = tstop, events = events,
                             order_ = order_)
 
     # M-step

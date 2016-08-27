@@ -5,10 +5,10 @@
 \title{Function to perform EM algorithm for dynamic discrete hazard models. This
 version perform no validation}
 \usage{
-ddhazard_fit(X, Y, a_0 = rep(0, n_parems), Q_0 = diag(0.1, n_parems),
-  F_ = diag(1, n_parems), Q = Q_0, risk_sets, n_parems, n_max = 10^2,
-  eps = 10^-3, verbose = F, save_all_output = F, order_ = 1,
-  est_Q_0 = T)
+ddhazard_fit(X, tstart, tstop, events, a_0 = rep(0, n_parems),
+  Q_0 = diag(0.1, n_parems), F_ = diag(1, n_parems), Q = Q_0, risk_sets,
+  n_parems, n_max = 10^2, eps = 10^-3, verbose = F, save_all_output = F,
+  order_ = 1, est_Q_0 = T)
 }
 \description{
 Function to perform EM algorithm for dynamic discrete hazard models. This
