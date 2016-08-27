@@ -5,7 +5,7 @@ ddhazard_fit = function(X, tstart, tstop, events,
                         a_0 = rep(0, n_parems), # ignorant prior
                         Q_0 = diag(.1, n_parems), # something large
                         F_ = diag(1, n_parems), # assume first order AR
-                        Q = Q_0, risk_sets, n_parems,
+                        Q = Q_0, risk_obj, n_parems,
                         n_max = 10^2, eps = 10^-3,
                         verbose = F, save_all_output = F,
                         order_ = 1,
@@ -14,7 +14,7 @@ ddhazard_fit = function(X, tstart, tstop, events,
     warning("No test made with order of ", order_)
 
   # Initalize
-  d = risk_sets$d
+  d = risk_obj$d
 
   n_parems = length(a_0) / order_
 
@@ -34,9 +34,9 @@ ddhazard_fit = function(X, tstart, tstop, events,
     # E-step
     inner_output <-
       gen_kalman_filter_cpp(a_0 = a_0, Q = Q, Q_0 = Q_0, F_ = F_,
-                            risk_sets = risk_sets$risk_sets,
-                            I_len =  risk_sets$I_len,
-                            d = risk_sets$d,
+                            risk_sets = risk_obj$risk_sets,
+                            I_len =  risk_obj$I_len,
+                            d = risk_obj$d,
                             X = X, start = tstart,
                             stop = tstop, events = events,
                             order_ = order_)
@@ -50,7 +50,7 @@ ddhazard_fit = function(X, tstart, tstop, events,
       Q_ =  Q
       Q_[, ] = 0
       for(t in 2:(d + 1)){
-        delta_t = risk_sets$I_len[t - 1]
+        delta_t = risk_obj$I_len[t - 1]
         B = B_s[, , t - 1]
 
         V_less = V_t_d_s[, , t - 1]
