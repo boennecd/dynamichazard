@@ -1,3 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 .log
+^benchmarking\.R$
+^R/benchmarking\.R$

@@ -35,17 +35,14 @@ const double lower_trunc_exp_log_thres = sqrt(log(std::numeric_limits<double>::m
 const double lower_trunc_exp_exp_thres = exp(lower_trunc_exp_log_thres);
 inline void in_place_lower_trunc_exp(arma::colvec & result)
 {
-  double *x;
-
-  for(unsigned i = 0; i < result.size(); i++){
-    x = &result(i);
-    if(*x >= lower_trunc_exp_log_thres )
+  for(auto i = result.begin(); i != result.end(); i++){
+    if(*i >= lower_trunc_exp_log_thres )
     {
-      *x =  lower_trunc_exp_exp_thres;
+      *i =  lower_trunc_exp_exp_thres;
     }
     else
     {
-      *x = std::exp(*x);
+      *i = std::exp(*i);
     }
   }
 }
@@ -194,7 +191,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
               i_points = n_cols - i_start;
 
             // Get columns to work with
-            i_r_set = r_set(arma::span(i_start, i_start + i_points - 1));
+            i_r_set = arma::uvec(r_set.begin() + i_start, i_points, false);
             i_x_  = _X.cols(i_r_set); // This is not reference copy but value http://stackoverflow.com/questions/18859328/fastest-way-to-refer-to-vector-in-armadillo-library
             exp_eta =  i_x_.t() * a_t_less_s.unsafe_col(t - 1).head(n_parems);
             in_place_lower_trunc_exp(exp_eta);

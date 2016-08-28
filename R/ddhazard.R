@@ -25,7 +25,8 @@ ddhazard = function(formula, data, by,
   }
 
   if(missing(id)){
-    warning("You did not parse and ID argument. I do not hink this is what you want ...")
+    if(verbose)
+      warning("You did not parse and ID argument. I do not hink this is what you want ...")
     id = 1:nrow(data)
   }
 
