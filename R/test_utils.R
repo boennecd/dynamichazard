@@ -1,3 +1,12 @@
+# function to test that expression does not throw an error
+expect_no_error = function(expr, env = parent.frame()){
+  call <- match.call()
+  eval(bquote(expect_error(.(call[[2]]), NA)), envir = env)
+}
+
+# expect_no_error(1 / "a")
+# expect_no_error(1 / 1)
+
 # Load data example to play arround with and validate against
 is_censored = c(6, 27, 34, 36, 42, 46, 48:51,
                 51 + c(15, 30:28, 33, 35:37, 39, 40, 42:45))

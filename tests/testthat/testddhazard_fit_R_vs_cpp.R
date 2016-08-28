@@ -1,4 +1,4 @@
-# library(survival); library(benssurvutils); library(dynamichazard); source("R/test_utils.R")
+# library(testthat); library(survival); library(benssurvutils); source("R/test_utils.R")
 
 # Simulate series to work with
 set.seed(2972)
@@ -40,6 +40,11 @@ res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
 Sys.time() - tmp_time
 # sink()
 # close(tmp_file)
+
+# library(microbenchmark)
+# microbenchmark(do.call(ddhazard_fit, arg_list),
+#                do.call(ddhazard_fit_cpp_prelim, arg_list),
+#                times = 10)
 
 test_that("Expecting similar outcome with new and old method", {
   expect_equal(c(res_new$a_t_d_s), c(res$a_t_d_s))

@@ -1,4 +1,4 @@
-# library(survival); library(benssurvutils); library(dynamichazard); source("R/test_utils.R")
+# library(survival); library(benssurvutils); source("R/test_utils.R")
 
 # Simulate series to work with
 set.seed(2972)
