@@ -223,30 +223,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                 z_dot.rows(0, n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
                 ++i;
               }
-
-              // TODO: Clean up
-              /*exp_eta_it = exp_eta(i);
-              if(i_events(i) && std::abs(i_stop(i) - event_time) < event_eps){
-                u_ = u_ + i_x_.unsafe_col(i) * (1.0 - exp_eta_it / (exp_eta_it + 1.0));
-              }
-              else {
-                u_ = u_ - i_x_.unsafe_col(i) * exp_eta_it / (exp_eta_it + 1.0);
-              }
-              U_ = U_ + i_x_.unsafe_col(i) * i_x_.unsafe_col(i).t() * exp_eta_it / pow(exp_eta_it + 1.0, 2.0);*/
-
-              /* const arma::subview_elem2<double, arma::Mat<unsigned int>, arma::Mat<unsigned int> >
-               i_x_ = std::move(_X.cols(i_r_set)); // This is not reference copy but value http://stackoverflow.com/questions/18859328/fastest-way-to-refer-to-vector-in-armadillo-library
-              exp_eta =  i_x_.t() * a_t_less_s.unsafe_col(t - 1).head(n_parems);
-              in_place_lower_trunc_exp(exp_eta);
-
-              i_events = events(i_r_set);
-              i_stop = tstop(i_r_set);
-
-              if(t == d){
-              H_diag_inv(arma::span(i_start, i_start + i_points - 1)) = pow(1.0 + exp_eta, 2) / exp_eta;
-              z_dot.rows(0, n_parems - 1).cols(i_start, i_start + i_points - 1) =
-              i_x_ *  diagmat(exp_eta / pow(1.0 + exp_eta, 2));
-              } */
             }
           }
           else if (i_am == 0){
@@ -285,8 +261,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             }
           }
 
-          if(i_am < 2)
-            U.raw_print(Rcpp::Rcout << std::setprecision(17));
+
 #pragma omp barrier // TODO: is this needed?
 
 #pragma omp master

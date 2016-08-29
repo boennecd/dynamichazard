@@ -195,6 +195,7 @@ if(is_run_parallel || i_am ==0){
   // Compute local result
   for(i = 0; i < exp_eta.size(); i++){
     exp_eta_it = exp_eta(i);
+
     if(i_events(i) && i_stop(i) == event_time){
       u_ = u_ + i_x_.col(i) * (1.0 - exp_eta_it / (exp_eta_it + 1.0));
     }
