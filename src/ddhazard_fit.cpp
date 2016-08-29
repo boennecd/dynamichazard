@@ -26,9 +26,9 @@
 // R now defines NDEBUG which suppresses a number of useful
 // Armadillo tests Users can still defined it later, and/or
 // define ARMA_NO_DEBUG
-#if defined(NDEBUG)
+/*#if defined(NDEBUG)
 #undef NDEBUG
-#endif
+#endif*/
 
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
 const double lower_trunc_exp_log_thres = sqrt(log(std::numeric_limits<double>::max())) - 1.1;
@@ -44,6 +44,17 @@ inline void in_place_lower_trunc_exp(arma::colvec & result)
     {
       *i = std::exp(*i);
     }
+  }
+}
+
+inline double lower_trunc_exp(double x){
+  if(x >= lower_trunc_exp_log_thres )
+  {
+    return(lower_trunc_exp_exp_thres);
+  }
+  else
+  {
+    return(std::exp(x));
   }
 }
 
@@ -82,7 +93,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   const int n_parems = a_0.size() / order_;
 
   const arma::mat T_F_ = F_.t();
-  const arma::mat _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
+  arma::mat _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
 
   const std::vector<double> I_len = Rcpp::as<std::vector<double> >(risk_obj["I_len"]);
 
@@ -122,7 +133,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   omp_set_num_threads(n_threads);
   int i_am, i_points, i_start, n_cols, n_threads_current;
   arma::mat i_x_;
-  arma::uvec i_r_set;
   arma::vec i_stop;
   arma::ivec i_events;
 
@@ -145,7 +155,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     // E-step
     event_time = vecmin(tstart);
 #pragma omp parallel                                                                                           \
-    private(n_threads_current, exp_eta_it, i_am, i_points, i_start, i_x_, exp_eta, i, i_r_set, i_stop, i_events) \
+    private(n_threads_current, exp_eta_it, i_am, i_points, i_start, i_x_, exp_eta, i, i_stop, i_events) \
       firstprivate(U_, u_) default(shared)
       {
         n_threads_current = omp_get_num_threads();
@@ -191,18 +201,52 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
               i_points = n_cols - i_start;
 
             // Get columns to work with
-            i_r_set = arma::uvec(r_set.begin() + i_start, i_points, false);
-            i_x_  = _X.cols(i_r_set); // This is not reference copy but value http://stackoverflow.com/questions/18859328/fastest-way-to-refer-to-vector-in-armadillo-library
-            exp_eta =  i_x_.t() * a_t_less_s.unsafe_col(t - 1).head(n_parems);
-            in_place_lower_trunc_exp(exp_eta);
+            const arma::uvec i_r_set(r_set.begin() + i_start, i_points, false); // reference the memory
+            const arma::vec i_a_t(a_t_less_s.colptr(t - 1), n_parems, false); // reference the memory
 
-            i_events = events(i_r_set);
-            i_stop = tstop(i_r_set);
+            // Compute local result
+            unsigned int i = i_start;
+            for(auto it = i_r_set.begin(); it != i_r_set.end(); it++){
+              const arma::vec x_(_X.colptr(*it), n_parems, false);
+              const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
 
-            if(t == d){
+              if(events(*it) && std::abs(tstop(*it) - event_time) < event_eps){
+                u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
+              }
+              else {
+                u_ -= x_ * (i_eta / (i_eta + 1.0));
+              }
+              U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
+
+              if(t == d){
+                H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
+                z_dot.rows(0, n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
+                ++i;
+              }
+
+              // TODO: Clean up
+              /*exp_eta_it = exp_eta(i);
+              if(i_events(i) && std::abs(i_stop(i) - event_time) < event_eps){
+                u_ = u_ + i_x_.unsafe_col(i) * (1.0 - exp_eta_it / (exp_eta_it + 1.0));
+              }
+              else {
+                u_ = u_ - i_x_.unsafe_col(i) * exp_eta_it / (exp_eta_it + 1.0);
+              }
+              U_ = U_ + i_x_.unsafe_col(i) * i_x_.unsafe_col(i).t() * exp_eta_it / pow(exp_eta_it + 1.0, 2.0);*/
+
+              /* const arma::subview_elem2<double, arma::Mat<unsigned int>, arma::Mat<unsigned int> >
+               i_x_ = std::move(_X.cols(i_r_set)); // This is not reference copy but value http://stackoverflow.com/questions/18859328/fastest-way-to-refer-to-vector-in-armadillo-library
+              exp_eta =  i_x_.t() * a_t_less_s.unsafe_col(t - 1).head(n_parems);
+              in_place_lower_trunc_exp(exp_eta);
+
+              i_events = events(i_r_set);
+              i_stop = tstop(i_r_set);
+
+              if(t == d){
               H_diag_inv(arma::span(i_start, i_start + i_points - 1)) = pow(1.0 + exp_eta, 2) / exp_eta;
               z_dot.rows(0, n_parems - 1).cols(i_start, i_start + i_points - 1) =
-                i_x_ *  diagmat(exp_eta / pow(1.0 + exp_eta, 2));
+              i_x_ *  diagmat(exp_eta / pow(1.0 + exp_eta, 2));
+              } */
             }
           }
           else if (i_am == 0){
@@ -241,6 +285,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             }
           }
 
+          if(i_am < 2)
+            U.raw_print(Rcpp::Rcout << std::setprecision(17));
 #pragma omp barrier // TODO: is this needed?
 
 #pragma omp master
@@ -376,7 +422,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                             Rcpp::Named("B_s") = Rcpp::wrap(B_s),
                             Rcpp::Named("lag_one_cor") = Rcpp::wrap(lag_one_cor),
 
-                            Rcpp::Named("n_iter") = it,
+                            Rcpp::Named("n_iter") = it + 1,
                             Rcpp::Named("conv_values") = conv_values,
                             Rcpp::Named("Q") = Rcpp::wrap(Q),
                             Rcpp::Named("Q_0") = Rcpp::wrap(Q_0)));
