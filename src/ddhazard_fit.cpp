@@ -118,9 +118,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat U(n_parems * order_, n_parems * order_);
 
   arma::uvec r_set;
-  arma::colvec exp_eta;
   arma::mat V_t_less_s_inv;
-  double exp_eta_it;
 
   // Needed for lag one covariance
   arma::mat z_dot;
@@ -132,11 +130,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   const int n_threads = omp_get_num_procs() - 1;
   omp_set_num_threads(n_threads);
   int i_am, i_points, i_start, n_cols, n_threads_current;
-  arma::mat i_x_;
-  arma::vec i_stop;
-  arma::ivec i_events;
 
-  unsigned int i, it = 0;
+  unsigned int it = 0;
   arma::colvec u_(n_parems);
   arma::mat U_(n_parems, n_parems);
   bool is_run_parallel;
@@ -155,7 +150,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     // E-step
     event_time = vecmin(tstart);
 #pragma omp parallel                                                                                           \
-    private(n_threads_current, exp_eta_it, i_am, i_points, i_start, i_x_, exp_eta, i, i_stop, i_events) \
+    private(n_threads_current, i_am, i_points, i_start) \
       firstprivate(U_, u_) default(shared)
       {
         n_threads_current = omp_get_num_threads();
@@ -189,17 +184,24 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
               z_dot.zeros();
             }
 
-            is_run_parallel = n_cols / 3 > n_threads; // TODO: How to set?
+            is_run_parallel = n_cols / 25 > n_threads; // TODO: How to set?
           }
 
 #pragma omp barrier // TODO: is this needed after a omp master?
-          if(is_run_parallel){
-            i_points = n_cols / n_threads_current; // size of partition
-            i_start = i_am * i_points; // starting array index
+          if(is_run_parallel || i_am == 0){
+            if(is_run_parallel){
+              i_points = n_cols / n_threads_current; // size of partition
+              i_start = i_am * i_points; // starting array index
 
-            if (i_am == n_threads - 1) // last thread may do more
-              i_points = n_cols - i_start;
+              if (i_am == n_threads - 1) // last thread may do more
+                i_points = n_cols - i_start;
+            } else if(i_am == 0){
+              i_start = 0;
+              i_points = n_cols;
+            }
+          }
 
+          if(is_run_parallel || i_am == 0){
             // Get columns to work with
             const arma::uvec i_r_set(r_set.begin() + i_start, i_points, false); // reference the memory
             const arma::vec i_a_t(a_t_less_s.colptr(t - 1), n_parems, false); // reference the memory
@@ -223,33 +225,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                 z_dot.rows(0, n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
                 ++i;
               }
-            }
-          }
-          else if (i_am == 0){
-            i_x_  = _X.cols(r_set); // This is not reference copy but value http://stackoverflow.com/questions/18859328/fastest-way-to-refer-to-vector-in-armadillo-library
-            exp_eta =  i_x_.t() * a_t_less_s.unsafe_col(t - 1).head(n_parems);
-            in_place_lower_trunc_exp(exp_eta);
-
-            i_events = events(r_set);
-            i_stop = tstop(r_set);
-
-            if(t == d){
-              H_diag_inv = pow(1.0 + exp_eta, 2)/exp_eta;
-              z_dot.rows(0, n_parems - 1) = i_x_ *  diagmat(exp_eta / pow(1.0 + exp_eta, 2));
-            }
-          }
-
-          if(is_run_parallel || i_am ==0){
-            // Compute local result
-            for(i = 0; i < exp_eta.size(); i++){
-              exp_eta_it = exp_eta(i);
-              if(i_events(i) && std::abs(i_stop(i) - event_time) < event_eps){
-                u_ = u_ + i_x_.unsafe_col(i) * (1.0 - exp_eta_it / (exp_eta_it + 1.0));
-              }
-              else {
-                u_ = u_ - i_x_.unsafe_col(i) * exp_eta_it / (exp_eta_it + 1.0);
-              }
-              U_ = U_ + i_x_.unsafe_col(i) * i_x_.unsafe_col(i).t() * exp_eta_it / pow(exp_eta_it + 1.0, 2.0);
             }
           }
 
