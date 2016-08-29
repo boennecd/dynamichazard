@@ -46,7 +46,7 @@ Sys.time() - tmp_time
 #                do.call(ddhazard_fit_cpp_prelim, arg_list),
 #                times = 10)
 
-test_that("Expecting similar outcome with new and old method", {
+test_that("Expecting similar outcome with new and old method with order = 1 and est_Q_0 = F", {
   expect_equal(c(res_new$a_t_d_s), c(res$a_t_d_s))
   expect_equal(c(res_new$V_t_d_s), c(res$V_t_d_s))
   expect_equal(c(res_new$B_s), c(res$B_s))
@@ -87,7 +87,7 @@ Sys.time() - tmp_time
 # sink()
 # close(tmp_file)
 
-test_that("Expecting similar outcome with new and old method", {
+test_that("Expecting similar outcome with new and old method with order = 1 and est_Q_0 = T", {
   expect_equal(c(res_new$a_t_d_s), c(res$a_t_d_s))
   expect_equal(c(res_new$V_t_d_s), c(res$V_t_d_s))
   expect_equal(c(res_new$B_s), c(res$B_s))
@@ -118,7 +118,7 @@ F_[n_parem + 1:n_parem, 1:n_parem] = diag(1, n_parem)
 F_[1:n_parem, n_parem + 1:n_parem] = diag(-1, n_parem)
 F_[n_parem + 1:n_parem, n_parem + 1:n_parem] = 0.0
 
-eps <- 1.0e-3
+eps <- 1.0e3
 
 # tmp_file <- file("tests/testthat/testddhazard_fit_R_vs_cpp_1.log")
 # sink(tmp_file)
@@ -146,7 +146,10 @@ Sys.time() - tmp_time
 # sink()
 # close(tmp_file)
 
-test_that("Expecting similar outcome with new and old method", {
+test_that("Expecting similar outcome with new and old method order = 2 and est_Q_0 = F", {
+  expect_equal(c(res_new$n_iter), c(res$n_iter))
+  expect_equal(c(res_new$conv_values), c(res$conv_values))
+
   expect_equal(c(res_new$a_t_d_s), c(res$a_t_d_s))
   expect_equal(c(res_new$V_t_d_s), c(res$V_t_d_s))
   expect_equal(c(res_new$B_s), c(res$B_s))
@@ -177,7 +180,7 @@ tmp_time <- Sys.time()
 res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
 Sys.time() - tmp_time
 
-test_that("Expecting similar outcome with new and old method", {
+test_that("Expecting similar outcome with new and old method order = 2 and est_Q_0 = T", {
   expect_equal(c(res_new$a_t_d_s), c(res$a_t_d_s))
   expect_equal(c(res_new$V_t_d_s), c(res$V_t_d_s))
   expect_equal(c(res_new$B_s), c(res$B_s))

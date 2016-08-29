@@ -124,6 +124,6 @@ ddhazard_fit = function(X, tstart, tstop, events,
   if(save_all_output)
     all_output
   else
-    c(inner_output, list(n_iter = i, conv_values = conv_values[1:(i - 1)],
+    c(inner_output, list(n_iter = i, conv_values = conv_values[seq_len(i)],
                          Q = Q, Q_0 = Q_0))
 }
