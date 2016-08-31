@@ -1,4 +1,4 @@
 ## -- compiling for OpenMP and c++11 n more
-PKG_CXXFLAGS = -std=c++11
+PKG_CXXFLAGS = -std=c++11  -fopenmp
 ## -- linking (do not ask if all of these are needed. I saw them in sourcecpp call with verbose = T)
 PKG_LIBS = -lRlapack -lRblas -lgfortran -lm -lquadmath -fopenmp
