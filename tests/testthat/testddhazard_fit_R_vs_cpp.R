@@ -1,4 +1,4 @@
-# library(testthat); library(survival); library(benssurvutils); source("R/test_utils.R")
+library(testthat); library(survival); library(benssurvutils); source("R/test_utils.R")
 
 # Simulate series to work with
 set.seed(2972)
@@ -33,13 +33,13 @@ Sys.time() - tmp_time
 # sink()
 # close(tmp_file)
 
-# tmp_file <- file("testddhazard_fit_R_vs_cpp_2.log")
-# sink(tmp_file)
+tmp_file <- file("testddhazard_fit_R_vs_cpp_2.log")
+sink(tmp_file)
 tmp_time <- Sys.time()
 res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
 Sys.time() - tmp_time
-# sink()
-# close(tmp_file)
+sink()
+close(tmp_file)
 
 # library(microbenchmark)
 # microbenchmark(do.call(ddhazard_fit, arg_list),
