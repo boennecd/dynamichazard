@@ -6,6 +6,8 @@
 #include <iostream>
 #include <armadillo>
 #include <Rcpp.h>
+#include <thread>
+#include <future>
 
 #define ARMA_USE_LAPACK
 #define ARMA_USE_BLAS
@@ -73,6 +75,10 @@ double relative_norm_change(const arma::vec &prev_est, const arma::vec &new_est)
 }
 double (*conv_criteria)(const arma::vec&, const arma::vec&) = relative_norm_change;
 
+// locks for parallel implementation
+std::mutex m_u;
+std::mutex m_U;
+
 //' @export
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec &tstart,
@@ -85,9 +91,26 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const int n_max = 100, const double eps = 0.001,
                                    const bool verbose = false, const bool save_all_output = false,
                                    const int order_ = 1, const bool est_Q_0 = true){
+  struct problem_data{
+    arma::mat &_X;
+    arma::mat &U;
+    arma::vec &u;
+    arma::mat &z_dot;
+    arma::vec &H_diag_inv;
+
+    const arma::ivec &events;
+    const arma::vec &tstop;
+
+    problem_data(const arma::ivec &events_,
+                 const arma::vec &tstop_):
+      events(events), tstop(tstop_)
+    {}
+
+    const double event_eps = 100 * std::numeric_limits<double>::epsilon(); // something small
+  };
+
   // Initalize constants
   const int d = Rcpp::as<int>(risk_obj["d"]);
-  const double event_eps = d * std::numeric_limits<double>::epsilon();
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
   const Rcpp::List &risk_sets = Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]);
   const int n_parems = a_0.size() / order_;
@@ -122,8 +145,9 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat V_t_less_s_inv;
 
   // Needed for lag one covariance
-  arma::mat z_dot;
-  arma::vec H_diag_inv;
+  const int n_in_last_set = (Rcpp::as<arma::uvec>(risk_sets[d - 1])).size();
+  arma::mat z_dot(n_parems * order_, n_in_last_set);
+  arma::vec H_diag_inv(n_in_last_set);
   arma::mat K_d;
   arma::cube lag_one_cor(n_parems * order_, n_parems * order_, d);
 
@@ -143,30 +167,222 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat *B, *V_less, *V;
   arma::vec a_less, a;
 
+  // Class to handle parallel computation of E-step filter step
+  class filter_step_helper{
+    using uvec_iter = arma::uvec::const_iterator;
+
+    // handy class to ensure that all ressources are cleaned up
+    class join_threads
+    {
+      std::vector<std::thread>& threads;
+    public:
+      explicit join_threads(std::vector<std::thread>& threads_):
+        threads(threads_)
+      {}
+      ~join_threads()
+      {
+        for(unsigned long i=0;i<threads.size();++i)
+        {
+          if(threads[i].joinable())
+            threads[i].join();
+        }
+      }
+    };
+
+    // worker class for parallel computation
+    class filter_worker{
+      const unsigned int n_parems;
+      bool is_first_call;
+      arma::mat &_X;
+      arma::mat &U;
+      arma::vec &u;
+      arma::mat &z_dot;
+      arma::vec &H_diag_inv;
+
+      const arma::ivec &events;
+      const arma::vec &tstop;
+
+      // local variables to compute temporary result
+      arma::colvec u_;
+      arma::mat U_;
+
+    public:
+      filter_worker(arma::mat &X_ref, arma::mat &U_ref,
+                    arma::vec &u_ref,
+                    arma::mat &z_dot_ref, arma::vec &H_diag_inv_ref,
+                    const arma::ivec &events_ref,
+                    const arma::vec &tstop_ref):
+        is_first_call(true), _X(X_ref),
+        U(U_ref), u(u_ref), n_parems(u.size()),
+        z_dot(z_dot_ref), H_diag_inv(H_diag_inv_ref),
+        events(events_ref), tstop(tstop_ref)
+        {
+          Rcpp::Rcout << "diba ";
+        }
+
+      bool operator()(uvec_iter first, uvec_iter last,
+                      const arma::vec &i_a_t, bool compute_z_and_H,
+                      double event_time, int i_start){
+        // potentially intialize variables and set entries to zeroes in any case
+        if(is_first_call){
+          u_ = arma::vec(n_parems);
+          U_ = arma::mat(n_parems, n_parems);
+          is_first_call = false;
+        }
+        u_.zeros();
+        U_.zeros();
+
+        // compute local results
+        int i = i_start;
+        for(auto it = first; it != last; it++){
+          const arma::vec x_(_X.colptr(*it), n_parems, false);
+          const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
+
+          if(events(*it) && std::abs(tstop(*it) - event_time) < event_eps){
+            u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
+          }
+          else {
+            u_ -= x_ * (i_eta / (i_eta + 1.0));
+          }
+          U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
+
+          if(compute_z_and_H){
+            H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
+            z_dot.rows(0, n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
+            ++i;
+          }
+        }
+
+        // Update shared variable
+        {
+          std::lock_guard<std::mutex> lk(m_U);
+          U.submat(0, 0, n_parems - 1, n_parems - 1) = U.submat(0, 0, n_parems - 1, n_parems - 1) + U_;
+        }
+
+        {
+          std::lock_guard<std::mutex> lk(m_u);
+          u.head(n_parems) = u.head(n_parems) + u_;
+        }
+
+        return true;
+      }
+    };
+
+    unsigned long const hardware_threads;
+    std::vector<filter_worker> workers;
+    arma::mat &_X;
+    arma::mat &U;
+    arma::vec &u;
+    arma::mat &z_dot;
+    arma::vec &H_diag_inv;
+
+    const arma::ivec &events;
+    const arma::vec &tstop;
+
+    const unsigned int n_parems;
+
+  public:
+    filter_step_helper(arma::mat &X_ref, arma::mat &U_ref,
+                       arma::vec &u_ref,
+                       arma::mat &z_dot_ref, arma::vec &H_diag_inv_ref,
+                       const arma::ivec &events_ref,
+                       const arma::vec &tstop_ref):
+      hardware_threads(std::thread::hardware_concurrency()),
+      _X(X_ref), U(U_ref), u(u_ref), n_parems(u.size()),
+      z_dot(z_dot_ref), H_diag_inv(H_diag_inv_ref),
+      workers(), events(events_ref), tstop(tstop_ref)
+      {
+        // create workers
+        for(int i = 0; i < hardware_threads; i++){
+          workers.push_back(filter_worker(_X, U, u, z_dot, H_diag_inv, events, tstop));
+        }
+      }
+
+    void parallel_filter_step(uvec_iter first, uvec_iter last,
+                              const arma::vec &i_a_t,
+                              const bool compute_H_and_z,
+                              double event_time){
+        // Set referenced objects entries to zero
+        U.zeros();
+        u.zeros();
+        if(compute_H_and_z){
+          z_dot.zeros();
+          H_diag_inv.zeros();
+        }
+
+        // Compute the number of threads to create
+        unsigned long const length = std::distance(first, last);
+
+        unsigned long const min_per_thread = 25; // TODO: how to set?
+        unsigned long const max_threads =
+          (length + min_per_thread - 1) / min_per_thread;
+
+        unsigned long const num_threads =
+          std::min(hardware_threads != 0 ? hardware_threads:2, max_threads); // at least use two threads if hardware thread is not set
+
+        unsigned long const block_size = length/num_threads;
+        std::vector<std::future<bool> > futures(num_threads - 1);
+        std::vector<std::thread> threads(num_threads - 1);
+        join_threads joiner(threads);
+        Rcpp::Rcout << "made ";
+
+        // start workers
+        // declare outsite for loop to ref after loop
+        uvec_iter block_start = first;
+        auto it = workers.begin();
+        int i_start = 0;
+        Rcpp::Rcout << "it ";
+        for(unsigned long i = 0; i < num_threads - 1; ++i, ++it)
+        {
+          uvec_iter block_end = block_start;
+          std::advance(block_end,block_size);
+          std::packaged_task<bool(uvec_iter, uvec_iter, const arma::vec&, bool,
+                                  double, int)> task(*it);
+          futures[i] = task.get_future();
+          Rcpp::Rcout << "here ";
+          threads[i] = std::thread(std::move(task), block_start, block_end, i_a_t, compute_H_and_z,
+                                   event_time, i_start);
+
+          i_start += block_size;
+          block_start = block_end;
+          Rcpp::Rcout << "! ";
+        }
+        (*it)(block_start, last, i_a_t, compute_H_and_z, event_time, i_start); // compute last enteries on this thread
+
+        Rcpp::Rcout << "yay ";
+
+        for(unsigned long i = 0; i < num_threads - 1; ++i)
+        {
+          futures[i].get(); // will throw if any of the threads did
+        }
+    }
+  };
+
   //EM algorithm
+  Rcpp::Rcout << "da ";
+  filter_step_helper filter_helper(_X, U, u, z_dot, H_diag_inv, events, tstop);
+
   do
   {
     V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
     // E-step
     event_time = vecmin(tstart);
-#pragma omp parallel                                                                                           \
+/*#pragma omp parallel                                                                                           \
     private(n_threads_current, i_am, i_points, i_start) \
       firstprivate(U_, u_) default(shared)
       {
         n_threads_current = omp_get_num_threads();
-        i_am = omp_get_thread_num();
+        i_am = omp_get_thread_num(); */
 
         for (int t = 1; t < d + 1; t++){ // each thread will have it own
-          U_.zeros();
-          u_.zeros();
+          /*U_.zeros();
+          u_.zeros();*/
 
-#pragma omp master
-          {
+/*#pragma omp master
+          {*/
             delta_t = I_len[t - 1];
             event_time += delta_t;
-
-            //Rcpp::Rcout << "made "; //TODO: delete me
 
             // E-step: Filter step
             a_t_less_s.col(t - 1) = F_ *  a_t_t_s.unsafe_col(t - 1);
@@ -174,7 +390,11 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
             // E-step: scoring step: information matrix and scoring vector
             r_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
-            n_cols = r_set.size();
+            const arma::vec i_a_t(a_t_less_s.colptr(t - 1), n_parems, false);
+
+            filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == d, event_time);
+
+            /*n_cols = r_set.size();
 
             u.zeros();
             U.zeros();
@@ -187,10 +407,9 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
             is_run_parallel = n_cols / 25 > n_threads; // TODO: How to set?
 
-            //Rcpp::Rcout << n_threads << " "<< n_threads_current << " " << is_run_parallel << std::endl; //TODO: Delete
-          }
+          }*/
 
-#pragma omp barrier // TODO: is this needed after a omp master?
+/*#pragma omp barrier // TODO: is this needed after a omp master?
           if(is_run_parallel || i_am == 0){
             if(is_run_parallel){
               i_points = n_cols / n_threads_current; // size of partition
@@ -240,10 +459,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
           }
 
 
-#pragma omp barrier // TODO: is this needed?
+#pragma omp barrier // TODO: is this needed? */
 
-#pragma omp master
-          {
+/*#pragma omp master
+          {*/
             // E-step: scoring step: update values
             V_t_less_s_inv = inv_sympd(V_t_less_s.slice(t - 1));
             V_t_t_s.slice(t) = inv_sympd(V_t_less_s_inv + U);
@@ -258,7 +477,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
               lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(U)) - K_d * z_dot.t()) * F_ * V_t_t_s.slice(t - 1);
             }
-          }
+          //}
 
           /* if(t < d + 1 && i_am < 2){ // TODO: Delete
             Rcpp::Rcout << std::setprecision(17) << "It = " << it << " t = " << t << std::endl;
@@ -269,9 +488,9 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             a_t_t_s.col(t).raw_print(Rcpp::Rcout);
           } */
 
-#pragma omp barrier //TODO is barrier needed after master?
+//#pragma omp barrier //TODO is barrier needed after master?
         }
-      }
+      //}
 
     // E-step: smoothing
     for (int t = d - 1; t > -1; t--){
