@@ -91,24 +91,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const int n_max = 100, const double eps = 0.001,
                                    const bool verbose = false, const bool save_all_output = false,
                                    const int order_ = 1, const bool est_Q_0 = true){
-  struct problem_data{
-    arma::mat &_X;
-    arma::mat &U;
-    arma::vec &u;
-    arma::mat &z_dot;
-    arma::vec &H_diag_inv;
-
-    const arma::ivec &events;
-    const arma::vec &tstop;
-
-    problem_data(const arma::ivec &events_,
-                 const arma::vec &tstop_):
-      events(events), tstop(tstop_)
-    {}
-
-    const double event_eps = 100 * std::numeric_limits<double>::epsilon(); // something small
-  };
-
   // Initalize constants
   const int d = Rcpp::as<int>(risk_obj["d"]);
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
@@ -167,6 +149,35 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat *B, *V_less, *V;
   arma::vec a_less, a;
 
+  // Hepler class
+  struct problem_data{
+    const int n_parems;
+    arma::mat &_X;
+    arma::mat &U;
+    arma::vec &u;
+    arma::mat &z_dot;
+    arma::vec &H_diag_inv;
+
+    const arma::ivec &events;
+    const arma::vec &tstop;
+
+    problem_data(arma::mat &X_ref, arma::mat &U_ref,
+                 arma::vec &u_ref,
+                 arma::mat &z_dot_ref, arma::vec &H_diag_inv_ref,
+                 const arma::ivec &events_ref,
+                 const arma::vec &tstop_ref,
+                 const int n_par):
+      _X(X_ref),
+      U(U_ref), u(u_ref), n_parems(n_par),
+      z_dot(z_dot_ref), H_diag_inv(H_diag_inv_ref),
+      events(events_ref), tstop(tstop_ref)
+    {}
+
+    const double event_eps = 100 * std::numeric_limits<double>::epsilon(); // something small
+  };
+
+  problem_data p_data(_X, U, u, z_dot, H_diag_inv, events, tstop, n_parems); // TODO: use this object through code
+
   // Class to handle parallel computation of E-step filter step
   class filter_step_helper{
     using uvec_iter = arma::uvec::const_iterator;
@@ -191,42 +202,25 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
     // worker class for parallel computation
     class filter_worker{
-      const unsigned int n_parems;
       bool is_first_call;
-      arma::mat &_X;
-      arma::mat &U;
-      arma::vec &u;
-      arma::mat &z_dot;
-      arma::vec &H_diag_inv;
-
-      const arma::ivec &events;
-      const arma::vec &tstop;
+      problem_data &dat;
 
       // local variables to compute temporary result
       arma::colvec u_;
       arma::mat U_;
 
     public:
-      filter_worker(arma::mat &X_ref, arma::mat &U_ref,
-                    arma::vec &u_ref,
-                    arma::mat &z_dot_ref, arma::vec &H_diag_inv_ref,
-                    const arma::ivec &events_ref,
-                    const arma::vec &tstop_ref):
-        is_first_call(true), _X(X_ref),
-        U(U_ref), u(u_ref), n_parems(u.size()),
-        z_dot(z_dot_ref), H_diag_inv(H_diag_inv_ref),
-        events(events_ref), tstop(tstop_ref)
-        {
-          Rcpp::Rcout << "diba ";
-        }
+      filter_worker(problem_data &p_data):
+        dat(p_data)
+        {}
 
       bool operator()(uvec_iter first, uvec_iter last,
                       const arma::vec &i_a_t, bool compute_z_and_H,
                       double event_time, int i_start){
         // potentially intialize variables and set entries to zeroes in any case
         if(is_first_call){
-          u_ = arma::vec(n_parems);
-          U_ = arma::mat(n_parems, n_parems);
+          u_ = arma::vec(dat.n_parems);
+          U_ = arma::mat(dat.n_parems, dat.n_parems);
           is_first_call = false;
         }
         u_.zeros();
@@ -235,10 +229,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
         // compute local results
         int i = i_start;
         for(auto it = first; it != last; it++){
-          const arma::vec x_(_X.colptr(*it), n_parems, false);
+          const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
           const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
 
-          if(events(*it) && std::abs(tstop(*it) - event_time) < event_eps){
+          if(dat.events(*it) && std::abs(dat.tstop(*it) - event_time) < dat.event_eps){
             u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
           }
           else {
@@ -247,8 +241,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
           U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
 
           if(compute_z_and_H){
-            H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
-            z_dot.rows(0, n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
+            dat.H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
+            dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
             ++i;
           }
         }
@@ -256,12 +250,12 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
         // Update shared variable
         {
           std::lock_guard<std::mutex> lk(m_U);
-          U.submat(0, 0, n_parems - 1, n_parems - 1) = U.submat(0, 0, n_parems - 1, n_parems - 1) + U_;
+          dat.U.submat(0, 0, dat.n_parems - 1, dat.n_parems - 1) +=  U_;
         }
 
         {
           std::lock_guard<std::mutex> lk(m_u);
-          u.head(n_parems) = u.head(n_parems) + u_;
+          dat.u.head(dat.n_parems) += u_;
         }
 
         return true;
@@ -270,31 +264,16 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
     unsigned long const hardware_threads;
     std::vector<filter_worker> workers;
-    arma::mat &_X;
-    arma::mat &U;
-    arma::vec &u;
-    arma::mat &z_dot;
-    arma::vec &H_diag_inv;
-
-    const arma::ivec &events;
-    const arma::vec &tstop;
-
-    const unsigned int n_parems;
+    problem_data &dat;
 
   public:
-    filter_step_helper(arma::mat &X_ref, arma::mat &U_ref,
-                       arma::vec &u_ref,
-                       arma::mat &z_dot_ref, arma::vec &H_diag_inv_ref,
-                       const arma::ivec &events_ref,
-                       const arma::vec &tstop_ref):
+    filter_step_helper(problem_data &p_data):
       hardware_threads(std::thread::hardware_concurrency()),
-      _X(X_ref), U(U_ref), u(u_ref), n_parems(u.size()),
-      z_dot(z_dot_ref), H_diag_inv(H_diag_inv_ref),
-      workers(), events(events_ref), tstop(tstop_ref)
+      dat(p_data), workers()
       {
         // create workers
         for(int i = 0; i < hardware_threads; i++){
-          workers.push_back(filter_worker(_X, U, u, z_dot, H_diag_inv, events, tstop));
+          workers.push_back(filter_worker(p_data));
         }
       }
 
@@ -303,11 +282,11 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                               const bool compute_H_and_z,
                               double event_time){
         // Set referenced objects entries to zero
-        U.zeros();
-        u.zeros();
+        dat.U.zeros();
+        dat.u.zeros();
         if(compute_H_and_z){
-          z_dot.zeros();
-          H_diag_inv.zeros();
+          dat.z_dot.zeros();
+          dat.H_diag_inv.zeros();
         }
 
         // Compute the number of threads to create
@@ -324,14 +303,12 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
         std::vector<std::future<bool> > futures(num_threads - 1);
         std::vector<std::thread> threads(num_threads - 1);
         join_threads joiner(threads);
-        Rcpp::Rcout << "made ";
 
         // start workers
         // declare outsite for loop to ref after loop
         uvec_iter block_start = first;
         auto it = workers.begin();
         int i_start = 0;
-        Rcpp::Rcout << "it ";
         for(unsigned long i = 0; i < num_threads - 1; ++i, ++it)
         {
           uvec_iter block_end = block_start;
@@ -339,17 +316,13 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
           std::packaged_task<bool(uvec_iter, uvec_iter, const arma::vec&, bool,
                                   double, int)> task(*it);
           futures[i] = task.get_future();
-          Rcpp::Rcout << "here ";
           threads[i] = std::thread(std::move(task), block_start, block_end, i_a_t, compute_H_and_z,
                                    event_time, i_start);
 
           i_start += block_size;
           block_start = block_end;
-          Rcpp::Rcout << "! ";
         }
         (*it)(block_start, last, i_a_t, compute_H_and_z, event_time, i_start); // compute last enteries on this thread
-
-        Rcpp::Rcout << "yay ";
 
         for(unsigned long i = 0; i < num_threads - 1; ++i)
         {
@@ -359,8 +332,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   };
 
   //EM algorithm
-  Rcpp::Rcout << "da ";
-  filter_step_helper filter_helper(_X, U, u, z_dot, H_diag_inv, events, tstop);
+  filter_step_helper filter_helper(p_data);
 
   do
   {
@@ -477,20 +449,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
               lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(U)) - K_d * z_dot.t()) * F_ * V_t_t_s.slice(t - 1);
             }
-          //}
-
-          /* if(t < d + 1 && i_am < 2){ // TODO: Delete
-            Rcpp::Rcout << std::setprecision(17) << "It = " << it << " t = " << t << std::endl;
-            U.raw_print(Rcpp::Rcout);
-            u.raw_print(Rcpp::Rcout);
-            V_t_less_s.slice(t - 1).raw_print(Rcpp::Rcout);
-            V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
-            a_t_t_s.col(t).raw_print(Rcpp::Rcout);
-          } */
-
-//#pragma omp barrier //TODO is barrier needed after master?
         }
-      //}
 
     // E-step: smoothing
     for (int t = d - 1; t > -1; t--){
