@@ -55,9 +55,6 @@ test_that("Expecting similar outcome with new and old method with order = 1 and 
   expect_equal(c(res_new$Q_0), c(res$Q_0))
 })
 
-
-
-
 ###########
 # Test order 1 and est_Q_0 = T
 
