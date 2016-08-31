@@ -1,33 +1,5 @@
 
-> tryCatch({
-+   res_new <- ddhazard_fit_cpp_prelim(
-+     X = design_mat$X,
-+     tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = de .... [TRUNCATED] 
-c:/Rtools/mingw_64/bin/g++  -std=c++0x -I"C:/PROGRA~1/R/R-33~1.1/include" -DNDEBUG     -I"C:/Users/boennecd/Documents/R/win-library/3.3/Rcpp/include" -I"C:/Users/boennecd/Documents/R/win-library/3.3/RcppArmadillo/include" -I"C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/src" -I"C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/inst/include"  -I"d:/Compiler/gcc-4.9.3/local330/include"  -fopenmp    -O2 -Wall  -mtune=core2 -c ddhazard_fit.cpp -o ddhazard_fit.o
-ddhazard_fit.cpp: In function 'Rcpp::List {anonymous}::ddhazard_fit_cpp_prelim(const NumericMatrix&, const vec&, const vec&, const ivec&, const colvec&, arma::mat, arma::mat, const List&, const mat&, int, double, bool, bool, int, bool)':
-ddhazard_fit.cpp:340:15: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
-   }while(++it < n_max);
-               ^
-ddhazard_fit.cpp:354:9: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
-   if(it == n_max)
-         ^
-ddhazard_fit.cpp: In function 'SEXPREC* sourceCpp_1_ddhazard_fit_cpp_prelim(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP)':
-ddhazard_fit.cpp:429:155: error: call of overloaded 'ddhazard_fit_cpp_prelim(Rcpp::traits::input_parameter<const Rcpp::Matrix<14>&>::type&, Rcpp::traits::input_parameter<const arma::Col<double>&>::type&, Rcpp::traits::input_parameter<const arma::Col<double>&>::type&, Rcpp::traits::input_parameter<const arma::Col<int>&>::type&, Rcpp::traits::input_parameter<const arma::Col<double>&>::type&, Rcpp::traits::input_parameter<arma::Mat<double> >::type&, Rcpp::traits::input_parameter<arma::Mat<double> >::type&, Rcpp::traits::input_parameter<const Rcpp::Vector<19>&>::type&, Rcpp::traits::input_parameter<const arma::Mat<double>&>::type&, Rcpp::traits::input_parameter<const int>::type&, Rcpp::traits::input_parameter<const double>::type&, Rcpp::traits::input_parameter<const bool>::type&, Rcpp::traits::input_parameter<const bool>::type&, Rcpp::traits::input_parameter<const int>::type&, Rcpp::traits::input_parameter<const bool>::type&)' is ambiguous
-     __result = Rcpp::wrap(ddhazard_fit_cpp_prelim(X, tstart, tstop, events, a_0, Q_0, Q, risk_obj, F, n_max, eps, verbose, save_all_output, order, est_Q_0));
-                                                                                                                                                           ^
-ddhazard_fit.cpp:429:155: note: candidates are:
-ddhazard_fit.cpp:409:12: note: Rcpp::List ddhazard_fit_cpp_prelim(const NumericMatrix&, const vec&, const vec&, const ivec&, const colvec&, arma::mat, arma::mat, const List&, const mat&, int, double, bool, bool, int, bool)
- Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::ivec& events, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F, const int n_max, const double eps, const bool verbose, const bool save_all_output, const int order, const bool est_Q_0);
-            ^
-ddhazard_fit.cpp:72:12: note: Rcpp::List {anonymous}::ddhazard_fit_cpp_prelim(const NumericMatrix&, const vec&, const vec&, const ivec&, const colvec&, arma::mat, arma::mat, const List&, const mat&, int, double, bool, bool, int, bool)
- Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec &tstart,
-            ^
-ddhazard_fit.cpp: At global scope:
-ddhazard_fit.cpp:72:12: warning: 'Rcpp::List {anonymous}::ddhazard_fit_cpp_prelim(const NumericMatrix&, const vec&, const vec&, const ivec&, const colvec&, arma::mat, arma::mat, const List&, const mat&, int, double, bool, bool, int, bool)' defined but not used [-Wunused-function]
-make: *** [ddhazard_fit.o] Error 1
-Warning message:
-running command 'make -f "C:/PROGRA~1/R/R-33~1.1/etc/x64/Makeconf" -f "C:/PROGRA~1/R/R-33~1.1/share/make/winshlib.mk" CXX='$(CXX1X) $(CXX1XSTD)' CXXFLAGS='$(CXX1XFLAGS)' CXXPICFLAGS='$(CXX1XPICFLAGS)' SHLIB_LDFLAGS='$(SHLIB_CXX1XLDFLAGS)' SHLIB_LD='$(SHLIB_CXX1XLD)' SHLIB="sourceCpp_6.dll" WIN=64 TCLBIN=64 OBJECTS="ddhazard_fit.o"' had status 2 
-Writing NAMESPACE
-Writing gen_kalman_filter_cpp.Rd
-Writing ddhazard.Rd
-Writing ddhazard_fit.Rd
+>     tryCatch({
++       res_new <- ddhazard_fit_cpp_prelim(
++           X = design_mat$X,
++           tstart = design_mat$Y[, 1],  tstop = design_mat .... [TRUNCATED] 

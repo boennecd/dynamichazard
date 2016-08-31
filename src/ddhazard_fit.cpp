@@ -1,8 +1,6 @@
 // [[Rcpp::depends("RcppArmadillo")]]
-// [[Rcpp::plugins(openmp)]]
 // [[Rcpp::plugins(cpp11)]]
 #include <RcppArmadillo.h>
-#include <omp.h>
 #include <iostream>
 #include <armadillo>
 #include <Rcpp.h>
@@ -133,15 +131,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat K_d;
   arma::cube lag_one_cor(n_parems * order_, n_parems * order_, d);
 
-  // Parallel settings and variables
-  const int n_threads = omp_get_num_procs() - 1;
-  omp_set_num_threads(n_threads);
-  int i_am, i_points, i_start, n_cols, n_threads_current;
-
   unsigned int it = 0;
-  arma::colvec u_(n_parems);
-  arma::mat U_(n_parems, n_parems);
-  bool is_run_parallel;
 
   // M-stp pointers for convenience
   // see http://stackoverflow.com/questions/35983814/access-column-of-matrix-without-creating-copy-of-data-using-armadillo-library
@@ -149,7 +139,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat *B, *V_less, *V;
   arma::vec a_less, a;
 
-  // Hepler class
+  // Hepler structure to reference data
   struct problem_data{
     const int n_parems;
     arma::mat &_X;
@@ -211,12 +201,12 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
     public:
       filter_worker(problem_data &p_data):
-        dat(p_data)
-        {}
+      dat(p_data), is_first_call(true)
+      {}
 
       bool operator()(uvec_iter first, uvec_iter last,
-                      const arma::vec &i_a_t, bool compute_z_and_H,
-                      double event_time, int i_start){
+                    const arma::vec &i_a_t, bool compute_z_and_H,
+                    double event_time, int i_start){
         // potentially intialize variables and set entries to zeroes in any case
         if(is_first_call){
           u_ = arma::vec(dat.n_parems);
@@ -268,188 +258,107 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
   public:
     filter_step_helper(problem_data &p_data):
-      hardware_threads(std::thread::hardware_concurrency()),
-      dat(p_data), workers()
-      {
-        // create workers
-        for(int i = 0; i < hardware_threads; i++){
-          workers.push_back(filter_worker(p_data));
-        }
+    hardware_threads(std::thread::hardware_concurrency()),
+    dat(p_data), workers()
+    {
+      // create workers
+      for(int i = 0; i < hardware_threads; i++){
+        workers.push_back(filter_worker(p_data));
       }
+    }
 
     void parallel_filter_step(uvec_iter first, uvec_iter last,
                               const arma::vec &i_a_t,
                               const bool compute_H_and_z,
                               double event_time){
-        // Set referenced objects entries to zero
-        dat.U.zeros();
-        dat.u.zeros();
-        if(compute_H_and_z){
-          dat.z_dot.zeros();
-          dat.H_diag_inv.zeros();
-        }
+      // Set referenced objects entries to zero
+      dat.U.zeros();
+      dat.u.zeros();
+      if(compute_H_and_z){
+        dat.z_dot.zeros();
+        dat.H_diag_inv.zeros();
+      }
 
-        // Compute the number of threads to create
-        unsigned long const length = std::distance(first, last);
+      // Compute the number of threads to create
+      unsigned long const length = std::distance(first, last);
 
-        unsigned long const min_per_thread = 25; // TODO: how to set?
-        unsigned long const max_threads =
-          (length + min_per_thread - 1) / min_per_thread;
+      unsigned long const min_per_thread = 25; // TODO: how to set?
+      unsigned long const max_threads =
+        (length + min_per_thread - 1) / min_per_thread;
 
-        unsigned long const num_threads =
-          std::min(hardware_threads != 0 ? hardware_threads:2, max_threads); // at least use two threads if hardware thread is not set
+      unsigned long const num_threads =
+        std::min(hardware_threads != 0 ? hardware_threads:2, max_threads); // at least use two threads if hardware thread is not set
 
-        unsigned long const block_size = length/num_threads;
-        std::vector<std::future<bool> > futures(num_threads - 1);
-        std::vector<std::thread> threads(num_threads - 1);
-        join_threads joiner(threads);
+      unsigned long const block_size = length/num_threads;
+      std::vector<std::future<bool> > futures(num_threads - 1);
+      std::vector<std::thread> threads(num_threads - 1);
+      join_threads joiner(threads);
 
-        // start workers
-        // declare outsite for loop to ref after loop
-        uvec_iter block_start = first;
-        auto it = workers.begin();
-        int i_start = 0;
-        for(unsigned long i = 0; i < num_threads - 1; ++i, ++it)
-        {
-          uvec_iter block_end = block_start;
-          std::advance(block_end,block_size);
-          std::packaged_task<bool(uvec_iter, uvec_iter, const arma::vec&, bool,
-                                  double, int)> task(*it);
-          futures[i] = task.get_future();
-          threads[i] = std::thread(std::move(task), block_start, block_end, i_a_t, compute_H_and_z,
-                                   event_time, i_start);
+      // start workers
+      // declare outsite for loop to ref after loop
+      uvec_iter block_start = first;
+      auto it = workers.begin();
+      int i_start = 0;
+      for(unsigned long i = 0; i < num_threads - 1; ++i, ++it)
+      {
+        uvec_iter block_end = block_start;
+        std::advance(block_end,block_size);
+        std::packaged_task<bool(uvec_iter, uvec_iter, const arma::vec&, bool,
+                                double, int)> task(*it);
+        futures[i] = task.get_future();
+        threads[i] = std::thread(std::move(task), block_start, block_end, i_a_t, compute_H_and_z,
+                                 event_time, i_start);
 
-          i_start += block_size;
-          block_start = block_end;
-        }
-        (*it)(block_start, last, i_a_t, compute_H_and_z, event_time, i_start); // compute last enteries on this thread
+        i_start += block_size;
+        block_start = block_end;
+      }
+      (*it)(block_start, last, i_a_t, compute_H_and_z, event_time, i_start); // compute last enteries on this thread
 
-        for(unsigned long i = 0; i < num_threads - 1; ++i)
-        {
-          futures[i].get(); // will throw if any of the threads did
-        }
+      for(unsigned long i = 0; i < num_threads - 1; ++i)
+      {
+        futures[i].get(); // will throw if any of the threads did
+      }
     }
   };
 
   //EM algorithm
   filter_step_helper filter_helper(p_data);
-
   do
   {
     V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
     // E-step
     event_time = vecmin(tstart);
-/*#pragma omp parallel                                                                                           \
-    private(n_threads_current, i_am, i_points, i_start) \
-      firstprivate(U_, u_) default(shared)
-      {
-        n_threads_current = omp_get_num_threads();
-        i_am = omp_get_thread_num(); */
 
-        for (int t = 1; t < d + 1; t++){ // each thread will have it own
-          /*U_.zeros();
-          u_.zeros();*/
+    for (int t = 1; t < d + 1; t++){
+      delta_t = I_len[t - 1];
+      event_time += delta_t;
 
-/*#pragma omp master
-          {*/
-            delta_t = I_len[t - 1];
-            event_time += delta_t;
+      // E-step: Filter step
+      a_t_less_s.col(t - 1) = F_ *  a_t_t_s.unsafe_col(t - 1);
+      V_t_less_s.slice(t - 1) = F_ * V_t_t_s.slice(t - 1) * T_F_ + delta_t * Q;
 
-            // E-step: Filter step
-            a_t_less_s.col(t - 1) = F_ *  a_t_t_s.unsafe_col(t - 1);
-            V_t_less_s.slice(t - 1) = F_ * V_t_t_s.slice(t - 1) * T_F_ + delta_t * Q;
+      // E-step: scoring step: information matrix and scoring vector
+      r_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
+      const arma::vec i_a_t(a_t_less_s.colptr(t - 1), n_parems, false);
 
-            // E-step: scoring step: information matrix and scoring vector
-            r_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
-            const arma::vec i_a_t(a_t_less_s.colptr(t - 1), n_parems, false);
+      filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == d, event_time);
 
-            filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == d, event_time);
+      // E-step: scoring step: update values
+      V_t_less_s_inv = inv_sympd(V_t_less_s.slice(t - 1));
+      V_t_t_s.slice(t) = inv_sympd(V_t_less_s_inv + U);
+      a_t_t_s.col(t) = a_t_less_s.unsafe_col(t - 1) + V_t_t_s.slice(t) * u;
+      B_s.slice(t - 1) = V_t_t_s.slice(t - 1) * T_F_ * V_t_less_s_inv;
 
-            /*n_cols = r_set.size();
+      if(t == d){
+        K_d = V_t_less_s.slice(t - 1) * inv(arma::eye<arma::mat>(size(U)) + U * V_t_less_s.slice(t - 1)) * z_dot * diagmat(H_diag_inv);
+        // Parenthesis is key here to avoid making a n x n matrix for large n
+        K_d = (F_ * V_t_less_s.slice(t - 1) * z_dot * diagmat(H_diag_inv) * z_dot.t()) * K_d;
+        K_d = F_ * V_t_less_s.slice(t - 1) * z_dot * diagmat(H_diag_inv) -  K_d;
 
-            u.zeros();
-            U.zeros();
-
-            if(t == d){
-              H_diag_inv = arma::vec(n_cols);
-              z_dot = arma::mat(n_parems * order_, n_cols);
-              z_dot.zeros();
-            }
-
-            is_run_parallel = n_cols / 25 > n_threads; // TODO: How to set?
-
-          }*/
-
-/*#pragma omp barrier // TODO: is this needed after a omp master?
-          if(is_run_parallel || i_am == 0){
-            if(is_run_parallel){
-              i_points = n_cols / n_threads_current; // size of partition
-              i_start = i_am * i_points; // starting array index
-
-              if (i_am == n_threads - 1) // last thread may do more
-                i_points = n_cols - i_start;
-            } else if(i_am == 0){
-              i_start = 0;
-              i_points = n_cols;
-            }
-          }
-
-          if(is_run_parallel || i_am == 0){
-            // Get columns to work with
-            const arma::uvec i_r_set(r_set.begin() + i_start, i_points, false); // reference the memory
-            const arma::vec i_a_t(a_t_less_s.colptr(t - 1), n_parems, false); // reference the memory
-
-            // Compute local result
-            unsigned int i = i_start;
-            for(auto it = i_r_set.begin(); it != i_r_set.end(); it++){
-              const arma::vec x_(_X.colptr(*it), n_parems, false);
-              const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
-
-              if(events(*it) && std::abs(tstop(*it) - event_time) < event_eps){
-                u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
-              }
-              else {
-                u_ -= x_ * (i_eta / (i_eta + 1.0));
-              }
-              U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
-
-              if(t == d){
-                H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
-                z_dot.rows(0, n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
-                ++i;
-              }
-            }
-          }
-
-          if(is_run_parallel || i_am == 0){
-#pragma omp critical
-            {
-              U.submat(0, 0, n_parems - 1, n_parems - 1) = U.submat(0, 0, n_parems - 1, n_parems - 1) + U_;
-              u.head(n_parems) = u.head(n_parems) + u_;
-            }
-          }
-
-
-#pragma omp barrier // TODO: is this needed? */
-
-/*#pragma omp master
-          {*/
-            // E-step: scoring step: update values
-            V_t_less_s_inv = inv_sympd(V_t_less_s.slice(t - 1));
-            V_t_t_s.slice(t) = inv_sympd(V_t_less_s_inv + U);
-            a_t_t_s.col(t) = a_t_less_s.unsafe_col(t - 1) + V_t_t_s.slice(t) * u;
-            B_s.slice(t - 1) = V_t_t_s.slice(t - 1) * T_F_ * V_t_less_s_inv;
-
-            if(t == d){
-              K_d = V_t_less_s.slice(t - 1) * inv(arma::eye<arma::mat>(size(U)) + U * V_t_less_s.slice(t - 1)) * z_dot * diagmat(H_diag_inv);
-              // Parenthesis is key here to avoid making a n x n matrix for large n
-              K_d = (F_ * V_t_less_s.slice(t - 1) * z_dot * diagmat(H_diag_inv) * z_dot.t()) * K_d;
-              K_d = F_ * V_t_less_s.slice(t - 1) * z_dot * diagmat(H_diag_inv) -  K_d;
-
-              lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(U)) - K_d * z_dot.t()) * F_ * V_t_t_s.slice(t - 1);
-            }
-        }
+        lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(U)) - K_d * z_dot.t()) * F_ * V_t_t_s.slice(t - 1);
+      }
+    }
 
     // E-step: smoothing
     for (int t = d - 1; t > -1; t--){
@@ -465,11 +374,11 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
         (V_t_t_s.slice(t + 1) - V_t_less_s.slice(t)) * B_s.slice(t).t();
 
       /*if(t < d + 1 && i_am < 2){ // TODO: Delete
-       Rcpp::Rcout << std::setprecision(17) << "It = " << it << " t = " << t << std::endl;
-       V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
-       a_t_t_s.col(t).raw_print(Rcpp::Rcout);
-      }*/
-    }
+      Rcpp::Rcout << std::setprecision(17) << "It = " << it << " t = " << t << std::endl;
+      V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
+      a_t_t_s.col(t).raw_print(Rcpp::Rcout);
+    }*/
+  }
 
     // M-step
     if(est_Q_0){
@@ -486,9 +395,9 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       a = a_t_t_s.unsafe_col(t);
 
       Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-        - F_ * *B * *V
-        - (F_ * *B * *V).t()
-        + F_ * *V_less * T_F_) / delta_t;
+              - F_ * *B * *V
+              - (F_ * *B * *V).t()
+              + F_ * *V_less * T_F_) / delta_t;
     }
     Q /= d;
 
@@ -531,7 +440,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     //if(verbose) // TODO: Implement verbose stuff
 
     a_prev = a_t_t_s.col(0);
-  }while(++it < n_max);
+}while(++it < n_max);
 
   /* TODO: Implementt something similar
   // set names
@@ -539,10 +448,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   colnames(inner_output$a_t_d_s) = tmp_names
   dimnames(inner_output$V_t_d_s) = list(tmp_names, tmp_names, NULL)
   dimnames(Q) = dimnames(Q_0) = list(tmp_names, tmp_names)
-   */
+  */
 
   /* if(save_all_output){
-    all_output
+  all_output
   }else */
 
   if(it == n_max)
@@ -557,38 +466,38 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                             Rcpp::Named("conv_values") = conv_values,
                             Rcpp::Named("Q") = Rcpp::wrap(Q),
                             Rcpp::Named("Q_0") = Rcpp::wrap(Q_0)));
-}
+  }
 
 
 /*** R
 getwd()
-library(survival); library(benssurvutils); library(dynamichazard); source("../R/test_utils.R")
+  library(survival); library(benssurvutils); library(dynamichazard); source("../R/test_utils.R")
 
-set.seed(2972)
-sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
-                            x_range = .1, x_mean = -.4, re_draw = T)
-sims$res <- as.data.frame(sims$res)
+    set.seed(2972)
+    sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
+                                x_range = .1, x_mean = -.4, re_draw = T)
+    sims$res <- as.data.frame(sims$res)
 
-design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
-rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
+    design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+    rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
-log_file = file("debug.log")
-sink(log_file)
+    log_file = file("debug.log")
+    sink(log_file)
 
-tryCatch({
-  res_new <- ddhazard_fit_cpp_prelim(
-    X = design_mat$X,
-    tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
-    a_0 = rep(0, ncol(design_mat$X)),
-    Q_0 = diag(10, ncol(design_mat$X)), # something large
-    Q = diag(1, ncol(design_mat$X)), # something large
-    F_ = diag(1, ncol(design_mat$X)), # first order random walk
-    risk_obj = rist_sets,
-    eps = 10^-4, n_max = 10^4,
-    order_ = 1,
-    est_Q_0 = F_)
-}, finally = function(...){
-  close(log_file)
-  sink()
-  })
-*/
+    tryCatch({
+      res_new <- ddhazard_fit_cpp_prelim(
+          X = design_mat$X,
+          tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+                                                                                       a_0 = rep(0, ncol(design_mat$X)),
+                                                                                       Q_0 = diag(10, ncol(design_mat$X)), # something large
+                                                                                         Q = diag(1, ncol(design_mat$X)), # something large
+                                                                                           F_ = diag(1, ncol(design_mat$X)), # first order random walk
+                                                                                             risk_obj = rist_sets,
+                                                                                               eps = 10^-4, n_max = 10^4,
+                                                                                               order_ = 1,
+                                                                                               est_Q_0 = F_)
+    }, finally = function(...){
+      close(log_file)
+      sink()
+    })
+    */

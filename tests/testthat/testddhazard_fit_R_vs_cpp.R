@@ -1,4 +1,4 @@
-library(testthat); library(survival); library(benssurvutils); source("R/test_utils.R")
+# library(testthat); library(survival); library(benssurvutils); source("R/test_utils.R")
 
 # Simulate series to work with
 set.seed(2972)
