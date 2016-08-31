@@ -93,6 +93,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   const int n_parems = a_0.size() / order_;
 
   const arma::mat T_F_ = F_.t();
+  // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
   arma::mat _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
 
   const std::vector<double> I_len = Rcpp::as<std::vector<double> >(risk_obj["I_len"]);
@@ -185,6 +186,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
             }
 
             is_run_parallel = n_cols / 25 > n_threads; // TODO: How to set?
+
+            //Rcpp::Rcout << n_threads << " "<< n_threads_current << " " << is_run_parallel << std::endl; //TODO: Delete
           }
 
 #pragma omp barrier // TODO: is this needed after a omp master?

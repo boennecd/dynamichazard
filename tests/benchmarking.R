@@ -2,7 +2,7 @@ library(testthat); library(survival); library(benssurvutils); source("R/test_uti
 
 # Simulate series to work with
 set.seed(2972)
-sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
+sims <- test_sim_func_logit(n_series = 10^5, n_vars = 20, t_0 = 0, t_max = 10,
                             x_range = .1, x_mean = -.4, re_draw = T)
 sims$res <- as.data.frame(sims$res)
 
@@ -18,7 +18,7 @@ arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_m
                  Q = diag(1, ncol(design_mat$X)), # something large
                  F_ = diag(1, ncol(design_mat$X)), # first order random walk
                  risk_obj = rist_sets,
-                 eps = 10^-4, n_max = 10^4,
+                 eps = 10^-2, n_max = 10^4,
                  order_ = 1,
                  est_Q_0 = F)
 
