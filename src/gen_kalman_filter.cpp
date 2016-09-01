@@ -1,17 +1,26 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 // [[Rcpp::plugins(openmp)]]
 // [[Rcpp::plugins(cpp11)]]
-#include <RcppArmadillo.h>
 #include <omp.h>
 #include <iostream>
+
+#if defined(USE_OPEN_BLAS) // Used to set the number of threads later
+#include "cblas.h"
+extern void openblas_set_num_threads(int num_threads);
+extern int openblas_get_num_threads();
+#define ARMA_USE_OPENBLAS
+#define ARMA_DONT_USE_WRAPPER
+#else
+#define ARMA_USE_BLAS
+#endif
+
+#define ARMA_USE_LAPACK
+
+#include <RcppArmadillo.h>
 #include <armadillo>
-#include <Rcpp.h>
 
 using namespace Rcpp;
 using namespace arma;
-
-#define ARMA_USE_LAPACK
-#define ARMA_USE_BLAS
 
 #define ARMA_HAVE_STD_ISFINITE
 #define ARMA_HAVE_STD_ISINF
@@ -38,7 +47,7 @@ const double lower_trunc_exp_log_thres = sqrt(log(std::numeric_limits<double>::m
 const double lower_trunc_exp_exp_thres = exp(lower_trunc_exp_log_thres);
 void in_place_lower_trunc_exp(arma::colvec & result)
 {
-  for(auto i = result.begin(); i != result.end(); i++){
+  for(auto i = result.begin(); i != result.end(); i++ ){
     if(*i >= lower_trunc_exp_log_thres )
     {
       *i =  lower_trunc_exp_exp_thres;
@@ -67,6 +76,10 @@ List gen_kalman_filter_cpp(const arma::colvec &a_0, const arma::mat &Q_0, const 
                            const int d, const NumericMatrix &X,
                            const IntegerVector &start, const arma::ivec &stop, const arma::ivec &events, // Armadillo have no boolean vector - do not use uvec fasting fails http://stackoverflow.com/questions/32309915/rcpparmadillo-c-create-bool-vector
                            const int & order_){
+  #if defined(USE_OPEN_BLAS)
+    openblas_set_num_threads(1);
+  #endif
+
   // see http://stackoverflow.com/questions/18866130/passing-large-matrices-to-rcpparmadillo-function-without-creating-copy-advanced
   int event_time, delta_t;
 
