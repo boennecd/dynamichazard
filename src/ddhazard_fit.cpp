@@ -1,20 +1,29 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 // [[Rcpp::plugins(cpp11)]]
-#include <RcppArmadillo.h>
 #include <iostream>
-#include <armadillo>
-#include <Rcpp.h>
 #include <thread>
 #include <future>
 
-#define ARMA_USE_LAPACK
+#if defined(USE_OPEN_BLAS) // Used to set the number of threads later
+#include "cblas.h"
+extern void openblas_set_num_threads(int num_threads);
+extern int openblas_get_num_threads();
+#define ARMA_USE_OPENBLAS
+#define ARMA_DONT_USE_WRAPPER
+#else
 #define ARMA_USE_BLAS
+#endif
+
+// we know these are avialble with all R installations
+#define ARMA_USE_LAPACK
+
+#include <RcppArmadillo.h>
+#include <armadillo> // has to come after the #define ARMA_DONT_USE_WRAPPER
 
 #define ARMA_HAVE_STD_ISFINITE
 #define ARMA_HAVE_STD_ISINF
 #define ARMA_HAVE_STD_ISNAN
 #define ARMA_HAVE_STD_SNPRINTF
-
 
 // Rcpp has its own stream object which cooperates more nicely
 // with R's i/o -- and as of Armadillo 2.4.3, we can use this
@@ -89,6 +98,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const int n_max = 100, const double eps = 0.001,
                                    const bool verbose = false, const bool save_all_output = false,
                                    const int order_ = 1, const bool est_Q_0 = true){
+  1+ 1; // TODO: Delete
+
   // Initalize constants
   const int d = Rcpp::as<int>(risk_obj["d"]);
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
@@ -100,6 +111,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
 
   const std::vector<double> I_len = Rcpp::as<std::vector<double> >(risk_obj["I_len"]);
+
+  #if defined(USE_OPEN_BLAS)
+  const int n_threads = std::thread::hardware_concurrency();
+  #endif
 
   // Declare and maybe intialize non constants
   double event_time, delta_t, test_max_diff;
@@ -345,7 +360,17 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       r_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
       const arma::vec i_a_t(a_t_less_s.colptr(t - 1), n_parems, false);
 
+      #if defined(USE_OPEN_BLAS)
+      openblas_set_num_threads(1);
+      //Rcpp::Rcout << "n thread before = " << openblas_get_num_threads() << std::endl;
+      #endif
+
       filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == d, event_time);
+
+      #ifdef USE_OPEN_BLAS
+      openblas_set_num_threads(n_threads);
+      //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
+      #endif
 
       // E-step: scoring step: update values
       V_t_less_s_inv = inv_sympd(V_t_less_s.slice(t - 1));
@@ -375,12 +400,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
         (a_t_t_s.unsafe_col(t + 1) - a_t_less_s.unsafe_col(t));
       V_t_t_s.slice(t) = V_t_t_s.slice(t) + B_s.slice(t) *
         (V_t_t_s.slice(t + 1) - V_t_less_s.slice(t)) * B_s.slice(t).t();
-
-      /*if(t < d + 1 && i_am < 2){ // TODO: Delete
-      Rcpp::Rcout << std::setprecision(17) << "It = " << it << " t = " << t << std::endl;
-      V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
-      a_t_t_s.col(t).raw_print(Rcpp::Rcout);
-    }*/
   }
 
     // M-step
@@ -427,10 +446,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       Q.zeros();
       Q.submat(0, 0, n_parems - 1, n_parems - 1) = tmp_Q;
     }
-
-    /*Rcpp::Rcout << std::setprecision(16) << "It " << it + 1 << std::endl; //TODO: delete
-    Q.raw_print(Rcpp::Rcout);
-    Q_0.raw_print(Rcpp::Rcout);*/
 
     conv_values.push_back(conv_criteria(a_prev, a_t_t_s.unsafe_col(0)));
 
