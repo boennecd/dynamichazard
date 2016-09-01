@@ -81,12 +81,18 @@ ddhazard = function(formula, data, by,
     message("Running EM")
   }
 
-  result = ddhazard_fit(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose, save_all_output = save_all_output,
-                        Q = Q, n_max = n_max,
-                        risk_obj = risk_set, eps = eps, X = X_Y$X,
-                        tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], events = X_Y$Y[, 3],
-                        order_ = order_,
-                        est_Q_0 = est_Q_0)
+  result = ddhazard_fit_cpp_prelim(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose, save_all_output = save_all_output,
+                                   Q = Q, n_max = n_max,
+                                   risk_obj = risk_set, eps = eps, X = X_Y$X,
+                                   tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], events = X_Y$Y[, 3],
+                                   order_ = order_,
+                                   est_Q_0 = est_Q_0)
+
+  # Set names
+  tmp_names = rep(colnames(X_Y$X), order_)
+  colnames(result$a_t_d_s) = tmp_names
+  dimnames(result$V_t_d_s) = list(tmp_names, tmp_names, NULL)
+  dimnames(result$Q) = dimnames(result$Q_0) = list(tmp_names, tmp_names)
 
   structure(list(
     formula = X_Y$formula,

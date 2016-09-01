@@ -115,12 +115,6 @@ ddhazard_fit = function(X, tstart, tstop, events,
     a_prev = a_0
   }
 
-  # Set names
-  tmp_names = rep(colnames(X), order_)
-  colnames(inner_output$a_t_d_s) = tmp_names
-  dimnames(inner_output$V_t_d_s) = list(tmp_names, tmp_names, NULL)
-  dimnames(Q) = dimnames(Q_0) = list(tmp_names, tmp_names)
-
   if(save_all_output)
     all_output
   else
