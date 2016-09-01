@@ -213,11 +213,13 @@ str_func <- function(x, n_digist = 16){
        x = tmp, perl = T)
 }
 
-get_expect_equal <- function(x){
+get_expect_equal <- function(x, eps){
   arg_name <- deparse(substitute(x))
   expects <- unlist(lapply(x, str_func))
+  tol_string = if(!missing(eps)) paste0("\n, tolerance = " , eval(bquote(.(eps)))) else ""
   expects <- mapply(function(e, index_name)
-    paste0("expect_equal(c(", arg_name, "$", index_name, "),\n", e, ")", collapse = ""),
+    paste0("expect_equal(c(", arg_name, "$", index_name, "),\n", e,
+           tol_string, ")", collapse = ""),
     e = expects, index_name = names(expects))
 
   out <- paste0(c("{", paste0(expects, collapse = "\n\n"), "}\n"), collapse = "\n")

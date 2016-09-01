@@ -26,9 +26,9 @@
 // R now defines NDEBUG which suppresses a number of useful
 // Armadillo tests Users can still defined it later, and/or
 // define ARMA_NO_DEBUG
-/*#if defined(NDEBUG)
+#if defined(NDEBUG)
 #undef NDEBUG
-#endif*/
+#endif
 
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
 const double lower_trunc_exp_log_thres = sqrt(log(std::numeric_limits<double>::max())) - 1.1;
@@ -325,6 +325,9 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   filter_step_helper filter_helper(p_data);
   do
   {
+    if((it + 1) % 25 == 0)
+      Rcpp::checkUserInterrupt(); // this is expensive - you do not want to check too often
+
     V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
     // E-step
