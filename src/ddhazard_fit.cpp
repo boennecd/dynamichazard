@@ -204,6 +204,17 @@ public:
   virtual void solve() = 0;
 };
 
+
+
+
+
+
+
+
+
+
+
+
 // Class to handle parallel computation in extended Kalman filter
 class EKF_helper{
   using uvec_iter = arma::uvec::const_iterator;
@@ -397,8 +408,8 @@ public:
 #endif
 
       // E-step: scoring step: update values
-      arma::mat V_t_less_s_inv = inv_sympd(p_dat.V_t_less_s.slice(t - 1));
-      p_dat.V_t_t_s.slice(t) = inv_sympd(V_t_less_s_inv + p_dat.U);
+      arma::mat V_t_less_s_inv = arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+      p_dat.V_t_t_s.slice(t) = arma::inv_sympd(V_t_less_s_inv + p_dat.U);
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.V_t_t_s.slice(t) * p_dat.u;
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
 
@@ -414,6 +425,136 @@ public:
     }
   }
 };
+
+
+
+
+
+
+class UKF_solver : public Solver{
+
+  problem_data &p_dat;
+  const long m;
+  const double w_0;
+  const double w_i;
+  const double min_time;
+  const double sqrt_m_k;
+  arma::mat sigma_points;
+
+  inline void compute_sigma_points(const arma::vec &a_t,
+                                   arma::mat &s_points,
+                                   const arma::mat &P_x_x){
+    const arma::mat cholesky_decomp = arma::chol(P_x_x, "lower"); // TODO: I think this should be lower
+
+    s_points.col(0) = a_t;
+    for(int i = 1; i < s_points.n_cols; ++i)
+      if(i % 2 == 0)
+        s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.unsafe_col(i / 2); else
+          s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.unsafe_col(i / 2);
+  }
+
+public:
+  UKF_solver(problem_data &p_, const double k):
+    p_dat(p_),
+    m(p_.a_t_t_s.size()),
+    w_0(k / (m + k)),
+    w_i(k / (2 * (m + k))),
+    min_time(vecmin(p_dat.tstart)),
+    sqrt_m_k(std::sqrt(m + k)),
+    sigma_points(arma::mat(m, 2 * m + 1))
+    {}
+
+  void solve(){
+#ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+    openblas_set_num_threads(p_dat.n_threads);
+    //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
+#endif
+
+    double event_time = min_time;
+    for (int t = 1; t < p_dat.d + 1; t++){
+      double delta_t = p_dat.I_len[t - 1];
+      event_time += delta_t;
+
+      // E-step: Filter step
+      //   Updates a_t_less_s and V_t_less_s
+      //   Requires T(sigma point) + a_t_less_s computed before V_t_less_s
+      //     NB have to compute sigma points the first time arround
+      //     Requires for-loop with 2m + 1 itertions
+      if(t < 2)
+        compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
+                             sigma_points, p_dat.V_t_t_s.slice(t - 1));
+
+      // First we compute the mean
+      p_dat.a_t_less_s.col(t - 1) = w_0 * sigma_points.unsafe_col(0) +
+        w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols -1), 1); // 1 indicates row sums. TODO: should be ncols - 1, right?
+
+      // Then the variance
+      p_dat.V_t_less_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1); // weigths sum to one
+      for(int i = 0; i < sigma_points.n_cols; ++i){
+        const double &w = i == 0 ? w_0 : w_i;
+
+        p_dat.V_t_less_s.slice(t - 1) +=
+          (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
+            (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
+      }
+
+      // E-step: correction-step
+      //   Compute a_t_t_s and v_t_t_s
+      //   Update y_bar, P_a_v, P_v_v
+      //     Can be done in 2m + 1 iterations
+      //   Update a_t_t_s
+      //   Requires comptation of the (2m + 1) x | risk_set |  matrix
+      //   Need to update sigma points (TODO: unless it is the last iteration?)
+      //     Thus a Cholesky decomposition V_t_less_s
+
+      // First, we compute the mean of the outcome
+      arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
+
+      arma::mat &&tmp = sigma_points.t() * p_dat._X(r_set);
+      arma::mat Z_t = tmp.for_each(
+        [](arma::mat::elem_type &val) {
+          double &&tmp = lower_trunc_exp(val);
+          val = tmp / (1 + tmp);
+          });
+
+      // Compute y_bar, P_a_v and P_v_v
+      const arma::vec y_bar = w_0 * Z_t.unsafe_col(0) +
+        w_i * arma::sum(Z_t.cols(1, Z_t.n_cols - 1), 1); // TODO: should use -1 here, right?
+
+      arma::mat P_a_v = (w_0 * (sigma_points.unsafe_col(0) - p_dat.a_t_t_s.unsafe_col(t - 1))) *
+        (Z_t.unsafe_col(0) - y_bar);
+      arma::mat P_v_v = (w_0 * (Z_t.unsafe_col(0) - y_bar)) * (Z_t.unsafe_col(0) - y_bar).t() +
+        arma::diagmat(Z_t.unsafe_col(0) * (1 - Z_t.unsafe_col(0)));
+
+
+      for(int i = 1; i < sigma_points.n_cols; ++i){
+        P_a_v += (w_i * (sigma_points.unsafe_col(i) - p_dat.a_t_t_s.unsafe_col(t - 1))) *
+          (Z_t.unsafe_col(i) - y_bar);
+        P_v_v += (w_i * (Z_t.unsafe_col(i) - y_bar)) * (Z_t.unsafe_col(i) - y_bar).t() +
+          arma::diagmat(Z_t.unsafe_col(i) * (1 - Z_t.unsafe_col(i)));
+      }
+
+      // Compute new estimates
+      P_v_v = arma::inv_sympd(P_v_v); // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
+
+      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
+        P_a_v * (P_v_v * ((arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps) - y_bar));
+
+      p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
+        P_a_v * P_v_v * P_a_v.t();
+
+      p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ *
+        arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+
+      // Update sigma pooints for next iteration
+      compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t),
+                           sigma_points, p_dat.V_t_t_s.slice(t));
+    }
+  }
+};
+
+
+
 
 //' @export
 // [[Rcpp::export]]
