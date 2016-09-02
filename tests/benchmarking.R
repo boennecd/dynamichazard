@@ -25,7 +25,7 @@ arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_m
 library(microbenchmark)
 microbenchmark(fit2 <- do.call(ddhazard_fit_cpp_prelim, arg_list),
                fit1 <- do.call(ddhazard_fit, arg_list),
-               times = 2)
+               times = 10)
 
 test_that("Expecting similar outcome with new and old method", {
   expect_equal(c(fit1$a_t_d_s), c(fit2$a_t_d_s))

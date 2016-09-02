@@ -84,7 +84,8 @@ double (*conv_criteria)(const arma::vec&, const arma::vec&) = relative_norm_chan
 
 // Hepler structure to reference data
 // TODO: Figure out what is specific to the EKF
-struct problem_data{
+class problem_data{
+public:
   // Initalize constants
   const int d;
   const Rcpp::List risk_sets;
@@ -117,13 +118,6 @@ struct problem_data{
   arma::cube V_t_less_s;
   arma::cube B_s;
 
-  arma::colvec u;
-  arma::mat U;
-
-  // Needed for lag one covariance
-  arma::mat z_dot;
-  arma::vec H_diag_inv;
-  arma::mat K_d;
   arma::cube lag_one_cor;
 
   problem_data(const Rcpp::NumericMatrix &X, const arma::vec &tstart_,
@@ -146,13 +140,11 @@ struct problem_data{
 #if defined(USE_OPEN_BLAS)
     n_threads(std::thread::hardware_concurrency()),
 #endif
-    Q(Q_),
     tstart(tstart_),
     tstop(tstop_),
-    events(events_)
+    events(events_),
+    Q(Q_)
   {
-    int i = 0;
-
     // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
     _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
 
@@ -163,7 +155,39 @@ struct problem_data{
     B_s = arma::cube(n_parems * order_, n_parems * order_, d);
 
     a_t_t_s.col(0) = a_0;
+  }
+};
 
+// Class with further members for the Extended Kalman Filter
+class problem_data_EKF : public problem_data{
+public:
+  // locks for parallel implementation
+  std::mutex m_u;
+  std::mutex m_U;
+
+  // Maticies for score and information matrix
+  arma::colvec u;
+  arma::mat U;
+
+  // Needed for lag one covariance
+  arma::mat z_dot;
+  arma::vec H_diag_inv;
+  arma::mat K_d;
+
+  problem_data_EKF(const Rcpp::NumericMatrix &X, const arma::vec &tstart_,
+                 const arma::vec &tstop_, const arma::ivec &events_,
+                 const arma::colvec &a_0,
+                 arma::mat &Q_0,
+                 arma::mat &Q_,
+                 const Rcpp::List &risk_obj,
+                 const arma::mat &F__,
+                 const int n_max = 100, const double eps = 0.001,
+                 const bool verbose = false, const bool save_all_output = false,
+                 const int order_ = 1, const bool est_Q_0 = true):
+  problem_data(X, tstart_, tstop_, events_, a_0,
+               Q_0, Q_, risk_obj, F__, n_max, eps, verbose, save_all_output,
+               order_, est_Q_0)
+  {
     u = arma::colvec(n_parems * order_);
     U = arma::mat(n_parems * order_, n_parems * order_);
 
@@ -174,16 +198,18 @@ struct problem_data{
   }
 };
 
-// locks for parallel implementation
-// TODO: move from global as only EKF specific
-std::mutex m_u;
-std::mutex m_U;
+// Abstact solver class
+class Solver {
+public:
+  virtual void solve() = 0;
+};
 
 // Class to handle parallel computation in extended Kalman filter
 class EKF_helper{
   using uvec_iter = arma::uvec::const_iterator;
 
-  // handy class to ensure that all ressources are cleaned up
+  // handy class to ensure that all ressources are cleaned up once scope of the
+  // class is expired
   class join_threads
   {
     std::vector<std::thread>& threads;
@@ -204,20 +230,20 @@ class EKF_helper{
   // worker class for parallel computation
   class filter_worker{
     bool is_first_call;
-    problem_data &dat;
+    problem_data_EKF &dat;
 
     // local variables to compute temporary result
     arma::colvec u_;
     arma::mat U_;
 
   public:
-    filter_worker(problem_data &p_data):
-    dat(p_data), is_first_call(true)
+    filter_worker(problem_data_EKF &p_data):
+    is_first_call(true), dat(p_data)
     {}
 
     bool operator()(uvec_iter first, uvec_iter last,
-                  const arma::vec &i_a_t, bool compute_z_and_H,
-                  double event_time, int i_start){
+                    const arma::vec &i_a_t, bool compute_z_and_H,
+                    double event_time, int i_start){
       // potentially intialize variables and set entries to zeroes in any case
       if(is_first_call){
         u_ = arma::vec(dat.n_parems);
@@ -250,12 +276,12 @@ class EKF_helper{
 
       // Update shared variable
       {
-        std::lock_guard<std::mutex> lk(m_U);
+        std::lock_guard<std::mutex> lk(dat.m_U);
         dat.U.submat(0, 0, dat.n_parems - 1, dat.n_parems - 1) +=  U_;
       }
 
       {
-        std::lock_guard<std::mutex> lk(m_u);
+        std::lock_guard<std::mutex> lk(dat.m_u);
         dat.u.head(dat.n_parems) += u_;
       }
 
@@ -264,13 +290,13 @@ class EKF_helper{
   };
 
   unsigned long const hardware_threads;
+  problem_data_EKF &p_data;
   std::vector<filter_worker> workers;
-  problem_data &dat;
 
 public:
-  EKF_helper(problem_data &p_data):
+  EKF_helper(problem_data_EKF &p_data_):
   hardware_threads(std::thread::hardware_concurrency()),
-  dat(p_data), workers()
+  p_data(p_data_), workers()
   {
     // create workers
     for(int i = 0; i < hardware_threads; i++){
@@ -283,11 +309,11 @@ public:
                             const bool compute_H_and_z,
                             double event_time){
     // Set referenced objects entries to zero
-    dat.U.zeros();
-    dat.u.zeros();
+    p_data.U.zeros();
+    p_data.u.zeros();
     if(compute_H_and_z){
-      dat.z_dot.zeros();
-      dat.H_diag_inv.zeros();
+      p_data.z_dot.zeros();
+      p_data.H_diag_inv.zeros();
     }
 
     // Compute the number of threads to create
@@ -332,14 +358,14 @@ public:
   }
 };
 
-class EKF_solver{
-  problem_data &p_dat;
+class EKF_solver : public Solver{
+  problem_data_EKF &p_dat;
   EKF_helper filter_helper;
   const double min_time;
 
 
 public:
-  EKF_solver(problem_data &p_):
+  EKF_solver(problem_data_EKF &p_):
     p_dat(p_), filter_helper(EKF_helper(p_)),
     min_time(vecmin(p_dat.tstart))
   {}
@@ -418,14 +444,15 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat *B, *V_less, *V;
   arma::vec a_less, a;
 
-  problem_data p_data(X, tstart, tstop, events,
-                      a_0, Q_0, Q,
-                      risk_obj, F_,
-                      n_max, eps, verbose, save_all_output,
-                      order_, est_Q_0);
+  problem_data_EKF *p_data = new problem_data_EKF(
+    X, tstart, tstop, events,
+    a_0, Q_0, Q,
+    risk_obj, F_,
+    n_max, eps, verbose, save_all_output,
+    order_, est_Q_0);
 
   //EM algorithm
-  EKF_solver solver(p_data);
+  Solver  * const solver = new EKF_solver(*p_data);
 
   /*Rcpp::Rcout << "X" << std::endl; TODO: Clean up or move
   p_data._X.print();
@@ -472,46 +499,46 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     if((it + 1) % 25 == 0)
       Rcpp::checkUserInterrupt(); // this is expensive - you do not want to check too often
 
-    p_data.V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
+    p_data->V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
     // E-step
-    // Extended kalman filter with correction
-    solver.solve();
+    solver->solve();
 
     // E-step: smoothing
-    for (int t = p_data.d - 1; t > -1; t--){
+    for (int t = p_data->d - 1; t > -1; t--){
       // we need to compute the correlation matrix first
       if(t > 0){
-        p_data.lag_one_cor.slice(t - 1) = p_data.V_t_t_s.slice(t) * p_data.B_s.slice(t - 1).t() +  p_data.B_s.slice(t) * (
-          p_data.lag_one_cor.slice(t) - F_ * p_data.V_t_t_s.slice(t)) * p_data.B_s.slice(t - 1).t();
+        p_data->lag_one_cor.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
+          p_data->B_s.slice(t) * (
+          p_data->lag_one_cor.slice(t) - F_ * p_data->V_t_t_s.slice(t)) * p_data->B_s.slice(t - 1).t();
       }
 
-      p_data.a_t_t_s.col(t) = p_data.a_t_t_s.unsafe_col(t) + p_data.B_s.slice(t) *
-        (p_data.a_t_t_s.unsafe_col(t + 1) - p_data.a_t_less_s.unsafe_col(t));
-      p_data.V_t_t_s.slice(t) = p_data.V_t_t_s.slice(t) + p_data.B_s.slice(t) *
-        (p_data.V_t_t_s.slice(t + 1) - p_data.V_t_less_s.slice(t)) * p_data.B_s.slice(t).t();
+      p_data->a_t_t_s.col(t) = p_data->a_t_t_s.unsafe_col(t) + p_data->B_s.slice(t) *
+        (p_data->a_t_t_s.unsafe_col(t + 1) - p_data->a_t_less_s.unsafe_col(t));
+      p_data->V_t_t_s.slice(t) = p_data->V_t_t_s.slice(t) + p_data->B_s.slice(t) *
+        (p_data->V_t_t_s.slice(t + 1) - p_data->V_t_less_s.slice(t)) * p_data->B_s.slice(t).t();
   }
 
     // M-step
     if(est_Q_0){
-      Q_0 = p_data.V_t_t_s.slice(0);
+      Q_0 = p_data->V_t_t_s.slice(0);
     }
     Q.zeros();
-    for (int t = 1; t < p_data.d + 1; t++){
-      delta_t = p_data.I_len[t - 1];
+    for (int t = 1; t < p_data->d + 1; t++){
+      delta_t = p_data->I_len[t - 1];
 
-      B = &p_data.B_s.slice(t - 1);
-      V_less = &p_data.V_t_t_s.slice(t - 1);
-      V = &p_data.V_t_t_s.slice(t);
-      a_less = p_data.a_t_t_s.unsafe_col(t - 1);
-      a = p_data.a_t_t_s.unsafe_col(t);
+      B = &p_data->B_s.slice(t - 1);
+      V_less = &p_data->V_t_t_s.slice(t - 1);
+      V = &p_data->V_t_t_s.slice(t);
+      a_less = p_data->a_t_t_s.unsafe_col(t - 1);
+      a = p_data->a_t_t_s.unsafe_col(t);
 
       Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
               - F_ * *B * *V
               - (F_ * *B * *V).t()
-              + F_ * *V_less * p_data.T_F_) / delta_t;
+              + F_ * *V_less * p_data->T_F_) / delta_t;
     }
-    Q /= p_data.d;
+    Q /= p_data->d;
 
     if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > Q_warn_eps){
       std::ostringstream warning;
@@ -532,12 +559,12 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
     if(order_ > 1){ // CHANGED # TODO: I figure I should set the primaery element to zero, right?
-      arma::mat tmp_Q = Q.submat(0, 0, p_data.n_parems - 1, p_data.n_parems - 1);
+      arma::mat tmp_Q = Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1);
       Q.zeros();
-      Q.submat(0, 0, p_data.n_parems - 1, p_data.n_parems - 1) = tmp_Q;
+      Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1) = tmp_Q;
     }
 
-    conv_values.push_back(conv_criteria(a_prev, p_data.a_t_t_s.unsafe_col(0)));
+    conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0)));
 
     //if(save_all_output) // TODO: make similar save all output function?
 
@@ -547,16 +574,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
     //if(verbose) // TODO: Implement verbose stuff
 
-    a_prev = p_data.a_t_t_s.col(0);
+    a_prev = p_data->a_t_t_s.col(0);
 }while(++it < n_max);
-
-  /* TODO: Implementt something similar
-  // set names
-  tmp_names = rep(colnames(X), order_)
-  colnames(inner_output$a_t_d_s) = tmp_names
-  dimnames(inner_output$V_t_d_s) = list(tmp_names, tmp_names, NULL)
-  dimnames(Q) = dimnames(Q_0) = list(tmp_names, tmp_names)
-  */
 
   /* if(save_all_output){
   all_output
@@ -565,10 +584,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   if(it == n_max)
     throw std::runtime_error("EM algorithm did not converge within the n_max number of iterations");
 
-  return(Rcpp::List::create(Rcpp::Named("V_t_d_s") = Rcpp::wrap(p_data.V_t_t_s),
-                            Rcpp::Named("a_t_d_s") = Rcpp::wrap(p_data.a_t_t_s.t()),
-                            Rcpp::Named("B_s") = Rcpp::wrap(p_data.B_s),
-                            Rcpp::Named("lag_one_cor") = Rcpp::wrap(p_data.lag_one_cor),
+  return(Rcpp::List::create(Rcpp::Named("V_t_d_s") = Rcpp::wrap(p_data->V_t_t_s),
+                            Rcpp::Named("a_t_d_s") = Rcpp::wrap(p_data->a_t_t_s.t()),
+                            Rcpp::Named("B_s") = Rcpp::wrap(p_data->B_s),
+                            Rcpp::Named("lag_one_cor") = Rcpp::wrap(p_data->lag_one_cor),
 
                             Rcpp::Named("n_iter") = it + 1,
                             Rcpp::Named("conv_values") = conv_values,
