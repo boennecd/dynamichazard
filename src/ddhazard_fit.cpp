@@ -446,13 +446,22 @@ class UKF_solver : public Solver{
   inline void compute_sigma_points(const arma::vec &a_t,
                                    arma::mat &s_points,
                                    const arma::mat &P_x_x){
-    const arma::mat cholesky_decomp = arma::chol(P_x_x, "lower"); // TODO: I think this should be lower
+    const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. should ensure that . See http://arma.sourceforge.net/docs.html#chol
+
+    Rcpp::Rcout << "a_t for sigma points are:"<< std::endl;
+    a_t.print();
+    Rcpp::Rcout << "Sqrt matrix are " << std::endl;
+    cholesky_decomp.print();
+    Rcpp::Rcout << std::endl;
 
     s_points.col(0) = a_t;
     for(int i = 1; i < s_points.n_cols; ++i)
       if(i % 2 == 0)
         s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2); else
           s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2);
+
+    Rcpp::Rcout << "Sigma points are" << std::endl;
+    sigma_points.print();
   }
 
 public:
@@ -468,6 +477,8 @@ public:
     {}
 
   void solve(){
+    int falure_count = 0; // TODO: Delete
+
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
     openblas_set_num_threads(p_dat.n_threads);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
@@ -491,10 +502,10 @@ public:
 
       // First we compute the mean
       p_dat.a_t_less_s.col(t - 1) = w_0 * sigma_points.unsafe_col(0) +
-        w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols -1), 1); // 1 indicates row sums. TODO: should be ncols - 1, right?
+        w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols - 1), 1);
 
       // Then the variance
-      p_dat.V_t_less_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1); // weigths sum to one
+      p_dat.V_t_less_s.slice(t - 1) = p_dat.Q; // weigths sum to one // TODO: Include or not?
       for(int i = 0; i < sigma_points.n_cols; ++i){
         const double &w = i == 0 ? w_0 : w_i;
 
@@ -524,32 +535,70 @@ public:
 
       // Compute y_bar, P_a_v and P_v_v
       const arma::vec y_bar = w_0 * Z_t.unsafe_col(0) +
-        w_i * arma::sum(Z_t.cols(1, Z_t.n_cols - 1), 1); // TODO: should use -1 here, right?
+        w_i * arma::sum(Z_t.cols(1, Z_t.n_cols - 1), 1);
 
-      arma::mat P_a_v = (w_0 * (sigma_points.unsafe_col(0) - p_dat.a_t_t_s.unsafe_col(t - 1))) *
+      arma::mat P_a_v = (w_0 * (sigma_points.unsafe_col(0) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
         (Z_t.unsafe_col(0) - y_bar).t();
 
       arma::mat P_v_v = (w_0 * (Z_t.unsafe_col(0) - y_bar)) * (Z_t.unsafe_col(0) - y_bar).t() +
-        arma::diagmat(Z_t.unsafe_col(0) % (1 - Z_t.unsafe_col(0))); // % is element-wise product
+        //arma::diagmat(y_bar % (1 - y_bar));
+        arma::diagmat(w_0 * Z_t.unsafe_col(0) % (1 - Z_t.unsafe_col(0))); // % is element-wise product. TODO: I think we have to time with w_0 here too? same applies for w_i below
+
+      Rcpp::Rcout << "t = " << t << std::endl;
+      y_bar.head(20).print();
+      Z_t.head_rows(20).print();
 
       for(int i = 1; i < sigma_points.n_cols; ++i){
-        P_a_v += (w_i * (sigma_points.unsafe_col(i) - p_dat.a_t_t_s.unsafe_col(t - 1))) *
+        P_a_v += (w_i * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
           (Z_t.unsafe_col(i) - y_bar).t();
         P_v_v += (w_i * (Z_t.unsafe_col(i) - y_bar)) * (Z_t.unsafe_col(i) - y_bar).t() +
-          arma::diagmat(Z_t.unsafe_col(i) % (1 - Z_t.unsafe_col(i)));
+          arma::diagmat(w_i * Z_t.unsafe_col(i) % (1 - Z_t.unsafe_col(i)));
       }
 
       // Compute new estimates
-      P_v_v = arma::inv_sympd(P_v_v); // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
+      P_v_v = arma::inv(P_v_v); // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
-        P_a_v * (P_v_v * ((arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps) - y_bar));
+        P_a_v * (P_v_v * (
+            (p_dat.events(r_set) &&
+              (arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps)) - y_bar));
+
+
+      falure_count += arma::sum(p_dat.events(r_set) && (arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps));
+      Rcpp::Rcout << "Cum failures for t = " << t << " is " << falure_count << std::endl;
+      /*int dum__ = 25; //TODO: Delete!
+      arma::vec tmp__; // TODO: Delete
+      Rcpp::Rcout << "? " << event_time <<  std::endl;
+      tmp__ = p_dat.tstop(r_set);
+      tmp__.head(dum__).print();
+
+      Rcpp::Rcout << "! " << std::endl;
+      arma::ivec &&dumdi = p_dat.events(r_set); // TODO: Delete
+      dumdi.head(dum__).print();
+
+
+      Rcpp::Rcout << ":^) " << std::endl;
+      arma::uvec &&dumdum = p_dat.events(r_set) && arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps;  // TODO: Delete
+      tmp__ = arma::conv_to<arma::vec >::from(dumdum);
+      tmp__.head(dum__).print();
+
+      Rcpp::Rcout << ":) " << std::endl;
+      y_bar.head(dum__).print();
+
+      Rcpp::Rcout << ":> " << std::endl;
+      tmp__ = (p_dat.events(r_set) &&
+        (arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps)) - y_bar;
+      tmp__.head(dum__).print();*/
+
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
         P_a_v * P_v_v * P_a_v.t();
 
-      p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ *
-        arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+      p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+
+      Rcpp::Rcout << "t = " << t << std::endl;
+      Rcpp::Rcout << "a_t_less_s is " << std::endl;
+      p_dat.a_t_less_s.col(t - 1).print();
 
       // Update sigma pooints for next iteration
       compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t),
@@ -728,13 +777,19 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
     conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0)));
 
+    Rcpp::Rcout << "it = " << it << std::endl;
+    p_data->a_t_t_s.print();
+    p_data->V_t_t_s.print();
+
     //if(save_all_output) // TODO: make similar save all output function?
 
     if(*(conv_values.end() -1) < eps){
       break;
     }
 
-    //if(verbose) // TODO: Implement verbose stuff
+    if(verbose && it % 5 == 0){
+      Rcpp::Rcout << "Iteration " << it + 1 << " ended with conv criteria " << *(conv_values.end() -1) << std::endl;
+    }
 
     a_prev = p_data->a_t_t_s.col(0);
 }while(++it < n_max);
@@ -766,50 +821,55 @@ sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = .1, x_mean = -.4, re_draw = T)
 sims$res <- as.data.frame(sims$res)
 
-design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
 rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
 design_mat$Y[, 2] <- rist_sets$stop_new
 design_mat$Y[, 3] <- rist_sets$new_events_flags
 
 log_file = file("debug.log")
-sink(log_file)
-
-arg_list <- list(
-  X = design_mat$X,
-  tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
-  a_0 = rep(0, ncol(design_mat$X)),
-  Q_0 = diag(10, ncol(design_mat$X)), # something large
-  Q = diag(1, ncol(design_mat$X)), # something large
-  F_ = diag(1, ncol(design_mat$X)), # first order random walk
-  risk_obj = rist_sets,
-  eps = 10^-4, n_max = 10^4,
-  order_ = 1,
-  est_Q_0 = F
-)
-
-res <- do.call(ddhazard_fit, arg_list)
-
-tryCatch({
-  res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
-}, finally = {
-  sink()
-  close(log_file)
-})
-
-
-test_that("Testing old versus new implementation", {
-  expect_equal(res$a_t_d_s, res_new$a_t_d_s)
-  expect_equal(res$V_t_d_s, res_new$V_t_d_s)
-  expect_equal(res$B_s, res_new$B_s)
-})
+write("", file = log_file); close(log_file) # TODO: delete this and comment back the code below
+# sink(log_file)
+#
+# arg_list <- list(
+#   X = design_mat$X,
+#   tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+#   a_0 = rep(0, ncol(design_mat$X)),
+#   Q_0 = diag(10, ncol(design_mat$X)), # something large
+#   Q = diag(1, ncol(design_mat$X)), # something large
+#   F_ = diag(1, ncol(design_mat$X)), # first order random walk
+#   risk_obj = rist_sets,
+#   eps = 10^-4, n_max = 10^4,
+#   order_ = 1,
+#   est_Q_0 = F
+# )
+#
+# res <- do.call(ddhazard_fit, arg_list)
+#
+# tryCatch({
+#   res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
+# }, finally = {
+#   sink()
+#   close(log_file)
+# })
+#
+#
+# test_that("Testing old versus new implementation", {
+#   expect_equal(res$a_t_d_s, res_new$a_t_d_s)
+#   expect_equal(res$V_t_d_s, res_new$V_t_d_s)
+#   expect_equal(res$B_s, res_new$B_s)
+# })
 
 # Test UKF
 sims <- test_sim_func_logit(n_series = 10^3, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = .1, x_mean = -.4, re_draw = T)
 sims$res <- as.data.frame(sims$res)
 
-design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+log_file = file("debug.log", open = "a")
+sink(log_file)
+
+design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
+sum(design_mat$Y[, 3] & design_mat$Y[, 2] <= 10)
 rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
 design_mat$Y[, 2] <- rist_sets$stop_new
@@ -818,24 +878,26 @@ design_mat$Y[, 3] <- rist_sets$new_events_flags
 arg_list <- list(
   X = design_mat$X,
   tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
-  a_0 = rep(0, ncol(design_mat$X)),
-  Q_0 = diag(10, ncol(design_mat$X)), # something large
-  Q = diag(1, ncol(design_mat$X)), # something large
+  a_0 = c(1, 1, 1),
+  Q_0 = diag(1.0e-0, ncol(design_mat$X)), # something large
+  Q = diag(1.0e-0, ncol(design_mat$X)), # something large
   F_ = diag(1, ncol(design_mat$X)), # first order random walk
   risk_obj = rist_sets,
-  eps = 10^-4, n_max = 10^4,
+  eps = 10^-2, n_max = 10^4,
   order_ = 1,
   est_Q_0 = F,
+  verbose = T,
   method = "UKF"
 )
 
-log_file = file("debug.log", open = "a")
-sink(log_file)
-
-sum(design_mat$Y[, 3])
-
 tryCatch({
-  res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
+  res_UKF <- do.call(ddhazard_fit_cpp_prelim, arg_list)
+  arg_list$method <- "EKF"
+  res_EKF <- do.call(ddhazard_fit_cpp_prelim, arg_list)
+
+  mean((res_UKF$a_t_d_s[-1, ] - sims$betas)^2)
+  mean((res_EKF$a_t_d_s[-1, ] - sims$betas)^2)
+
 }, finally = {
   sink()
   close(log_file)
