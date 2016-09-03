@@ -7,8 +7,8 @@
 using namespace Rcpp;
 
 // ddhazard_fit_cpp_prelim
-Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::ivec& events, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const int n_max, const double eps, const bool verbose, const bool save_all_output, const int order_, const bool est_Q_0);
-RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP eventsSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP save_all_outputSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP) {
+Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::ivec& events, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const int n_max, const double eps, const bool verbose, const bool save_all_output, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> k);
+RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP eventsSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP save_all_outputSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -27,7 +27,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool >::type save_all_output(save_all_outputSEXP);
     Rcpp::traits::input_parameter< const int >::type order_(order_SEXP);
     Rcpp::traits::input_parameter< const bool >::type est_Q_0(est_Q_0SEXP);
-    __result = Rcpp::wrap(ddhazard_fit_cpp_prelim(X, tstart, tstop, events, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, save_all_output, order_, est_Q_0));
+    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type k(kSEXP);
+    __result = Rcpp::wrap(ddhazard_fit_cpp_prelim(X, tstart, tstop, events, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, save_all_output, order_, est_Q_0, method, k));
     return __result;
 END_RCPP
 }

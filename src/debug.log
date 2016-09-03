@@ -8,30 +8,131 @@
 
 > tryCatch({
 +   res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
-+ }, finally = function(...){
-+   close(log_file)
++ }, finally = {
 +   sink()
++   close(log_file)
 + })
 
-> test_that("Testing old versus new implementation", {
-+   expect_equal(res$a_t_d_s, res_new$a_t_d_s)
-+   expect_equal(res$V_t_d_s, res_new$V_t_d_s)
-+ .... [TRUNCATED] 
-c:/Rtools/mingw_64/bin/g++  -std=c++0x -I"C:/PROGRA~1/R/R-33~1.1/include" -DNDEBUG     -I"C:/Users/boennecd/Documents/R/win-library/3.3/Rcpp/include" -I"C:/Users/boennecd/Documents/R/win-library/3.3/RcppArmadillo/include" -I"C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/src" -I"C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/inst/include"  -I"d:/Compiler/gcc-4.9.3/local330/include"     -O2 -Wall  -mtune=core2 -c ddhazard_fit.cpp -o ddhazard_fit.o
-ddhazard_fit.cpp: In constructor 'EKF_helper::EKF_helper(problem_data_EKF&)':
-ddhazard_fit.cpp:300:22: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
-     for(int i = 0; i < hardware_threads; i++){
-                      ^
-ddhazard_fit.cpp: In function 'Rcpp::List ddhazard_fit_cpp_prelim(const NumericMatrix&, const vec&, const vec&, const ivec&, const colvec&, arma::mat, arma::mat, const List&, const mat&, int, double, bool, bool, int, bool)':
-ddhazard_fit.cpp:453:74: error: 'Solver' is an inaccessible base of 'EKF_solver'
-   Solver *solver = new EKF_solver(static_cast<problem_data_EKF&>(*p_data));
-                                                                          ^
-ddhazard_fit.cpp:576:13: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
- }while(++it < n_max);
-             ^
-ddhazard_fit.cpp:582:9: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
-   if(it == n_max)
-         ^
-make: *** [ddhazard_fit.o] Error 1
-Warning message:
-running command 'make -f "C:/PROGRA~1/R/R-33~1.1/etc/x64/Makeconf" -f "C:/PROGRA~1/R/R-33~1.1/share/make/winshlib.mk" CXX='$(CXX1X) $(CXX1XSTD)' CXXFLAGS='$(CXX1XFLAGS)' CXXPICFLAGS='$(CXX1XPICFLAGS)' SHLIB_LDFLAGS='$(SHLIB_CXX1XLDFLAGS)' SHLIB_LD='$(SHLIB_CXX1XLD)' SHLIB="sourceCpp_3.dll" WIN=64 TCLBIN=64 OBJECTS="ddhazard_fit.o"' had status 2 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 
+> sum(design_mat$Y[, 3])
+[1] 418
+
+> tryCatch({
++   res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
++ }, finally = {
++   sink()
++   close(log_file)
++ })
+Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 923 923 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 882 882 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 860 860 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 835 835 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 806 806 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 748 748 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 708 708 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 654 654 y0 jep a b b b b b b b b ? 1 2 3 4 end 
+Hello  t = 9  t = 8  t = 7  t = 6  t = 5  t = 4  t = 3  t = 2  t = 1  t = 0 Begin hey Boh ya ye 9 1000 1000 y0 jep a b b b b b b b b ? 1 2 3 4 end Begin hey Boh ya ye 9 973 973 y0 jep a b b b b b b b b ? 
+error: inv_sympd(): matrix is singular or not positive definite
