@@ -155,6 +155,8 @@ public:
     B_s = arma::cube(n_parems * order_, n_parems * order_, d);
 
     a_t_t_s.col(0) = a_0;
+
+    lag_one_cor = arma::cube(n_parems * order_, n_parems * order_, d);
   }
 };
 
@@ -194,7 +196,6 @@ public:
     const int n_in_last_set = (Rcpp::as<arma::uvec>(risk_sets[d - 1])).size();
     z_dot = arma::mat(n_parems * order_, n_in_last_set);
     H_diag_inv = arma::vec(n_in_last_set);
-    lag_one_cor = arma::cube(n_parems * order_, n_parems * order_, d);
   }
 };
 
@@ -435,6 +436,7 @@ class UKF_solver : public Solver{
 
   problem_data &p_dat;
   const long m;
+  const double k;
   const double w_0;
   const double w_i;
   const double min_time;
@@ -449,16 +451,17 @@ class UKF_solver : public Solver{
     s_points.col(0) = a_t;
     for(int i = 1; i < s_points.n_cols; ++i)
       if(i % 2 == 0)
-        s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.unsafe_col(i / 2); else
-          s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.unsafe_col(i / 2);
+        s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2); else
+          s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2);
   }
 
 public:
-  UKF_solver(problem_data &p_, const double k):
+  UKF_solver(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_):
     p_dat(p_),
-    m(p_.a_t_t_s.size()),
+    m(p_.a_t_t_s.n_rows),
+    k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
     w_0(k / (m + k)),
-    w_i(k / (2 * (m + k))),
+    w_i(1 / (2 * (m + k))),
     min_time(vecmin(p_dat.tstart)),
     sqrt_m_k(std::sqrt(m + k)),
     sigma_points(arma::mat(m, 2 * m + 1))
@@ -471,6 +474,11 @@ public:
 #endif
 
     double event_time = min_time;
+
+    // Need to compute the first set of sigma points
+    compute_sigma_points(p_dat.a_t_t_s.unsafe_col(0),
+                         sigma_points, p_dat.V_t_t_s.slice(0));
+
     for (int t = 1; t < p_dat.d + 1; t++){
       double delta_t = p_dat.I_len[t - 1];
       event_time += delta_t;
@@ -480,9 +488,6 @@ public:
       //   Requires T(sigma point) + a_t_less_s computed before V_t_less_s
       //     NB have to compute sigma points the first time arround
       //     Requires for-loop with 2m + 1 itertions
-      if(t < 2)
-        compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
-                             sigma_points, p_dat.V_t_t_s.slice(t - 1));
 
       // First we compute the mean
       p_dat.a_t_less_s.col(t - 1) = w_0 * sigma_points.unsafe_col(0) +
@@ -510,7 +515,7 @@ public:
       // First, we compute the mean of the outcome
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
-      arma::mat &&tmp = sigma_points.t() * p_dat._X(r_set);
+      arma::mat &&tmp = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
       arma::mat Z_t = tmp.for_each(
         [](arma::mat::elem_type &val) {
           double &&tmp = lower_trunc_exp(val);
@@ -522,16 +527,16 @@ public:
         w_i * arma::sum(Z_t.cols(1, Z_t.n_cols - 1), 1); // TODO: should use -1 here, right?
 
       arma::mat P_a_v = (w_0 * (sigma_points.unsafe_col(0) - p_dat.a_t_t_s.unsafe_col(t - 1))) *
-        (Z_t.unsafe_col(0) - y_bar);
-      arma::mat P_v_v = (w_0 * (Z_t.unsafe_col(0) - y_bar)) * (Z_t.unsafe_col(0) - y_bar).t() +
-        arma::diagmat(Z_t.unsafe_col(0) * (1 - Z_t.unsafe_col(0)));
+        (Z_t.unsafe_col(0) - y_bar).t();
 
+      arma::mat P_v_v = (w_0 * (Z_t.unsafe_col(0) - y_bar)) * (Z_t.unsafe_col(0) - y_bar).t() +
+        arma::diagmat(Z_t.unsafe_col(0) % (1 - Z_t.unsafe_col(0))); // % is element-wise product
 
       for(int i = 1; i < sigma_points.n_cols; ++i){
         P_a_v += (w_i * (sigma_points.unsafe_col(i) - p_dat.a_t_t_s.unsafe_col(t - 1))) *
-          (Z_t.unsafe_col(i) - y_bar);
+          (Z_t.unsafe_col(i) - y_bar).t();
         P_v_v += (w_i * (Z_t.unsafe_col(i) - y_bar)) * (Z_t.unsafe_col(i) - y_bar).t() +
-          arma::diagmat(Z_t.unsafe_col(i) * (1 - Z_t.unsafe_col(i)));
+          arma::diagmat(Z_t.unsafe_col(i) % (1 - Z_t.unsafe_col(i)));
       }
 
       // Compute new estimates
@@ -567,7 +572,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const arma::mat &F_,
                                    const int n_max = 100, const double eps = 0.001,
                                    const bool verbose = false, const bool save_all_output = false,
-                                   const int order_ = 1, const bool est_Q_0 = true){
+                                   const int order_ = 1, const bool est_Q_0 = true,
+                                   const std::string method = "EKF",
+                                   Rcpp::Nullable<Rcpp::NumericVector> k = R_NilValue // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
+                                     ){
   // Declare and maybe intialize non constants
   double delta_t, test_max_diff;
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
@@ -585,15 +593,28 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat *B, *V_less, *V;
   arma::vec a_less, a;
 
-  problem_data_EKF *p_data = new problem_data_EKF(
-    X, tstart, tstop, events,
-    a_0, Q_0, Q,
-    risk_obj, F_,
-    n_max, eps, verbose, save_all_output,
-    order_, est_Q_0);
+  // Intialize the solver for the E-step
+  problem_data *p_data;
+  Solver  *solver;
 
-  //EM algorithm
-  Solver  * const solver = new EKF_solver(*p_data);
+  if(method == "EKF"){
+    p_data = new problem_data_EKF(
+      X, tstart, tstop, events,
+      a_0, Q_0, Q,
+      risk_obj, F_,
+      n_max, eps, verbose, save_all_output,
+      order_, est_Q_0);
+    solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data));
+  } else if (method == "UKF"){
+    p_data = new problem_data(
+      X, tstart, tstop, events,
+      a_0, Q_0, Q,
+      risk_obj, F_,
+      n_max, eps, verbose, save_all_output,
+      order_, est_Q_0);
+    solver = new UKF_solver(*p_data, k);
+  } else
+    Rcpp::stop("method '" + method  +"'is not implemented");
 
   /*Rcpp::Rcout << "X" << std::endl; TODO: Clean up or move
   p_data._X.print();
@@ -649,7 +670,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     for (int t = p_data->d - 1; t > -1; t--){
       // we need to compute the correlation matrix first
       if(t > 0){
-        p_data->lag_one_cor.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
+          p_data->lag_one_cor.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
           p_data->B_s.slice(t) * (
           p_data->lag_one_cor.slice(t) - F_ * p_data->V_t_t_s.slice(t)) * p_data->B_s.slice(t - 1).t();
       }
@@ -771,9 +792,9 @@ res <- do.call(ddhazard_fit, arg_list)
 
 tryCatch({
   res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
-}, finally = function(...){
-  close(log_file)
+}, finally = {
   sink()
+  close(log_file)
 })
 
 
@@ -781,5 +802,42 @@ test_that("Testing old versus new implementation", {
   expect_equal(res$a_t_d_s, res_new$a_t_d_s)
   expect_equal(res$V_t_d_s, res_new$V_t_d_s)
   expect_equal(res$B_s, res_new$B_s)
+})
+
+# Test UKF
+sims <- test_sim_func_logit(n_series = 10^3, n_vars = 3, t_0 = 0, t_max = 10,
+                            x_range = .1, x_mean = -.4, re_draw = T)
+sims$res <- as.data.frame(sims$res)
+
+design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
+
+design_mat$Y[, 2] <- rist_sets$stop_new
+design_mat$Y[, 3] <- rist_sets$new_events_flags
+
+arg_list <- list(
+  X = design_mat$X,
+  tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+  a_0 = rep(0, ncol(design_mat$X)),
+  Q_0 = diag(10, ncol(design_mat$X)), # something large
+  Q = diag(1, ncol(design_mat$X)), # something large
+  F_ = diag(1, ncol(design_mat$X)), # first order random walk
+  risk_obj = rist_sets,
+  eps = 10^-4, n_max = 10^4,
+  order_ = 1,
+  est_Q_0 = F,
+  method = "UKF"
+)
+
+log_file = file("debug.log", open = "a")
+sink(log_file)
+
+sum(design_mat$Y[, 3])
+
+tryCatch({
+  res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
+}, finally = {
+  sink()
+  close(log_file)
 })
 */
