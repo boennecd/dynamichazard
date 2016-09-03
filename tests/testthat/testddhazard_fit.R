@@ -218,11 +218,6 @@ test_that("Testing versus previously computed values with order 2 and Q_0 estima
                , tolerance = 0.001)
 })
 
-
-
-test_that("Implement tests for non-integer start and stop times",
-          expect_true(FALSE))
-
 # par(mfcol = c(2, 2))
 # plot(res$a_t_d_s[, 1], type = "l", ylim = range(res$a_t_d_s[, 1], res_new$a_t_d_s[, 1]))
 # for(i in 1:3){
