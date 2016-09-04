@@ -435,7 +435,7 @@ public:
 class UKF_solver : public Solver{
 
   problem_data &p_dat;
-  const long m;
+  const arma::uword m;
   const double k;
   const double w_0;
   const double w_i;

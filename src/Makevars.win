@@ -15,3 +15,7 @@ endif
 PKG_CXXFLAGS = -std=c++11 $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS)
 ## -- linking (do not ask if all of these are needed. I saw them in sourcecpp call with verbose = T)
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS_USE) $(FLIBS) -fopenmp $(USE_OPEN_BLAS)
+
+ifeq "$(WIN)" "64"
+PKG_LIBS += -D ARMA_64BIT_WORD
+endif

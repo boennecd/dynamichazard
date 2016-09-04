@@ -1,0 +1,151 @@
+---
+title: "Comparing UKF with EKF"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+  ## Set the width of the R-terminal to # characters
+  options(width = 80, warn = -1)
+
+# Derfine function to make small margin in pictures
+# you can use the bool flag to set what to excute before, after chunk 
+# or always
+# If you do not whant to excute the code than do e.g. small.mar = F
+knitr::knit_hooks$set(small.mar = function(before, options, envir){
+  if (before){ par(
+    mar = c(5,5,0.5,0.5), 
+    tcl = -0.3, 
+    mgp = c(2.5,.5,0), 
+    oma = c(0,0,0,0),
+    pch=16,
+    cex=.6,
+    cex.axis = 1,
+    cex.lab = .8/.6,
+    lwd= 1
+  )}},
+  my.options=function(before, options, envir){
+    if(before){
+      options(digits = 3)
+    }})
+
+## opts_chunk$set() can change the default global options in a document (e.g. put this in a code chunk
+knitr::opts_chunk$set(fig.path='figures/',
+               fig.align='center',
+               fig.width=6, fig.height=4,
+               out.width="0.7\\textwidth",
+               size='tiny',                ## See R highligt package for possible values (https://cran.r-project.org/web/packages/highlight/highlight.pdf)
+               small.mar = TRUE,
+               my.options = TRUE,
+               comment = "##", 
+               warnings = T,
+               errors = T
+)
+```
+
+## Introduction
+This note will compare the dynamic discrete model fitted with the Extended Kalman (EKF) filter to with Unscented Kalman Filter (UKF) for the logistic model. We will use a simulated data set in order to compare the two 
+
+
+TODO: Write about main findings
+
+## Simulation
+First, we will need to simulate the data. We first simulate $\vec{ \beta }_t = \vec{\beta}_{t-1} + \vec{\eta}_t$ where $\vec{\eta}_t \sim N(\vec{0}, I)$. We then model the death of invidual $i$ in period $t$ by $\pi_i = \exp (\vec{\beta}^T \vec{x}_it) / (1 + \exp (\vec{\beta}^T \vec{x}_it))$. We update the covariate vector for the $i$'th invidual with gabs of $1 + z$ where $z \sim \text{Pois} (1)$. We let $x_{itk} ~ \text{Unif}(a,b)$ for given values $a$ and $b$
+
+There is a function to do in the `R` folder called `test_sim_func_logit`: 
+```{r}
+# We are currenlty in the vignettes folder
+getwd()
+source("../R./test_utils.R")
+test_sim_func_logit
+```
+
+The `get_zyx_draw` function are conveniente function that runs faster than the equivelent sampling function like `rnorm` when we simulate few outcomes:
+```{r}
+# We are currenlty in the vignettes folder
+microbenchmark::microbenchmark(
+  get_unif_draw(1),
+  runif(1),
+  times = 1e6
+)
+
+microbenchmark::microbenchmark(
+  get_unif_draw(10),
+  runif(10),
+  times = 1e5
+)
+```
+
+## Comparing
+We simulate as follows:
+
+```{r}
+set.seed(20160904) # a good day
+sims <- test_sim_func_logit(n_series = (n_series <- 2e3), 
+                            n_vars = (n_vars <- 4), 
+                            t_0 = (t_0 <- 0), 
+                            t_max = (t_max <- 10),
+                            x_range = (x_range <- .1), 
+                            x_mean = (x_mean <- -.6), 
+                            re_draw = T)
+sims$res <- as.data.frame(sims$res)
+```
+
+We have a total of `r n_series` series, with `r n_vars` co-variates. The simulated co-variates are:
+```{r}
+sims$betas
+```
+
+Further we start at time `r t_0` and end at time `r t_max` giving us `r t_max - t_0` intervals. Lastly, the covariates are simulated to uniformly distributed within [`r x_mean + c(-1, 1) * x_range / 2`]. The first 10 rows of the final data frame look like: 
+```{r}
+head(sims$res, 10)
+```
+
+Next, we get the design matrix and risk set object for `ddhazard_fit_cpp_prelim` by using the the following functions from `benssurvutils`:
+```{r}
+design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
+
+design_mat$Y[, 2] <- rist_sets$stop_new
+design_mat$Y[, 3] <- rist_sets$new_events_flags
+```
+
+The last two lines update the failure flags and stop times. It is need for the logic `ddhazard_fit_cpp_prelim` to check in which period a row counts as a death or as a control. E.g. say that we have row from time [3, 7.5] with a failure at the end. It is a control period [3, 4), [4, 5), [5, 6) and [6, 7) and a case in period [7, 8)
+
+The final number of failures series that end with a death with `r t_max` are:
+```{r}
+sum(design_mat$Y[, 3] & design_mat$Y[, 2] <= t_max)
+```
+
+### Fitting EKF
+We start by fitting the EKF. We do it with the following call:
+
+```{r}
+arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+                 a_0 = (a_0 <- rep(0, ncol(design_mat$X))),
+                 Q_0 = (Q_0 <- diag(1, ncol(design_mat$X))),
+                 Q = (Q <- diag(1, ncol(design_mat$X))),
+                 F_ = diag(1, ncol(design_mat$X)),
+                 risk_obj = rist_sets,
+                 eps = 10^-2, n_max = 10^4,
+                 order_ = 1,
+                 est_Q_0 = F,
+                 verbose = T)
+
+system.time(fit_EKF <- do.call(ddhazard_fit_cpp_prelim, arg_list))
+```
+
+We start $\vec{\beta}_0$ as [`r a_0`], the initial co-variance, $Q_0$ as a digonal matrix with elements [`r Q_0`] and the co-variance matrix in state space queation, $Q$ as a diagonal matrix with elements [`r Q_0`]. Further, keep $Q_0$ fixed in each iteration by setting $est_Q_0 = F$
+
+Next, we fit the same model with the UKF:
+```{r}
+arg_list$method = "UKF"
+
+system.time(fit_UKF <- do.call(ddhazard_fit_cpp_prelim, arg_list))
+```
+
+
+## Installation
+TODO: write about install both packages
+TODO: Write about openBlas
