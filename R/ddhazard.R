@@ -10,7 +10,8 @@ ddhazard = function(formula, data, by,
                     max_T, save_risk_set = F,
                     order_ = 1,
                     est_Q_0 = T,
-                    verbose = F){
+                    verbose = F,
+                    method = "EKF"){
   X_Y = benssurvutils::get_design_matrix(formula, data)
   n_parems = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
@@ -86,7 +87,7 @@ ddhazard = function(formula, data, by,
                                    risk_obj = risk_set, eps = eps, X = X_Y$X,
                                    tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], events = X_Y$Y[, 3],
                                    order_ = order_,
-                                   est_Q_0 = est_Q_0)
+                                   est_Q_0 = est_Q_0, method = method)
 
   # Set names
   tmp_names = rep(colnames(X_Y$X), order_)
@@ -113,6 +114,7 @@ ddhazard = function(formula, data, by,
       x_ * exp_ / (exp_ + 1)^2
     },
     risk_set = if(save_risk_set) risk_set else NA,
-    order = order_, F_ = F_),
+    order = order_, F_ = F_,
+    method = method),
     "class" = "fahrmeier_94")
 }

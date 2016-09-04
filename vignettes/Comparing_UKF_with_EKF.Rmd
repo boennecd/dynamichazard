@@ -61,7 +61,7 @@ source("../R./test_utils.R")
 test_sim_func_logit
 ```
 
-The `get_zyx_draw` function are conveniente function that runs faster than the equivelent sampling function like `rnorm` when we simulate few outcomes:
+The `get_zyx_draw` functions are conveniente function that runs faster than the equivelent sampling function like `rnorm` when we simulate few outcomes:
 ```{r}
 # We are currenlty in the vignettes folder
 microbenchmark::microbenchmark(
@@ -77,12 +77,12 @@ microbenchmark::microbenchmark(
 )
 ```
 
-## Comparing
+## Comparing with one sample
 We simulate as follows:
 
 ```{r}
 set.seed(20160904) # a good day
-beta_start <- 1 + rnorm(3)
+beta_start <- 1
 sims_args <- list(n_series = (n_series <- 1e3), 
                             n_vars = (n_vars <- 3), 
                             t_0 = (t_0 <- 0), 
@@ -90,34 +90,37 @@ sims_args <- list(n_series = (n_series <- 1e3),
                             x_range = (x_range <- 1), 
                             x_mean = (x_mean <- .5), 
                             beta_start = beta_start,
-                            intercept_start = - (.5 * sum(beta_start) + 3),
+                            intercept_start = (intercept_start <- 
+                                                 - (.5 * 3 * beta_start + 0)),
                             re_draw = T)
 
 sims <- do.call(test_sim_func_logit, sims_args)
 sims$res <- as.data.frame(sims$res)
 ```
 
-We have a total of `r n_series` series, with `r n_vars` co-variates. The simulated co-variates are:
+We have a total of `r n_series` series, with `r n_vars` parameters and a intercept. The simulated parameters are:
 ```{r}
 sims$betas
 matplot(sims$betas, type = "l")
 ```
 
-Further we start at time `r t_0` and end at time `r t_max` giving us `r t_max - t_0` intervals. The $\vec{\beta}_0$ starts at (`r beta_start`). Lastly, the covariates are simulated to uniformly distributed within [`r x_mean + c(-1, 1) * x_range / 2`]. The first 10 rows of the final data frame look like: 
+Further we start at time `r t_0` and end at time `r t_max` giving us `r t_max - t_0` intervals. The $\vec{\beta}_0$ starts at (`r c(intercept_start, rep(beta_start, n_vars))`). Lastly, the co-variates are simulated to uniformly distributed within [`r x_mean + c(-1, 1) * x_range / 2`]. The first 10 rows of the final data frame are: 
 ```{r}
 head(sims$res, 10)
 ```
 
 Next, we get the design matrix and risk set object for `ddhazard_fit_cpp_prelim` by using the the following functions from `benssurvutils`:
 ```{r}
-design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
-risk_obj <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = t_max, id = sims$res$id)
+design_mat <- benssurvutils::get_design_matrix(
+  survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+risk_obj <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, 
+                                         max_T = t_max, id = sims$res$id)
 
 design_mat$Y[, 2] <- risk_obj$stop_new
 design_mat$Y[, 3] <- risk_obj$new_events_flags
 ```
 
-The last two lines update the failure flags and stop times. It is need for the logic `ddhazard_fit_cpp_prelim` to check in which period a row counts as a death or as a control. E.g. say that we have row from time [3, 7.5] with a failure at the end. It is a control period [3, 4), [4, 5), [5, 6) and [6, 7) and a case in period [7, 8)
+The last two lines update the failure flags and stop times. It is need for the logic in `ddhazard_fit_cpp_prelim` to check in which period a row counts as a death or as a control. E.g. say that we have row from time [3, 7.5] with a failure at the end. It is a control period [3, 4), [4, 5), [5, 6) and [6, 7) and a case in period [7, 8)
 
 The final number of failures series that end with a death with `r t_max` are:
 ```{r}
@@ -128,7 +131,8 @@ sum(design_mat$Y[, 3] & design_mat$Y[, 2] <= t_max)
 We start by fitting the EKF. We do it with the following call:
 
 ```{r}
-arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  
+                 tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
                  a_0 = (a_0 <- rep(0, ncol(design_mat$X))),
                  Q_0 = (Q_0 <- diag(1, ncol(design_mat$X))),
                  Q = (Q <- diag(1, ncol(design_mat$X))),
@@ -142,8 +146,9 @@ arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_m
 system.time(fit_EKF <- do.call(dynamichazard::ddhazard_fit_cpp_prelim, arg_list))
 ```
 
-We start $\vec{\beta}_0$ as [`r a_0`], the initial co-variance, $Q_0$ as a digonal matrix with elements [`r Q_0`] and the co-variance matrix in state space queation, $Q$ as a diagonal matrix with elements [`r Q_0`]. Further, keep $Q_0$ fixed in each iteration by setting `est_Q_0 = F`. The convergence criteria is the relative norm of the change $\vec{beta}_0^{(k)} - \vec{beta}_0^{(k - 1)}$. That is, the norm of the initial state space vector
+The `arg_list` is saved as we will ned it when we use the UKF. We start with $\vec{\beta}_0$ as [`r a_0`], the initial co-variance, $Q_0$, as a digonal matrix with elements [`r diag(Q_0)`] and the co-variance matrix in state space queation, $Q$, as a diagonal matrix with elements [`r diag(Q)`]. Further, we keep $Q_0$ fixed in each iteration by setting `est_Q_0 = F`. The convergence criteria is the relative norm of the change $\vert\vec{\beta}_0^{(k)} - \vec{\beta}_0^{(k - 1)}\vert/\vert\vec{\beta}_0^{(k - 1) \vert$. That is, the norm of the initial state space vector
 
+### Fitting UKF
 Next, we fit the same model with the UKF:
 ```{r}
 arg_list$method = "UKF"
@@ -151,7 +156,7 @@ arg_list$method = "UKF"
 system.time(fit_UKF <- do.call(dynamichazard::ddhazard_fit_cpp_prelim, arg_list))
 ```
 
-Note, the big difference in computation time. We will return to this in later. We can compare the two in terms of mean square error:
+Note, the big difference in computation time. We will return to this in later. We can compare the two in terms of mean square error of the state space vectors:
 ```{r}
 MSE_func <- function(b) 
   mean((b - sims$betas)^2) 
@@ -168,25 +173,81 @@ f_plot <- function(UKF, EKF, betas = sims$betas){
     b <- sims$betas[, i]
     b_UKF <- UKF$a_t_d_s[, i]
     b_EKF <- EKF$a_t_d_s[, i]
-    plot(seq_len(t_max - t_0 + 1) ,sims$betas[, i], 
-         ylim = range(b, b_UKF, b_EKF), type = "l")
-    lines(seq_len(t_max - t_0 + 1), b_EKF, col = "blue")
-    lines(seq_len(t_max - t_0 + 1), b_UKF, col = "red")
+    plot((seq_len(t_max - t_0 + 1) - 1) ,sims$betas[, i], 
+         ylim = range(b, b_UKF, b_EKF), type = "l",
+         xlab = "time (t)", ylab = paste("beta", i - 1))
+    lines((seq_len(t_max - t_0 + 1) - 1), b_EKF, col = "blue")
+    lines((seq_len(t_max - t_0 + 1) - 1), b_UKF, col = "red")
   }
 }
 
 f_plot(UKF = fit_UKF, EKF = fit_EKF)
 ```
 
-Lastly, we can compare in-sample estimates versus actual outcomes
+The blue line is the EKF and rhe red line is the UKF. Lastly, we can compare in-sample estimates versus actual outcomes. We call `dynamichazard::ddhazard` in order to use the S3 generic `predict`. This method was not used before to illustarte the computation time (we avoid redundant computation that applies for both methods)
 ```{r}
+arg_list <- list(
+  formula = formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3),
+  data = sims$res, by = 1, a_0 = a_0, Q_0 = Q_0, id = sims$res$id,
+  Q = Q, n_max = 1e3, eps = 1e-2, max_T = t_max, est_Q_0 = F)
 
-predict(fit_EKF)
+fit_EKF_new <- do.call(dynamichazard::ddhazard, arg_list)
+
+testthat::test_that("Estimates are equal", {
+  testthat::expect_equal(fit_EKF$a_t_d_s,  fit_EKF_new$a_t_d_s, check.attributes = F)
+})
+
+# New object has more information
+str(fit_EKF_new)
+str(fit_EKF)
+
+# Compute predicted chance of death and then brier score
+brier_func <- function(fit){
+  pred <- predict(fit, new_data = sims$res, 
+                  tstart = "tstart", tstop = "tstop")
+  print(tail(pred$fits, 10))
+  c("Brier score" = mean((sims$res$event - pred$fits)^2))
+}
+brier_func(fit_EKF_new)
+
+# Do the same for UKF
+arg_list$method <- "UKF"
+fit_UKF_new <- do.call(dynamichazard::ddhazard, arg_list)
+brier_func(fit_UKF_new)
 ```
+
+Lastly, we can compare the fits with a model where we do not take into account that parameters change
+
+```{r}
+static_glm <- 
+  benssurvutils::static_glm(formula = arg_list$formula, data = arg_list$data, 
+                            by = arg_list$by, use_risk_set_to_weight = T)
+summary(static_glm)
+```
+
+We cannot use the fitted values directly as some of the observations appears in multiple bins which we have to account for
+
+```{r}
+n_bins_apperance <- rep(0, nrow(sims$res))
+for(t in 1:t_max){
+  is_in_bin <- sims$res$tstart <= t & t <= sims$res$tstop
+  n_bins_apperance[is_in_bin] <- n_bins_apperance[is_in_bin] + 1
+}
+
+static_glm$pred <- 1 - (1- static_glm$fitted.values)^(n_bins_apperance)
+
+mean((static_glm$pred - sims$res$event)^2) # compute brier score
+```
+
+TODO: Is the predict method correct? 
+
+## Comparing more than one simulation
 
 
 ## Improving UKF computation time
 TODO: Metion % parallel and  
+
+## Issues with UKF
 
 ## Installation
 TODO: write about install both packages
