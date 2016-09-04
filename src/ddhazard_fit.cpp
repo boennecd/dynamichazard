@@ -446,6 +446,11 @@ class UKF_solver : public Solver{
   inline void compute_sigma_points(const arma::vec &a_t,
                                    arma::mat &s_points,
                                    const arma::mat &P_x_x){
+    Rcpp::Rcout << std::endl;
+    a_t.print();
+    Rcpp::Rcout << std::endl;
+    P_x_x.print();
+
     const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. should ensure that . See http://arma.sourceforge.net/docs.html#chol
 
     s_points.col(0) = a_t;
@@ -550,11 +555,7 @@ public:
             (p_dat.events(r_set) &&
               (arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps)) - y_bar));
 
-
-      falure_count += arma::sum(p_dat.events(r_set) && (arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps));
-
-      p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
-        P_a_v * P_v_v * P_a_v.t();
+      p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
 

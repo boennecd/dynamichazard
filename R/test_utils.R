@@ -131,7 +131,7 @@ get_norm_draw = compiler::cmpfun(get_norm_draw, options = list(
 
 # Define function to simulate outcomes
 test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = .1, x_mean = -.1,
-                                re_draw = T, beta_start = 3){
+                                re_draw = T, beta_start = 3, intercept_start){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
@@ -145,8 +145,9 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
   }
 
   # draw betas
-  betas <- matrix(get_norm_draw((t_max - t_0) * n_vars), ncol = n_vars, nrow = t_max - t_0)
-  betas[1, ] <- beta_start
+  use_intercept <- !missing(intercept_start)
+  betas <- matrix(get_norm_draw((t_max - t_0 + 1) * (n_vars + use_intercept)), ncol = n_vars + use_intercept, nrow = t_max - t_0 + 1)
+  betas[1, ] <- if(use_intercept) c(intercept_start, rep(beta_start, n_vars)) else beta_start
   betas <- apply(betas, 2, cumsum)
 
   # Simulate
@@ -156,9 +157,11 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
       tstop <- tstart + get_exp_draw(1) + 1
 
       x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
+      l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
+
       tmp_t <- tstart
       while(tmp_t < tstop && tmp_t < t_max){
-        exp_eta <- exp((betas[floor(tmp_t) + 1 + t_0, ] %*% x_vars)[1, 1])
+        exp_eta <- exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1])
         event <- exp_eta / (1 + exp_eta) > get_unif_draw(1)
         if(event){
           tstop <- tmp_t + 1
