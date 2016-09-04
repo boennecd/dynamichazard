@@ -446,11 +446,6 @@ class UKF_solver : public Solver{
   inline void compute_sigma_points(const arma::vec &a_t,
                                    arma::mat &s_points,
                                    const arma::mat &P_x_x){
-    Rcpp::Rcout << std::endl;
-    a_t.print();
-    Rcpp::Rcout << std::endl;
-    P_x_x.print();
-
     const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. should ensure that . See http://arma.sourceforge.net/docs.html#chol
 
     s_points.col(0) = a_t;
