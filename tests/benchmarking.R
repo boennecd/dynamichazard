@@ -2,7 +2,7 @@ library(testthat); library(survival); library(benssurvutils); source("R/test_uti
 
 # Simulate series to work with
 set.seed(2972)
-sims <- test_sim_func_logit(n_series = 10^5, n_vars = 20, t_0 = 0, t_max = 10,
+sims <- test_sim_func_logit(n_series = 10^4, n_vars = 20, t_0 = 0, t_max = 10,
                             x_range = .1, x_mean = -.4, re_draw = T)
 sims$res <- as.data.frame(sims$res)
 
@@ -35,3 +35,7 @@ test_that("Expecting similar outcome with new and old method", {
   expect_equal(c(fit1$Q), c(fit2$Q))
   expect_equal(c(fit1$Q_0), c(fit2$Q_0))
 })
+
+
+arg_list$method = "UKF"
+fit3 <- do.call(ddhazard_fit_cpp_prelim, arg_list)
