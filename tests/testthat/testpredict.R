@@ -13,12 +13,13 @@ for(use_parallel in c(T, F)){
   test_that(paste0("Testing one period in sample with use_parallel = ", use_parallel),{
     predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(1, 60)),
                        use_parallel = use_parallel)
-    expect_equal(predict_$fits, c(result$hazard_func(result$a_t_d_s %*% c(1, 1))),
+    tmp_a_t_d_s <- rbind(result$a_t_d_s[-1, ], result$a_t_d_s[60, ])
+    expect_equal(predict_$fits, c(result$hazard_func(tmp_a_t_d_s %*% c(1, 1))),
                  use.names = F, check.attributes = F)
 
     predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(0, 60)),
                        use_parallel = use_parallel)
-    expect_equal(predict_$fits, c(result$hazard_func(result$a_t_d_s %*% c(1, 0))),
+    expect_equal(predict_$fits, c(result$hazard_func(tmp_a_t_d_s %*% c(1, 0))),
                  use.names = F, check.attributes = F)
   })
 
@@ -26,15 +27,16 @@ for(use_parallel in c(T, F)){
   test_that(paste0("Testing two period in sample with use_parallel = ", use_parallel),{
     predict_ = predict(result, new_data = data.frame(start = 2*(0:29), stop = 2*(1:30), group = rep(1, 30)),
                        use_parallel = use_parallel)
-    fac1 = c(result$hazard_func(result$a_t_d_s[2*(1:30) - 1, ] %*% c(1, 1)))
-    fac2 = c(result$hazard_func(result$a_t_d_s[2*(1:30), ] %*% c(1, 1)))
+    tmp_a_t_d_s <- rbind(result$a_t_d_s[-1, ], result$a_t_d_s[60, ])
+    fac1 = c(result$hazard_func(tmp_a_t_d_s[2*(1:30) - 1, ] %*% c(1, 1)))
+    fac2 = c(result$hazard_func(tmp_a_t_d_s[2*(1:30), ] %*% c(1, 1)))
     expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
                  use.names = F, check.attributes = F)
 
     predict_ = predict(result, new_data = data.frame(start = 2*(0:29), stop = 2*(1:30), group = rep(0, 30)),
                        use_parallel = use_parallel)
-    fac1 = c(result$hazard_func(result$a_t_d_s[2*(1:30) - 1, ] %*% c(1, 0)))
-    fac2 = c(result$hazard_func(result$a_t_d_s[2*(1:30), ] %*% c(1, 0)))
+    fac1 = c(result$hazard_func(tmp_a_t_d_s[2*(1:30) - 1, ] %*% c(1, 0)))
+    fac2 = c(result$hazard_func(tmp_a_t_d_s[2*(1:30), ] %*% c(1, 0)))
     expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
                  use.names = F, check.attributes = F)
   })
@@ -58,12 +60,14 @@ for(use_parallel in c(T, F)){
 # Check the terms
 test_that("Testing term prediction",{
   for(g in 0:1){
-    predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = g))
+    predict_ = predict(result, new_data = data.frame(start = 0:58, stop = 1:59, group = g))
     predict_terms = predict(result, new_data = data.frame(group = g), type = "term")
     expect_equal(dim(predict_terms$terms), c(60, 1, 2))
+    predict_terms$terms <- predict_terms$terms[-1, , , drop = F]
 
-    predict_terms_fit = exp(c(apply(predict_terms$terms, 1:2, sum))) / (exp(c(apply(predict_terms$terms, 1:2, sum))) + 1)
-    expect_equal(predict_$fits, predict_terms_fit, check.attributes = F, use.names = F)
+    predict_terms_fit = exp(c(apply(predict_terms$terms, 1:2, sum))) /
+      (exp(c(apply(predict_terms$terms, 1:2, sum))) + 1)
+    expect_equal(unname(predict_$fits), predict_terms_fit, check.attributes = F)
   }
 })
 

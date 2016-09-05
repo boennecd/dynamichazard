@@ -107,6 +107,7 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
       times = c(times, new_times)
     }
 
+    parems = parems[-1, ] # remove first row it is the initial state space vector
     parems = parems[, 1:(dim(parems)[2] / object$order)] # We only need the current estimates
 
     # Round if needed. Throw error if so
@@ -114,7 +115,7 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
     if(any(start - times[int_start] > 0))
       warning("Some start times are rounded down")
 
-    int_stop_ = findInterval(stop_, times + sqrt(.Machine$double.eps))
+    int_stop_ = findInterval(stop_, times + 1e4 * .Machine$double.eps) # TODO: better way to deal with equality in the stop time?
     if(any(times[int_stop_] - stop_ > 0))
       warning("Some stop times are rounded up")
 
