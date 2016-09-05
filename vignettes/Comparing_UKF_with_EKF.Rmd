@@ -91,7 +91,7 @@ sims_args <- list(n_series = (n_series <- 1e3),
                             x_mean = (x_mean <- .5), 
                             beta_start = beta_start,
                             intercept_start = (intercept_start <- 
-                                                 - (.5 * 3 * beta_start + 0)),
+                                                 - (.5 * 3 * beta_start + 1)),
                             re_draw = T)
 
 sims <- do.call(test_sim_func_logit, sims_args)
@@ -158,8 +158,8 @@ system.time(fit_UKF <- do.call(dynamichazard::ddhazard_fit_cpp_prelim, arg_list)
 
 Note, the big difference in computation time. We will return to this in later. We can compare the two in terms of mean square error of the state space vectors:
 ```{r}
-MSE_func <- function(b) 
-  mean((b - sims$betas)^2) 
+MSE_func <- function(b, betas = sims$betas) 
+  mean((b - betas)^2) 
 
 MSE_func(fit_EKF$a_t_d_s)
 MSE_func(fit_UKF$a_t_d_s)
@@ -202,11 +202,13 @@ str(fit_EKF_new)
 str(fit_EKF)
 
 # Compute predicted chance of death and then brier score
-brier_func <- function(fit){
-  pred <- predict(fit, new_data = sims$res, 
+brier_func <- function(fit, pred_dat = sims$res){
+  # We have to set some of the stop times to t_max when predicitng
+  pred_dat$tstop = pmin(pred_dat$tstop, t_max)
+  
+  pred <- predict(fit, new_data = pred_dat, 
                   tstart = "tstart", tstop = "tstop")
-  print(tail(pred$fits, 10))
-  c("Brier score" = mean((sims$res$event - pred$fits)^2))
+  c("Brier score" = mean((pred_dat$event - pred$fits)^2))
 }
 brier_func(fit_EKF_new)
 
@@ -239,10 +241,44 @@ static_glm$pred <- 1 - (1- static_glm$fitted.values)^(n_bins_apperance)
 mean((static_glm$pred - sims$res$event)^2) # compute brier score
 ```
 
-TODO: Is the predict method correct? 
-
 ## Comparing more than one simulation
+We will simulate a number of times and compare the mean square predicting error and the brier score:
 
+```{r}
+n_sim <- 10
+outcome <- matrix(NA_real_, nrow = n_sim, ncol = 4, 
+                  dimnames = list(NULL, c("EKF MSE", "EKF Brier",
+                                          "UKF MSE", "UKF Brier")))
+
+for(i in seq_len(n_sim)){
+  sims <- do.call(test_sim_func_logit, sims_args)
+  arg_list$data <- data.frame(sims$res)
+  arg_list$id <- arg_list$data$id
+  
+  cat("Iteration", i, "has", sum(arg_list$data$event & arg_list$data$tstop <= t_max),
+      "deaths\n")
+  
+  for(method in c("EKF", "UKF"))
+    tryCatch({
+      arg_list$method <- method
+      fit <- do.call(dynamichazard::ddhazard, arg_list)
+      outcome[i, paste(method, c("MSE", "Brier"))] <- 
+        c(MSE_func(fit$a_t_d_s, betas = sims$betas), 
+          brier_func(fit,pred_dat = arg_list$data))
+    }, error = function(e){
+      cat("Failed with method ", method, ". Error was:\n")
+      print(e)
+    })
+}
+```
+
+The code above simulate r n_sim outcomes and fit them using the EKF and UKF. 
+
+```{r}
+outcome
+outcome[, c("EKF MSE")] - outcome[, c("UKF MSE")]
+outcome[, c("EKF Brier")] - outcome[, c("UKF Brier")]
+```
 
 ## Improving UKF computation time
 TODO: Metion % parallel and  

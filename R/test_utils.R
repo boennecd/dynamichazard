@@ -131,7 +131,8 @@ get_norm_draw = compiler::cmpfun(get_norm_draw, options = list(
 
 # Define function to simulate outcomes
 test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = .1, x_mean = -.1,
-                                re_draw = T, beta_start = 3, intercept_start){
+                                re_draw = T, beta_start = 3, intercept_start,
+                                sds = rep(1, n_vars + !missing(intercept_start))){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
@@ -146,7 +147,9 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
 
   # draw betas
   use_intercept <- !missing(intercept_start)
-  betas <- matrix(get_norm_draw((t_max - t_0 + 1) * (n_vars + use_intercept)), ncol = n_vars + use_intercept, nrow = t_max - t_0 + 1)
+  betas <- matrix(get_norm_draw((t_max - t_0 + 1) * (n_vars + use_intercept)),
+                  ncol = n_vars + use_intercept, nrow = t_max - t_0 + 1)
+  betas <- t(t(betas) * sds)
   betas[1, ] <- if(use_intercept) c(intercept_start, rep(beta_start, n_vars)) else beta_start
   betas <- apply(betas, 2, cumsum)
 
