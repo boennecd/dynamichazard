@@ -32,18 +32,18 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
 
   const double min_start = min(start);
 
-  double I_stop_time, I_start_time;
+  double I_stop_time, I_start_time; // current interval start and stop time
   const unsigned int n = start.size();
   unsigned int d, i, j, d_;
-  NumericVector event_times;
+  NumericVector event_times; // vector of event times
   vector<int> indicies; // see http://stackoverflow.com/questions/13324431/c-vectors-insert-push-back-difference
 
   // Find event times
-  if(by < 0.0){
+  if(by < 0.0){ // set event times to all the unique stop times
     event_times = sort_unique(stop_events);
     d = event_times.size();
   }
-  else{
+  else{ // go from min to max with by as increaments
     d = ceil((max_T - min_start) / by);
     event_times = NumericVector(d);
     for(i = 0; i < d; i++){
@@ -51,32 +51,35 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
     }
   }
 
-  // Find new rounded stop times
+  //TODO: Delete
+  /* // Find new rounded stop times
   NumericVector stop_new = clone(stop);
   I_start_time = min_start;
   for(d_ = 0; d_ < d + 1; d_++){
-    if(d_ == d)
-      I_stop_time = max(stop) + 1.0;
-    else
-      I_stop_time = event_times[d_];
+  if(d_ == d)
+  I_stop_time = max(stop) + 1.0;
+  else
+  I_stop_time = event_times[d_];
 
-    for(i = 0; i < n; i++){
-      j = start_order[i];
+  for(i = 0; i < n; i++){
+  j = start_order[i];
 
-      if(start[j] >= I_stop_time)
-        break;
+  if(start[j] >= I_stop_time)
+  break;
 
-      if(I_start_time < stop[j] && stop[j] <= I_stop_time){
-        stop_new[j] = I_stop_time;
-      }
-    }
-
-    I_start_time = I_stop_time;
+  if(I_start_time < stop[j] && stop[j] <= I_stop_time){
+  stop_new[j] = I_stop_time;
+  }
   }
 
-  // Make flag for whether an event is inside a bin
-  LogicalVector is_within_bin_and_event(n);
-  LogicalVector new_events_flags = clone(event);
+  I_start_time = I_stop_time;
+  }*/
+
+  // Make flag for whether an observation is inside a bin
+  //  E.g. we have a row at time [.25, .75) with an event
+  //  and a bins with times [0, 1).
+  LogicalVector is_within_bin(n);
+  //LogicalVector new_events_flags = clone(event); // TODO: Delete
 
   // Find risket sets
   List risk_sets(d);
@@ -93,13 +96,17 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
     for(j = 0; j < n; j++){
       i = start_order[j];
 
-      if(start[i] >= I_stop_time)
+      if(start[i] >= I_stop_time) // no need to search further
         break;
 
-      if(start[i] <= I_start_time && I_start_time < stop[i])
+      if(start[i] <= I_start_time && I_start_time < stop[i]){
+        // starts before and ends after. Thus in this bin
         indicies.push_back(i + 1); // R use one indexing!
-      else if(start[i] >= I_start_time && stop[i] <= I_stop_time)
-        is_within_bin_and_event[i] = event[i];
+      }
+      else if(start[i] >= I_start_time && stop[i] <= I_stop_time){
+        // start after and ends before. Thus inside the bin
+        is_within_bin[i] = true;
+      }
     }
 
     risk_sets[d_] = IntegerVector(indicies.begin(), indicies.end());
@@ -123,35 +130,54 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
 
   dum_for_find_interval[d + 1] = dum_stop[d] = max(max(stop) + 1.0, dum_stop[d]);
 
-  unsigned int n_events_inside = 0;
   int this_id, this_bin;
   unsigned int k, l;
   double bin_start, bin_stop;
-  double* tmp_pointer;
+  double *tmp_pointer;
+
+  // this vector is used to indicate if an observation is an event in a given
+  // bin. The default is -1 which indicates that the observation is not an
+  // event in any bin. Note that this is zero indexed
+  IntegerVector is_event_in(n, -1);
 
   j = 0;
   while(j < n){
     i = order_by_id_and_rev_start[j];
 
-    // Skipe those that are not events insides bins
-    if(!is_within_bin_and_event[i]){
+    if(!event[i]){
+      // The default indicating no event is correct. Thus, we continue
       j++;
       continue;
     }
 
-    n_events_inside++;
-
     // Find the bin (see http://stackoverflow.com/a/15724226/5861244)
     tmp_pointer =  lower_bound(dum_for_find_interval.begin(), dum_for_find_interval.end(), stop[i]);
+    int bin_number = std::distance(dum_for_find_interval.begin(), tmp_pointer) - 1;
+
+    if(bin_number == event_times.size()){
+      // The failure is after the last event time
+      // Thus, we do not include the failure
+      j++;
+      continue;
+    }
+
+    if(!is_within_bin[i]){
+      // This an event and it do cross two bins. Thus, we need to set the bin
+      // number in the is_event_in
+      is_event_in[i] = bin_number;
+      j++;
+      continue;
+    }
+
     this_bin = tmp_pointer - dum_for_find_interval.begin() - 1;
     this_id = id[i];
 
     bin_start = dum_start[this_bin];
     bin_stop = dum_stop[this_bin];
 
-    if(j == n - 1){
+    if(j == n - 1){ // we reached the end. No further work needed
       j++;
-      continue;
+      break;
     }
 
     for(k = j + 1; k < n; k++){
@@ -159,11 +185,14 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
 
       if(id[l] != this_id ||
          stop[l] <= bin_start){
+        // Either there is a gab for this id or we changed to another indvidual
+        // we break in either case
         j = k;
         break;
       }
       else if(start[l] <= bin_start){
-        new_events_flags[l] = true;
+        // We found the previous row. We mark it as an event and continue
+        is_event_in[l] = bin_number;
         j = k;
         break;
       }
@@ -181,7 +210,5 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
                       Named("event_times") = event_times,
                       Named("I_len") = I_len,
                       Named("d") = d,
-                      Named("stop_new") = stop_new,
-                      Named("new_events_flags") = new_events_flags));
-
+                      Named("is_event_in") = is_event_in));
 }
