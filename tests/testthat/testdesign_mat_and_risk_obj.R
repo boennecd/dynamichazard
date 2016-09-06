@@ -76,12 +76,12 @@ for(do_truncate in c(F, T)){
       expect_equal(sims$event, design$Y[, 3], check.attributes = F, use.names = F)
       })
 
-    inside_of_bin <- !seq_len(nrow(sims)) %in% is_in_a_bin & sims$tstop <= max_T
+    inside_of_bin <- !seq_len(nrow(sims)) %in% is_in_a_bin
     test_that("All those inside of bins and that has the correct is_event_in", {
       expect_equal(risk_set$is_event_in[inside_of_bin], rep(-1, sum(inside_of_bin)))
     })
 
-    inside_of_bin_and_event <- inside_of_bin & sims$event & sims$tstart < max_T
+    inside_of_bin_and_event <- inside_of_bin & sims$event
     test_that("All those inside of bins with events have has the correct previous row as event", {
       ids <- sims$id[inside_of_bin_and_event]
       ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = F)
@@ -98,6 +98,7 @@ for(do_truncate in c(F, T)){
     })
 
     # Test with max_T
+    max_T = 6
     max_T = (max_T - max_T %% by_) + by_ * (max_T %% by_ > 0)
     risk_set = get_risk_obj(Y = design$Y, by = by_, id = sims[, "id"], max_T = max_T)
 

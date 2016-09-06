@@ -61,9 +61,6 @@ ddhazard = function(formula, data, by,
   risk_set <-
     get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T), id = id)
 
-  X_Y$Y[, 2] = risk_set$stop_new # Update to new rounded risk stop times
-  X_Y$Y[, 3] = risk_set$new_events_flags # update event flags
-
   # Report pre-liminary stats
   if(verbose){
     tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
@@ -85,7 +82,7 @@ ddhazard = function(formula, data, by,
   result = ddhazard_fit_cpp_prelim(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose, save_all_output = save_all_output,
                                    Q = Q, n_max = n_max,
                                    risk_obj = risk_set, eps = eps, X = X_Y$X,
-                                   tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], events = X_Y$Y[, 3],
+                                   tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
                                    order_ = order_,
                                    est_Q_0 = est_Q_0, method = method)
 
