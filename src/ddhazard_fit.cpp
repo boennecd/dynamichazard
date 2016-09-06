@@ -384,7 +384,7 @@ public:
     // Compute the number of threads to create
     unsigned long const length = std::distance(first, last);
 
-    unsigned long const min_per_thread = 50; // TODO: figure out how to set?
+    unsigned long const min_per_thread = 25; // TODO: figure out how to set?
     unsigned long const max_threads =
       (length + min_per_thread - 1) / min_per_thread;
 
@@ -405,16 +405,13 @@ public:
     {
       uvec_iter block_end = block_start;
       std::advance(block_end,block_size);
-      std::packaged_task<bool(
-        uvec_iter, uvec_iter, const arma::vec&, bool, double, int, const int)> task(
-            [=](uvec_iter block_start, uvec_iter block_end, const arma::vec& i_a_t, bool compute_H_and_z,
-               double event_time, int i_start, const int bin_number){
+      std::packaged_task<bool()> task(
+            [it, block_start, block_end, &i_a_t, &compute_H_and_z, &event_time, i_start, &bin_number](){
               return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
                       event_time, i_start, bin_number);
             });
       futures[i] = task.get_future();
-      threads[i] = std::thread(std::move(task), block_start, block_end, i_a_t, compute_H_and_z,
-                               event_time, i_start, bin_number);
+      threads[i] = std::thread(std::move(task));
 
       i_start += block_size;
       block_start = block_end;

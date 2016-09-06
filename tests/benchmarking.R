@@ -9,10 +9,7 @@ sims$res <- as.data.frame(sims$res)
 design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
 rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
-design_mat$Y[, 2] <- rist_sets$stop_new
-design_mat$Y[, 3] <- rist_sets$new_events_flags
-
-arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                  a_0 = rep(0, ncol(design_mat$X)),
                  Q_0 = diag(10, ncol(design_mat$X)), # something large
                  Q = diag(1, ncol(design_mat$X)), # something large
