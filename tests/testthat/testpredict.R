@@ -1,4 +1,4 @@
-# library(testthat); library(survival); library(benssurvutils); library(parallel); source("R/test_utils.R")
+# library(testthat); library(survival); library(parallel); source("R/test_utils.R")
 
 result = ddhazard(
   formula = Surv(start, stop, event) ~ group,

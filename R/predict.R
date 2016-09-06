@@ -4,7 +4,7 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
                                 method = "delta", tstart = "start", tstop = "stop",
                                 use_parallel = F, sds = F, ...)
 {
-  m = benssurvutils::get_design_matrix(formula = object$formula, data = new_data, response = F)$X
+  m = get_design_matrix(formula = object$formula, data = new_data, response = F)$X
 
   if(type %in% c("term", "term_var_diff")){
     if(length(object$risk_set) <= 1 && is.na(object$risk_set))

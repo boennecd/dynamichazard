@@ -2,8 +2,8 @@ test_that("The head_neck_cancer must be defined for the gen_kalman_filter tests"
           expect_true(exists("head_neck_cancer")))
 
 # Find the risk sets and design matrix for head and neck cancer set
-design_mat = benssurvutils::get_design_matrix(survival::Surv(start, stop, event) ~ group, head_neck_cancer)
-rist_set= benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 40, id = head_neck_cancer$id)
+design_mat = get_design_matrix(survival::Surv(start, stop, event) ~ group, head_neck_cancer)
+rist_set= get_risk_obj(design_mat$Y, by = 1, max_T = 40, id = head_neck_cancer$id)
 
 design_mat$Y[, 2] <- rist_set$stop_new
 design_mat$Y[, 3] <- rist_set$new_events_flags
