@@ -9,7 +9,6 @@ License: What license is it under?
 LazyData: TRUE
 Imports:
     Rcpp (>= 0.12.6),
-    benssurvutils,
     RcppArmadillo,
     survival
 LinkingTo:
