@@ -5,9 +5,6 @@ test_that("The head_neck_cancer must be defined for the gen_kalman_filter tests"
 design_mat = get_design_matrix(survival::Surv(start, stop, event) ~ group, head_neck_cancer)
 rist_set= get_risk_obj(design_mat$Y, by = 1, max_T = 40, id = head_neck_cancer$id)
 
-design_mat$Y[, 2] <- rist_set$stop_new
-design_mat$Y[, 3] <- rist_set$new_events_flags
-
 # Test for head and neck data set
 res <- gen_kalman_filter_cpp(a_0 = rep(0, ncol(design_mat$X)),
                               Q_0 = diag(10, ncol(design_mat$X)), # something large
@@ -19,7 +16,7 @@ res <- gen_kalman_filter_cpp(a_0 = rep(0, ncol(design_mat$X)),
                               X = design_mat$X,
                               start = design_mat$Y[, 1],
                               stop = design_mat$Y[, 2],
-                              events = design_mat$Y[, 3],
+                              is_event_in_bin = rist_set$is_event_in,
                               order_ = 1)
 
 # get_expect_equal(res)

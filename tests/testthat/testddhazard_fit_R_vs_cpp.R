@@ -6,18 +6,15 @@ sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = .1, x_mean = -.4, re_draw = T)
 sims$res <- as.data.frame(sims$res)
 
-design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
-rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
-
-design_mat$Y[, 2] <- rist_sets$stop_new
-design_mat$Y[, 3] <- rist_sets$new_events_flags
+design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
 ###########
 # Test order 1 and est_Q_0 = F
 
 # tmp_file <- file("testddhazard_fit_R_vs_cpp_1.log")
 # sink(tmp_file)
-arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                  a_0 = rep(0, ncol(design_mat$X)),
                  Q_0 = diag(10, ncol(design_mat$X)), # something large
                  Q = diag(1, ncol(design_mat$X)), # something large
@@ -60,7 +57,7 @@ test_that("Expecting similar outcome with new and old method with order = 1 and 
 
 # tmp_file <- file("testddhazard_fit_R_vs_cpp_1.log")
 # sink(tmp_file)
-arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                  a_0 = rep(0, ncol(design_mat$X)),
                  Q_0 = diag(10, ncol(design_mat$X)), # something large
                  Q = diag(1, ncol(design_mat$X)), # something large
@@ -119,7 +116,7 @@ eps <- 1.0e-3
 
 # tmp_file <- file("tests/testthat/testddhazard_fit_R_vs_cpp_1.log")
 # sink(tmp_file)
-arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                  a_0 = a_0,
                  Q_0 = Q_0,
                  Q = Q,
@@ -160,7 +157,7 @@ test_that("Expecting similar outcome with new and old method order = 2 and est_Q
 ###########
 # Test order 2 and est_Q_0 = T
 
-arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                  a_0 = a_0,
                  Q_0 = Q_0,
                  Q = Q,
@@ -189,10 +186,6 @@ test_that("Expecting similar outcome with new and old method order = 2 and est_Q
 # i <- 5
 # plot(res$a_t_d_s[, i], type = "l", ylim = range(res$a_t_d_s[, i], sims$betas[, i - 1]))
 # lines(seq_len(nrow(sims$betas)), sims$betas[, i - 1], col = "blue")
-
-
-test_that("Check attribuates",
-          expect_true(F))
 
 # par(mfcol = c(2, 2))
 # plot(res$a_t_d_s[, 1], type = "l", ylim = range(res$a_t_d_s[, 1], res_new$a_t_d_s[, 1]))

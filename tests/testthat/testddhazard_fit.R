@@ -10,9 +10,6 @@ sims$res <- as.data.frame(sims$res)
 design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
 rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
-design_mat$Y[, 2] <- rist_sets$stop_new
-design_mat$Y[, 3] <- rist_sets$new_events_flags
-
 
 
 
@@ -21,7 +18,7 @@ design_mat$Y[, 3] <- rist_sets$new_events_flags
 #########
 # Without estimating Q_0
 
-res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                     a_0 = rep(0, ncol(design_mat$X)),
                     Q_0 = diag(10, ncol(design_mat$X)), # something large
                     Q = diag(1, ncol(design_mat$X)), # something large
@@ -63,7 +60,7 @@ test_that("Testing versus previously computed values with order 1 and no Q_0 est
 #########
 # With estimating Q_0
 
-res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                     a_0 = rep(0, ncol(design_mat$X)),
                     Q_0 = diag(10, ncol(design_mat$X)), # something large
                     Q = diag(1, ncol(design_mat$X)), # something large
@@ -118,7 +115,7 @@ F_[n_parem + 1:n_parem, 1:n_parem] = diag(1, n_parem)
 F_[1:n_parem, n_parem + 1:n_parem] = diag(-1, n_parem)
 F_[n_parem + 1:n_parem, n_parem + 1:n_parem] = 0.0
 
-res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                     a_0 = a_0,
                     Q_0 = Q_0,
                     Q = Q,
@@ -172,7 +169,7 @@ warning("Figure out if what happens with 2 order and est_Q_0 is expected. What i
 diag(Q_0) <- 1.0e4
 diag(Q[1:n_parem, 1:n_parem]) <- 1.0e2
 
-res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
                     a_0 = a_0,
                     Q_0 = Q_0,
                     Q = Q,

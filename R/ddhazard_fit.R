@@ -1,7 +1,7 @@
 #' Function to perform EM algorithm for dynamic discrete hazard models. This
 #' version perform no validation
 #' @export
-ddhazard_fit = function(X, tstart, tstop, events,
+ddhazard_fit = function(X, tstart, tstop, is_event_in_bin,
                         a_0 = rep(0, n_parems), # ignorant prior
                         Q_0 = diag(.1, n_parems), # something large
                         F_ = diag(1, n_parems), # assume first order AR
@@ -38,7 +38,7 @@ ddhazard_fit = function(X, tstart, tstop, events,
                             I_len =  risk_obj$I_len,
                             d = risk_obj$d,
                             X = X, start = tstart,
-                            stop = tstop, events = events,
+                            stop = tstop, is_event_in_bin = risk_obj$is_event_in,
                             order_ = order_)
 
     # M-step

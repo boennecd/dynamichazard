@@ -106,7 +106,7 @@ public:
 
   const arma::vec &tstart;
   const arma::vec &tstop;
-  const arma::ivec &events;
+  const arma::ivec &is_event_in_bin;
 
   // Declare and maybe intialize non constants
   arma::mat &Q;
@@ -121,7 +121,7 @@ public:
   arma::cube lag_one_cor;
 
   problem_data(const Rcpp::NumericMatrix &X, const arma::vec &tstart_,
-               const arma::vec &tstop_, const arma::ivec &events_,
+               const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
                const arma::colvec &a_0,
                arma::mat &Q_0,
                arma::mat &Q_,
@@ -142,7 +142,7 @@ public:
 #endif
     tstart(tstart_),
     tstop(tstop_),
-    events(events_),
+    is_event_in_bin(is_event_in_bin_),
     Q(Q_)
   {
     // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
@@ -177,7 +177,7 @@ public:
   arma::mat K_d;
 
   problem_data_EKF(const Rcpp::NumericMatrix &X, const arma::vec &tstart_,
-                 const arma::vec &tstop_, const arma::ivec &events_,
+                 const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
                  const arma::colvec &a_0,
                  arma::mat &Q_0,
                  arma::mat &Q_,
@@ -186,7 +186,7 @@ public:
                  const int n_max = 100, const double eps = 0.001,
                  const bool verbose = false, const bool save_all_output = false,
                  const int order_ = 1, const bool est_Q_0 = true):
-  problem_data(X, tstart_, tstop_, events_, a_0,
+  problem_data(X, tstart_, tstop_, is_event_in_bin_, a_0,
                Q_0, Q_, risk_obj, F__, n_max, eps, verbose, save_all_output,
                order_, est_Q_0)
   {
@@ -255,7 +255,7 @@ class EKF_helper{
 
     bool operator()(uvec_iter first, uvec_iter last,
                     const arma::vec &i_a_t, bool compute_z_and_H,
-                    double event_time, int i_start){
+                    double event_time, int i_start, int bin_number){
       // potentially intialize variables and set entries to zeroes in any case
       if(is_first_call){
         u_ = arma::vec(dat.n_parems);
@@ -271,7 +271,7 @@ class EKF_helper{
         const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
         const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
 
-        if(dat.events(*it) && std::abs(dat.tstop(*it) - event_time) < dat.event_eps){
+        if(dat.is_event_in_bin(*it) == bin_number){
           u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
         }
         else {
@@ -319,7 +319,7 @@ public:
   void parallel_filter_step(uvec_iter first, uvec_iter last,
                             const arma::vec &i_a_t,
                             const bool compute_H_and_z,
-                            double event_time){
+                            double event_time, const int bin_number){
     // Set referenced objects entries to zero
     p_data.U.zeros();
     p_data.u.zeros();
@@ -353,15 +353,15 @@ public:
       uvec_iter block_end = block_start;
       std::advance(block_end,block_size);
       std::packaged_task<bool(uvec_iter, uvec_iter, const arma::vec&, bool,
-                              double, int)> task(*it);
+                              double, int, const int)> task(*it);
       futures[i] = task.get_future();
       threads[i] = std::thread(std::move(task), block_start, block_end, i_a_t, compute_H_and_z,
-                               event_time, i_start);
+                               event_time, i_start, bin_number);
 
       i_start += block_size;
       block_start = block_end;
     }
-    (*it)(block_start, last, i_a_t, compute_H_and_z, event_time, i_start); // compute last enteries on this thread
+    (*it)(block_start, last, i_a_t, compute_H_and_z, event_time, i_start, bin_number); // compute last enteries on this thread
 
     for(unsigned long i = 0; i < num_threads - 1; ++i)
     {
@@ -401,7 +401,7 @@ public:
       //Rcpp::Rcout << "n thread before = " << openblas_get_num_threads() << std::endl;
 #endif
 
-      filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == p_dat.d, event_time);
+      filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == p_dat.d, event_time, t - 1);
 
 #ifdef USE_OPEN_BLAS
       openblas_set_num_threads(p_dat.n_threads);
@@ -550,8 +550,7 @@ public:
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
         P_a_v * (P_v_v * (
-            (p_dat.events(r_set) &&
-              (arma::abs(p_dat.tstop(r_set) - event_time) < p_dat.event_eps)) - y_bar));
+            (p_dat.is_event_in_bin(r_set) == t -1) - y_bar));
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
 
@@ -570,7 +569,7 @@ public:
 //' @export
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec &tstart,
-                                   const arma::vec &tstop, const arma::ivec &events, // armadillo have no boolean vector
+                                   const arma::vec &tstop,
                                    const arma::colvec &a_0,
                                    arma::mat Q_0, // by value copy. This  is key cuz we will change it if est_Q_0 = T
                                    arma::mat Q, // similary this is a copy
@@ -599,13 +598,15 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::mat *B, *V_less, *V;
   arma::vec a_less, a;
 
+  const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
+
   // Intialize the solver for the E-step
   problem_data *p_data;
   Solver  *solver;
 
   if(method == "EKF"){
     p_data = new problem_data_EKF(
-      X, tstart, tstop, events,
+      X, tstart, tstop, is_event_in_bin,
       a_0, Q_0, Q,
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
@@ -613,7 +614,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data));
   } else if (method == "UKF"){
     p_data = new problem_data(
-      X, tstart, tstop, events,
+      X, tstart, tstop, is_event_in_bin,
       a_0, Q_0, Q,
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
@@ -632,8 +633,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   p_data.B_s.print();
   Rcpp::Rcout << "d " << p_data.d << std::endl;
   Rcpp::Rcout << "event_eps " << p_data.event_eps << std::endl;
-  Rcpp::Rcout << "events" << std::endl;
-  p_data.events.print();
+  Rcpp::Rcout << "is_event_in_bin" << std::endl;
+  p_data.is_event_in_bin.print();
   Rcpp::Rcout << "F_" << std::endl;
   p_data.F_.print();
   Rcpp::Rcout << "H_diag_inv" << std::endl;
@@ -776,15 +777,12 @@ sims$res <- as.data.frame(sims$res)
 design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
 rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
-design_mat$Y[, 2] <- rist_sets$stop_new
-design_mat$Y[, 3] <- rist_sets$new_events_flags
-
 log_file = file("debug.log")
 sink(log_file)
 
 arg_list <- list(
   X = design_mat$X,
-  tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+  tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
   a_0 = rep(0, ncol(design_mat$X)),
   Q_0 = diag(10, ncol(design_mat$X)), # something large
   Q = diag(1, ncol(design_mat$X)), # something large

@@ -74,7 +74,7 @@ int vecmin(const T x){
 List gen_kalman_filter_cpp(const arma::colvec &a_0, const arma::mat &Q_0, const arma::mat &Q, const arma::mat &F_,
                            const List &risk_sets, const NumericVector &I_len,
                            const int d, const NumericMatrix &X,
-                           const IntegerVector &start, const arma::ivec &stop, const arma::ivec &events, // Armadillo have no boolean vector - do not use uvec fasting fails http://stackoverflow.com/questions/32309915/rcpparmadillo-c-create-bool-vector
+                           const IntegerVector &start, const arma::ivec &stop, const arma::ivec &is_event_in_bin,
                            const int & order_){
   #if defined(USE_OPEN_BLAS)
     openblas_set_num_threads(1);
@@ -120,7 +120,7 @@ List gen_kalman_filter_cpp(const arma::colvec &a_0, const arma::mat &Q_0, const 
   arma::mat i_x_;
   uvec i_r_set;
   arma::ivec i_stop;
-  arma::ivec i_events;
+  arma::ivec i_is_event_in_bin;
 
   unsigned int i;
   arma::colvec u_ = arma::colvec(n_parems);
@@ -130,8 +130,8 @@ List gen_kalman_filter_cpp(const arma::colvec &a_0, const arma::mat &Q_0, const 
   // Start loop
   event_time = vecmin(start);
   // See http://stackoverflow.com/questions/31321071/openmp-nested-for-loop-becomes-faster-when-having-parallel-before-outer-loop
-#pragma omp parallel                                                                                           \
-  private(n_threads_current, exp_eta_it, i_am, i_points, i_start, i_x_, exp_eta, i, i_r_set, i_stop, i_events) \
+#pragma omp parallel                                                                                                    \
+  private(n_threads_current, exp_eta_it, i_am, i_points, i_start, i_x_, exp_eta, i, i_r_set, i_stop, i_is_event_in_bin) \
     firstprivate(U_, u_) default(shared)
     {
       n_threads_current = omp_get_num_threads();
@@ -181,7 +181,7 @@ if(is_run_parallel){
   exp_eta =  i_x_.t() * a_t_less_s.col(t - 1).head(n_parems);
   in_place_lower_trunc_exp(exp_eta);
 
-  i_events = events(i_r_set);
+  i_is_event_in_bin = is_event_in_bin(i_r_set);
   i_stop = stop(i_r_set);
 
   if(t == d){
@@ -195,7 +195,7 @@ else if (i_am == 0){
   exp_eta =  i_x_.t() * a_t_less_s.col(t - 1).head(n_parems);
   in_place_lower_trunc_exp(exp_eta);
 
-  i_events = events(r_set);
+  i_is_event_in_bin = is_event_in_bin(r_set);
   i_stop = stop(r_set);
 
   if(t == d){
@@ -209,7 +209,7 @@ if(is_run_parallel || i_am ==0){
   for(i = 0; i < exp_eta.size(); i++){
     exp_eta_it = exp_eta(i);
 
-    if(i_events(i) && i_stop(i) == event_time){
+    if(i_is_event_in_bin(i) == t - 1){
       u_ = u_ + i_x_.col(i) * (1.0 - exp_eta_it / (exp_eta_it + 1.0));
     }
     else {
@@ -248,12 +248,12 @@ if(is_run_parallel || i_am == 0){
 }
 
 /*if(t < d + 1 && i_am < 2){ //TODO: delete
-  Rcpp::Rcout << std::setprecision(17) << " t = " << t << std::endl;
-  U.raw_print(Rcpp::Rcout);
-  u.raw_print(Rcpp::Rcout);
-  V_t_less_s.slice(t - 1).raw_print(Rcpp::Rcout);
-  V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
-  a_t_t_s.col(t).raw_print(Rcpp::Rcout);
+ Rcpp::Rcout << std::setprecision(17) << " t = " << t << std::endl;
+ U.raw_print(Rcpp::Rcout);
+ u.raw_print(Rcpp::Rcout);
+ V_t_less_s.slice(t - 1).raw_print(Rcpp::Rcout);
+ V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
+ a_t_t_s.col(t).raw_print(Rcpp::Rcout);
 }*/
 
 #pragma omp barrier //TODO is barrier needed after master?
@@ -274,9 +274,9 @@ if(is_run_parallel || i_am == 0){
       (V_t_t_s.slice(t + 1) - V_t_less_s.slice(t)) * B_s.slice(t).t();
 
     /*if(t < d + 1 && i_am < 2){ // TODO: Delete
-      Rcpp::Rcout << std::setprecision(17) << "t = " << t << std::endl;
-      V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
-      a_t_t_s.col(t).raw_print(Rcpp::Rcout);
+     Rcpp::Rcout << std::setprecision(17) << "t = " << t << std::endl;
+     V_t_t_s.slice(t).raw_print(Rcpp::Rcout);
+     a_t_t_s.col(t).raw_print(Rcpp::Rcout);
     }*/
   }
 
