@@ -77,7 +77,7 @@ inline int vecmin(const T x){
 }
 
 // Define convergence criteria
-double relative_norm_change(const arma::vec &prev_est, const arma::vec &new_est){
+inline double relative_norm_change(const arma::vec &prev_est, const arma::vec &new_est){
   return arma::norm(prev_est - new_est, 2) / (arma::norm(prev_est, 2) + 1.0e-10);
 }
 double (*conv_criteria)(const arma::vec&, const arma::vec&) = relative_norm_change;
@@ -240,7 +240,15 @@ class EKF_helper{
   };
 
   // worker class for parallel computation
+  // This class is abstact as the method do_computation will differ between
+  // the models
   class filter_worker{
+  protected:
+    virtual void do_comps(const uvec_iter it, int &i,
+                          const arma::vec &i_a_t, const bool &compute_z_and_H,
+                          const double &event_time, const int &bin_number)
+    {}; // abstact method to be implemented
+
     bool is_first_call;
     problem_data_EKF &dat;
 
@@ -255,7 +263,7 @@ class EKF_helper{
 
     bool operator()(uvec_iter first, uvec_iter last,
                     const arma::vec &i_a_t, bool compute_z_and_H,
-                    double event_time, int i_start, int bin_number){
+                    double event_time, int i_start, const int bin_number){
       // potentially intialize variables and set entries to zeroes in any case
       if(is_first_call){
         u_ = arma::vec(dat.n_parems);
@@ -265,25 +273,18 @@ class EKF_helper{
       u_.zeros();
       U_.zeros();
 
+      /*{ //TODO: delete
+        std::lock_guard<std::mutex> lk(dat.m_u);
+        Rcpp::Rcout << "I am " << std::this_thread::get_id() << " " <<
+          std::distance(first, last) << " " <<
+            compute_z_and_H << " " <<  event_time << " " << bin_number << std::endl;
+        i_a_t.print();
+      }*/
+
       // compute local results
       int i = i_start;
-      for(auto it = first; it != last; it++){
-        const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-        const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
-
-        if(dat.is_event_in_bin(*it) == bin_number){
-          u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
-        }
-        else {
-          u_ -= x_ * (i_eta / (i_eta + 1.0));
-        }
-        U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
-
-        if(compute_z_and_H){
-          dat.H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
-          dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
-          ++i;
-        }
+      for(uvec_iter it = first; it != last; it++){
+        do_comps(it, i, i_a_t, compute_z_and_H, event_time, bin_number);
       }
 
       // Update shared variable
@@ -294,16 +295,67 @@ class EKF_helper{
 
       {
         std::lock_guard<std::mutex> lk(dat.m_u);
+        /*Rcpp::Rcout << std::this_thread::get_id() << " got this to add in bin " << bin_number << std::endl;
+        u_.print();
+
+        Rcpp::Rcout << "Here is u_ before" << std::endl;
+
+        dat.u.print();*/
+
         dat.u.head(dat.n_parems) += u_;
+
+        /*Rcpp::Rcout << "Here is the new u_" << std::endl;
+        dat.u.print();
+
+        Rcpp::Rcout << std::endl;*/
       }
 
       return true;
     }
   };
 
+  class filter_worker_logit : public filter_worker {
+  private:
+    void do_comps(const uvec_iter it, int &i,
+                  const arma::vec &i_a_t, const bool &compute_z_and_H,
+                  const double &event_time, const int &bin_number){
+      const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
+      const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
+
+      if(dat.is_event_in_bin(*it) == bin_number){
+        u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
+      }
+      else {
+        u_ -= x_ * (i_eta / (i_eta + 1.0));
+      }
+      U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
+
+      /*{ //TODO: delete
+        std::lock_guard<std::mutex> lk(dat.m_u);
+        Rcpp::Rcout << "I am " << std::this_thread::get_id() << " boh!" << std::endl;
+        (x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0)))).print();
+      }*/
+
+      if(compute_z_and_H){
+        dat.H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
+        ++i;
+      }
+
+      /*std::stringstream ss; TODO: delete
+      ss << std::this_thread::get_id() << "\t" << &u_ << "\t" << &dat.m_u << "\t" << &dat.U << "\n";
+      Rcpp::Rcout << ss.str();*/
+    }
+
+  public:
+    filter_worker_logit(problem_data_EKF &p_data):
+      filter_worker(p_data)
+    {}
+  };
+
   unsigned long const hardware_threads;
   problem_data_EKF &p_data;
-  std::vector<filter_worker> workers;
+  std::vector<std::shared_ptr<filter_worker> > workers;
 
 public:
   EKF_helper(problem_data_EKF &p_data_):
@@ -312,7 +364,8 @@ public:
   {
     // create workers
     for(int i = 0; i < hardware_threads; i++){
-      workers.push_back(filter_worker(p_data));
+      std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
+      workers.push_back(std::move(new_p));
     }
   }
 
@@ -331,7 +384,7 @@ public:
     // Compute the number of threads to create
     unsigned long const length = std::distance(first, last);
 
-    unsigned long const min_per_thread = 25; // TODO: how to set?
+    unsigned long const min_per_thread = 50; // TODO: figure out how to set?
     unsigned long const max_threads =
       (length + min_per_thread - 1) / min_per_thread;
 
@@ -352,8 +405,13 @@ public:
     {
       uvec_iter block_end = block_start;
       std::advance(block_end,block_size);
-      std::packaged_task<bool(uvec_iter, uvec_iter, const arma::vec&, bool,
-                              double, int, const int)> task(*it);
+      std::packaged_task<bool(
+        uvec_iter, uvec_iter, const arma::vec&, bool, double, int, const int)> task(
+            [=](uvec_iter block_start, uvec_iter block_end, const arma::vec& i_a_t, bool compute_H_and_z,
+               double event_time, int i_start, const int bin_number){
+              return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
+                      event_time, i_start, bin_number);
+            });
       futures[i] = task.get_future();
       threads[i] = std::thread(std::move(task), block_start, block_end, i_a_t, compute_H_and_z,
                                event_time, i_start, bin_number);
@@ -361,7 +419,7 @@ public:
       i_start += block_size;
       block_start = block_end;
     }
-    (*it)(block_start, last, i_a_t, compute_H_and_z, event_time, i_start, bin_number); // compute last enteries on this thread
+    (*(it->get()))(block_start, last, i_a_t, compute_H_and_z, event_time, i_start, bin_number); // compute last enteries on this thread
 
     for(unsigned long i = 0; i < num_threads - 1; ++i)
     {
