@@ -468,8 +468,6 @@ public:
     {}
 
   void solve(){
-    int falure_count = 0; // TODO: Delete
-
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
     openblas_set_num_threads(p_dat.n_threads);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
@@ -504,6 +502,11 @@ public:
           (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
             (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
       }
+
+      // Recompute sigma points
+      //TODO: should or should these be re-computed?
+      //compute_sigma_points(p_dat.a_t_less_s.unsafe_col(t - 1),
+      //                     sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
       // E-step: correction-step
       //   Compute a_t_t_s and v_t_t_s
