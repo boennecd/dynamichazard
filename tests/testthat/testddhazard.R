@@ -4,8 +4,6 @@ test_that("The head_neck_cancer must be defined for the ddhazard tests",
           expect_true(exists("head_neck_cancer")))
 
 # Test on data set that is one of Farhmiers papers
-tmp_file <- file("testddhazard.log")
-sink(tmp_file)
 result = ddhazard(
   formula = Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
@@ -16,8 +14,6 @@ result = ddhazard(
   max_T = 45,
   id = head_neck_cancer$id, order_ = 1
 )
-sink()
-close(tmp_file)
 
 test_that("Testing previous computed values vs. current on head and neck cancer set assuming that the previous is correct", {
   expect_equal(c(result$a_t_d_s),
