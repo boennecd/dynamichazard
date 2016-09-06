@@ -13,12 +13,12 @@
 +   close(log_file)
 + })
 
-> design_mat <- benssurvutils::get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
+> design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
 
 > sum(design_mat$Y[, 3] & design_mat$Y[, 2] <= 10)
-[1] 384
+[1] 245
 
-> rist_sets <- benssurvutils::get_risk_sets(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
+> rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
 > design_mat$Y[, 2] <- rist_sets$stop_new
 
@@ -35,16 +35,15 @@
 +   arg_list$method <- "EKF"
 +   c .... [TRUNCATED] 
 UKF runtime
-Iteration 1 ended with conv criteria 1.68399
-Iteration 6 ended with conv criteria 0.0125152
+Iteration 1 ended with conv criteria 2.04368
    user  system elapsed 
-  22.44    1.35   23.80 
+  22.23    1.25   23.48 
 EKF runtime
-Iteration 1 ended with conv criteria 0.963471
-Iteration 6 ended with conv criteria 0.0122068
+Iteration 1 ended with conv criteria 1.05244
+Iteration 6 ended with conv criteria 0.0155253
    user  system elapsed 
-   0.05    0.03    0.03 
+   0.06    0.04    0.05 
 MSE for UKF
-[1] 0.9017543
+[1] 1.683381
 MSE for EKF
-[1] 0.9627598
+[1] 2.012851

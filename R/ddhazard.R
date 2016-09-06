@@ -12,7 +12,7 @@ ddhazard = function(formula, data, by,
                     est_Q_0 = T,
                     verbose = F,
                     method = "EKF"){
-  X_Y = benssurvutils::get_design_matrix(formula, data)
+  X_Y = get_design_matrix(formula, data)
   n_parems = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
 
@@ -59,7 +59,7 @@ ddhazard = function(formula, data, by,
   if(verbose)
     message("Finding Risk set")
   risk_set <-
-    benssurvutils::get_risk_sets(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T), id = id)
+    get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T), id = id)
 
   X_Y$Y[, 2] = risk_set$stop_new # Update to new rounded risk stop times
   X_Y$Y[, 3] = risk_set$new_events_flags # update event flags

@@ -12,3 +12,8 @@ gen_kalman_filter_cpp <- function(a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start
     .Call('dynamichazard_gen_kalman_filter_cpp', PACKAGE = 'dynamichazard', a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop, events, order_)
 }
 
+#' Function to find the risk set in c++
+get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id) {
+    .Call('dynamichazard_get_risk_obj_rcpp', PACKAGE = 'dynamichazard', start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id)
+}
+

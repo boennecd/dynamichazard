@@ -6,7 +6,7 @@
 \usage{
 ddhazard(formula, data, by, a_0, Q_0, id, Q = Q_0, n_max = 10^2,
   eps = 10^-3, save_all_output = F, max_T, save_risk_set = F,
-  order_ = 1, est_Q_0 = T, verbose = F)
+  order_ = 1, est_Q_0 = T, verbose = F, method = "EKF")
 }
 \description{
 Function to fit dynamic discrete hazard model
