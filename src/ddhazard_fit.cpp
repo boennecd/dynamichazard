@@ -355,14 +355,20 @@ class EKF_helper{
   std::vector<std::shared_ptr<filter_worker> > workers;
 
 public:
-  EKF_helper(problem_data_EKF &p_data_):
+  EKF_helper(problem_data_EKF &p_data_, const std::string model):
   hardware_threads(std::thread::hardware_concurrency()),
   p_data(p_data_), workers()
   {
     // create workers
     for(int i = 0; i < hardware_threads; i++){
-      std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
-      workers.push_back(std::move(new_p));
+      if(model == "logit"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
+        workers.push_back(std::move(new_p));
+      } else if (model == "poisson"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_poisson(p_data));
+        workers.push_back(std::move(new_p));
+      } else
+        Rcpp::stop("EKF is not implemented for model '" + model  +"'");
     }
   }
 
@@ -430,8 +436,8 @@ class EKF_solver : public Solver{
 
 
 public:
-  EKF_solver(problem_data_EKF &p_):
-    p_dat(p_), filter_helper(EKF_helper(p_)),
+  EKF_solver(problem_data_EKF &p_, const std::string model):
+    p_dat(p_), filter_helper(EKF_helper(p_, model)),
     min_time(vecmin(p_dat.tstart))
   {}
 
@@ -634,8 +640,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const bool verbose = false, const bool save_all_output = false,
                                    const int order_ = 1, const bool est_Q_0 = true,
                                    const std::string method = "EKF",
-                                   Rcpp::Nullable<Rcpp::NumericVector> k = R_NilValue // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
-                                     ){
+                                   Rcpp::Nullable<Rcpp::NumericVector> k = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
+                                   const std::string model = "logit"){
   // Declare and maybe intialize non constants
   double delta_t, test_max_diff;
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
@@ -666,8 +672,11 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
       order_, est_Q_0);
-    solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data));
+    solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
   } else if (method == "UKF"){
+    if(model != "logit")
+      Rcpp::stop("UKF is not implemented for model '" + model  +"'");
+
     p_data = new problem_data(
       X, tstart, tstop, is_event_in_bin,
       a_0, Q_0, Q,
