@@ -334,7 +334,7 @@ class EKF_helper{
       const double z = lower_trunc_exp(arma::dot(i_a_t, x_)) *
         (std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart));
 
-      u_ += x_ * z * ((dat.is_event_in_bin(*it) == bin_number) - z);
+      u_ += x_ * ((dat.is_event_in_bin(*it) == bin_number) - z);
       U_ += x_ * (x_.t() * z);
 
       if(compute_z_and_H){
