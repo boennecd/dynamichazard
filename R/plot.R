@@ -1,31 +1,34 @@
 #' Plots to illustrate the estimate state space variables from a ddhazardfit
 #' @export
-plot.fahrmeier_94 = function(result, new_data, xlab = "Time",
+plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
                              ylab = "Hazard", method = "delta",
                              type, plot_type = "l", cov_index, ylim, ...){
+  if(!object$model %in% c("logit"))
+    stop("Functions for model '", object$model, "' is not implemented")
+
   if(!missing(type) && type == "cov"){
     if(missing(cov_index))
       stop("Need cov index when type is equal to ", type)
 
     if(missing(ylab))
-      ylab = colnames(result$a_t_d_s)[cov_index]
+      ylab = colnames(object$a_t_d_s)[cov_index]
 
-    lb = result$a_t_d_s[, cov_index] - 1.96 * sqrt(result$V_t_d_s[cov_index, cov_index, ])
-    ub = result$a_t_d_s[, cov_index] + 1.96 * sqrt(result$V_t_d_s[cov_index, cov_index, ])
+    lb = object$a_t_d_s[, cov_index] - 1.96 * sqrt(object$V_t_d_s[cov_index, cov_index, ])
+    ub = object$a_t_d_s[, cov_index] + 1.96 * sqrt(object$V_t_d_s[cov_index, cov_index, ])
 
     if(missing(ylim))
       ylim = range(lb, ub)
 
-    plot(result$times, result$a_t_d_s[, cov_index], type = plot_type,
+    plot(object$times, object$a_t_d_s[, cov_index], type = plot_type,
          ylim = ylim, xlab = xlab, ylab = ylab, ...)
-    lines(result$times, lb, lty = 2)
-    lines(result$times, ub, lty = 2)
+    lines(object$times, lb, lty = 2)
+    lines(object$times, ub, lty = 2)
 
     return(invisible())
   }
 
-  predict_ = predict.fahrmeier_94(result, new_data, method = method)
-  hazard = predict_$fits / c(1, diff(result$times))
+  predict_ = predict.fahrmeier_94(object, new_data, method = method)
+  hazard = predict_$fits / c(1, diff(object$times))
 
   plot(predict_$times, hazard, xlab = xlab, ylab = ylab, type = plot_type, ...)
   lines(predict_$times, predict_$lbs, lty = 2)

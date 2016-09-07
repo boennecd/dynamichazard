@@ -1,10 +1,17 @@
 #' Residuals function for result of ddhazard fit
 #' @export
 residuals.fahrmeier_94 = function(object, type = c("stdSpaceErrors", "Pearson"), data_){
+
+  if(!object$model %in% c("logit"))
+    stop("Functions for model '",  object$model, "' is not implemented")
+
   type = type[1]
 
   if(type == "stdSpaceErrors"){
     warning("Std state space error is not tested")
+
+    if(!object$method %in% c("EKF"))
+      stop("Functions for stdSpaceErrors with method '", object$method, "' is not implemented")
 
     if(object$order != 1)
       stop("Method for stdSpaceErrors is not implemented for order ", object$order)
