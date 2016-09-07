@@ -331,21 +331,17 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
+      const double z = lower_trunc_exp(arma::dot(i_a_t, x_)) *
+        (std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart));
 
-      /*if(dat.is_event_in_bin(*it) == bin_number){
-        u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
-      }
-      else {
-        u_ -= x_ * (i_eta / (i_eta + 1.0));
-      }
-      U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
+      u_ += x_ * z * ((dat.is_event_in_bin(*it) == bin_number) - z);
+      U_ += x_ * (x_.t() * z);
 
       if(compute_z_and_H){
-        dat.H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
+        dat.H_diag_inv(i) = pow(z, -1.0);
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  z;
         ++i;
-      }*/
+      }
     }
 
   public:
