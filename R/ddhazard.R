@@ -11,7 +11,8 @@ ddhazard = function(formula, data, by,
                     order_ = 1,
                     est_Q_0 = T,
                     verbose = F,
-                    method = "EKF"){
+                    method = "EKF",
+                    model = "logit"){
   X_Y = get_design_matrix(formula, data)
   n_parems = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
@@ -84,7 +85,8 @@ ddhazard = function(formula, data, by,
                                    risk_obj = risk_set, eps = eps, X = X_Y$X,
                                    tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
                                    order_ = order_,
-                                   est_Q_0 = est_Q_0, method = method)
+                                   est_Q_0 = est_Q_0, method = method,
+                                   model = model)
 
   # Set names
   tmp_names = rep(colnames(X_Y$X), order_)
@@ -92,7 +94,28 @@ ddhazard = function(formula, data, by,
   dimnames(result$V_t_d_s) = list(tmp_names, tmp_names, NULL)
   dimnames(result$Q) = dimnames(result$Q_0) = list(tmp_names, tmp_names)
 
-  structure(list(
+  if(model == "logit") {
+    res <- list(
+    hazard_func =  function(eta, ...){
+      exp_ = exp(eta)
+      exp_/(1 + exp_)
+      },
+      hazard_first_deriv = function(beta, x_, ...){
+        exp_ = exp(beta %*% x_)
+        x_ * exp_ / (exp_ + 1)^2
+      })
+  }else if(model == "poisson"){
+    res <- list(
+    hazard_func =  function(eta, tstop, tstart, ...){
+      exp(eta) * (tstop - tstart)
+    },
+    hazard_first_deriv = function(beta, x_, ...){
+      x_ * exp(beta %*% x_) * (tstop - tstart)
+    })
+  }
+
+  structure(c(
+    res, list(
     formula = X_Y$formula,
     a_t_d_s = result$a_t_d_s,
     V_t_d_s = result$V_t_d_s,
@@ -102,16 +125,9 @@ ddhazard = function(formula, data, by,
     Q_0 = result$Q_0,
     n_risk = unlist(lapply(risk_set$risk_sets, length)),
     times = c(min(X_Y$Y[, 1]), risk_set$event_times),
-    hazard_func =  function(eta){
-      exp_ = exp(eta)
-      exp_/(1 + exp_)
-    },
-    hazard_first_deriv = function(beta, x_){
-      exp_ = exp(beta %*% x_)
-      x_ * exp_ / (exp_ + 1)^2
-    },
     risk_set = if(save_risk_set) risk_set else NA,
     order = order_, F_ = F_,
-    method = method),
+    method = method,
+    model = model)),
     "class" = "fahrmeier_94")
 }

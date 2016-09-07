@@ -95,4 +95,10 @@ test_that("Calls with second order models do not throw errors", {
                 use_parallel = .(use_parallel))))
 })
 
+dum <- structure(list(model = "poisson"), "class" = class(result))
+
+test_that("predict functions throws error when model is poisson",{
+  expect_error(predict(dum))
+})
+
 warning("Implement test for second order random walk and predict")

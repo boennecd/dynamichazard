@@ -13,4 +13,10 @@ test_that("Calls to residuals should succed",{
   expect_no_error(residuals(result, type = "Raw", data_ = head_neck_cancer))
 })
 
+dum <- structure(list(model = "poisson"), "class" = class(result))
+
+test_that("residuals functions throws error when model is poisson",{
+  expect_error(predict(dum))
+})
+
 warning("Implement more test for residuals method (e.g. second order models, the actual values etc.)")

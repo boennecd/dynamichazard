@@ -42,4 +42,10 @@ test_that("Expecting the following calls to succed with a second order fit", {
   expect_no_error(plot(result, new_data = data.frame(group = 0), method = "backtransform"))
 })
 
+dum <- structure(list(model = "poisson"), "class" = class(result))
+
+test_that("Plot functions throws error when model is poisson",{
+  expect_error(plot(dum))
+})
+
 warning("Implement more plot tests")

@@ -4,6 +4,9 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
                                 method = "delta", tstart = "start", tstop = "stop",
                                 use_parallel = F, sds = F, ...)
 {
+  if(!object$model %in% c("logit"))
+    stop("Functions for model '", object$model, "' is not implemented")
+
   m = get_design_matrix(formula = object$formula, data = new_data, response = F)$X
 
   if(type %in% c("term", "term_var_diff")){
@@ -99,11 +102,6 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
         warning("Currently forecasting wihtout drift from higher than first order effects")
       for(t in seq_along(new_times) + length(times)){
         parems[t, ] = parems[t - 1, ]
-        # parems[t, ] = object$F_ %*% parems[t - 1, ]
-      }
-
-      #       parems = c(c(t(parems)), rep(tail(parems, 1), length(new_times)))
-      #       parems = matrix(parems, ncol = n_cols, byrow = T)
       times = c(times, new_times)
     }
 
