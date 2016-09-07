@@ -106,7 +106,7 @@ ddhazard = function(formula, data, by,
       })
   }else if(model == "poisson"){
     res <- list(
-    hazard_func =  function(eta, tstop, tstart, ...){
+    hazard_func =  function(eta, tstart, tstop, ...){
       exp(eta) * (tstop - tstart)
     },
     hazard_first_deriv = function(beta, x_, ...){

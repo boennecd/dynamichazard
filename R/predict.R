@@ -100,7 +100,7 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
       parems = rbind(parems, matrix(NA_real_, nrow = length(new_times), ncol = n_cols))
       if(object$order > 1)
         warning("Currently forecasting wihtout drift from higher than first order effects")
-      for(t in seq_along(new_times) + length(times)){
+      for(t in seq_along(new_times) + length(times))
         parems[t, ] = parems[t - 1, ]
       times = c(times, new_times)
     }
@@ -110,45 +110,58 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
 
     # Round if needed. Throw error if so
     int_start = findInterval(start, times)
-    if(any(start - times[int_start] > 0))
+    if(any(start - times[int_start] > 0) && object$model != "poisson")
       warning("Some start times are rounded down")
 
     int_stop_ = findInterval(stop_, times + 1e4 * .Machine$double.eps) # TODO: better way to deal with equality in the stop time?
-    if(any(times[int_stop_] - stop_ > 0))
+    if(any(times[int_stop_] - stop_ > 0) && object$model != "poisson")
       warning("Some stop times are rounded up")
 
     # Make function to predict for each observations
     # assume that covariates do not change
     hazard_func = object$hazard_func
-    tmp_func = function(x_, sta_, sto_){
-      survival_probs = 1 - sapply(sta_:sto_, function(t)
-        hazard_func(parems[t, ] %*% x_))
+    tmp_func = function(x_, istart, istop, tstart, tstop){
+
+      i <- 0
+      i_max <- istop - istart
+
+      survival_probs = 1 - sapply(istart:istop, function(t){
+        tart <- if(i == 0) tstart else times[t]
+        ttop <- if(i == i_max) tstop else times[t + 1]
+        i <<- i + 1
+        hazard_func(parems[t, ] %*% x_, tstart = tart, tstop = ttop)
+      })
+
       1 - prod(survival_probs)
     }
 
     # Compute hazard
     if(use_parallel){
       tryCatch({
-        no_cores <- min(parallel::detectCores() - 1, nrow(m))
+        no_cores <- min(parallel::detectCores() - 1, ceiling(nrow(m) / 25))
         cl <- parallel::makeCluster(no_cores)
-        parallel::clusterExport(cl, c("parems", "hazard_func"),
+        parallel::clusterExport(cl, c("parems", "hazard_func", "times"),
                                 envir = environment())
 
-        fits = parallel::parRapply(cl = cl, data.frame(sta_ = int_start, sto_ = int_stop_, x_ = m),
+        fits = parallel::parRapply(cl = cl, data.frame(istart = int_start, istop = int_stop_,
+                                                       tstart = start, tstop = stop_, x_ = m),
                                    function(row_){
-                                     tmp_func(x_ = row_[-(1:2)], sta_ = row_[1], sto_ = row_[2])
+                                     tmp_func(x_ = row_[-(1:4)], istart = row_[1], istop = row_[2],
+                                              tstart =  row_[3], tstop =  row_[4])
                                    })
 
       }, finally = { parallel::stopCluster(cl)})
     }
     else{
-      fits = apply(data.frame(sta_ = int_start, sto_ = int_stop_, x_ = m), 1,
+      fits = apply(data.frame(istart = int_start, istop = int_stop_,
+                              tstart = start, tstop = stop_, x_ = m), 1,
                    function(row_){
-                     tmp_func(x_ = row_[-(1:2)], sta_ = row_[1], sto_ = row_[2])
+                     tmp_func(x_ = row_[-(1:4)], istart = row_[1], istop = row_[2],
+                              tstart =  row_[3], tstop =  row_[4])
                    })
     }
 
-    return(list(fits = fits, start = times[int_start], stop = times[int_stop_]))
+    return(list(fits = fits, istart = times[int_start], istop = times[int_stop_]))
   }
 
   if(nrow(m) > 1)
