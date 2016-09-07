@@ -246,8 +246,7 @@ class EKF_helper{
   protected:
     virtual void do_comps(const uvec_iter it, int &i,
                           const arma::vec &i_a_t, const bool &compute_z_and_H,
-                          const double &event_time, const int &bin_number)
-    {}; // abstact method to be implemented
+                          const double &event_time, const int &bin_number) = 0; // abstact method to be implemented
 
     bool is_first_call;
     problem_data_EKF &dat;
@@ -261,9 +260,9 @@ class EKF_helper{
     is_first_call(true), dat(p_data)
     {}
 
-    bool operator()(uvec_iter first, uvec_iter last,
-                    const arma::vec &i_a_t, bool compute_z_and_H,
-                    double event_time, int i_start, const int bin_number){
+    void operator()(uvec_iter first, const uvec_iter last,
+                    const arma::vec &i_a_t, const bool compute_z_and_H,
+                    const double event_time, const int i_start, const int bin_number){
       // potentially intialize variables and set entries to zeroes in any case
       if(is_first_call){
         u_ = arma::vec(dat.n_parems);
@@ -272,14 +271,6 @@ class EKF_helper{
       }
       u_.zeros();
       U_.zeros();
-
-      /*{ //TODO: delete
-        std::lock_guard<std::mutex> lk(dat.m_u);
-        Rcpp::Rcout << "I am " << std::this_thread::get_id() << " " <<
-          std::distance(first, last) << " " <<
-            compute_z_and_H << " " <<  event_time << " " << bin_number << std::endl;
-        i_a_t.print();
-      }*/
 
       // compute local results
       int i = i_start;
@@ -295,22 +286,8 @@ class EKF_helper{
 
       {
         std::lock_guard<std::mutex> lk(dat.m_u);
-        /*Rcpp::Rcout << std::this_thread::get_id() << " got this to add in bin " << bin_number << std::endl;
-        u_.print();
-
-        Rcpp::Rcout << "Here is u_ before" << std::endl;
-
-        dat.u.print();*/
-
         dat.u.head(dat.n_parems) += u_;
-
-        /*Rcpp::Rcout << "Here is the new u_" << std::endl;
-        dat.u.print();
-
-        Rcpp::Rcout << std::endl;*/
       }
-
-      return true;
     }
   };
 
@@ -330,21 +307,11 @@ class EKF_helper{
       }
       U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
 
-      /*{ //TODO: delete
-        std::lock_guard<std::mutex> lk(dat.m_u);
-        Rcpp::Rcout << "I am " << std::this_thread::get_id() << " boh!" << std::endl;
-        (x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0)))).print();
-      }*/
-
       if(compute_z_and_H){
         dat.H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
         dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
         ++i;
       }
-
-      /*std::stringstream ss; TODO: delete
-      ss << std::this_thread::get_id() << "\t" << &u_ << "\t" << &dat.m_u << "\t" << &dat.U << "\n";
-      Rcpp::Rcout << ss.str();*/
     }
 
   public:
@@ -392,7 +359,7 @@ public:
       std::min(hardware_threads != 0 ? hardware_threads:2, max_threads); // at least use two threads if hardware thread is not set
 
     unsigned long const block_size = length/num_threads;
-    std::vector<std::future<bool> > futures(num_threads - 1);
+    std::vector<std::future<void> > futures(num_threads - 1);
     std::vector<std::thread> threads(num_threads - 1);
     join_threads joiner(threads);
 
@@ -405,7 +372,7 @@ public:
     {
       uvec_iter block_end = block_start;
       std::advance(block_end,block_size);
-      std::packaged_task<bool()> task(
+      std::packaged_task<void()> task(
             [it, block_start, block_end, &i_a_t, &compute_H_and_z, &event_time, i_start, &bin_number](){
               return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
                       event_time, i_start, bin_number);
