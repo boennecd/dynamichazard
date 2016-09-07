@@ -236,7 +236,7 @@ test_sim_func_poisson <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_
 
       tmp_t <- tstart
       while(tmp_t < tstop && tmp_t < t_max){
-        hazzard <- 1 - exp( - exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1]) * (min(ceiling(tmp_t + 1e-14), tstop) - tmp_t))
+        hazzard <- exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1]) * (min(ceiling(tmp_t + 1e-14), tstop) - tmp_t)
         event <- hazzard > get_unif_draw(1)
         if(event){
           tstop <- min(ceiling(tmp_t + 1e-14), tstop)

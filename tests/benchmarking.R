@@ -32,3 +32,37 @@ test_that("Expecting similar outcome with new and old method", {
   expect_equal(c(fit1$Q), c(fit2$Q))
   expect_equal(c(fit1$Q_0), c(fit2$Q_0))
 })
+
+######
+# Poisson model
+sims <- test_sim_func_poisson(1e4, n_vars = 3, x_range = 1, x_mean = .5, beta_start = 1,
+                              intercept_start = -5, sds = c(.2, rep(1, 3)))
+
+sum(sims$res$event)
+
+options("scipen"=100, "digits"=4)
+
+design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
+
+tmp_file <- file("benchmarking.log")
+sink(tmp_file)
+
+fit <- ddhazard_fit_cpp_prelim(
+  X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
+  a_0 = rep(0, ncol(design_mat$X)),
+  Q_0 = diag(10, ncol(design_mat$X)),
+  Q = diag(1, ncol(design_mat$X)),
+  F_ = diag(1, ncol(design_mat$X)),
+  risk_obj = rist_sets,
+  eps = 1e-4, n_max = 10^4,
+  order_ = 1,
+  est_Q_0 = F,
+  model = "poisson"
+)
+
+sink()
+close(tmp_file)
+
+matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), lty = 1)
+matplot(sims$betas, type = "l", lty = 2, add = T)
