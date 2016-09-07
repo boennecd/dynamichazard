@@ -246,7 +246,8 @@ class EKF_helper{
   protected:
     virtual void do_comps(const uvec_iter it, int &i,
                           const arma::vec &i_a_t, const bool &compute_z_and_H,
-                          const double &event_time, const int &bin_number) = 0; // abstact method to be implemented
+                          const int &bin_number,
+                          const double &bin_tstart, const double &bin_tstop) = 0; // abstact method to be implemented
 
     bool is_first_call;
     problem_data_EKF &dat;
@@ -260,9 +261,10 @@ class EKF_helper{
     is_first_call(true), dat(p_data)
     {}
 
-    void operator()(uvec_iter first, const uvec_iter last,
-                    const arma::vec &i_a_t, const bool compute_z_and_H,
-                    const double event_time, const int i_start, const int bin_number){
+    void operator()(uvec_iter first, const uvec_iter &last,
+                    const arma::vec &i_a_t, const bool &compute_z_and_H,
+                    const int &i_start, const int &bin_number,
+                    const double &bin_tstart, const double &bin_tstop){
       // potentially intialize variables and set entries to zeroes in any case
       if(is_first_call){
         u_ = arma::vec(dat.n_parems);
@@ -275,7 +277,8 @@ class EKF_helper{
       // compute local results
       int i = i_start;
       for(uvec_iter it = first; it != last; it++){
-        do_comps(it, i, i_a_t, compute_z_and_H, event_time, bin_number);
+        do_comps(it, i, i_a_t, compute_z_and_H, bin_number,
+                 bin_tstart, bin_tstop);
       }
 
       // Update shared variable
@@ -295,7 +298,8 @@ class EKF_helper{
   private:
     void do_comps(const uvec_iter it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
-                  const double &event_time, const int &bin_number){
+                  const int &bin_number,
+                  const double &bin_tstart, const double &bin_tstop){
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
       const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
 
@@ -320,6 +324,36 @@ class EKF_helper{
     {}
   };
 
+  class filter_worker_poisson : public filter_worker {
+  private:
+    void do_comps(const uvec_iter it, int &i,
+                  const arma::vec &i_a_t, const bool &compute_z_and_H,
+                  const int &bin_number,
+                  const double &bin_tstart, const double &bin_tstop){
+      const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
+      const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
+
+      /*if(dat.is_event_in_bin(*it) == bin_number){
+        u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
+      }
+      else {
+        u_ -= x_ * (i_eta / (i_eta + 1.0));
+      }
+      U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
+
+      if(compute_z_and_H){
+        dat.H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
+        ++i;
+      }*/
+    }
+
+  public:
+    filter_worker_poisson(problem_data_EKF &p_data):
+    filter_worker(p_data)
+    {}
+  };
+
   unsigned long const hardware_threads;
   problem_data_EKF &p_data;
   std::vector<std::shared_ptr<filter_worker> > workers;
@@ -338,8 +372,9 @@ public:
 
   void parallel_filter_step(uvec_iter first, uvec_iter last,
                             const arma::vec &i_a_t,
-                            const bool compute_H_and_z,
-                            double event_time, const int bin_number){
+                            const bool &compute_H_and_z,
+                            const int &bin_number,
+                            const double &bin_tstart, const double &bin_tstop){
     // Set referenced objects entries to zero
     p_data.U.zeros();
     p_data.u.zeros();
@@ -373,9 +408,9 @@ public:
       uvec_iter block_end = block_start;
       std::advance(block_end,block_size);
       std::packaged_task<void()> task(
-            [it, block_start, block_end, &i_a_t, &compute_H_and_z, &event_time, i_start, &bin_number](){
+            [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
               return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
-                      event_time, i_start, bin_number);
+                                  i_start, bin_number, bin_tstart, bin_tstop);
             });
       futures[i] = task.get_future();
       threads[i] = std::thread(std::move(task));
@@ -383,7 +418,7 @@ public:
       i_start += block_size;
       block_start = block_end;
     }
-    (*(it->get()))(block_start, last, i_a_t, compute_H_and_z, event_time, i_start, bin_number); // compute last enteries on this thread
+    (*(it->get()))(block_start, last, i_a_t, compute_H_and_z, i_start, bin_number, bin_tstart, bin_tstop); // compute last enteries on this thread
 
     for(unsigned long i = 0; i < num_threads - 1; ++i)
     {
@@ -405,10 +440,11 @@ public:
   {}
 
   void solve(){
-    double event_time = min_time;
+    double bin_tstop = min_time;
     for (int t = 1; t < p_dat.d + 1; t++){
+      double bin_tstart = bin_tstop;
       double delta_t = p_dat.I_len[t - 1];
-      event_time += delta_t;
+      bin_tstop += delta_t;
 
       // E-step: Filter step
       p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
@@ -423,7 +459,8 @@ public:
       //Rcpp::Rcout << "n thread before = " << openblas_get_num_threads() << std::endl;
 #endif
 
-      filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == p_dat.d, event_time, t - 1);
+      filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == p_dat.d, t - 1,
+                                         bin_tstart, bin_tstop);
 
 #ifdef USE_OPEN_BLAS
       openblas_set_num_threads(p_dat.n_threads);
