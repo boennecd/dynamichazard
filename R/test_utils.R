@@ -77,7 +77,7 @@ get_norm_draw <- with(new.env(), {
     if(n > n_max - n_cur){ # we forget about the - 1
       n_max <<- n + n_draws
       n_cur <<- 1
-      draws <<- rnorm(n = n + n_draws, rate = 1)
+      draws <<- rnorm(n = n + n_draws)
     }
 
     tmp <- n_cur
@@ -129,7 +129,7 @@ get_norm_draw = compiler::cmpfun(get_norm_draw, options = list(
 # microbenchmark(get_unif_draw(1), runif(1))
 # microbenchmark(get_unif_draw(100), runif(100))
 
-# Define function to simulate outcomes
+# Define functions to simulate outcomes
 test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = .1, x_mean = -.1,
                                 re_draw = T, beta_start = 3, intercept_start,
                                 sds = rep(1, n_vars + !missing(intercept_start))){
@@ -201,6 +201,70 @@ test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
 # summaryRprof(tmp_file)
 # #
 # sum(tmp$res[, "event"])
+
+test_sim_func_poisson <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = 0,
+                                re_draw = T, beta_start = 1, intercept_start,
+                                sds = rep(1, n_vars + !missing(intercept_start))){
+  # Make output matrix
+  n_row_max <- n_row_inc <- 10^5
+  res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
+                dimnames = list(NULL, c("id", "tstart", "tstop", "event", paste0("x", 1:n_vars))))
+  cur_row <- 1
+
+  if(re_draw){
+    get_unif_draw(re_draw = T)
+    get_exp_draw(re_draw = T)
+    get_norm_draw(re_draw = T)
+  }
+
+  # draw betas
+  use_intercept <- !missing(intercept_start)
+  betas <- matrix(get_norm_draw((t_max - t_0 + 1) * (n_vars + use_intercept)),
+                  ncol = n_vars + use_intercept, nrow = t_max - t_0 + 1)
+  betas <- t(t(betas) * sds)
+  betas[1, ] <- if(use_intercept) c(intercept_start, rep(beta_start, n_vars)) else beta_start
+  betas <- apply(betas, 2, cumsum)
+
+  # Simulate
+  for(id in 1:n_series){
+    tstart <- tstop <- t_0
+    repeat{
+      tstop <- tstart + get_exp_draw(1)
+
+      x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
+      l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
+
+      tmp_t <- tstart
+      while(tmp_t < tstop && tmp_t < t_max){
+        hazzard <- 1 - exp( - exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1]) * (min(ceiling(tmp_t + 1e-14), tstop) - tmp_t))
+        event <- hazzard > get_unif_draw(1)
+        if(event){
+          tstop <- min(ceiling(tmp_t + 1e-14), tstop)
+          break
+        }
+
+        tmp_t <- ceiling(tmp_t + 1e-14)
+      }
+
+      res[cur_row, ] <- c(id, tstart, tstop, event, x_vars)
+
+      if(cur_row == n_row_max){
+        n_row_max <- n_row_max + n_row_inc
+        res = rbind(res, matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars))
+      }
+      cur_row <- cur_row + 1
+
+      if(event || tstop > t_max)
+        break
+
+      tstart <- tstop
+    }
+  }
+
+  list(res = as.data.frame(res[1:(cur_row - 1), ]), betas = betas)
+}
+
+test_sim_func_poisson = compiler::cmpfun(test_sim_func_poisson)
 
 # hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by
 # as search for '(?<=\d)\s+(?=\d)' and replace with ','
