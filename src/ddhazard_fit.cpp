@@ -330,16 +330,21 @@ class EKF_helper{
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
+      //TODO: simplify computations here
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      const double z = lower_trunc_exp(arma::dot(i_a_t, x_)) *
-        (std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart));
+      const double dot_prod = arma::dot(i_a_t, x_);
+      const double exp_eta = lower_trunc_exp(dot_prod);
+      const double delta_t = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
 
-      u_ += x_ * ((dat.is_event_in_bin(*it) == bin_number) - z);
-      U_ += x_ * (x_.t() * z);
+      const double z = 1.0 - exp( - exp_eta * delta_t);
+      const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
+
+      u_ += ((dat.is_event_in_bin(*it) == bin_number) - z) * z_dot / (z * (1 - z));
+      U_ += z_dot * (z_dot.t() / (z * (1 - z)));
 
       if(compute_z_and_H){
-        dat.H_diag_inv(i) = pow(z, -1.0);
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  z;
+        dat.H_diag_inv(i) = 1 / (z * (1 - z));
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = z_dot;
         ++i;
       }
     }
@@ -458,7 +463,7 @@ public:
 
 #if defined(USE_OPEN_BLAS)
       openblas_set_num_threads(1);
-      //Rcpp::Rcout << "n thread before = " << openblas_get_num_threads() << std::endl;
+      Rcpp::Rcout << "n thread before = " << openblas_get_num_threads() << std::endl;
 #endif
 
       filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == p_dat.d, t - 1,
@@ -466,14 +471,24 @@ public:
 
 #ifdef USE_OPEN_BLAS
       openblas_set_num_threads(p_dat.n_threads);
-      //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
+      Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
 
       // E-step: scoring step: update values
+
+
+      Rcpp::Rcout << "made ";
       arma::mat V_t_less_s_inv = arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+      p_dat.U.print();
+      arma::mat tmp = arma::inv_sympd(V_t_less_s_inv + p_dat.U); // TODO: Delete
+      Rcpp::Rcout << "it " << p_dat.U.n_rows << "\t" << p_dat.U.n_cols << "\t" <<
+        tmp.n_rows << "\t" << tmp.n_cols;
       p_dat.V_t_t_s.slice(t) = arma::inv_sympd(V_t_less_s_inv + p_dat.U);
+      Rcpp::Rcout << "here ";
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.V_t_t_s.slice(t) * p_dat.u;
+      Rcpp::Rcout << "!! ";
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
+      Rcpp::Rcout << "?! ";
 
       if(t == p_dat.d){
         p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * inv(arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U *
