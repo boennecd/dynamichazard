@@ -76,16 +76,20 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
       if(start[i] >= I_stop_time) // no need to search further
         break;
 
-      if(start[i] <= I_start_time && I_start_time < stop[i]){
-        // starts before and ends after. Thus in this bin
-        indicies.push_back(i + 1); // R use one indexing!
-      }
-      else if(start[i] >= I_start_time && stop[i] <= I_stop_time){
-        // start after and ends before. Thus inside the bin
-        if(is_for_discrete_model){
+      if(is_for_discrete_model){
+        if(start[i] <= I_start_time && I_start_time < stop[i]){
+          // starts before and ends after. Thus in this bin
+          indicies.push_back(i + 1); // R use one indexing!
+        }
+        else if(start[i] >= I_start_time && stop[i] <= I_stop_time){
+          // start after and ends before. Thus inside the bin
           is_within_bin[i] = true;
-        } else {
-          indicies.push_back(i + 1);
+        }
+      } else {
+        if(I_start_time < stop[i]){
+          // we all ready know it start before the interval stops and now we
+          // know it stop after the interval starts so it is in
+          indicies.push_back(i + 1); // R use one indexing!
         }
       }
     }
