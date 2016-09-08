@@ -56,8 +56,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // get_risk_obj_rcpp
-List get_risk_obj_rcpp(const NumericVector& start, const NumericVector& stop, const LogicalVector& event, const double& by, const IntegerVector& start_order, const double& max_T, const IntegerVector& order_by_id_and_rev_start, const IntegerVector& id);
-RcppExport SEXP dynamichazard_get_risk_obj_rcpp(SEXP startSEXP, SEXP stopSEXP, SEXP eventSEXP, SEXP bySEXP, SEXP start_orderSEXP, SEXP max_TSEXP, SEXP order_by_id_and_rev_startSEXP, SEXP idSEXP) {
+List get_risk_obj_rcpp(const NumericVector& start, const NumericVector& stop, const LogicalVector& event, const double& by, const IntegerVector& start_order, const double& max_T, const IntegerVector& order_by_id_and_rev_start, const IntegerVector& id, const bool& is_for_discrete_model);
+RcppExport SEXP dynamichazard_get_risk_obj_rcpp(SEXP startSEXP, SEXP stopSEXP, SEXP eventSEXP, SEXP bySEXP, SEXP start_orderSEXP, SEXP max_TSEXP, SEXP order_by_id_and_rev_startSEXP, SEXP idSEXP, SEXP is_for_discrete_modelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -69,7 +69,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double& >::type max_T(max_TSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type order_by_id_and_rev_start(order_by_id_and_rev_startSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type id(idSEXP);
-    __result = Rcpp::wrap(get_risk_obj_rcpp(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id));
+    Rcpp::traits::input_parameter< const bool& >::type is_for_discrete_model(is_for_discrete_modelSEXP);
+    __result = Rcpp::wrap(get_risk_obj_rcpp(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model));
     return __result;
 END_RCPP
 }

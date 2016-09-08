@@ -1,4 +1,4 @@
-# library(survival); library(benssurvutils); source("R/test_utils.R")
+# library(survival); source("R/test_utils.R")
 
 # Simulate series to work with
 set.seed(2972)
@@ -187,3 +187,26 @@ res <- ddhazard_fit(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = desig
 #   plot(res$a_t_d_s[, i + 1], type = "l", ylim = range(sims$betas[, i ], res$a_t_d_s[, i + 1], res_new$a_t_d_s[, i + 1]))
 #   lines(x = seq_len(nrow(sims$betas)), sims$betas[, i], col = "red")
 # }
+
+design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
+
+arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
+                 a_0 = rep(0, ncol(design_mat$X)),
+                 Q_0 = diag(10, ncol(design_mat$X)), # something large
+                 Q = diag(1, ncol(design_mat$X)), # something large
+                 F_= diag(1, ncol(design_mat$X)), # first order random walk
+                 eps = 10^-4, n_max = 10^4,
+                 order_ = 1,
+                 est_Q_0 = F)
+
+test_that("Fit throw error when you use wrong is_for_discrete_model for risk set",{
+  risk_obj <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id, is_for_discrete_model = T)
+  arg_list$risk_obj <- risk_obj
+  arg_list$model <- "poisson"
+  expect_error(do.call(ddhazard_fit_cpp_prelim, arg_list))
+
+  risk_obj <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id, is_for_discrete_model = F)
+  arg_list$risk_obj <- risk_obj
+  arg_list$model <- "logit"
+  expect_error(do.call(ddhazard_fit_cpp_prelim, arg_list))
+})
