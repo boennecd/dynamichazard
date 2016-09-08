@@ -45,8 +45,8 @@ options("scipen"=100, "digits"=4)
 design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
 rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
-tmp_file <- file("benchmarking.log")
-sink(tmp_file)
+# tmp_file <- file("benchmarking.log")
+# sink(tmp_file)
 
 fit <- ddhazard_fit_cpp_prelim(
   X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
@@ -61,8 +61,8 @@ fit <- ddhazard_fit_cpp_prelim(
   model = "poisson"
 )
 
-sink()
-close(tmp_file)
+# sink()
+# close(tmp_file)
 
-matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), lty = 1)
-matplot(sims$betas, type = "l", lty = 2, add = T)
+# matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), lty = 1)
+# matplot(sims$betas, type = "l", lty = 2, add = T)

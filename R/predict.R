@@ -4,7 +4,7 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
                                 method = "delta", tstart = "start", tstop = "stop",
                                 use_parallel = F, sds = F, ...)
 {
-  if(!object$model %in% c("logit"))
+  if(!object$model %in% c("logit", "poisson"))
     stop("Functions for model '", object$model, "' is not implemented")
 
   m = get_design_matrix(formula = object$formula, data = new_data, response = F)$X
@@ -163,6 +163,9 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2), type = 
 
     return(list(fits = fits, istart = times[int_start], istop = times[int_stop_]))
   }
+
+  if(!object$model %in% c("logit"))
+    stop("Functions for model '", object$model, "' is not implemented beyond this point in source code")
 
   if(nrow(m) > 1)
     stop("Not implemented for more than one observation")

@@ -51,30 +51,6 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
     }
   }
 
-  //TODO: Delete
-  /* // Find new rounded stop times
-  NumericVector stop_new = clone(stop);
-  I_start_time = min_start;
-  for(d_ = 0; d_ < d + 1; d_++){
-  if(d_ == d)
-  I_stop_time = max(stop) + 1.0;
-  else
-  I_stop_time = event_times[d_];
-
-  for(i = 0; i < n; i++){
-  j = start_order[i];
-
-  if(start[j] >= I_stop_time)
-  break;
-
-  if(I_start_time < stop[j] && stop[j] <= I_stop_time){
-  stop_new[j] = I_stop_time;
-  }
-  }
-
-  I_start_time = I_stop_time;
-  }*/
-
   // Make flag for whether an observation is inside a bin
   //  E.g. we have a row at time [.25, .75) with an event
   //  and a bins with times [0, 1).
