@@ -24,7 +24,8 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
                        const IntegerVector &start_order, // index of stop sorted in decreasing order
                        const double &max_T,
                        const IntegerVector &order_by_id_and_rev_start,
-                       const IntegerVector &id
+                       const IntegerVector &id,
+                       const bool &is_for_discrete_model = true
 ){
   // See this page for rcpp sugar functions http://dirk.eddelbuettel.com/code/rcpp/html/unique_8h.html
   NumericVector stop_events = stop[event];
@@ -81,7 +82,11 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
       }
       else if(start[i] >= I_start_time && stop[i] <= I_stop_time){
         // start after and ends before. Thus inside the bin
-        is_within_bin[i] = true;
+        if(is_for_discrete_model){
+          is_within_bin[i] = true;
+        } else {
+          indicies.push_back(i + 1);
+        }
       }
     }
 
@@ -186,5 +191,6 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
                       Named("event_times") = event_times,
                       Named("I_len") = I_len,
                       Named("d") = d,
-                      Named("is_event_in") = is_event_in));
+                      Named("is_event_in") = is_event_in,
+                      Named("is_for_discrete_model") = is_for_discrete_model));
 }

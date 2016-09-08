@@ -642,6 +642,12 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const std::string method = "EKF",
                                    Rcpp::Nullable<Rcpp::NumericVector> k = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
                                    const std::string model = "logit"){
+  if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "poisson"){
+    Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
+  } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
+    Rcpp::stop("risk_obj has 'is_for_discrete_model' = false which should be true for model '" + model  +"'");
+  }
+
   // Declare and maybe intialize non constants
   double delta_t, test_max_diff;
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());

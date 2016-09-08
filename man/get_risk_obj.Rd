@@ -4,7 +4,7 @@
 \alias{get_risk_obj}
 \title{Returns the discretized risk set}
 \usage{
-get_risk_obj(Y, by, max_T, id)
+get_risk_obj(Y, by, max_T, id, is_for_discrete_model = F)
 }
 \description{
 Returns the discretized risk set

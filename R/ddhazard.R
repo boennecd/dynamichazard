@@ -57,10 +57,18 @@ ddhazard = function(formula, data, by,
      length(a_0) != n_parems * order_)
     stop("One of the input vector or matrices do not match with the order and number of parameters")
 
+  if(model == "logit"){
+    is_for_discrete_model <- TRUE
+  } else if (model == "poisson"){
+    is_for_discrete_model <- FALSE
+  } else
+    stop("Model '", model, "' is not implemented")
+
   if(verbose)
     message("Finding Risk set")
   risk_set <-
-    get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T), id = id)
+    get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
+                 id = id, is_for_discrete_model = is_for_discrete_model)
 
   # Report pre-liminary stats
   if(verbose){

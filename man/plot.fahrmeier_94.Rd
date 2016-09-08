@@ -4,7 +4,7 @@
 \alias{plot.fahrmeier_94}
 \title{Plots to illustrate the estimate state space variables from a ddhazardfit}
 \usage{
-\method{plot}{fahrmeier_94}(result, new_data, xlab = "Time",
+\method{plot}{fahrmeier_94}(object, new_data, xlab = "Time",
   ylab = "Hazard", method = "delta", type, plot_type = "l", cov_index,
   ylim, ...)
 }

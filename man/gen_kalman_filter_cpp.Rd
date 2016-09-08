@@ -5,7 +5,7 @@
 \title{Function to perform one iteration of the Kalman filter in parallel}
 \usage{
 gen_kalman_filter_cpp(a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop,
-  events, order_)
+  is_event_in_bin, order_)
 }
 \description{
 Function to perform one iteration of the Kalman filter in parallel

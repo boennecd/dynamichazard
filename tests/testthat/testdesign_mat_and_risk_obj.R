@@ -206,3 +206,6 @@ test_that("Design mat with vs. without intercept", {
   expect_equal(design$X[, 2:4], design_no_intercept$X[, 1:3])
   expect_equal(ncol(design_no_intercept$X[, 1:3]), 3)
 })
+
+test_that("is_for_discrete_model logic work",
+          expect_true(FALSE))

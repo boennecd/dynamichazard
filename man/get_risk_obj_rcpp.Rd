@@ -5,7 +5,7 @@
 \title{Function to find the risk set in c++}
 \usage{
 get_risk_obj_rcpp(start, stop, event, by, start_order, max_T,
-  order_by_id_and_rev_start, id)
+  order_by_id_and_rev_start, id, is_for_discrete_model = TRUE)
 }
 \description{
 Function to find the risk set in c++
