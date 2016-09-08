@@ -207,5 +207,90 @@ test_that("Design mat with vs. without intercept", {
   expect_equal(ncol(design_no_intercept$X[, 1:3]), 3)
 })
 
-test_that("is_for_discrete_model logic work",
-          expect_true(FALSE))
+test_that("is_for_discrete_model logic work",{
+  by_ = 1
+  t_max = 3
+
+  data_ <- data.frame(matrix(
+    dimnames = list(NULL, c("id", "tstart", "tstop", "event")),
+    ncol = 4, byrow = T, data = c(
+      # Id 1:
+      #   is in bin 1 in either method
+      #   has event
+      1, 0, .5, 1,
+
+      # Id 2:
+      #   same as id 1
+      2, 0, 1, 1,
+
+      # Id 3:
+      #   same as id 1 but with no event
+      3, 0, .5, 0,
+
+      # Id 4:
+      #   same as id 2 but with no event
+      4, 0, 1, 0,
+
+      # Id 5:
+      #   1 row in all three bins
+      #   has event
+      5, 0, 3, 1,
+
+      # Id 6:
+      #   5 row in all three bins
+      #   no has event
+      6, 0, 3, 0,
+
+      # Id 7
+      #   one row that is only in cont
+      #   and is an event
+      7, .25, .75, 1,
+
+      # Id 8
+      #   two rows where one cross two bins
+      #   has event in the latter which is added two first in discrete
+      8, 0, 1.25, 0,
+      8, 1.25, 1.5, 1,
+
+      # Id 9
+      #   same as Id 7 but no event
+      9, .25, .75, 0,
+
+      # Id 10
+      #   two rows where second cross two bins and has event after max_T
+      10, .25, 1.5, 0,
+      10, 1.5, 9, 1,
+
+      # id 11
+      #   same as 11 but with no event
+      11, .25, 1.5, 0,
+      11, 1.5, 9, 0
+  )))
+
+  arg_list <- list(Y = Surv(data_$tstart, data_$tstop, data_$event),
+                   by = by_, max_T = t_max, id = data_$id)
+
+  arg_list$is_for_discrete_model <- T
+  get_risk_obj_discrete <- do.call(get_risk_obj, arg_list)
+
+  expect_equal(get_risk_obj_discrete$is_event_in,
+               c(0, 0, -1, -1, 2,
+                 -1, -1, 1, -1, -1,
+                 -1, -1, -1, -1))
+
+  expect_true(setequal(get_risk_obj_discrete$risk_sets[[1]], c(1:6, 8)))
+  expect_true(setequal(get_risk_obj_discrete$risk_sets[[2]], c(5:6, 8, 11, 13)))
+  expect_true(setequal(get_risk_obj_discrete$risk_sets[[3]], c(5:6, 12, 14)))
+
+  arg_list$is_for_discrete_model <- F
+  get_risk_obj_cont <- do.call(get_risk_obj, arg_list)
+
+  expect_equal(get_risk_obj_cont$is_event_in,
+               c(0, 0, -1, -1, 2,
+                 -1, 0, -1, 1, -1,
+                 -1, -1, -1, -1))
+
+  expect_true(setequal(get_risk_obj_cont$risk_sets[[1]], c(1:8, 10, 11, 13)))
+  expect_true(setequal(get_risk_obj_cont$risk_sets[[2]], c(5:6, 8, 9, 11, 12, 13, 14)))
+  expect_true(setequal(get_risk_obj_cont$risk_sets[[3]], c(5:6, 12, 14)))
+})
