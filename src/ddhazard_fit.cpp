@@ -42,8 +42,9 @@ extern int openblas_get_num_threads();
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
 const double lower_trunc_exp_log_thres = sqrt(log(std::numeric_limits<double>::max())) - 1.1;
 const double lower_trunc_exp_exp_thres = exp(lower_trunc_exp_log_thres);
-struct in_place_lower_trunc_exp_functor{
-  void operator()(arma::vec::elem_type &val){
+struct {
+  template<typename T>
+  void operator()(T &&val){
     if(val >= lower_trunc_exp_log_thres )
     {
       val =  lower_trunc_exp_exp_thres;
@@ -53,23 +54,17 @@ struct in_place_lower_trunc_exp_functor{
       val = std::exp(val);
     }
   }
-};
-
-inline arma::vec& lower_trunc_exp(arma::vec result)
-{
-  result.for_each(in_place_lower_trunc_exp_functor());
-  return result;
-}
+} lower_trunc_exp_in_place_functor;
 
 inline arma::vec& in_place_lower_trunc_exp(arma::vec &result)
 {
-  result.for_each(in_place_lower_trunc_exp_functor());
+  result.for_each(lower_trunc_exp_in_place_functor);
   return result;
 }
 
 inline arma::mat& in_place_lower_trunc_exp(arma::mat &result)
 {
-  result.for_each(in_place_lower_trunc_exp_functor());
+  result.for_each(lower_trunc_exp_in_place_functor);
   return result;
 }
 
@@ -361,7 +356,7 @@ class EKF_helper{
       double z = (tmp >= tresh_low) ? ((tmp > tresh_up) ? tresh_up : tmp) : tresh_low;
 
       const arma::vec log_z_dot = log(x_ * delta_t) + dot_prod - delta_t * exp_eta;
-      const arma::vec z_dot = in_place_lower_trunc_exp(log_z_dot);
+      const arma::vec z_dot = exp(log_z_dot);
       //const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
 
       u_ += ((dat.is_event_in_bin(*it) == bin_number) - z) * z_dot / (z * (1 - z));
