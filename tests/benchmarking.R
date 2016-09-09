@@ -52,7 +52,7 @@ rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id, is
 fit <- ddhazard_fit_cpp_prelim(
   X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
   a_0 = rep(0, ncol(design_mat$X)),
-  Q_0 = diag(10, ncol(design_mat$X)),
+  Q_0 = diag(1, ncol(design_mat$X)),
   Q = diag(1, ncol(design_mat$X)),
   F_ = diag(1, ncol(design_mat$X)),
   risk_obj = rist_sets,
@@ -67,3 +67,4 @@ fit <- ddhazard_fit_cpp_prelim(
 
 matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), lty = 1)
 matplot(sims$betas, type = "l", lty = 2, add = T)
+sum(sims$res$event)

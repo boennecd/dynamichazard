@@ -336,7 +336,13 @@ class EKF_helper{
       const double exp_eta = lower_trunc_exp(dot_prod);
       const double delta_t = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
 
-      const double z = 1.0 - exp( - exp_eta * delta_t);
+      static double tresh_low = 1.0e-6; // TODO: How to set?
+      static double tresh_up = 1.0 - tresh_low;
+
+      double z = 1.0 - exp( - exp_eta * delta_t);
+      z = (z < tresh_low) ? tresh_low :
+        ((z > tresh_up) ? tresh_up : z);
+
       const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
 
       u_ += ((dat.is_event_in_bin(*it) == bin_number) - z) * z_dot / (z * (1 - z));
@@ -463,7 +469,7 @@ public:
 
 #if defined(USE_OPEN_BLAS)
       openblas_set_num_threads(1);
-      Rcpp::Rcout << "n thread before = " << openblas_get_num_threads() << std::endl;
+      //Rcpp::Rcout << "n thread before = " << openblas_get_num_threads() << std::endl;
 #endif
 
       filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == p_dat.d, t - 1,
@@ -471,24 +477,15 @@ public:
 
 #ifdef USE_OPEN_BLAS
       openblas_set_num_threads(p_dat.n_threads);
-      Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
+      //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
 
       // E-step: scoring step: update values
 
-
-      Rcpp::Rcout << "made ";
       arma::mat V_t_less_s_inv = arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
-      p_dat.U.print();
-      arma::mat tmp = arma::inv_sympd(V_t_less_s_inv + p_dat.U); // TODO: Delete
-      Rcpp::Rcout << "it " << p_dat.U.n_rows << "\t" << p_dat.U.n_cols << "\t" <<
-        tmp.n_rows << "\t" << tmp.n_cols;
       p_dat.V_t_t_s.slice(t) = arma::inv_sympd(V_t_less_s_inv + p_dat.U);
-      Rcpp::Rcout << "here ";
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.V_t_t_s.slice(t) * p_dat.u;
-      Rcpp::Rcout << "!! ";
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
-      Rcpp::Rcout << "?! ";
 
       if(t == p_dat.d){
         p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * inv(arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U *
