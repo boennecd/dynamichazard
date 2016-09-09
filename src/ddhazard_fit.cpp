@@ -42,21 +42,38 @@ extern int openblas_get_num_threads();
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
 const double lower_trunc_exp_log_thres = sqrt(log(std::numeric_limits<double>::max())) - 1.1;
 const double lower_trunc_exp_exp_thres = exp(lower_trunc_exp_log_thres);
-inline void in_place_lower_trunc_exp(arma::colvec & result)
-{
-  for(auto i = result.begin(); i != result.end(); i++){
-    if(*i >= lower_trunc_exp_log_thres )
+struct in_place_lower_trunc_exp_functor{
+  void operator()(arma::vec::elem_type &val){
+    if(val >= lower_trunc_exp_log_thres )
     {
-      *i =  lower_trunc_exp_exp_thres;
+      val =  lower_trunc_exp_exp_thres;
     }
     else
     {
-      *i = std::exp(*i);
+      val = std::exp(val);
     }
   }
+};
+
+inline arma::vec& lower_trunc_exp(arma::vec result)
+{
+  result.for_each(in_place_lower_trunc_exp_functor());
+  return result;
 }
 
-inline double lower_trunc_exp(double x){
+inline arma::vec& in_place_lower_trunc_exp(arma::vec &result)
+{
+  result.for_each(in_place_lower_trunc_exp_functor());
+  return result;
+}
+
+inline arma::mat& in_place_lower_trunc_exp(arma::mat &result)
+{
+  result.for_each(in_place_lower_trunc_exp_functor());
+  return result;
+}
+
+inline double lower_trunc_exp(const double &x){
   if(x >= lower_trunc_exp_log_thres )
   {
     return(lower_trunc_exp_exp_thres);
@@ -326,6 +343,10 @@ class EKF_helper{
 
   class filter_worker_poisson : public filter_worker {
   private:
+    const double tresh_low = 1.0e-8; // TODO: How to set?
+    const double tresh_up = 1.0 - tresh_low;
+    const arma::rowvec dum_one_vec;
+
     void do_comps(const uvec_iter it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
                   const int &bin_number,
@@ -336,17 +357,18 @@ class EKF_helper{
       const double exp_eta = lower_trunc_exp(dot_prod);
       const double delta_t = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
 
-      static double tresh_low = 1.0e-6; // TODO: How to set?
-      static double tresh_up = 1.0 - tresh_low;
+      double &&tmp = 1.0 - exp( - exp_eta * delta_t);
+      double z = (tmp >= tresh_low) ? ((tmp > tresh_up) ? tresh_up : tmp) : tresh_low;
 
-      double z = 1.0 - exp( - exp_eta * delta_t);
-      z = (z < tresh_low) ? tresh_low :
-        ((z > tresh_up) ? tresh_up : z);
-
-      const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
+      const arma::vec log_z_dot = log(x_ * delta_t) + dot_prod - delta_t * exp_eta;
+      const arma::vec z_dot = in_place_lower_trunc_exp(log_z_dot);
+      //const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
 
       u_ += ((dat.is_event_in_bin(*it) == bin_number) - z) * z_dot / (z * (1 - z));
-      U_ += z_dot * (z_dot.t() / (z * (1 - z)));
+
+      arma::mat &&U_intermediate = log_z_dot * dum_one_vec;
+      U_intermediate = U_intermediate.each_row() + (log_z_dot.t() - log(z * (1 - z)));
+      U_ += in_place_lower_trunc_exp(U_intermediate);
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = 1 / (z * (1 - z));
@@ -357,7 +379,7 @@ class EKF_helper{
 
   public:
     filter_worker_poisson(problem_data_EKF &p_data):
-    filter_worker(p_data)
+    filter_worker(p_data), dum_one_vec(arma::ones<arma::vec>(dat.n_parems).t())
     {}
   };
 
