@@ -56,27 +56,42 @@ struct {
   }
 } lower_trunc_exp_in_place_functor;
 
-inline arma::vec& in_place_lower_trunc_exp(arma::vec &result)
+inline arma::vec& lower_trunc_exp_in_place(arma::vec &result)
 {
   result.for_each(lower_trunc_exp_in_place_functor);
   return result;
 }
 
-inline arma::mat& in_place_lower_trunc_exp(arma::mat &result)
+inline arma::mat& lower_trunc_exp_in_place(arma::mat &result)
 {
   result.for_each(lower_trunc_exp_in_place_functor);
   return result;
 }
 
-inline double lower_trunc_exp(const double &x){
-  if(x >= lower_trunc_exp_log_thres )
-  {
-    return(lower_trunc_exp_exp_thres);
+struct {
+  template<typename T>
+  T operator()(const T &val){
+    if(val >= lower_trunc_exp_log_thres )
+    {
+      return lower_trunc_exp_exp_thres;
+    }
+    else
+    {
+      return std::exp(val);
+    }
   }
-  else
-  {
-    return(std::exp(x));
-  }
+} lower_trunc_exp_functor;
+
+inline const arma::vec& lower_trunc_exp(const arma::vec &result)
+{
+  result.for_each(lower_trunc_exp_functor);
+  return result;
+}
+
+inline const arma::mat& lower_trunc_exp(const arma::mat &result)
+{
+  result.for_each(lower_trunc_exp_functor);
+  return result;
 }
 
 // from http://gallery.rcpp.org/articles/vector-minimum/
@@ -313,7 +328,7 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      const double i_eta = lower_trunc_exp(arma::dot(i_a_t, x_));
+      const double i_eta = lower_trunc_exp_functor(arma::dot(i_a_t, x_));
 
       if(dat.is_event_in_bin(*it) == bin_number){
         u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
@@ -349,21 +364,17 @@ class EKF_helper{
       //TODO: simplify computations here
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
       const double dot_prod = arma::dot(i_a_t, x_);
-      const double exp_eta = lower_trunc_exp(dot_prod);
+
+      const double exp_eta = lower_trunc_exp_functor(dot_prod);
       const double delta_t = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
 
       double &&tmp = 1.0 - exp( - exp_eta * delta_t);
       double z = (tmp >= tresh_low) ? ((tmp > tresh_up) ? tresh_up : tmp) : tresh_low;
 
-      const arma::vec log_z_dot = log(x_ * delta_t) + dot_prod - delta_t * exp_eta;
-      const arma::vec z_dot = exp(log_z_dot);
-      //const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
+      const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
 
       u_ += ((dat.is_event_in_bin(*it) == bin_number) - z) * z_dot / (z * (1 - z));
-
-      arma::mat &&U_intermediate = log_z_dot * dum_one_vec;
-      U_intermediate = U_intermediate.each_row() + (log_z_dot.t() - log(z * (1 - z)));
-      U_ += in_place_lower_trunc_exp(U_intermediate);
+      U_ += z_dot * (z_dot.t() / (z * (1 - z)));
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = 1 / (z * (1 - z));
@@ -611,11 +622,8 @@ public:
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
       arma::mat &&tmp = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
-      arma::mat Z_t = tmp.for_each(
-        [](arma::mat::elem_type &val) {
-          double &&tmp = lower_trunc_exp(val);
-          val = tmp / (1 + tmp);
-          });
+      tmp = lower_trunc_exp(tmp);
+      arma::mat Z_t = tmp.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
       // Compute y_bar, P_a_v and P_v_v
       const arma::vec y_bar = w_0 * Z_t.unsafe_col(0) +
