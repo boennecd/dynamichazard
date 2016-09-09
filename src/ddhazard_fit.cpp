@@ -56,16 +56,14 @@ struct {
   }
 } lower_trunc_exp_in_place_functor;
 
-inline arma::vec& lower_trunc_exp_in_place(arma::vec &result)
+inline void lower_trunc_exp_in_place(arma::vec &result)
 {
   result.for_each(lower_trunc_exp_in_place_functor);
-  return result;
 }
 
-inline arma::mat& lower_trunc_exp_in_place(arma::mat &result)
+inline void lower_trunc_exp_in_place(arma::mat &result)
 {
   result.for_each(lower_trunc_exp_in_place_functor);
-  return result;
 }
 
 struct {

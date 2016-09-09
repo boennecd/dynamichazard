@@ -107,7 +107,7 @@ warning("Implement test for second order random walk and predict")
 # Poisson model
 set.seed(39795)
 sims <- test_sim_func_poisson(1e4, n_vars = 3, x_range = 1, x_mean = .5, beta_start = 1,
-                              intercept_start = -5, sds = c(.2, rep(1, 3)))
+                              intercept_start = -5, sds = c(.2, rep(.5, 3)))
 
 design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
 risk_obj <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
@@ -125,6 +125,7 @@ fit <- ddhazard(
 
 matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), lty = 1)
 matplot(sims$betas, type = "l", lty = 2, add = T)
+sum(sims$res$event)
 
 preds <- predict(fit, new_data = sims$res, tstart = "tstart", tstop = "tstop")
 
