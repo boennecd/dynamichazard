@@ -37,7 +37,7 @@ test_that("Expecting similar outcome with new and old method", {
 # Poisson model
 set.seed(582193)
 sims <- test_sim_func_poisson(1e4, n_vars = 3, x_range = 1, x_mean = .5, beta_start = 1,
-                              intercept_start = -5, sds = c(.1, rep(1, 3)))
+                              intercept_start = -5, sds = c(.1, rep(sqrt(.5), 3)))
 
 sum(sims$res$event)
 
@@ -51,7 +51,7 @@ rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id, is
 
 fit <- ddhazard_fit_cpp_prelim(
   X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
-  a_0 = rep(0, ncol(design_mat$X)),
+  a_0 = c(-1, 1, 1, 1),
   Q_0 = diag(1, ncol(design_mat$X)),
   Q = diag(1, ncol(design_mat$X)),
   F_ = diag(1, ncol(design_mat$X)),
@@ -65,6 +65,7 @@ fit <- ddhazard_fit_cpp_prelim(
 # sink()
 # close(tmp_file)
 
+matplot(sims$betas, type = "l", lty = 2)
 matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), lty = 1)
 matplot(sims$betas, type = "l", lty = 2, add = T)
 sum(sims$res$event)
