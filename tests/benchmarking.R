@@ -52,7 +52,7 @@ rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id, is
 fit <- ddhazard_fit_cpp_prelim(
   X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
   a_0 = c(-1, 1, 1, 1),
-  Q_0 = diag(1, ncol(design_mat$X)),
+  Q_0 = diag(10, ncol(design_mat$X)),
   Q = diag(1, ncol(design_mat$X)),
   F_ = diag(1, ncol(design_mat$X)),
   risk_obj = rist_sets,

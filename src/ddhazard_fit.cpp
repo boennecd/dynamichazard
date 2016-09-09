@@ -374,7 +374,9 @@ class EKF_helper{
       const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
 
       u_ += ((dat.is_event_in_bin(*it) == bin_number) - z) * z_dot / (z * (1 - z));
-      U_ += z_dot * (z_dot.t() / (z * (1 - z)));
+
+      tmp = lower_trunc_exp_functor(log(pow(delta_t, 2.0) * (1 - z) / z) + 2 * dot_prod);
+      U_ += x_ * (x_.t() * tmp);
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = 1 / (z * (1 - z));
