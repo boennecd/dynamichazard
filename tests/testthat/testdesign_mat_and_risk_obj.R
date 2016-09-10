@@ -264,7 +264,19 @@ test_that("is_for_discrete_model logic work",{
       # id 11
       #   same as 11 but with no event
       11, .25, 1.5, 0,
-      11, 1.5, 9, 0
+      11, 1.5, 9, 0,
+
+      # id 12
+      #   starts at time one and end at time 2 should be in second bin for both
+      12, 1, 2, 0,
+
+      # id 13
+      #   same as id 12 but with an event
+      13, 1, 2, 1,
+
+      # id 14
+      #   should be in both methods for last two bins. Has event in neither
+      13, 1, 3.4, 1
   )))
 
   arg_list <- list(Y = Surv(data_$tstart, data_$tstop, data_$event),
@@ -276,11 +288,12 @@ test_that("is_for_discrete_model logic work",{
   expect_equal(get_risk_obj_discrete$is_event_in,
                c(0, 0, -1, -1, 2,
                  -1, -1, 1, -1, -1,
-                 -1, -1, -1, -1))
+                 -1, -1, -1, -1, -1,
+                 1, -1))
 
   expect_true(setequal(get_risk_obj_discrete$risk_sets[[1]], c(1:6, 8)))
-  expect_true(setequal(get_risk_obj_discrete$risk_sets[[2]], c(5:6, 8, 11, 13)))
-  expect_true(setequal(get_risk_obj_discrete$risk_sets[[3]], c(5:6, 12, 14)))
+  expect_true(setequal(get_risk_obj_discrete$risk_sets[[2]], c(5:6, 8, 11, 13, 15, 16, 17)))
+  expect_true(setequal(get_risk_obj_discrete$risk_sets[[3]], c(5:6, 12, 14, 17)))
 
   arg_list$is_for_discrete_model <- F
   get_risk_obj_cont <- do.call(get_risk_obj, arg_list)
@@ -288,9 +301,10 @@ test_that("is_for_discrete_model logic work",{
   expect_equal(get_risk_obj_cont$is_event_in,
                c(0, 0, -1, -1, 2,
                  -1, 0, -1, 1, -1,
-                 -1, -1, -1, -1))
+                 -1, -1, -1, -1, -1,
+                 1, -1))
 
   expect_true(setequal(get_risk_obj_cont$risk_sets[[1]], c(1:8, 10, 11, 13)))
-  expect_true(setequal(get_risk_obj_cont$risk_sets[[2]], c(5:6, 8, 9, 11, 12, 13, 14)))
-  expect_true(setequal(get_risk_obj_cont$risk_sets[[3]], c(5:6, 12, 14)))
+  expect_true(setequal(get_risk_obj_cont$risk_sets[[2]], c(5:6, 8, 9, 11, 12, 13, 14, 15, 16, 17)))
+  expect_true(setequal(get_risk_obj_cont$risk_sets[[3]], c(5:6, 12, 14, 17)))
 })

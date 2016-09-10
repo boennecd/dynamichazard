@@ -12,7 +12,8 @@ ddhazard = function(formula, data, by,
                     est_Q_0 = T,
                     verbose = F,
                     method = "EKF",
-                    model = "logit"){
+                    model = "logit", 
+                    time_scale){
   X_Y = get_design_matrix(formula, data)
   n_parems = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
@@ -57,6 +58,14 @@ ddhazard = function(formula, data, by,
      length(a_0) != n_parems * order_)
     stop("One of the input vector or matrices do not match with the order and number of parameters")
 
+  if(missing(time_scale)){
+    time_scale <- 1
+  } else{
+    message("You provided time scale. Be aware that you need to take this into account for future calls to predict, residuals and plot")
+    X_Y$Y[, 1:2] <- X_Y$Y[, 1:2] * time_scale
+    by <- by * time_scale
+  }
+  
   if(model == "logit"){
     is_for_discrete_model <- TRUE
   } else if (model == "poisson"){
@@ -72,6 +81,7 @@ ddhazard = function(formula, data, by,
 
   # Report pre-liminary stats
   if(verbose){
+    message("TODO: Update the messages here")
     tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
     colnames(tmp_tbl) = c("Risk size", "Num events")
     tmp_stop = min(X_Y$Y[, 1])
@@ -137,6 +147,7 @@ ddhazard = function(formula, data, by,
     risk_set = if(save_risk_set) risk_set else NA,
     order = order_, F_ = F_,
     method = method,
-    model = model)),
+    model = model, 
+    time_scale = time_scale)),
     "class" = "fahrmeier_94")
 }
