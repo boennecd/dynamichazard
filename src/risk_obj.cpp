@@ -12,10 +12,6 @@ using namespace Rcpp;
 #undef NDEBUG
 #endif
 
-
-// use vecmin from other cpp function
-extern int vecmin(IntegerVector x);
-
 //' Function to find the risk set in c++
 // [[Rcpp::export]]
 List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
@@ -30,6 +26,8 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
   // See this page for rcpp sugar functions http://dirk.eddelbuettel.com/code/rcpp/html/unique_8h.html
   NumericVector stop_events = stop[event];
   stop_events = stop_events[stop_events <= max_T];
+
+  const double delta_t_eps = 1.0e-14;
 
   const double min_start = min(start);
 
@@ -89,6 +87,12 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
         if(I_start_time < stop[i]){
           // we all ready know it start before the interval stops and now we
           // know it stop after the interval starts so it is in
+          /*if(std::min(stop[i], I_stop_time) - std::max(start[i], I_start_time) < delta_t_eps){ //TODO: Delete
+            // there is numerical imprecission with float comparisson. Thus the check is added
+            // TODO: is there something better?
+            continue;
+          }*/
+
           indicies.push_back(i + 1); // R use one indexing!
         }
       }
@@ -192,6 +196,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
   NumericVector I_len = diff(temp);
 
   return(List::create(Named("risk_sets") = risk_sets,
+                      Named("min_start") = min_start,
                       Named("event_times") = event_times,
                       Named("I_len") = I_len,
                       Named("d") = d,

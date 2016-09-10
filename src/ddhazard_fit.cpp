@@ -92,15 +92,6 @@ inline const arma::mat& lower_trunc_exp(const arma::mat &result)
   return result;
 }
 
-// from http://gallery.rcpp.org/articles/vector-minimum/
-template<typename T>
-inline int vecmin(const T x){
-  // Rcpp supports STL-style iterators
-  auto it = std::min_element(x.begin(), x.end());
-  // we want the value so dereference
-  return *it;
-}
-
 // Define convergence criteria
 inline double relative_norm_change(const arma::vec &prev_est, const arma::vec &new_est){
   return arma::norm(prev_est - new_est, 2) / (arma::norm(prev_est, 2) + 1.0e-10);
@@ -132,6 +123,8 @@ public:
   const arma::vec &tstart;
   const arma::vec &tstop;
   const arma::ivec &is_event_in_bin;
+
+  const double min_start;
 
   // Declare and maybe intialize non constants
   arma::mat &Q;
@@ -168,7 +161,8 @@ public:
     tstart(tstart_),
     tstop(tstop_),
     is_event_in_bin(is_event_in_bin_),
-    Q(Q_)
+    Q(Q_),
+    min_start(Rcpp::as<double>(risk_obj["min_start"]))
   {
     // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
     _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
@@ -351,9 +345,7 @@ class EKF_helper{
 
   class filter_worker_poisson : public filter_worker {
   private:
-    const double tresh_low = 1.0e-8; // TODO: How to set?
-    const double tresh_up = 1.0 - tresh_low;
-    const arma::rowvec dum_one_vec;
+    const double eps = 3; // TODO: How to set?
 
     void do_comps(const uvec_iter it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
@@ -361,31 +353,44 @@ class EKF_helper{
                   const double &bin_tstart, const double &bin_tstop){
       //TODO: simplify computations here
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      const double dot_prod = arma::dot(i_a_t, x_);
-
-      const double exp_eta = lower_trunc_exp_functor(dot_prod);
+      double eta = arma::dot(i_a_t, x_);
       const double delta_t = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
 
-      double &&tmp = 1.0 - exp( - exp_eta * delta_t);
-      double z = (tmp >= tresh_low) ? ((tmp > tresh_up) ? tresh_up : tmp) : tresh_low;
+      eta = std::min(eta, log(eps / delta_t));
 
-      const arma::vec z_dot = x_ * (delta_t * exp(dot_prod - delta_t * exp_eta));
+      const double exp_eta = exp(eta);
+      const double z = 1.0 - exp( - exp_eta * delta_t);
+      const arma::vec z_dot = x_ * (delta_t * exp(eta - delta_t * exp_eta));
 
-      u_ += ((dat.is_event_in_bin(*it) == bin_number) - z) * z_dot / (z * (1 - z));
+      u_ += x_ * ((delta_t * exp_eta / z) * ((dat.is_event_in_bin(*it) == bin_number) - z));
 
-      tmp = lower_trunc_exp_functor(log(pow(delta_t, 2.0) * (1 - z) / z) + 2 * dot_prod);
-      U_ += x_ * (x_.t() * tmp);
+      U_ += x_ * (x_.t() * (pow(delta_t * exp_eta, 2.0) * (1 - z) / z));
+
+      /*{
+        std::lock_guard<std::mutex> lk(dat.m_U); //TODO: Delete
+        std::stringstream ss; // TODO: Delete
+        ss << dat.tstop(*it) << "\t" << bin_tstop << "\t" << dat.tstart(*it) << "\t" << bin_tstart << "\n";
+        ss << delta_t << "\t" << exp_eta << "\t" << z << "\n";
+        ss << " y = " << (dat.is_event_in_bin(*it) == bin_number) <<
+          "\t eta = " << eta <<
+          "\tzdot fac = " <<
+            (delta_t * exp_eta / z) *
+            ((dat.is_event_in_bin(*it) == bin_number) - z)  <<
+              "\n";
+        ss << " info fac = " << pow(delta_t * exp_eta, 2.0) * (1 - z) / z << "\n";
+        Rcpp::Rcout << ss.str();
+      }*/
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = 1 / (z * (1 - z));
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = z_dot;
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ * (delta_t * exp(eta - delta_t * exp_eta));
         ++i;
       }
     }
 
   public:
     filter_worker_poisson(problem_data_EKF &p_data):
-    filter_worker(p_data), dum_one_vec(arma::ones<arma::vec>(dat.n_parems).t())
+    filter_worker(p_data)
     {}
   };
 
@@ -471,17 +476,15 @@ public:
 class EKF_solver : public Solver{
   problem_data_EKF &p_dat;
   EKF_helper filter_helper;
-  const double min_time;
 
 
 public:
   EKF_solver(problem_data_EKF &p_, const std::string model):
-    p_dat(p_), filter_helper(EKF_helper(p_, model)),
-    min_time(vecmin(p_dat.tstart))
+    p_dat(p_), filter_helper(EKF_helper(p_, model))
   {}
 
   void solve(){
-    double bin_tstop = min_time;
+    double bin_tstop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
       double bin_tstart = bin_tstop;
       double delta_t = p_dat.I_len[t - 1];
@@ -509,7 +512,6 @@ public:
 #endif
 
       // E-step: scoring step: update values
-
       arma::mat V_t_less_s_inv = arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
       p_dat.V_t_t_s.slice(t) = arma::inv_sympd(V_t_less_s_inv + p_dat.U);
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.V_t_t_s.slice(t) * p_dat.u;
@@ -540,7 +542,6 @@ class UKF_solver : public Solver{
   const double k;
   const double w_0;
   const double w_i;
-  const double min_time;
   const double sqrt_m_k;
   arma::mat sigma_points;
 
@@ -563,7 +564,6 @@ public:
     k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
     w_0(k / (m + k)),
     w_i(1 / (2 * (m + k))),
-    min_time(vecmin(p_dat.tstart)),
     sqrt_m_k(std::sqrt(m + k)),
     sigma_points(arma::mat(m, 2 * m + 1))
     {}
@@ -574,7 +574,7 @@ public:
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
 
-    double event_time = min_time;
+    double event_time = p_dat.min_start;
 
     // Need to compute the first set of sigma points
     compute_sigma_points(p_dat.a_t_t_s.unsafe_col(0),
