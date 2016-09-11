@@ -7,7 +7,7 @@
 using namespace Rcpp;
 
 // ddhazard_fit_cpp_prelim
-Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const int n_max, const double eps, const bool verbose, const bool save_all_output, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> k, const std::string model);
+Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const int n_max, const double eps, const int verbose, const bool save_all_output, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> k, const std::string model);
 RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP save_all_outputSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kSEXP, SEXP modelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
@@ -22,7 +22,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type F_(F_SEXP);
     Rcpp::traits::input_parameter< const int >::type n_max(n_maxSEXP);
     Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< const int >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< const bool >::type save_all_output(save_all_outputSEXP);
     Rcpp::traits::input_parameter< const int >::type order_(order_SEXP);
     Rcpp::traits::input_parameter< const bool >::type est_Q_0(est_Q_0SEXP);
@@ -52,6 +52,16 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::ivec& >::type is_event_in_bin(is_event_in_binSEXP);
     Rcpp::traits::input_parameter< const int& >::type order_(order_SEXP);
     __result = Rcpp::wrap(gen_kalman_filter_cpp(a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop, is_event_in_bin, order_));
+    return __result;
+END_RCPP
+}
+// logLike_rcpp
+Rcpp::NumericVector logLike_rcpp();
+RcppExport SEXP dynamichazard_logLike_rcpp() {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    __result = Rcpp::wrap(logLike_rcpp());
     return __result;
 END_RCPP
 }

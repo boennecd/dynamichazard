@@ -2,7 +2,7 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #' @export
-ddhazard_fit_cpp_prelim <- function(X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_, n_max = 100L, eps = 0.001, verbose = FALSE, save_all_output = FALSE, order_ = 1L, est_Q_0 = TRUE, method = "EKF", k = NULL, model = "logit") {
+ddhazard_fit_cpp_prelim <- function(X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_, n_max = 100L, eps = 0.001, verbose = 0L, save_all_output = FALSE, order_ = 1L, est_Q_0 = TRUE, method = "EKF", k = NULL, model = "logit") {
     .Call('dynamichazard_ddhazard_fit_cpp_prelim', PACKAGE = 'dynamichazard', X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, save_all_output, order_, est_Q_0, method, k, model)
 }
 
@@ -10,6 +10,10 @@ ddhazard_fit_cpp_prelim <- function(X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_,
 #' @export
 gen_kalman_filter_cpp <- function(a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop, is_event_in_bin, order_) {
     .Call('dynamichazard_gen_kalman_filter_cpp', PACKAGE = 'dynamichazard', a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop, is_event_in_bin, order_)
+}
+
+logLike_rcpp <- function() {
+    .Call('dynamichazard_logLike_rcpp', PACKAGE = 'dynamichazard')
 }
 
 #' Function to find the risk set in c++
