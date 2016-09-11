@@ -1,0 +1,100 @@
+---
+title: "Simulating cloglog"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+  ## Set the width of the R-terminal to # characters
+  options(width = 80, warn = -1)
+
+# Derfine function to make small margin in pictures
+# you can use the bool flag to set what to excute before, after chunk 
+# or always
+# If you do not whant to excute the code than do e.g. small.mar = F
+knitr::knit_hooks$set(small.mar = function(before, options, envir){
+  if (before){ par(
+    mar = c(5,5,0.5,0.5), 
+    tcl = -0.3, 
+    mgp = c(2.5,.5,0), 
+    oma = c(0,0,0,0),
+    pch=16,
+    cex=.6,
+    cex.axis = 1,
+    cex.lab = .8/.6,
+    lwd= 1
+  )}},
+  my.options=function(before, options, envir){
+    if(before){
+      options(digits = 3)
+    }})
+
+## opts_chunk$set() can change the default global options in a document (e.g. put this in a code chunk
+knitr::opts_chunk$set(fig.path='figures/',
+               fig.align='center',
+               fig.width=6, fig.height=4,
+               out.width="0.7\\textwidth",
+               size='tiny',                ## See R highligt package for possible values (https://cran.r-project.org/web/packages/highlight/highlight.pdf)
+               small.mar = TRUE,
+               my.options = TRUE,
+               comment = "##", 
+               warnings = T,
+               errors = T
+)
+```
+
+## Simulating
+
+First, we need simulate our data sets. The parameters we will pass to `test_sim_func_poisson` in the file `R/test_utils.R` are:
+
+```{r}
+n_plots <- 6
+arg_list <- list(n_series = 1e4, 
+                 n_vars = 5, 
+                 x_range = 1, 
+                 x_mean = 0, 
+                 beta_start = 1,
+                 intercept_start = -5, 
+                 sds = c(.1, rep(1, 5)))
+```
+
+We end up simulating `r arg_list$n_series` indviduals. Co-variates for invidiauls are changed with increaments of a $\sim \text{exp}(1)$ random variables. The co-variates are simulated to be from uniform distribution on [`r arg_list$x_mean + c(-.5, .5) * arg_list$x_range`] The state space vector chance with increaments of 1. We have `r arg_list$n_vars` parameters all starting at `r arg_list$beta_start`. Furter, we have an intercept starting at `r arg_list$intercept_start`. The standard deviation of the intercept and parameters are respectivly `r arg_list$sds`. The function we use to simulate with is printed below:
+
+```{r}
+# We are currenlty in the vignettes folder
+getwd()
+source("../R/test_utils.R")
+test_sim_func_poisson
+```
+
+
+## Results
+We are now ready to simulate and make plots of the fitted values and actual parameters This is done below `r n_plots` times. The dashed line are estimates and the continous lines are actual values of the parameters. The thick lines are the intercept and the thin ones are the parameters for the co-variates
+
+
+
+```{r}
+set.seed(20160911)
+for(i in seq_len(n_plots)){
+  sims <- do.call(test_sim_func_poisson, arg_list)
+  cat("The number of indviduals who dies are", sum(sims$res$event))
+  
+  fit <- dynamichazard::ddhazard(
+    survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id, 
+    data = sims$res, 
+    by = 1,
+    id = sims$res$id,
+    Q_0 = diag(10, arg_list$n_vars + 1),
+    est_Q_0 = F, 
+    eps = 1e-3,
+    a_0 = rep(0, arg_list$n_vars + 1),
+    model = "poisson")
+  
+  matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), 
+          lty = 2, col = "black", lwd = c(2, rep(1, arg_list$n_vars)),
+          xlab = "time", ylab = "parameter estimate")
+  matplot(sims$betas, type = "l", lty = 1, add = T,
+          col = "black", lwd = c(2, rep(1, arg_list$n_vars)))
+}
+```

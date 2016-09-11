@@ -54,9 +54,14 @@ result = ddhazard(
   est_Q_0 = F,
   max_T = 10,
   id = sims$res$id, order_ = 1,
-  verbose = 5
+  verbose = 1
 )
 
+set.seed(31280)
+sims <- test_sim_func_poisson(n_series = 10^4, n_vars = 20, t_0 = 0, t_max = 10,
+                              x_range = 1, x_mean = 0, re_draw = T,
+                              intercept_start = -5, sds = c(.1, rep(.4, 20)))
+sum(sims$res$event)
 
 result = ddhazard(
   survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
@@ -66,7 +71,8 @@ result = ddhazard(
   a_0 = rep(0, 21), Q_0 = diag(1, 21),
   est_Q_0 = F,
   max_T = 10,
-  id = sims$res$id, order_ = 2,
-  verbose = 5
+  id = sims$res$id, order_ = 1,
+  verbose = 1,
+  model = "poisson"
 )
 
