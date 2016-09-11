@@ -59,7 +59,7 @@ arg_list <- list(n_series = 1e4,
                  sds = c(.1, rep(1, 5)))
 ```
 
-We end up simulating `r arg_list$n_series` indviduals. Co-variates for invidiauls are changed with increaments of a $\sim \text{exp}(1)$ random variables. The co-variates are simulated to be from uniform distribution on [`r arg_list$x_mean + c(-.5, .5) * arg_list$x_range`] The state space vector chance with increaments of 1. We have `r arg_list$n_vars` parameters all starting at `r arg_list$beta_start`. Furter, we have an intercept starting at `r arg_list$intercept_start`. The standard deviation of the intercept and parameters are respectivly `r arg_list$sds`. The function we use to simulate with is printed below:
+We end up simulating `r arg_list$n_series` individuals. Co-variates for individuals are changed with increments of a $\sim \text{exp}(1)$ random variables. The co-variates are simulated to from uniform distribution on [`r arg_list$x_mean + c(-.5, .5) * arg_list$x_range`]. The state space vector chance with increments of 1. We have `r arg_list$n_vars` parameters all starting at `r arg_list$beta_start`. Further, we have an intercept starting at `r arg_list$intercept_start`. The standard deviation of the intercept and parameters are respectively (`r arg_list$sds`). The function we use to simulate with is printed below:
 
 ```{r}
 # We are currenlty in the vignettes folder
@@ -70,7 +70,7 @@ test_sim_func_poisson
 
 
 ## Results
-We are now ready to simulate and make plots of the fitted values and actual parameters This is done below `r n_plots` times. The dashed line are estimates and the continous lines are actual values of the parameters. The thick lines are the intercept and the thin ones are the parameters for the co-variates
+We are now ready to simulate and make plots of the fitted parameters and actual parameters. This is done below `r n_plots` times. The dashed lines are estimates and the continuous lines are actual values of the parameters. The thick lines are the intercepts and the thin ones are the parameters for the co-variates
 
 
 
@@ -97,4 +97,10 @@ for(i in seq_len(n_plots)){
   matplot(sims$betas, type = "l", lty = 1, add = T,
           col = "black", lwd = c(2, rep(1, arg_list$n_vars)))
 }
+```
+
+You run the code yourself by installing this version of the package by calling:
+
+```{r , eval=FALSE}
+devtools::install_github("boennecd/dynamichazard@40450bcc36d8e7d4dafe42075347d3998ab2b260")
 ```
