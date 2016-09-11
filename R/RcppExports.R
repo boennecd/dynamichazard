@@ -12,8 +12,8 @@ gen_kalman_filter_cpp <- function(a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start
     .Call('dynamichazard_gen_kalman_filter_cpp', PACKAGE = 'dynamichazard', a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop, is_event_in_bin, order_)
 }
 
-logLike_rcpp <- function() {
-    .Call('dynamichazard_logLike_rcpp', PACKAGE = 'dynamichazard')
+logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, order_ = 1L, model = "logit") {
+    .Call('dynamichazard_logLike_cpp', PACKAGE = 'dynamichazard', X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, order_, model)
 }
 
 #' Function to find the risk set in c++

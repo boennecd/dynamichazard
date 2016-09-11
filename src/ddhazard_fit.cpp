@@ -648,11 +648,11 @@ public:
 
 
 
-extern double logLike_cpp(const arma::mat&, const Rcpp::List&,
-                          const arma::mat&, const arma::mat&,
-                          arma::mat Q, const arma::mat&,
-                          const arma::vec&, const arma::vec&,
-                          const int order_, const std::string);
+extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
+                                       const arma::mat&, const arma::mat&,
+                                       arma::mat Q, const arma::mat&,
+                                       const arma::vec&, const arma::vec&,
+                                       const int order_, const std::string);
 
 
 
@@ -842,14 +842,14 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
     if(verbose && it % 5 < verbose){
       auto rcout_width = Rcpp::Rcout.width();
-      Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
-        " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) << "\t";
       double log_like =
         logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
                     p_data->a_t_t_s, p_data->tstart, p_data->tstop,
-                    order_, model);
-      Rcpp::Rcout << "The log likelihood is " << log_like <<
-        std::setw(rcout_width) << std::endl;
+                    order_, model)[0];
+      Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
+        " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
+          "\t" << "The log likelihood is " << log_like <<
+            std::setw(rcout_width) << std::endl;
     }
 
     a_prev = p_data->a_t_t_s.col(0);
