@@ -169,7 +169,14 @@ double logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
     Rcpp::stop(ss.str());
   }
 
+  Rcpp::Rcout << risk_sets.size() << std::endl;
+  Rcpp::Rcout << d << std::endl;
+
+  //is_event_in_bin.print();
+
+
   double bin_stop = Rcpp::as<double>(risk_obj["min_start"]);
+  Rcpp::Rcout << std::endl;
   for(int t = 1; t <= d; ++t){
     const arma::subview_col<double> a_t = a_t_d_s.col(t);
     arma::vec delta = a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
@@ -181,7 +188,11 @@ double logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
 
     const arma::uvec &risk_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
 
-    logLike -= helper->link_logLik_terms(a_t, risk_set, bin_Start, bin_stop, t - 1);
+    Rcpp::Rcout << "t = " <<  t << "\t" << std::setw(15) << logLike;
+
+    logLike += helper->link_logLik_terms(a_t, risk_set, bin_Start, bin_stop, t - 1);
+
+    Rcpp::Rcout << "\t" << std::setw(15) << logLike << std::endl;
   }
 
   return logLike;
