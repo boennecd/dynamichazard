@@ -841,12 +841,15 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     }
 
     if(verbose && it % 5 < verbose){
-      Rcpp::Rcout << "Iteration " << it + 1 << " ended with conv criteria " << *(conv_values.end() -1) << std::endl;
+      auto rcout_width = Rcpp::Rcout.width();
+      Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
+        " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) << "\t";
       double log_like =
         logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
                     p_data->a_t_t_s, p_data->tstart, p_data->tstop,
                     order_, model);
-      Rcpp::Rcout << "The log likelihood is " << log_like;
+      Rcpp::Rcout << "The log likelihood is " << log_like <<
+        std::setw(rcout_width) << std::endl;
     }
 
     a_prev = p_data->a_t_t_s.col(0);
