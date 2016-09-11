@@ -1,1 +1,39 @@
-# dum
+#' @export
+logLik.fahrmeier_94 = function(object, data_, id, ...){
+  if(missing(data_))
+    stop("data_ need to compute log likelihood")
+
+  if(missing(id))
+    stop("id need to compute log likelihood")
+
+  if(object$model == "poisson"){
+    is_for_discrete_model <- F
+  } else if (object$model == "logit"){
+    is_for_discrete_model <- T
+  } else
+    stop("logLik not implemented for model '", object$model, "'")
+
+  X <- get_design_matrix(object$formula, data_)
+  X$X <- t(X$X)
+  risk_obj <- get_risk_obj(Y = X$Y, by = unique(diff(object$times)),
+                           max_T = max(object$times), is_for_discrete_model = is_for_discrete_model,
+                           id = id)
+
+  val <- logLike_cpp(X = X$X, risk_obj = risk_obj, F = object$F_,
+                     Q_0 = object$Q_0, Q = object$Q, a_t_d_s = t(object$a_t_d_s),
+                     tstart = X$Y[, 1], tstop = X$Y[, 2], order_ = object$order,
+                     model = object$model)
+
+  attr(val, "prior_loglike") <- val[2]
+  val <- val[1]
+
+  if(object$est_Q_0)
+    warning("parameters for Q_0 are not included in attribute df")
+
+  n_parems <- ncol(object$a_t_d_s) / object$order
+  attr(val, "df") <- n_parems * object$order +  # from a_0
+    n_parems * (n_parems + 1) / 2 # from Q
+  class(val) <- "logLik"
+
+  val
+}

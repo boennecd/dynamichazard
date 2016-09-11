@@ -1,78 +1,107 @@
-test_that("Implement log likelihood methods and add tests",
-          expect_true(FALSE))
+test_that("Verbose on ddhazard prints a log likelihood", {
+  expect_output({
+    result = ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1,
+      n_max = 10^4, eps = 10^-4,
+      a_0 = rep(0, 2), Q_0 = diag(1, 2),
+      est_Q_0 = F,
+      max_T = 45,
+      id = head_neck_cancer$id, order_ = 1,
+      verbose = 5
+    )
+  }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
 
-result = ddhazard(
-  formula = survival::Surv(start, stop, event) ~ group,
-  data = head_neck_cancer,
-  by = 1, # Use by month intervals
-  n_max = 10^4, eps = 10^-4,
-  a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
-  est_Q_0 = F,
-  max_T = 45,
-  id = head_neck_cancer$id, order_ = 1,
-  verbose = 5
-)
+  expect_output({
+    result = ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1,
+      n_max = 10^4, eps = 10^-4,
+      a_0 = rep(0, 2), Q_0 = diag(1, 2),
+      est_Q_0 = F,
+      max_T = 45,
+      id = head_neck_cancer$id, order_ = 1,
+      verbose = 5,
+      model = "poisson"
+    )
+  }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
+})
 
-result = ddhazard(
-  formula = survival::Surv(start, stop, event) ~ group,
-  data = head_neck_cancer,
-  by = 1,
-  n_max = 10^4, eps = 10^-4,
-  a_0 = rep(0, 4), Q_0 = diag(1, 4),
-  Q = diag(c(1e-2, 1e-2, 0, 0)),
-  est_Q_0 = F,
-  max_T = 45,
-  id = head_neck_cancer$id, order_ = 2,
-  verbose = 5
-)
+test_that("logLik for head_neck_cancer data set match previous results", {
+  result = ddhazard(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    n_max = 10^4, eps = 10^-4,
+    a_0 = rep(0, 2), Q_0 = diag(1, 2),
+    est_Q_0 = F,
+    max_T = 45,
+    id = head_neck_cancer$id, order_ = 1,
+    verbose = F
+  )
 
-result = ddhazard(
-  formula = survival::Surv(start, stop, event) ~ group,
-  data = head_neck_cancer,
-  by = 1, # Use by month intervals
-  n_max = 10^4, eps = 10^-4,
-  a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
-  est_Q_0 = F,
-  max_T = 45,
-  id = head_neck_cancer$id, order_ = 1,
-  verbose = 5,
-  model = "poisson"
-)
+  log_like <- logLik(object = result, data_ = head_neck_cancer, id =  head_neck_cancer$id)
+
+  old <- structure(-338.0345966500186,
+                   class = "logLik",
+                   df = 2 + 3)
+
+  expect_equal(log_like, old)
+})
 
 ##############
-set.seed(21280)
-sims <- test_sim_func_logit(n_series = 10^4, n_vars = 20, t_0 = 0, t_max = 10,
-                            x_range = 1, x_mean = -.2, re_draw = T)
-sims$res <- as.data.frame(sims$res)
 
-result = ddhazard(
-  survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-  sims$res,
-  by = 1,
-  n_max = 10^4, eps = 10^-2,
-  a_0 = rep(0, 21), Q_0 = diag(1, 21),
-  est_Q_0 = F,
-  max_T = 10,
-  id = sims$res$id, order_ = 1,
-  verbose = 1
-)
+test_that("logLik for simulated data versus old results", {
+  set.seed(21280)
+  sims <- test_sim_func_logit(n_series = 2e3, n_vars = 5, t_0 = 0, t_max = 10,
+                              x_range = 1, x_mean = -.2, re_draw = T)
+  sims$res <- as.data.frame(sims$res)
 
-set.seed(31280)
-sims <- test_sim_func_poisson(n_series = 10^4, n_vars = 20, t_0 = 0, t_max = 10,
-                              x_range = 1, x_mean = 0, re_draw = T,
-                              intercept_start = -5, sds = c(.1, rep(.4, 20)))
-sum(sims$res$event)
+  result = ddhazard(
+    survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event - 1,
+    sims$res,
+    by = 1,
+    n_max = 10^4, eps = 10^-2,
+    a_0 = rep(0, 5), Q_0 = diag(1, 5),
+    est_Q_0 = F,
+    max_T = 10,
+    id = sims$res$id, order_ = 1,
+    verbose = F
+  )
 
-result = ddhazard(
-  survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-  sims$res,
-  by = 1,
-  n_max = 10^4, eps = 10^-2,
-  a_0 = rep(0, 21), Q_0 = diag(1, 21),
-  est_Q_0 = F,
-  max_T = 10,
-  id = sims$res$id, order_ = 1,
-  verbose = 1,
-  model = "poisson"
-)
+  log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
+  old <- structure(-2409.758,
+                   class = "logLik",
+                   df = 5 + 5 * (1 + 5) / 2)
+  expect_equal(log_like, old)
+
+
+
+
+  set.seed(31280)
+  sims <- test_sim_func_poisson(n_series = 2e3, n_vars = 5, t_0 = 0, t_max = 10,
+                                x_range = 1, x_mean = 0, re_draw = T,
+                                intercept_start = -5, sds = c(.1, rep(.4, 5)))
+  sum(sims$res$event)
+
+  result = ddhazard(
+    survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    sims$res,
+    by = 1,
+    n_max = 10^4, eps = 10^-2,
+    a_0 = rep(0, 6), Q_0 = diag(1, 6),
+    est_Q_0 = F,
+    max_T = 10,
+    id = sims$res$id, order_ = 1,
+    verbose = F
+  )
+  log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
+  old <- structure(-1371.943,
+                   class = "logLik",
+                   df = 6 + 6 * (1 + 6) / 2)
+  expect_equal(log_like, old, tolerance = 1e-6)
+})
+
 

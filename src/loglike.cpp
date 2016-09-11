@@ -128,13 +128,14 @@ public:
 
 
 
-
-double logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
-                   const arma::mat &F, const arma::mat &Q_0,
-                   arma::mat Q, const arma::mat &a_t_d_s,
-                   const arma::vec &tstart, const arma::vec &tstop,
-                   const int order_ = 1,
-                   const std::string model = "logit"){
+// [[Rcpp::export]]
+std::vector<double>
+  logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
+              const arma::mat &F, const arma::mat &Q_0,
+              arma::mat Q, const arma::mat &a_t_d_s,
+              const arma::vec &tstart, const arma::vec &tstop,
+              const int order_ = 1,
+              const std::string model = "logit"){
   const int d(Rcpp::as<int>(risk_obj["d"]));
   const int n_parems(a_t_d_s.n_rows / order_);
 
@@ -169,14 +170,8 @@ double logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
     Rcpp::stop(ss.str());
   }
 
-  Rcpp::Rcout << risk_sets.size() << std::endl;
-  Rcpp::Rcout << d << std::endl;
-
-  //is_event_in_bin.print();
-
 
   double bin_stop = Rcpp::as<double>(risk_obj["min_start"]);
-  Rcpp::Rcout << std::endl;
   for(int t = 1; t <= d; ++t){
     const arma::subview_col<double> a_t = a_t_d_s.col(t);
     arma::vec delta = a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
@@ -188,25 +183,14 @@ double logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
 
     const arma::uvec &risk_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
 
-    Rcpp::Rcout << "t = " <<  t << "\t" << std::setw(15) << logLike;
+    // TODO: Delete
+    //double tmp = logLike; //TODO: Delete
+    //Rcpp::Rcout << "t = " <<  t << "\t" << std::setw(15) << logLike;
 
     logLike += helper->link_logLik_terms(a_t, risk_set, bin_Start, bin_stop, t - 1);
 
-    Rcpp::Rcout << "\t" << std::setw(15) << logLike << std::endl;
+    //Rcpp::Rcout << "\t" << std::setw(15) << logLike << "\t\t"  << tmp - logLike << std::endl;
   }
 
-  return logLike;
-}
-
-// [[Rcpp::export]]
-Rcpp::NumericVector logLike_rcpp(){
-  Rcpp::NumericVector out = Rcpp::NumericVector::create(1);
-
-  out.attr("nall") = -1;
-  out.attr("nobs") = -1;
-  out.attr("df") = -1;
-  out.attr("init_terms") = -1;
-  out.attr("class") = "logLik";
-
-  return out;
+  return std::vector<double>{logLike, t_0_logLike};
 }

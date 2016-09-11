@@ -55,13 +55,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// logLike_rcpp
-Rcpp::NumericVector logLike_rcpp();
-RcppExport SEXP dynamichazard_logLike_rcpp() {
+// logLike_cpp
+std::vector<double> logLike_cpp(const arma::mat& X, const Rcpp::List& risk_obj, const arma::mat& F, const arma::mat& Q_0, arma::mat Q, const arma::mat& a_t_d_s, const arma::vec& tstart, const arma::vec& tstop, const int order_, const std::string model);
+RcppExport SEXP dynamichazard_logLike_cpp(SEXP XSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP a_t_d_sSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP order_SEXP, SEXP modelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(logLike_rcpp());
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type risk_obj(risk_objSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type F(FSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Q_0(Q_0SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type a_t_d_s(a_t_d_sSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tstart(tstartSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tstop(tstopSEXP);
+    Rcpp::traits::input_parameter< const int >::type order_(order_SEXP);
+    Rcpp::traits::input_parameter< const std::string >::type model(modelSEXP);
+    rcpp_result_gen = Rcpp::wrap(logLike_cpp(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, order_, model));
     return rcpp_result_gen;
 END_RCPP
 }
