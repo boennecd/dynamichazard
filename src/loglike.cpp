@@ -72,7 +72,7 @@ public:
     double res(0.0);
 
     for(uvec_iter it = risk_set.begin(); it != risk_set.end(); ++it){
-      const double eta = arma::dot(a_t, X.col(*it));
+      const double eta = arma::dot(a_t.head(n_parems), X.col(*it));
       const double delta_t = std::min(tstop(*it), bin_stop) - std::max(tstart(*it), bin_start);
 
       res += (bin_number == is_event_in_bin(*it)) ?
@@ -146,8 +146,6 @@ double logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
 
   const Rcpp::List &risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]));
 
-  Rcpp::Rcout << d << std::endl;
-
   // We want to deal with degenered case
   Q = Q.submat(0, 0, n_parems - 1, n_parems - 1);
   const arma::mat Q_inv = arma::inv_sympd(Q);
@@ -159,7 +157,6 @@ double logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
   double logLike = - d / 2.0 * arma::det(Q)
     - d * n_parems / 2.0 * (log(2.0) + log(M_PI))
     - t_0_logLike;
-
 
   logLike_link_term_helper *helper;
   if(model == "logit"){
@@ -175,7 +172,7 @@ double logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
   double bin_stop = Rcpp::as<double>(risk_obj["min_start"]);
   for(int t = 1; t <= d; ++t){
     const arma::subview_col<double> a_t = a_t_d_s.col(t);
-    auto &&delta = a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
+    arma::vec delta = a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
 
     double bin_Start = bin_stop;
     bin_stop += I_len[t - 1];
