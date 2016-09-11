@@ -363,23 +363,7 @@ class EKF_helper{
       const arma::vec z_dot = x_ * (delta_t * exp(eta - delta_t * exp_eta));
 
       u_ += x_ * ((delta_t * exp_eta / z) * ((dat.is_event_in_bin(*it) == bin_number) - z));
-
       U_ += x_ * (x_.t() * (pow(delta_t * exp_eta, 2.0) * (1 - z) / z));
-
-      /*{
-        std::lock_guard<std::mutex> lk(dat.m_U); //TODO: Delete
-        std::stringstream ss; // TODO: Delete
-        ss << dat.tstop(*it) << "\t" << bin_tstop << "\t" << dat.tstart(*it) << "\t" << bin_tstart << "\n";
-        ss << delta_t << "\t" << exp_eta << "\t" << z << "\n";
-        ss << " y = " << (dat.is_event_in_bin(*it) == bin_number) <<
-          "\t eta = " << eta <<
-          "\tzdot fac = " <<
-            (delta_t * exp_eta / z) *
-            ((dat.is_event_in_bin(*it) == bin_number) - z)  <<
-              "\n";
-        ss << " info fac = " << pow(delta_t * exp_eta, 2.0) * (1 - z) / z << "\n";
-        Rcpp::Rcout << ss.str();
-      }*/
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = 1 / (z * (1 - z));
@@ -664,6 +648,15 @@ public:
 
 
 
+extern double logLike_cpp(const arma::mat&, const Rcpp::List&,
+                          const arma::mat&, const arma::mat&,
+                          arma::mat Q, const arma::mat&,
+                          const arma::vec&, const arma::vec&,
+                          const int order_, const std::string);
+
+
+
+
 //' @export
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec &tstart,
@@ -674,7 +667,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const Rcpp::List &risk_obj,
                                    const arma::mat &F_,
                                    const int n_max = 100, const double eps = 0.001,
-                                   const bool verbose = false, const bool save_all_output = false,
+                                   const int verbose = 0, const bool save_all_output = false,
                                    const int order_ = 1, const bool est_Q_0 = true,
                                    const std::string method = "EKF",
                                    Rcpp::Nullable<Rcpp::NumericVector> k = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
@@ -847,8 +840,13 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       break;
     }
 
-    if(verbose && it % 5 == 0){
+    if(verbose && it % 5 < verbose){
       Rcpp::Rcout << "Iteration " << it + 1 << " ended with conv criteria " << *(conv_values.end() -1) << std::endl;
+      double log_like =
+        logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
+                    p_data->a_t_t_s, p_data->tstart, p_data->tstop,
+                    order_, model);
+      Rcpp::Rcout << "The log likelihood is " << log_like;
     }
 
     a_prev = p_data->a_t_t_s.col(0);
