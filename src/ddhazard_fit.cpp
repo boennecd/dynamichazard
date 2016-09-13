@@ -182,11 +182,12 @@ public:
 // Class with further members for the Extended Kalman Filter
 class problem_data_EKF : public problem_data{
 public:
-  // locks for parallel implementation
+  // locks for parallel implementation when we need to reduce score vector
+  // and information matrix
   std::mutex m_u;
   std::mutex m_U;
 
-  // Maticies for score and information matrix
+  // Vector for score and information matrix
   arma::colvec u;
   arma::mat U;
 
@@ -240,7 +241,7 @@ class EKF_helper{
   using uvec_iter = arma::uvec::const_iterator;
 
   // handy class to ensure that all ressources are cleaned up once scope of the
-  // class is expired
+  // is expired
   class join_threads
   {
     std::vector<std::thread>& threads;
@@ -313,6 +314,7 @@ class EKF_helper{
     }
   };
 
+  // worker for the logit model
   class filter_worker_logit : public filter_worker {
   private:
     void do_comps(const uvec_iter it, int &i,
@@ -343,9 +345,10 @@ class EKF_helper{
     {}
   };
 
+  // worker for the poisson model
   class filter_worker_poisson : public filter_worker {
   private:
-    const double eps = 3; // TODO: How to set?
+    const double eps = 3; // TODO: How to set? Move to problem data and be user specific?
 
     void do_comps(const uvec_iter it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
@@ -421,9 +424,9 @@ public:
       (length + min_per_thread - 1) / min_per_thread;
 
     unsigned long const num_threads =
-      std::min(hardware_threads != 0 ? hardware_threads:2, max_threads); // at least use two threads if hardware thread is not set
+      std::min(hardware_threads != 0 ? hardware_threads : 2, max_threads); // at least use two threads if hardware thread is not set
 
-    unsigned long const block_size = length/num_threads;
+    unsigned long const block_size = length / num_threads;
     std::vector<std::future<void> > futures(num_threads - 1);
     std::vector<std::thread> threads(num_threads - 1);
     join_threads joiner(threads);
@@ -436,7 +439,7 @@ public:
     for(unsigned long i = 0; i < num_threads - 1; ++i, ++it)
     {
       uvec_iter block_end = block_start;
-      std::advance(block_end,block_size);
+      std::advance(block_end, block_size);
       std::packaged_task<void()> task(
             [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
               return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
@@ -532,7 +535,7 @@ class UKF_solver : public Solver{
   inline void compute_sigma_points(const arma::vec &a_t,
                                    arma::mat &s_points,
                                    const arma::mat &P_x_x){
-    const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. should ensure that . See http://arma.sourceforge.net/docs.html#chol
+    const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
 
     s_points.col(0) = a_t;
     for(int i = 1; i < s_points.n_cols; ++i)
@@ -559,19 +562,18 @@ public:
 #endif
 
     double event_time = p_dat.min_start;
-
-    // Need to compute the first set of sigma points
-    compute_sigma_points(p_dat.a_t_t_s.unsafe_col(0),
-                         sigma_points, p_dat.V_t_t_s.slice(0));
-
     for (int t = 1; t < p_dat.d + 1; t++){
       double delta_t = p_dat.I_len[t - 1];
       event_time += delta_t;
 
+      // Update sigma pooints
+      compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
+                           sigma_points, p_dat.V_t_t_s.slice(t - 1));
+
       // E-step: Filter step
       //   Updates a_t_less_s and V_t_less_s
       //   Requires T(sigma point) + a_t_less_s computed before V_t_less_s
-      //     NB have to compute sigma points the first time arround
+      //     Requries that we have updated the sigma points
       //     Requires for-loop with 2m + 1 itertions
 
       // First we compute the mean
@@ -605,9 +607,9 @@ public:
       // First, we compute the mean of the outcome
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
-      arma::mat &&tmp = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
-      tmp = lower_trunc_exp(tmp);
-      arma::mat Z_t = tmp.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
+      arma::mat Z_t = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
+      lower_trunc_exp_in_place(Z_t);
+      Z_t.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
       // Compute y_bar, P_a_v and P_v_v
       const arma::vec y_bar = w_0 * Z_t.unsafe_col(0) +
@@ -637,10 +639,6 @@ public:
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
-
-      // Update sigma pooints for next iteration
-      compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t),
-                           sigma_points, p_dat.V_t_t_s.slice(t));
     }
   }
 };

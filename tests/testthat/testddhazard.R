@@ -123,3 +123,29 @@ test_that("poisson model and logit moels hazzard functions differs", {
   expect_true(toString(body(result_pois$hazard_first_deriv)) !=
                 toString(body(result$hazard_first_deriv)))
 })
+
+
+# Test on data set that is one of Farhmiers papers
+result_EKF = ddhazard(
+  formula = Surv(start, stop, event) ~ group,
+  data = head_neck_cancer,
+  by = 1, # Use by month intervals
+  n_max = 10^4, eps = 10^-4,
+  a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
+  est_Q_0 = T,
+  max_T = 45,
+  id = head_neck_cancer$id, order_ = 1
+)
+
+# result_UKF = ddhazard(
+#   formula = Surv(start, stop, event) ~ group,
+#   data = head_neck_cancer,
+#   by = 1, # Use by month intervals
+#   n_max = 10^4, eps = 10^-4,
+#   a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
+#   est_Q_0 = T,
+#   max_T = 45,
+#   id = head_neck_cancer$id, order_ = 1,
+#   method = "UKF"
+# )
+
