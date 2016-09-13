@@ -51,6 +51,29 @@ test_that("logLik for head_neck_cancer data set match previous results", {
   expect_equal(log_like, old)
 })
 
+test_that("logLik for head_neck_cancer data set with second order model", {
+  result = ddhazard(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    n_max = 10^4, eps = 10^-4,
+    a_0 = rep(0, 4), Q_0 = diag(c(1, 1, 1, 1)),
+    Q = diag(c(1e-4, 1e-4, 0, 0)),
+    est_Q_0 = F,
+    max_T = 45,
+    id = head_neck_cancer$id, order_ = 2,
+    verbose = F
+  )
+
+  log_like <- logLik(object = result, data_ = head_neck_cancer, id =  head_neck_cancer$id)
+
+  old <- structure(-347.2320516354606,
+                   class = "logLik",
+                   df = 2 * 2 + 3)
+
+  expect_equal(log_like, old)
+})
+
 ##############
 
 test_that("logLik for simulated data versus old results", {

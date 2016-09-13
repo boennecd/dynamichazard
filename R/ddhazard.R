@@ -12,7 +12,8 @@ ddhazard = function(formula, data, by,
                     est_Q_0 = T,
                     verbose = F,
                     method = "EKF",
-                    model = "logit"){
+                    model = "logit",
+                    kappa = NULL){
   X_Y = get_design_matrix(formula, data)
   n_parems = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
@@ -95,7 +96,7 @@ ddhazard = function(formula, data, by,
                                    tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
                                    order_ = order_,
                                    est_Q_0 = est_Q_0, method = method,
-                                   model = model)
+                                   model = model, k = kappa)
 
   # Set names
   tmp_names = rep(colnames(X_Y$X), order_)

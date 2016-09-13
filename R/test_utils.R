@@ -189,7 +189,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
     }
   }
 
-  list(res = res[1:(cur_row - 1), ], betas = betas)
+  list(res = as.data.frame(res[1:(cur_row - 1), ]), betas = betas)
 }
 
 test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
