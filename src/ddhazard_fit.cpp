@@ -138,7 +138,8 @@ public:
 
   arma::cube lag_one_cor;
 
-  problem_data(const Rcpp::NumericMatrix &X, const arma::vec &tstart_,
+  problem_data(const Rcpp::NumericMatrix &X, // notice that we assume that x has each row as an observation
+               const arma::vec &tstart_,
                const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
                const arma::colvec &a_0,
                arma::mat &Q_0,

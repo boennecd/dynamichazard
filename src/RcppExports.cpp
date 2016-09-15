@@ -6,6 +6,38 @@
 
 using namespace Rcpp;
 
+// IWLS_logit
+arma::vec IWLS_logit(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
+RcppExport SEXP dynamichazard_IWLS_logit(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type offsets(offsetsSEXP);
+    Rcpp::traits::input_parameter< const arma::uword >::type it_max(it_maxSEXP);
+    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(IWLS_logit(X, y, beta, offsets, it_max, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
+// IWLS_poisson
+arma::vec IWLS_poisson(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
+RcppExport SEXP dynamichazard_IWLS_poisson(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type offsets(offsetsSEXP);
+    Rcpp::traits::input_parameter< const arma::uword >::type it_max(it_maxSEXP);
+    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(IWLS_poisson(X, y, beta, offsets, it_max, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
 // ddhazard_fit_cpp_prelim
 Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const int n_max, const double eps, const int verbose, const bool save_all_output, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> k, const std::string model);
 RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP save_all_outputSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kSEXP, SEXP modelSEXP) {

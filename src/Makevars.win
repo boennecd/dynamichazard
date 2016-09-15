@@ -10,9 +10,15 @@ else
 BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
+## include the C code in the sub directory
+SOURCES_C = $(wildcard stats/*.c)
+SOURCES_CPP = $(wildcard *.cpp)
+CXX_STD = CXX11
+OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o)
+
 ## -- compiling for OpenMP and c++11 n more
 ##PKG_CPPFLAGS = $(USE_OPEN_BLAS)
-PKG_CXXFLAGS = -std=c++11 $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS)
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS)
 ## -- linking (do not ask if all of these are needed. I saw them in sourcecpp call with verbose = T)
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS_USE) $(FLIBS) -fopenmp $(USE_OPEN_BLAS)
 
