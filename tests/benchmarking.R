@@ -59,7 +59,8 @@ fit <- ddhazard_fit_cpp_prelim(
   eps = 1e-4, n_max = 10^4,
   order_ = 1, verbose = T,
   est_Q_0 = F,
-  model = "poisson"
+  model = "poisson",
+  M_step_formulation = "Fahrmier94"
 )
 
 sink()

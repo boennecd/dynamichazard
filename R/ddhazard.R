@@ -13,6 +13,7 @@ ddhazard = function(formula, data, by,
                     verbose = F,
                     method = "EKF",
                     model = "logit",
+                    M_step_formulation = "Fahrmier94",
                     kappa = NULL){
   X_Y = get_design_matrix(formula, data)
   n_parems = ncol(X_Y$X)
@@ -73,19 +74,36 @@ ddhazard = function(formula, data, by,
 
   # Report pre-liminary stats
   if(verbose){
-    message("TODO: Update the messages here")
     tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
     colnames(tmp_tbl) = c("Risk size", "Num events")
-    tmp_stop = min(X_Y$Y[, 1])
-    for(i in seq_len(risk_set$d)){
-      tmp_stop = tmp_stop + risk_set$I_len[i]
-      r_set = risk_set$risk_sets[[i]]
-      tmp_tbl[i, ] = c(length(r_set), sum(X_Y$Y[r_set, 3] * (X_Y$Y[r_set, 2] == tmp_stop)))
+
+    # Find the number of event in each bin
+    n_events <- xtabs(~ risk_set$is_event_in)
+    n_events <- n_events[names(n_events) != "-1"]
+    names(n_events) <- as.integer(names(n_events)) + 1
+
+    # Some bins may have no events. We need to add these
+    if(any(event_group_missing <- !seq_len(risk_set$d) %in% names(n_events))){
+      n_missing <- sum(event_group_missing)
+      n_events <- c(rep(0, n_missing), n_events)
+      names(n_events)[seq_len(n_missing)] <- which(event_group_missing)
     }
-    message("Size of risk set and number of events in each risk set are:")
-    message(paste(apply(tmp_tbl, 1, paste, collapse = " : "), collapse = ",\t"))
+    n_events <- n_events[order(as.integer(names(n_events)))]
+
+    # Insert in to table to print and prinnt
+    tmp_tbl[, "Num events"] <- n_events
+    tmp_tbl[, "Risk size"] <- unlist(lapply(risk_set$risk_sets, length))
+
     message("Total number of included events are ", sum(tmp_tbl[, 2]), " of ", tmp_n_failures)
-    rm(tmp_tbl, tmp_stop, tmp_n_failures)
+    message("Size of risk set and number of events in each risk set are:")
+
+    tmp_tbl[, 1] <- sprintf("%8s", tmp_tbl[, 1])
+    tmp_tbl[, 2] <- sprintf("%-8s", tmp_tbl[, 2])
+    tmp_message <- sprintf("%21s", apply(tmp_tbl, 1, paste, collapse = " : "))
+    msg_final <- tmp_message[1]
+    for(i in seq_along(tmp_message)[-1])
+      msg_final <- paste0(msg_final, if((i - 1) %% 4 > 0) " " else "\n", tmp_message[i])
+    message(msg_final)
 
     message("Running EM")
   }
