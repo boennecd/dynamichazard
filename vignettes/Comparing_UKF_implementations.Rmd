@@ -1,0 +1,70 @@
+---
+title: "Comparing UKF implementations"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+  ## Set the width of the R-terminal to # characters
+  options(width = 80, warn = -1)
+
+# Derfine function to make small margin in pictures
+# you can use the bool flag to set what to excute before, after chunk 
+# or always
+# If you do not whant to excute the code than do e.g. small.mar = F
+knitr::knit_hooks$set(small.mar = function(before, options, envir){
+  if (before){ par(
+    mar = c(5,5,0.5,0.5), 
+    tcl = -0.3, 
+    mgp = c(2.5,.5,0), 
+    oma = c(0,0,0,0),
+    pch=16,
+    cex=.6,
+    cex.axis = 1,
+    cex.lab = .8/.6,
+    lwd= 1
+  )}},
+  my.options=function(before, options, envir){
+    if(before){
+      options(digits = 3)
+    }})
+
+## opts_chunk$set() can change the default global options in a document (e.g. put this in a code chunk
+knitr::opts_chunk$set(fig.path='figures/',
+               fig.align='center',
+               fig.width=6, fig.height=4,
+               out.width="0.7\\textwidth",
+               size='tiny',                ## See R highligt package for possible values (https://cran.r-project.org/web/packages/highlight/highlight.pdf)
+               small.mar = TRUE,
+               my.options = TRUE,
+               comment = "##", 
+               warnings = T,
+               errors = T
+)
+```
+
+## Simulating
+We sill start by simulating data with the following function
+
+```{r}
+# We are currenlty in the vignettes folder
+getwd()
+source("../R./test_utils.R")
+test_sim_func_logit
+```
+
+Our simulations arguments are
+
+```{r}
+sim_args <- list(n_series = 5e2, n_vars = 3, t_0 = 0, t_max = 10,
+                 x_range = 1, x_mean = -.5, re_draw = T, beta_start = 1,
+                 intercept_start = -1, sds = c(.1, rep(1, 3)))
+```
+
+The final data set has the following number of events
+
+```{r}
+set.seed(2972)
+
+```

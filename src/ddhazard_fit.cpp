@@ -640,11 +640,6 @@ public:
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
-
-      //TODO: Delete
-      Rcpp::Rcout << "t = " << t << std::endl;
-      p_dat.a_t_t_s.col(t).print();
-      p_dat.V_t_t_s.slice(t).print();
     }
   }
 };
@@ -739,37 +734,27 @@ public:
 
       //TODO: can this be done more effeciently?
       { // Define scope here as there is a lot of varialbes that are not needed after scope
-        // First we use C to store expected observations given sigma points
+        // First we use O to store expected observations given sigma points
         arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
-        arma::mat C = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
-        lower_trunc_exp_in_place(C);
-        C.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
+        O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
+        lower_trunc_exp_in_place(O);
+        O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
         // Compute mean observation sing sigma points
-        const arma::vec y_bar = w_0 * C.unsafe_col(0) +
-          w_i * arma::sum(C.cols(1, C.n_cols - 1), 1);
+        const arma::vec y_bar = w_0 * O.unsafe_col(0) +
+          w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
+
+        arma::vec vars = (w_0 * O.unsafe_col(0)) % (1.0 - O.unsafe_col(0));
+        for(uword i = 1; i < O.n_cols; ++i)
+          vars += (w_i * O.unsafe_col(i)) % (1.0 - O.unsafe_col(i));
+
 
         // Substract y_bar to get deviations
-        C.each_col() -= y_bar;
-        y_bar.print();
-        C.print();
+        O.each_col() -= y_bar;
 
-        // We then use O for the matrix (store observations given sigma points)^T divided by the variance matrix
-        O = C.t();
-        for(uword i = 0; i < O.n_cols; ++i){
-          // compute weighted average of variance
-          arma::vec tmp(O.colptr(i), O.n_rows, false); // create reference to memory;
-          double h = w_0 * tmp[0] * (1 - tmp[0]);
-          for(uword j = 1; j < O.n_rows; ++j)
-            h+= w_i * tmp[j] * (1 - tmp[j]);
-
-          // scale the column
-          O.col(i) = pow(h, -1) * O.col(i);
-        }
-
-        // compute vector for errors scaled by the current O
-        c_vec = O * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
-        O =  O * C; // Re-use O to new intermediate value for later
+        // first we compute the c_vec and then y deviation times y deveation scaled by inverse weighted variance
+        c_vec = (O.each_col() / vars).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
+        O = O.t() * (O.each_col() / vars);
 
         // Compute intermediate matrix
         arma::mat tmp_mat = O * arma::inv_sympd(arma::diagmat(weights_vec_inv) + O);
@@ -791,11 +776,6 @@ public:
         sigma_points * arma::diagmat(weights_vec) * O * arma::diagmat(weights_vec) * sigma_points.t();
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
-
-      //TODO: Delete
-      Rcpp::Rcout << "t = " << t << std::endl;
-      p_dat.a_t_t_s.col(t).print();
-      p_dat.V_t_t_s.slice(t).print();
     }
   }
 };
@@ -879,7 +859,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       n_max, eps, verbose, save_all_output,
       order_, est_Q_0);
     solver = new UKF_solver_New(*p_data, k);
-  } else if (method == "UKF_old"){ // TODO: remove this if clause
+  } else if (method == "UKF_org"){
     if(model != "logit")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
 

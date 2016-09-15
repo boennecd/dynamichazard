@@ -5,7 +5,7 @@ sims <- test_sim_func_logit(n_series = 5e2, n_vars = 3, t_0 = 0, t_max = 10,
 sum(sims$res$event)
 
 test_that("UKF does not fail",{
-  res <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+  res_new <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                   by = 1,
                   data = sims$res,
                   a_0 = rep(0, ncol(sims$res) + 1 - 4),
@@ -16,34 +16,19 @@ test_that("UKF does not fail",{
                   max_T = 10)
 
 
-  res <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-                  by = 1,
-                  data = sims$res,
-                  a_0 = rep(0, ncol(sims$res) + 1 - 4),
-                  Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                  est_Q_0 = F, method = "UKF_old",
-                  verbose = F, kappa = 0, eps = 1e16,
-                  id = sims$res$id,
-                  max_T = 10)
+  res_old <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+                      by = 1,
+                      data = sims$res,
+                      a_0 = rep(0, ncol(sims$res) + 1 - 4),
+                      Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
+                      est_Q_0 = F, method = "UKF_org",
+                      verbose = F, kappa = 0, eps = 1e-2,
+                      id = sims$res$id,
+                      max_T = 10)
+
+  expect_equal(res_new$a_t_d_s, res_old$a_t_d_s)
+  expect_equal(res_new$V_t_d_s, res_old$V_t_d_s)
 })
-
-EKF_res <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-                    by = 1,
-                    data = sims$res,
-                    a_0 = rep(0, ncol(sims$res) + 1 - 4),
-                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                    est_Q_0 = F, method = "EKF",
-                    verbose = F, kappa = 0,
-                    id = sims$res$id,
-                    max_T = 10)
-
-matplot(res$a_t_d_s, type = "l", lty = 2, ylim = range(res$a_t_d_s, sims$betas, EKF_res$a_t_d_s))
-matplot(EKF_res$a_t_d_s, type = "p", lty = 5, add = T)
-matplot(sims$betas, type = "l", lty = 1, add = T)
-
-res$Q
-EKF_res$Q
-
 
 #
 # res_UKF <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
