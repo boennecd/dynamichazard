@@ -14,6 +14,17 @@ test_that("UKF does not fail",{
                   verbose = F, kappa = 0, eps = 1e-2,
                   id = sims$res$id,
                   max_T = 10)
+
+
+  res <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+                  by = 1,
+                  data = sims$res,
+                  a_0 = rep(0, ncol(sims$res) + 1 - 4),
+                  Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
+                  est_Q_0 = F, method = "UKF_old",
+                  verbose = F, kappa = 0, eps = 1e16,
+                  id = sims$res$id,
+                  max_T = 10)
 })
 
 EKF_res <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,

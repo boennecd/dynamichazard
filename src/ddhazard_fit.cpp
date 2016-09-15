@@ -164,20 +164,20 @@ public:
     is_event_in_bin(is_event_in_bin_),
     Q(Q_),
     min_start(Rcpp::as<double>(risk_obj["min_start"]))
-  {
-    // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
-    _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
+    {
+      // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
+      _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
 
-    a_t_t_s = arma::mat(n_parems * order_, d + 1);
-    a_t_less_s = arma::mat(n_parems * order_, d);
-    V_t_t_s = arma::cube(n_parems * order_, n_parems * order_, d + 1);
-    V_t_less_s = arma::cube(n_parems * order_, n_parems * order_, d);
-    B_s = arma::cube(n_parems * order_, n_parems * order_, d);
+      a_t_t_s = arma::mat(n_parems * order_, d + 1);
+      a_t_less_s = arma::mat(n_parems * order_, d);
+      V_t_t_s = arma::cube(n_parems * order_, n_parems * order_, d + 1);
+      V_t_less_s = arma::cube(n_parems * order_, n_parems * order_, d);
+      B_s = arma::cube(n_parems * order_, n_parems * order_, d);
 
-    a_t_t_s.col(0) = a_0;
+      a_t_t_s.col(0) = a_0;
 
-    lag_one_cor = arma::cube(n_parems * order_, n_parems * order_, d);
-  }
+      lag_one_cor = arma::cube(n_parems * order_, n_parems * order_, d);
+    }
 };
 
 // Class with further members for the Extended Kalman Filter
@@ -198,18 +198,18 @@ public:
   arma::mat K_d;
 
   problem_data_EKF(const Rcpp::NumericMatrix &X, const arma::vec &tstart_,
-                 const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
-                 const arma::colvec &a_0,
-                 arma::mat &Q_0,
-                 arma::mat &Q_,
-                 const Rcpp::List &risk_obj,
-                 const arma::mat &F__,
-                 const int n_max = 100, const double eps = 0.001,
-                 const bool verbose = false, const bool save_all_output = false,
-                 const int order_ = 1, const bool est_Q_0 = true):
-  problem_data(X, tstart_, tstop_, is_event_in_bin_, a_0,
-               Q_0, Q_, risk_obj, F__, n_max, eps, verbose, save_all_output,
-               order_, est_Q_0)
+                   const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
+                   const arma::colvec &a_0,
+                   arma::mat &Q_0,
+                   arma::mat &Q_,
+                   const Rcpp::List &risk_obj,
+                   const arma::mat &F__,
+                   const int n_max = 100, const double eps = 0.001,
+                   const bool verbose = false, const bool save_all_output = false,
+                   const int order_ = 1, const bool est_Q_0 = true):
+    problem_data(X, tstart_, tstop_, is_event_in_bin_, a_0,
+                 Q_0, Q_, risk_obj, F__, n_max, eps, verbose, save_all_output,
+                 order_, est_Q_0)
   {
     u = arma::colvec(n_parems * order_);
     U = arma::mat(n_parems * order_, n_parems * order_);
@@ -283,9 +283,9 @@ class EKF_helper{
     {}
 
     void operator()(uvec_iter first, const uvec_iter &last,
-                    const arma::vec &i_a_t, const bool &compute_z_and_H,
-                    const int &i_start, const int &bin_number,
-                    const double &bin_tstart, const double &bin_tstop){
+                  const arma::vec &i_a_t, const bool &compute_z_and_H,
+                  const int &i_start, const int &bin_number,
+                  const double &bin_tstart, const double &bin_tstop){
       // potentially intialize variables and set entries to zeroes in any case
       if(is_first_call){
         u_ = arma::vec(dat.n_parems);
@@ -342,7 +342,7 @@ class EKF_helper{
 
   public:
     filter_worker_logit(problem_data_EKF &p_data):
-      filter_worker(p_data)
+    filter_worker(p_data)
     {}
   };
 
@@ -442,10 +442,10 @@ public:
       uvec_iter block_end = block_start;
       std::advance(block_end, block_size);
       std::packaged_task<void()> task(
-            [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
-              return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
-                                  i_start, bin_number, bin_tstart, bin_tstop);
-            });
+          [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
+            return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
+                    i_start, bin_number, bin_tstart, bin_tstop);
+          });
       futures[i] = task.get_future();
       threads[i] = std::thread(std::move(task));
 
@@ -468,7 +468,7 @@ class EKF_solver : public Solver{
 
 public:
   EKF_solver(problem_data_EKF &p_, const std::string model):
-    p_dat(p_), filter_helper(EKF_helper(p_, model))
+  p_dat(p_), filter_helper(EKF_helper(p_, model))
   {}
 
   void solve(){
@@ -523,7 +523,7 @@ public:
 
 
 
-class UKF_solver : public Solver{
+class UKF_solver_Org : public Solver{
 
   problem_data &p_dat;
   const arma::uword m;
@@ -546,15 +546,15 @@ class UKF_solver : public Solver{
   }
 
 public:
-  UKF_solver(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_):
-    p_dat(p_),
-    m(p_.a_t_t_s.n_rows),
-    k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
-    w_0(k / (m + k)),
-    w_i(1 / (2 * (m + k))),
-    sqrt_m_k(std::sqrt(m + k)),
-    sigma_points(arma::mat(m, 2 * m + 1))
-    {}
+  UKF_solver_Org(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_):
+  p_dat(p_),
+  m(p_.a_t_t_s.n_rows),
+  k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
+  w_0(k / (m + k)),
+  w_i(1 / (2 * (m + k))),
+  sqrt_m_k(std::sqrt(m + k)),
+  sigma_points(arma::mat(m, 2 * m + 1))
+  {}
 
   void solve(){
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -588,7 +588,7 @@ public:
 
         p_dat.V_t_less_s.slice(t - 1) +=
           (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
-            (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
+          (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
       }
 
       // Recompute sigma points
@@ -640,9 +640,168 @@ public:
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+
+      //TODO: Delete
+      Rcpp::Rcout << "t = " << t << std::endl;
+      p_dat.a_t_t_s.col(t).print();
+      p_dat.V_t_t_s.slice(t).print();
     }
   }
 };
+
+
+
+
+class UKF_solver_New : public Solver{
+  using uword = arma::uword;
+
+
+  problem_data &p_dat;
+  const uword m;
+  const double k;
+  const double w_0;
+  const double w_i;
+  const double sqrt_m_k;
+  arma::mat sigma_points;
+
+  inline void compute_sigma_points(const arma::vec &a_t,
+                                   arma::mat &s_points,
+                                   const arma::mat &P_x_x){
+    const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
+
+    s_points.col(0) = a_t;
+    for(int i = 1; i < s_points.n_cols; ++i)
+      if(i % 2 == 0)
+        s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2); else
+          s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2);
+  }
+
+public:
+  UKF_solver_New(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_):
+  p_dat(p_),
+  m(p_.a_t_t_s.n_rows),
+  k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
+  w_0(k / (m + k)),
+  w_i(1 / (2 * (m + k))),
+  sqrt_m_k(std::sqrt(m + k)),
+  sigma_points(arma::mat(m, 2 * m + 1))
+  {}
+
+  void solve(){
+#ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+    openblas_set_num_threads(p_dat.n_threads);
+    //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
+#endif
+
+    // will be usefull later
+    arma::vec weights_vec(std::vector<double>(2 * m + 1, w_i));
+    weights_vec[0] = w_0;
+    arma::vec weights_vec_inv = arma::pow(weights_vec, -1);
+
+    double event_time = p_dat.min_start;
+    for (int t = 1; t < p_dat.d + 1; t++){
+      double delta_t = p_dat.I_len[t - 1];
+      event_time += delta_t;
+
+      // Update sigma pooints
+      compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
+                           sigma_points, p_dat.V_t_t_s.slice(t - 1));
+
+      // E-step: Filter step
+      //   Updates a_t_less_s and V_t_less_s
+      //   Requires T(sigma point) + a_t_less_s computed before V_t_less_s
+      //     Requries that we have updated the sigma points
+      //     Requires for-loop with 2m + 1 itertions
+
+      // First we compute the mean
+      p_dat.a_t_less_s.col(t - 1) = w_0 * sigma_points.unsafe_col(0) +
+        w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols - 1), 1);
+
+      // Then the variance
+      p_dat.V_t_less_s.slice(t - 1) = p_dat.Q; // weigths sum to one // TODO: Include or not?
+      for(int i = 0; i < sigma_points.n_cols; ++i){
+        const double &w = i == 0 ? w_0 : w_i;
+
+        p_dat.V_t_less_s.slice(t - 1) +=
+          (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
+          (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
+      }
+
+      // Recompute sigma points
+      //TODO: should or should these be re-computed?
+      compute_sigma_points(p_dat.a_t_less_s.unsafe_col(t - 1),
+                           sigma_points, p_dat.V_t_less_s.slice(t - 1));
+
+      // E-step: correction-step
+
+      arma::mat O;
+      arma::vec c_vec;
+
+      //TODO: can this be done more effeciently?
+      { // Define scope here as there is a lot of varialbes that are not needed after scope
+        // First we use C to store expected observations given sigma points
+        arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
+        arma::mat C = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
+        lower_trunc_exp_in_place(C);
+        C.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
+
+        // Compute mean observation sing sigma points
+        const arma::vec y_bar = w_0 * C.unsafe_col(0) +
+          w_i * arma::sum(C.cols(1, C.n_cols - 1), 1);
+
+        // Substract y_bar to get deviations
+        C.each_col() -= y_bar;
+        y_bar.print();
+        C.print();
+
+        // We then use O for the matrix (store observations given sigma points)^T divided by the variance matrix
+        O = C.t();
+        for(uword i = 0; i < O.n_cols; ++i){
+          // compute weighted average of variance
+          arma::vec tmp(O.colptr(i), O.n_rows, false); // create reference to memory;
+          double h = w_0 * tmp[0] * (1 - tmp[0]);
+          for(uword j = 1; j < O.n_rows; ++j)
+            h+= w_i * tmp[j] * (1 - tmp[j]);
+
+          // scale the column
+          O.col(i) = pow(h, -1) * O.col(i);
+        }
+
+        // compute vector for errors scaled by the current O
+        c_vec = O * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
+        O =  O * C; // Re-use O to new intermediate value for later
+
+        // Compute intermediate matrix
+        arma::mat tmp_mat = O * arma::inv_sympd(arma::diagmat(weights_vec_inv) + O);
+
+        // Compute vector for state space vector
+        c_vec = c_vec -  tmp_mat * c_vec;
+
+        // compute matrix for co-variance
+        O = O - tmp_mat * O;
+      }
+
+      // Substract mean to get delta sigma points
+      sigma_points.each_col() -= p_dat.a_t_less_s.unsafe_col(t - 1);
+
+      // TODO: can this be done more effeciently?
+      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + sigma_points * (weights_vec % c_vec);
+
+      p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
+        sigma_points * arma::diagmat(weights_vec) * O * arma::diagmat(weights_vec) * sigma_points.t();
+
+      p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+
+      //TODO: Delete
+      Rcpp::Rcout << "t = " << t << std::endl;
+      p_dat.a_t_t_s.col(t).print();
+      p_dat.V_t_t_s.slice(t).print();
+    }
+  }
+};
+
+
+
 
 
 
@@ -719,8 +878,19 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
       order_, est_Q_0);
-    solver = new UKF_solver(*p_data, k);
-  } else
+    solver = new UKF_solver_New(*p_data, k);
+  } else if (method == "UKF_old"){ // TODO: remove this if clause
+    if(model != "logit")
+      Rcpp::stop("UKF is not implemented for model '" + model  +"'");
+
+    p_data = new problem_data(
+      X, tstart, tstop, is_event_in_bin,
+      a_0, Q_0, Q,
+      risk_obj, F_,
+      n_max, eps, verbose, save_all_output,
+      order_, est_Q_0);
+    solver = new UKF_solver_Org(*p_data, k);
+  }else
     Rcpp::stop("method '" + method  +"'is not implemented");
 
   /*Rcpp::Rcout << "X" << std::endl; TODO: Clean up or move
@@ -776,16 +946,16 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     for (int t = p_data->d - 1; t > -1; t--){
       // we need to compute the correlation matrix first
       if(t > 0){
-          p_data->lag_one_cor.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
+        p_data->lag_one_cor.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
           p_data->B_s.slice(t) * (
-          p_data->lag_one_cor.slice(t) - F_ * p_data->V_t_t_s.slice(t)) * p_data->B_s.slice(t - 1).t();
+              p_data->lag_one_cor.slice(t) - F_ * p_data->V_t_t_s.slice(t)) * p_data->B_s.slice(t - 1).t();
       }
 
       p_data->a_t_t_s.col(t) = p_data->a_t_t_s.unsafe_col(t) + p_data->B_s.slice(t) *
         (p_data->a_t_t_s.unsafe_col(t + 1) - p_data->a_t_less_s.unsafe_col(t));
       p_data->V_t_t_s.slice(t) = p_data->V_t_t_s.slice(t) + p_data->B_s.slice(t) *
         (p_data->V_t_t_s.slice(t + 1) - p_data->V_t_less_s.slice(t)) * p_data->B_s.slice(t).t();
-  }
+    }
 
     // M-step
     if(est_Q_0){
@@ -864,11 +1034,11 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     }
 
     a_prev = p_data->a_t_t_s.col(0);
-}while(++it < n_max);
+  }while(++it < n_max);
 
   /* if(save_all_output){
   all_output
-  }else */
+}else */
 
   if(it == n_max)
     throw std::runtime_error("EM algorithm did not converge within the n_max number of iterations");
@@ -888,89 +1058,89 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 /*** R
 library(survival); library(testthat); library(dynamichazard); source("../R/test_utils.R")
 
-set.seed(2972)
-sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
-                            x_range = .1, x_mean = -.4, re_draw = T)
-sims$res <- as.data.frame(sims$res)
+  set.seed(2972)
+  sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
+                              x_range = .1, x_mean = -.4, re_draw = T)
+  sims$res <- as.data.frame(sims$res)
 
-design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
-rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
+  design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
+  rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
-log_file = file("debug.log")
-sink(log_file)
+  log_file = file("debug.log")
+  sink(log_file)
 
-arg_list <- list(
-  X = design_mat$X,
-  tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
-  a_0 = rep(0, ncol(design_mat$X)),
-  Q_0 = diag(10, ncol(design_mat$X)), # something large
-  Q = diag(1, ncol(design_mat$X)), # something large
-  F_ = diag(1, ncol(design_mat$X)), # first order random walk
-  risk_obj = rist_sets,
-  eps = 10^-4, n_max = 10^4,
-  order_ = 1,
-  est_Q_0 = F
-)
+  arg_list <- list(
+      X = design_mat$X,
+      tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
+                                                       a_0 = rep(0, ncol(design_mat$X)),
+                                                       Q_0 = diag(10, ncol(design_mat$X)), # something large
+                                                         Q = diag(1, ncol(design_mat$X)), # something large
+                                                           F_ = diag(1, ncol(design_mat$X)), # first order random walk
+                                                             risk_obj = rist_sets,
+                                                               eps = 10^-4, n_max = 10^4,
+                                                               order_ = 1,
+                                                               est_Q_0 = F
+  )
 
-res <- do.call(ddhazard_fit, arg_list)
+  res <- do.call(ddhazard_fit, arg_list)
 
-tryCatch({
-  res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
-}, finally = {
-  sink()
-  close(log_file)
-})
+  tryCatch({
+    res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
+  }, finally = {
+    sink()
+    close(log_file)
+  })
 
 
-test_that("Testing old versus new implementation", {
-  expect_equal(res$a_t_d_s, res_new$a_t_d_s)
-  expect_equal(res$V_t_d_s, res_new$V_t_d_s)
-  expect_equal(res$B_s, res_new$B_s)
-})
+  test_that("Testing old versus new implementation", {
+    expect_equal(res$a_t_d_s, res_new$a_t_d_s)
+    expect_equal(res$V_t_d_s, res_new$V_t_d_s)
+    expect_equal(res$B_s, res_new$B_s)
+  })
 
 # Test UKF
-sims <- test_sim_func_logit(n_series = 10^3, n_vars = 3, t_0 = 0, t_max = 10,
-                            x_range = .1, x_mean = -.4, re_draw = T)
-sims$res <- as.data.frame(sims$res)
+  sims <- test_sim_func_logit(n_series = 10^3, n_vars = 3, t_0 = 0, t_max = 10,
+                              x_range = .1, x_mean = -.4, re_draw = T)
+  sims$res <- as.data.frame(sims$res)
 
-log_file = file("debug.log", open = "a")
-sink(log_file)
+  log_file = file("debug.log", open = "a")
+  sink(log_file)
 
-design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
-sum(design_mat$Y[, 3] & design_mat$Y[, 2] <= 10)
-rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
+  design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
+  sum(design_mat$Y[, 3] & design_mat$Y[, 2] <= 10)
+  rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
-design_mat$Y[, 2] <- rist_sets$stop_new
-design_mat$Y[, 3] <- rist_sets$new_events_flags
+  design_mat$Y[, 2] <- rist_sets$stop_new
+  design_mat$Y[, 3] <- rist_sets$new_events_flags
 
-arg_list <- list(
-  X = design_mat$X,
-  tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
-  a_0 = c(1, 1, 1),
-  Q_0 = diag(1.0e1, ncol(design_mat$X)), # something large
-  Q = diag(1.0e-0, ncol(design_mat$X)), # something large
-  F_ = diag(1, ncol(design_mat$X)), # first order random walk
-  risk_obj = rist_sets,
-  eps = 10^-2, n_max = 10^4,
-  order_ = 1,
-  est_Q_0 = F,
-  verbose = T,
-  method = "UKF"
-)
+  arg_list <- list(
+      X = design_mat$X,
+      tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
+                                                                                   a_0 = c(1, 1, 1),
+                                                                                   Q_0 = diag(1.0e1, ncol(design_mat$X)), # something large
+                                                                                     Q = diag(1.0e-0, ncol(design_mat$X)), # something large
+                                                                                       F_ = diag(1, ncol(design_mat$X)), # first order random walk
+                                                                                         risk_obj = rist_sets,
+                                                                                           eps = 10^-2, n_max = 10^4,
+                                                                                           order_ = 1,
+                                                                                           est_Q_0 = F,
+                                                                                           verbose = T,
+                                                                                           method = "UKF"
+  )
 
-tryCatch({
-  cat("UKF runtime\n")
-  print(system.time(res_UKF <- do.call(ddhazard_fit_cpp_prelim, arg_list)))
-  arg_list$method <- "EKF"
-  cat("EKF runtime\n")
-  print(system.time(res_EKF <- do.call(ddhazard_fit_cpp_prelim, arg_list)))
+  tryCatch({
+    cat("UKF runtime\n")
+    print(system.time(res_UKF <- do.call(ddhazard_fit_cpp_prelim, arg_list)))
+    arg_list$method <- "EKF"
+    cat("EKF runtime\n")
+    print(system.time(res_EKF <- do.call(ddhazard_fit_cpp_prelim, arg_list)))
 
-  cat("MSE for UKF\n")
-  print(mean((res_UKF$a_t_d_s - sims$betas)^2))
-  cat("MSE for EKF\n")
-  print(mean((res_EKF$a_t_d_s - sims$betas)^2))
-}, finally = {
-  sink()
-  close(log_file)
-})
-*/
+    cat("MSE for UKF\n")
+    print(mean((res_UKF$a_t_d_s - sims$betas)^2))
+    cat("MSE for EKF\n")
+    print(mean((res_EKF$a_t_d_s - sims$betas)^2))
+  }, finally = {
+    sink()
+    close(log_file)
+  })
+  */
