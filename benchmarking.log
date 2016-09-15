@@ -1,0 +1,27 @@
+Iteration [1] 4403
+           [,1]     [,2]     [,3]      [,4]
+[1,]  0.0266470 -0.04606  0.06124 0.0003109
+[2,] -0.0460559  0.76058 -0.01285 0.2114176
+[3,]  0.0612372 -0.01285  0.22307 0.0359871
+[4,]  0.0003109  0.21142  0.03599 0.0669552
+kelihood is -9723.6
+Iteration    16 ended with conv criteria     0.000527672	The log likelihood is -9722.28
+Iteration    21 ended with conv criteria     0.000370624	The log likelihood is -9721.44
+Iteration    26 ended with conv criteria     0.000287024	The log likelihood is -9720.82
+Iteration    31 ended with conv criteria       0.0002364	The log likelihood is -9720.33
+Iteration    36 ended with conv criteria     0.000203295	The log likelihood is -9719.92
+Iteration    41 ended with conv criteria     0.000180842	The log likelihood is -9719.56
+Iteration    46 ended with conv criteria     0.000165523	The log likelihood is -9719.25
+Iteration    51 ended with conv criteria     0.000154955	The log likelihood is -9718.96
+Iteration    56 ended with conv criteria      0.00014772	The log likelihood is -9718.69
+Iteration    61 ended with conv criteria     0.000142839	The log likelihood is -9718.44
+Iteration    66 ended with conv criteria     0.000139573	The log likelihood is -9718.2
+Iteration    71 ended with conv criteria     0.000137313	The log likelihood is -9717.99
+Iteration    76 ended with conv criteria     0.000135525	The log likelihood is -9717.78
+Iteration    81 ended with conv criteria     0.000133728	The log likelihood is -9717.6
+Iteration    86 ended with conv criteria       0.0001315	The log likelihood is -9717.43
+Iteration    91 ended with conv criteria     0.000128499	The log likelihood is -9717.28
+Iteration    96 ended with conv criteria     0.000124489	The log likelihood is -9717.14
+Iteration   101 ended with conv criteria     0.000119369	The log likelihood is -9717.03
+Iteration   106 ended with conv criteria     0.000113177	The log likelihood is -9716.93
+Iteration   111 ended with conv criteria     0.000106076	The log likelihood is -9716.85

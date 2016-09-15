@@ -1,6 +1,6 @@
 # Simple test that methods calls succeds
 result = ddhazard(
-  formula = Surv(start, stop, event) ~ group,
+  formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,
   a_0 = rep(0, 2), Q_0 = diag(.1, 2),

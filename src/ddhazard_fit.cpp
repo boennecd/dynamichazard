@@ -670,7 +670,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const int order_ = 1, const bool est_Q_0 = true,
                                    const std::string method = "EKF",
                                    Rcpp::Nullable<Rcpp::NumericVector> k = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
-                                   const std::string model = "logit"){
+                                   const std::string model = "logit",
+                                   const std::string M_step_formulation = "Fahrmier94"){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "poisson"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -794,16 +795,27 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     for (int t = 1; t < p_data->d + 1; t++){
       delta_t = p_data->I_len[t - 1];
 
-      B = &p_data->B_s.slice(t - 1);
       V_less = &p_data->V_t_t_s.slice(t - 1);
       V = &p_data->V_t_t_s.slice(t);
       a_less = p_data->a_t_t_s.unsafe_col(t - 1);
       a = p_data->a_t_t_s.unsafe_col(t);
 
-      Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-              - F_ * *B * *V
-              - (F_ * *B * *V).t()
-              + F_ * *V_less * p_data->T_F_) / delta_t;
+      if(M_step_formulation == "Fahrmier94"){
+        B = &p_data->B_s.slice(t - 1);
+
+        Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
+                - F_ * *B * *V
+                - (F_ * *B * *V).t()
+                + F_ * *V_less * p_data->T_F_) / delta_t;
+      } else if (M_step_formulation == "SmoothedCov"){
+        B = &p_data->lag_one_cor.slice(t - 1); // this is not B but the lagged one smooth correlation. Do not mind the variable name
+
+        Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
+                - F_ * *B
+                - (F_ * *B).t()
+                + F_ * *V_less * p_data->T_F_) / delta_t;
+      } else
+        Rcpp::stop("'M_step_formulation' of type '" + M_step_formulation + "' is not implemented");
     }
     Q /= p_data->d;
 

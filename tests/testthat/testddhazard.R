@@ -5,7 +5,7 @@ test_that("The head_neck_cancer must be defined for the ddhazard tests",
 
 # Test on data set that is one of Farhmiers papers
 result = ddhazard(
-  formula = Surv(start, stop, event) ~ group,
+  formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1, # Use by month intervals
   n_max = 10^4, eps = 10^-4,
@@ -124,18 +124,22 @@ test_that("poisson model and logit moels hazzard functions differs", {
                 toString(body(result$hazard_first_deriv)))
 })
 
-
-# Test on data set that is one of Farhmiers papers
-result_EKF = ddhazard(
-  formula = Surv(start, stop, event) ~ group,
-  data = head_neck_cancer,
-  by = 1, # Use by month intervals
-  n_max = 10^4, eps = 10^-4,
-  a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
-  est_Q_0 = T,
-  max_T = 45,
-  id = head_neck_cancer$id, order_ = 1
-)
+# sim_dat <- test_sim_func_logit(n_series = 1e4, n_vars = 4, t_max = 10, x_range = 1, x_mean = 0,
+#                                beta_start = 1, sds = c(.1, rep(1, 4)), intercept_start = -5)
+#
+# fit <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+#                 data = sim_dat$res,
+#                 by = 1,
+#                 a_0 = rep(0, 5),
+#                 Q_0 = diag(rep(10, 5)),
+#                 id = sim_dat$res$id,
+#                 eps = 1e-2, n_max = 1e2,
+#                 max_T = 10,
+#                 verbose = T,
+#                 model = "logit")
+#
+# matplot(fit$a_t_d_s, lty = 2, type = "l", ylim = range(fit$a_t_d_s, sim_dat$betas))
+# matplot(sim_dat$betas, lty = 1, type = "l", add = T)
 
 # result_UKF = ddhazard(
 #   formula = Surv(start, stop, event) ~ group,
