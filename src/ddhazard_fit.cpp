@@ -593,8 +593,8 @@ public:
 
       // Recompute sigma points
       //TODO: should or should these be re-computed?
-      //compute_sigma_points(p_dat.a_t_less_s.unsafe_col(t - 1),
-      //                     sigma_points, p_dat.V_t_less_s.slice(t - 1));
+      compute_sigma_points(p_dat.a_t_less_s.unsafe_col(t - 1),
+                           sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
       // E-step: correction-step
       //   Compute a_t_t_s and v_t_t_s
@@ -631,11 +631,11 @@ public:
       }
 
       // Compute new estimates
-      P_v_v = arma::inv(P_v_v); // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
+      P_v_v = arma::inv_sympd(P_v_v); // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
         P_a_v * (P_v_v * (
-            (p_dat.is_event_in_bin(r_set) == t -1) - y_bar));
+            (p_dat.is_event_in_bin(r_set) == t - 1) - y_bar));
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
 
