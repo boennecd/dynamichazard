@@ -4,7 +4,7 @@ sims <- test_sim_func_logit(n_series = 5e2, n_vars = 3, t_0 = 0, t_max = 10,
                             intercept_start = -1, sds = c(.1, rep(1, 3)))
 sum(sims$res$event)
 
-test_that("UKF does not fail",{
+test_that("UKF does not fail and both methods give the same",{
   res_new <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                   by = 1,
                   data = sims$res,
@@ -30,15 +30,14 @@ test_that("UKF does not fail",{
   expect_equal(res_new$V_t_d_s, res_old$V_t_d_s)
 })
 
-#
-# res_UKF <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-#                     by = 1,
-#                     data = sims$res,
-#                     a_0 = c(-1, rep(0, ncol(sims$res) + 1 - 4 - 1)),
-#                     Q_0 = diag( rep(1e1, ncol(sims$res) + 1 - 4)),
-#                     Q =   diag( rep(1e-1, ncol(sims$res) + 1 - 4)),
-#                     est_Q_0 = F, method = "UKF", kappa = -2)
-#
+# res_test <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+#                      by = 1,
+#                      data = sims$res,
+#                      a_0 = res_new$a_t_d_s[1, ],
+#                      Q_0 = res_new$Q,
+#                      Q = res_new$Q,
+#                      est_Q_0 = F, method = "UKF", kappa = NULL)
+
 # res_EKF <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
 #                     by = 1,
 #                     data = sims$res,

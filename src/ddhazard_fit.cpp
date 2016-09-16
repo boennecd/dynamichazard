@@ -535,7 +535,9 @@ public:
 
 
 
-
+// This is the orginal UKF formulation from Julier et al 1997. The methods
+// requires inversion of matrix with dimension equal to the dim of observational
+// equation. Hence, it does not scale well in the number of observation per bin
 class UKF_solver_Org : public Solver{
 
   problem_data &p_dat;
@@ -652,8 +654,6 @@ public:
     }
   }
 };
-
-
 
 
 class UKF_solver_New : public Solver{
@@ -782,14 +782,21 @@ public:
       }
 
       // Substract mean to get delta sigma points
-      sigma_points.each_col() -= p_dat.a_t_less_s.unsafe_col(t - 1);
+      arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
 
       // TODO: can this be done more effeciently?
-      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + sigma_points * (weights_vec % c_vec);
+      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + delta_sigma_points * (weights_vec % c_vec);
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
-        sigma_points * arma::diagmat(weights_vec) * O * arma::diagmat(weights_vec) * sigma_points.t();
+        (delta_sigma_points.each_row() % weights_vec.t()) * O * (delta_sigma_points.each_row() % weights_vec.t()).t();
 
+      // // TODO: Figure out what to do about BS
+      // // TODO: remove - it is the same
+      // O = p_dat.F_ * sigma_points; // we do not need O more at this point
+      // O = ((sigma_points.each_col() - p_dat.a_t_t_s.col(t - 1)).each_row() % weights_vec.t()) *
+      //   (O.each_col() - p_dat.a_t_t_s.col(t)).t();
+      //
+      // p_dat.B_s.slice(t - 1) = O * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
     }
   }
