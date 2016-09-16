@@ -138,7 +138,7 @@ run_time_func <- function(n){
   system.time(do.call(dynamichazard::ddhazard, dd_args_local))
 }
 
-n_for_test <- 2^(8:14)
+n_for_test <- 2^(8:18)
 run_time <- sapply(n_for_test, run_time_func)
 
 plot(n_for_test, run_time["user.self", ], type = "p", log = "xy", 

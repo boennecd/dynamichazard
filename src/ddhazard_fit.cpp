@@ -581,6 +581,7 @@ public:
       event_time += delta_t;
 
       // Update sigma pooints
+      // The orginal Julier paper only updates sigma points here
       compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
                            sigma_points, p_dat.V_t_t_s.slice(t - 1));
 
@@ -603,11 +604,6 @@ public:
           (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
           (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
       }
-
-      // Recompute sigma points
-      //TODO: should or should these be re-computed?
-      compute_sigma_points(p_dat.a_t_less_s.unsafe_col(t - 1),
-                           sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
       // E-step: correction-step
       //   Compute a_t_t_s and v_t_t_s
@@ -714,6 +710,7 @@ public:
       event_time += delta_t;
 
       // Update sigma pooints
+      // The orginal Julier paper only updates sigma points here
       compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
                            sigma_points, p_dat.V_t_t_s.slice(t - 1));
 
@@ -737,13 +734,7 @@ public:
           (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
       }
 
-      // Recompute sigma points
-      //TODO: should or should these be re-computed?
-      compute_sigma_points(p_dat.a_t_less_s.unsafe_col(t - 1),
-                           sigma_points, p_dat.V_t_less_s.slice(t - 1));
-
       // E-step: correction-step
-
       arma::mat O;
       arma::vec c_vec;
 
