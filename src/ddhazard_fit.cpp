@@ -40,31 +40,37 @@ extern int openblas_get_num_threads();
 #endif
 
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
-const double lower_trunc_exp_log_thres = sqrt(log(std::numeric_limits<double>::max())) - 1.1;
-const double lower_trunc_exp_exp_thres = exp(lower_trunc_exp_log_thres);
+const double lower_trunc_exp_exp_thres = 1 / sqrt(std::numeric_limits<double>::epsilon());
+const double lower_trunc_exp_log_thres = sqrt(lower_trunc_exp_exp_thres);
+const double upper_trunc_exp_exp_thres = sqrt(std::numeric_limits<double>::epsilon());
+const double upper_trunc_exp_log_thres = log(upper_trunc_exp_exp_thres);
+
 struct {
   template<typename T>
   void operator()(T &&val){
-    if(val >= lower_trunc_exp_log_thres )
+    if(val >= lower_trunc_exp_log_thres)
     {
       val =  lower_trunc_exp_exp_thres;
+    } else if(val <= upper_trunc_exp_log_thres) {
+      val = upper_trunc_exp_exp_thres;
     }
     else
     {
       val = std::exp(val);
     }
   }
-} lower_trunc_exp_in_place_functor;
+} trunc_exp_in_place_functor;
 
-inline void lower_trunc_exp_in_place(arma::vec &result)
+inline void trunc_exp_in_place(arma::vec &result)
 {
-  result.for_each(lower_trunc_exp_in_place_functor);
+  result.for_each(trunc_exp_in_place_functor);
 }
 
-inline void lower_trunc_exp_in_place(arma::mat &result)
+inline void trunc_exp_in_place(arma::mat &result)
 {
-  result.for_each(lower_trunc_exp_in_place_functor);
+  result.for_each(trunc_exp_in_place_functor);
 }
+
 
 struct {
   template<typename T>
@@ -73,24 +79,29 @@ struct {
     {
       return lower_trunc_exp_exp_thres;
     }
+    else if(val <= upper_trunc_exp_log_thres){
+      return upper_trunc_exp_exp_thres;
+    }
     else
     {
       return std::exp(val);
     }
   }
-} lower_trunc_exp_functor;
+} trunc_exp_functor;
 
-inline const arma::vec& lower_trunc_exp(const arma::vec &result)
+
+inline const arma::vec& trunc_exp(const arma::vec &result)
 {
-  result.for_each(lower_trunc_exp_functor);
+  result.for_each(trunc_exp_functor);
   return result;
 }
 
-inline const arma::mat& lower_trunc_exp(const arma::mat &result)
+inline const arma::mat& trunc_exp(const arma::mat &result)
 {
-  result.for_each(lower_trunc_exp_functor);
+  result.for_each(trunc_exp_functor);
   return result;
 }
+
 
 // Define convergence criteria
 inline double relative_norm_change(const arma::vec &prev_est, const arma::vec &new_est){
@@ -323,7 +334,7 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      const double i_eta = lower_trunc_exp_functor(arma::dot(i_a_t, x_));
+      const double i_eta = trunc_exp_functor(arma::dot(i_a_t, x_));
 
       if(dat.is_event_in_bin(*it) == bin_number){
         u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
@@ -609,7 +620,7 @@ public:
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
       arma::mat Z_t = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
-      lower_trunc_exp_in_place(Z_t);
+      trunc_exp_in_place(Z_t);
       Z_t.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
       // Compute y_bar, P_a_v and P_v_v
@@ -737,7 +748,7 @@ public:
         // First we use O to store expected observations given sigma points
         arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
         O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
-        lower_trunc_exp_in_place(O);
+        trunc_exp_in_place(O);
         O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
         // Compute mean observation sing sigma points
@@ -757,6 +768,7 @@ public:
         O = O.t() * (O.each_col() / vars);
 
         // Compute intermediate matrix
+        //Rcpp::Rcout << arma::min(vars) << "\t" << lower_trunc_exp_exp_thres << "\t" << upper_trunc_exp_exp_thres << std::endl;
         arma::mat tmp_mat = O * arma::inv_sympd(arma::diagmat(weights_vec_inv) + O);
 
         // Compute vector for state space vector
