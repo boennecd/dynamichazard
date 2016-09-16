@@ -40,10 +40,12 @@ extern int openblas_get_num_threads();
 #endif
 
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
-const double lower_trunc_exp_exp_thres = 1 / sqrt(std::numeric_limits<double>::epsilon());
-const double lower_trunc_exp_log_thres = sqrt(lower_trunc_exp_exp_thres);
-const double upper_trunc_exp_exp_thres = sqrt(std::numeric_limits<double>::epsilon());
-const double upper_trunc_exp_log_thres = log(upper_trunc_exp_exp_thres);
+// This truncation ensures that the variance in the logit model can never
+// become lower than sqrt(std::numeric_limits<double>::epsilon())
+constexpr double lower_trunc_exp_exp_thres = 1 / sqrt(std::numeric_limits<double>::epsilon());
+constexpr double lower_trunc_exp_log_thres = sqrt(lower_trunc_exp_exp_thres);
+constexpr double upper_trunc_exp_exp_thres = sqrt(std::numeric_limits<double>::epsilon());
+constexpr double upper_trunc_exp_log_thres = log(upper_trunc_exp_exp_thres);
 
 struct {
   template<typename T>
@@ -670,6 +672,8 @@ class UKF_solver_New : public Solver{
   const double sqrt_m_k;
   arma::mat sigma_points;
 
+  static constexpr double min_var = (lower_trunc_exp_exp_thres / (1 + lower_trunc_exp_exp_thres)) / (1 + lower_trunc_exp_exp_thres);
+
   inline void compute_sigma_points(const arma::vec &a_t,
                                    arma::mat &s_points,
                                    const arma::mat &P_x_x){
@@ -748,7 +752,9 @@ public:
         // First we use O to store expected observations given sigma points
         arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
         O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
+
         trunc_exp_in_place(O);
+
         O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
         // Compute mean observation sing sigma points
@@ -756,9 +762,16 @@ public:
           w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
 
         arma::vec vars = (w_0 * O.unsafe_col(0)) % (1.0 - O.unsafe_col(0));
-        for(uword i = 1; i < O.n_cols; ++i)
+        for(uword i = 1; i < O.n_cols; ++i){
           vars += (w_i * O.unsafe_col(i)) % (1.0 - O.unsafe_col(i));
+        }
 
+        // There is a risk that the product of the weigths and the variances
+        // are small in which case some of the vars indicies are small. We
+        // overcome this issue by setting these elements to the smallest
+        // posible value given the truncation we apply to the exponential
+        // function
+        vars.elem(arma::find(vars <= min_var)).fill(min_var);
 
         // Substract y_bar to get deviations
         O.each_col() -= y_bar;
@@ -768,7 +781,6 @@ public:
         O = O.t() * (O.each_col() / vars);
 
         // Compute intermediate matrix
-        //Rcpp::Rcout << arma::min(vars) << "\t" << lower_trunc_exp_exp_thres << "\t" << upper_trunc_exp_exp_thres << std::endl;
         arma::mat tmp_mat = O * arma::inv_sympd(arma::diagmat(weights_vec_inv) + O);
 
         // Compute vector for state space vector
