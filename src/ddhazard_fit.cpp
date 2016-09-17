@@ -668,8 +668,12 @@ class UKF_solver_New : public Solver{
 
   problem_data &p_dat;
   const uword m;
-  const double k;
-  const double lambda;
+  //TODO: clean up here
+  //const double k;
+  //const double lambda;
+  const double alpha;
+  const double beta;
+  const double mu;
   const double w_0;
   const double w_0_c;
   const double w_i;
@@ -684,26 +688,35 @@ class UKF_solver_New : public Solver{
     const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
 
     s_points.col(0) = a_t;
-    for(int i = 1; i < s_points.n_cols; ++i)
-      if(i % 2 == 0)
-        s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
-          s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
+    for(int i = 1; i < s_points.n_cols; ++i){
+      if(i % 2 == 0){
+        s_points.col(i) = (1 - alpha) * a_t + alpha * (
+          a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2));
+      } else {
+          s_points.col(i) = (1 - alpha) * a_t + alpha * (
+            a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2));
+      }
+    }
   }
 
 public:
   UKF_solver_New(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_,
-                 double alpha = 1, double beta = 2.0):
+                 double a = 1, double b = 2.0):
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
-  k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
-  lambda(pow(alpha, 2) * (m + k) - m),
-  w_0(lambda / (m + lambda)),
+
+  //k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
+  //lambda(pow(alpha, 2) * (m + k) - m),
+
+  alpha(a), beta(b),
+  mu(pow(a, 2)),
+  w_0((0.0 + mu - 1)/mu),
   w_0_c(w_0 + 1 - pow(alpha, 2) + beta), // TODO: how to set?
-  w_i(1 / (2 * (m + lambda))),
-  sqrt_m_lambda(std::sqrt(m + lambda)),
+  w_i(((1 - w_0)/(2 * m)) / mu),
+  sqrt_m_lambda(std::sqrt(m / (1 - w_0))),
   sigma_points(arma::mat(m, 2 * m + 1))
   {
-    Rcpp::Rcout << k << "\t" << lambda << "\t" << w_0 << "\t" << w_0_c << "\t" << w_i << "\t" << sqrt_m_lambda << std::endl;
+    Rcpp::Rcout << "\t" << w_0 << "\t" << w_0_c << "\t" << w_i << "\t" << sqrt_m_lambda << std::endl;
   }
 
   void solve(){
