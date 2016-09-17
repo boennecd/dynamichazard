@@ -9,11 +9,6 @@ get_survival_case_Weigths_and_data = function(
   if(missing(init_weights))
     init_weights = rep(1, nrow(data))
 
-  if(missing(id)){
-    warning("You did not parse and ID argument. I do not hink this is what you want ...")
-    id = 1:nrow(data)
-  }
-
   if(any(colnames(data) == "weights")){
     warning("Column called weights will be replaced")
     data = data[, colnames(data) != "weights"]
@@ -25,15 +20,17 @@ get_survival_case_Weigths_and_data = function(
      max(unlist(lapply(risk_obj$risk_sets, max))))
     stop("risk_obj has indicies out site of data. Likely the risk_set comes from a different data set")
 
-  if(compute_risk_obj)
+  if(compute_risk_obj){
+    if(missing(id)){
+      warning("You did not parse and ID argument. I do not hink this is what you want ...")
+      id = 1:nrow(data)
+    }
+
     risk_obj <- get_risk_obj(
       Y = X_Y$Y, by = by,
       max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
       id = id, is_for_discrete_model = is_for_discrete_model)
-      # start = X_Y$Y[, 1], stop = X_Y$Y[, 2], event = X_Y$Y[, 3],
-      # by = by, start_order = order(X_Y$Y[, 1]) - 1,
-      # max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
-      # order_by_id_and_rev_start = order(id, -X_Y$Y[, 1]) - 1, id = id)
+  }
 
   new_weights = rep(0, nrow(data))
   new_case_rows = data.frame()

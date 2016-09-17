@@ -61,7 +61,7 @@ ddhazard = function(formula, data, by,
     # Assume that logit models is used
     message("a_0 not supplied. One iteration IWLS of static logit model is used")
     tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
-                         control = glm.control(epsilon = Inf), family = "logit")
+                         control = glm.control(epsilon = Inf), family = "binomial")
     a_0 = rep(tmp_mod$coefficients, order_)
     rm(tmp_mod)
 
