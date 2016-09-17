@@ -11,7 +11,7 @@ test_that("UKF does not fail and both methods give the same",{
                   a_0 = rep(0, ncol(sims$res) + 1 - 4),
                   Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
                   est_Q_0 = F, method = "UKF",
-                  verbose = F, kappa = 0, eps = 1e-2,
+                  verbose = F, eps = 1e-2, kappa = 0,
                   id = sims$res$id,
                   max_T = 10)
 
@@ -29,6 +29,10 @@ test_that("UKF does not fail and both methods give the same",{
   expect_equal(res_new$a_t_d_s, res_old$a_t_d_s)
   expect_equal(res_new$V_t_d_s, res_old$V_t_d_s)
 })
+
+matplot(res_new$a_t_d_s, type = "l", ylim = range(res_new$a_t_d_s, res_old$a_t_d_s, sims$betas))
+matplot(res_old$a_t_d_s, type = "l", add = T, lty = 1)
+matplot(sims$betas, type = "l", add = T, lty = 4)
 
 # res_test <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
 #                      by = 1,
