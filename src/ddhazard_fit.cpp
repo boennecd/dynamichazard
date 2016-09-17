@@ -573,6 +573,7 @@ public:
 
   void solve(){
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+    const int prev_n_thread = openblas_get_num_threads();
     openblas_set_num_threads(p_dat.n_threads);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
@@ -652,6 +653,11 @@ public:
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
     }
+
+#ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+    openblas_set_num_threads(prev_n_thread);
+    //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
+#endif
   }
 };
 
@@ -790,13 +796,6 @@ public:
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
         (delta_sigma_points.each_row() % weights_vec.t()) * O * (delta_sigma_points.each_row() % weights_vec.t()).t();
 
-      // // TODO: Figure out what to do about BS
-      // // TODO: remove - it is the same
-      // O = p_dat.F_ * sigma_points; // we do not need O more at this point
-      // O = ((sigma_points.each_col() - p_dat.a_t_t_s.col(t - 1)).each_row() % weights_vec.t()) *
-      //   (O.each_col() - p_dat.a_t_t_s.col(t)).t();
-      //
-      // p_dat.B_s.slice(t - 1) = O * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
     }
   }

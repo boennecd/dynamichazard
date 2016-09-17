@@ -19,15 +19,6 @@ ddhazard = function(formula, data, by,
   n_parems = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
 
-  if(missing(a_0)){
-    # Assume that logit models is used
-    message("a_0 not supplied. One iteration IWLS of static logit model is used")
-    tmp_mod = glm(X_Y$Y[, 3] ~ X_Y$X - 1, # design mat already have intercept
-                  family = binomial, control = glm.control(epsilon = Inf))
-    a_0 = rep(tmp_mod$coefficients, order_)
-    rm(tmp_mod)
-  }
-
   if(missing(id)){
     if(verbose)
       warning("You did not parse and ID argument. I do not hink this is what you want ...")
@@ -53,12 +44,6 @@ ddhazard = function(formula, data, by,
     F_[n_parems + 1:n_parems, n_parems + 1:n_parems] = 0
   } else stop("Method not implemented for order ", order_)
 
-  if(ncol(F_) != n_parems * order_ ||
-     ncol(Q) != n_parems * order_ ||
-     ncol(Q_0) != n_parems * order_ ||
-     length(a_0) != n_parems * order_)
-    stop("One of the input vector or matrices do not match with the order and number of parameters")
-
   if(model == "logit"){
     is_for_discrete_model <- TRUE
   } else if (model == "poisson"){
@@ -71,6 +56,25 @@ ddhazard = function(formula, data, by,
   risk_set <-
     get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
                  id = id, is_for_discrete_model = is_for_discrete_model)
+
+  if(missing(a_0) && model == "logit"){
+    # Assume that logit models is used
+    message("a_0 not supplied. One iteration IWLS of static logit model is used")
+    tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
+                         control = glm.control(epsilon = Inf), family = "logit")
+    a_0 = rep(tmp_mod$coefficients, order_)
+    rm(tmp_mod)
+
+  } else if (missing(a_0)){
+    message("a_0 not supplied. Initial value set to a zero vector")
+    a_0 = rep(0, order_ * n_parems)
+  }
+
+  if(ncol(F_) != n_parems * order_ ||
+     ncol(Q) != n_parems * order_ ||
+     ncol(Q_0) != n_parems * order_ ||
+     length(a_0) != n_parems * order_)
+    stop("One of the input vector or matrices do not match with the order and number of parameters")
 
   # Report pre-liminary stats
   if(verbose){
