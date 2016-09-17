@@ -535,9 +535,14 @@ public:
 
 
 
-// This is the orginal UKF formulation from Julier et al 1997. The methods
-// requires inversion of matrix with dimension equal to the dim of observational
-// equation. Hence, it does not scale well in the number of observation per bin
+// This is the orginal UKF formulation from:
+// Julier, Simon J., and Jeffrey K. Uhlmann. "New extension of the Kalman filter
+// to nonlinear systems." AeroSense'97. International Society for Optics and
+// Photonics, 1997.Julier et al 1997.
+
+// The methods requires inversion of matrix with dimension equal to the dim of
+// observational equation. Hence, it does not scale well in the number of
+// observation per bin
 class UKF_solver_Org : public Solver{
 
   problem_data &p_dat;
@@ -662,18 +667,32 @@ public:
 };
 
 
+// New method that use the Woodbury matrix identity to make the UKF algorithm
+// scale linearly with the dimension of the observationally.
+
+// beta = 0.0 and alpha = 1.0 yields the same sigma points as in:
+// Julier, Simon J., and Jeffrey K. Uhlmann. "New extension of the Kalman filter
+// to nonlinear systems." AeroSense'97. International Society for Optics and
+// Photonics, 1997.Julier et al 1997.
+
+// Altering these will yields parameter estimate similar to:
+// Wan, Eric A., and Rudolph Van Der Merwe. "The unscented Kalman filter for
+// nonlinear estimation." Adaptive Systems for Signal Processing, Communications
+// and Control Symposium 2000. AS-SPCC. The IEEE 2000. Ieee, 2000.
+
+// This allows one to match third moment. In this case you have to set beta =
+// 2.0 as we have a Gaussian state space model. Another good article is this
+// one which yields the same results but with a different parameterization:
+// Julier, Simon J., and Jeffrey K. Uhlmann. "Unscented filtering and nonlinear
+// estimation." Proceedings of the IEEE 92.3 (2004): 401-422.
 class UKF_solver_New : public Solver{
   using uword = arma::uword;
 
 
   problem_data &p_dat;
   const uword m;
-  //TODO: clean up here
-  //const double k;
-  //const double lambda;
-  const double alpha;
-  const double beta;
-  const double mu;
+  const double k;
+  const double lambda;
   const double w_0;
   const double w_0_c;
   const double w_i;
@@ -688,39 +707,29 @@ class UKF_solver_New : public Solver{
     const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
 
     s_points.col(0) = a_t;
-    for(int i = 1; i < s_points.n_cols; ++i){
-      if(i % 2 == 0){
-        s_points.col(i) = (1 - alpha) * a_t + alpha * (
-          a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2));
-      } else {
-          s_points.col(i) = (1 - alpha) * a_t + alpha * (
-            a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2));
-      }
-    }
+    for(int i = 1; i < s_points.n_cols; ++i)
+      if(i % 2 == 0)
+        s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
+          s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
   }
 
 public:
   UKF_solver_New(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_,
-                 double a = 1, double b = 2.0):
+                 double alpha = 1.0, double beta = 0.0):
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
-
-  //k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
-  //lambda(pow(alpha, 2) * (m + k) - m),
-
-  alpha(a), beta(b),
-  mu(pow(a, 2)),
-  w_0((0.0 + mu - 1)/mu),
+  k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
+  lambda(pow(alpha, 2) * (m + k) - m),
+  w_0(lambda / (m + lambda)),
   w_0_c(w_0 + 1 - pow(alpha, 2) + beta), // TODO: how to set?
-  w_i(((1 - w_0)/(2 * m)) / mu),
-  sqrt_m_lambda(std::sqrt(m / (1 - w_0))),
+  w_i(1 / (2 * (m + lambda))),
+  sqrt_m_lambda(std::sqrt(m + lambda)),
   sigma_points(arma::mat(m, 2 * m + 1))
-  {
-    Rcpp::Rcout << "\t" << w_0 << "\t" << w_0_c << "\t" << w_i << "\t" << sqrt_m_lambda << std::endl;
-  }
+  {}
 
   void solve(){
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+    const int prev_n_thread = openblas_get_num_threads();
     openblas_set_num_threads(p_dat.n_threads);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
@@ -825,6 +834,11 @@ public:
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
     }
+
+#ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+    openblas_set_num_threads(prev_n_thread);
+    //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
+#endif
   }
 };
 
