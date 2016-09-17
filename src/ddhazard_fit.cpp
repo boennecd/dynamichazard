@@ -669,9 +669,11 @@ class UKF_solver_New : public Solver{
   problem_data &p_dat;
   const uword m;
   const double k;
+  const double lambda;
   const double w_0;
+  const double w_0_c;
   const double w_i;
-  const double sqrt_m_k;
+  const double sqrt_m_lambda;
   arma::mat sigma_points;
 
   static constexpr double min_var = (lower_trunc_exp_exp_thres / (1 + lower_trunc_exp_exp_thres)) / (1 + lower_trunc_exp_exp_thres);
@@ -684,20 +686,25 @@ class UKF_solver_New : public Solver{
     s_points.col(0) = a_t;
     for(int i = 1; i < s_points.n_cols; ++i)
       if(i % 2 == 0)
-        s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2); else
-          s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2);
+        s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
+          s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
   }
 
 public:
-  UKF_solver_New(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_):
+  UKF_solver_New(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_,
+                 double alpha = 1, double beta = 2.0):
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
   k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
-  w_0(k / (m + k)),
-  w_i(1 / (2 * (m + k))),
-  sqrt_m_k(std::sqrt(m + k)),
+  lambda(pow(alpha, 2) * (m + k) - m),
+  w_0(lambda / (m + lambda)),
+  w_0_c(w_0 + 1 - pow(alpha, 2) + beta), // TODO: how to set?
+  w_i(1 / (2 * (m + lambda))),
+  sqrt_m_lambda(std::sqrt(m + lambda)),
   sigma_points(arma::mat(m, 2 * m + 1))
-  {}
+  {
+    Rcpp::Rcout << k << "\t" << lambda << "\t" << w_0 << "\t" << w_0_c << "\t" << w_i << "\t" << sqrt_m_lambda << std::endl;
+  }
 
   void solve(){
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -709,6 +716,10 @@ public:
     arma::vec weights_vec(std::vector<double>(2 * m + 1, w_i));
     weights_vec[0] = w_0;
     arma::vec weights_vec_inv = arma::pow(weights_vec, -1);
+
+    arma::vec weights_vec_c = weights_vec;
+    weights_vec_c[0] = w_0_c;
+    arma::vec weights_vec_c_inv = arma::pow(weights_vec_c, -1);
 
     double event_time = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
@@ -733,7 +744,7 @@ public:
       // Then the variance
       p_dat.V_t_less_s.slice(t - 1) = p_dat.Q; // weigths sum to one // TODO: Include or not?
       for(int i = 0; i < sigma_points.n_cols; ++i){
-        const double &w = i == 0 ? w_0 : w_i;
+        const double &w = i == 0 ? w_0_c : w_i;
 
         p_dat.V_t_less_s.slice(t - 1) +=
           (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
@@ -758,7 +769,7 @@ public:
         const arma::vec y_bar = w_0 * O.unsafe_col(0) +
           w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
 
-        arma::vec vars = (w_0 * O.unsafe_col(0)) % (1.0 - O.unsafe_col(0));
+        arma::vec vars = (w_0_c * O.unsafe_col(0)) % (1.0 - O.unsafe_col(0));
         for(uword i = 1; i < O.n_cols; ++i){
           vars += (w_i * O.unsafe_col(i)) % (1.0 - O.unsafe_col(i));
         }
@@ -783,6 +794,9 @@ public:
         // Compute vector for state space vector
         c_vec = c_vec -  tmp_mat * c_vec;
 
+        // Re-compute intermediate matrix using the other weight vector
+        tmp_mat = O * arma::inv_sympd(arma::diagmat(weights_vec_c_inv) + O);
+
         // compute matrix for co-variance
         O = O - tmp_mat * O;
       }
@@ -794,7 +808,7 @@ public:
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + delta_sigma_points * (weights_vec % c_vec);
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
-        (delta_sigma_points.each_row() % weights_vec.t()) * O * (delta_sigma_points.each_row() % weights_vec.t()).t();
+        (delta_sigma_points.each_row() % weights_vec_c.t()) * O * (delta_sigma_points.each_row() % weights_vec_c.t()).t();
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
     }
