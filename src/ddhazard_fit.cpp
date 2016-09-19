@@ -15,7 +15,11 @@ extern int openblas_get_num_threads();
 #endif
 
 // DEBUG flags
-#define MYDEBUG_UKF
+// Only define this if the observational equation and state space equation
+// have reasonable dimensions
+//#define MYDEBUG_UKF
+
+//#define MYDEBUG_M_STEP
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
@@ -607,7 +611,7 @@ public:
         w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols - 1), 1);
 
       // Then the variance
-      p_dat.V_t_less_s.slice(t - 1) = p_dat.Q; // weigths sum to one // TODO: Include or not?
+      p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q; // weigths sum to one // TODO: Include or not?
       for(int i = 0; i < sigma_points.n_cols; ++i){
         const double &w = i == 0 ? w_0 : w_i;
 
@@ -789,7 +793,7 @@ public:
         w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols - 1), 1);
 
       // Then the variance
-      p_dat.V_t_less_s.slice(t - 1) = p_dat.Q; // weigths sum to one // TODO: Include or not?
+      p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q; // weigths sum to one // TODO: Include or not?
 
       for(int i = 0; i < sigma_points.n_cols; ++i){
         const double &w = i == 0 ? w_0_c : w_i;
@@ -881,6 +885,13 @@ public:
       (weights_vec % c_vec).print("scaled by weights");
       Rcpp::Rcout << std::endl;
       (delta_sigma_points * (weights_vec % c_vec)).print("final gain");
+
+      if(t > 1){
+        p_dat.a_t_t_s.col(t - 1).print("Old a_t");
+        p_dat.a_t_less_s.col(t - 1).print("a_(t|t - 1)");
+        p_dat.a_t_t_s.col(t).print("New a_t");
+      }
+
       Rcpp::Rcout << "________" << std::endl;
 #endif
 
@@ -888,10 +899,7 @@ public:
         (delta_sigma_points.each_row() % weights_vec_c.t()) * O * (delta_sigma_points.each_row() % weights_vec_c.t()).t();
 
 #if defined(MYDEBUG_UKF)
-      arma::vec eig_val;
-      arma::eig_sym(eig_val, p_dat.V_t_less_s.slice(t - 1));
-
-      eig_val.print("V_(t|t - 1) eigen values");
+      p_dat.V_t_t_s.slice(t).print("V_(t|t)");
 #endif
 
       // Solve should be faster than inv_sympd http://arma.sourceforge.net/docs.html#inv_sympd
@@ -900,8 +908,19 @@ public:
       //  X = B A^-1
       // X^T = A^-1 B^T <=> A X^T = B^T
 
-      p_dat.B_s.slice(t - 1) = arma::solve(
-        p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
+      // TODO: Comment this back - yields the same
+      // p_dat.B_s.slice(t - 1) = arma::solve(
+      //   p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
+
+      O = p_dat.F_ * sigma_points; // we do not need O more at this point
+      O = ((sigma_points.each_col() - p_dat.a_t_t_s.col(t - 1)).each_row() % weights_vec.t()) *
+        (O.each_col() - p_dat.a_t_t_s.col(t)).t();
+
+      p_dat.B_s.slice(t - 1) = arma::solve(p_dat.V_t_less_s.slice(t - 1), O.t()).t();
+
+#if defined(MYDEBUG_UKF)
+      Rcpp::Rcout << "The end" << std::endl;
+#endif
     }
 
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -1085,6 +1104,20 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       if(M_step_formulation == "Fahrmier94"){
         B = &p_data->B_s.slice(t - 1);
 
+#if defined(MYDEBUG_M_STEP)
+        Rcpp::Rcout << "New Q-term from t = " << t << ":" << std::endl;
+        (((a - F_ * a_less) * (a - F_ * a_less).t() + *V
+           - F_ * *B * *V
+           - (F_ * *B * *V).t()
+           + F_ * *V_less * p_data->T_F_) / delta_t).print();
+
+        ((a - F_ * a_less) * (a - F_ * a_less).t()).print();
+        (*V
+           - F_ * *B * *V
+           - (F_ * *B * *V).t()
+           + F_ * *V_less * p_data->T_F_).print();
+#endif
+
         Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
                 - F_ * *B * *V
                 - (F_ * *B * *V).t()
@@ -1126,6 +1159,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     }
 
     conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0)));
+
+#if defined(MYDEBUG_M_STEP)
+    Q.print("Q");
+#endif
 
     //if(save_all_output) // TODO: make similar save all output function?
 
