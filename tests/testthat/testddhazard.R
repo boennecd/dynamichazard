@@ -141,15 +141,21 @@ test_that("poisson model and logit moels hazzard functions differs", {
 # matplot(fit$a_t_d_s, lty = 2, type = "l", ylim = range(fit$a_t_d_s, sim_dat$betas))
 # matplot(sim_dat$betas, lty = 1, type = "l", add = T)
 
-# result_UKF = ddhazard(
-#   formula = Surv(start, stop, event) ~ group,
-#   data = head_neck_cancer,
-#   by = 1, # Use by month intervals
-#   n_max = 10^4, eps = 10^-4,
-#   a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
-#   est_Q_0 = T,
-#   max_T = 45,
-#   id = head_neck_cancer$id, order_ = 1,
-#   method = "UKF"
-# )
+tmp_file <- file("ukf_log.log")
+sink(tmp_file)
+tryCatch({
+  result_UKF <- ddhazard(
+  formula = Surv(start, stop, event) ~ group,
+  data = head_neck_cancer,
+  by = 1, # Use by month intervals
+  n_max = 10^4, eps = 10^-5,
+  a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
+  est_Q_0 = T,
+  max_T = 45,
+  id = head_neck_cancer$id, order_ = 1,
+  method = "UKF")
+}, finally = {
+  sink()
+  close(tmp_file)
+})
 
