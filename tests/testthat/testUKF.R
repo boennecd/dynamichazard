@@ -30,9 +30,9 @@ test_that("UKF does not fail and both methods give the same",{
   expect_equal(res_new$V_t_d_s, res_old$V_t_d_s)
 })
 
-matplot(res_new$a_t_d_s, type = "l", ylim = range(res_new$a_t_d_s, res_old$a_t_d_s, sims$betas))
-matplot(res_old$a_t_d_s, type = "l", add = T, lty = 1)
-matplot(sims$betas, type = "l", add = T, lty = 4)
+# matplot(res_new$a_t_d_s, type = "l", ylim = range(res_new$a_t_d_s, res_old$a_t_d_s, sims$betas))
+# matplot(res_old$a_t_d_s, type = "l", add = T, lty = 1)
+# matplot(sims$betas, type = "l", add = T, lty = 4)
 
 # res_test <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
 #                      by = 1,
