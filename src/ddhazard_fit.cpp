@@ -14,6 +14,9 @@ extern int openblas_get_num_threads();
 #define ARMA_USE_BLAS
 #endif
 
+// DEBUG flags
+#define MYDEBUG_UKF
+
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
 
@@ -42,9 +45,9 @@ extern int openblas_get_num_threads();
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
 // This truncation ensures that the variance in the logit model can never
 // become lower than sqrt(std::numeric_limits<double>::epsilon())
-constexpr double lower_trunc_exp_exp_thres = 1 / sqrt(std::numeric_limits<double>::epsilon());
+constexpr double lower_trunc_exp_exp_thres = 1 / (1e-4 * sqrt(std::numeric_limits<double>::epsilon()));
 constexpr double lower_trunc_exp_log_thres = sqrt(lower_trunc_exp_exp_thres);
-constexpr double upper_trunc_exp_exp_thres = sqrt(std::numeric_limits<double>::epsilon());
+constexpr double upper_trunc_exp_exp_thres = 1e-4 * sqrt(std::numeric_limits<double>::epsilon());
 constexpr double upper_trunc_exp_log_thres = log(upper_trunc_exp_exp_thres);
 
 struct {
@@ -692,6 +695,8 @@ class UKF_solver_New : public Solver{
   problem_data &p_dat;
   const uword m;
   const double k;
+  const double a;
+  const double b;
   const double lambda;
   const double w_0;
   const double w_0_c;
@@ -704,6 +709,11 @@ class UKF_solver_New : public Solver{
   inline void compute_sigma_points(const arma::vec &a_t,
                                    arma::mat &s_points,
                                    const arma::mat &P_x_x){
+#if defined(MYDEBUG_UKF)
+    P_x_x.print("P_x_x for Cholesky");
+    a_t.print("a_t for Cholesky");
+#endif
+
     const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
 
     s_points.col(0) = a_t;
@@ -711,19 +721,30 @@ class UKF_solver_New : public Solver{
       if(i % 2 == 0)
         s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
           s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
+
+#if defined(MYDEBUG_UKF)
+        cholesky_decomp.print("Cholesky decomp");
+        Rcpp::Rcout << std::endl;
+#endif
   }
 
 public:
-  UKF_solver_New(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_,
-                 double alpha = 1.0, double beta = 0.0):
+  UKF_solver_New(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
+                 Rcpp::Nullable<Rcpp::NumericVector> &alpha,
+                 Rcpp::Nullable<Rcpp::NumericVector> &beta):
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
-  k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
-  lambda(pow(alpha, 2) * (m + k) - m),
+
+  k(!kappa.isNull() ? Rcpp::as< Rcpp::NumericVector >(kappa)[0] : 3.0 - m),
+  a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 1.0),
+  b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 0.0),
+  lambda(pow(a, 2) * (m + k) - m),
+
   w_0(lambda / (m + lambda)),
-  w_0_c(w_0 + 1 - pow(alpha, 2) + beta), // TODO: how to set?
+  w_0_c(w_0 + 1 - pow(a, 2) + b), // TODO: how to set?
   w_i(1 / (2 * (m + lambda))),
   sqrt_m_lambda(std::sqrt(m + lambda)),
+
   sigma_points(arma::mat(m, 2 * m + 1))
   {}
 
@@ -745,6 +766,10 @@ public:
 
     double event_time = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
+#if defined(MYDEBUG_UKF)
+      Rcpp::Rcout << "t = " << t << std::endl;
+#endif
+
       double delta_t = p_dat.I_len[t - 1];
       event_time += delta_t;
 
@@ -765,6 +790,7 @@ public:
 
       // Then the variance
       p_dat.V_t_less_s.slice(t - 1) = p_dat.Q; // weigths sum to one // TODO: Include or not?
+
       for(int i = 0; i < sigma_points.n_cols; ++i){
         const double &w = i == 0 ? w_0_c : w_i;
 
@@ -772,6 +798,10 @@ public:
           (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
           (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
       }
+
+#if defined(MYDEBUG_UKF)
+      p_dat.V_t_less_s.slice(t - 1).print("V_(t|t - 1)");
+#endif
 
       // E-step: correction-step
       arma::mat O;
@@ -787,13 +817,17 @@ public:
 
         O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
+#if defined(MYDEBUG_UKF)
+        O.print("etas");
+#endif
+
         // Compute mean observation sing sigma points
         const arma::vec y_bar = w_0 * O.unsafe_col(0) +
           w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
 
-        arma::vec vars = (w_0_c * O.unsafe_col(0)) % (1.0 - O.unsafe_col(0));
+        arma::vec vars = w_0_c * (O.unsafe_col(0) % (1.0 - O.unsafe_col(0)));
         for(uword i = 1; i < O.n_cols; ++i){
-          vars += (w_i * O.unsafe_col(i)) % (1.0 - O.unsafe_col(i));
+          vars += w_i * (O.unsafe_col(i) % (1.0 - O.unsafe_col(i)));
         }
 
         // There is a risk that the product of the weigths and the variances
@@ -811,13 +845,23 @@ public:
         O = O.t() * (O.each_col() / vars);
 
         // Compute intermediate matrix
-        arma::mat tmp_mat = O * arma::inv_sympd(arma::diagmat(weights_vec_inv) + O);
+        arma::mat tmp_mat = O * arma::inv(arma::diagmat(weights_vec_inv) + O); // TODO: should this be postive definite so we can use inv_sympd?
+
+#if defined(MYDEBUG_UKF)
+        Rcpp::Rcout << "________" << std::endl;
+        sigma_points.print("sigma points");
+        vars.print("vars");
+        tmp_mat.print("O (R^- + O)^-1");
+        ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar).print("y - y_hat");
+        O.print("y_delta * R^-1 y_delta_T");
+        Rcpp::Rcout << "________" << std::endl;
+#endif
 
         // Compute vector for state space vector
         c_vec = c_vec -  tmp_mat * c_vec;
 
         // Re-compute intermediate matrix using the other weight vector
-        tmp_mat = O * arma::inv_sympd(arma::diagmat(weights_vec_c_inv) + O);
+        tmp_mat = O * arma::inv(arma::diagmat(weights_vec_c_inv) + O); // TODO: should this be postive definite so we can use inv_sympd?
 
         // compute matrix for co-variance
         O = O - tmp_mat * O;
@@ -829,10 +873,35 @@ public:
       // TODO: can this be done more effeciently?
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + delta_sigma_points * (weights_vec % c_vec);
 
+#if defined(MYDEBUG_UKF)
+      Rcpp::Rcout << "________" << std::endl;
+      Rcpp::Rcout << "Gain vec" << std::endl;
+      c_vec.print("y_tilde");
+      Rcpp::Rcout << std::endl;
+      (weights_vec % c_vec).print("scaled by weights");
+      Rcpp::Rcout << std::endl;
+      (delta_sigma_points * (weights_vec % c_vec)).print("final gain");
+      Rcpp::Rcout << "________" << std::endl;
+#endif
+
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
         (delta_sigma_points.each_row() % weights_vec_c.t()) * O * (delta_sigma_points.each_row() % weights_vec_c.t()).t();
 
-      p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+#if defined(MYDEBUG_UKF)
+      arma::vec eig_val;
+      arma::eig_sym(eig_val, p_dat.V_t_less_s.slice(t - 1));
+
+      eig_val.print("V_(t|t - 1) eigen values");
+#endif
+
+      // Solve should be faster than inv_sympd http://arma.sourceforge.net/docs.html#inv_sympd
+      // Solves yields a solution X to A * X = B <=> X = A^-1 B
+      // We are looking at:
+      //  X = B A^-1
+      // X^T = A^-1 B^T <=> A X^T = B^T
+
+      p_dat.B_s.slice(t - 1) = arma::solve(
+        p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
     }
 
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -870,7 +939,9 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const int verbose = 0, const bool save_all_output = false,
                                    const int order_ = 1, const bool est_Q_0 = true,
                                    const std::string method = "EKF",
-                                   Rcpp::Nullable<Rcpp::NumericVector> k = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
+                                   Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
+                                   Rcpp::Nullable<Rcpp::NumericVector> alpha = R_NilValue,
+                                   Rcpp::Nullable<Rcpp::NumericVector> beta = R_NilValue,
                                    const std::string model = "logit",
                                    const std::string M_step_formulation = "Fahrmier94"){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "poisson"){
@@ -913,14 +984,13 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   } else if (method == "UKF"){
     if(model != "logit")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
-
     p_data = new problem_data(
       X, tstart, tstop, is_event_in_bin,
       a_0, Q_0, Q,
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
       order_, est_Q_0);
-    solver = new UKF_solver_New(*p_data, k);
+    solver = new UKF_solver_New(*p_data, kappa, alpha, beta);
   } else if (method == "UKF_org"){
     if(model != "logit")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
@@ -931,7 +1001,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
       order_, est_Q_0);
-    solver = new UKF_solver_Org(*p_data, k);
+    solver = new UKF_solver_Org(*p_data, kappa);
   }else
     Rcpp::stop("method '" + method  +"'is not implemented");
 

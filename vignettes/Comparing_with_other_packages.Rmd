@@ -1,0 +1,48 @@
+---
+title: "Comparing with other packages"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## survival::cancer
+### Dynamic hazard
+
+```{r}
+library(survival)
+library(dynamichazard)
+arg_list <- list(
+  formula = Surv(rep(0, nrow(cancer)), time, status == 2) ~ age + sex, 
+  data = cancer, 
+  by = 100, max_T = 800,
+  Q_0 = diag(rep(1, 3)), est_Q_0 = F,
+  verbose = T)
+dd_fit <- do.call(ddhazard, arg_list)
+
+par(mfcol = c(3, 1))
+for(i in 1:3)
+  plot(dd_fit, cov_index = i, type = "cov")
+```
+
+```{r}
+arg_list$method <- "UKF"
+arg_list$kappa <- 3 - 3
+arg_list$Q_0 <- diag(diag(dd_fit$Q))
+arg_list$alpha <- 1
+arg_list$beta <- 0
+
+tmp_log <- file("ukf_log.log")
+sink(tmp_log)
+tryCatch({
+  dd_fit <- do.call(ddhazard, arg_list)
+}, finally = {
+  sink()
+  close(tmp_log)
+})
+
+par(mfcol = c(3, 1))
+for(i in 1:3)
+  plot(dd_fit, cov_index = i, type = "cov")
+```
