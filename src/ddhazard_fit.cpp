@@ -520,8 +520,17 @@ public:
 #endif
 
       // E-step: scoring step: update values
-      arma::mat V_t_less_s_inv = arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
-      p_dat.V_t_t_s.slice(t) = arma::inv_sympd(V_t_less_s_inv + p_dat.U);
+      arma::mat V_t_less_s_inv;
+      if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
+        Rcpp::warning("V_(t|t-1) seemd non positive definit. Using general inverse instead");
+        V_t_less_s_inv = arma::inv(p_dat.V_t_less_s.slice(t - 1));
+      }
+
+      if(!arma::inv_sympd(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
+        Rcpp::warning("V_(t|t) seemd non positive definit. Using general inverse instead");
+        p_dat.V_t_t_s.slice(t) = arma::inv(V_t_less_s_inv + p_dat.U);
+      }
+
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.V_t_t_s.slice(t) * p_dat.u;
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
 
@@ -655,7 +664,10 @@ public:
       }
 
       // Compute new estimates
-      P_v_v = arma::inv_sympd(P_v_v); // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
+       if(!arma::inv_sympd(P_v_v, P_v_v)){ // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
+         Rcpp::warning("Failed to use inversion for symmetric square matrix for P_v_v. Trying with general inversion method");
+         P_v_v = arma::inv_sympd(P_v_v);
+       }
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
         P_a_v * (P_v_v * (
@@ -663,7 +675,8 @@ public:
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
 
-      p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * arma::inv_sympd(p_dat.V_t_less_s.slice(t - 1));
+
+      p_dat.B_s.slice(t - 1) = arma::solve(p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
     }
 
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -849,7 +862,12 @@ public:
         O = O.t() * (O.each_col() / vars);
 
         // Compute intermediate matrix
-        arma::mat tmp_mat = O * arma::inv(arma::diagmat(weights_vec_inv) + O); // TODO: should this be postive definite so we can use inv_sympd?
+        arma::mat tmp_mat;
+        if(!arma::inv_sympd(tmp_mat, arma::diagmat(weights_vec_inv) + O)){
+          Rcpp::warning("Failed to invert intermediate matrix with a symmetric square method. Using general inversion instead");
+          arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O);
+        }
+        tmp_mat = O * tmp_mat;
 
 #if defined(MYDEBUG_UKF)
         Rcpp::Rcout << "________" << std::endl;
@@ -865,7 +883,11 @@ public:
         c_vec = c_vec -  tmp_mat * c_vec;
 
         // Re-compute intermediate matrix using the other weight vector
-        tmp_mat = O * arma::inv(arma::diagmat(weights_vec_c_inv) + O); // TODO: should this be postive definite so we can use inv_sympd?
+        if(!arma::inv_sympd(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
+          Rcpp::warning("Failed to invert intermediate matrix with a symmetric square method. Using general inversion instead");
+          arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O);
+        }
+        tmp_mat = O * tmp_mat;
 
         // compute matrix for co-variance
         O = O - tmp_mat * O;
