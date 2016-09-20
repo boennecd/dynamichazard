@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(survival)
 head(cancer)
-cancer$age <- (cancer$age - mean(cancer$age)) / sd(cancer$age)
+# cancer$age <- (cancer$age - mean(cancer$age)) / sd(cancer$age)
 
 library(dynamichazard)
 arg_list <- list(
@@ -34,9 +34,9 @@ arg_list$method <- "UKF"
 arg_list$kappa <- 3 - 3
 arg_list$Q_0 <- diag(rep(1, 3))
 arg_list$Q <- diag(rep(1e-2, 3))
-arg_list$alpha <- 1
-arg_list$beta <- 0
-arg_list$M_step_formulation = "Fahrmier94"
+# arg_list$alpha <- 1
+# arg_list$beta <- 0
+# arg_list$M_step_formulation = "Fahrmier94"
 
 tmp_log <- file("ukf_log.log")
 sink(tmp_log)

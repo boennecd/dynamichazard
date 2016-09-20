@@ -17,9 +17,9 @@ extern int openblas_get_num_threads();
 // DEBUG flags
 // Only define this if the observational equation and state space equation
 // have reasonable dimensions
-//#define MYDEBUG_UKF
+#define MYDEBUG_UKF
 
-//#define MYDEBUG_M_STEP
+#define MYDEBUG_M_STEP
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
@@ -45,6 +45,8 @@ extern int openblas_get_num_threads();
 #if defined(NDEBUG)
 #undef NDEBUG
 #endif
+
+using uword = arma::uword;
 
 // Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
 // This truncation ensures that the variance in the logit model can never
@@ -182,8 +184,8 @@ public:
     tstart(tstart_),
     tstop(tstop_),
     is_event_in_bin(is_event_in_bin_),
-    Q(Q_),
-    min_start(Rcpp::as<double>(risk_obj["min_start"]))
+    min_start(Rcpp::as<double>(risk_obj["min_start"])),
+    Q(Q_)
     {
       // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
       _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
@@ -412,7 +414,7 @@ public:
   p_data(p_data_), workers()
   {
     // create workers
-    for(int i = 0; i < hardware_threads; i++){
+    for(uword i = 0; i < hardware_threads; i++){
       if(model == "logit"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
         workers.push_back(std::move(new_p));
@@ -562,7 +564,7 @@ public:
 class UKF_solver_Org : public Solver{
 
   problem_data &p_dat;
-  const arma::uword m;
+  const uword m;
   const double k;
   const double w_0;
   const double w_i;
@@ -575,7 +577,7 @@ class UKF_solver_Org : public Solver{
     const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
 
     s_points.col(0) = a_t;
-    for(int i = 1; i < s_points.n_cols; ++i)
+    for(uword i = 1; i < s_points.n_cols; ++i)
       if(i % 2 == 0)
         s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2); else
           s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2);
@@ -621,7 +623,7 @@ public:
 
       // Then the variance
       p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q; // weigths sum to one // TODO: Include or not?
-      for(int i = 0; i < sigma_points.n_cols; ++i){
+      for(uword i = 0; i < sigma_points.n_cols; ++i){
         const double &w = i == 0 ? w_0 : w_i;
 
         p_dat.V_t_less_s.slice(t - 1) +=
@@ -656,7 +658,7 @@ public:
         //arma::diagmat(y_bar % (1 - y_bar));
         arma::diagmat(w_0 * Z_t.unsafe_col(0) % (1 - Z_t.unsafe_col(0))); // % is element-wise product. TODO: I think we have to time with w_0 here too? same applies for w_i below
 
-      for(int i = 1; i < sigma_points.n_cols; ++i){
+      for(uword i = 1; i < sigma_points.n_cols; ++i){
         P_a_v += (w_i * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
           (Z_t.unsafe_col(i) - y_bar).t();
         P_v_v += (w_i * (Z_t.unsafe_col(i) - y_bar)) * (Z_t.unsafe_col(i) - y_bar).t() +
@@ -706,9 +708,6 @@ public:
 // Julier, Simon J., and Jeffrey K. Uhlmann. "Unscented filtering and nonlinear
 // estimation." Proceedings of the IEEE 92.3 (2004): 401-422.
 class UKF_solver_New : public Solver{
-  using uword = arma::uword;
-
-
   problem_data &p_dat;
   const uword m;
   const double k;
@@ -734,7 +733,7 @@ class UKF_solver_New : public Solver{
     const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
 
     s_points.col(0) = a_t;
-    for(int i = 1; i < s_points.n_cols; ++i)
+    for(uword i = 1; i < s_points.n_cols; ++i)
       if(i % 2 == 0)
         s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
           s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
@@ -808,7 +807,7 @@ public:
       // Then the variance
       p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q; // weigths sum to one // TODO: Include or not?
 
-      for(int i = 0; i < sigma_points.n_cols; ++i){
+      for(uword i = 0; i < sigma_points.n_cols; ++i){
         const double &w = i == 0 ? w_0_c : w_i;
 
         p_dat.V_t_less_s.slice(t - 1) +=
@@ -976,8 +975,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    arma::mat Q, // similary this is a copy
                                    const Rcpp::List &risk_obj,
                                    const arma::mat &F_,
-                                   const int n_max = 100, const double eps = 0.001,
-                                   const int verbose = 0, const bool save_all_output = false,
+                                   const arma::uword n_max = 100, const double eps = 0.001,
+                                   const arma::uword verbose = 0, const bool save_all_output = false,
                                    const int order_ = 1, const bool est_Q_0 = true,
                                    const std::string method = "EKF",
                                    Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
@@ -1000,7 +999,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   arma::colvec a_prev(a_0.begin(), a_0.size());
   Rcpp::List all_output; // only need if save_all_output = true
 
-  unsigned int it = 0;
+  uword it = 0;
 
   // M-stp pointers for convenience
   // see http://stackoverflow.com/questions/35983814/access-column-of-matrix-without-creating-copy-of-data-using-armadillo-library
