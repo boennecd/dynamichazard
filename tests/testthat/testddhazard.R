@@ -141,38 +141,41 @@ test_that("poisson model and logit moels hazzard functions differs", {
 # matplot(fit$a_t_d_s, lty = 2, type = "l", ylim = range(fit$a_t_d_s, sim_dat$betas))
 # matplot(sim_dat$betas, lty = 1, type = "l", add = T)
 
-set.seed(9327)
+set.seed(3787)
 sims <- test_sim_func_logit(n_series = 5e2, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = 1, x_mean = -.5, re_draw = T, beta_start = 0,
                             intercept_start = -4, sds = c(.1, rep(1, 3)))
 
 test_that("Chaning time scale in EKF does no change results when other parems are changed accoridngly",{
-  arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-                   by = 1,
-                   data = sims$res,
-                   a_0 = rep(0, ncol(sims$res) + 1 - 4),
-                   Q_0 = diag(rep(1e1, ncol(sims$res) + 1 - 4)),
-                   Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                   est_Q_0 = F, method = "EKF",
-                   eps = 1e-2, id = sims$res$id,
-                   verbose = F,
-                   max_T = 10)
+  for(m in c("logit")){
+    arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+                     by = 1,
+                     data = sims$res,
+                     a_0 = rep(0, ncol(sims$res) + 1 - 4),
+                     Q_0 = diag(rep(1e2, ncol(sims$res) + 1 - 4)),
+                     Q = diag(rep(1e-3, ncol(sims$res) + 1 - 4)),
+                     est_Q_0 = F, method = "EKF",
+                     model = m,
+                     eps = 1e-2, id = sims$res$id,
+                     verbose = T,
+                     max_T = 10)
 
-  res <- do.call(ddhazard, arg_list)
+    res <- do.call(ddhazard, arg_list)
 
-  sim_tmp <- sims
-  t_mult <- 2.5
-  sim_tmp$res$tstart <- sim_tmp$res$tstart * t_mult
-  sim_tmp$res$tstop <- sim_tmp$res$tstop * t_mult
-  arg_list$data <- sim_tmp$res
-  arg_list$by <- t_mult
-  arg_list$max_T <- arg_list$max_T * t_mult
-  arg_list$Q <- arg_list$Q / t_mult
+    sim_tmp <- sims
+    t_mult <- 2.5
+    sim_tmp$res$tstart <- sim_tmp$res$tstart * t_mult
+    sim_tmp$res$tstop <- sim_tmp$res$tstop * t_mult
+    arg_list$data <- sim_tmp$res
+    arg_list$by <- t_mult
+    arg_list$max_T <- arg_list$max_T * t_mult
+    arg_list$Q <- arg_list$Q / t_mult
 
-  res_new_time <- do.call(ddhazard, arg_list)
+    res_new_time <- do.call(ddhazard, arg_list)
 
-  expect_equal(res$a_t_d_s, res_new_time$a_t_d_s)
-  expect_equal(res$V_t_d_s, res_new_time$V_t_d_s)
-  expect_equal(res$Q, res_new_time$Q * t_mult)
+    expect_equal(res$a_t_d_s, res_new_time$a_t_d_s)
+    expect_equal(res$V_t_d_s, res_new_time$V_t_d_s)
+    expect_equal(res$Q, res_new_time$Q * t_mult)
+  }
 })
 
