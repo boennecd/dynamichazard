@@ -39,7 +39,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // ddhazard_fit_cpp_prelim
-Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const int n_max, const double eps, const int verbose, const bool save_all_output, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, const std::string model, const std::string M_step_formulation);
+Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const arma::uword n_max, const double eps, const arma::uword verbose, const bool save_all_output, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, const std::string model, const std::string M_step_formulation);
 RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP save_all_outputSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -52,9 +52,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::mat >::type Q(QSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type risk_obj(risk_objSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type F_(F_SEXP);
-    Rcpp::traits::input_parameter< const int >::type n_max(n_maxSEXP);
+    Rcpp::traits::input_parameter< const arma::uword >::type n_max(n_maxSEXP);
     Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
-    Rcpp::traits::input_parameter< const int >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< const arma::uword >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< const bool >::type save_all_output(save_all_outputSEXP);
     Rcpp::traits::input_parameter< const int >::type order_(order_SEXP);
     Rcpp::traits::input_parameter< const bool >::type est_Q_0(est_Q_0SEXP);
