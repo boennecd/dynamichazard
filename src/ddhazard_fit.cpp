@@ -17,9 +17,9 @@ extern int openblas_get_num_threads();
 // DEBUG flags
 // Only define this if the observational equation and state space equation
 // have reasonable dimensions
-#define MYDEBUG_UKF
+// #define MYDEBUG_UKF
 
-#define MYDEBUG_M_STEP
+// #define MYDEBUG_M_STEP
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK

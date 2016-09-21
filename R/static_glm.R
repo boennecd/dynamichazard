@@ -57,20 +57,20 @@ get_survival_case_Weigths_and_data = function(
 #' Function to make a static glm fit from a input with a \code{Surv} object
 #' as the right hand site of forumla
 #' @export
-static_glm = function(form, data, by, max_T, id, family = "binomial", model = F, weights, risk_obj = NULL, ...){
+static_glm = function(formula, data, by, max_T, id, family = "binomial", model = F, weights, risk_obj = NULL, ...){
   if(family == "binomial"){
     family <- binomial()
   } else
     stop("family '", family, "' not implemented in static_glm")
 
   X = get_survival_case_Weigths_and_data(
-    formula = form, data = data, by = by, max_T = max_T, id = id,
+    formula = formula, data = data, by = by, max_T = max_T, id = id,
     init_weights = weights, risk_obj = risk_obj)
 
   weights = X$weights
 
-  form <- formula(terms(form, data = data))
-  form = update(form, Y ~ ., data = X)
+  formula <- stats::formula(terms(formula, data = data))
+  formula = update(formula, Y ~ ., data = X)
 
-  glm(form, X, family = family, model = model, weights = weights, ...)
+  glm(formula = formula, data = X, family = family, model = model, weights = weights, ...)
 }
