@@ -1,53 +1,280 @@
 ---
 title: "Comparing with other packages"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+  ## Set the width of the R-terminal to # characters
+  options(width = 80, warn = -1)
+
+# Derfine function to make small margin in pictures
+# you can use the bool flag to set what to excute before, after chunk 
+# or always
+# If you do not whant to excute the code than do e.g. small.mar = F
+knitr::knit_hooks$set(small.mar = function(before, options, envir){
+  if (before){ par(
+    mar = c(5,5,0.5,0.5), 
+    tcl = -0.3, 
+    mgp = c(2.5,.5,0), 
+    oma = c(0,0,0,0),
+    pch=16,
+    cex=.6,
+    cex.axis = 1,
+    cex.lab = .8/.6,
+    lwd= 1
+  )}},
+  my.options=function(before, options, envir){
+    if(before){
+      options(digits = 3)
+    }})
+
+## opts_chunk$set() can change the default global options in a document (e.g. put this in a code chunk
+knitr::opts_chunk$set(fig.path='figures/',
+               fig.align='center',
+               fig.width=6, fig.height=4,
+               out.width="0.7\\textwidth",
+               size='tiny',                ## See R highligt package for possible values (https://cran.r-project.org/web/packages/highlight/highlight.pdf)
+               small.mar = TRUE,
+               my.options = TRUE,
+               comment = "##", 
+               warnings = T,
+               errors = T
+)
 ```
 
+# Summary
+This note will compare the package `dynamichazard` I am working on with current methods avialable in `R`. First, we will look at other methods that use splines to variying effects in multiplicative hazard models. Then we will turn to the methods I have implemented
+
 ## survival::cancer
-### Dynamic hazard
+This section will use the dataset `survival::cancer` to compare the methods. The data set consist of lung cancer patients where some die after `time` while others are right censored. Dying is coded through `status` with `1` implying right censored and `2` implying a death. For more information on the dataset see `?cancer`. We will focus on the `age` and `sex` variable in the data set. We start by attaching the `survival` package and standardizing the `age` variable. The later is important when we the use the Unscented Kalman filter (UKF)
 
 ```{r}
 library(survival)
 head(cancer)
-# cancer$age <- (cancer$age - mean(cancer$age)) / sd(cancer$age)
+
+# Standardize
+cancer$age <- (cancer$age - mean(cancer$age)) / sd(cancer$age)
+
+# Add id to keep track later
+cancer$id <- seq_len(nrow(cancer))
+
+c("Number of patients" = nrow(cancer), 
+  "Number of deaths" = sum(cancer$status == 2))
+```
+
+### mgcv
+We start with Generalized Additive Models (GAM) by using the `gam` function in the `mgcv` package. The model we fit is of the form: 
+
+$$\text{logit}(\pi_i) = \vec{\gamma}_{\text{time}}\vec{f}_{\text{time}}(t_i)
+    + \vec{\gamma}_{\text{age}}\vec{f}_{\text{time}}(t_i)a_i
+    + \vec{\gamma}_{\text{sex}}\vec{f}_{\text{sex}}(t_i)s_i$$
+    
+where $\pi_i$ is the probability that the $i$'th individual dies of cancer, $t_i$ is the stop time of the $i$'th indvidual, $a_i$ is the age of the $i$'th individual and $s_i$ is the sex of the $i$'th individual. $\vec{f}_{\cdot}$ is a basis function. We will use cubic regression splines with knots spread evenly through the covariate values. We fit the model with the following call:
+
+```{r}
+library(mgcv, quietly = T)
+spline_fit <- gam(
+  formula = status == 2 ~ -1 + s(time, bs = "cr", k = 6) + # cr yields cubic ba-
+                                                           # sis with dim of k
+    s(time, bs = "cr", k = 6, by = age) + 
+    s(time, bs = "cr", k = 6, by = sex),
+  family = binomial, data = cancer,
+  method = "GCV.Cp" # estimate smoothing parameters with generalized cross vali-
+                    # dation  
+                  )
+
+# summary(spline_fit) # TODO: Do we want to see the summary?
+plot(spline_fit, xlim = c(0, 800), ylim = c(-1.5, 2), rug = F, 
+     pages = 1)
+```
+
+The plot in the upper right corner is the intercept coeffecient. The lower right corner is the coeffecient of `sex` and the upper left corner is the coeffecient of `age`. The parameters in the sets $\vec{\gamma}_{\text{time}}$, $\vec{\gamma}_{\text{age}}$ and $\vec{\gamma}_{\text{sex}}$ are penalized with a smoothing parameter selected with generalized cross validation. The final plot of the estimates do suggest that there may be curvuture in `sex` variable. The estimate for the `sex` variable seems resonable given that men have higher propensity to die early from cancer then women as illustrated in the cross table below:
+
+```{r}
+# sex = 1 is male
+# First we look at the proportion that die before time 200
+xtabs(~ I(status == 2 & time <= 200) + sex, data = cancer)
+# Then we look at the proportion that die before time 800
+xtabs(~ I(status == 2 & time <= 800) + sex, data = cancer)
+```
+
+### timereg  
+Another method we can try is a timevariying effects cox model from the package `timereg` based on the book 'Dynamic Regression Models for Survival Data'. The model we fit has an instanous hazard $\lambda(t)$ given by:
+
+$$\lambda(t) = \lambda_0(t) \exp \left( \vec{x}\vec{\beta}(t) \right)$$
+
+where each margin of $\vec{\beta}(t)$ is estimated with method described shortly. Below we will plot the cummulative regression function $B_i(t) = \int_0^t \beta_i(s)ds$. 
+
+```{r}
+library(timereg)
+library(survival)
+arg_list <- list( # We will re-use these parameters later
+  formula = Surv(rep(0, nrow(cancer)), time, status == 2) ~ age + sex,
+  max_T = 800, data = cancer)
+
+# The Breslow estimate of baseline is not available at this point
+tryCatch({
+  cox_fit <- timecox(arg_list$formula, data = arg_list$data, max.time = arg_list$max_T, 
+                   method = "breslow")
+}, error = function(e) cat(e$message))
+
+cox_fit <- timecox(arg_list$formula, data = arg_list$data, max.time = arg_list$max_T, 
+                   method = "basic")
+
+# summary(cox_fit) # TODO: Do we want to see the summary?
+par(mfcol = c(2, 2), mar = c(5,5,3,0.5))
+plot(cox_fit, ylab = "Cum coef")
+```
+
+The above code first shows that non-parametric `breslow` estimate is currenlty not supported. Instead the baseline $\lambda_0(t)=\exp(\alpha_0(t))$ where $\alpha_0(t)$ is estimated in a similar to way to $\vec{\beta}(t)$. $\vec{\beta}(t)$ is estimated recursivly with an update equation that is simplified through a first order Taylor expansion and adding a smoothness through weighting the time changes with a uniform contionous kernal. See 'Martinussen, Torben, and Thomas H. Scheike. *Dynamic regression models for survival data*. Springer Science & Business Media, 2007.' for details
+
+Notice that the cummulative coeffecient for the `intercept` and `age` seems close to linear while we do have curvture in the `sex` coeffecient. This is consistent with curvutre we found with our logistic fit using the `mgcv` 
+
+### Other packages
+For completness, there are many other packages that estimate cox regression and GAM models with timevariying effects. For example, we could have used `mgcv::cox.ph` to compare with only one package. The `timereg` was used instead to illustrate two different packages
+
+### Dynamic hazard
+This section will show results for the logistic model with timevariying effect that I have implemented. Estimates are shown both for the extended Kalman filter (EKF) and the Unscented Kalman fillter (UKF). First, we will breifly cover the models
+
+The idea is that we discretize the outcomes into $1,2,\dots,T$ bins. In each bin, we observe whether the indviduals dies or is right censored. The state space model we are applying is of the form: 
+$$\begin{array}{ll}
+    	\vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad & 
+         	\vec{\epsilon}_t \sim (\vec{0}, \mathbf{H}_t(\vec{\alpha}_t))  \\
+    	\vec{\alpha}_{t + 1} = \mathbf{F}\vec{\alpha}_t + \mathbf{R}\vec{\eta}_t \qquad & 
+         	\vec{\eta}_t \sim N(\vec{0}, \mathbf{Q}) \\
+	\end{array}
+	, \qquad t = 1,\dots, n$$
+	
+where $y_{it} \in \{0,1\}$ is the $i$'th indviduals outcome at time $t$. $\cdots \sim (a, b)$ notes a random variable with mean (or mean vector) $a$ and variance (or co-variance matrix) $b$. It needs not to be normally distributed. $z_{it}(\vec{\alpha}_t) = h(\vec{\alpha}_t\vec{x}_{it})$ where $h$ is the link function. We use the logit model model in this example. The current implementation supplies $\mathbf{F}$ and $\mathbf{R}$ such that we have first and second order random walk
+
+Firstly, we will need estimate the starting value $\vec{\alpha}_0$ and co-varianec matrix $\mathbf{Q}$. This is done through an EM-algorithm. The E-step either use the Extended Kalman filter or Uncented Kalman Filter. Either methods yields smoothed estimates of $\vec{\alpha}_1,\dots, \vec{\alpha}_T$, smoothed co-variance matrix and smoothed correlation need for the M-step. At this point $\mathbf{Q}_0 = \kappa \mathbf{I}$ is fixed to a large value $\kappa$
+
+
+### Extended Kalman filter
+The idea behind the EKF is to linearize $\vec{z}_t(\vec{\alpha}_t)$ through a first order Taylor expansion and apply the regular Kalamn filter to the linearized model.  The implemented version uses the method described in 'Fahrmeir, Ludwig. *Dynamic modelling and penalized likelihood estimation for discrete time survival data*. Biometrika 81.2 (1994): 317-330.' 
+
+Fahrmeier applies the the Woodbury matrix identity to re-write the filter step of the Kalman filter to gain a method that is linear in time complexity of the dimension of the observational equation. In contrast the orginal formulation in is cubic. Furhter, the filter step can be caried out in parallel make the method more applicable to large data sets. We will return to this later
+
+We can fit the model the following call to `ddhazard`:
+
+```{r}
+# # Download the version the code is run with
+# devtools::install_github(
+#   "boennecd/dynamichazard@6af6b6d3c6807829492b0645bc5ca45c0f8527c4")
 
 library(dynamichazard)
-arg_list <- list(
-  formula = Surv(rep(0, nrow(cancer)), time, status == 2) ~ age + sex, 
-  data = cancer, 
-  by = 100, max_T = 800,
+arg_list <- c(arg_list, list( 
+  by = 100,
   Q_0 = diag(rep(1, 3)), est_Q_0 = F,
-  verbose = T)
-dd_fit <- do.call(ddhazard, arg_list)
+  verbose = F))
+dd_fit_EKF <- do.call(ddhazard, arg_list)
 
-par(mfcol = c(3, 1))
+par(mfcol = c(2, 2))
 for(i in 1:3)
-  plot(dd_fit, cov_index = i, type = "cov")
+  plot(dd_fit_EKF, cov_index = i, type = "cov")
 ```
+
+The method set $\vec{\alpha}_0$ equal to the estimate from one iteration of the iteratively reweighted least squares model with time in-variante coeffecients. Each observations is weighted according to the number intervals they are in (we will cover more details in a bit). $\mathbf{Q}_0$ is set to diagonal matrix (`r diag(arg_list$Q_0)`). Each time intervals has length `r arg_list$by` and the maximum time $T$ is set to `r arg_list$max_T`
+
+The plots shows estimates of coeffecients $\vec{\alpha}_1,\dots,\vec{\alpha}_T$. The confidence bounds are pointwise estimates using the smoothed variance matrix $\text{Var}\left(\left.\alpha_t \right|\vec{y}_1,\dots,\vec{y}_T\right)$. We can notice that the `sex` coeffecient seems to have an upward slope
+
+### Uncented Kalman Filter
+The idea behind UKF is select points from the state equation $\vec{\alpha}_t$ and use these to approximate the distribution of observed outcomes $\vec{y}_t$. To be more concrete, let $m$ denote the dimension of the state equation. Then we select $2m + 1$ $\vec{\mathcal{X}}_{0,t}, \vec{\mathcal{X}}_{1,t}, \dots, \vec{\mathcal{X}}_{2m,t}$. Each sigma point has a sigma weight of $W_i$ where $W_0 = \lambda / (m + \lambda)$ and $W_1 =  \dots = W_{2m} = 1 / (2(m + \lambda))$ ($\lambda$ will be specified shortly). The sigma points are computed in each iteration of the UKF by:
+$$\begin{array}{c}
+  \vec{a}_{t|t} = E\left(\left. \vec{\alpha}_t\right|\vec{y}_{1},\dots,\vec{y}_t\right),
+    \qquad \mathbf{V}_{t|t} = \text{Var}\left(\left. \vec{\alpha}_t\right|\vec{y}_{1},\dots,\vec{y}_t\right)  \\
+  \vec{\mathcal{X}}_{0,t} = \vec{a}_{t|t} \\
+  \vec{\mathcal{X}}_{1,t} = \vec{a}_{t|t} + \sqrt{\lambda + m}\left(\sqrt{\mathbf{V}_{t|t}}\right )_1 \\
+  \vec{\mathcal{X}}_{2,t} = \vec{a}_{t|t} + \sqrt{\lambda + m}\left(\sqrt{\mathbf{V}_{t|t}}\right )_2 \\
+  \vdots \\
+  \vec{\mathcal{X}}_{1 + m,t} = \vec{a}_{t|t} - \sqrt{\lambda + m}\left(\sqrt{\mathbf{V}_{t|t}}\right )_1 \\
+  \vdots
+\end{array}$$
+
+where $\left(\sqrt{\mathbf{V}_{t|t}}\right )_i$ is $i$'th column of the Cholesky decomposition of $\mathbf{V}_{t|t}$. $\lambda$ is set such that $\lambda = a(m + \kappa) - m$ where $a\in (0,1]$ controls the spread of the sigma point (usually set to 1) and $\kappa$ is typically set to $0$ or $3 - m$. After we have computed the sigma point, we compute the outcomes $\vec{\mathcal{Y}}_{i,t} i = \vec{z}_t(\vec{\mathcal{X}}_{i,t})$ and use the pairs of $(\vec{\mathcal{Y}}_{i,t},\vec{\mathcal{X}}_{i,t})$ and sigma weights to compute the means, co-variance and correlation matricies needed for the Kalman filter
+
+Two usefull reference for UKF are 'Julier, Simon J., and Jeffrey K. Uhlmann. *Unscented filtering and nonlinear estimation*. Proceedings of the IEEE 92.3 (2004): 401-422.' and 'Julier, Simon J., and Jeffrey K. Uhlmann. *New extension of the Kalman filter to nonlinear systems*. AeroSense'97. International Society for Optics and Photonics, 1997.'
+
+The paramitization for $\lambda$ differs from these articles but yields the same results when the theoratical optimal values are used. The details are omitted here to keep focus on the idea of the UKF. Lastly, the implementation differs from all describsions I have seen so far by applying the the Woodbury matrix identity to get an algorithm that is linear in the number of observations. We will return to this later
+
+We call `ddhazard` below to estimate with the UKF method. We print the co-variates estimates after the estimation
 
 ```{r}
 arg_list$method <- "UKF"
 arg_list$kappa <- 3 - 3
 arg_list$Q_0 <- diag(rep(1, 3))
 arg_list$Q <- diag(rep(1e-2, 3))
-# arg_list$alpha <- 1
-# arg_list$beta <- 0
-# arg_list$M_step_formulation = "Fahrmier94"
 
-tmp_log <- file("ukf_log.log")
-sink(tmp_log)
-tryCatch({
-  dd_fit <- do.call(ddhazard, arg_list)
-}, finally = {
-  sink()
-  close(tmp_log)
-})
+dd_fit_UKF <- do.call(ddhazard, arg_list)
 
-par(mfcol = c(3, 1))
+par(mfcol = c(2, 2))
 for(i in 1:3)
-  plot(dd_fit, cov_index = i, type = "cov")
+  plot(dd_fit_UKF, cov_index = i, type = "cov")
+```
+
+We set the initial $\mathbf{Q}$ to a diagonal matrix with elements c(`r diag(arg_list$Q)`) to avoid issues with the Cholesky decomposition in the first iteration. We find similar estimates as before though the confidence bounds are wider
+
+```{r}
+glm_args <- list(
+  formula = status == 2 & time <= arg_list$max_T ~ age + sex, 
+  family = "binomial", data = cancer) 
+glm_fit <- do.call(glm, glm_args)
+
+summary(glm_fit)$coefficients
+```
+
+```{r}
+glm_args$formula <- arg_list$formula
+glm_args$by <- arg_list$by
+glm_args$max_T <- arg_list$max_T
+
+glm_fit_new <- do.call(static_glm, glm_args)
+
+summary(glm_fit_new)$coefficients
+
+# There is an added row for every case that has an event beyond the first bin 
+nrow(glm_fit$data)
+nrow(glm_fit_new$data)
+
+sum(glm_fit$data$time <= arg_list$max_T & # Before end
+      glm_fit$data$time > arg_list$by & # after first bin
+      glm_fit$data$status == 2)
+
+# The weight vector count the number of bins
+head(glm_fit$data[, c("status", "time", "sex", "age")])
+
+head(glm_fit_new$data[, c("Y", "weights", "sex", "age")])
+
+# An extra row is added for events
+glm_fit_new$data[glm_fit_new$data$id %in% glm_fit$data$id[1:5],
+                 c("Y", "weights", "sex", "age")]
+```
+
+```{r}
+par(mfcol = c(2, 2))
+# par(cex.axis = par()$cex.axis * 1.5, cex.lab = par()$cex.lab * 1.5)
+for(i in 1:3){
+  # glm estimates
+  est_glm <- glm_fit_new$coefficients[i]
+  
+  # empty plot
+  plot(c(0, arg_list$max_T), range(c(
+    est_glm,
+    dd_fit_EKF$a_t_d_s[, i] +
+      sqrt(dd_fit_EKF$V_t_d_s[i, i,]) %*% t(c(1.96, -1.96)),
+    dd_fit_UKF$a_t_d_s[, i] +
+      sqrt(dd_fit_UKF$V_t_d_s[i, i,]) %*% t(c(1.96, -1.96)))),
+    type = "n", xlab = "time", ylab = names(est_glm))
+  
+  # Add estimates from glm
+  abline(h = est_glm, lty = 1, col = "black")
+  
+  # Add estimates from EKF
+  plot(dd_fit_EKF, cov_index = i, type = "cov", add = T, col = "blue")
+  
+  # Add estimates from UKF
+  plot(dd_fit_UKF, cov_index = i, type = "cov", add = T, col = "red")
+}
 ```

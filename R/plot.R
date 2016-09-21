@@ -2,7 +2,8 @@
 #' @export
 plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
                              ylab = "Hazard", method = "delta",
-                             type, plot_type = "l", cov_index, ylim, ...){
+                             type, plot_type = "l", cov_index, ylim,
+                             col = "black", add = F, ...){
   if(!object$model %in% c("logit"))
     stop("Functions for model '", object$model, "' is not implemented")
 
@@ -19,10 +20,16 @@ plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
     if(missing(ylim))
       ylim = range(lb, ub)
 
-    plot(object$times, object$a_t_d_s[, cov_index], type = plot_type,
-         ylim = ylim, xlab = xlab, ylab = ylab, ...)
-    lines(object$times, lb, lty = 2)
-    lines(object$times, ub, lty = 2)
+    if(!add){
+      plot(object$times, object$a_t_d_s[, cov_index], type = plot_type,
+           ylim = ylim, xlab = xlab, ylab = ylab, col = col, ...)
+    } else {
+      lines(object$times, object$a_t_d_s[, cov_index],
+            col = col, ...)
+    }
+
+    lines(object$times, lb, lty = 2, col = col)
+    lines(object$times, ub, lty = 2, col = col)
 
     return(invisible())
   }
