@@ -108,7 +108,6 @@ sims_args <- list(n_series = (n_series <- 1e3),
                   sds = (sds <- c(sqrt(.2), rep(1, n_vars))))
 
 sims <- do.call(test_sim_func_logit, sims_args)
-sims$res <- as.data.frame(sims$res)
 ```
 
 We have a total of `r n_series` series, with `r n_vars` parameters and an intercept. The simulated parameters are:
