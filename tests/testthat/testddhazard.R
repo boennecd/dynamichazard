@@ -157,7 +157,7 @@ test_that("Chaning time scale in EKF does no change results when other parems ar
                      est_Q_0 = F, method = "EKF",
                      model = m,
                      eps = 1e-2, id = sims$res$id,
-                     verbose = T,
+                     verbose = F,
                      max_T = 10)
 
     res <- do.call(ddhazard, arg_list)

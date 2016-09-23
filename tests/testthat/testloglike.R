@@ -44,7 +44,7 @@ test_that("logLik for head_neck_cancer data set match previous results", {
 
   log_like <- logLik(object = result, data_ = head_neck_cancer, id =  head_neck_cancer$id)
 
-  old <- structure(-338.0345966500186,
+  old <- structure(-340.3724737164279,
                    class = "logLik",
                    df = 2 + 3)
 
@@ -67,7 +67,7 @@ test_that("logLik for head_neck_cancer data set with second order model", {
 
   log_like <- logLik(object = result, data_ = head_neck_cancer, id =  head_neck_cancer$id)
 
-  old <- structure(-347.2320516354606,
+  old <- structure(-349.569928801165,
                    class = "logLik",
                    df = 2 * 2 + 3)
 
@@ -95,7 +95,7 @@ test_that("logLik for simulated data versus old results", {
   )
 
   log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
-  old <- structure(-2409.758,
+  old <- structure(-2414.852657205478,
                    class = "logLik",
                    df = 5 + 5 * (1 + 5) / 2)
   expect_equal(log_like, old)
@@ -121,7 +121,7 @@ test_that("logLik for simulated data versus old results", {
     verbose = F
   )
   log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
-  old <- structure(-1371.943,
+  old <- structure(-1377.956385478617,
                    class = "logLik",
                    df = 6 + 6 * (1 + 6) / 2)
   expect_equal(log_like, old, tolerance = 1e-6)

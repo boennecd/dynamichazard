@@ -171,7 +171,7 @@ We can fit the model with the following call to `ddhazard`:
 ```{r}
 # # Download the version the code is run with
 # devtools::install_github(
-#   "boennecd/dynamichazard@6af6b6d3c6807829492b0645bc5ca45c0f8527c4") # TODO: Update link once final version is send out
+#   "boennecd/dynamichazard@1a96c837c822c4258751c26c88e151949691a55b")
 
 library(dynamichazard)
 arg_list <- c(arg_list, list( 
