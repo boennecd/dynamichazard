@@ -156,8 +156,7 @@ std::vector<double>
     - n_parems / 2.0 * (log(2.0) + log(M_PI));
 
   double logLike = - d / 2.0 * arma::det(Q)
-    - d * n_parems / 2.0 * (log(2.0) + log(M_PI))
-    - t_0_logLike;
+    - d * n_parems / 2.0 * (log(2.0) + log(M_PI));
 
   logLike_link_term_helper *helper;
   if(model == "logit"){
@@ -179,17 +178,12 @@ std::vector<double>
     double bin_Start = bin_stop;
     bin_stop += I_len[t - 1];
 
-    logLike -= 1.0 / 2.0 * arma::as_scalar(delta.t() * (Q_inv * delta));
+    logLike -= 1.0 / 2.0 * pow(bin_stop - bin_Start, -1) * arma::as_scalar(
+      delta.t() * (Q_inv  * delta));
 
     const arma::uvec &risk_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
 
-    // TODO: Delete
-    //double tmp = logLike; //TODO: Delete
-    //Rcpp::Rcout << "t = " <<  t << "\t" << std::setw(15) << logLike;
-
     logLike += helper->link_logLik_terms(a_t, risk_set, bin_Start, bin_stop, t - 1);
-
-    //Rcpp::Rcout << "\t" << std::setw(15) << logLike << "\t\t"  << tmp - logLike << std::endl;
   }
 
   return std::vector<double>{logLike, t_0_logLike};
