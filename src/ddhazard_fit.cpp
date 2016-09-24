@@ -19,9 +19,9 @@ extern int openblas_get_num_threads();
 // have reasonable dimensions
 // #define MYDEBUG_UKF
 
-#define MYDEBUG_EKF
+// #define MYDEBUG_EKF
 
-#define MYDEBUG_M_STEP
+// #define MYDEBUG_M_STEP
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
@@ -425,7 +425,7 @@ class EKF_helper{
       const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
       const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
 
-      const double exp_eta = exp(eta); // exp(x^T * beta)
+      const double exp_eta = trunc_exp_functor(eta); // exp(x^T * beta)
       const double inv_exp_eta = pow(exp_eta, -1);
 
       const double exp_term = exp(at_risk_length * exp_eta); // exp(d_t * exp(x^T * beta))
@@ -437,10 +437,43 @@ class EKF_helper{
       const double common_nominator_factor = 1.0 + at_risk_length * exp_eta - exp_term;
       const double denominator = exp_term * exp_term - 1.0 - 2.0 * at_risk_length * exp_term * exp_eta;
 
-      double score_fac = (at_risk_length * exp_eta / expect_chance_die) * (do_die - expect_chance_die);
-      if(do_die)
-        score_fac += exp_term * exp_eta * common_nominator_factor / denominator * (time_outcome - expect_time);
-      u_ += x_ * score_fac;
+      //TODO: Delete
+#if defined(MYDEBUG_EKF)
+
+      auto mult_cout = [](std::string name, double d1, double d2){
+        std::stringstream out;
+        int width = 12;
+        out << "\t" << name << std::setw(width) << d1 << " x " << std::setw(width) << d2 << " = " << std::setw(width) << d1 * d2;
+        return out.str();
+      };
+
+      auto plus_cout = [](std::string name, double d1, double d2){
+        std::stringstream out;
+        int width = 12;
+        out << "\t" << name << std::setw(width) << d1 << " + " << std::setw(width) << d2 << " = " << std::setw(width) << d1 + d2;
+        return out.str();
+      };
+
+      std::stringstream str;
+      if(10.0 < std::abs(exp_term * exp_eta * common_nominator_factor / denominator * (time_outcome - expect_time)
+           + (at_risk_length * exp_eta / expect_chance_die) * (do_die - expect_chance_die))) {
+        std::lock_guard<std::mutex> lk(dat.m_U);
+
+        str << "at risk for " << std::setw(10) << at_risk_length <<
+          "\tdo_die = " <<  do_die <<
+            "\teta = " << std::setw(10) << eta << "\n" <<
+            mult_cout("score_fac_1 = ", (at_risk_length * exp_eta / expect_chance_die), (do_die - expect_chance_die)) <<
+              mult_cout("score_fac_2 = ", exp_term * exp_eta * common_nominator_factor / denominator, time_outcome - expect_time) <<
+            plus_cout("U fac = ", common_nominator_factor * common_nominator_factor / denominator,
+                      pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die) << "\n";
+        Rcpp::Rcout << str.str();
+      }
+#endif
+
+      u_ += x_ * (
+        exp_term * exp_eta * common_nominator_factor / denominator * (time_outcome - expect_time)
+        + (at_risk_length * exp_eta / expect_chance_die) * (do_die - expect_chance_die)
+      );
 
       U_ += x_ * (x_.t() * (
         common_nominator_factor * common_nominator_factor / denominator
@@ -612,8 +645,10 @@ public:
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
 
 #if defined(MYDEBUG_EKF)
-      p_dat.a_t_t_s.col(t).print("a_(t|t)");
-      p_dat.V_t_t_s.slice(t).print("V_(t|t)");
+      std::stringstream str;
+      str << t << "|" << t;
+      p_dat.a_t_t_s.col(t).print("a_(" + str.str() + ")");
+      p_dat.V_t_t_s.slice(t).print("V_(" + str.str() + ")");
 #endif
 
       if(t == p_dat.d){
@@ -746,10 +781,10 @@ public:
       }
 
       // Compute new estimates
-       if(!arma::inv_sympd(P_v_v, P_v_v)){ // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
-         Rcpp::warning("Failed to use inversion for symmetric square matrix for P_v_v. Trying with general inversion method");
-         P_v_v = arma::inv_sympd(P_v_v);
-       }
+      if(!arma::inv_sympd(P_v_v, P_v_v)){ // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
+        Rcpp::warning("Failed to use inversion for symmetric square matrix for P_v_v. Trying with general inversion method");
+        P_v_v = arma::inv_sympd(P_v_v);
+      }
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
         P_a_v * (P_v_v * (
@@ -1207,21 +1242,21 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 #if defined(MYDEBUG_M_STEP)
         Rcpp::Rcout << "New Q-term from t = " << t << ":" << std::endl;
         (((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-           - F_ * *B * *V
-           - (F_ * *B * *V).t()
-           + F_ * *V_less * p_data->T_F_) / delta_t).print();
+            - F_ * *B * *V
+            - (F_ * *B * *V).t()
+            + F_ * *V_less * p_data->T_F_) / delta_t).print();
 
-        ((a - F_ * a_less) * (a - F_ * a_less).t()).print();
-        (*V
-           - F_ * *B * *V
-           - (F_ * *B * *V).t()
-           + F_ * *V_less * p_data->T_F_).print();
+            ((a - F_ * a_less) * (a - F_ * a_less).t()).print();
+            (*V
+               - F_ * *B * *V
+               - (F_ * *B * *V).t()
+               + F_ * *V_less * p_data->T_F_).print();
 #endif
 
-        Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-                - F_ * *B * *V
-                - (F_ * *B * *V).t()
-                + F_ * *V_less * p_data->T_F_) / delta_t;
+               Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
+               - F_ * *B * *V
+               - (F_ * *B * *V).t()
+               + F_ * *V_less * p_data->T_F_) / delta_t;
       } else if (M_step_formulation == "SmoothedCov"){
         B = &p_data->lag_one_cor.slice(t - 1); // this is not B but the lagged one smooth correlation. Do not mind the variable name
 

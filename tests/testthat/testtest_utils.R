@@ -29,7 +29,7 @@ n_series <- 1e5
 t_max <- 10
 
 test_that("Testing util functions to sim series for tests", {
-  for(func in c(test_sim_func_logit, test_sim_func_poisson)){
+  for(func in c(test_sim_func_logit, test_sim_func_exp)){
     tmp = func(n_series, t_max = t_max)$res
 
     expect_equal(unique(tmp[, "id"]), seq_len(n_series))

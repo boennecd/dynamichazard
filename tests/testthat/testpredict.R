@@ -104,57 +104,5 @@ test_that("predict functions throws error when model is poisson",{
 warning("Implement test for second order random walk and predict")
 
 ######
-# Poisson model
-set.seed(39795)
-sims <- test_sim_func_poisson(1e4, n_vars = 3, x_range = 1, x_mean = .5, beta_start = 1,
-                              intercept_start = -5, sds = c(.2, rep(.5, 3)))
-
-design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
-risk_obj <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
-
-fit <- ddhazard(
-  survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res,
-  a_0 = rep(0, ncol(design_mat$X)),
-  Q_0 = diag(10, ncol(design_mat$X)),
-  Q = diag(1, ncol(design_mat$X)),
-  eps = 1e-4, n_max = 10^4,
-  order_ = 1, by = 1,
-  est_Q_0 = F,
-  model = "poisson"
-)
-
-matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), lty = 1)
-matplot(sims$betas, type = "l", lty = 2, add = T)
-sum(sims$res$event)
-
-preds <- predict(fit, new_data = sims$res, tstart = "tstart", tstop = "tstop")
-
-test_that("poisson predicting have equal number of rows", {
-  expect_equal(length(preds$fits), nrow(sims$res))
-})
-
-test_that("random sample rows have correct predicted chance of failure given estimates in Poisson model",{
-  r_rows <- sample.int(nrow(sims$res), min(nrow(sims$res), 1e3), replace = F)
-  l_parem <- rbind(fit$a_t_d_s[-1, ], fit$a_t_d_s[nrow(fit$a_t_d_s), ])
-  l_time <- c(fit$times, max(sims$res$tstop))
-
-  for(r in r_rows){
-    x <- c(1, unlist(sims$res[r, -(1:4)]))
-    tstart <- sims$res$tstart[r]
-    tstop <- sims$res$tstop[r]
-
-    istart <- max(which(l_time <= tstart))
-    istop <- min(which(l_time[-1] >= tstop))
-
-    p_surv <- 1
-    for(i in istart:istop){
-      p_surv = p_surv * (
-        1 - fit$hazard_func(eta = (l_parem[i, ] %*% x)[1,1],
-                                    tstart = max(l_time[i], tstart),
-                                    tstop = min(l_time[i + 1], tstop)))
-    }
-
-    if(is.character(all.equal(1 - p_surv, unname(preds$fits[r]))))
-      expect_true(FALSE, info = paste0(c("Predict failed for row with start and stop =", tstart, tstop), collapse = " "))
-  }
-})
+# Exponential model
+test_that("Test exponential model", expect_true(FALSE))
