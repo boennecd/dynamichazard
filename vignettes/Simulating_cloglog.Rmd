@@ -46,7 +46,7 @@ knitr::opts_chunk$set(fig.path='figures/',
 
 ## Simulating
 
-First, we need simulate our data sets. The parameters we will pass to `test_sim_func_poisson` in the file `R/test_utils.R` are:
+First, we need simulate our data sets. The parameters we will pass to `test_sim_func_exp` in the file `R/test_utils.R` are:
 
 ```{r}
 n_plots <- 6
@@ -65,9 +65,10 @@ We end up simulating `r arg_list$n_series` individuals. Co-variates for individu
 # We are currenlty in the vignettes folder
 getwd()
 source("../R/test_utils.R")
-test_sim_func_poisson
+test_sim_func_exp
 ```
 
+There is a difference from the previous version that I function definition named `..._poisson`. Before I interval censored every observation. To be concrete 
 
 ## Results
 We are now ready to simulate and make plots of the fitted parameters and actual parameters. This is done below `r n_plots` times. The dashed lines are estimates and the continuous lines are actual values of the parameters. The thick lines are the intercepts and the thin ones are the parameters for the co-variates

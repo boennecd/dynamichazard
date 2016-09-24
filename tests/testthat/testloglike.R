@@ -13,7 +13,20 @@ test_that("Verbose on ddhazard prints a log likelihood", {
     )
   }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
 
-  expect_true(FALSE, info = "Implement loglike method for exponential model")
+  expect_output({
+    result = ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1,
+      n_max = 10^4, eps = 10^-4,
+      a_0 = rep(0, 2), Q_0 = diag(1, 2),
+      est_Q_0 = F,
+      max_T = 45,
+      id = head_neck_cancer$id, order_ = 1,
+      verbose = 5,
+      model = "exponential"
+    )
+  }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
 })
 
 test_that("logLik for head_neck_cancer data set match previous results", {
@@ -88,9 +101,28 @@ test_that("logLik for simulated data versus old results", {
   expect_equal(log_like, old)
 
 
+  set.seed(35374)
+  sims <- test_sim_func_exp(n_series = 1e3, n_vars = 5, t_0 = 0, t_max = 10,
+                            x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+                            intercept_start = -3, sds = c(.1, rep(1, 5)))
 
+  result = ddhazard(
+    survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    sims$res,
+    by = 1,
+    n_max = 10^4, eps = 10^-2,
+    a_0 = rep(0, 6), Q_0 = diag(10, 6),
+    est_Q_0 = F,
+    max_T = 10,
+    id = sims$res$id, order_ = 1,
+    verbose = F, model = "exponential"
+  )
 
-  expect_true(FALSE, info = "Implement loglike method for exponential model")
+  log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
+  old <- structure(-1561.570688141223,
+                   class = "logLik",
+                   df = 6 + 6 * (1 + 6) / 2)
+  expect_equal(log_like, old, tolerance = 1e-6)
 })
 
 

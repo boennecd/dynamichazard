@@ -33,7 +33,7 @@ fit <- ddhazard(
     age + edema + log(bili) + log(protime),
   data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
   Q = diag(rep(1e-2, 5)), max_T = 3600, est_Q_0 = F,
-  verbose = T)
+  verbose = F)
 
 plot(fit, cov_index = 5, type = "cov")
 
