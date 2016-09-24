@@ -19,5 +19,6 @@ Suggests:
     testthat,
     parallel,
     knitr,
-    rmarkdown
+    rmarkdown,
+    timereg
 VignetteBuilder: knitr

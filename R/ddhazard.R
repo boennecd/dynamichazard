@@ -46,7 +46,7 @@ ddhazard = function(formula, data, by,
 
   if(model == "logit"){
     is_for_discrete_model <- TRUE
-  } else if (model == "poisson"){
+  } else if (model == "exponential"){
     is_for_discrete_model <- FALSE
   } else
     stop("Model '", model, "' is not implemented")
