@@ -202,9 +202,9 @@ test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
 # #
 # sum(tmp$res[, "event"])
 
-test_sim_func_poisson <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = 0,
-                                re_draw = T, beta_start = 1, intercept_start,
-                                sds = rep(1, n_vars + !missing(intercept_start))){
+test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = 0,
+                              re_draw = T, beta_start = 1, intercept_start,
+                              sds = rep(1, n_vars + !missing(intercept_start))){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
@@ -236,12 +236,12 @@ test_sim_func_poisson <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_
 
       tmp_t <- tstart
       while(tmp_t < tstop && tmp_t < t_max){
+        delta_max <- min(ceiling(tmp_t + 1e-14), tstop) - tmp_t
         hazzard <- 1 - exp( - (
-          exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1]) *
-            (min(ceiling(tmp_t + 1e-14), tstop) - tmp_t)))
+          exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1]) * delta_max))
         event <- hazzard > get_unif_draw(1)
         if(event){
-          tstop <- min(ceiling(tmp_t + 1e-14), tstop)
+          tstop <- get_unif_draw(1) * delta_max + tmp_t # Arrival time is uniform conditional on event
           break
         }
 
@@ -266,7 +266,7 @@ test_sim_func_poisson <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_
   list(res = as.data.frame(res[1:(cur_row - 1), ]), betas = betas)
 }
 
-test_sim_func_poisson = compiler::cmpfun(test_sim_func_poisson)
+test_sim_func_exp = compiler::cmpfun(test_sim_func_exp)
 
 # hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by
 # as search for '(?<=\d)\s+(?=\d)' and replace with ','
