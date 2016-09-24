@@ -137,7 +137,7 @@ ddhazard = function(formula, data, by,
         exp_ = exp(beta %*% x_)
         x_ * exp_ / (exp_ + 1)^2
       })
-  }else if(model == "poisson"){
+  }else if(model == "exponential"){
     res <- list(
     hazard_func =  function(eta, tstart, tstop, ...){
       1 - exp( - exp(eta) * (tstop - tstart))

@@ -212,6 +212,8 @@ public:
   std::mutex m_u;
   std::mutex m_U;
 
+  const int n_in_last_set;
+
   // Vector for score and information matrix
   arma::colvec u;
   arma::mat U;
@@ -230,17 +232,18 @@ public:
                    const arma::mat &F__,
                    const int n_max = 100, const double eps = 0.001,
                    const bool verbose = false, const bool save_all_output = false,
-                   const int order_ = 1, const bool est_Q_0 = true):
+                   const int order_ = 1, const bool est_Q_0 = true,
+                   const bool is_cont_time = false):
     problem_data(X, tstart_, tstop_, is_event_in_bin_, a_0,
                  Q_0, Q_, risk_obj, F__, n_max, eps, verbose, save_all_output,
-                 order_, est_Q_0)
+                 order_, est_Q_0),
+                 n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size())
   {
     u = arma::colvec(n_parems * order_);
     U = arma::mat(n_parems * order_, n_parems * order_);
 
-    const int n_in_last_set = (Rcpp::as<arma::uvec>(risk_sets[d - 1])).size();
-    z_dot = arma::mat(n_parems * order_, n_in_last_set);
-    H_diag_inv = arma::vec(n_in_last_set);
+    z_dot = arma::mat(n_parems * order_, n_in_last_set * (is_cont_time + 1));
+    H_diag_inv = arma::vec(n_in_last_set * (is_cont_time + 1));
   }
 };
 
@@ -414,42 +417,52 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       //TODO: simplify computations here
+      // Compute intermediates
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
       const double eta = arma::dot(i_a_t, x_);
-      const double delta_t = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
+
+      const double do_die = (dat.is_event_in_bin(*it) == bin_number);
+      const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
+      const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
 
       const double exp_eta = exp(eta); // exp(x^T * beta)
       const double inv_exp_eta = pow(exp_eta, -1);
 
-      const double exp_term = exp(delta_t * exp_eta); // exp(d_t * exp(x^T * beta))
+      const double exp_term = exp(at_risk_length * exp_eta); // exp(d_t * exp(x^T * beta))
       const double inv_exp_term = pow(exp_term, -1);
 
-      double const z = (1.0 - exp(- exp_eta * delta_t)) / exp_eta;
+      double &&expect_time = (1.0 - inv_exp_term) / exp_eta;
+      const double expect_chance_die = 1.0 - inv_exp_term;
 
-      const double common_nom_fac = exp_term - delta_t * exp_eta - 1.0;
+      const double common_nominator_factor = 1.0 + at_risk_length * exp_eta - exp_term;
+      const double denominator = exp_term * exp_term - 1.0 - 2.0 * at_risk_length * exp_term * exp_eta;
 
-      u_ += x_ * ((exp_term * exp_eta * common_nom_fac) /
-                    (1.0 - exp_term * exp_term + 2.0 * delta_t * exp_term * exp_eta) *
-                      ((dat.is_event_in_bin(*it) == bin_number) - z));
-
-      std::stringstream str;
-      str << ((exp_term * exp_eta * common_nom_fac) /
-                (1.0 - exp_term * exp_term + 2.0 * delta_t * exp_term * exp_eta) *
-                  ((dat.is_event_in_bin(*it) == bin_number) - z)) << "\n";
-
-      Rcpp::Rcout << str.str();
+      double score_fac = (at_risk_length * exp_eta / expect_chance_die) * (do_die - expect_chance_die);
+      if(do_die)
+        score_fac += exp_term * exp_eta * common_nominator_factor / denominator * (time_outcome - expect_time);
+      u_ += x_ * score_fac;
 
       U_ += x_ * (x_.t() * (
-        (inv_exp_term * inv_exp_term * common_nom_fac * common_nom_fac) /
-                    (1.0 - inv_exp_term * inv_exp_term -
-                      2.0 * delta_t * inv_exp_term * exp_eta)));
+        common_nominator_factor * common_nominator_factor / denominator
+                    + pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die));
+
+      // // TODO: Delete
+      // std::stringstream str;
+      // str << "do_die = " << do_die << "\tbin_tstop = " << bin_tstop <<
+      //   "\ttstop = " << dat.tstop(*it) << "\ttime_outcome = " << time_outcome <<
+      //     "\tat_risk_length = " << at_risk_length << "\n";
+      // Rcpp::Rcout << str.str();
 
       if(compute_z_and_H){
-        dat.H_diag_inv(i) = exp_eta * exp_eta / (1.0 - inv_exp_term * inv_exp_term
-          - 2.0 * delta_t * exp_eta * inv_exp_term);
+        // Compute terms from waiting time
+        dat.H_diag_inv(i) = exp_eta * exp_eta / (
+          1.0 - inv_exp_term * inv_exp_term - 2.0 * exp_eta * at_risk_length * inv_exp_term);
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ * (common_nominator_factor * inv_exp_eta * inv_exp_term);
 
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ * (inv_exp_term * inv_exp_eta * (
-          1.0 - exp_term + delta_t * exp_eta));
+        // Compute terms from binary out come
+        dat.H_diag_inv(i + dat.n_in_last_set) = 1 / (expect_chance_die * (1 - expect_chance_die));
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i + dat.n_in_last_set) =
+          x_ * (at_risk_length * exp_eta * inv_exp_term);
         ++i;
       }
     }
@@ -743,7 +756,6 @@ public:
             (p_dat.is_event_in_bin(r_set) == t - 1) - y_bar));
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
-
 
       p_dat.B_s.slice(t - 1) = arma::solve(p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
     }
@@ -1086,7 +1098,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       a_0, Q_0, Q,
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
-      order_, est_Q_0);
+      order_, est_Q_0, model == "exponential");
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
   } else if (method == "UKF"){
     if(model != "logit")
