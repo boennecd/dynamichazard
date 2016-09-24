@@ -109,7 +109,7 @@ public:
 class logLike_link_term_helper_cloglog : public logLike_link_term_helper{
 private:
   inline double link_term_if_death(const double &eta, const double &delta_t){
-    return log(1 - exp(- exp(eta) * delta_t));
+    return eta - exp(eta) * delta_t;
   };
 
   inline double link_term_if_control(const double &eta, const double &delta_t){
@@ -161,7 +161,7 @@ std::vector<double>
   logLike_link_term_helper *helper;
   if(model == "logit"){
     helper = new logLike_link_term_helper_logit(X, tstart, tstop, is_event_in_bin);
-  } else if (model == "poisson"){
+  } else if (model == "exponential"){
     helper = new logLike_link_term_helper_cloglog(X, tstart, tstop, is_event_in_bin);
   } else{
     std::stringstream ss;

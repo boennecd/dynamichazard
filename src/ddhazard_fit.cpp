@@ -373,42 +373,6 @@ class EKF_helper{
     {}
   };
 
-  // worker for the poisson model
-  class filter_worker_poisson : public filter_worker {
-  private:
-    const double eps = 3; // TODO: How to set? Move to problem data and be user specific?
-
-    void do_comps(const uvec_iter it, int &i,
-                  const arma::vec &i_a_t, const bool &compute_z_and_H,
-                  const int &bin_number,
-                  const double &bin_tstart, const double &bin_tstop){
-      //TODO: simplify computations here
-      const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      double eta = arma::dot(i_a_t, x_);
-      const double delta_t = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
-
-      eta = std::min(eta, log(eps / delta_t));
-
-      const double exp_eta = exp(eta);
-      const double z = 1.0 - exp( - exp_eta * delta_t);
-      const arma::vec z_dot = x_ * (delta_t * exp(eta - delta_t * exp_eta));
-
-      u_ += x_ * ((delta_t * exp_eta / z) * ((dat.is_event_in_bin(*it) == bin_number) - z));
-      U_ += x_ * (x_.t() * (pow(delta_t * exp_eta, 2.0) * (1 - z) / z));
-
-      if(compute_z_and_H){
-        dat.H_diag_inv(i) = 1 / (z * (1 - z));
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ * (delta_t * exp(eta - delta_t * exp_eta));
-        ++i;
-      }
-    }
-
-  public:
-    filter_worker_poisson(problem_data_EKF &p_data):
-    filter_worker(p_data)
-    {}
-  };
-
   // worker for the continous model with exponential distribution
   class filter_worker_exponential : public filter_worker {
   private:
@@ -478,13 +442,6 @@ class EKF_helper{
       U_ += x_ * (x_.t() * (
         common_nominator_factor * common_nominator_factor / denominator
                     + pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die));
-
-      // // TODO: Delete
-      // std::stringstream str;
-      // str << "do_die = " << do_die << "\tbin_tstop = " << bin_tstop <<
-      //   "\ttstop = " << dat.tstop(*it) << "\ttime_outcome = " << time_outcome <<
-      //     "\tat_risk_length = " << at_risk_length << "\n";
-      // Rcpp::Rcout << str.str();
 
       if(compute_z_and_H){
         // Compute terms from waiting time
@@ -1306,17 +1263,15 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     }
 
     if(verbose && it % 5 < verbose){
-      // auto rcout_width = Rcpp::Rcout.width();
-      // double log_like =
-      //   logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
-      //               p_data->a_t_t_s, p_data->tstart, p_data->tstop,
-      //               order_, model)[0];
-      // Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
-      //   " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
-      //     "\t" << "The log likelihood is " << log_like <<
-      //       std::setw(rcout_width) << std::endl;
-
-      Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 << ". TODO: Comment back log like" << std::endl;
+      auto rcout_width = Rcpp::Rcout.width();
+      double log_like =
+        logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
+                    p_data->a_t_t_s, p_data->tstart, p_data->tstop,
+                    order_, model)[0];
+      Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
+        " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
+          "\t" << "The log likelihood is " << log_like <<
+            std::setw(rcout_width) << std::endl;
     }
 
     a_prev = p_data->a_t_t_s.col(0);

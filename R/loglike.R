@@ -6,7 +6,7 @@ logLik.fahrmeier_94 = function(object, data_, id, ...){
   if(missing(id))
     stop("id need to compute log likelihood")
 
-  if(object$model == "poisson"){
+  if(object$model == "exponential"){
     is_for_discrete_model <- F
   } else if (object$model == "logit"){
     is_for_discrete_model <- T
