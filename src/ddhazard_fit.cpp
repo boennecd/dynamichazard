@@ -19,7 +19,9 @@ extern int openblas_get_num_threads();
 // have reasonable dimensions
 // #define MYDEBUG_UKF
 
-// #define MYDEBUG_M_STEP
+#define MYDEBUG_EKF
+
+#define MYDEBUG_M_STEP
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
@@ -404,6 +406,60 @@ class EKF_helper{
     {}
   };
 
+  // worker for the continous model with exponential distribution
+  class filter_worker_exponential : public filter_worker {
+  private:
+    void do_comps(const uvec_iter it, int &i,
+                  const arma::vec &i_a_t, const bool &compute_z_and_H,
+                  const int &bin_number,
+                  const double &bin_tstart, const double &bin_tstop){
+      //TODO: simplify computations here
+      const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
+      const double eta = arma::dot(i_a_t, x_);
+      const double delta_t = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
+
+      const double exp_eta = exp(eta); // exp(x^T * beta)
+      const double inv_exp_eta = pow(exp_eta, -1);
+
+      const double exp_term = exp(delta_t * exp_eta); // exp(d_t * exp(x^T * beta))
+      const double inv_exp_term = pow(exp_term, -1);
+
+      double const z = (1.0 - exp(- exp_eta * delta_t)) / exp_eta;
+
+      const double common_nom_fac = exp_term - delta_t * exp_eta - 1.0;
+
+      u_ += x_ * ((exp_term * exp_eta * common_nom_fac) /
+                    (1.0 - exp_term * exp_term + 2.0 * delta_t * exp_term * exp_eta) *
+                      ((dat.is_event_in_bin(*it) == bin_number) - z));
+
+      std::stringstream str;
+      str << ((exp_term * exp_eta * common_nom_fac) /
+                (1.0 - exp_term * exp_term + 2.0 * delta_t * exp_term * exp_eta) *
+                  ((dat.is_event_in_bin(*it) == bin_number) - z)) << "\n";
+
+      Rcpp::Rcout << str.str();
+
+      U_ += x_ * (x_.t() * (
+        (inv_exp_term * inv_exp_term * common_nom_fac * common_nom_fac) /
+                    (1.0 - inv_exp_term * inv_exp_term -
+                      2.0 * delta_t * inv_exp_term * exp_eta)));
+
+      if(compute_z_and_H){
+        dat.H_diag_inv(i) = exp_eta * exp_eta / (1.0 - inv_exp_term * inv_exp_term
+          - 2.0 * delta_t * exp_eta * inv_exp_term);
+
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ * (inv_exp_term * inv_exp_eta * (
+          1.0 - exp_term + delta_t * exp_eta));
+        ++i;
+      }
+    }
+
+  public:
+    filter_worker_exponential(problem_data_EKF &p_data):
+    filter_worker(p_data)
+    {}
+  };
+
   unsigned long const hardware_threads;
   problem_data_EKF &p_data;
   std::vector<std::shared_ptr<filter_worker> > workers;
@@ -418,8 +474,8 @@ public:
       if(model == "logit"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
         workers.push_back(std::move(new_p));
-      } else if (model == "poisson"){
-        std::shared_ptr<filter_worker> new_p(new filter_worker_poisson(p_data));
+      } else if (model == "exponential"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exponential(p_data));
         workers.push_back(std::move(new_p));
       } else
         Rcpp::stop("EKF is not implemented for model '" + model  +"'");
@@ -516,6 +572,12 @@ public:
       filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == p_dat.d, t - 1,
                                          bin_tstart, bin_tstop);
 
+#if defined(MYDEBUG_EKF)
+      Rcpp::Rcout << "t = " << t << std::endl;
+      p_dat.U.print("U:");
+      p_dat.u.print("u:");
+#endif
+
 #ifdef USE_OPEN_BLAS
       openblas_set_num_threads(p_dat.n_threads);
       //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
@@ -535,6 +597,11 @@ public:
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.V_t_t_s.slice(t) * p_dat.u;
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
+
+#if defined(MYDEBUG_EKF)
+      p_dat.a_t_t_s.col(t).print("a_(t|t)");
+      p_dat.V_t_t_s.slice(t).print("V_(t|t)");
+#endif
 
       if(t == p_dat.d){
         p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * inv(arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U *
@@ -984,7 +1051,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    Rcpp::Nullable<Rcpp::NumericVector> beta = R_NilValue,
                                    const std::string model = "logit",
                                    const std::string M_step_formulation = "Fahrmier94"){
-  if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "poisson"){
+  if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = false which should be true for model '" + model  +"'");
@@ -1192,15 +1259,17 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     }
 
     if(verbose && it % 5 < verbose){
-      auto rcout_width = Rcpp::Rcout.width();
-      double log_like =
-        logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
-                    p_data->a_t_t_s, p_data->tstart, p_data->tstop,
-                    order_, model)[0];
-      Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
-        " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
-          "\t" << "The log likelihood is " << log_like <<
-            std::setw(rcout_width) << std::endl;
+      // auto rcout_width = Rcpp::Rcout.width();
+      // double log_like =
+      //   logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
+      //               p_data->a_t_t_s, p_data->tstart, p_data->tstop,
+      //               order_, model)[0];
+      // Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
+      //   " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
+      //     "\t" << "The log likelihood is " << log_like <<
+      //       std::setw(rcout_width) << std::endl;
+
+      Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 << ". TODO: Comment back log like" << std::endl;
     }
 
     a_prev = p_data->a_t_t_s.col(0);

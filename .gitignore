@@ -5,6 +5,8 @@
 src/*.o
 src/*.so
 src/*.dll
-.log
+*.log
+**/*.log
+*.pdf
 inst/doc
 vignettes/figures
