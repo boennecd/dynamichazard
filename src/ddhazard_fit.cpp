@@ -19,9 +19,9 @@ extern int openblas_get_num_threads();
 // have reasonable dimensions
 // #define MYDEBUG_UKF
 
-// #define MYDEBUG_EKF
+#define MYDEBUG_EKF
 
-// #define MYDEBUG_M_STEP
+#define MYDEBUG_M_STEP
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
@@ -389,19 +389,22 @@ class EKF_helper{
       const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
       const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
 
-      const double exp_eta = trunc_exp_functor(eta); // exp(x^T * beta)
-      const double inv_exp_eta = pow(exp_eta, -1);
+      const double exp_eta = exp(eta); // exp(x^T * beta)
+      const double inv_exp_eta = exp(-eta);
 
       const double exp_term = exp(at_risk_length * exp_eta); // exp(d_t * exp(x^T * beta))
-      const double inv_exp_term = pow(exp_term, -1);
+      const double inv_exp_term = exp(-at_risk_length * exp_eta);
 
       double &&expect_time = (1.0 - inv_exp_term) / exp_eta;
       const double expect_chance_die = 1.0 - inv_exp_term;
 
-      const double common_nominator_factor = 1.0 + at_risk_length * exp_eta - exp_term;
-      const double denominator = exp_term * exp_term - 1.0 - 2.0 * at_risk_length * exp_term * exp_eta;
+      const double common_nominator_factor = inv_exp_term * (1.0 + at_risk_length * exp_eta) - 1;
 
-      //TODO: Delete
+      //TODO: remove intermediate when done debugging
+      const double score_fac = common_nominator_factor / (inv_exp_eta  - inv_exp_eta * inv_exp_term * inv_exp_term - 2 * at_risk_length * inv_exp_term);
+      const double info_fac = common_nominator_factor * common_nominator_factor < std::numeric_limits<double>::epsilon() ?
+      0.0 : common_nominator_factor * common_nominator_factor / (1 - inv_exp_term * (inv_exp_term + 2 * at_risk_length * exp_eta));
+
 #if defined(MYDEBUG_EKF)
 
       auto mult_cout = [](std::string name, double d1, double d2){
@@ -419,35 +422,36 @@ class EKF_helper{
       };
 
       std::stringstream str;
-      if(10.0 < std::abs(exp_term * exp_eta * common_nominator_factor / denominator * (time_outcome - expect_time)
-           + (at_risk_length * exp_eta / expect_chance_die) * (do_die - expect_chance_die))) {
+      if(100 < std::abs(score_fac)) {
         std::lock_guard<std::mutex> lk(dat.m_U);
 
         str << "at risk for " << std::setw(10) << at_risk_length <<
           "\tdo_die = " <<  do_die <<
             "\teta = " << std::setw(10) << eta << "\n" <<
-            mult_cout("score_fac_1 = ", (at_risk_length * exp_eta / expect_chance_die), (do_die - expect_chance_die)) <<
-              mult_cout("score_fac_2 = ", exp_term * exp_eta * common_nominator_factor / denominator, time_outcome - expect_time) <<
-            plus_cout("U fac = ", common_nominator_factor * common_nominator_factor / denominator,
-                      pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die) << "\n";
+              mult_cout("score_fac_y = ", (at_risk_length * exp_eta / expect_chance_die), (do_die - expect_chance_die)) <<
+                mult_cout("score_fac_t = ", score_fac, time_outcome - expect_time) <<
+                  plus_cout("U fac = ", info_fac, pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die) << "\n";
         Rcpp::Rcout << str.str();
+
+        Rcpp::Rcout << common_nominator_factor << "\t" << (inv_exp_eta  - inv_exp_eta * inv_exp_term * inv_exp_term - 2 * at_risk_length * inv_exp_term) <<
+                    "\t"  << inv_exp_eta << "\t" << inv_exp_term << std::endl;
       }
 #endif
 
       u_ += x_ * (
-        exp_term * exp_eta * common_nominator_factor / denominator * (time_outcome - expect_time)
+        score_fac * (time_outcome - expect_time)
         + (at_risk_length * exp_eta / expect_chance_die) * (do_die - expect_chance_die)
       );
 
       U_ += x_ * (x_.t() * (
-        common_nominator_factor * common_nominator_factor / denominator
+        info_fac
                     + pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die));
 
       if(compute_z_and_H){
         // Compute terms from waiting time
         dat.H_diag_inv(i) = exp_eta * exp_eta / (
           1.0 - inv_exp_term * inv_exp_term - 2.0 * exp_eta * at_risk_length * inv_exp_term);
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ * (common_nominator_factor * inv_exp_eta * inv_exp_term);
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ * (inv_exp_term * (inv_exp_eta + at_risk_length) - inv_exp_eta);
 
         // Compute terms from binary out come
         dat.H_diag_inv(i + dat.n_in_last_set) = 1 / (expect_chance_die * (1 - expect_chance_die));
