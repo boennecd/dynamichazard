@@ -68,7 +68,15 @@ source("../R/test_utils.R")
 test_sim_func_exp
 ```
 
-There is a difference from the previous version that I function definition named `..._poisson`. Before I interval censored every observation. To be concrete 
+There is a difference from the previous version that I function definition named `..._poisson`. Before I interval censored every observation. To be concrete what is did before was:
+
+1. We are given co-variate $\vec{x}_{ij}$ with start time $t^L$ and stop time $t^S$. Note that $t^L > \lceil t \rceil - 1$ and $t^S < \lceil t \rceil$ due to change of co-variates values or right censoring where $\lceil \cdot \rceil$ is the ceiling operator. I then computed the chance of dying by $p = 1 - \exp (- \exp(\vec{x}_{ij}\vec{\alpha}_{\lceil t \rceil})(\min\{\lceil t \rceil, t^L\} - \max\{\lceil t \rceil, t^L \rceil - 1}))$
+2. Draw a uniform variable $U$. If $p>U$ then i set an event AND set the stop time to $\lceil t \rceil$
+
+The latter is what I do not do in the new version. Here I replace 2. with: 
+
+2. ... $p>U$ then draw a the stop time uniformly from $[t^L, t^S]$
+
 
 ## Results
 We are now ready to simulate and make plots of the fitted parameters and actual parameters. This is done below `r n_plots` times. The dashed lines are estimates and the continuous lines are actual values of the parameters. The thick lines are the intercepts and the thin ones are the parameters for the co-variates
@@ -78,9 +86,12 @@ We are now ready to simulate and make plots of the fitted parameters and actual 
 ```{r}
 set.seed(20160911)
 for(i in seq_len(n_plots)){
-  sims <- do.call(test_sim_func_poisson, arg_list)
+  sims <- do.call(test_sim_func_exp, arg_list)
   cat("The number of indviduals who dies are", sum(sims$res$event))
   
+  
+  tmp_file <- file("exponential.log")
+  sink(tmp_file)
   fit <- dynamichazard::ddhazard(
     survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id, 
     data = sims$res, 
@@ -90,7 +101,10 @@ for(i in seq_len(n_plots)){
     est_Q_0 = F, 
     eps = 1e-3,
     a_0 = rep(0, arg_list$n_vars + 1),
-    model = "poisson")
+    verbose = 5,
+    model = "exponential")
+  sink()
+  close(tmp_file)
   
   matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), 
           lty = 2, col = "black", lwd = c(2, rep(1, arg_list$n_vars)),
@@ -103,5 +117,5 @@ for(i in seq_len(n_plots)){
 You run the code yourself by installing this version of the package by calling:
 
 ```{r , eval=FALSE}
-devtools::install_github("boennecd/dynamichazard@40450bcc36d8e7d4dafe42075347d3998ab2b260")
+devtools::install_github("boennecd/dynamichazard@40450bcc36d8e7d4dafe42075347d3998ab2b260") #TODO: Needs an update!
 ```
