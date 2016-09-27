@@ -398,12 +398,15 @@ class EKF_helper{
       double &&expect_time = (1.0 - inv_exp_term) / exp_eta;
       const double expect_chance_die = 1.0 - inv_exp_term;
 
-      const double common_nominator_factor = inv_exp_term * (1.0 + at_risk_length * exp_eta) - 1;
+      const double common_nominator_factor = inv_exp_term +  at_risk_length * exp(eta - at_risk_length * exp_eta) - 1.0;
 
       //TODO: remove intermediate when done debugging
-      const double score_fac = common_nominator_factor / (inv_exp_eta  - inv_exp_eta * inv_exp_term * inv_exp_term - 2 * at_risk_length * inv_exp_term);
+      const double score_fac = common_nominator_factor /
+        (inv_exp_eta  - exp(-2 * at_risk_length * exp_eta - eta) - 2 * at_risk_length * inv_exp_term);
+
       const double info_fac = common_nominator_factor * common_nominator_factor < std::numeric_limits<double>::epsilon() ?
-      0.0 : common_nominator_factor * common_nominator_factor / (1 - inv_exp_term * (inv_exp_term + 2 * at_risk_length * exp_eta));
+        0.0 : common_nominator_factor * common_nominator_factor /
+          (1.0 - exp(- 2 * at_risk_length * exp_eta) - 2 * at_risk_length * exp(eta - at_risk_length * exp_eta));
 
 #if defined(MYDEBUG_EKF)
 
@@ -433,8 +436,8 @@ class EKF_helper{
                   plus_cout("U fac = ", info_fac, pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die) << "\n";
         Rcpp::Rcout << str.str();
 
-        Rcpp::Rcout << common_nominator_factor << "\t" << (inv_exp_eta  - inv_exp_eta * inv_exp_term * inv_exp_term - 2 * at_risk_length * inv_exp_term) <<
-                    "\t"  << inv_exp_eta << "\t" << inv_exp_term << std::endl;
+        Rcpp::Rcout << common_nominator_factor << "\t" << (inv_exp_eta  - exp(-2 * at_risk_length * exp_eta - eta) - 2 * at_risk_length * inv_exp_term)
+                    << "\t" << inv_exp_eta << "\t" << exp(-2 * at_risk_length * exp_eta - eta) << "\t" <<  2 * at_risk_length * inv_exp_term << std::endl;
       }
 #endif
 
