@@ -160,3 +160,71 @@ tmp <- t(mapply(function(eps, eta){
 }, eta = grid_vals$eta, eps = grid_vals$eps))
 
 tmp[order(tmp[, "eps"]), ]
+
+#############
+# Score term from binary
+
+f1 <- function(e, a)
+  a * exp(e) / (1 - exp(- a * exp(e)))
+
+f2 <- function(e, a){
+  v <- a * exp(e)
+  1 + v / 2 + v^2 / 12 - v^4/720
+}
+
+# This is not an issue
+eta <- 1
+a <- 1
+f1(eta, a) # <-- Should be right
+f2(eta, a)
+
+# This is a small issue
+eta <- 1
+a <- 1e-14
+f1(eta, a) # <-- Should be right
+f2(eta, a)
+
+# This is a large issue
+eta <- -40
+a <- 1
+f1(eta, a) # <-- Should be right
+f2(eta, a)
+
+v <- 10^(0:-14)
+cbind("v" = v,
+      "exp(v)/(1 - exp(-v))" = v / (1 - exp(-v)))
+
+
+#############
+# Variance factor from time variable
+
+f1 <- function(e, a){
+  (1 + a * exp(e) - exp(a * exp(e)))^2 /
+    (exp(2 * a * exp(e)) - 1 - 2 * a * exp(e + a * exp(e)))
+}
+
+# Issue
+f1(10, 10)
+f1(10, 1)
+
+# Not issue
+f1(1, 10)
+f1(1, 1)
+f1(1, 1e-10)
+f1(1e-10, 1e-10)
+f1(1e-14, 1e-10)
+f1(1e-14, 1e-14)
+
+# More numerical examples
+v <- 10^(14:-14)
+cbind("v" = v,
+      "(1 + v - exp(v))^2/(exp(2*v) - 1 - 2 * v* exp(v))" =
+        (1 + v - exp(v))^2/(exp(2*v) - 1 - 2 * v* exp(v))
+)
+
+#########
+# Variance factor for binary
+v <- 10^(-8:-20)
+cbind("v" = v,
+      "v^2 * exp(-v)/(1 - exp(-v))" =
+        v^2 * exp(-v)/(1 - exp(-v)))

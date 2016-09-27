@@ -226,7 +226,7 @@ set.seed(93143)
 sims <- test_sim_func_exp(n_series = 1e4, n_vars = 10, t_0 = 0, t_max = 10,
                           x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
                           intercept_start = -5, sds = c(.1, rep(1, 10)))
-# sum(sims$res$event)
+sum(sims$res$event)
 
 tmp_file <- file("exponential.log")
 sink(tmp_file)
@@ -247,8 +247,8 @@ result_exp = ddhazard(
 sink()
 close(tmp_file)
 
-# matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
-# matplot(result_exp$times, result_exp$a_t_d_s, result_exp$a_t_d_s, type = "l", lty = 2, add = T)
+matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
+matplot(result_exp$times, result_exp$a_t_d_s, result_exp$a_t_d_s, type = "l", lty = 2, add = T)
 
 # get_expect_equal(result_exp, eps = 1e-2)
 
