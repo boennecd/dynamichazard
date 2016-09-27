@@ -398,15 +398,25 @@ class EKF_helper{
       double &&expect_time = (1.0 - inv_exp_term) / exp_eta;
       const double expect_chance_die = 1.0 - inv_exp_term;
 
-      const double common_nominator_factor = inv_exp_term +  at_risk_length * exp(eta - at_risk_length * exp_eta) - 1.0;
-
       //TODO: remove intermediate when done debugging
-      const double score_fac = common_nominator_factor /
-        (inv_exp_eta  - exp(-2 * at_risk_length * exp_eta - eta) - 2 * at_risk_length * inv_exp_term);
+      const double v = at_risk_length * exp(eta);
 
-      const double info_fac = common_nominator_factor * common_nominator_factor < std::numeric_limits<double>::epsilon() ?
-        0.0 : common_nominator_factor * common_nominator_factor /
-          (1.0 - exp(- 2 * at_risk_length * exp_eta) - 2 * at_risk_length * exp(eta - at_risk_length * exp_eta));
+
+      const double score_fac_t = (v >= 1e-4) ?
+        // Use regular formula
+        (inv_exp_term +  at_risk_length * exp(eta - at_risk_length * exp_eta) - 1.0) /
+          (inv_exp_eta  - exp(-2 * at_risk_length * exp_eta - eta)
+                                     - 2 * at_risk_length * inv_exp_term) :
+        // Use Laurent series approximation
+        exp_eta * (- 3.0 / (2.0 * v) - 0.5 - v / 20.0 - pow(v, 3.0) / 8400.0);
+
+      const double score_fac_y = (v >= 1e-9) ? at_risk_length * exp_eta / expect_chance_die : 1.0;
+
+      const double info_fac_t = (v > 20.0) ?
+        1.0 : pow(1.0 + at_risk_length * exp_eta - exp_term, 2.0) /
+          (exp_term * exp_term - 1.0 - 2 * at_risk_length * exp_eta * exp_term);
+
+      const double info_fac_y = v * v * exp(-v) / (1.0 - exp(-v));
 
 #if defined(MYDEBUG_EKF)
 
@@ -425,30 +435,27 @@ class EKF_helper{
       };
 
       std::stringstream str;
-      if(100 < std::abs(score_fac)) {
+      if(1 < std::abs(score_fac_y * (do_die - expect_chance_die)) ||
+          1 < std::abs(score_fac_t * (time_outcome - expect_time)))
+      {
         std::lock_guard<std::mutex> lk(dat.m_U);
 
         str << "at risk for " << std::setw(10) << at_risk_length <<
           "\tdo_die = " <<  do_die <<
             "\teta = " << std::setw(10) << eta << "\n" <<
-              mult_cout("score_fac_y = ", (at_risk_length * exp_eta / expect_chance_die), (do_die - expect_chance_die)) <<
-                mult_cout("score_fac_t = ", score_fac, time_outcome - expect_time) <<
-                  plus_cout("U fac = ", info_fac, pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die) << "\n";
+              mult_cout("score_fac_y = ", score_fac_y, (do_die - expect_chance_die)) <<
+                mult_cout("score_fac_t = ", score_fac_t, time_outcome - expect_time) <<
+                  plus_cout("U fac = ", info_fac_t, info_fac_y) << "\n";
         Rcpp::Rcout << str.str();
-
-        Rcpp::Rcout << common_nominator_factor << "\t" << (inv_exp_eta  - exp(-2 * at_risk_length * exp_eta - eta) - 2 * at_risk_length * inv_exp_term)
-                    << "\t" << inv_exp_eta << "\t" << exp(-2 * at_risk_length * exp_eta - eta) << "\t" <<  2 * at_risk_length * inv_exp_term << std::endl;
       }
 #endif
 
       u_ += x_ * (
-        score_fac * (time_outcome - expect_time)
-        + (at_risk_length * exp_eta / expect_chance_die) * (do_die - expect_chance_die)
-      );
+        score_fac_t * (time_outcome - expect_time)
+        + score_fac_y * (do_die - expect_chance_die));
 
       U_ += x_ * (x_.t() * (
-        info_fac
-                    + pow(at_risk_length * exp_eta, 2.0) * (1 - expect_chance_die) / expect_chance_die));
+        info_fac_t + info_fac_y));
 
       if(compute_z_and_H){
         // Compute terms from waiting time
