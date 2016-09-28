@@ -410,16 +410,20 @@ class EKF_helper{
           (inv_exp_eta  - inv_exp_term * inv_exp_term * inv_exp_eta
                                      - 2 * at_risk_length * inv_exp_term) :
         // Use Laurent series approximation
-        exp_eta * (- 3.0 / (2.0 * v) - 0.5 - v / 20.0 - pow(v, 3.0) / 8400.0);
+        // See https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%2F(exp(v)+-++exp(-v)+-+2v)
+        exp_eta * (- 3.0 / (2.0 * v) - 0.5 - v / 20.0 + pow(v, 3) / 8400.0);
 
       const double score_fac_y = (v >= 1e-6) ?
         at_risk_length * exp_eta / (1.0 - inv_exp_term) :
-        1 + v / 2 * (1 + v/12 * (1 - v * v/720));
+        // See this for Taylor series: https://www.wolframalpha.com/input/?i=v%2F(1-exp(-v))
+        1 + v * (1 / 2 + v * (1/12 - v * v /720));
 
-      const double info_fac_t = (v > 20.0) ?
-        1.0 :
-        pow(1.0 + at_risk_length * exp_eta - exp_term, 2.0) /
-          (exp_term * exp_term - 1.0 - 2.0 * at_risk_length * exp_eta * exp_term);
+      const double info_fac_t = (v > 20.0) ? // deals with overflow in the numerator
+        1.0 : ((v >= 1e-4) ?
+          pow(1.0 + at_risk_length * exp_eta - exp_term, 2.0) /
+            (exp_term * exp_term - 1.0 - 2.0 * at_risk_length * exp_eta * exp_term) :
+                 // See this link for the Taylor series https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%5E2+%2F+(exp(2*v)+-+1-+2+*+v*+exp(v))
+                 v * (3 / 4 - v * (1 / 4 - v * (11 / 240 - v * (1 / 240 - v / 16800)))));
 
       const double info_fac_y = v * v * exp(-v) / (1.0 - exp(-v));
 
@@ -441,7 +445,9 @@ class EKF_helper{
 
       std::stringstream str;
       if(10 < std::abs(score_fac_y * (do_die - expect_chance_die)) ||
-          10 < std::abs(score_fac_t * (time_outcome - expect_time)))
+          10 < std::abs(score_fac_t * (time_outcome - expect_time)) ||
+            info_fac_t + info_fac_y < 1e-8 ||
+              info_fac_t < 0 || info_fac_y < 0)
       {
         std::lock_guard<std::mutex> lk(dat.m_U);
 
@@ -595,7 +601,9 @@ public:
 
 #if defined(MYDEBUG_EKF)
       Rcpp::Rcout << "t = " << t << std::endl;
+      Rcpp::Rcout << std::fixed;
       p_dat.U.print("U:");
+      Rcpp::Rcout << std::fixed;
       p_dat.u.print("u:");
 #endif
 
@@ -622,8 +630,13 @@ public:
 #if defined(MYDEBUG_EKF)
       std::stringstream str;
       str << t << "|" << t;
+      Rcpp::Rcout << std::fixed;
       p_dat.a_t_t_s.col(t).print("a_(" + str.str() + ")");
-      p_dat.V_t_t_s.slice(t).print("V_(" + str.str() + ")");
+
+      Rcpp::Rcout.setf(std::ios_base::fixed, std::ios_base::floatfield);
+      Rcpp::Rcout.precision(6);
+
+      Rcpp::Rcout << "V_(" + str.str() + ")\n" << std::fixed << p_dat.V_t_t_s.slice(t) <<  std::endl;
 #endif
 
       if(t == p_dat.d){
@@ -1213,20 +1226,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
       if(M_step_formulation == "Fahrmier94"){
         B = &p_data->B_s.slice(t - 1);
-
-#if defined(MYDEBUG_M_STEP)
-        Rcpp::Rcout << "New Q-term from t = " << t << ":" << std::endl;
-        (((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-            - F_ * *B * *V
-            - (F_ * *B * *V).t()
-            + F_ * *V_less * p_data->T_F_) / delta_t).print();
-
-            ((a - F_ * a_less) * (a - F_ * a_less).t()).print();
-            (*V
-               - F_ * *B * *V
-               - (F_ * *B * *V).t()
-               + F_ * *V_less * p_data->T_F_).print();
-#endif
 
                Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
                - F_ * *B * *V

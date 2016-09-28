@@ -296,3 +296,36 @@ test_that("Result of exponential model on simulated data match previous results"
   expect_equal(c(result_exp$est_Q_0),
                c(FALSE ))
 })
+
+
+
+
+for(i in 1:100){
+  n_vars <- 10
+  sims <- test_sim_func_exp(n_series = 1e4, n_vars = n_vars, t_0 = 0, t_max = 10,
+                            x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+                            intercept_start = -5, sds = c(.1, rep(1, n_vars)))
+
+  tmp_file <- file("exponential.log")
+  sink(tmp_file)
+  result_exp = ddhazard(
+    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    data = sims$res,
+    by = (by_ <- 1),
+    n_max = 10^4, eps = 10^-2,
+    a_0 = rep(0, n_vars + 1),
+    Q_0 = diag(1e4, n_vars + 1),
+    Q = diag(1, n_vars + 1),
+    est_Q_0 = F,
+    max_T = 10,
+    id = sims$res$id, order_ = 1,
+    verbose = F,
+    model = "exponential"
+  )
+  sink()
+  close(tmp_file)
+
+  print(sum(sims$res$event))
+  matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
+  matplot(result_exp$times, result_exp$a_t_d_s, result_exp$a_t_d_s, type = "l", lty = 2, add = T)
+}

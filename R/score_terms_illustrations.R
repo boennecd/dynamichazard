@@ -42,9 +42,10 @@ g1 <- function(e, a_t){
 
 ##############
 # Function 4: using Laurent series
+# See: https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%2F(exp(v)+-++exp(-v)+-+2v)
 g2 <- function(e, a_t){
   v = a_t * exp(e)
-  exp(e) * (- 3 /(2 * v) - 1 / 2 - v / 20 - v^3 / 8400)
+  exp(e) * (- 3 /(2 * v) - 1 / 2 - v / 20 + v^3 / 8400)
 }
 
 
@@ -203,7 +204,7 @@ f2(eta, a)
 v <- 10^(0:-14)
 cbind("v" = v,
       "v/(1 - exp(-v))" = v / (1 - exp(-v)),
-      "Taylor" = 1 + v / 2 * (1 + v /12 * (1 - v * v /720)))
+      "Taylor" = 1 + v * (1 / 2 + v * (1/12 - v * v /720)))
 
 
 #############
@@ -217,6 +218,7 @@ f1 <- function(e, a){
 # Issue
 f1(10, 10)
 f1(10, 1)
+f1(-10.8169, 0.291538)
 
 # Not issue
 f1(1, 10)
@@ -226,12 +228,19 @@ f1(1e-10, 1e-10)
 f1(1e-14, 1e-10)
 f1(1e-14, 1e-14)
 
+
 # More numerical examples
+# from https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%5E2+%2F+(exp(2*v)+-+1-+2+*+v*+exp(v))
 v <- 10^(14:-14)
 cbind("v" = v,
       "(1 + v - exp(v))^2/(exp(2*v) - 1 - 2 * v* exp(v))" =
-        (1 + v - exp(v))^2/(exp(2*v) - 1 - 2 * v* exp(v))
-)
+        (1 + v - exp(v))^2/(exp(2*v) - 1 - 2 * v* exp(v)),
+      "Taylor" =
+        v * (3 / 4 - v * (1 / 4 - v * (11 / 240 - v * (1 / 240 - v / 16800)))))
+
+# Have to keep this in mind
+(v <- 0.291538 * exp(-10.8169))
+(1 + v - exp(v))^2/(exp(2*v) - 1 - 2 * v* exp(v))
 
 #########
 # Variance factor for binary
