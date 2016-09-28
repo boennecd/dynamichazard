@@ -390,31 +390,36 @@ class EKF_helper{
       const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
 
       const double exp_eta = exp(eta); // exp(x^T * beta)
-      const double inv_exp_eta = exp(-eta);
+      const double inv_exp_eta = pow(exp_eta, -1);
 
       const double exp_term = exp(at_risk_length * exp_eta); // exp(d_t * exp(x^T * beta))
-      const double inv_exp_term = exp(-at_risk_length * exp_eta);
-
-      double &&expect_time = (1.0 - inv_exp_term) / exp_eta;
-      const double expect_chance_die = 1.0 - inv_exp_term;
+      const double inv_exp_term = pow(exp_term, -1);
 
       //TODO: remove intermediate when done debugging
-      const double v = at_risk_length * exp(eta);
+      const double v = at_risk_length * exp_eta;
 
+      const double expect_time = (v >= 1e-8) ? (1.0 - inv_exp_term) / exp_eta :
+        at_risk_length * ((1 - v / 2 * (1 - v / 6 * (1 - v / 24 * (1 - v / 120)))));
+
+      const double expect_chance_die = (v >= 1e-5) ? 1.0 - inv_exp_term :
+        v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0))));
 
       const double score_fac_t = (v >= 1e-4) ?
         // Use regular formula
-        (inv_exp_term +  at_risk_length * exp(eta - at_risk_length * exp_eta) - 1.0) /
-          (inv_exp_eta  - exp(-2 * at_risk_length * exp_eta - eta)
+        (inv_exp_term +  at_risk_length * exp_eta * inv_exp_term - 1.0) /
+          (inv_exp_eta  - inv_exp_term * inv_exp_term * inv_exp_eta
                                      - 2 * at_risk_length * inv_exp_term) :
         // Use Laurent series approximation
         exp_eta * (- 3.0 / (2.0 * v) - 0.5 - v / 20.0 - pow(v, 3.0) / 8400.0);
 
-      const double score_fac_y = (v >= 1e-9) ? at_risk_length * exp_eta / expect_chance_die : 1.0;
+      const double score_fac_y = (v >= 1e-6) ?
+        at_risk_length * exp_eta / (1.0 - inv_exp_term) :
+        1 + v / 2 * (1 + v/12 * (1 - v * v/720));
 
       const double info_fac_t = (v > 20.0) ?
-        1.0 : pow(1.0 + at_risk_length * exp_eta - exp_term, 2.0) /
-          (exp_term * exp_term - 1.0 - 2 * at_risk_length * exp_eta * exp_term);
+        1.0 :
+        pow(1.0 + at_risk_length * exp_eta - exp_term, 2.0) /
+          (exp_term * exp_term - 1.0 - 2.0 * at_risk_length * exp_eta * exp_term);
 
       const double info_fac_y = v * v * exp(-v) / (1.0 - exp(-v));
 
@@ -435,15 +440,15 @@ class EKF_helper{
       };
 
       std::stringstream str;
-      if(1 < std::abs(score_fac_y * (do_die - expect_chance_die)) ||
-          1 < std::abs(score_fac_t * (time_outcome - expect_time)))
+      if(10 < std::abs(score_fac_y * (do_die - expect_chance_die)) ||
+          10 < std::abs(score_fac_t * (time_outcome - expect_time)))
       {
         std::lock_guard<std::mutex> lk(dat.m_U);
 
         str << "at risk for " << std::setw(10) << at_risk_length <<
           "\tdo_die = " <<  do_die <<
             "\teta = " << std::setw(10) << eta << "\n" <<
-              mult_cout("score_fac_y = ", score_fac_y, (do_die - expect_chance_die)) <<
+              mult_cout("score_fac_y = ", score_fac_y, do_die - expect_chance_die) <<
                 mult_cout("score_fac_t = ", score_fac_t, time_outcome - expect_time) <<
                   plus_cout("U fac = ", info_fac_t, info_fac_y) << "\n";
         Rcpp::Rcout << str.str();
@@ -454,8 +459,7 @@ class EKF_helper{
         score_fac_t * (time_outcome - expect_time)
         + score_fac_y * (do_die - expect_chance_die));
 
-      U_ += x_ * (x_.t() * (
-        info_fac_t + info_fac_y));
+      U_ += x_ * (x_.t() * (info_fac_t + info_fac_y));
 
       if(compute_z_and_H){
         // Compute terms from waiting time

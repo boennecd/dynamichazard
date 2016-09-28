@@ -134,6 +134,14 @@ g1(eta, a)
 g2(eta, a)
 
 
+# Example from debugging
+a <- 1
+eta <- 3.18634
+g_org(eta, a)
+g_prev_1(eta, a)
+g1(eta, a)
+g2(eta, a)
+
 #
 eps <- 1
 for(eta in -3:3 + 1e-8){
@@ -190,9 +198,12 @@ a <- 1
 f1(eta, a) # <-- Should be right
 f2(eta, a)
 
+
+# Taylor series from https://www.wolframalpha.com/input/?i=v%2F(1-exp(-v))
 v <- 10^(0:-14)
 cbind("v" = v,
-      "exp(v)/(1 - exp(-v))" = v / (1 - exp(-v)))
+      "v/(1 - exp(-v))" = v / (1 - exp(-v)),
+      "Taylor" = 1 + v / 2 * (1 + v /12 * (1 - v * v /720)))
 
 
 #############
@@ -224,7 +235,46 @@ cbind("v" = v,
 
 #########
 # Variance factor for binary
-v <- 10^(-8:-20)
+v <- 10^(-2:-20)
 cbind("v" = v,
       "v^2 * exp(-v)/(1 - exp(-v))" =
-        v^2 * exp(-v)/(1 - exp(-v)))
+        v^2 * exp(-v)/(1 - exp(-v)),
+      "Taylor" =
+        v - v^2 / 2 + v^3 / 12 - v^5 / 720)
+
+#########
+# Survival prob
+# Source: https://www.wolframalpha.com/input/?i=1-exp(-v)
+v <- 10^(-2:-16)
+cbind("v" = v,
+      "1 - exp(-v)" =
+        1 - exp(-v),
+      "Taylor" =
+        v - v^2 / 2 + v^3 / 6 - v^4 / 24 + v^5 / 120)
+
+
+#########
+# Expected truncated survival time
+# Source: https://www.wolframalpha.com/input/?i=(1-exp(-v))v%5E-1
+f1 <- function(e, a)
+  (1 - exp(-exp(e) * a)) / exp(e)
+
+f_taylor <- function(e, a){
+  v <- a * exp(e)
+
+  a * ((1 - v / 2 * (1 - v / 6 * (1 - v / 24 * (1 - v / 120)))))
+}
+
+grid_vals <- expand.grid(e = -1:-6, a = 10^(-2:-8))
+
+tmp <- t(mapply(function(e, a)
+  c("v" = a * exp(e), "a" = a, "eta" = e,
+    "Org formula" = f1(e, a), "Taylor" = f_taylor(e, a)),
+  e = grid_vals$e, a = grid_vals$a))
+
+tmp[sort(tmp[, "eta"]), ]
+
+
+
+
+
