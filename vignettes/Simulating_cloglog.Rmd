@@ -50,6 +50,7 @@ This note will illustrate the implemented continuous time exponential model. The
 1. How the model work on simulated data illustrated with plots
 2. That the model decrease in mean square error in the state space variables estimates when the number of series increase
 3. The model do have convergence issues in some cases 
+4. The resulting fit differs if you fit the model twice
 
 ## Simulating
 
@@ -86,6 +87,7 @@ The latter is what I do not do in the new version. Here I replace 2. with:
 
 
 ## Results
+### Plot examples
 We are now ready to simulate and make plots of the fitted parameters and actual parameters. This is done below `r n_plots` times. The dashed lines are estimates and the continuous lines are actual values of the parameters. The thick lines are the intercepts and the thin ones are the parameters for the co-variates
 
 
@@ -126,6 +128,7 @@ for(i in seq_len(n_plots)){
 
 The estimates seems close to the actual values. Notice that the model fails to fit the model once. What goes wrong is that one of the margins in the state variable $\vec{\beta}_t$ gets absolute large after which some of the score terms tend toward infinity or minus infinity. I figure this is due to divergence. This should not be uncommon with Extended Kalman filters from what I have read. What is your take?
 
+### Mean Square error
 Another question is whether the mean square error (or another metric?) between estimated state variables and actual values decrease as the number of observation increase. The simulation function starts by simulating the state variables $\vec{\beta}_0, \dots, \vec{\beta}_T$. Hence, we get the same variables if we use the same seed. This is done below where the number of series varies change with the same seed (and thus the same state space vectors):
 
 ```{r}
@@ -156,18 +159,7 @@ for(seed in seeds){
     fit_args$id <- sims$res$id
     
     try({
-      fit <- dynamichazard::ddhazard(
-        survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id, 
-        data = sims$res, 
-        by = 1,
-        id = sims$res$id,
-        Q_0 = diag(100, arg_list$n_vars + 1),
-        Q = diag(1e-1, arg_list$n_vars + 1),
-        est_Q_0 = F, 
-        eps = 1e-2,
-        a_0 = c(-3, rep(0, arg_list$n_vars)),
-        verbose = F,
-        model = "exponential")
+      fit <- do.call(dynamichazard::ddhazard, fit_args)
       
       MSEs[j, i] <- mean((sims$betas[-1, ] - fit$a_t_d_s[-1, ])^2)
     })
@@ -181,9 +173,35 @@ print(MSEs, digits = 4)
 n_cases
 ```
 
+### Issues with varying results
+The last issue I will stress is that results differ if you fit the model twice. This is illustrated below:
+
+```{r}
+set.seed(1992)
+arg_list$n_series <- 1e4
+sims <- do.call(test_sim_func_exp, arg_list)
+
+fit_args$data <- sims$res
+fit_args$id <- sims$res$id
+fit_1 <- do.call(dynamichazard::ddhazard, fit_args)
+
+for(i in 1:10){
+  cat("Fit number", i, "\n")
+  fit_2 <- do.call(dynamichazard::ddhazard, fit_args)
+  
+  print(all.equal(fit_1$a_t_d_s, fit_2$a_t_d_s))
+  print(all.equal(fit_1$V_t_d_s, fit_2$V_t_d_s))
+  print(all.equal(fit_1$lag_one_cor, fit_2$lag_one_cor))
+}
+```
+
+The relative difference is minor but present. I figure it might have to do with the order of summation when we compute the score vector $\vec{u}_t(\vec{\beta}_t)$ and information matrix $\mathbf{U}_t(\vec{\beta}_t)$. Some of the terms we add are small and they are computed in parallel so the order in which intermediates are added is non-deterministic. This could course varying results. What do you think?
+
+## Running the code
+
 You run the code yourself by installing this version of the package by calling:
 
 ```{r , eval=FALSE}
 devtools::install_github(
-  "boennecd/dynamichazard@40450bcc36d8e7d4dafe42075347d3998ab2b260") #TODO: Needs an update!
+  "boennecd/dynamichazard@4ef968eac5706df99fc31941747ccd3e1c10e1a8")
 ```
