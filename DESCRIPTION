@@ -10,7 +10,8 @@ LazyData: TRUE
 Imports:
     Rcpp (>= 0.12.6),
     RcppArmadillo,
-    survival
+    survival,
+    stringr
 LinkingTo:
     Rcpp,
     RcppArmadillo
