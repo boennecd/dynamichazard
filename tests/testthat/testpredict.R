@@ -97,7 +97,7 @@ test_that("Calls with second order models do not throw errors", {
 
 dum <- structure(list(model = "exponential"), "class" = class(result))
 
-test_that("predict functions throws error when model is exponential",{
+test_that("predict functions throws error when model it is exponential",{
   expect_error(predict(dum))
 })
 
