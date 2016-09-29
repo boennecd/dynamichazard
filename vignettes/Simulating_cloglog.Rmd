@@ -44,6 +44,13 @@ knitr::opts_chunk$set(fig.path='figures/',
 )
 ```
 
+## Intro 
+This note will illustrate the implemented continuous time exponential model. The note shows:
+
+1. How the model work on simulated data illustrated with plots
+2. That the model decrease in mean square error in the state space variables estimates when the number of series increase
+3. The model do have convergence issues in some cases 
+
 ## Simulating
 
 First, we need simulate our data sets. The parameters we will pass to `test_sim_func_exp` in the file `R/test_utils.R` are:
@@ -59,7 +66,7 @@ arg_list <- list(n_series = 1e4,
                  sds = c(.1, rep(1, 5)))
 ```
 
-We end up simulating `r arg_list$n_series` individuals. Co-variates for individuals are changed with increments of a $\sim \text{exp}(1)$ random variables. The co-variates are simulated to from uniform distribution on [`r arg_list$x_mean + c(-.5, .5) * arg_list$x_range`]. The state space vector chance with increments of 1. We have `r arg_list$n_vars` parameters all starting at `r arg_list$beta_start`. Further, we have an intercept starting at `r arg_list$intercept_start`. The standard deviation of the intercept and parameters are respectively (`r arg_list$sds`). The function we use to simulate with is printed below:
+We end up simulating `r arg_list$n_series` individuals. Co-variates for individuals are changed with increments of a $s\sim \text{exp}(1)$ random variables. The co-variates are simulated drawn from a uniform distribution on [`r arg_list$x_mean + c(-.5, .5) * arg_list$x_range`]. The state space vector chance with increments of 1. We have `r arg_list$n_vars` parameters all starting at `r arg_list$beta_start`. Further, we have an intercept starting at `r arg_list$intercept_start`. The standard deviation of the intercept and parameters are respectively (`r arg_list$sds`). The function we use to simulate with is printed below (Skip it if you like):
 
 ```{r}
 # We are currenlty in the vignettes folder
@@ -68,14 +75,14 @@ source("../R/test_utils.R")
 test_sim_func_exp
 ```
 
-There is a difference from the previous version that I function definition named `..._poisson`. Before I interval censored every observation. To be concrete what is did before was:
+This version differs from the previous version named `..._poisson`. Before I interval censored every observation that had an outcome. To be concrete what is did before was:
 
-1. We are given co-variate $\vec{x}_{ij}$ with start time $t^L$ and stop time $t^S$. Note that $t^L > \lceil t \rceil - 1$ and $t^S < \lceil t \rceil$ due to change of co-variates values or right censoring where $\lceil \cdot \rceil$ is the ceiling operator. I then computed the chance of dying by $p = 1 - \exp (- \exp(\vec{x}_{ij}\vec{\alpha}_{\lceil t \rceil})(\min\{\lceil t \rceil, t^L\} - \max\{\lceil t \rceil, t^L \rceil - 1}))$
-2. Draw a uniform variable $U$. If $p>U$ then i set an event AND set the stop time to $\lceil t \rceil$
+1. We are given co-variate $\vec{x}_{ij}$ with start time $t^L$ and stop time $t^S$. Note that $t^L > \lceil t \rceil - 1$ and $t^S < \lceil t \rceil$ due to change of co-variates values or right censoring where $\lceil \cdot \rceil$ is the ceiling operator. I then computed the chance of dying by $p = 1 - \exp (- \exp(\vec{x}_{ij}\vec{\alpha}_{\lceil t \rceil})(\min\{\lceil t \rceil, t^S\} - \max\{\lceil t \rceil - 1, t^L\}))$
+2. Draw a uniform variable $U$ on $[0, 1]$. If $p>U$ then set it as an event AND set the stop time to $\lceil t^S \rceil$
 
 The latter is what I do not do in the new version. Here I replace 2. with: 
 
-2. ... $p>U$ then draw a the stop time uniformly from $[t^L, t^S]$
+2. The same as before but in the case an event then I draw a the stop time uniformly from $[t^L, t^S]$
 
 
 ## Results
@@ -87,35 +94,96 @@ We are now ready to simulate and make plots of the fitted parameters and actual 
 set.seed(20160911)
 for(i in seq_len(n_plots)){
   sims <- do.call(test_sim_func_exp, arg_list)
-  cat("The number of indviduals who dies are", sum(sims$res$event))
   
-  
-  tmp_file <- file("exponential.log")
-  sink(tmp_file)
-  fit <- dynamichazard::ddhazard(
-    survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id, 
-    data = sims$res, 
-    by = 1,
-    id = sims$res$id,
-    Q_0 = diag(10, arg_list$n_vars + 1),
-    est_Q_0 = F, 
-    eps = 1e-3,
-    a_0 = rep(0, arg_list$n_vars + 1),
-    verbose = 5,
-    model = "exponential")
-  sink()
-  close(tmp_file)
-  
-  matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), 
-          lty = 2, col = "black", lwd = c(2, rep(1, arg_list$n_vars)),
-          xlab = "time", ylab = "parameter estimate")
-  matplot(sims$betas, type = "l", lty = 1, add = T,
-          col = "black", lwd = c(2, rep(1, arg_list$n_vars)))
+  # Try catch is used in case the estimation fails
+  tryCatch({  
+    
+    fit_args <- list(
+      survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id, 
+      data = sims$res, 
+      by = 1,
+      id = sims$res$id,
+      Q_0 = diag(10, arg_list$n_vars + 1),
+      est_Q_0 = F, 
+      eps = 1e-2,
+      a_0 = c(-3, rep(0, arg_list$n_vars)),
+      verbose = 5,
+      model = "exponential"
+    )
+    
+    fit <- do.call(dynamichazard::ddhazard, fit_args)
+    
+    matplot(fit$a_t_d_s, type = "l", ylim = range(fit$a_t_d_s, sims$betas), 
+            lty = 2, lwd = c(2, rep(1, arg_list$n_vars)),
+            xlab = "time", ylab = "parameter estimate")
+    matplot(sims$betas, type = "l", lty = 1, add = T,
+            lwd = c(2, rep(1, arg_list$n_vars)))
+  }, error = function(e){
+    cat("\n\n\n!!!!!!!!!!!!!!!!!!!\nFailed to fit\n!!!!!!!!!!!!!!!!!!!\n")
+  })
 }
+```
+
+The estimates seems close to the actual values. Notice that the model fails to fit the model once. What goes wrong is that one of the margins in the state variable $\vec{\beta}_t$ gets absolute large after which some of the score terms tend toward infinity or minus infinity. I figure this is due to divergence. This should not be uncommon with Extended Kalman filters from what I have read. What is your take?
+
+Another question is whether the mean square error (or another metric?) between estimated state variables and actual values decrease as the number of observation increase. The simulation function starts by simulating the state variables $\vec{\beta}_0, \dots, \vec{\beta}_T$. Hence, we get the same variables if we use the same seed. This is done below where the number of series varies change with the same seed (and thus the same state space vectors):
+
+```{r}
+set.seed(20160928)
+ns <- 2^(9:16) # number of series
+seeds <- round(runif(5, max = 1e5)) # seeds we want to use
+
+# Resulting MSE matrix and number of cases
+n_cases <- MSEs <- 
+  matrix(NA_real_, nrow = length(seeds), ncol = length(ns),
+         dimnames = list(NULL, ns))
+
+# Simulate and compute MSE
+fit_args$verbose <- F
+j <- 0
+for(seed in seeds){
+  i <- 0
+  j <- j + 1
+  for(n in ns){
+    i <- i + 1
+    set.seed(seed)
+    arg_list$n_series <- n
+    
+    sims <- do.call(test_sim_func_exp, arg_list)
+    n_cases[j, i] <- sum(sims$res$event)
+    
+    fit_args$data <- sims$res
+    fit_args$id <- sims$res$id
+    
+    try({
+      fit <- dynamichazard::ddhazard(
+        survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id, 
+        data = sims$res, 
+        by = 1,
+        id = sims$res$id,
+        Q_0 = diag(100, arg_list$n_vars + 1),
+        Q = diag(1e-1, arg_list$n_vars + 1),
+        est_Q_0 = F, 
+        eps = 1e-2,
+        a_0 = c(-3, rep(0, arg_list$n_vars)),
+        verbose = F,
+        model = "exponential")
+      
+      MSEs[j, i] <- mean((sims$betas[-1, ] - fit$a_t_d_s[-1, ])^2)
+    })
+  }
+}
+
+# Print the mean square errors (column name is number of series) 
+print(MSEs, digits = 4)
+
+# Print the number of cases
+n_cases
 ```
 
 You run the code yourself by installing this version of the package by calling:
 
 ```{r , eval=FALSE}
-devtools::install_github("boennecd/dynamichazard@40450bcc36d8e7d4dafe42075347d3998ab2b260") #TODO: Needs an update!
+devtools::install_github(
+  "boennecd/dynamichazard@40450bcc36d8e7d4dafe42075347d3998ab2b260") #TODO: Needs an update!
 ```

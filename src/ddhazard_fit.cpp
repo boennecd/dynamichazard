@@ -19,9 +19,8 @@ extern int openblas_get_num_threads();
 // have reasonable dimensions
 // #define MYDEBUG_UKF
 
-#define MYDEBUG_EKF
-
-#define MYDEBUG_M_STEP
+// #define MYDEBUG_EKF
+// #define MYDEBUG_M_STEP
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
@@ -640,8 +639,13 @@ public:
 #endif
 
       if(t == p_dat.d){
-        p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * inv(arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U *
-          p_dat.V_t_less_s.slice(t - 1)) * p_dat.z_dot * diagmat(p_dat.H_diag_inv);
+
+        arma::mat tmp_inv_mat;
+        if(!arma::inv(tmp_inv_mat, arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U * p_dat.V_t_less_s.slice(t - 1))){
+          Rcpp::stop("Failed to invert intermediate for K_d matrix");
+        }
+
+        p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * tmp_inv_mat * p_dat.z_dot * diagmat(p_dat.H_diag_inv);
         // Parenthesis is key here to avoid making a n x n matrix for large n
         p_dat.K_d = (p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot * diagmat(p_dat.H_diag_inv) * p_dat.z_dot.t()) * p_dat.K_d;
         p_dat.K_d = p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot * diagmat(p_dat.H_diag_inv) -  p_dat.K_d;
@@ -1271,6 +1275,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
 #if defined(MYDEBUG_M_STEP)
     Q.print("Q");
+    p_data->a_t_t_s.print("a_t_d_s");
 #endif
 
     //if(save_all_output) // TODO: make similar save all output function?
