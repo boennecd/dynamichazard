@@ -1,8 +1,8 @@
 #' Predict function for result of ddhazard
 #' @export
-predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2),
-                                type = c("ZYX", "term"), # TODO: ZYX
-                                method = "delta", tstart = "start", tstop = "stop",
+predict.fahrmeier_94 = function(object, new_data,
+                                type = c("response", "term"),
+                                tstart = "start", tstop = "stop",
                                 use_parallel = F, sds = F, ...)
 {
   if(!object$model %in% c("logit"))
@@ -14,12 +14,53 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2),
   if(type %in% c("term"))
     return(predict_terms(object, new_data, m, sds))
 
+  if(type %in% c("response"))
+    return(predict_response(object, new_data, m, tstart, tstop, use_parallel, sds))
+
+  stop("Type '", type, "' not implemented in predict.fahrmeier_94")
+}
+
+predict_terms <- function(object, new_data, m, sds){
+  # Find the string index maps
+  # We have to format the string to a regexp
+  term_names_org = c("(Intercept)", attr(object$formula,"term.labels"))
+  term_names = stringr::str_replace_all(term_names_org, "(\\W)", "\\\\\\1") # add escape version of charecters
+
+  var_names = colnames(object$a_t_d_s)
+  terms_to_vars = sapply(term_names, function(t_name) which(grepl(t_name, var_names)))
+
+  stopifnot(!duplicated(unlist(terms_to_vars)))
+  stopifnot(length(setdiff(unlist(terms_to_vars), seq_along(var_names))) == 0)
+
+  # Predict terms
+  d <- length(object$times)
+  terms_res = array(NA_real_, dim = c(d, nrow(new_data), length(term_names)), dimnames = list(NULL, NULL, term_names_org))
+
+  sds_res = if(sds) terms_res else NULL
+
+  for(i in seq_along(term_names)){
+    terms_res[, , i] = object$a_t_d_s[ , terms_to_vars[[i]], drop = F] %*%
+      t(m[, terms_to_vars[[i]], drop = F])
+    if(!sds)
+      next
+
+    for(j in seq_len(d))
+      sds_res[j, , i] = sqrt(diag(m[, terms_to_vars[[i]], drop = F] %*%
+                                    object$V_t_d_s[j, terms_to_vars[[i]], terms_to_vars[[i]]] %*%
+                                    t(m[, terms_to_vars[[i]], drop = F])))
+  }
+
+  return(list(terms = terms_res, sds = sds_res))
+}
+
+predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, sds){
   # Check order of random walk
   if(object$order > 1)
     warning("Predict not test with new data for order ", object$order)
 
   # Check if start and stop is provided. If so we need to use these
   # if not, we predict for the sample period
+  d <- length(object$times) - 1
   if(all(c(tstart, tstop) %in% colnames(new_data))){
     message("start and stop times ('", tstart, "' and '", tstop, "' are in data. prediction will match these periods")
 
@@ -27,8 +68,11 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2),
     start = new_data[, tstart]
     stop_ = new_data[, tstop]
   } else{
-    message("start and stop times ('", tstart, "' and '", tstop, "' are not in data. prediction observations will get a row for each bin")
-
+    message("start and stop times ('", tstart, "' and '", tstop, "' are not in data columns. Each row in new_data will get a row for every bin")
+    n_obs <- nrow(m)
+    m <- m[sapply(1:nrow(m), rep.int, times = d), ]
+    start <- rep(object$times[-(d + 1)], n_obs)
+    stop_ <- rep(object$times[-1], n_obs)
   }
 
   if(min(start) < object$times[1])
@@ -41,6 +85,7 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2),
   max_stop = max(stop_)
   max_times = tail(object$times, 1)
 
+  # Check if we have to predict state variables in the future
   if(max_stop > tail(object$times, 1)){
     last_gab = diff(tail(object$times, 2))
     new_times = max_times + last_gab*(1:ceiling((max_stop - max_times) / last_gab))
@@ -55,15 +100,15 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2),
   }
 
   parems = parems[-1, ] # remove first row it is the initial state space vector
-  parems = parems[, 1:(dim(parems)[2] / object$order)] # We only need the current estimates
+  parems = parems[, 1:(dim(parems)[2] / object$order)] # We only need the current estimates (relevant for higher than 1. order)
 
   # Round if needed. Throw error if so
   int_start = findInterval(start, times)
-  if(any(start - times[int_start] > 0) && object$model != "poisson")
+  if(any(start - times[int_start] > 0) && object$model != "exponential")
     warning("Some start times are rounded down")
 
   int_stop_ = findInterval(stop_, times + 1e4 * .Machine$double.eps) # TODO: better way to deal with equality in the stop time?
-  if(any(times[int_stop_] - stop_ > 0) && object$model != "poisson")
+  if(any(times[int_stop_] - stop_ > 0) && object$model != "exponential")
     warning("Some stop times are rounded up")
 
   # Make function to predict for each observations
@@ -111,66 +156,4 @@ predict.fahrmeier_94 = function(object, new_data, level = pnorm(1.96/2),
   }
 
   return(list(fits = fits, istart = times[int_start], istop = times[int_stop_]))
-
-  # TODO: Clean up
-  # if(!object$model %in% c("logit"))
-  #   stop("Functions for model '", object$model, "' is not implemented beyond this point in source code")
-  #
-  # if(nrow(m) > 1)
-  #   stop("Not implemented for more than one observation")
-  #
-  # m = m[1, ]
-  # var_ind = seq_along(m) # ADDED
-  #
-  # fits = t(object$hazard_func(object$a_t_d_s[, var_ind] %*% m)) # changed
-  # if(method == "backtransform"){
-  #   sds = sqrt(apply(object$V_t_d_s, 3, function(V) diag(m %*% V[var_ind, var_ind] %*% m)))
-  #   lbs = t(object$hazard_func(object$a_t_d_s[, var_ind] %*% m - sds * qnorm(level)))
-  #   ubs = t(object$hazard_func(object$a_t_d_s[, var_ind] %*% m + sds * qnorm(level)))
-  # }
-  # else if(method == "delta"){
-  #   first_deriv = apply(object$a_t_d_s[, var_ind], 1, function(b) object$hazard_first_deriv(b, m))
-  #   sds = sapply(seq_len(nrow(object$a_t_d_s)), function(i)
-  #     sqrt(first_deriv[, i] %*% object$V_t_d_s[var_ind, var_ind, i] %*%  first_deriv[, i]))
-  #
-  #   lbs = fits - sds * qnorm(level)
-  #   ubs = fits + sds * qnorm(level)
-  # }
-  # else
-  #   stop("Method not implemented")
-  #
-  # list(fits = fits, lbs = lbs, ubs = ubs, times = object$times)
-}
-
-predict_terms <- function(object, new_data, m, sds){
-  # Find the string index maps
-  # We have to format the string to a regexp
-  term_names_org = c("(Intercept)", attr(object$formula,"term.labels"))
-  term_names = stringr::str_replace_all(term_names_org, "(\\W)", "\\\\\\1") # add escape version of charecters
-
-  var_names = colnames(object$a_t_d_s)
-  terms_to_vars = sapply(term_names, function(t_name) which(grepl(t_name, var_names)))
-
-  stopifnot(!duplicated(unlist(terms_to_vars)))
-  stopifnot(length(setdiff(unlist(terms_to_vars), seq_along(var_names))) == 0)
-
-  # Predict terms
-  d <- length(object$times)
-  terms_res = array(NA_real_, dim = c(d, nrow(new_data), length(term_names)), dimnames = list(NULL, NULL, term_names_org))
-
-  sds_res = if(sds) terms_res else NULL
-
-  for(i in seq_along(term_names)){
-    terms_res[, , i] = object$a_t_d_s[ , terms_to_vars[[i]], drop = F] %*%
-      t(m[, terms_to_vars[[i]], drop = F])
-    if(!sds)
-      next
-
-    for(j in seq_len(d))
-      sds_res[j, , i] = sqrt(diag(m[, terms_to_vars[[i]], drop = F] %*%
-                                    object$V_t_d_s[j, terms_to_vars[[i]], terms_to_vars[[i]]] %*%
-                                    t(m[, terms_to_vars[[i]], drop = F])))
-  }
-
-  return(list(terms = terms_res, sds = sds_res))
 }

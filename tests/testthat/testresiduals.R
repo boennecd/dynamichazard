@@ -45,8 +45,8 @@ test_that("State space error gives previous result with logit model", {
 
 # PBC dataset described in Fleming & Harrington (1991)
 library(timereg)
-data(pbc)
-head(pbc)
+# data(pbc)
+# head(pbc)
 # status at endpoint, 0/1/2 for censored, transplant, dead
 
 # pbc <- pbc[complete.cases(pbc[, c("time", "status", "age", "edema", "bili", "protime")]), ]

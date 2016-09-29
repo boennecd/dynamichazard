@@ -1,7 +1,7 @@
 # library(testthat); library(survival); library(parallel); source("R/test_utils.R")
 
 result = ddhazard(
-  formula = Surv(start, stop, event) ~ group,
+  formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,
   a_0 = rep(0, 2), Q_0 = diag(.1, 2),
@@ -78,7 +78,7 @@ test_that("Terms prediction when parsing two observations",{
 
 # Check for second order
 result = ddhazard(
-  formula = Surv(start, stop, event) ~ group,
+  formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,
   a_0 = rep(0, 2 * 2), Q_0 = diag(10, 2 * 2),
@@ -95,9 +95,9 @@ test_that("Calls with second order models do not throw errors", {
                 use_parallel = .(use_parallel))))
 })
 
-dum <- structure(list(model = "poisson"), "class" = class(result))
+dum <- structure(list(model = "exponential"), "class" = class(result))
 
-test_that("predict functions throws error when model is poisson",{
+test_that("predict functions throws error when model is exponential",{
   expect_error(predict(dum))
 })
 
