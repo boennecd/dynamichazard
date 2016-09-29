@@ -174,7 +174,7 @@ n_cases
 ```
 
 ### Issues with varying results
-The last issue I will stress is that results differ if you fit the model twice. This is illustrated below:
+The last issue I will stress is that the results differ if you fit the model twice. This is illustrated below:
 
 ```{r}
 set.seed(1992)
@@ -203,5 +203,5 @@ You run the code yourself by installing this version of the package by calling:
 
 ```{r , eval=FALSE}
 devtools::install_github(
-  "boennecd/dynamichazard@4ef968eac5706df99fc31941747ccd3e1c10e1a8")
+  "boennecd/dynamichazard@41f6631e73351263b92a61f1f63a6d7c32005ad3")
 ```

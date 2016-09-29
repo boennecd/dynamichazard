@@ -103,6 +103,23 @@ test_that("predict functions throws error when model is poisson",{
 
 warning("Implement test for second order random walk and predict")
 
+# PBC dataset described in Fleming & Harrington (1991)
+library(timereg)
+data(pbc)
+head(pbc)
+# status at endpoint, 0/1/2 for censored, transplant, dead
+
+pbc <- pbc[complete.cases(pbc[, c("time", "status", "age", "edema", "bili", "protime")]), ]
+max(pbc$time[pbc$status == 2])
+fit <- ddhazard(
+  formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~ splines::ns(log(bili),df = 4),
+  data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
+  Q = diag(rep(1e-2, 5)), max_T = 3600, est_Q_0 = F,
+  verbose = F, save_risk_set = T)
+
+predict(fit, new_data = pbc[1:5, ], type = "term")
+
+
 ######
 # Exponential model
 test_that("Test exponential model", expect_true(FALSE))
