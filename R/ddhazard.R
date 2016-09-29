@@ -94,12 +94,12 @@ ddhazard = function(formula, data, by,
     }
     n_events <- n_events[order(as.integer(names(n_events)))]
 
-    # Insert in to table to print and prinnt
+    # Insert in to table to print and print
     tmp_tbl[, "Num events"] <- n_events
     tmp_tbl[, "Risk size"] <- unlist(lapply(risk_set$risk_sets, length))
 
     message("Total number of included events are ", sum(tmp_tbl[, 2]), " of ", tmp_n_failures)
-    message("Size of risk set and number of events in each risk set are:")
+    message("Size of risk set and number of events in each risk set are ([Risk set size]:[# events]):")
 
     tmp_tbl[, 1] <- sprintf("%8s", tmp_tbl[, 1])
     tmp_tbl[, 2] <- sprintf("%-8s", tmp_tbl[, 2])
