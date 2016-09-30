@@ -6,7 +6,7 @@
 there are not duplicate rows but weights instead}
 \usage{
 get_survival_case_Weigths_and_data(formula, data, by, max_T, id, init_weights,
-  risk_obj)
+  risk_obj, is_for_discrete_model = T)
 }
 \description{
 Function used to get design matrix and weigths for a static fit where

@@ -4,9 +4,8 @@
 \alias{predict.fahrmeier_94}
 \title{Predict function for result of ddhazard}
 \usage{
-\method{predict}{fahrmeier_94}(object, new_data, level = pnorm(1.96/2),
-  type = "not_term", method = "delta", tstart = "start", tstop = "stop",
-  use_parallel = F, sds = F, ...)
+\method{predict}{fahrmeier_94}(object, new_data, type = c("response", "term"),
+  tstart = "start", tstop = "stop", use_parallel = F, sds = F, ...)
 }
 \description{
 Predict function for result of ddhazard

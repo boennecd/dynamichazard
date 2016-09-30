@@ -11,15 +11,13 @@ residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_err
   }
 
   if(type == "pearson" || type == "raw"){
-    return(obs_res())
+    return(obs_res(object, data_, type))
   }
 
   stop("Method '", type, "' not implemented for residuals method")
 }
 
 space_errors <- function(object, data_, standardize){
-  warning("Std state space error is not tested")
-
   if(!object$method %in% c("EKF"))
     stop("Functions for with method '", object$method, "' is not implemented")
 
@@ -43,45 +41,43 @@ space_errors <- function(object, data_, standardize){
                    "class" = "fahrmeier_94_SpaceErrors"))
 }
 
-obs_res <- function(...){
-  # if(missing(data_) || is.na(object$risk_set))
-  #   stop("Missing risk set or data")
-  #
-  # # Wee need these to check if there is an event in the bin
-  # new_stop = object$risk_set$stop_new
-  # new_event = object$risk_set$new_events_flags
-  # res = list()
-  #
-  # for(i in seq_along(object$risk_set$risk_sets)){
-  #   start_ = object$times[i]
-  #   stop_ = object$times[i + 1]
-  #   r_set = object$risk_set[[1]][[i]]
-  #
-  #   tmp_dat = data_[r_set, ]
-  #   tmp_dat$tstart = rep(start_, length(r_set))
-  #   tmp_dat$tstop = rep(stop_, length(r_set))
-  #   p_est = predict(object, tmp_dat, tstart = "tstart", tstop = "tstop")$fits
-  #
-  #   Y = (new_stop[r_set] == stop_) * new_event[r_set]
-  #
-  #   if(type == "Raw"){
-  #     res[[i]] = cbind(Raw_res = Y - p_est,
-  #                      p_est = p_est,
-  #                      Y = Y,
-  #                      row_num = r_set)
-  #     next
-  #   }
-  #
-  #   res[[i]] = cbind(Pearson_res = (Y - p_est)/sqrt(p_est * (1 - p_est)),
-  #                    p_est = p_est,
-  #                    Y = Y,
-  #                    row_num = r_set)
-  # }
-  #
-  # if(type == "Raw")
-  #   return(structure(res,
-  #                    "class" = "fahrmeier_94_Raw_res"))
-  #
-  # return(structure(res,
-  #                  "class" = "fahrmeier_94_Pearson"))
+obs_res <- function(object, data_, type){
+  warning("Implement observation residuals")
+  if(missing(data_) || is.na(object$risk_set))
+    stop("Missing risk set or data to compute residuals")
+
+  # Wee need these to check if there is an event in the bin
+  new_stop = object$risk_set$stop_new
+  new_event = object$risk_set$new_events_flags
+  res = list()
+
+  for(i in seq_along(object$risk_set$risk_sets)){
+    start_ = object$times[i]
+    stop_ = object$times[i + 1]
+    r_set = object$risk_set[[1]][[i]]
+
+    tmp_dat = data_[r_set, ]
+    tmp_dat$tstart = rep(start_, length(r_set))
+    tmp_dat$tstop = rep(stop_, length(r_set))
+
+    suppressMessages(p_est <- predict(object, tmp_dat, type = "response", tstart = "tstart", tstop = "tstop")$fits)
+
+    Y = object$risk_set$is_event_in[r_set] == (i - 1)
+
+    if(type == "raw"){
+      res[[i]] = cbind(residuals = Y - p_est,
+                       p_est = p_est,
+                       Y = Y,
+                       row_num = r_set)
+      next
+    }
+
+    res[[i]] = cbind(residuals = (Y - p_est)/sqrt(p_est * (1 - p_est)),
+                     p_est = p_est,
+                     Y = Y,
+                     row_num = r_set)
+  }
+
+  return(structure(list(
+    residuals = res, type = type), "class" = "fahrmeier_94_res"))
 }

@@ -6,7 +6,7 @@
 as the right hand site of forumla}
 \usage{
 static_glm(formula, data, by, max_T, id, family = "binomial", model = F,
-  weights, risk_obj, ...)
+  weights, risk_obj = NULL, ...)
 }
 \description{
 Function to make a static glm fit from a input with a \code{Surv} object
