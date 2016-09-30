@@ -1,0 +1,171 @@
+---
+title: "PBC data"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+options(digist = 4)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fit
+```{r fit}
+library(timereg)
+library(dynamichazard)
+# status at endpoint, 0/1/2 for censored, transplant, dead
+
+pbc <- pbc[, c("id", "time", "status", "age", "edema", "bili", "protime")]
+pbc <- pbc[complete.cases(pbc), ]
+
+max(pbc$time[pbc$status == 2]) # Last person to die in data set
+max(pbc$time[pbc$status != 2]) # Last control in data set
+summary(pbc) # bili and protime are skewed
+
+tmp <- xtabs(~ I(status == 2) + cut(time, breaks = c(seq(0, 3600, 400), Inf)), pbc)
+tmp["FALSE", ] <- rev(cumsum(rev(tmp["FALSE", ] + c(tmp["TRUE", -1], 0))))
+tmp # Number of controls is "FALSE" and number of cases is "TRUE". Columns are 
+    # The time bins
+
+# Fit the first order random walk model with a the Extended Kalman filter
+fit <- ddhazard(
+  formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~
+    age + edema + log(bili) + log(protime),
+  data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
+  Q = diag(rep(1e-2, 5)), max_T = 3600, est_Q_0 = F,
+  verbose = F, save_risk_set = T)
+```
+
+## Covariate plots
+```{r cov_Plot}
+# Plot each of the parameter estimates
+for(i in 1:ncol(fit$a_t_d_s))
+  plot(fit, cov_index = i, type = "cov")
+```
+
+## Pearson residuals
+
+```{r Pearson_residuals}
+# Compute Pearson residuals
+pearson_res <- residuals(object = fit, type = "pearson", data_ = pbc)
+
+# returns a list with Pearson residual for every observation in each bin
+class(pearson_res$residuals)     # It is a list
+length(pearson_res$residuals)    # The number of bins
+head(pearson_res$residuals[[2]]) # Number of observations in second bin
+
+# We can sum the Pearson residual for every observation
+# Question: I figure this may be a good idea?
+ids <- unique(pbc$id) # Find unique ids (Not needed in this as co-variates do
+                      # not change)
+
+# Make matrix to map rows to ids. A sparse matrix from the matrix package would
+# be better. Though, it does not matter for this small data set
+id_to_row_map <- t(sapply(ids, function(id) pbc$id == id))
+
+accumulated_res <- rep(0.0, nrow(id_to_row_map)) # Vector for accum residuals
+dum <- rep(0.0, ncol(id_to_row_map)) # Intermediate vector to hold residuals
+for(set in pearson_res$residuals){
+  dum[] <- 0.0
+  dum[set[, "row_num"]] <- set[, "residuals"]
+  accumulated_res <- accumulated_res + c(id_to_row_map %*% dum)
+}
+
+# Dummy plot
+plot(c(1, length(ids)), range(accumulated_res) + c(-1, 1), type = "n",
+     xaxt = "n", xlab = "", ylab = "Cummulated Pearson residuals")
+
+# Find the absolut largest observations
+tmp <- -sort(-1 * abs(accumulated_res), partial = 10)[10]
+is_large <- abs(accumulated_res) >= tmp
+labs <- ifelse(is_large, ids, ".") # create special labels for the n largest
+text(seq_along(ids), accumulated_res, label = labs) # add labels
+```
+
+```{r pearson_res_cont}
+tmp <- sapply(pearson_res$residuals, function(x) x[x[, "row_num"] == 56, ])
+do.call(rbind, (tmp[sapply(tmp, length) > 0]))
+
+# Look at the rows with the largest accumulated residuals
+pbc[pbc$id %in% ids[is_large], ]
+
+# Find the predicted terms for one of the observations
+large_ex <- pbc[pbc$id %in% ids[which(is_large)[1]], ]
+large_ex
+
+# Predict the terms for the linear predictor for each of the co-variates in 
+# each bin
+predict(fit, new_data = large_ex, type = "term")$terms[, 1, ]
+
+# Can the explanation be a low protime score?
+aggregate(pbc$protime, list(pbc$status == 2), function(x) 
+  c(mean = mean(x), median = median(x)))
+
+# Can the explanation be a low bili score?
+aggregate(pbc$bili, list(pbc$status == 2), function(x) 
+  c(mean = mean(x), median = median(x)))
+```
+
+## State space errors
+```{r space_errors}
+# Compute standardized state-space errors. A smoothed co-variance matrix
+# is used to standardize the space errors. It matrix is similar to the matrix
+# in "Property P6.3: The Lag-One Covariance Smoother" of: 
+# Shumway, Robert H., and David S. Stoffer. Time series analysis and its 
+# applications: with R examples. Springer Science & Business Media, 2010.
+# The version here uses the linearised approximation though
+std_errors <- residuals(fit, "std_space_error")
+plot(std_errors, fit)
+
+# Unstandarized residuals are also available
+errors <- residuals(fit, "space_error")
+str(errors)
+
+# The element "Covariances" contains the smoothed co-variance matrix
+```
+
+## Second order model
+```{r second_order}
+# Fit the second order random walk model with a the Extended Kalman filter
+fit <- ddhazard(
+  formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~
+    age + edema + log(bili) + log(protime),
+  data = pbc, 
+  Q_0 = diag(c(rep(1e2, 5), rep(1, 5))), # Changed 
+  by = 400, # increased
+  Q = diag(c(rep(1e-3, 5), rep(0, 5))), # Changed
+  max_T = 3200, # decreased
+  est_Q_0 = F,
+  verbose = F, save_risk_set = T,
+  eps = 1e-2, order_ = 2) # Added
+```
+
+```{r cov_Plot_second_order}
+# Plot each of the parameter estimates
+for(i in 1:(ncol(fit$a_t_d_s)/2))
+  plot(fit, cov_index = i, type = "cov")
+
+# It is very sensive to starting values. For instance, it seems to divergece with these values:
+try({
+  fit <- ddhazard(
+  formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~
+    age + edema + log(bili) + log(protime),
+  data = pbc, 
+  Q_0 = diag(c(rep(1e2, 5), rep(1, 5))), # Changed 
+  by = 100, # Re-set
+  Q = diag(c(rep(1e-3, 5), rep(0, 5))), # Changed
+  max_T = 3600, # Re-set
+  est_Q_0 = F,
+  verbose = F, save_risk_set = T,
+  eps = 1e-2, order_ = 2) # Added
+})
+
+# Note: I start the re-cursion with a_(0|0) = a_0 and V_(0|0) = Q_0. This is
+# not what they do in this article here https://hal.archives-ouvertes.fr/hal-00912475/document
+# Here they start with a_(0|-1) = a_0 and V_(0|-1) = Q_0 (it seems). This is 
+# contrary to both what Farhmier writes in:
+#  - Dynamic modelling and penalized likelihood estimation for discrete time survival data
+#
+# and what they write in 4.3.3 in:
+# Durbin, James; Koopman, Siem Jan. Time Series Analysis by State Space Methods: 
+# Second Edition   (Oxford Statistical Science Series) (p. 85). Oxford University Press. Kindle Edition. 
+```

@@ -1,13 +1,13 @@
 #' Plots to illustrate the estimate state space variables from a ddhazardfit
 #' @export
 plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
-                             ylab = "Hazard", method = "delta",
-                             type, plot_type = "l", cov_index, ylim,
+                             ylab = "Hazard",
+                             type = "cov", plot_type = "l", cov_index, ylim,
                              col = "black", add = F, ...){
   if(!object$model %in% c("logit"))
     stop("Functions for model '", object$model, "' is not implemented")
 
-  if(!missing(type) && type == "cov"){
+  if(type == "cov"){
     if(missing(cov_index))
       stop("Need cov index when type is equal to ", type)
 
@@ -34,25 +34,20 @@ plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
     return(invisible())
   }
 
-  predict_ = predict.fahrmeier_94(object, new_data, method = method)
-  hazard = predict_$fits / c(1, diff(object$times))
-
-  plot(predict_$times, hazard, xlab = xlab, ylab = ylab, type = plot_type, ...)
-  lines(predict_$times, predict_$lbs, lty = 2)
-  lines(predict_$times, predict_$ubs, lty = 2)
+  stop("Type '", type, "' is not implemented for plot.fahrmeier_94")
 }
 
 #' Plot function for standadized statespace errors from ddhazardfit
 #' @export
-plot.fahrmeier_94_stdSpaceErrors = function(object, mod, vars_ = NA, t_index = NA,
-                                            p_cex = par()$cex * .2, pch = 16,
-                                            ylab = "Std. state space error",
-                                            x_tick_loc = NA, x_tick_mark = NA,
-                                            xlab = "Time", ...){
+plot.fahrmeier_94_SpaceErrors = function(object, mod, vars_ = NA, t_index = NA,
+                                         p_cex = par()$cex * .2, pch = 16,
+                                         ylab = "Std. state space error",
+                                         x_tick_loc = NA, x_tick_mark = NA,
+                                         xlab = "Time", ...){
   bin_times = mod$times[-1]
 
   var_index = if(length(t_index) == 1 && is.na(vars_)) seq_len(ncol(mod$a_t_d_s)) else vars_
-  res_std = object[, var_index, drop = F]
+  res_std = object$residuals[, var_index, drop = F]
   n_vars = length(var_index)
 
   # assume equal distance

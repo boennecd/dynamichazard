@@ -4,8 +4,8 @@
 \alias{residuals.fahrmeier_94}
 \title{Residuals function for result of ddhazard fit}
 \usage{
-\method{residuals}{fahrmeier_94}(object, type = c("stdSpaceErrors",
-  "Pearson"), data_)
+\method{residuals}{fahrmeier_94}(object, type = c("std_space_error",
+  "space_error", "pearson", "raw"), data_)
 }
 \description{
 Residuals function for result of ddhazard fit

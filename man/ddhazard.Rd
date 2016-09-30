@@ -7,7 +7,8 @@
 ddhazard(formula, data, by, a_0, Q_0, id, Q = Q_0, n_max = 10^2,
   eps = 10^-3, save_all_output = F, max_T, save_risk_set = F,
   order_ = 1, est_Q_0 = T, verbose = F, method = "EKF",
-  model = "logit", M_step_formulation = "Fahrmier94", kappa = NULL)
+  model = "logit", M_step_formulation = "Fahrmier94", kappa = NULL,
+  alpha = NULL, beta = NULL)
 }
 \description{
 Function to fit dynamic discrete hazard model
