@@ -129,7 +129,8 @@ ddhazard = function(formula, data, by,
                                    est_Q_0 = est_Q_0, method = method,
                                    model = model,
                                    kappa = control$kappa, alpha = control$alpha, beta = control$beta,
-                                   NR_eps = control$NR_eps)
+                                   NR_eps = control$NR_eps,
+                                   LR = control$LR)
 
   # Set names
   tmp_names = rep(colnames(X_Y$X), order_)
