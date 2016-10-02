@@ -212,6 +212,10 @@ public:
   std::mutex m_U;
 
   const int n_in_last_set;
+  const bool is_mult_NR;
+  const double NR_eps;
+  const unsigned int NR_it_max;
+  const double LR;
 
   // Vector for score and information matrix
   arma::colvec u;
@@ -229,14 +233,21 @@ public:
                    arma::mat &Q_,
                    const Rcpp::List &risk_obj,
                    const arma::mat &F__,
+                   Rcpp::Nullable<Rcpp::NumericVector> NR_eps_,
+                   Rcpp::Nullable<Rcpp::NumericVector> LR_,
                    const int n_max = 100, const double eps = 0.001,
                    const bool verbose = false, const bool save_all_output = false,
                    const int order_ = 1, const bool est_Q_0 = true,
-                   const bool is_cont_time = false):
+                   const bool is_cont_time = false,
+                   const unsigned int NR_it_max_ = 100):
     problem_data(X, tstart_, tstop_, is_event_in_bin_, a_0,
                  Q_0, Q_, risk_obj, F__, n_max, eps, verbose, save_all_output,
                  order_, est_Q_0),
-                 n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size())
+                 n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
+    is_mult_NR(NR_eps_.isNotNull()),
+    NR_eps(is_mult_NR ? Rcpp::as< Rcpp::NumericVector >(NR_eps_)[0] : 0.0),
+    NR_it_max(NR_it_max_),
+    LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0)
   {
     u = arma::colvec(n_parems * order_);
     U = arma::mat(n_parems * order_, n_parems * order_);
@@ -528,7 +539,7 @@ public:
                             const bool &compute_H_and_z,
                             const int &bin_number,
                             const double &bin_tstart, const double &bin_tstop){
-    // Set referenced objects entries to zero
+    // Set entries to zero
     p_data.U.zeros();
     p_data.u.zeros();
     if(compute_H_and_z){
@@ -604,52 +615,64 @@ public:
       // E-step: scoring step: information matrix and scoring vector
       // Shuffle is used to break any non-arbitrary order
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
-      const arma::vec i_a_t(p_dat.a_t_less_s.colptr(t - 1), p_dat.n_parems, false);
+      arma::vec i_a_t = p_dat.a_t_less_s.col(t - 1);
+      arma::mat V_t_less_s_inv;
+      unsigned int n_NR_it = 0;
+
+      while(true){
+        ++n_NR_it;
 
 #if defined(USE_OPEN_BLAS)
-      openblas_set_num_threads(1);
-      //Rcpp::Rcout << "n thread before = " << openblas_get_num_threads() << std::endl;
+        openblas_set_num_threads(1);
 #endif
-
-      filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t, t == p_dat.d, t - 1,
-                                         bin_tstart, bin_tstop);
+        filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t.head(p_dat.n_parems), t == p_dat.d, t - 1,
+                                           bin_tstart, bin_tstop);
 
 #if defined(MYDEBUG_EKF)
-      Rcpp::Rcout << "t = " << t << std::endl;
-      Rcpp::Rcout << std::fixed;
-      p_dat.U.print("U:");
-      Rcpp::Rcout << std::fixed;
-      p_dat.u.print("u:");
+        Rcpp::Rcout << "t = " << t << std::endl;
+        Rcpp::Rcout << std::fixed;
+        p_dat.U.print("U:");
+        Rcpp::Rcout << std::fixed;
+        p_dat.u.print("u:");
 #endif
 
 #ifdef USE_OPEN_BLAS
-      openblas_set_num_threads(p_dat.n_threads);
-      //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
+        openblas_set_num_threads(p_dat.n_threads);
 #endif
 
-      // E-step: scoring step: update values
-      arma::mat V_t_less_s_inv;
-      if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
-        Rcpp::warning("V_(t|t-1) seemd non positive definit. Using general inverse instead");
-        V_t_less_s_inv = arma::inv(p_dat.V_t_less_s.slice(t - 1));
+        // E-step: scoring step: update values
+        if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
+          Rcpp::warning("V_(t|t-1) seemd non positive definit. Using general inverse instead");
+          V_t_less_s_inv = arma::inv(p_dat.V_t_less_s.slice(t - 1));
+        }
+
+        if(!arma::inv_sympd(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
+          Rcpp::warning("V_(t|t) seemd non positive definit. Using general inverse instead");
+          p_dat.V_t_t_s.slice(t) = arma::inv(V_t_less_s_inv + p_dat.U);
+        }
+
+        p_dat.a_t_t_s.col(t) = i_a_t + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
+
+        if(!p_dat.is_mult_NR || arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) < p_dat.NR_eps)
+          break;
+
+        if(n_NR_it > p_dat.NR_it_max)
+          Rcpp::stop("Failed to convergece in NR method of filter step within " + std::to_string(p_dat.NR_it_max) + " iterations");
+
+#if defined(MYDEBUG_EKF)
+        Rcpp::Rcout << "Did not converge in filter step in iteration " << n_NR_it << ". Convergence criteria value is  "
+                    << arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) << std::endl;
+#endif
+
+        i_a_t = p_dat.a_t_t_s.col(t);
       }
 
-      if(!arma::inv_sympd(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
-        Rcpp::warning("V_(t|t) seemd non positive definit. Using general inverse instead");
-        p_dat.V_t_t_s.slice(t) = arma::inv(V_t_less_s_inv + p_dat.U);
-      }
-
-      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.V_t_t_s.slice(t) * p_dat.u;
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
 
 #if defined(MYDEBUG_EKF)
       std::stringstream str;
       str << t << "|" << t;
-      Rcpp::Rcout << std::fixed;
       p_dat.a_t_t_s.col(t).print("a_(" + str.str() + ")");
-
-      Rcpp::Rcout.setf(std::ios_base::fixed, std::ios_base::floatfield);
-      Rcpp::Rcout.precision(6);
 
       Rcpp::Rcout << "V_(" + str.str() + ")\n" << std::fixed << p_dat.V_t_t_s.slice(t) <<  std::endl;
 #endif
@@ -1104,6 +1127,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
                                    Rcpp::Nullable<Rcpp::NumericVector> alpha = R_NilValue,
                                    Rcpp::Nullable<Rcpp::NumericVector> beta = R_NilValue,
+                                   Rcpp::Nullable<Rcpp::NumericVector> NR_eps = R_NilValue,
+                                   Rcpp::Nullable<Rcpp::NumericVector> LR = R_NilValue,
                                    const std::string model = "logit",
                                    const std::string M_step_formulation = "Fahrmier94"){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
@@ -1139,7 +1164,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     p_data = new problem_data_EKF(
       X, tstart, tstop, is_event_in_bin,
       a_0, Q_0, Q,
-      risk_obj, F_,
+      risk_obj, F_, NR_eps, LR,
       n_max, eps, verbose, save_all_output,
       order_, est_Q_0, model == "exponential");
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);

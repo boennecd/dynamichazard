@@ -332,6 +332,34 @@ test_that("Unmacthed control variable throw error",
               control = list("None_existing_parem" = 1)
             )}, regexp = "These control parameters are not recognized"))
 
+
+
+
+# set.seed(seed <- round(runif(1, max = 1e5)))
+# sims <- test_sim_func_exp(n_series = 1e4, n_vars = 10, t_0 = 0, t_max = 10,
+#                           x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+#                           intercept_start = -5, sds = c(.1, rep(1, 10)))
+#
+# result_exp = ddhazard(
+#   formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+#   data = sims$res,
+#   by = (by_ <- 1),
+#   n_max = 10^4, eps = 10^-2,
+#   a_0 = rep(0, 11),
+#   Q_0 = diag(100, 11),
+#   Q = diag(1e-3, 11),
+#   est_Q_0 = F,
+#   max_T = 10,
+#   id = sims$res$id, order_ = 1,
+#   verbose = 5,
+#   control = list(NR_eps = 1e-4),
+#   model = "exponential"
+# )
+#
+# sum(sims$res$event)
+# matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
+# matplot(result_exp$times, result_exp$a_t_d_s, result_exp$a_t_d_s, type = "l", lty = 2, add = T)
+
 # for(i in 1:100){
 #   n_vars <- 10
 #   sims <- test_sim_func_exp(n_series = 1e4, n_vars = n_vars, t_0 = 0, t_max = 10,
