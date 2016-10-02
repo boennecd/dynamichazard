@@ -349,19 +349,23 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      const double i_eta = trunc_exp_functor(arma::dot(i_a_t, x_));
+      const double exp_eta = exp(arma::dot(i_a_t, x_));
 
-      if(dat.is_event_in_bin(*it) == bin_number){
-        u_ += x_ * (1.0 - i_eta / (i_eta + 1.0));
-      }
-      else {
-        u_ -= x_ * (i_eta / (i_eta + 1.0));
-      }
-      U_ += x_ *  (x_.t() * (i_eta / pow(i_eta + 1.0, 2.0))); // I guess this is the fastest http://stackoverflow.com/questions/26766831/armadillo-inplace-plus-significantly-slower-than-normal-plus-operation
+      // Can be issue here with overflow in denominator
+      // Set exp(-eta) = v such that we are computing v^-1 / (1 + v^-1)^2
+      // A Taylor series expansion is than
+      //   v - 2 v^2 + 3 v^3 approx v for v small
+      double tmp_denom = pow(1.0 + exp_eta, 2.0);
+      const double var = std::isinf(tmp_denom) ?
+        pow(exp_eta, -1) : (exp_eta / pow(exp_eta + 1.0, 2.0));
+
+
+      u_ += x_ * ((dat.is_event_in_bin(*it) == bin_number) - exp_eta / (1.0 + exp_eta));
+      U_ += x_ *  (x_.t() * var);
 
       if(compute_z_and_H){
-        dat.H_diag_inv(i) = pow(1.0 + i_eta, 2.0) / i_eta;
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  (i_eta / pow(1.0 + i_eta, 2.0));
+        dat.H_diag_inv(i) = pow(var, -1);
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  var;
         ++i;
       }
     }
@@ -379,7 +383,6 @@ class EKF_helper{
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
-      //TODO: simplify computations here
       // Compute intermediates
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
       const double eta = arma::dot(i_a_t, x_);

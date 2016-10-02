@@ -14,7 +14,7 @@ ddhazard = function(formula, data, by,
                     method = "EKF",
                     model = "logit",
                     M_step_formulation = "Fahrmier94",
-                    kappa = NULL, alpha = NULL, beta = NULL){
+                    control = list()){
   X_Y = get_design_matrix(formula, data)
   n_parems = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
@@ -50,6 +50,14 @@ ddhazard = function(formula, data, by,
     is_for_discrete_model <- FALSE
   } else
     stop("Model '", model, "' is not implemented")
+
+  control_default <- list(kappa = NULL, alpha = NULL, beta = NULL)
+  if(any(is.na(control_match <- match(names(control), names(control_default)))))
+    stop("These control parameters are not recognized: ",
+         paste0(names(control)[is.na(control_match)], collapse = "\t"))
+
+  control_default[control_match] <- control
+  control <- control_default
 
   if(verbose)
     message("Finding Risk set")
@@ -119,7 +127,7 @@ ddhazard = function(formula, data, by,
                                    order_ = order_,
                                    est_Q_0 = est_Q_0, method = method,
                                    model = model,
-                                   kappa = kappa, alpha = alpha, beta = beta)
+                                   kappa = control$kappa, alpha = control$alpha, beta = control$beta)
 
   # Set names
   tmp_names = rep(colnames(X_Y$X), order_)

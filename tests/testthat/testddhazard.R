@@ -318,7 +318,19 @@ test_that("Result of exponential model on simulated data match previous results"
 })
 
 
-
+test_that("Unmacthed control variable throw error",
+          expect_error({
+            result = ddhazard(
+              formula = survival::Surv(start, stop, event) ~ group,
+              data = head_neck_cancer,
+              by = 1, # Use by month intervals
+              n_max = 10^4, eps = 10^-4,
+              a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
+              est_Q_0 = T,
+              max_T = 45,
+              id = head_neck_cancer$id, order_ = 1,
+              control = list("None_existing_parem" = 1)
+            )}, regexp = "These control parameters are not recognized"))
 
 # for(i in 1:100){
 #   n_vars <- 10
