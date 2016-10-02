@@ -51,7 +51,8 @@ ddhazard = function(formula, data, by,
   } else
     stop("Model '", model, "' is not implemented")
 
-  control_default <- list(kappa = NULL, alpha = NULL, beta = NULL)
+  control_default <- list(kappa = NULL, alpha = NULL, beta = NULL,
+                          NR_eps = NULL, LR = NULL)
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
          paste0(names(control)[is.na(control_match)], collapse = "\t"))
@@ -127,7 +128,8 @@ ddhazard = function(formula, data, by,
                                    order_ = order_,
                                    est_Q_0 = est_Q_0, method = method,
                                    model = model,
-                                   kappa = control$kappa, alpha = control$alpha, beta = control$beta)
+                                   kappa = control$kappa, alpha = control$alpha, beta = control$beta,
+                                   NR_eps = control$NR_eps)
 
   # Set names
   tmp_names = rep(colnames(X_Y$X), order_)
