@@ -10,6 +10,7 @@
 #' @parem Q Initial covariance matrix \eqn{\mathbf{Q}} for the state equation
 #' @parem order_ Order of the random walk
 #' @parem control list of control variables
+#' @export
 ddhazard = function(formula, data,
                     model = "logit",
                     by, max_T, id,
@@ -77,8 +78,11 @@ ddhazard = function(formula, data,
     rm(tmp_mod)
 
   } else if (missing(a_0)){
-    message("a_0 not supplied. Initial value set to a zero vector")
-    a_0 = rep(0, order_ * n_parems)
+    message("a_0 not supplied. One iteration IWLS of static logit model is used")
+    tmp_mod = static_glm(form = formula, data = data, max_T = max_T,
+                         control = glm.control(epsilon = Inf), family = "exponential")
+    a_0 = rep(tmp_mod$coefficients, order_)
+    rm(tmp_mod)
   }
 
   if(ncol(F_) != n_parems * order_ ||
