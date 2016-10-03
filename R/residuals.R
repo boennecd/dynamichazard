@@ -1,14 +1,14 @@
 #' Residuals function for result of ddhazard fit
 #' @export
 residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data_){
-  if(!object$model %in% c("logit"))
-    stop("Functions for model '",  object$model, "' is not implemented")
-
   type = type[1]
 
   if(type %in% c("std_space_error", "space_error")){
     return(space_errors(object, data_, type == "std_space_error"))
   }
+
+  if(!object$model %in% c("logit", "exponential"))
+    stop("Functions for model '",  object$model, "' is not implemented")
 
   if(type == "pearson" || type == "raw"){
     return(obs_res(object, data_, type))
@@ -42,7 +42,6 @@ space_errors <- function(object, data_, standardize){
 }
 
 obs_res <- function(object, data_, type){
-  warning("Implement observation residuals")
   if(missing(data_) || is.na(object$risk_set))
     stop("Missing risk set or data to compute residuals")
 

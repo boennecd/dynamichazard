@@ -613,7 +613,6 @@ public:
       p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
       // E-step: scoring step: information matrix and scoring vector
-      // Shuffle is used to break any non-arbitrary order
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
       arma::vec i_a_t = p_dat.a_t_less_s.col(t - 1);
       arma::mat V_t_less_s_inv;

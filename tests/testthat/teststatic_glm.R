@@ -26,10 +26,6 @@ test_that("Static glm yields expected number of events, correct rows and same re
   expect_equal(res_own_risk_obj$coefficients, res$coefficients)
 })
 
-test_that("Implement static glm for Poisson",{
-  expect_true(FALSE)
-})
-
 # matplot(sims$betas, type = "l", ylim = range(sims$betas, res$coefficients),
 #         col = 1:4)
 # sum(sims$res$event)

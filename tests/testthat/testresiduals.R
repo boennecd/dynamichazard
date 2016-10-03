@@ -1,11 +1,13 @@
 ###############
 # Simple test that methods calls succeds
-result = ddhazard(
+arg_list <- list(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1, max_T = 40,
   a_0 = rep(0, 2), Q_0 = diag(10, 2),
   Q = diag(1e-2, 2))
+
+result = do.call(ddhazard, arg_list)
 
 test_that("Calls to residuals should succed",{
   expect_no_error(residuals(result, "std_space_error"))
@@ -14,14 +16,21 @@ test_that("Calls to residuals should succed",{
   expect_no_error(residuals(result, type = "raw", data_ = head_neck_cancer))
 })
 
-dum <- structure(list(model = "exponential"), "class" = class(result))
-test_that("residuals functions throws error when model is exponential",{
-  expect_error(predict(dum))
-})
+arg_list$control <- list(method = "UKF")
+result = do.call(ddhazard, arg_list)
 
+test_that("residuals functions throws error for some types when method is UKF",{
+  expect_error(residuals(result, "std_space_error"))
+  expect_error(residuals(result, "space_error"))
+  expect_no_error(residuals(result, type = "pearson", data_ = head_neck_cancer))
+  expect_no_error(residuals(result, type = "raw", data_ = head_neck_cancer))
+})
 
 ########
 # Test state space errors
+
+arg_list$control <- list(method = "EKF")
+result = do.call(ddhazard, arg_list)
 
 test_that("State space error gives previous result with logit model", {
   std_res <- residuals(result, "std_space_error")
@@ -90,6 +99,25 @@ test_that("Cases in residuals match cases in data", {
 
     expect_equal(is_case_residuals, is_case + 0)
 })
+
+
+##################
+# Exponential model
+fit <- ddhazard(
+  formula = survival::Surv(tstart, tstop, status == 2) ~
+    age + log(bili) + log(protime),
+  data = pbc2, Q_0 = diag(rep(1e3, 4)), by = 100,
+  Q = diag(rep(1e-2, 4)), max_T = 3600,
+  model = "exponential", control = list(est_Q_0 = F, LR = .4))
+
+test_that("Calls to residuals should succed",{
+  expect_no_error(residuals(fit, "std_space_error"))
+  expect_no_error(residuals(fit, "space_error"))
+  expect_no_error(residuals(fit, type = "pearson", data_ = pbc2))
+  expect_no_error(residuals(result, type = "raw", data_ = head_neck_cancer))
+})
+
+test_that("pearson and raw residuals for exponential corresponds", expect_true(FALSE))
 
 # resids <- residuals(fit, "std_space_error")
 # matplot(resids$residuals)

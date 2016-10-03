@@ -77,8 +77,8 @@ ddhazard = function(formula, data,
     a_0 = rep(tmp_mod$coefficients, order_)
     rm(tmp_mod)
 
-  } else if (missing(a_0)){
-    message("a_0 not supplied. One iteration IWLS of static logit model is used")
+  } else if (missing(a_0) && model == "exponential"){
+    message("a_0 not supplied. One iteration IWLS of static glm model is used")
     tmp_mod = static_glm(form = formula, data = data, max_T = max_T,
                          control = glm.control(epsilon = Inf), family = "exponential")
     a_0 = rep(tmp_mod$coefficients, order_)

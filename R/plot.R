@@ -4,7 +4,7 @@ plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
                              col = "black", add = F, ...){
-  if(!object$model %in% c("logit"))
+  if(!object$model %in% c("logit", "exponential"))
     stop("Functions for model '", object$model, "' is not implemented")
 
   if(type == "cov"){
