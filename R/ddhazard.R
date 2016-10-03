@@ -1,20 +1,21 @@
 #' Function to fit dynamic discrete hazard model
-#' @export
-ddhazard = function(formula, data, by,
-                    a_0,
-                    Q_0,
-                    id,
-                    Q = Q_0,
-                    n_max = 10^2, eps = 10^-3,
-                    save_all_output = F,
-                    max_T, save_risk_set = F,
-                    order_ = 1,
-                    est_Q_0 = T,
-                    verbose = F,
-                    method = "EKF",
+#' @param formula \code{coxph} like formula with \code{survival::Surv(tstart, tstop, event)} on the left hand site of \code{~}
+#' @parem data Data frame or enviroment containing the outcome and co-variates
+#' @parem model "logit" or "exponential" for the discrete time function using the logistic function or for the continous time model with exponential arrival times
+#' @param by Interval length of the bins in which parameters are fixed
+#' @parem max_T End of the last interval. The last stop time with an event is selected if the parameter is omitted
+#' @param id Vector of ids for each row of the in the design matrix
+#' @parem a_0 Vector with \eqn{\vec{a}_0} for the first iteration (optional)
+#' @param Q_0 Covariance matrix for the prior \eqn{\mathbf{Q}_0}
+#' @parem Q Initial covariance matrix \eqn{\mathbf{Q}} for the state equation
+#' @parem order_ Order of the random walk
+#' @parem control list of control variables
+ddhazard = function(formula, data,
                     model = "logit",
-                    M_step_formulation = "Fahrmier94",
-                    control = list()){
+                    by, max_T, id,
+                    a_0, Q_0, Q = Q_0,
+                    order_ = 1, control = list(),
+                    verbose = F){
   X_Y = get_design_matrix(formula, data)
   n_parems = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
@@ -52,7 +53,8 @@ ddhazard = function(formula, data, by,
     stop("Model '", model, "' is not implemented")
 
   control_default <- list(kappa = NULL, alpha = NULL, beta = NULL,
-                          NR_eps = NULL, LR = NULL)
+                          NR_eps = NULL, LR = NULL, n_max = 10^2, eps = 10^-3,
+                          est_Q_0 = F, method = "EKF", save_risk_set = T)
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
          paste0(names(control)[is.na(control_match)], collapse = "\t"))
@@ -121,12 +123,12 @@ ddhazard = function(formula, data, by,
     message("Running EM")
   }
 
-  result = ddhazard_fit_cpp_prelim(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose, save_all_output = save_all_output,
-                                   Q = Q, n_max = n_max,
-                                   risk_obj = risk_set, eps = eps, X = X_Y$X,
+  result = ddhazard_fit_cpp_prelim(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
+                                   Q = Q, n_max = control$n_max,
+                                   risk_obj = risk_set, eps = control$eps, X = X_Y$X,
                                    tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
                                    order_ = order_,
-                                   est_Q_0 = est_Q_0, method = method,
+                                   est_Q_0 = control$est_Q_0, method = control$method,
                                    model = model,
                                    kappa = control$kappa, alpha = control$alpha, beta = control$beta,
                                    NR_eps = control$NR_eps,
@@ -170,10 +172,10 @@ ddhazard = function(formula, data, by,
     Q_0 = result$Q_0,
     n_risk = unlist(lapply(risk_set$risk_sets, length)),
     times = c(min(X_Y$Y[, 1]), risk_set$event_times),
-    risk_set = if(save_risk_set) risk_set else NA,
+    risk_set = if(control$save_risk_set) risk_set else NA,
     order = order_, F_ = F_,
-    method = method,
+    method = control$method,
     model = model,
-    est_Q_0 = est_Q_0)),
+    est_Q_0 = control$est_Q_0)),
     "class" = "fahrmeier_94")
 }

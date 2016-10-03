@@ -4,9 +4,7 @@ result = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,
-  a_0 = rep(0, 2), Q_0 = diag(.1, 2),
-  save_risk_set = T
-)
+  a_0 = rep(0, 2), Q_0 = diag(.1, 2))
 
 for(use_parallel in c(T, F)){
   # Test that we get same estimate in one period estimates
@@ -82,9 +80,9 @@ result = ddhazard(
   data = head_neck_cancer,
   by = 1,
   a_0 = rep(0, 2 * 2), Q_0 = diag(10, 2 * 2),
-  Q = diag(c(1.0e-4, 1.0e-4, 0, 0)), est_Q_0 = F,
-  n_max = 1e3,
-  save_risk_set = T, order_ = 2
+  Q = diag(c(1.0e-4, 1.0e-4, 0, 0)),
+  control = list(n_max = 1e3, save_risk_set = T, est_Q_0 = F),
+  order_ = 2
 )
 
 test_that("Calls with second order models do not throw errors", {
@@ -114,8 +112,8 @@ max(pbc$time[pbc$status == 2])
 fit <- ddhazard(
   formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~ splines::ns(log(bili),df = 4),
   data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
-  Q = diag(rep(1e-2, 5)), max_T = 3600, est_Q_0 = F,
-  verbose = F, save_risk_set = T)
+  Q = diag(rep(1e-2, 5)), max_T = 3600,
+  control = list(est_Q_0 = F))
 
 predict(fit, new_data = pbc[1:5, ], type = "term")
 
