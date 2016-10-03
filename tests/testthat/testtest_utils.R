@@ -50,3 +50,9 @@ test_that("Testing util functions to sim series for tests", {
                       tmp[-nrow(tmp), "event"]))
   }
 })
+
+test_that("The head_neck_cancer must be defined for the ddhazard tests",
+          expect_true(exists("head_neck_cancer")))
+
+test_that("The pbc2 must be defined for the ddhazard tests",
+          expect_true(exists("pbc2")))

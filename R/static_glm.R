@@ -74,13 +74,13 @@ static_glm = function(formula, data, by, max_T, id, family = "binomial", model =
     X_Y$X <- X_Y$X[, -1] # remove the intercept
 
     is_before_max_T <- X_Y$Y[, 1] < max_T
-    X_Y$X <- X_Y$X[is_before_max_T, ]
+    data <- data[is_before_max_T, ]
     X_Y$Y <- X_Y$Y[is_before_max_T, ]
 
-    X <- cbind(data.frame(X_Y$X),
+    X <- cbind(data,
                Y = X_Y$Y[, 3] & (X_Y$Y[, 2] <= max_T),
                log_delta_time = log(pmin(X_Y$Y[, 2], max_T) - X_Y$Y[, 1]),
-               weights = rep(1, nrow(X_Y$X)))
+               weights = rep(1, nrow(data)))
 
     formula <- stats::formula(terms(formula, data = data))
     formula = update(formula, Y ~ . + offset(log_delta_time), data = X)

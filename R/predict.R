@@ -5,7 +5,7 @@ predict.fahrmeier_94 = function(object, new_data,
                                 tstart = "start", tstop = "stop",
                                 use_parallel = F, sds = F, ...)
 {
-  if(!object$model %in% c("logit"))
+  if(!object$model %in% c("logit", "exponential"))
     stop("Functions for model '", object$model, "' is not implemented")
 
   type = type[1]
@@ -62,13 +62,13 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
   # if not, we predict for the sample period
   d <- length(object$times) - 1
   if(all(c(tstart, tstop) %in% colnames(new_data))){
-    message("start and stop times ('", tstart, "' and '", tstop, "' are in data. prediction will match these periods")
+    message("start and stop times ('", tstart, "' and '", tstop, "') are in data. Prediction will match these periods")
 
     # Find min start. Throw error if before time zero
     start = new_data[, tstart]
     stop_ = new_data[, tstop]
   } else{
-    message("start and stop times ('", tstart, "' and '", tstop, "' are not in data columns. Each row in new_data will get a row for every bin")
+    message("start and stop times ('", tstart, "' and '", tstop, "') are not in data columns. Each row in new_data will get a row for every bin")
     n_obs <- nrow(m)
     m <- m[sapply(1:nrow(m), rep.int, times = d), ]
     start <- rep(object$times[-(d + 1)], n_obs)
@@ -107,7 +107,7 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
   if(any(start - times[int_start] > 0) && object$model != "exponential")
     warning("Some start times are rounded down")
 
-  int_stop_ = findInterval(stop_, times + 1e4 * .Machine$double.eps) # TODO: better way to deal with equality in the stop time?
+  int_stop_ = findInterval(stop_, times, left.open = T) # TODO: better way to deal with equality in the stop time?
   if(any(times[int_stop_] - stop_ > 0) && object$model != "exponential")
     warning("Some stop times are rounded up")
 

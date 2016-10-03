@@ -120,4 +120,48 @@ predict(fit, new_data = pbc[1:5, ], type = "term")
 
 ######
 # Exponential model
-test_that("Test exponential model", expect_true(FALSE))
+fit <- ddhazard(
+  formula = survival::Surv(tstart, tstop, status == 2) ~
+    age + log(bili) + log(protime),
+  data = pbc2, Q_0 = diag(rep(1e3, 4)), by = 100,
+  Q = diag(rep(1e-2, 4)), max_T = 3600,
+  model = "exponential", control = list(est_Q_0 = F, LR = .4))
+
+
+test_that("Terms from predict with exponential outcome are correct", {
+  pred <- predict(fit, new_data = pbc2, type = "term", tstart = "tstart", tstop = "tstop")
+
+  expect_equal(dim(pred$terms), c(1 + 3600/100, nrow(pbc2), 4))
+  tmp_mat <- t(cbind(rep(1, nrow(pbc2)), pbc2$age, log(pbc2$bili), log(pbc2$protime)))
+
+  for(i in 1:ncol(fit$a_t_d_s))
+    expect_equal(pred$terms[, , i], fit$a_t_d_s[, i] %o% tmp_mat[i,])
+
+  expect_message(
+    respone_pred <- predict(fit, new_data = pbc2, type = "response", tstart = "tstart", tstop = "tstop"),
+    "start and stop times \\('tstart' and 'tstop'\\) are in data. Prediction will match these periods")
+
+  set.seed(192301258)
+  rand_indicies <- sample.int(nrow(pbc2), 1000)
+  test_rows <- pbc2[rand_indicies, ]
+  test_rows <- cbind(rep(1, nrow(test_rows)),
+                     test_rows$age, log(test_rows$bili), log(test_rows$protime),
+                     test_rows)
+
+  for(j in seq_along(test_rows)){
+    tmp <- test_rows[j, ]
+    bins_breaks <- seq(0, 3600, by = 100)
+    start <- findInterval(tmp$tstart, bins_breaks)
+    stop  <- findInterval(tmp$tstop, bins_breaks, left.open = T)
+    p_survival <- 1
+
+    t_min <- max(bins_breaks[start], tmp$tstart)
+    for(i in start:stop){
+      t_max <- min(bins_breaks[i + 1], tmp$tstop)
+      p_survival <- p_survival * exp(- exp(fit$a_t_d_s[i + 1, ] %*% unlist(tmp[, 1:4])) * (t_max - t_min))
+      t_min <- t_max
+    }
+
+    expect_equal(unname(respone_pred$fits[rand_indicies[j]]), c(1 - p_survival), info = "")
+  }
+})
