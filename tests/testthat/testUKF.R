@@ -10,11 +10,11 @@ test_that("UKF does not fail and both methods give the same",{
                   data = sims$res,
                   a_0 = rep(0, ncol(sims$res) + 1 - 4),
                   Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                  est_Q_0 = F, method = "UKF",
-                  verbose = F, eps = 1e-2,
+                  verbose = F,
+                  control = list(eps = 1e-2, est_Q_0 = F, method = "UKF",
+                                 kappa = 0, alpha = 1, beta = 0),
                   id = sims$res$id,
-                  max_T = 10,
-                  control = list(kappa = 0, alpha = 1, beta = 0))
+                  max_T = 10)
 
 
   res_old <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
@@ -22,9 +22,7 @@ test_that("UKF does not fail and both methods give the same",{
                       data = sims$res,
                       a_0 = rep(0, ncol(sims$res) + 1 - 4),
                       Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                      est_Q_0 = F, method = "UKF_org",
-                      verbose = F, eps = 1e-2,
-                      control = list(kappa = 0, alpha = 1, beta = 0),
+                      control = list(est_Q_0 = F, kappa = 0, alpha = 1, beta = 0, eps = 1e-2, method = "UKF_org"),
                       id = sims$res$id,
                       max_T = 10)
 
@@ -39,9 +37,8 @@ test_that("Chaning time scale in UKF does no change results when other parems ar
                    a_0 = rep(0, ncol(sims$res) + 1 - 4),
                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
                    Q = diag(rep(1e-2, ncol(sims$res) + 1 - 4)),
-                   est_Q_0 = F, method = "UKF",
-                   eps = 1e-2,
-                   control = list(kappa = 0, alpha = 1, beta = 0),
+                   control = list(kappa = 0, alpha = 1, beta = 0,
+                                  est_Q_0 = F, method = "UKF", eps = 1e-2),
                    id = sims$res$id,
                    verbose = F,
                    max_T = 10)
@@ -71,9 +68,8 @@ test_that("Testing UKF against prev computed values",{
                    a_0 = rep(0, ncol(sims$res) + 1 - 4),
                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
                    Q = diag(rep(1e-2, ncol(sims$res) + 1 - 4)),
-                   est_Q_0 = F, method = "UKF",
-                   eps = 1e-2,
-                   control = list(kappa = 0, alpha = 1, beta = 0),
+                   control = list(kappa = 0, alpha = 1, beta = 0,
+                                  est_Q_0 = F, method = "UKF", eps = 1e-2),
                    id = sims$res$id,
                    verbose = F,
                    max_T = 10)
@@ -118,9 +114,8 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
                    a_0 = rep(0, ncol(sims$res) + 1 - 4),
                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
                    Q = diag(rep(1e-2, ncol(sims$res) + 1 - 4)),
-                   est_Q_0 = F, method = "UKF",
-                   eps = 1e-2,
-                   control = list(kappa = 0, alpha = 1, beta = 0),
+                   control = list(kappa = 0, alpha = 1, beta = 0,
+                                  est_Q_0 = F, method = "UKF", eps = 1e-2),
                    id = sims$res$id,
                    verbose = F,
                    max_T = 10)
