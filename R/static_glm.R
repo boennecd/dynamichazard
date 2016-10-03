@@ -58,19 +58,35 @@ get_survival_case_Weigths_and_data = function(
 #' as the right hand site of forumla
 #' @export
 static_glm = function(formula, data, by, max_T, id, family = "binomial", model = F, weights, risk_obj = NULL, ...){
-  if(family == "binomial"){
+  if(family %in% c("binomial", "logit")){
     family <- binomial()
+
+    X = get_survival_case_Weigths_and_data(
+      formula = formula, data = data, by = by, max_T = max_T, id = id,
+      init_weights = weights, risk_obj = risk_obj)
+
+    formula <- stats::formula(terms(formula, data = data))
+    formula = update(formula, Y ~ ., data = X)
+
+  } else if(family == "exponential"){
+    family <- poisson()
+    X_Y = get_design_matrix(formula, data)
+    X_Y$X <- X_Y$X[, -1] # remove the intercept
+
+    is_before_max_T <- X_Y$Y[, 1] < max_T
+    X_Y$X <- X_Y$X[is_before_max_T, ]
+    X_Y$Y <- X_Y$Y[is_before_max_T, ]
+
+    X <- cbind(data.frame(X_Y$X),
+               Y = X_Y$Y[, 3] & (X_Y$Y[, 2] <= max_T),
+               log_delta_time = log(pmin(X_Y$Y[, 2], max_T) - X_Y$Y[, 1]),
+               weights = rep(1, nrow(X_Y$X)))
+
+    formula <- stats::formula(terms(formula, data = data))
+    formula = update(formula, Y ~ . + offset(log_delta_time), data = X)
+
   } else
     stop("family '", family, "' not implemented in static_glm")
-
-  X = get_survival_case_Weigths_and_data(
-    formula = formula, data = data, by = by, max_T = max_T, id = id,
-    init_weights = weights, risk_obj = risk_obj)
-
-  weights = X$weights
-
-  formula <- stats::formula(terms(formula, data = data))
-  formula = update(formula, Y ~ ., data = X)
 
   glm(formula = formula, data = X, family = family, model = model, weights = weights, ...)
 }
