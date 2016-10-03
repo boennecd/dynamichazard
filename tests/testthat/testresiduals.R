@@ -5,9 +5,7 @@ result = ddhazard(
   data = head_neck_cancer,
   by = 1, max_T = 40,
   a_0 = rep(0, 2), Q_0 = diag(10, 2),
-  Q = diag(1e-2, 2),
-  save_risk_set = T
-)
+  Q = diag(1e-2, 2))
 
 test_that("Calls to residuals should succed",{
   expect_no_error(residuals(result, "std_space_error"))
@@ -54,8 +52,8 @@ fit <- ddhazard(
   formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~
     age + edema + log(bili) + log(protime),
   data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
-  Q = diag(rep(1e-2, 5)), max_T = 3600, est_Q_0 = F,
-  verbose = F, save_risk_set = T)
+  Q = diag(rep(1e-2, 5)), max_T = 3600,
+  control = list(est_Q_0 = F))
 
 test_that("Pearson residuals and raw residuals for logistic model are consistent with each other", {
   pearson_res <- residuals(object = fit, type = "pearson", data_ = pbc)
@@ -93,7 +91,6 @@ test_that("Cases in residuals match cases in data", {
     expect_equal(is_case_residuals, is_case + 0)
 })
 
-#
 # resids <- residuals(fit, "std_space_error")
 # matplot(resids$residuals)
 # resids <- residuals(fit, "space_error")

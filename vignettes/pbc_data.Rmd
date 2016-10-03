@@ -5,7 +5,8 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 options(digist = 4)
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.width = 6, fig.height = 4)
 ```
 
 ## Fit
@@ -23,8 +24,8 @@ summary(pbc) # bili and protime are skewed
 
 tmp <- xtabs(~ I(status == 2) + cut(time, breaks = c(seq(0, 3600, 400), Inf)), pbc)
 tmp["FALSE", ] <- rev(cumsum(rev(tmp["FALSE", ] + c(tmp["TRUE", -1], 0))))
-tmp # Number of controls is "FALSE" and number of cases is "TRUE". Columns are 
-    # The time bins
+# Number of controls is "FALSE" and number of cases is "TRUE". Columns are the bin times
+tmp
 
 # Fit the first order random walk model with a the Extended Kalman filter
 fit <- ddhazard(
@@ -51,7 +52,9 @@ pearson_res <- residuals(object = fit, type = "pearson", data_ = pbc)
 # returns a list with Pearson residual for every observation in each bin
 class(pearson_res$residuals)     # It is a list
 length(pearson_res$residuals)    # The number of bins
-head(pearson_res$residuals[[2]]) # Number of observations in second bin
+# Each bin has the residuals (+ more information). Here are the first rows
+# for bin 2
+head(pearson_res$residuals[[2]])
 
 # We can sum the Pearson residual for every observation
 # Question: I figure this may be a good idea?
@@ -82,6 +85,7 @@ text(seq_along(ids), accumulated_res, label = labs) # add labels
 ```
 
 ```{r pearson_res_cont}
+# Look at the residuals for invidiual 56
 tmp <- sapply(pearson_res$residuals, function(x) x[x[, "row_num"] == 56, ])
 do.call(rbind, (tmp[sapply(tmp, length) > 0]))
 
@@ -103,6 +107,23 @@ aggregate(pbc$protime, list(pbc$status == 2), function(x)
 # Can the explanation be a low bili score?
 aggregate(pbc$bili, list(pbc$status == 2), function(x) 
   c(mean = mean(x), median = median(x)))
+```
+
+```{r}
+# Plot pearson residuals verus co-variates
+# First we start with the protime
+plot(accumulated_res ~ log(pbc$protime), ylab = "Pearson residuals", pch = 16, 
+     cex = .75)
+
+# We add a kernal smoother to to the plot
+lines(ksmooth(log(pbc$protime), accumulated_res, bandwidth = .25), 
+      col = "red")
+
+# Secondly, we do the same thing for bili 
+plot(accumulated_res ~ log(pbc$bili), ylab = "Pearson residuals", pch = 16, 
+     cex = .75)
+lines(ksmooth(log(pbc$bili), accumulated_res, bandwidth = .5), 
+      col = "red")
 ```
 
 ## State space errors

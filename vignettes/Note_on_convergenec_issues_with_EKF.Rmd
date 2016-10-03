@@ -108,17 +108,18 @@ Another question is what would have happens with other outcomes of the same simu
 
 Each of the models are then compared in terms of mean square error of the coefficient estimates
 
-```{r}
+```{r  message=FALSE, warning=FALSE}
 mse_func <- function(f, s) 
   mean((f$a_t_d_s - s$betas)^2)
 
-n_series <- 2
+n_series <- 100
 MSE_res <- matrix(
   NA_real_, ncol = 4, nrow = n_series, dimnames = 
     list(NULL, c("Regular", "Only extra rep", "Only learning rate", "Combined")))
 
 set.seed(20161002) # A good day
 for(i in 1:n_series){
+  message("Still going. On simulation ", i, " now") # message while compilling
   sims <- do.call(test_sim_func_exp, sim_args)
   
   arg_list$data <- sims$res
@@ -160,3 +161,10 @@ colMeans(MSE_res[complete.cases(MSE_res),])
 The two last printouts are the mean square errors and the average of the mean square errors in the case where all four fits were successful. The main take away seems to be that the extra NR repetitions may be worth it in terms of lower mean square error. Further, the learning rate seem to enable us to fit the model 
 
 However, this adds two new tuning parameters. I figure these can be chosen through generalized cross validation or a similar schema
+
+You run the code yourself by installing this version of the package by calling:
+
+```{r , eval=FALSE}
+devtools::install_github(
+  "boennecd/dynamichazard@a8134f4c90a4d0a08eba3551f58f4729553e0e08")
+```

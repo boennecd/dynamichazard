@@ -1,6 +1,5 @@
-#' Function to perform EM algorithm for dynamic discrete hazard models. This
-#' version perform no validation
-#' @export
+# Previously used estimation function for the EKF method
+# Kept in the package for tests
 ddhazard_fit = function(X, tstart, tstop, is_event_in_bin,
                         a_0 = rep(0, n_parems), # ignorant prior
                         Q_0 = diag(.1, n_parems), # something large

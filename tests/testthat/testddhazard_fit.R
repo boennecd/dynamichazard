@@ -202,7 +202,7 @@ arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_m
 test_that("Fit throw error when you use wrong is_for_discrete_model for risk set",{
   risk_obj <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id, is_for_discrete_model = T)
   arg_list$risk_obj <- risk_obj
-  arg_list$model <- "poisson"
+  arg_list$model <- "exponential"
   expect_error(do.call(ddhazard_fit_cpp_prelim, arg_list))
 
   risk_obj <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id, is_for_discrete_model = F)

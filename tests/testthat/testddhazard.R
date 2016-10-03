@@ -8,9 +8,8 @@ result = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1, # Use by month intervals
-  n_max = 10^4, eps = 10^-4,
+  control = list(est_Q_0 = T, n_max = 10^4, eps = 10^-4),
   a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
-  est_Q_0 = T,
   max_T = 45,
   id = head_neck_cancer$id, order_ = 1
 )
@@ -46,9 +45,6 @@ test_that("Testing previous computed values vs. current on head and neck cancer 
   # expect_equal(c(result$hazard_first_deriv),
   #              c([[1]]function (beta, x_) {    exp_ = exp(beta %*% x_)    x_ * exp_/(exp_ + 1)^2}<environment: 0x000000001fb07d38> ))
 
-  expect_equal(c(result$risk_set),
-               c(NA ))
-
   expect_equal(c(result$order),
                c(1 ))
 
@@ -67,10 +63,9 @@ result_exp = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,
-  n_max = 10^4, eps = 10^-4,
   a_0 = rep(0, 2), Q_0 = diag(1, 2),
   Q = diag(1e-3, 2),
-  est_Q_0 = F,
+  control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4),
   max_T = 30,
   id = head_neck_cancer$id, order_ = 1,
   verbose = F,
@@ -115,7 +110,7 @@ test_that("Result of exponential model on head_neck_data match previous results"
                c(FALSE ))
 })
 
-test_that("poisson model and logit moels hazzard functions differs", {
+test_that("exponential model and logit moels hazzard functions differs", {
   expect_true(result_exp$model != result$model)
   expect_true(toString(body(result_exp$hazard_func)) !=
                 toString(body(result$hazard_func)))
@@ -136,10 +131,9 @@ result_exp = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 2,
-  n_max = 10^4, eps = 10^-4,
   a_0 = rep(0, 2), Q_0 = diag(1, 2),
   Q = diag(1e-3, 2),
-  est_Q_0 = F,
+  control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4),
   max_T = 30,
   id = head_neck_cancer$id, order_ = 1,
   verbose = F,
@@ -184,44 +178,6 @@ test_that("Result of exponential model on head_neck_data match previous results 
                c(FALSE ))
 })
 
-set.seed(3787)
-sims <- test_sim_func_logit(n_series = 5e2, n_vars = 3, t_0 = 0, t_max = 10,
-                            x_range = 1, x_mean = -.5, re_draw = T, beta_start = 0,
-                            intercept_start = -4, sds = c(.1, rep(1, 3)))
-
-test_that("Chaning time scale in EKF does no change results when other parems are changed accoridngly",{
-  for(m in c("logit")){
-    arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-                     by = 1,
-                     data = sims$res,
-                     a_0 = rep(0, ncol(sims$res) + 1 - 4),
-                     Q_0 = diag(rep(1e2, ncol(sims$res) + 1 - 4)),
-                     Q = diag(rep(1e-3, ncol(sims$res) + 1 - 4)),
-                     est_Q_0 = F, method = "EKF",
-                     model = m,
-                     eps = 1e-2, id = sims$res$id,
-                     verbose = F,
-                     max_T = 10)
-
-    res <- do.call(ddhazard, arg_list)
-
-    sim_tmp <- sims
-    t_mult <- 2.5
-    sim_tmp$res$tstart <- sim_tmp$res$tstart * t_mult
-    sim_tmp$res$tstop <- sim_tmp$res$tstop * t_mult
-    arg_list$data <- sim_tmp$res
-    arg_list$by <- t_mult
-    arg_list$max_T <- arg_list$max_T * t_mult
-    arg_list$Q <- arg_list$Q / t_mult
-
-    res_new_time <- do.call(ddhazard, arg_list)
-
-    expect_equal(res$a_t_d_s, res_new_time$a_t_d_s)
-    expect_equal(res$V_t_d_s, res_new_time$V_t_d_s)
-    expect_equal(res$Q, res_new_time$Q * t_mult)
-  }
-})
-
 set.seed(93143)
 sims <- test_sim_func_exp(n_series = 1e4, n_vars = 10, t_0 = 0, t_max = 10,
                           x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
@@ -234,11 +190,10 @@ result_exp = ddhazard(
   formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
   data = sims$res,
   by = (by_ <- 1),
-  n_max = 10^4, eps = 10^-2,
   a_0 = rep(0, 11),
   Q_0 = diag(100, 11),
   Q = diag(1e-3, 11),
-  est_Q_0 = F,
+  control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^4),
   max_T = 10,
   id = sims$res$id, order_ = 1,
   verbose = F,
@@ -292,10 +247,6 @@ test_that("Result of exponential model on simulated data match previous results"
                c( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 )
                , tolerance = 1e-04)
 
-  expect_equal(c(result_exp$risk_set),
-               c(NA )
-               , tolerance = 1e-04)
-
   expect_equal(c(result_exp$order),
                c(1 )
                , tolerance = 1e-04)
@@ -324,9 +275,7 @@ test_that("Unmacthed control variable throw error",
               formula = survival::Surv(start, stop, event) ~ group,
               data = head_neck_cancer,
               by = 1, # Use by month intervals
-              n_max = 10^4, eps = 10^-4,
               a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
-              est_Q_0 = T,
               max_T = 45,
               id = head_neck_cancer$id, order_ = 1,
               control = list("None_existing_parem" = 1)
@@ -343,18 +292,17 @@ test_that("Decreasing learning rate in NR can get method to convergece",{
     formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     data = sims$res,
     by = (by_ <- 1),
-    n_max = 10^4, eps = 10^-2,
     a_0 = rep(0, 11),
     Q_0 = diag(100, 11),
     Q = diag(1e-3, 11),
-    est_Q_0 = F,
+    control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-2),
     max_T = 10,
     id = sims$res$id, order_ = 1,
     model = "exponential")
 
   expect_error(do.call(ddhazard, arg_list))
 
-  arg_list$control <- list(LR = .75)
+  arg_list$control <- c(arg_list$control, list(LR = .75))
 
   result_exp <- do.call(ddhazard, arg_list)
   expect_equal(mean((result_exp$a_t_d_s - sims$betas)^2), 0.7661225948671551, tolerance  = 1e-6)
