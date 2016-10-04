@@ -130,36 +130,6 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
   expect_true(class(all.equal(m1$lag_one_cor, m2$lag_one_cor)) == "character")
 })
 
-# matplot(res$a_t_d_s, type = "l", ylim = range(res$a_t_d_s, res_new_time$a_t_d_s))
-# matplot(res_new_time$a_t_d_s, type = "l", add = T, lty = 1)
-
-# matplot(res_new$a_t_d_s, type = "l", ylim = range(res_new$a_t_d_s, res_old$a_t_d_s, sims$betas))
-# matplot(res_old$a_t_d_s, type = "l", add = T, lty = 1)
-# matplot(sims$betas, type = "l", add = T, lty = 4)
-
-# res_test <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-#                      by = 1,
-#                      data = sims$res,
-#                      a_0 = res_new$a_t_d_s[1, ],
-#                      Q_0 = res_new$Q,
-#                      Q = res_new$Q,
-#                      est_Q_0 = F, method = "UKF", kappa = NULL)
-
-# res_EKF <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-#                     by = 1,
-#                     data = sims$res,
-#                     a_0 = rep(0, ncol(sims$res) + 1 -4),
-#                     Q_0 = diag(rep(1, ncol(sims$res) + 1 -4)),
-#                     est_Q_0 = F)
-#
-# matplot(res_UKF$a_t_d_s, ylim = range(res_UKF$a_t_d_s, res_EKF$a_t_d_s),
-#         lty = 1, type = "l")
-# matplot(res_EKF$a_t_d_s, lty = 2, type = "l", add = T)
-
-test_that("Implement tests for UKF", {
-  expect_true(F)
-})
-
 test_that("Implement cont time model for UKF when Feodor aggress on implementation", {
   expect_true(F)
 })
