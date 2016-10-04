@@ -110,14 +110,20 @@ fit <- ddhazard(
   Q = diag(rep(1e-2, 4)), max_T = 3600,
   model = "exponential", control = list(est_Q_0 = F, LR = .4))
 
-test_that("Calls to residuals should succed",{
+test_that("Calls to residuals should succed for exponential model",{
   expect_no_error(residuals(fit, "std_space_error"))
   expect_no_error(residuals(fit, "space_error"))
-  expect_no_error(residuals(fit, type = "pearson", data_ = pbc2))
-  expect_no_error(residuals(result, type = "raw", data_ = head_neck_cancer))
 })
 
-test_that("pearson and raw residuals for exponential corresponds", expect_true(FALSE))
+test_that("pearson and raw residuals for exponential corresponds", {
+  res_pearson <- residuals(fit, type = "pearson", data_ = pbc2)
+  res_raw <- residuals(fit, type = "raw", data_ = pbc2)
+
+  for(i in seq_along(res_pearson$residuals))
+    expect_equal(res_pearson$residuals[[i]][, "residuals"],
+                 res_raw$residuals[[i]][, "residuals"]/
+                   sqrt(res_raw$residuals[[i]][, "p_est"] * (1 - res_raw$residuals[[i]][, "p_est"])))
+})
 
 # resids <- residuals(fit, "std_space_error")
 # matplot(resids$residuals)

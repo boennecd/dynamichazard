@@ -1,0 +1,13 @@
+---
+title: "ddhazard"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Intro
+
+# Background
+The models estimated in the `ddhazard` function are 
