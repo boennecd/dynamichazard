@@ -1,13 +1,306 @@
 ---
 title: "ddhazard"
 output: pdf_document
+author: "Benjamin Christoffersen"
+header-includes:
+   - \usepackage{bm}
+bibliography: ddhazard_bibliography.bib
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Intro
+\newcommand{\mat}[1]{\mathbf{#1}}
+\renewcommand{\vec}[1]{\bm{#1}}
+%
+\newcommand{\Lparen}[1]{\left( #1\right)} 
+\newcommand{\Lbrack}[1]{\left[ #1\right]} 
+\newcommand{\Lbrace}[1]{\left \{ #1\right \}} 
+%
+\newcommand{\propp}[1]{P\Lparen{#1}}
+\newcommand{\proppCond}[2]{P\Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\expecp}[1]{E\Lparen{#1}}
+\newcommand{\expecpCond}[2]{E\Lparen{\left. #1  \right\vert  #2}}
+%
+\newcommand{\varp}[1]{\textrm{Var}\Lparen{#1}}
+\newcommand{\varpCond}[2]{\textrm{Var} \Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\corpCond}[2]{\textrm{Cor} \Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\emNotee}[3]{#1_{\left. #2 \right\vert #3}}
+\newcommand{\emNote}[4]{#1_{\left. #2 \right\vert #3}^{(#4)}} 
+%
+\newcommand{\ukfNote}[2]{\mat{P}_{\vec{#1}, \vec{#2}}}
+\newcommand{\ukfNotee}[3]{\mat{P}_{\vec{#1}_{#3}, \vec{#2}_{#3}}}
+%
+\newcommand{\diag}[1]{\text{diag}{(#1)}}
+\newcommand{\wvec}[1]{\widehat{\vec{#1}}}
+\newcommand{\wmat}[1]{\widehat{\mat{#1}}}
+%
 
-# Background
-The models estimated in the `ddhazard` function are 
+# Intro
+The `ddhazard` function estimates a binary regression model where the parameters are assumed to follow a pre-defined random walk. The function is implemented such that: 
+
+1) The time complexity of the computation is linear in the number of observations
+2) The dimension of the observation equation can vary through time
+3) It is fast due to the `C++` implementation and use of multithreading
+
+Let $\vec{x}_{it}$ denote the co-variate vector for indvidual $i$ at time $t$ and let $Y_{it}$ be the random variable for whether the $i$'th individual dies at time $t$. For given parameters at time $t$ denoted by $\vec{\alpha}_t$ the probablity of death is:
+
+$$\begin{aligned}
+  \vec{y}_{it} = (y_{i1}, \dots, y_{it})^T, 
+  \quad \mat{X}_{t} = \Lparen{\vec{x}_{i1}^T, \dots, \vec{x}_{it}^T}^T \\
+  \proppCond{Y_{it} = 1}{\vec{y}_{i,t-1}, \mat{X}_{t}, \vec{r}_{it}, \vec{\alpha}_t} = h(\vec{\alpha}_t^T \vec{x}_{it})
+\end{aligned}$$
+
+where $h$ is the link function. For example, this could be the logistic function such that $\exp(\eta) / (1 + \exp(\eta))$.
+
+The models estimated in the `ddhazard` function are in the state space form:
+$$\begin{array}{ll}
+  \vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad & 
+  \vec{\epsilon}_t \sim (\vec{0}, \mat{H}_t(\vec{\alpha}_t))  \\
+  \vec{\alpha}_{t + 1} = \mat{F}\vec{\alpha}_t + \mat{R}\vec{\eta}_t \qquad & 
+  \vec{\eta}_t \sim N(\vec{0}, \mat{Q}) \\
+\end{array} , \qquad t = 1,\dots, n$$
+
+$\vec{y}_t$ is the binary outcome and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. $\vec{\alpha}$ is the state vector with the coresponding *state equation*
+
+The mean $\vec{z}_t(\vec{\alpha}_t)$ and variance $\mat{H}(\vec{\alpha}_t)$ are state dependent with:
+$$\begin{aligned}
+  z_{it}(\vec{\alpha}_t)=\expecpCond{Y_{it}}{\vec{\alpha}_t} = h(\vec{\alpha}_t^T \vec{x}_{it}) \\
+  H_{ijt}(\vec{\alpha}_t) = \left\{\begin{matrix}
+    \varpCond{Y_{it}}{\vec{\alpha}_t} & i = j \\ 0 & \textrm{otherwise}
+  \end{matrix}\right.
+\end{aligned}$$
+
+The state equation is implemented with a 1. and 2. order random walk. For the first order random walk $\mat{F} = \mat{R} = \mat{I}_m$ where $m$ is the dimension of the state vector. As for the second order random walk, we have:
+$$\mat{F} = \begin{pmatrix} 
+  2\mat{I}_m & - \mat{I}_m \\ \mat{0}_m & \mat{I}
+\end{pmatrix},  \qquad 
+\mat{R} = \begin{pmatrix} \mat{I}_m \\ \mat{0}_m \end{pmatrix}$$
+
+where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The models are estimated by an Extended Kalman filter (EKF) and an Uncented Kalman filter (UKF). The method is chosen by passing list `control` parameter with an `list(method = "EKF", ...)` or `list(method = "UKF", ...)` respectivly
+
+Either methods require that a vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and co-variance matrix $\mat{Q}_0$ to start the filters. They can be estimated with an EM-algorithm as suggested in  [@fahrmeir94]. However, $\mat{Q}_0$ cannot be estimated and will tend towards zero. Hence, the default is not to estiamte the co-variance matrix $\mat{Q}_0$ and only the state vector $\vec{\alpha}_0$. You can estimate $\mat{Q}_0$ by setting the `est_Q_0` element of the `control` to `TRUE` (`list(est_Q_0 = T, ...)`)
+
+The rest of this note is structed as follows. The section 'Example of usage' will show how to quickly fit a model. This is followed by the section 'EM alogorithm' where the EM algorithm is explained. The sections 'Extended Kalman Filter' and 'Uncented Kalman Filter' respectivly covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Exponential model' which cover the two implemented link functions
+
+# Example of usage
+
+# EM algorithm
+An EM algorithm is used to estiamte the initial state space vector $\vec{\alpha}_0$ and the co-variance matrix $\mat{Q}$. Optionally $\mat{Q}_0$ is also estimated if `control = list(est_Q_0 = T, ...)`. We will need a short hand for the conditional means and co-variances to ease the notation. Define
+
+$$\emNotee{\vec{a}}{t}{k} = \expecpCond{\vec{\alpha}_t}{\mat{Y}_k},  \qquad
+\emNotee{\mat{V}}{t}{k} = \expecpCond{\mat{V}_t}{\mat{Y}_k},  \mat{Y}_k = (\vec{y}_{1k}, \dots, \vec{y}_{sk}) $$
+
+for the conditional mean and co-variance matrix where $s$ is the number of observations. Notice that the letter 'a' is used for estimates while alpha is used for the unkown state. Further, these can both be filter estimates in the case where $k \leq t$ smoothed estimates when $k > t$. We supress the dependence of the co-variates here to simplfy the notation
+
+## E-step
+The outcome of the E-step is smoothed estimates:
+$$\emNote{\vec{a}}{i}{T}{k},  \quad 
+  \emNote{\mat{V}}{i}{d}{k}, \quad 
+  \mat{B}_j^{(k)} = \emNotee{\mat{V}}{t - 1}{t - 1}\mat{F}\emNotee{\mat{V}}{t}{t - 1}^{-1},  \quad 
+  i=0,1,\dots,T\wedge j = 1,2,\dots,T$$
+  
+where $T$ is the last period we observe and supercripts $\cdot^{(k)}$ is used to destinguish the estimates from each iteration of the EM-algorithm. The required input to start the E-step is initial mean vector $\widehat{\vec{a}}_0^{(k-1)}$ and co-variance matrices $\widehat{\mat{Q}}_0^{(k - 1)}$ and $\widehat{\mat{Q}}_0^{(k - 1)}$. Given these input, we compute the folowing estimates either using the EKF or UKF:
+$$\emNotee{\vec{a}}{j}{j-1}, \quad 
+  \emNotee{\vec{a}}{i}{i}, \quad 
+  \emNotee{\mat{V}}{j}{j - 1}, \quad 
+  \emNotee{\mat{V}}{i}{i}, \quad i =0,1,\dots,T\wedge j=1,2,\dots,T$$
+  
+Then the estimates are smoothed by computing:
+$$\begin{aligned}
+  & \mat{B}_t^{(k)} = \emNotee{\mat{V}}{t - 1}{t - 1} \mat{F} \emNotee{\mat{V}}{t}{t - 1}^{-1} \\
+  & \emNote{\vec{a}}{t - 1}{d}{k} = \emNotee{\vec{a}}{t - 1}{t - 1} + \mat{B}_t (
+    \emNote{\vec{a}}{t}{d}{k} - \emNotee{\vec{a}}{t}{t - 1}) \\
+  & \emNote{\mat{V}}{t - 1}{d}{k} = \emNotee{\mat{V}}{t - 1}{t - 1} + \mat{B}_t (
+    \emNote{\mat{V}}{t}{d}{k} - \emNotee{\mat{V}}{t}{t - 1}) \mat{B}_t^T
+\end{aligned}, \qquad t = T,T-1,\dots, 1$$
+
+## M-step
+The M-step is used to compute updated mean $\widehat{\vec{a}}_0^{(k)}$ and co-variance matrices $\widehat{\mat{Q}}_0^{(k - 1)}$ and $\widehat{\mat{Q}}_0^{(k - 1)}$ (the latter being optional). These are computed by:
+$$\begin{aligned}
+\widehat{\vec{\alpha}}_0^{(k)} &= \emNote{\vec{a}}{0}{d}{k}\\
+\widehat{\mat{Q}}_0^{(k)} &= \emNote{\mat{V}}{0}{d}{k} \\
+    \widehat{\mat{Q}}^{(k)} &= \frac{1}{d}	\sum_{t = 1}^d \left( 
+      \left( \emNote{\vec{a}}{t}{d}{k} - \mat{F}\emNote{\vec{a}}{t - 1}{d}{k} \right)
+      \left( \emNote{\vec{a}}{t}{d}{k} - \mat{F}\emNote{\vec{a}}{t - 1}{d}{k} \right)^T \right. \\
+    &\hspace{43pt} + \emNote{\mat{V}}{t}{d}{k} - \mat{F}\mat{B}_t^{(k)}\emNote{\mat{V}}{t}{d}{k} - 
+      \left( \mat{F}\mat{B}_t^{(k)}\emNote{\mat{V}}{t}{d}{k} \right) ^T + 
+      \mat{F}\emNote{\mat{V}}{t - 1}{d}{k}\mat{F}^T
+      \left. \vphantom{\left( \emNote{\vec{a}}{t}{d}{k} - \mat{F}\emNote{\vec{a}}{t - 1}{d}{k} \right)^T} \right)
+\end{aligned}$$
+
+# Kalman Filter
+The standard Kalman filter is carried out by recursively doing two steps. This also aplies for the EKF and UKF. Thus, this paragraph is included to introduce general notions. The first step is in the Kalman Filter is the *filter step* where we estimate $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ based on $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$. Secondly, we cary out the *correction step* where we estimate $\emNotee{\vec{a}}{t}{t}$ and $\emNotee{\mat{V}}{t}{t}$ based on $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ and the observations. We then repeat the process
+
+# Extended Kalman Filter
+The idea for the Extended Kalman filter in this application is to replace the observational equation with a first order Taylor expansion. This approximated model can then be estimated with a regular Kalman Filter. The EKF in the form presented here is orginally described in [@fahrmeir94] and [@fahrmeir92] 
+
+The formulation in [@fahrmeir94] differs from the standard Kalman Filter by re-writting the correction step using the Woodbury matrix identity. This has two computational advantages. The first one is that the time complexity is $O(p)$ instead of $O(p^3)$ where $p$ denotes the dimension of the obsertion equation. Secondly, we do not have store an intermediate $p\times p$ matrix
+
+Going to the detail, we start with EKF with filter step:
+$$\begin{aligned}
+  \emNotee{\vec{a}}{t}{t - 1} = \mat{F} \emNotee{\vec{a}}{t - 1}{t - 1}, \quad \\
+  \emNotee{\mat{V}}{t}{t - 1} = \mat{F}\emNotee{\mat{V}}{t - 1}{t - 1}\mat{F}^T + \mat{Q}
+\end{aligned}$$
+	  
+Secondly, we perform the correction step by:
+$$\begin{aligned}
+  \emNotee{\vec{a}}{t}{t} = \emNotee{\vec{a}}{t}{t - 1} + \emNotee{\mat{V}}{t}{t}\vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})\\
+  \emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}
+\end{aligned}$$
+
+where $\vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})$ and $\mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})$ are given by:
+
+$$\begin{aligned}
+  & \vec{u}_t (\vec{\alpha}_t) = \sum_{i \in R_t} \vec{u}_{it} (\vec{\alpha}_t) \nonumber \\
+  & \vec{u}_{it} (\vec{\alpha}_t)= \left. \vec{z}_{it} \frac{\partial h(\eta)/ \partial \eta}{H_{iit}(\vec{\alpha}_t)} \Lparen{y_{it} - h(\eta)} \right\vert_{\eta = \vec{z}_{it}^T \vec{\alpha}_t} \\
+	& \mat{U}_t (\vec{\alpha}_t) = \sum_{i \in R_t} \mat{U}_{it} (\vec{\alpha}_t) \nonumber \\
+	& \mat{U}_{it} (\vec{\alpha}_t) = \left. \vec{z}_{it} \vec{z}_{it}^T 
+		 \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{iit}(\vec{\alpha}_t)} \right\vert_{\eta = \vec{z}_{it}^T \vec{\alpha}_t}
+\end{aligned}$$
+
+## Divergence
+Intial testing showed that the EKF had issues divergence for some data set. The cause of divergence is overstepping in the correction step where we update $\emNotee{\vec{a}}{t}{t}$. That is, the signs of the margins of $\emNotee{\vec{a}}{t}{t}$ tended to alter between $t-1, t, t+1$ etc. and the absolute values tended to increase.  The following section describes a solution to this issue
+
+[@fahrmeir92] mentions that the filter step can be viewed as single Fischer Scoring step (and hence a step in a Newton Raphson method). This motivates:
+
+1) To take multiple steps if $\emNotee{\vec{a}}{t}{t}$ is far from $\emNotee{\vec{a}}{t}{t-1}$
+2) Introduce a learning rate
+
+Simulation shows that the learning rate solves the issues with divergence. Let $l>0$ denote the learning rate and $\epsilon_\text{NR}$ denote the tolerance of the for the Filter step. We then set $\vec{a} = \emNotee{\vec{a}}{t}{t-1}$ and for compute:
+
+$$\begin{aligned}
+  &\emNotee{\vec{a}}{t}{t} = \vec{a} + l \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})\\
+  &\emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\vec{a})\right)^{-1} \\
+  &\text{if } \rVert \emNotee{\vec{a}}{t}{t} - \vec{a} \lVert / (\rVert \vec{a} \lVert + \delta) < \epsilon_{\text{NR}} 
+    \text{ then exit}\\
+  &\text{else set } \vec{a} = \emNotee{\vec{a}}{t}{t} \text{ and repeat} 
+\end{aligned}$$
+
+where $\delta$ is small like $10^{-9}$. The defaults are $l = 1$ and $\epsilon_{\text{NR}} = \infty$. Selecting $l < 1$ in case of divergence seems to help. Further, while [@fahrmeir92] does not observe improvments with multiple repitation, we find improvments in terms of mean sqare error of the state vector by taking multiple steps (setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower)
+
+$l$ and $\epsilon_{\text{NR}}$ are set by respecivly setting the elements `LR` and `NR_eps` of the list passed to `control` argument of `ddhazard`. By default, `LR = 1` and `NR_eps = NULL` which yields a learning rate of 1 and single Fischer scoring step. These can be altered by setting `control = list(LR = .75, NR_eps = 0.001)` for a learning rate of 0.75 and a threshold in the Fischer Scoring of $10^{-3}$
+
+## Parallel BLAS or LAPACK
+
+## Summary and recommandations
+
+
+# Uncented Kalman Filter
+The UKF selects state vectors called *sigma point* with given *sigma weigths* such that to match the moments of  observational equation. Hence, the motivation to use the UKF in place of the EKF as we avoid linerization error in the EKF and match the moments of a given order. [@julier97] the introduce UKF that match the first two moments and up to fourth moment in certain settings. [@julier04] further develops the UKF and extend to what is later refered to as *the Scaled Unscented Transformation*. We will cover the the Scaled Unscented Transformation in a bit and the motivation for it. Firstly, we will cover the UKF and the implemented version
+
+
+## Usual UKF formulation
+We start by introducing a common notation used in the UKF. Let:
+$$\ukfNotee{a}{b}{t}= \expecpCond{(\vec{a}_t - \overline{\vec{a}}_t)(\vec{b}_t - \overline{\vec{b}}_t)^T}{\mat{Y}_k}$$
+
+$\ukfNote{\cdot}{\cdot}$ is usefull short hand for the expected corelation matracies and expected co-variance matrix. Further, notice that $\mat{P}_{\vec{\alpha}_t, \vec{\alpha}_t} = \emNotee{\mat{V}}{t}{t}$. The UKF method proceeds as follows: We are given estimates $\emNotee{\vec{a}}{t - }{t - 1}$ and $\emNotee{\vec{a}}{t - }{t - 1}$. We then select $2m + 1$ *sigma points* (where $m$ is the dimension of the state equation) denoted by $\vec{z}_0, \vec{z}_1, \dots, \vec{z}_{2m + 1}$ according to:
+
+$$\begin{aligned}
+  \wvec{a}_0 &= \emNotee{\vec{a}}{t-1}{t-1} \\
+  \wvec{a}_{i} &= \emNotee{\vec{a}}{t-1}{t-1} + \sqrt{m + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t - 1}{t - 1}}\right)_i \\
+  \wvec{a}_{i + m} &= \emNotee{\vec{a}}{t-1}{t - 1} - \sqrt{m + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t - 1}{t - 1}}\right)_i
+\end{aligned} \qquad i = 1,2,\dots, n$$
+
+where $\left(\sqrt{\emNotee{\mat{V}}{t - 1}{t - 1}}\right)_i$ is the $i$'th column of the lower triangular matrix of the Cholesky decomposition of $\emNotee{\mat{V}}{t - 1}{t - 1}$. We assign the following weights to each sigma point (we will cover selection of the scalaras $\alpha$, $\beta$ and $\kappa$ shortly):
+$$\begin{aligned} 
+  W_0^{(m)} &= \frac{\lambda}{m + \lambda} \\
+  W_0^{(c)} &= \frac{\lambda}{m + \lambda} + 1 - \alpha^2 + \beta \\
+  W_i^{(m)} &= W_0^{(c)} = \frac{1}{2(m+\lambda)}, \qquad i = 1,\dots, 2m \\
+  \lambda &= \alpha^2 (m + \kappa) - m
+\end{aligned}$$
+
+Let $\vec{W}^{(j)} = (W_0^{(j)}, \dots, W_{2m}^{(j)})^T$ and $\wmat{A} = (\wvec{a}_0,\dots,\wvec{a}_{2m})$ The filter step given the sigma points and sigma weights is:
+$$\begin{aligned}
+  \emNotee{\vec{a}}{t}{t-1} &= \sum_{i = 0}^{2m} W_i^{(m)} \wvec{a}_i \\
+  \Delta\wmat{A} &= \wmat{A} - \emNotee{\vec{a}}{t}{t-1} \vec{1}^T \\
+  \emNotee{\mat{V}}{t}{t-1} &= \mat{Q} + \sum_{i=0}^{2m} W_i^{(c)}
+    (\wvec{a}_i - \emNotee{\vec{a}}{t}{t-1})(\wvec{a}_i - \emNotee{\vec{a}}{t}{t-1})^T \\
+  & = \mat{Q} + \Delta\wmat{A}\diag{\vec{W}^{(c)}}\Delta\wmat{A}^T
+\end{aligned}$$
+
+where $\diag{\cdot}$ returns a diagonal matrix with the passed vectors values in the diagonal and $\vec{1}$ is a vector with one in all the entries. We then proceed to the correction step. We start by defining the following intermediates: 
+
+$$\begin{aligned}
+  \wvec{y}_i &= \vec{z}_t \left(\wvec{a}_i \right), \qquad i = 0,1,\dots, 2m \\
+  \wmat{Y} &= (\wvec{y}_0, \dots, \wvec{y}_{2m}) \\
+  \overline{\vec{y}} &= \sum_{i = 0}^{2m} W_i^{(m)} \vec{y}_i, \qquad
+  \Delta\wmat{Y} = \wmat{Y} - \overline{\vec{y}} \vec{1}^T, \qquad 
+  \wmat{H} = \sum_{i=0}^m W_i^{(c)}\mat{H}_t(\wmat{a}_i) \\
+  \ukfNotee{y}{y}{t} &= \sum_{i=0}^m W_i^{(c)} \left(
+    (\wvec{y}_i - \overline{\vec{y}})(\wvec{y}_i - \overline{\vec{y}})^T + \wmat{H}\right) \\
+  &= \Delta\wmat{Y}\diag{\vec{W}^{(c)}}\Delta\wmat{Y}^T + \wmat{H} \\
+  \ukfNotee{x}{y}{t} &= \sum_{i=0}^m W_i^{(c)} 
+    (\wvec{a}_i - \emNotee{\vec{a}}{t}{t-1})(\wvec{y}_i - \overline{\vec{y}})^T \\
+  &= \Delta\wmat{A}\diag{\vec{W}^{(c)}}\Delta\wmat{Y}^T
+\end{aligned}$$
+
+The final correction step is then:
+$$\begin{aligned}
+  \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \ukfNote{a}{y}\ukfNote{y}{y}^{-1}(\vec{y}_t - \overline{\vec{y}}) \\
+  \emNotee{\mat{V}}{t}{t} &= \emNotee{\mat{V}}{t}{t} - \ukfNote{a}{y}\ukfNote{y}{y}^{-1}\ukfNote{a}{y}^T
+\end{aligned}$$
+
+## Re-writting
+The above formulation have the draw back that we have to invert $\ukfNote{y}{y}^{-1}$ which requires that we store matrix with dimension equal to the number of observation in given interval and invert it. The later is an issue when the number of observation is large (say 10,000) while the case is an issue when the number of observation is even moderatly large (say greater than 200). We can though re-write the above using the Woodbury matrix identity to get algorithm $O(s_i)$ instead of $O(s_i^3)$ where $s_i$ is the number of observations in the $i$'th interval
+
+The proposed correction step can be computed as:
+$$\begin{aligned}
+  \tilde{\vec{y}} &= \Delta \wmat{Y}^T \widehat{\mat{H}}^{-1}(\vec{y}_t - \overline{\vec{y}}) \\ 
+    \mat{G} &= \Delta\wmat{Y}^T\widehat{\mat{H}}^{-1}\Delta\wmat{Y} \\
+  \vec{c} &= \tilde{\vec{y}} - \mat{G}\left( \diag{\vec{W}^{(c)}}^{-1} + \mat{G}\right)^{-1} \tilde{\vec{y}} \\ 
+    \mat{L} &= \mat{G} - \mat{G}\left( \diag{\vec{W}^{(c)}}^{-1} + \mat{G}\right)^{-1} \mat{G} \\
+  \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \Delta\wmat{X}\diag{\vec{W}^{(c)}}\vec{c} \\
+  \emNotee{\mat{V}}{t}{t} &= \emNotee{\mat{V}}{t}{t - 1} - 
+    \Delta\wmat{X}\diag{\vec{W}^{(c)}}\mat{L}\diag{\vec{W}^{(c)}}\Delta\wmat{X}^T
+\end{aligned}$$
+
+where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(s_i)$ since $\widehat{\mat{H}}$ is a diagonal matrix and all products involves at worst multiplication $m\times s_i$ and $s_i \times m$ matricies
+
+## Chosing hyperparameters
+We still need to select the hyperparameters $\kappa$, $\alpha$ and $\beta$. We will cover these in the given order. $\kappa$ is usually set to $\kappa = 0$ or $\kappa = 3 - m$ which [@julier97] state is a "* useful heuristic*" when the state equation is Gaussian. The default is 0 and can be alter by setting the list element `kappa` passed as the `control` argument to `ddhazard`. For example, `control = list(kappa = 1, ...)` yields $\kappa = 1$.
+
+
+$0<\alpha \leq 1$ controls the spread of the sigma points. As an example, we can notice that $\lambda + m \rightarrow 0^+$, $w_0^{(c)},w_0^{(m)}\rightarrow -\infty$ and $w_i^{(c)}, w_i^{(m)} \rightarrow \infty$ ($i > 0$) as $\alpha \rightarrow 0^+$ with $\kappa = 0$. Hence, the lower the value, the lower the spread but the higher the absolute weights. It is genrally suggsted to choose $\alpha$ small. The arguments hereof are provided in for example [@gustafsson12] and [@julier04]. The algorithm tend to have issues with divergence with $\alpha < 1$. In particular divergence seems to be linked to the choice of initial co-variance matrix $\mat{Q}$ and co-variance matrix $\mat{Q}_0$. For this reason, the default is $\alpha = 1$. The parameter can be altered through the `alpha` element of the list passed to the argument `control` of `ddhazard`.
+
+Lastly, $\beta$ is a correction term to match the fourth-order term in the Taylor series expansion of the covariance of the observational equation. [@julier04] show in the appendix that the optimal value with a Gaussian state equation is $\beta = 2$. This is the default. It can be altered through the `beta` element of list passed to the argument `control` of `ddhazard`.
+
+
+## Summary and recommandations
+
+
+
+# Logistic model
+The logistic model is fitted with by setting `model = "logit"` in the call to `ddhazard`. The link funtion $h$ is defined as inverse logit function $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The following paragraphs will cover the EKF and UKF notes. This is followed by some quick comment about the loss of information due to binning
+
+## EKF
+From a numerical point of view, each individual computation are fairly stable with EKF method fot the logitistic model. The main reason is that:
+$$\left. \partial h(\eta)/ \partial \eta \right\vert_{\eta = \vec{z}_{it}^T \vec{\alpha}_t} = H_{iit}(\vec{\alpha}_t)$$
+
+Given the variance $\mat{H}_t(\vec{\alpha}_t)$ and expected mean $h(\eta)$ are bound this means that all the terms are on a resonably stable for all values of the linear predictor $\vec{\alpha}_t^T\vec{x}_{it}$
+
+## UKF
+This is not the case for the UKF method and the logistic model. We scale by $\wmat{H}_t^{-1}$ when computing $\mat{G}$ and $\tilde{\vec{y}}$ which will approach zero as linear predictor get large in abosolute value. For this reason, we truncate the linear predictor $\eta_{it} = \vec{\alpha}_t^T\vec{x}_{it}$ the variance cannot be less than some pre-specified quantity $\delta$. Effecitvly this means that we set:
+$$\begin{aligned}
+  &h(\eta)(1-h(\eta) \geq \delta, \qquad \delta \in (0, 1/4) \\
+  \Leftrightarrow \quad & \log \left( \frac{1 - 2\delta - \sqrt{(1-4\delta)}}{2\delta}\right)
+    \leq \eta \leq 
+    \log \left( \frac{1 - 2\delta +\sqrt{(1-4\delta)}}{2\delta}\right)
+\end{aligned}$$
+
+## Implementation details
+### Binning
+Insert graph and make points. Motivates the exponential model
+
+# Exponential model
+## EKF
+## UKF
+## Implementation details
+### Computational issues
+
+# References
+

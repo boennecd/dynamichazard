@@ -43,9 +43,11 @@ extern int openblas_get_num_threads();
 // R now defines NDEBUG which suppresses a number of useful
 // Armadillo tests Users can still defined it later, and/or
 // define ARMA_NO_DEBUG
-#if defined(NDEBUG)
-#undef NDEBUG
-#endif
+// #if defined(NDEBUG)
+// #undef NDEBUG
+// #endif
+
+#define NDEBUG
 
 using uword = arma::uword;
 
@@ -53,7 +55,7 @@ using uword = arma::uword;
 // This truncation ensures that the variance in the logit model can never
 // become lower than sqrt(std::numeric_limits<double>::epsilon())
 constexpr double lower_trunc_exp_exp_thres = 1 / (1e-4 * sqrt(std::numeric_limits<double>::epsilon()));
-constexpr double lower_trunc_exp_log_thres = sqrt(lower_trunc_exp_exp_thres);
+constexpr double lower_trunc_exp_log_thres = log(lower_trunc_exp_exp_thres);
 constexpr double upper_trunc_exp_exp_thres = 1e-4 * sqrt(std::numeric_limits<double>::epsilon());
 constexpr double upper_trunc_exp_log_thres = log(upper_trunc_exp_exp_thres);
 
@@ -895,9 +897,9 @@ public:
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
 
-  k(!kappa.isNull() ? Rcpp::as< Rcpp::NumericVector >(kappa)[0] : 3.0 - m),
-  a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 1.0),
-  b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 0.0),
+  k(!kappa.isNull() ? Rcpp::as< Rcpp::NumericVector >(kappa)[0] : 0.0),
+  a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 0.01),
+  b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 2.0),
   lambda(pow(a, 2) * (m + k) - m),
 
   w_0(lambda / (m + lambda)),
@@ -906,7 +908,9 @@ public:
   sqrt_m_lambda(std::sqrt(m + lambda)),
 
   sigma_points(arma::mat(m, 2 * m + 1))
-  {}
+  {
+    Rcpp::Rcout << "w_0 " << w_0 << "\tw_0_c " << w_0_c << "\tw_i " << w_i << "\tlambda" << lambda << std::endl;
+  }
 
   void solve(){
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -1006,10 +1010,7 @@ public:
 
         // Compute intermediate matrix
         arma::mat tmp_mat;
-        if(!arma::inv_sympd(tmp_mat, arma::diagmat(weights_vec_inv) + O)){
-          Rcpp::warning("Failed to invert intermediate matrix with a symmetric square method. Using general inversion instead");
-          arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O);
-        }
+        arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O); // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
         tmp_mat = O * tmp_mat;
 
 #if defined(MYDEBUG_UKF)
@@ -1026,10 +1027,7 @@ public:
         c_vec = c_vec -  tmp_mat * c_vec;
 
         // Re-compute intermediate matrix using the other weight vector
-        if(!arma::inv_sympd(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-          Rcpp::warning("Failed to invert intermediate matrix with a symmetric square method. Using general inversion instead");
-          arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O);
-        }
+        arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O);
         tmp_mat = O * tmp_mat;
 
         // compute matrix for co-variance

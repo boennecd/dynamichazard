@@ -130,6 +130,7 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
   expect_true(class(all.equal(m1$lag_one_cor, m2$lag_one_cor)) == "character")
 })
 
+
 test_that("Implement cont time model for UKF when Feodor aggress on implementation", {
   expect_true(F)
 })
