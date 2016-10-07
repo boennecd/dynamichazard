@@ -51,70 +51,31 @@ extern int openblas_get_num_threads();
 
 using uword = arma::uword;
 
-// Maybe look at this one day https://github.com/Headtalk/armadillo-ios/blob/master/armadillo-4.200.0/include/armadillo_bits/fn_trunc_exp.hpp
-// This truncation ensures that the variance in the logit model can never
-// become lower than sqrt(std::numeric_limits<double>::epsilon())
-constexpr double lower_trunc_exp_exp_thres = 1 / (1e-4 * sqrt(std::numeric_limits<double>::epsilon()));
-constexpr double lower_trunc_exp_log_thres = log(lower_trunc_exp_exp_thres);
-constexpr double upper_trunc_exp_exp_thres = 1e-4 * sqrt(std::numeric_limits<double>::epsilon());
-constexpr double upper_trunc_exp_log_thres = log(upper_trunc_exp_exp_thres);
+constexpr double trunc_exp_delta = 1e-4;
+constexpr double lower_trunc_exp_log_thres =
+  log((1 - sqrt(1 - 4 * trunc_exp_delta) - 2 * trunc_exp_delta) / (2 * trunc_exp_delta));
+constexpr double lower_trunc_exp_exp_thres = exp(lower_trunc_exp_log_thres);
+constexpr double upper_trunc_exp_log_thres =
+  log((1 + sqrt(1 - 4 * trunc_exp_delta) - 2 * trunc_exp_delta) / (2 * trunc_exp_delta));
+constexpr double upper_trunc_exp_exp_thres = exp(upper_trunc_exp_log_thres);
+
 
 struct {
   template<typename T>
-  void operator()(T &&val){
-    if(val >= lower_trunc_exp_log_thres)
+  T operator()(T &&val){
+    if(val <= lower_trunc_exp_log_thres)
     {
-      val =  lower_trunc_exp_exp_thres;
-    } else if(val <= upper_trunc_exp_log_thres) {
+      val = lower_trunc_exp_exp_thres;
+    } else if(val >= upper_trunc_exp_log_thres) {
       val = upper_trunc_exp_exp_thres;
     }
     else
     {
       val = std::exp(val);
     }
-  }
-} trunc_exp_in_place_functor;
-
-inline void trunc_exp_in_place(arma::vec &result)
-{
-  result.for_each(trunc_exp_in_place_functor);
-}
-
-inline void trunc_exp_in_place(arma::mat &result)
-{
-  result.for_each(trunc_exp_in_place_functor);
-}
-
-
-struct {
-  template<typename T>
-  T operator()(const T &val){
-    if(val >= lower_trunc_exp_log_thres )
-    {
-      return lower_trunc_exp_exp_thres;
-    }
-    else if(val <= upper_trunc_exp_log_thres){
-      return upper_trunc_exp_exp_thres;
-    }
-    else
-    {
-      return std::exp(val);
-    }
+    return(val);
   }
 } trunc_exp_functor;
-
-
-inline const arma::vec& trunc_exp(const arma::vec &result)
-{
-  result.for_each(trunc_exp_functor);
-  return result;
-}
-
-inline const arma::mat& trunc_exp(const arma::mat &result)
-{
-  result.for_each(trunc_exp_functor);
-  return result;
-}
 
 
 // Define convergence criteria
@@ -791,7 +752,7 @@ public:
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
       arma::mat Z_t = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
-      trunc_exp_in_place(Z_t);
+      Z_t.transform(trunc_exp_functor);
       Z_t.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
       // Compute y_bar, P_a_v and P_v_v
@@ -908,9 +869,7 @@ public:
   sqrt_m_lambda(std::sqrt(m + lambda)),
 
   sigma_points(arma::mat(m, 2 * m + 1))
-  {
-    Rcpp::Rcout << "w_0 " << w_0 << "\tw_0_c " << w_0_c << "\tw_i " << w_i << "\tlambda" << lambda << std::endl;
-  }
+  {}
 
   void solve(){
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -977,7 +936,7 @@ public:
         arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
         O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
 
-        trunc_exp_in_place(O);
+        O.transform(trunc_exp_functor);
 
         O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
