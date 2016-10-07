@@ -111,9 +111,8 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
   arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                    by = 1,
                    data = sims$res,
-                   a_0 = rep(0, ncol(sims$res) + 1 - 4),
                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                   Q = diag(rep(1e-2, ncol(sims$res) + 1 - 4)),
+                   Q = diag(rep(1e-1, ncol(sims$res) + 1 - 4)),
                    control = list(kappa = 0, alpha = 1, beta = 0,
                                   est_Q_0 = F, method = "UKF", eps = 1e-2),
                    id = sims$res$id,
@@ -128,8 +127,55 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
   expect_true(class(all.equal(m1$a_t_d_s, m2$a_t_d_s)) == "character")
   expect_true(class(all.equal(m1$V_t_d_s, m2$V_t_d_s)) == "character")
   expect_true(class(all.equal(m1$lag_one_cor, m2$lag_one_cor)) == "character")
+
+  arg_list$control$alpha <- .1
+
+  m3 <- do.call(ddhazard, arg_list)
+
+  expect_true(class(all.equal(m2$a_t_d_s, m3$a_t_d_s)) == "character")
+  expect_true(class(all.equal(m2$V_t_d_s, m3$V_t_d_s)) == "character")
+  expect_true(class(all.equal(m2$lag_one_cor, m3$lag_one_cor)) == "character")
+
+  arg_list$control$kappa <- -1
+  m4 <- do.call(ddhazard, arg_list)
+
+  expect_true(class(all.equal(m3$a_t_d_s, m4$a_t_d_s)) == "character")
+  expect_true(class(all.equal(m3$V_t_d_s, m4$V_t_d_s)) == "character")
+  expect_true(class(all.equal(m3$lag_one_cor, m4$lag_one_cor)) == "character")
 })
 
+arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+                 by = 1,
+                 data = NULL,
+                 Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
+                 Q = diag(rep(1e-1, ncol(sims$res) + 1 - 4)),
+                 control = list(kappa = 0, alpha = 1, beta = 0,
+                                est_Q_0 = F, method = "UKF", eps = 1e-2),
+                 id = NULL,
+                 verbose = F,
+                 max_T = 10)
+
+set.seed(2972)
+sims <- test_sim_func_logit(n_series = 2e3, n_vars = 3, t_0 = 0, t_max = 10,
+                            x_range = 1, x_mean = -.5, re_draw = T, beta_start = 1,
+                            intercept_start = -2, sds = c(.1, rep(1, 3)))
+sum(sims$res$event)
+
+arg_list$data <- sims$res
+arg_list$id <- sims$res$id
+
+arg_list$control$beta <- 0
+fit1 <- do.call(ddhazard, arg_list)
+
+arg_list$control$beta = 2
+fit2 <- do.call(ddhazard, arg_list)
+
+matplot(sims$betas, type = "l", lty = 1, ylim = range(sims$betas, fit1$a_t_d_s, fit2$a_t_d_s))
+matplot(fit1$a_t_d_s, type = "l", lty = 2, add = T)
+matplot(fit2$a_t_d_s, type = "l", lty = 4, add = T)
+
+diag(fit1$Q)
+diag(fit2$Q)
 
 test_that("Implement cont time model for UKF when Feodor aggress on implementation", {
   expect_true(F)
