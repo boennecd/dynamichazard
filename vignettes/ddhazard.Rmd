@@ -45,23 +45,29 @@ knitr::opts_chunk$set(echo = TRUE)
 %
 
 # Intro
-The `ddhazard` function estimates a binary regression model where the parameters are assumed to follow a pre-defined random walk. The function is implemented such that: 
+This note will cover the `ddhazard` function in `dynamichazard` library. You can install the the library through github for the `devtools` library as follows:
+
+```{r eval=FALSE}
+devtools::install_github("boennecd/dynamichazard")
+```
+
+The `ddhazard` function estimates a binary regression model where the parameters are assumed to time-variant and follow a pre-defined random walk. The function is implemented such that: 
 
 1) The time complexity of the computation is linear in the number of observations
-2) The dimension of the observation equation can vary through time
-3) It is fast due to the `C++` implementation and use of multithreading
+2) The dimension of the observation equation (this will be defined soon) can vary through time
+3) It is fast due and scalable due the `C++` implementation which uses `Armadillo` library and use of multithreading through the standard library `thread` 
 
-We will breifly introduce the in model in the following paragraphs. Let $\vec{x}_{it}$ denote the co-variate vector for indvidual $i$ at time $t$ and let $Y_{it}$ be the random variable for whether the $i$'th individual dies at time $t$. For given parameters at time $t$ denoted by $\vec{\alpha}_t$ the probablity of death is:
+We will breifly introduce the in model in the following paragraphs. Let $\vec{x}_{it}$ denote the co-variate vector for indvidual $i$ at time $t$ and let $Y_{it}$ be the random variable for whether the $i$'th individual dies within time $(t-1, t]$. Denote the parameters at time $t$ by $\vec{\alpha}_t$. For given parameters at time $t$ the probability of death is:
 
 $$\begin{aligned}
   \vec{y}_{it} = (y_{i1}, \dots, y_{it})^T, 
   \quad \mat{X}_{t} = \Lparen{\vec{x}_{i1}^T, \dots, \vec{x}_{it}^T}^T \\
-  \proppCond{Y_{it} = 1}{\vec{y}_{i,t-1}, \mat{X}_{t}, \vec{r}_{it}, \vec{\alpha}_t} = h(\vec{\alpha}_t^T \vec{x}_{it})
+  \proppCond{Y_{it} = 1}{\vec{y}_{i,t-1}, \mat{X}_{t}, \vec{\alpha}_t} = h(\vec{\alpha}_t^T \vec{x}_{it})
 \end{aligned}$$
 
-where $h$ is the link function. For example, this could be the logistic function such that $\exp(\eta) / (1 + \exp(\eta))$.
+where $h$ is the link function. For example, this could be the logistic function such that $H(\eta) = \exp(\eta) / (1 + \exp(\eta))$.
 
-The models estimated in the `ddhazard` function are in the state space form:
+The `ddhazard` function estimates models in the state space form:
 $$\begin{array}{ll}
   \vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad & 
   \vec{\epsilon}_t \sim (\vec{0}, \mat{H}_t(\vec{\alpha}_t))  \\
@@ -69,7 +75,7 @@ $$\begin{array}{ll}
   \vec{\eta}_t \sim N(\vec{0}, \mat{Q}) \\
 \end{array} , \qquad t = 1,\dots, n$$
 
-$\vec{y}_t$ is the binary outcome and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. It needs not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the coresponding *state equation*
+$\vec{y}_t$ is the binary outcomes and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. It needs not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding *state equation*
 
 The mean $\vec{z}_t(\vec{\alpha}_t)$ and variance $\mat{H}(\vec{\alpha}_t)$ are state dependent with:
 $$\begin{aligned}
@@ -79,38 +85,39 @@ $$\begin{aligned}
   \end{matrix}\right.
 \end{aligned}$$
 
-The state equation is implemented with a 1. and 2. order random walk. For the first order random walk $\mat{F} = \mat{R} = \mat{I}_m$ where $m$ is the dimension of the state vector and $\mat{I}_m$ is the identity matrix with dimension $m$. As for the second order random walk, we have:
+The state equation is implemented with a 1. and 2. order random walk. For the first order random walk $\mat{F} = \mat{R} = \mat{I}_m$ where $m$ is the number of regression parameters and $\mat{I}_m$ is the identity matrix with dimension $m$. As for the second order random walk, we have:
 $$\mat{F} = \begin{pmatrix} 
   2\mat{I}_m & - \mat{I}_m \\ \mat{0}_m & \mat{I}_m
 \end{pmatrix},  \qquad 
 \mat{R} = \begin{pmatrix} \mat{I}_m \\ \mat{0}_m \end{pmatrix}$$
 
-where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The models are estimated by an Extended Kalman filter (EKF) or an Uncented Kalman filter (UKF). The method is chosen by passing a list to the `control` argument of `ddhazard` (the estimation function) with `list(method = "EKF", ...)` or `list(method = "UKF", ...)` respectivly
+where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The models are estimated by an Extended Kalman filter (EKF) or an Unscented Kalman filter (UKF). The method is chosen by passing a list to the `control` argument of `ddhazard` with `list(method = "EKF", ...)` or `list(method = "UKF", ...)` respectively
 
-Either methods require that a vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and co-variance matrix $\mat{Q}_0$ to start the filters. They can be estimated with an EM-algorithm as suggested in  [@fahrmeir94]. However, $\mat{Q}_0$ cannot be estimated and will tend towards zero. Hence, the default is not to estiamte the co-variance matrix $\mat{Q}_0$ and only the state vector $\vec{\alpha}_0$. You can estimate $\mat{Q}_0$ by setting the `est_Q_0` element of the `control` to `TRUE` (`list(est_Q_0 = T, ...)`)
+Either methods require a vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and co-variance matrix $\mat{Q}_0$ to start the filters. They can be estimated with an EM-algorithm as suggested in  [@fahrmeir94]. [@fahrmeir94] states that $\mat{Q}_0$ can be estimated to. Though, it does not seem posible and doing as [@fahrmeir94] will make all the elements tend towards zero. Hence, the default is not to estimate the co-variance matrix $\mat{Q}_0$ and only estimate the state vector $\vec{\alpha}_0$ and co-variance matrix $\mat{Q}$. You can estimate $\mat{Q}_0$ in the way [@fahrmeir94] describes by setting the `est_Q_0` element of the `control` to `TRUE` (`list(est_Q_0 = T, ...)`)
 
-The rest of this note is structed as follows. The section 'Example of usage' will show how to quickly fit a model. This is followed by the section 'EM alogorithm' where the EM algorithm is explained. The sections 'Extended Kalman Filter' and 'Uncented Kalman Filter' respectivly covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Exponential model' which cover the two implemented link functions
+The rest of this note is structured as follows. The section 'Example of usage' will show how to quickly fit a model. This is followed by the section 'EM algorithm' where the EM algorithm will be explained. The sections 'Extended Kalman Filter' and 'Unscented Kalman Filter' respectively covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Exponential model' which cover the models
 
 # Example of usage
+Question: Should I include a a quick example here or leave examples to a separate vignettes? 
 
 # EM algorithm
-An EM algorithm is used to estiamte the initial state space vector $\vec{\alpha}_0$ and the co-variance matrix $\mat{Q}$. Optionally $\mat{Q}_0$ is also estimated if `control = list(est_Q_0 = T, ...)`. We will need a short hand for the conditional means and co-variances to ease the notation. Define
+An EM algorithm is used to estimate the initial state space vector $\vec{\alpha}_0$ and the co-variance matrix $\mat{Q}$. Optionally $\mat{Q}_0$ is also estimated if `control = list(est_Q_0 = T, ...)`. We will need a short hand for the conditional means and co-variances to ease the notation. Define
 
 $$\emNotee{\vec{a}}{t}{k} = \expecpCond{\vec{\alpha}_t}{\mat{Y}_k},  \qquad
-\emNotee{\mat{V}}{t}{T} = \expecpCond{\mat{V}_t}{\mat{Y}_k},  \mat{Y}_k = (\vec{y}_{1k}, \dots, \vec{y}_{sk}) $$
+\emNotee{\mat{V}}{t}{k} = \expecpCond{\mat{V}_t}{\mat{Y}_k}, \qquad  \mat{Y}_k = (\vec{y}_{1k}, \dots, \vec{y}_{sk}) $$
 
-for the conditional mean and co-variance matrix where $s$ is the number of observations. Notice that the letter 'a' is used for estimates while alpha is used for the unkown state. Further, these can both be filter estimates in the case where $k \leq t$ smoothed estimates when $k > t$. We supress the dependence of the co-variates here to simplfy the notation
+for the conditional mean and co-variance matrix where $s$ is the number of observations. Notice that the letter 'a' is used for estimates while alpha is used for the unknown state. Further, these can both be filter estimates in the case where $k \leq t$ and smoothed estimates when $k > t$. We suppress the dependence of the co-variates ($\vec{x}_{it}$) here to simplify the notation
 
-The initial values for $\vec{\alpha}_0$, $\mat{Q}$ and $\mat{Q}_0$ can be set by passing vector to `a_0` argument of `ddhazard` and matricies to `Q_0` and `Q` argument of `ddhazard` for respectivly the $\mat{Q}_0$ and $\mat{Q}$ 
+The initial values for $\vec{\alpha}_0$, $\mat{Q}$ and $\mat{Q}_0$ can be set by passing a vector to `a_0` argument of `ddhazard` for $\vec{\alpha}_0$ and matrices to `Q_0` and `Q` argument of `ddhazard` for respectively $\mat{Q}_0$ and $\mat{Q}$ 
 
 ## E-step
 The outcome of the E-step is smoothed estimates:
 $$\emNote{\vec{a}}{i}{T}{k},  \quad 
-  \emNote{\mat{V}}{i}{d}{k}, \quad 
+  \emNote{\mat{V}}{i}{T}{k}, \quad 
   \mat{B}_j^{(k)} = \emNotee{\mat{V}}{t - 1}{t - 1}\mat{F}\emNotee{\mat{V}}{t}{t - 1}^{-1},  \quad 
   i=0,1,\dots,T\wedge j = 1,2,\dots,T$$
   
-where $T$ is the end of the last period we observe and supercripts $\cdot^{(k)}$ is used to destinguish the estimates from each iteration of the EM-algorithm. The required input to start the E-step is an initial mean vector $\widehat{\vec{a}}_0^{(k-1)}$ and co-variance matrices $\widehat{\mat{Q}}_0^{(k - 1)}$ and $\widehat{\mat{Q}}_0^{(k - 1)}$. Given these input, we compute the folowing estimates either using the EKF or UKF:
+where $T$ is the end of the last period we observe and superscripts $\cdot^{(k)}$ is used to distinguish the estimates from each iteration of the EM-algorithm. The required input to start the E-step is an initial mean vector $\widehat{\vec{a}}_0^{(k-1)}$ and co-variance matrices $\widehat{\mat{Q}}_0^{(k - 1)}$ and $\widehat{\mat{Q}}^{(k - 1)}$. Given these input, we compute the following estimates either by using the EKF or UKF:
 $$\emNotee{\vec{a}}{j}{j-1}, \quad 
   \emNotee{\vec{a}}{i}{i}, \quad 
   \emNotee{\mat{V}}{j}{j - 1}, \quad 
@@ -126,26 +133,28 @@ $$\begin{aligned}
 \end{aligned} \qquad t = T,T-1,\dots, 1$$
 
 ## M-step
-The M-step is updates the mean $\widehat{\vec{a}}_0^{(k)}$ and co-variance matrices $\widehat{\mat{Q}}_0^{(k - 1)}$ and $\widehat{\mat{Q}}_0^{(k - 1)}$ (the latter being optional). These are computed by:
+The M-step updates the mean $\widehat{\vec{a}}_0^{(k - 1)}$ and co-variance matrices $\widehat{\mat{Q}}_0^{(k - 1)}$ and $\widehat{\mat{Q}}_0^{(k - 1)}$ (the latter being optional). These are computed by:
 $$\begin{aligned}
 \widehat{\vec{\alpha}}_0^{(k)} &= \emNote{\vec{a}}{0}{d}{k}, \qquad
     \widehat{\mat{Q}}_0^{(k)} = \emNote{\mat{V}}{0}{d}{k} \\
-  \widehat{\mat{Q}}^{(k)} &= \frac{1}{d}	\sum_{t = 1}^d \mat{R}\left( 
+  \widehat{\mat{Q}}^{(k)} &= \frac{1}{d}	\sum_{t = 1}^d \mat{R}^T\left( 
       \left( \emNote{\vec{a}}{t}{d}{k} - \mat{F}\emNote{\vec{a}}{t - 1}{d}{k} \right)
       \left( \emNote{\vec{a}}{t}{d}{k} - \mat{F}\emNote{\vec{a}}{t - 1}{d}{k} \right)^T \right. \\
     &\hspace{57pt} + \emNote{\mat{V}}{t}{d}{k} - \mat{F}\mat{B}_t^{(k)}\emNote{\mat{V}}{t}{d}{k} - 
       \left( \mat{F}\mat{B}_t^{(k)}\emNote{\mat{V}}{t}{d}{k} \right) ^T + 
       \mat{F}\emNote{\mat{V}}{t - 1}{d}{k}\mat{F}^T
-      \left. \vphantom{\left( \emNote{\vec{a}}{t}{d}{k} - \mat{F}\emNote{\vec{a}}{t - 1}{d}{k} \right)^T} \right)\mat{R}^T
+      \left. \vphantom{\left( \emNote{\vec{a}}{t}{d}{k} - \mat{F}\emNote{\vec{a}}{t - 1}{d}{k} \right)^T} \right)\mat{R}
 \end{aligned}$$
 
+We test the relative norm of the change in the intial state vector to check for convergence. The convergence criteria is given by $\rVert \widehat{\vec{\alpha}}_0^{(k)} - \widehat{\vec{\alpha}}_0^{(k - 1)} \lVert / (\rVert \widehat{\vec{\alpha}}_0^{(k - 1)} \lVert + \delta) < \epsilon$  where $\delta$ is small number and $\epsilon$ is a pre-specified threshhold. You can select $\epsilon$ by chaning setting the `eps` element of the list passed to the `control` arugment of `ddhazard` (e.g. `list(eps = 0.01, ...)`)
+
 # Kalman Filter
-The standard Kalman filter is carried out by recursively doing two steps. This also aplies for the EKF and UKF. Thus, this paragraph is included to introduce general notions. The first step is in the Kalman Filter is the *filter step* where we estimate $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ based on $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$. Secondly, we cary out the *correction step* where we estimate $\emNotee{\vec{a}}{t}{t}$ and $\emNotee{\mat{V}}{t}{t}$ based on $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ and the observations. We then repeat the process
+The standard Kalman filter is carried out by recursively doing two steps. This also applies for the EKF and UKF. Thus, this paragraph is included to introduce general notions. The first step is in the Kalman Filter is the *filter step* where we estimate $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ based on $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$. Secondly, we carny out the *correction step* where we estimate $\emNotee{\vec{a}}{t}{t}$ and $\emNotee{\mat{V}}{t}{t}$ based on $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ and the observations. We then repeat the process until $t=T$
 
 # Extended Kalman Filter
-The idea for the Extended Kalman filter in this application is to replace the observational equation with a first order Taylor expansion. This approximated model can then be estimated with a regular Kalman Filter. The EKF in the form presented here is orginally described in [@fahrmeir94] and [@fahrmeir92] 
+The idea for the Extended Kalman filter is to replace the observational equation with a first order Taylor expansion. This approximated model can then be estimated with a regular Kalman Filter. The EKF presented here is originally described in [@fahrmeir94] and [@fahrmeir92] 
 
-The formulation in [@fahrmeir94] differs from the standard Kalman Filter by re-writting the correction step using the Woodbury matrix identity. This has two computational advantages. The first one is that the time complexity is $O(p)$ instead of $O(p^3)$ where $p$ denotes the dimension of the obsertion equation. Secondly, we do not have store an intermediate $p\times p$ matrix
+The formulation in [@fahrmeir94] differs from the standard Kalman Filter by re-writing the correction step using the Woodbury matrix identity. This has two computational advantages. The first one is that the time complexity is $O(p)$ instead of $O(p^3)$ where $p$ denotes the dimension of the observation equation. Secondly, we do not have store an intermediate $p\times p$ matrix
 
 The EKF starts with filter step where we compute:
 $$\begin{aligned}
@@ -169,15 +178,17 @@ $$\begin{aligned}
 		 \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{iit}(\vec{\alpha}_t)} \right\vert_{\eta = \vec{z}_{it}^T \vec{\alpha}_t}
 \end{aligned}$$
 
-## Divergence
-Intial testing showed that the EKF had issues divergence for some data set. The cause of divergence is overstepping in the correction step where we update $\emNotee{\vec{a}}{t}{t}$. In particular, the signs of the margins of $\emNotee{\vec{a}}{t}{t}$ tended to alter between $t-1, t, t+1$ etc. and the absolute values tended to increase.  The following section describes a solution to this issue
+$R_t$ is the set of indicies of individuals who are add risk at time $t$. It is commonly referred to as the risk set. Thus, the dimension the observational equation can varry as individual dies or are right censored
 
-[@fahrmeir92] mentions that the filter step can be viewed as single Fischer Scoring step (and hence a step in a Newton Raphson method). This motivates:
+## Divergence
+Initial testing shows that the EKF has issues with divergence for some data set. The cause of divergence seems to be overstepping in the correction step where we update $\emNotee{\vec{a}}{t}{t}$. In particular, the signs of the margins of $\emNotee{\vec{a}}{t}{t}$ tends to alter between $t-1, t, t+1$ etc. and the absolute values tends to increase when the algorithm diverges.  The following section describes a solution to this issue
+
+[@fahrmeir92] mentions that the filter step can be viewed as a single Fischer Scoring step (and hence a step in a Newton Raphson method). This motivates:
 
 1) To take multiple steps if $\emNotee{\vec{a}}{t}{t}$ is far from $\emNotee{\vec{a}}{t}{t-1}$
 2) Introduce a learning rate
 
-Simulation shows that the learning rate solves the issues with divergence. Let $l>0$ denote the learning rate and $\epsilon_\text{NR}$ denote the tolerance of the for the Filter step. We then set $\vec{a} = \emNotee{\vec{a}}{t}{t-1}$ and for compute:
+Simulated datasets show that the learning rate solves the issues with divergence. Let $l>0$ denote the learning rate and $\epsilon_\text{NR}$ denote the tolerance of the for the scoring step. We then set $\vec{a} = \emNotee{\vec{a}}{t}{t-1}$ and compute:
 
 $$\begin{aligned}
   &\emNotee{\vec{a}}{t}{t} = \vec{a} + l \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})\\
@@ -187,26 +198,39 @@ $$\begin{aligned}
   &\text{else set } \vec{a} = \emNotee{\vec{a}}{t}{t} \text{ and repeat} 
 \end{aligned}$$
 
-where $\delta$ is small like $10^{-9}$. The defaults are $l = 1$ and $\epsilon_{\text{NR}} = \infty$. Selecting $l < 1$ in case of divergence seems to help. Further, while [@fahrmeir92] does not observe improvments with multiple repitation, we find improvments in terms of mean sqare error of the state vector by taking multiple steps (setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower)
+where $\delta$ is small like $10^{-9}$. The defaults are $l = 1$ and $\epsilon_{\text{NR}} = \infty$. Selecting $l < 1$ in case of divergence seems to help. Further, while [@fahrmeir92] does not observe improvements with multiple repetitions, we find improvements in terms of mean square error of the state vector by taking multiple steps (for example by setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower)
 
-$l$ and $\epsilon_{\text{NR}}$ are set by respecivly setting the elements `LR` and `NR_eps` of the list passed to `control` argument of `ddhazard`. By default, `LR = 1` and `NR_eps = NULL` which yields a learning rate of 1 and single Fischer scoring step. These can be altered by setting `control = list(LR = .75, NR_eps = 0.001)` for a learning rate of 0.75 and a threshold in the Fischer Scoring of $10^{-3}$
+$l$ and $\epsilon_{\text{NR}}$ are set by respectively setting the elements `LR` and `NR_eps` of the list passed to `control` argument of `ddhazard`. By default, `LR = 1` and `NR_eps = NULL` which yields a learning rate of 1 and a single Fischer scoring step (which is the same as $\epsilon_{\text{NR}=\infty}$. These arguments can be altered by setting `control = list(LR = .75, NR_eps = 0.001)` for a learning rate of 0.75 and a threshold in the Fischer Scoring of $10^{-3}$
 
 ## Parallel BLAS or LAPACK
+All the computations use objects from the `Armadillo` library. Thus, an optimized version LAPACK and BLAS can speed up the computation
 
-## Summary and recommandations
-Choose low $\mat{Q}$ to start with
-Choose large $\mat{Q}_0$
+A multithreaded version of LAPACK or BLAS can cause issues with performance. The majority of the computation time is spend in the correction step of the EKF when have to compute $\vec{u}_t (\vec{\alpha}_t)$ and $\mat{U}_t (\vec{\alpha}_t)$ when the number of regression parameter is low and we have a lot of observations. For this reason, this part of the code is computed in parallel with the standard library 'thread'. The reduction in computation time can midigated if multithreaded version of LAPLACK or BLAS is used as the code already use multithreading
+
+A very specefic solution to the issues is implemented for windows users who compiles with openBLAS. the `src/Makevars.win` checks if there is `C:\OpenBLAS` folder. If so, we assume that the structure is:
+```
+C:/OpenBLAS/
+|--lib/
+   |--libopenblas.a
+|--include/
+   |--cblas.h
+   |--f77blas.h
+```
+
+The code will be compiled with this `openBLAS` instead of the `BLAS` library used to compile `R`. This will allow parts of the matrix operations to be run in parallel to `openBLAS` for multithreading. The number of threads openBLAS will use is set to 1 before the part that use `thread` is run and reset after the this part is completed
+
+## Recommandations
+In general, choosing $\mat{Q}_t = k\mat{I}$ with a large value $k$ and Choose large $\mat{Q} = d\mat{I}$ for $d$ small seems to work for a lot of data set. The exact value of $k$ and $d$ seems not to be too important. For instance, one dataset yielded almost the same result in terms of mean square error when $k \in [1, 10^3]$ and $d \in [10^{-6},10^{-1}]$
 
 
 # Uncented Kalman Filter
-The UKF selects state vectors called *sigma point* with given *sigma weigths* such that to match the moments of  observational equation. Hence, the motivation to use the UKF in place of the EKF as we avoid linerization error in the EKF and match the moments of a given order. [@julier97] the introduce UKF that match the first two moments and up to fourth moment in certain settings. [@julier04] further develops the UKF and extend to what is later refered to as *the Scaled Unscented Transformation*. We will cover the the Scaled Unscented Transformation in a bit and the motivation for it. Firstly, we will cover the UKF and the implemented version
-
+The UKF selects state vectors called *sigma point* with given *sigma weigths* such that to match the moments of  observational equation. The motivation to use the UKF in place of the EKF as we avoid linerization error in the EKF and choose hyperparameters to approximate moments of the observational equation. [@julier97] introduces a UKF that approximate the first two moments and up to fourth moment in certain settings. [@julier04] further develops the UKF and extend to what is later referred to as *the Scaled Unscented Transformation*. We will cover the the Scaled Unscented Transformation.
 
 ## Usual UKF formulation
 We start by introducing a common notation used in the UKF. Let:
 $$\ukfNotee{a}{b}{t}= \expecpCond{(\vec{a}_t - \overline{\vec{a}}_t)(\vec{b}_t - \overline{\vec{b}}_t)^T}{\mat{Y}_t}$$
 
-$\ukfNote{\cdot}{\cdot}$ is usefull short hand for the expected corelation matracies and expected co-variance matrix. Further, notice that $\mat{P}_{\vec{\alpha}_t, \vec{\alpha}_t} = \emNotee{\mat{V}}{t}{t}$. The UKF method proceeds as follows: We are given estimates $\emNotee{\vec{a}}{t - }{t - 1}$ and $\emNotee{\vec{a}}{t - }{t - 1}$. We then select $2m + 1$ *sigma points* (where $m$ is the dimension of the state equation) denoted by $\vec{z}_0, \vec{z}_1, \dots, \vec{z}_{2m + 1}$ according to:
+$\ukfNote{\cdot}{\cdot}$ is useful short hand for the expected correlation matrices and expected co-variance matrix. Further, notice that $\mat{P}_{\vec{\alpha}_t, \vec{\alpha}_t} = \emNotee{\mat{V}}{t}{t}$. The UKF method proceeds as follows: We are given estimates $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$. We then select $2m + 1$ *sigma points* (where $m$ is the dimension of the state equation) denoted by $\wvec{a}_0, \wvec{a}_1, \dots, \wvec{a}_{2m + 1}$ according to:
 
 $$\begin{aligned}
   \wvec{a}_0 &= \mat{F}\emNotee{\vec{a}}{t-1}{t-1} \\
@@ -214,7 +238,7 @@ $$\begin{aligned}
   \wvec{a}_{i + m} &= \mat{F}\left(\emNotee{\vec{a}}{t-1}{t - 1} - \sqrt{m + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t - 1}{t - 1}}\right)_i\right)
 \end{aligned} \qquad i = 1,2,\dots, n$$
 
-where $\left(\sqrt{\emNotee{\mat{V}}{t - 1}{t - 1}}\right)_i$ is the $i$'th column of the lower triangular matrix of the Cholesky decomposition of $\emNotee{\mat{V}}{t - 1}{t - 1}$. We assign the following weights to each sigma point (we will cover selection of the scalaras $\alpha$, $\beta$ and $\kappa$ shortly):
+where $\left(\sqrt{\emNotee{\mat{V}}{t - 1}{t - 1}}\right)_i$ is the $i$'th column of the lower triangular matrix of the Cholesky decomposition of $\emNotee{\mat{V}}{t - 1}{t - 1}$. We assign the following weights to each sigma point (we will cover selection of the hyperparameters $\alpha$, $\beta$ and $\kappa$ shortly):
 $$\begin{aligned} 
   W_0^{(m)} &= \frac{\lambda}{m + \lambda} \\
   W_0^{(c)} &= \frac{\lambda}{m + \lambda} + 1 - \alpha^2 + \beta \\
@@ -249,12 +273,12 @@ $$\begin{aligned}
 
 The final correction step is then:
 $$\begin{aligned}
-  \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \ukfNote{a}{y}\ukfNote{y}{y}^{-1}(\vec{y}_t - \overline{\vec{y}}) \\
-  \emNotee{\mat{V}}{t}{t} &= \emNotee{\mat{V}}{t}{t} - \ukfNote{a}{y}\ukfNote{y}{y}^{-1}\ukfNote{a}{y}^T
+  \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \ukfNotee{x}{y}{t}\ukfNotee{y}{y}{t}^{-1}(\vec{y}_t - \overline{\vec{y}}) \\
+  \emNotee{\mat{V}}{t}{t} &= \emNotee{\mat{V}}{t}{t} - \ukfNotee{x}{y}{t}\ukfNotee{y}{y}{t}^{-1}\ukfNotee{x}{y}{t}^T
 \end{aligned}$$
 
 ## Re-writting
-The above formulation have the draw back that we have to invert $\ukfNote{y}{y}^{-1}$ which requires that we store matrix with dimension equal to the number of observation in given interval and invert it. The later is an issue when the number of observation is large (say 10,000) while the case is an issue when the number of observation is even moderatly large (say greater than 200). We can though re-write the above using the Woodbury matrix identity to get algorithm $O(s_i)$ instead of $O(s_i^3)$ where $s_i$ is the number of observations in the $i$'th interval
+The above formulation has the draw back that we have to invert $\ukfNotee{y}{y}{t}^{-1}$ which is infeasible when the number observation is moderately large (say greater than 1000). We can re-write the above using the Woodbury matrix identity to get algorithm $O(\vert R_t \vert)$ instead of $O(\vert R_t \vert^3)$ where $R_t$ is the indicies at risk in the $i$'th interval
 
 The proposed correction step can be computed as:
 $$\begin{aligned}
@@ -267,36 +291,32 @@ $$\begin{aligned}
     \Delta\wmat{X}\diag{\vec{W}^{(c)}}\mat{L}\diag{\vec{W}^{(c)}}\Delta\wmat{X}^T
 \end{aligned}$$
 
-where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(s_i)$ since $\widehat{\mat{H}}$ is a diagonal matrix and all products involves at worst multiplication $m\times s_i$ and $s_i \times m$ matricies
+where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(\vert R_t \vert)$ since $\widehat{\mat{H}}$ is a diagonal matrix and all products involves at worst multiplication $m\times \vert R_t \vert$ or $\vert R_t \vert \times m$ matrices
 
 ## Selecting hyperparameters
-We still need to select the hyperparameters $\kappa$, $\alpha$ and $\beta$. We will cover these in the given order. $\kappa$ is usually set to $\kappa = 0$ or $\kappa = 3 - m$ which [@julier97] state is a "* useful heuristic*" when the state equation is Gaussian and $\alpha = 1$. The default is 0 and can be altered by setting the list element `kappa` passed as the `control` argument to `ddhazard`. For example, `control = list(kappa = 1, ...)` yields $\kappa = 1$.
+We still need to select the hyperparameters $\kappa$, $\alpha$ and $\beta$. We will cover these in the given order. $\kappa$ is usually set to $\kappa = 0$ or $\kappa = 3 - m$ which [@julier97] state is a "*useful heuristic*" when the state equation is Gaussian and $\alpha = 1$. The default is 0 and can be altered by setting the list element `kappa` passed as the `control` argument to `ddhazard`. For example, `control = list(kappa = 1, ...)` yields $\kappa = 1$.
 
 
-$0<\alpha \leq 1$ controls the spread of the sigma points. As an example, we can notice that $\lambda + m \rightarrow 0^+$, $w_0^{(c)},w_0^{(m)}\rightarrow -\infty$ and $w_i^{(c)}, w_i^{(m)} \rightarrow \infty$ ($i > 0$) as $\alpha \rightarrow 0^+$ with $\kappa = 0$. Hence, the lower the value, the lower the spread but the higher the absolute weights. It is genrally suggsted to choose $\alpha$ small. The arguments hereof are provided in for example [@gustafsson12] and [@julier04]. The algorithm tend to have issues with divergence with $\alpha < 1$. In particular divergence seems to be linked to the choice of initial co-variance matrix $\mat{Q}$ and co-variance matrix $\mat{Q}_0$. For this reason, the default is $\alpha = 1$. The parameter can be altered through the `alpha` element of the list passed to the argument `control` of `ddhazard`.
+$0<\alpha \leq 1$ controls the spread of the sigma points. Notice that $\lambda + m \rightarrow 0^+$, $w_0^{(c)},w_0^{(m)}\rightarrow -\infty$ and $w_i^{(c)}, w_i^{(m)} \rightarrow \infty$ ($i > 0$) as $\alpha \rightarrow 0^+$ with $\kappa = 0$. Thus, the lower the value of $\alpha$, the lower the spread but the higher the absolute weights. It is generally suggested to choose $\alpha$ small. The arguments hereof are provided in for example [@gustafsson12] and [@julier04]. The algorithm tend to have issues with divergence with $\alpha < 1$. In particular divergence seems to be linked to the choice of initial co-variance matrix $\mat{Q}$ and co-variance matrix $\mat{Q}_0$. For this reason, the default is $\alpha = 1$. The parameter can be altered through the `alpha` element of the list passed to the argument `control` of `ddhazard`.
 
 Lastly, $\beta$ is a correction term to match the fourth-order term in the Taylor series expansion of the covariance of the observational equation. [@julier04] show in the appendix that the optimal value with a Gaussian state equation is $\beta = 2$. This is the default. It can be altered through the `beta` element of list passed to the argument `control` of `ddhazard`.
 
 ## Selecting starting values
-Exeperince with various data set and the UKF method have shown that the method is sensitive to the starting values of $\mat{Q}$ and $\mat{Q}_0$ (where the latter is may be fixed). The reason can be illustrated by the effect of $\mat{Q}_0$. We start the filter by setting $\emNotee{\mat{V}}{0}{0} = \mat{Q}_0$. Say that we set $\mat{Q}_0 = \kappa \mat{I}_m$ and $\vec{a}_0 = \vec{0}$. Then the $i$'th column of the Cholesky decompositions $\sqrt{\emNotee{\mat{V}}{0}{0}}$ is a vector with $\sqrt{\kappa}$ in the $i$'th entry and zero in the rest of the entries. Suppose that we set $\kappa$ large. Then the linear predictors computed with the $k < m +1$ sigma point is $\kappa x_{kjt}$ where $x_{kj1}$ is the $k$'th entry of indviduals $j$'s co-variate vector at time $1$. This can be potentially quite large in aboslute terms if $x_{kjt}$ is moderatly different from zero. This seems to lead to divergence in some cases for instance in the logistic model where we end with either zero or 1 estimates for the outcome 
+Experience with different data sets and the UKF is that the method is sensitive to the starting values of $\mat{Q}$ and $\mat{Q}_0$ (where the latter may be fixed). The reason for divergence can be illustrated by the effect of $\mat{Q}_0$. We start the filter by setting $\emNotee{\mat{V}}{0}{0} = \mat{Q}_0$. Say that we set $\mat{Q}_0 = k \mat{I}_m$ and $\vec{a}_0 = \vec{0}$. Then the $i$'th column of the Cholesky decomposition $\emNotee{\mat{V}}{0}{0}$ is a vector with $\sqrt{k}$ in the $i$'th entry and zero in the rest of the entries. Suppose that we set $k$ large. Then the linear predictors computed with the $l < m +1$ sigma point is $k x_{j1l}$ where $x_{j1l}$ is the $l$'th entry of individuals $j$'s co-variate vector at time $1$. This can be potentially quite large in absolute terms if $x_{kjt}$ is moderately different from zero. This seems to lead to divergence in some cases. For instance in the logistic model where we end with either zero or one estimates for the outcome for most or all sigma points  
 
-$\mat{Q}$ has a similar effect although it is harder to illustrate with a small example as it occours as an intermediate in the UKF. Question is then how to select $\mat{Q}$ and $\mat{Q}_0$. At this point, I can suggest to pick at diagonal matrix for plausible somewhat large values $\mat{Q}_0$ and $\mat{Q}_0$ to a diagonal matrix with small values. This is based on experince with various data sets. Though, what is plausible and what is small dependent on the data set
-
-## Summary and recommandations
-
-
+$\mat{Q}$ has a similar effect although it is harder to illustrate with a small example as it occurs as an intermediate in the UKF. Question is then how to select $\mat{Q}$ and $\mat{Q}_0$. At this point, I can suggest to pick at diagonal matrix for $\mat{Q}_0$ with a "*somewhat*" large values and $\mat{Q}_0$ to a diagonal matrix with small values. This is based on experience. Though, what is "*somewhat*" large and what is small dependent on the data set
 
 # Logistic model
-The logistic model is fitted with by setting `model = "logit"` in the call to `ddhazard`. The link funtion $h$ is defined as inverse logit function $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The following paragraphs will cover the EKF and UKF notes. This is followed by some quick comment about the loss of information due to binning
+The logistic model is fitted with by setting `model = "logit"` in the call to `ddhazard`. The link function $h$ is defined as inverse logit function $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The following paragraphs will cover the a few comments to the EKF and UKF implementation. This is followed by some comments about the loss of information due to binning which motivates the exponential model
 
 ## EKF
-From a numerical point of view, each individual computation are fairly stable with EKF method fot the logitistic model. The main reason is that:
+From a numerical point of view, each individual computation are fairly stable with EKF method for the logistic model. The main reason is that:
 $$\left. \partial h(\eta)/ \partial \eta \right\vert_{\eta = \vec{z}_{it}^T \vec{\alpha}_t} = H_{iit}(\vec{\alpha}_t)$$
 
-Given the variance $\mat{H}_t(\vec{\alpha}_t)$ and expected mean $h(\eta)$ are bound this means that all the terms are on a resonably stable for all values of the linear predictor $\vec{\alpha}_t^T\vec{x}_{it}$
+Given the variance $\mat{H}_t(\vec{\alpha}_t)$ and expected mean $h(\eta)$ are bound this means that all the terms are on a reasonably stable for all values of the linear predictor $\vec{\alpha}_t^T\vec{x}_{it}$
 
 ## UKF
-This is not the case for the UKF method and the logistic model. We scale by $\wmat{H}_t^{-1}$ when computing $\mat{G}$ and $\tilde{\vec{y}}$ which will approach zero as linear predictor get large in abosolute value. For this reason, we truncate the linear predictor $\eta_{it} = \vec{\alpha}_t^T\vec{x}_{it}$ the variance cannot be less than some pre-specified quantity $\delta$. Effecitvly this means that we set:
+This is not the case for the UKF method and the logistic model. We scale by $\wmat{H}^{-1}$ when we compute $\mat{G}$ and $\tilde{\vec{y}}$ which will approach Infinity as linear predictor get large in absolute value. For this reason, we truncate the linear predictor $\eta_{it} = \vec{\alpha}_t^T\vec{x}_{it}$ such that the variance cannot be less than some pre-specified quantity $\delta$. Effectively this means that we set:
 $$\begin{aligned}
   &h(\eta)(1-h(\eta) \geq \delta, \qquad \delta \in (0, 1/4) \\
   \Leftrightarrow \quad & \log \left( \frac{1 - 2\delta - \sqrt{(1-4\delta)}}{2\delta}\right)
@@ -308,14 +328,13 @@ In terms this implies that:
 $$\frac{1 - 2 \delta - \sqrt{1-4 \delta }}{1 - \sqrt{1-4 \delta}}
   \leq h(\eta) \leq \frac{1 - 2 \delta + \sqrt{1-4 \delta }}{1 + \sqrt{1-4 \delta}}$$
   
-The current implementation set $\delta = 10^{-4}$ 
+The current implementation uses $\delta = 10^{-4}$ 
+
+## Starting value
+QUESTION: Should I write about the static model that cen be used for $\vec{\alpha}_0$?
 
 ## Binning
-This section will illustrate how binning is performed for the logistic model and how this can lead to loss of information. It is elementery but included to stress this point and motivate the exponential model. We will use figure \ref{binning_fig} as the illustration. Each horizontal line represent an individual. A cross represents when the co-variate values change for the invidual and a circle represents the death of an invidual. Lines that ends with a cross are right censored
-
-The vertical dashed lines represents the bin borders. The first vertical from the left is where we start our model, the second vertical line is where the first bin ends and the second start and the third vertical line is where the second bin ends. Thus, only have two bins in this example
-
-```{r binning_fig, echo=FALSE, fig.cap = "Illustration of binning. See the text for explanation", fig.height=3}
+```{r binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of binning. See the text for explanation", fig.height=3}
 par(cex = .8, mar = c(1, 4, 1, 2))
 plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = F)
 
@@ -323,6 +342,8 @@ abline(v = c(0.5, 1.5, 2.5), lty = 2)
 
 n_series = 7
 y_pos = seq(0, 1, length.out = n_series + 2)[-c(1, n_series +2)]
+
+captioner::captioner()("binning_fig")
 
 set.seed(1992)
 x_vals_and_point_codes = list(
@@ -365,7 +386,11 @@ for(i in seq_along(x_vals_and_point_codes)){
 text(rep(0, n_series), rev(y_pos), letters[1:n_series], cex = par()$cex * 1.5)
 ```
 
-We can now cover how the inviduals (horisontal lines) are used in the estimation:
+This section will illustrate how binning is performed for the logistic model and how this can lead to loss of information. It is elementary but included to stress this point and motivate the exponential model. We will use `r tolower(captioner::captioner()("binning_fig", display = "cite"))` as the illustration. Each horizontal line represent an individual. A cross represents when the co-variate values change for the individual and a circle represents the death of an individual. Lines that ends with a cross are right censored
+
+The vertical dashed lines represents the bin borders. The first vertical from the left is where we start our model, the second vertical line is where the first bin ends and the second bin starts and the third vertical line is where the second bin ends. Thus, only have two bins in this example
+
+We can now cover how the individuals (horizontal lines) are used in the estimation:
 
 a. Is a control in both bins. We use the co-variates from 0 in the first bin and the co-variates from 1 in the second bin
 b. Is not included in any of the bins. We do not know the co-variates values at the start of the second bin so we cannot include him
@@ -377,26 +402,26 @@ g. Is not included in any bins. We do not know if he survived the entire period 
 
 The example illustrates that: 
 
-1. We loss information about co-variates that are updated within bins. For instance, a., c., d. and f. all use the co-variates from 0 for the entire period of the first bin despite that the co-variates change at 1. Moreover, we never use the information at 2 from a., d. and f.
-2. We loss information when we have right censoring. For instance, g. is not included at all since we only know that survives parts of the first bin
-3. We loss information for observation that only occours within bins as is the case for b.
+1. We loose  information about co-variates that are updated within bins. For instance, a., c., d. and f. all use the co-variates from 0 for the entire period of the first bin despite that the co-variates change at 1. Moreover, we never use the information at 2 from a., d. and f.
+2. We loose information when we have right censoring. For instance, g. is not included at all since we only know that survives parts of the first bin
+3. We loose information for observation that only occurs within bins as is the case for b.
 
 The above motivates the exponential model that will be covered in the next sections
 
 # Exponential model
-The following section introduce the exponential model. The exponential model has a tuplet for each observation containing a indicator for whether the invidual dies and a right-truncated time variable for the observed survival time. We start by describing the assumption of the exponential model. Then we turn to the indicator followed by the right-truncated time variabel. Finaly, a few comment is added to the EKF implementation.
+The following section introduce the exponential model. The exponential model has a tuple for each observation. The tuples contains an indicator for whether the individual dies and a right truncated time variable for the observed survival time. We start by describing the assumption of the exponential model. Then we turn to the indicator followed by the right truncated time variable. Finally, a few comment is added to the EKF implementation.
 
 
 ## Assumptions
 We make the following assumption in the exponential model: 
 
 1. Parameters (i.e. state variables $\vec{\alpha}_1,\dots, \vec{\alpha}_T$) change at time $1, 2, \dots , T$
-2. The invidiuals co-variates change at discrete times
-3. We have exponential disributed arrival times within bins
+2. The individuals co-variates change at discrete times
+3. We have exponential distributed arrival times within bins conditional on the parameters and co-variates
 
-These assumption means that we have piecewise constant exponential destributed arival times where the instantaneous hazard change when either the invidual co-variates change or the parameters change. We make the following definition to formalize the above. Let $\vec{x}_{ij}$ denote the $i$'th individuals $k$'th co-variate vector. For each invidiual we observe $j = 1, 2, \dots , l_i$ co-variate vectors. Each co-variate vector is valid in a period $(t_{i,j-1}, t_{i,j}]$. Let $T_i$ denote the random death time of the $i$'th invidual. Lastly, let $y_{ij} = 1_{\{T_i \in (t_{i,j - 1}, t_{i,j}]\}}$ be the indicator for whether the $i$'th invidual dies in period $(t_{i,j - 1}, t_{i,j}]$
+These assumption means that we have piecewise constant exponential distributed arrival times. The instantaneous hazard change when either the individual co-variates change or the parameters change. We make the following definitions to formalize the above. Let $\vec{x}_{ij}$ denote the $i$'th individuals $j$'th co-variate vector. For each individual we observe $j = 1, 2, \dots , l_i$ co-variate vectors. Each co-variate vector is valid in a period $(t_{i,j-1}, t_{i,j}]$. This definition differs from the previous definition of $\vec{x}_{ij}$ where the subscript $j$ referred to the bin number. Let $T_i$ denote the random death time of the $i$'th individual. Lastly, let $y_{ij} = 1_{\{T_i \in (t_{i,j - 1}, t_{i,j}]\}}$ be the indicator for whether the $i$'th individual dies in period $(t_{i,j - 1}, t_{i,j}]$
 
-The likelihood of observing a death for the $i$'th individual in the last period $(t_{i,l_i - 1, t_{i,l_i}]$ is: 
+The likelihood of observing a death for the $i$'th individual in the last period $(t_{i,l_i - 1}, t_{i,l_i}]$ is: 
 
 $$\begin{aligned}
   \proppCond{Y_{il_i} = 1}{\vec{\alpha}_0,\vec{\alpha}_1,\dots} =& \proppCond{Y_{il_i} = 1}{Y_{i, l_i -1} = 0 \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots} \\
@@ -406,18 +431,16 @@ $$\begin{aligned}
     \proppCond{Y_{i, 1} = 0}{\vec{\alpha}_0,\vec{\alpha}_1,\dots}
 \end{aligned}$$
 
-We can use the memory less property of the exponetial distribution to conclude that each of the term above have:
+We can use the memory less property of the exponential distribution to conclude that each of factor and the right hand site have:
 
 $$\begin{aligned}
 \proppCond{Y_{i,s} = 1}{Y_{i, s - 1} = 0\wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots} &= 1 - \prod_{z = \Lfloor{t_{i,s-1}} + 1 }^{\Lceil{t_{i,s}} } \exp\Lparen{ - \exp(\vec{x}_{is}^T \vec{\alpha}_{z})
     \Lparen{\min\{ z, t_{i,s} \} - \max\{ z - 1, t_{i,s-1} \} }}
 \end{aligned}$$
     
-where $\Lfloor{\cdot }$ is the floor function and $\Lceil{\cdot}$ is the ceiling function. The above we assume that $t_{i,s} - t_{i,s -1 } \geq 1$ to simplify the product (if not we would have more factors in the product where the co-variate vectors change within a bin). This is to ease the notation
+where $\Lfloor{\cdot }$ is the floor function and $\Lceil{\cdot}$ is the ceiling function. In order to get this into the state space model notation we further have to separate $Y_{i,s}$ if $(t_{i,s-1}, t_{i,s}]$ crosses one or more bins. Take for example $(0.5, 2.5]$. Here we add three binary observations: one with time period of $(0.5,1]$, one with $(1, 2]$ and one with $(2, 2.5]$. Notice that this also implies that an individual who has different co-variate vectors within in a bin will have more than one observation in that bin. For example, an individual with a co-variate vector for $(0, 0.5]$ and a co-variate vector for $(0.5, 1]$ will yield two observation to the observation equation in the first bin
 
-In order to get this into the state space model notation we further have to seperate $Y_{i,s}$ if $(t_{i,s-1}, t_{i,s}]$ crosses one or more bins. Take for example $(0.5,1.5]$. Here we add two binary observations: one with time period of $(0.5,1]$ and another with $(1, 1.5]$. Notice that this also implies that an invidual who has different co-variate vectors witih in a bin. For example and invidual with a co-variate vector $(0, 0.5]$ and a co-variate vector for $(0.5, 1]$ will yield two observation to the observation equation in the first interval
-
-Computing the condtional mean, $h$, can done as follows. Assume for simplicity of notation that the observation $Y_{i,s}$ is inside an interval. In other words $\Lceil{t_{i,s}} - 1 \leq \Lfloor{t_{i,s-1}}$ . This could for example be an observation we have introduced becuase the inital interval crossed a bin. The the link function in this case is:
+Computing the conditional mean, $h$, can done as follows. Assume for simplicity of notation that the observation $Y_{i,s}$ is inside an interval. In other words $\Lceil{t_{i,s}} - 1 = \Lfloor{t_{i,s-1}}$. This could be an observation we have introduced because the initial interval crossed a bin. The conditional mean is:
 
 $$\begin{aligned}
   \tilde{z}(\vec{\alpha}) &= \expecpCond{Y_{i, s}}{Y_{i, s - 1} = 0 \wedge \vec{\alpha}_{\Lceil{t_{i,s}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,s}} - 1}, \dots , \vec{\alpha}_0 } \\
@@ -425,20 +448,20 @@ $$\begin{aligned}
    &= \left. 1 - \exp\Lparen{ - \exp(\eta) \Lparen{t_{i,s} - t_{i,s-1} }}\right|_{\eta = \vec{x}_{is}^T\vec{\alpha} }
 \end{aligned}$$
 
-where the tilde is added to stress that $\tilde{z}(\vec{\alpha}_{\Lceil{t_{i,s}}})$ is a margin of the mean in the observational equation $\vec{z}_{\Lceil{t_{i,s}}}$ where we do not provide a subscript for the elements index. The variance for diagonal in $\mat{H}_{\Lceil{t_{i,s}}}(\vec{\alpha}_{\Lceil{t_{i,s}}})$ is given by $h(\eta)(1 - h(\eta))$ as $Y_{is}$ is binary. 
+where the tilde is added to stress that $\tilde{z}(\vec{\alpha}_{\Lceil{t_{i,s}}})$ is a margin of the mean in the observational equation $\vec{z}_{\Lceil{t_{i,s}}}$ where we do not provide a subscript for the elements index. The variance for the diagonal in $\mat{H}_{\Lceil{t_{i,s}}}(\vec{\alpha}_{\Lceil{t_{i,s}}})$ is given by $h(\eta)(1 - h(\eta))$ as $Y_{is}$ is binary. 
 
-Right censoring is not an issue in this setup if we assume independent censoring. In this case the '$\min$' condition in $\proppCond{Y_{i,s} = 1}{Y_{i, s - 1} = 0 \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots}$ is valid for the last $t_{il_i}$ even if $t_{il_i} < \Lceil{t_{il_i}}$ as we can condition on the censoring variable. However, the '$\min$' condition is not valid when $t_{il_i} < \Lceil{t_{il_i}}$ and it is due to a death ($T_i = t_{il_i}$). We cannot condition on $T_i = t_{il_i}$ as we did with independent censoring because then $\proppCond{Y_{i,l_i} = 1}{T_i = t_{il_i}} = 1$
+Right censoring is easily handled if we assume independent censoring. In this case the '$\min$' condition in $\proppCond{Y_{i,s} = 1}{Y_{i, s - 1} = 0 \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots}$ is valid for the last $t_{il_i}$ even if $t_{il_i} < \Lceil{t_{il_i}}$. We only know that the individual survives up to $t_{il_i}$ after which he was censored by an independent mechanism which we can condition on. However, the same logic does not apply when $t_{il_i} < \Lceil{t_{il_i}}$ and it is due to a death ($T_i = t_{il_i}$). We cannot condition on $T_i = t_{il_i}$ as we did with independent censoring because then $\proppCond{Y_{i,l_i} = 1}{T_i = t_{il_i}} = 1$
 
-What we do instead is that we round $t_{il_i}$ up when we compute $h$ (the condtional mean) and when we compute the contional variance in the case of a death. This means that we loss the information of the time of the event. However, we incorporate this with the addition described in the next section
+What we do instead is that we round $t_{il_i}$ up when we compute $h$ (the conditional mean) and when we compute the conditional variance in the case of a death. This means that we loose the information of the time of the event. However, we incorporate this information with the addition described in the next section
 
 ## Truncated observations time
-We start by defning the truncated obserervation time $\Delta_{is}$:
+We start by defining the truncated observation time $\Delta_{is}$:
 $$\begin{aligned}
   &\Delta_{is} = (T_i - t_{i,s-1}) + \Lparen{t_{i,s} - T_i}1_{\{T_i \geq t_{i,s}\}} \\
   &T_i \geq t_{i,s-1}\Rightarrow\Delta_{is} \in [0,t_{i,s} - t_{i,s-1}]
 \end{aligned}$$
 
-The propposed and implemented model is to let every observation yield a tuplet $(Y_{i,s}, \Delta_{i,s})$. This reason to do this will be given and the end of this section. First, we will need to find the conditional mean and variance of $\Delta_{i,s}$ in order to use $\Delta_{i,s}$ in the observational equation. We start by recursively conditioning to get:
+The proposed and implemented model is to let every observation yield a tuple $(Y_{i,s}, \Delta_{i,s})$. The reason to include the tuple will be given and the end of this section. First, we will need to find the conditional mean and variance of $\Delta_{i,s}$ in order to use $\Delta_{i,s}$ in the observational equation. We start by recursively conditioning to get:
 $$\begin{aligned}
   \proppCond{T_i = t_{i,l_i}}{\vec{\alpha}_0,\vec{\alpha}_1,\dots} =&
     \proppCond{\Delta_{i,l_i} = t_{i,l_i} - t_{i,l_i -1}}{\Delta_{i,l_i - 1} = t_{i,l_i - 1} - t_{i,l_i - 2} \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots} \\
@@ -450,16 +473,16 @@ $$\begin{aligned}
     \proppCond{\Delta_{i,1} = t_{i,1} }{\vec{\alpha}_0,\vec{\alpha}_1,\dots}
 \end{aligned}$$
 
-The condtional probabilites simplifies in a similar manner as for the binary $Y_{i,s}$ due to the memoryless property of the exponential distribution. Thus, computing the condtional mean, $h$, can done as follows. Again, assume for simplicity of notation that the observation $(t_{i, s-1}, t_{i,s}]$ is inside an interval (see the previous section). Then:
+The conditional probabilities simplifies in a similar manner as for the binary $Y_{i,s}$ due to the memoryless property of the exponential distribution. Thus, computing the conditional mean, $h$, can done as follows. Again, assume for simplicity of notation that the observation $(t_{i, s-1}, t_{i,s}]$ is inside an interval (see the previous section). Then:
 
 $$\begin{aligned}
   \tilde{z}(\vec{\alpha}) &= \expecpCond{\Delta_{i,s}}
     {\Delta_{i,s - 1} = t_{i,s - 1} - t_{i,s - 2} \wedge \vec{\alpha}_{\Lceil{t_{i,s}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,s}} - 1}, \dots , \vec{\alpha}_0  } \\
   &= \left. h(\eta) \right|_{\eta = \vec{x}_{is}^T\vec{\alpha} } \\
-  &= (t_{i,s} - t_{i,s - 1}) P(\tilde{T} \geq t_{i,s} - t_{i,s - 1}) + \int_0^{t_{i,s} - t_{i,s - 1}} r P(\tilde{T} = r) \mathrm{d} r
+  &= (t_{i,s} - t_{i,s - 1}) P(\tilde{T} \geq t_{i,s} - t_{i,s - 1}) + \int_0^{t_{i,s} - t_{i,s - 1}} r f_{\tilde{T}}(r) \mathrm{d} r
 \end{aligned}$$
 
-where $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{is}^T\vec{\alpha})}$. Set $\lambda = \exp(\vec{x}_{is}^T\vec{\alpha})$ and $\delta =t_{i,s} - t_{i,s - 1}$. Then the resulting conditional mean is:
+where $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{is}^T\vec{\alpha})}$ and $f_{\tilde{T}}$ is the density function of $\tilde{T}$. Set $\lambda = \exp(\vec{x}_{is}^T\vec{\alpha})$ and $\delta =t_{i,s} - t_{i,s - 1}$ . The resulting conditional mean is:
 
 $$\tilde{z}(\vec{\alpha}) = \frac{1 - \exp \Lparen{- \lambda \delta} }{\lambda}$$
 
@@ -470,18 +493,48 @@ $$\begin{aligned}
   &= \frac{1 - \exp\Lparen{-2\delta\lambda} - 2 \lambda \exp \Lparen{-\delta\lambda}}{\lambda^2}
 \end{aligned}$$
 
-Right censoring is treated the same way as for $Y_{i,s}$. That is, we can have $t_{i,l_i} < \Lceil{t_{i,l_i}}$. Further, we still round up in the case where $T_i = t_{i,l_i}$ (in the case of a death). The individual could have survived $\Lceil{t_{i,l_i}}$ by only survived $T_i$. Denote the predicted mean $\Delta_{i,l_i}$ by $\widehat{\Delta}_{i,l_i}$. Then this effect is included as we can have $\widehat{\Delta}_{i,l_i} \geq \Delta_{i,l_i}$ in the case of death. This will affact the correction step in both the UKF end EKF
+Right censoring is treated the same way as for $Y_{i,s}$. That is, we can have $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case censoring. Further, we still round up in the case where $T_i = t_{i,l_i}$ (in the case of a death). The individual could have survived $\Lceil{t_{i,l_i}}$ but only survived $t_{i,l_i}$. Denote the predicted mean $\Delta_{i,l_i}$ by $\widehat{\Delta}_{i,l_i}$. We can have $\widehat{\Delta}_{i,l_i} \geq \Delta_{i,l_i}$ in the case of death. This will affect the correction step in both the UKF end EKF when we compute $\emNotee{\vec{a}}{t}{t}$
 
 ## Why not use $\Delta_{i,s}$ solely
-The reason also to use the binary $Y_{i,t}$ is that we cannot destinguish betweens deaths when times are rounded. For example, let the time be rounded to multiplies of $0.5$ (i.e. $0$, $0.5$, $1$, $1.5$ etc.). We cannot destinguish between the death of an individual, change in co-variate vector or change of parameters if $\Delta_{i,s}$ is whole number. That is, $\Delta_{i,s} = 1$ either because $T_i = 1$, because $t_{i,s} = 1$ becuase we have new co-variate vector $\vec{x}_{i,s+1}$ or(/and) because the parameters changed from $\vec{\alpha}_1$ to $\vec{\alpha}_2$
+The reason also to use the binary $Y_{i,t}$ is that we cannot distinguish between deaths when times are rounded. For example, say that the observed times are rounded up to multiplies of $0.5$ (i.e. $0$, $0.5$, $1$, $1.5$ etc.). We cannot distinguish between the death of an individual, change in co-variate vector or change of parameters if $t_{i,s}$ is a whole number. That is, $\Delta_{i,s} = 1$ either because $T_i = 1$ or because $t_{i,s} = 1$ since we have new co-variate vector $\vec{x}_{i,s+1}$ or(/and) because the parameters changed from $\vec{\alpha}_1$ to $\vec{\alpha}_2$
 
 ## EKF
-The EKF for the exponential model have shown to have issues with divergence. The cause seem to be overstepping in the correction step. Hence, you can set the learning rate below 1. For example, you can do so by passing `list(LR = .5, ...)` to the `control` argument of `ddhazard` to gain a learning rate of $0.5$
+The EKF method for the exponential model has shown to have issues with divergence. The cause seem to be overstepping in the correction step. Hence, we can set the learning rate below 1. For example, you can do so by passing `list(LR = .5, ...)` to the `control` argument of `ddhazard` to gain a learning rate of $0.5$
 
-The direct formulas for the conditional mean, conditional variance and deriatives of the condtional mean are nummerically unsable for certain combinations of interval lengths ($t_{i,s} - t_{i, s - 1}$) and the linear predictor ($\eta = \vec{x}_{it}^T \vec{\alpha}_{\Lceil{t}}$). In particular they are subject to cancellation. This can cause both high relative errors and even wrong sign in some of the cases. Hence, Laurens series or Tylor series are used for critcal points. This has no implication for the user but worth stressing for readers who worry after seeing both the conditional mean and conditional varaince of $\Delta_{i,s}$
+The direct formulas for the conditional mean, conditional variance and derivatives of the conditional mean are numerically unstable for certain combinations of interval lengths ($t_{i,s} - t_{i, s - 1}$) and the linear predictor ($\eta = \vec{x}_{is}^T \vec{\alpha}_{\Lceil{t_{i,s}}}$). In particular they are subject to cancellation. This can cause both high relative errors and even wrong sign in some of the cases. Thus, Lauren series or Tylor series are used for critical points. This requires no action for user but is stressed for readers who worry after seeing both the conditional mean and conditional variance of $\Delta_{i,s}$
 
 ## UKF
 The UKF is not yet implemented for the exponential problem
+
+## Starting value
+QUESTION: Should I write about the static model that cen be used for $\vec{\alpha}_0$?
+
+# Further tasks and ideas
+The last section will cover further task and ideas. Please, let me know what you think. Is it relevant, got ideas to the question I pose and how would you priorities?
+
+## Comparisson of other package
+Look further at the vignette I have made where I compare with other packages. The goal of the vignette is to: 
+
+1. Show how the API for package works
+2. Show how these modal compares with other models
+3. Illustrate the pros and cons of the model I have implemented compared to other models 
+
+## Fixed effects
+Fixed parameters effects can be incorporated. Due to the likelihood function, these can be estimated in the M-step separately from $\mat{Q}$ and $\vec{\alpha}_0$. The problem is particularly easy to implement for the exponential family. The fixed effects will acts as offsets doing the E-step where the dynamic effects are estimated and vice versa in M-step. Thus, the `glm.fit` function can be used M-step and only minor changes are needed EKF and UKF in the correction step
+
+## Confidence bounds
+How do we construct confidence bounds both for the state vectors and for the predicted values?
+
+## Diagnostics
+I am thinking of making a second vignettes with diagnostic. It will contain raw residuals, Pearson residuals, non-standardized and standardized state space error. The motivation to keep it in a separate vignette is to include more examples and keep it as more of an example of how to use the package
+
+Further, I need to look into tests the effects are time varying or not. One idea is to test entries in $\mat{Q}$. Though, this involves tests on the boundary of the parameter space. Another idea is to make an F-test if we can estimate a model where only some of the parameters are fixed. This thread here suggest the idea when make all the parameter time invariant [http://stats.stackexchange.com/a/161917](http://stats.stackexchange.com/a/161917)
+
+## Other state equations
+We can replace the state equation with other models then a given order random walk. For example, we can replace it with a stationary process: 
+$$\vec{\alpha}_t = \vec{\mu} + \mat{F} \vec{\alpha}_{t - 1} + \mat{R}\vec{\eta}_t$$
+
+where we require $\mat{F}$ is such that the process is stable. $\mat{F}$ and $\vec{\mu}$ can be estimated in the M-step with closed form solutions when the noise is Gaussian. Both the UKF end EKF can be addapted to this setting. Further, we can change the distribution of $\vec{\eta}$ or change make a non-linear dependence between  $\vec{\alpha}_t$ and $\vec{\alpha}_{t - 1}$
 
 # References
 
