@@ -24,9 +24,9 @@ space_errors <- function(object, data_, standardize){
   if(object$order != 1)
     stop("Method for is not implemented for order ", object$order)
 
-  res = diff(object$a_t_d_s)
+  res = diff(object$state_vecs)
 
-  covs <- vars <- object$V_t_d_s
+  covs <- vars <- object$state_vars
   for(i in seq_len(dim(vars)[3] - 1))
     covs[, , i] = vars[, , i + 1] + vars[, , i] - object$lag_one_cor[, , i] - t(object$lag_one_cor[, , i])
 

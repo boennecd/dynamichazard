@@ -38,7 +38,6 @@ ddhazard = function(formula, data,
     F_ = diag(1, n_parems)
   }
   else if(order_ == 2){
-    # TODO: Test
     F_ = matrix(NA_real_, nrow = 2 * n_parems, ncol = 2 * n_parems)
     F_[1:n_parems, 1:n_parems] = diag(2, n_parems)
     F_[n_parems + 1:n_parems, 1:n_parems] = diag(1, n_parems)
@@ -168,8 +167,8 @@ ddhazard = function(formula, data,
   structure(c(
     res, list(
     formula = X_Y$formula,
-    a_t_d_s = result$a_t_d_s,
-    V_t_d_s = result$V_t_d_s,
+    state_vecs = result$a_t_d_s,
+    state_vars = result$V_t_d_s,
     lag_one_cor = result$lag_one_cor,
     n_iter = result$n_iter,
     Q = result$Q,
