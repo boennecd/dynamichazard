@@ -11,13 +11,13 @@ for(use_parallel in c(T, F)){
   test_that(paste0("Testing one period in sample with use_parallel = ", use_parallel),{
     predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(1, 60)),
                        use_parallel = use_parallel)
-    tmp_a_t_d_s <- rbind(result$a_t_d_s[-1, ], result$a_t_d_s[60, ])
-    expect_equal(predict_$fits, c(result$hazard_func(tmp_a_t_d_s %*% c(1, 1))),
+    tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
+    expect_equal(predict_$fits, c(result$hazard_func(tmp_state_vecs %*% c(1, 1))),
                  use.names = F, check.attributes = F)
 
     predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(0, 60)),
                        use_parallel = use_parallel)
-    expect_equal(predict_$fits, c(result$hazard_func(tmp_a_t_d_s %*% c(1, 0))),
+    expect_equal(predict_$fits, c(result$hazard_func(tmp_state_vecs %*% c(1, 0))),
                  use.names = F, check.attributes = F)
   })
 
@@ -25,16 +25,16 @@ for(use_parallel in c(T, F)){
   test_that(paste0("Testing two period in sample with use_parallel = ", use_parallel),{
     predict_ = predict(result, new_data = data.frame(start = 2*(0:29), stop = 2*(1:30), group = rep(1, 30)),
                        use_parallel = use_parallel)
-    tmp_a_t_d_s <- rbind(result$a_t_d_s[-1, ], result$a_t_d_s[60, ])
-    fac1 = c(result$hazard_func(tmp_a_t_d_s[2*(1:30) - 1, ] %*% c(1, 1)))
-    fac2 = c(result$hazard_func(tmp_a_t_d_s[2*(1:30), ] %*% c(1, 1)))
+    tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
+    fac1 = c(result$hazard_func(tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 1)))
+    fac2 = c(result$hazard_func(tmp_state_vecs[2*(1:30), ] %*% c(1, 1)))
     expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
                  use.names = F, check.attributes = F)
 
     predict_ = predict(result, new_data = data.frame(start = 2*(0:29), stop = 2*(1:30), group = rep(0, 30)),
                        use_parallel = use_parallel)
-    fac1 = c(result$hazard_func(tmp_a_t_d_s[2*(1:30) - 1, ] %*% c(1, 0)))
-    fac2 = c(result$hazard_func(tmp_a_t_d_s[2*(1:30), ] %*% c(1, 0)))
+    fac1 = c(result$hazard_func(tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 0)))
+    fac2 = c(result$hazard_func(tmp_state_vecs[2*(1:30), ] %*% c(1, 0)))
     expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
                  use.names = F, check.attributes = F)
   })
@@ -43,13 +43,13 @@ for(use_parallel in c(T, F)){
   test_that(paste0("Testing forcasting with use_parallel = ", use_parallel),{
     predict_ = predict(result, new_data = data.frame(start = 59, stop = 69, group = 1),
                        use_parallel = use_parallel)
-    fac1 = c(result$hazard_func(result$a_t_d_s[60, ] %*% c(1, 1)))
+    fac1 = c(result$hazard_func(result$state_vecs[60, ] %*% c(1, 1)))
     expect_equal(predict_$fits, (1 - (1 - fac1)^10),
                  use.names = F, check.attributes = F)
 
     predict_ = predict(result, new_data = data.frame(start = 59, stop = 69, group = 0),
                        use_parallel = use_parallel)
-    fac1 = c(result$hazard_func(result$a_t_d_s[60, ] %*% c(1, 0)))
+    fac1 = c(result$hazard_func(result$state_vecs[60, ] %*% c(1, 0)))
     expect_equal(predict_$fits, (1 - (1 - fac1)^10),
                  use.names = F, check.attributes = F)
   })
@@ -134,8 +134,8 @@ test_that("Terms from predict with exponential outcome are correct", {
   expect_equal(dim(pred$terms), c(1 + 3600/100, nrow(pbc2), 4))
   tmp_mat <- t(cbind(rep(1, nrow(pbc2)), pbc2$age, log(pbc2$bili), log(pbc2$protime)))
 
-  for(i in 1:ncol(fit$a_t_d_s))
-    expect_equal(pred$terms[, , i], fit$a_t_d_s[, i] %o% tmp_mat[i,])
+  for(i in 1:ncol(fit$state_vecs))
+    expect_equal(pred$terms[, , i], fit$state_vecs[, i] %o% tmp_mat[i,])
 
   expect_message(
     respone_pred <- predict(fit, new_data = pbc2, type = "response", tstart = "tstart", tstop = "tstop"),
@@ -158,7 +158,7 @@ test_that("Terms from predict with exponential outcome are correct", {
     t_min <- max(bins_breaks[start], tmp$tstart)
     for(i in start:stop){
       t_max <- min(bins_breaks[i + 1], tmp$tstop)
-      p_survival <- p_survival * exp(- exp(fit$a_t_d_s[i + 1, ] %*% unlist(tmp[, 1:4])) * (t_max - t_min))
+      p_survival <- p_survival * exp(- exp(fit$state_vecs[i + 1, ] %*% unlist(tmp[, 1:4])) * (t_max - t_min))
       t_min <- t_max
     }
 

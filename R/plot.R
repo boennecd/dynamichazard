@@ -12,19 +12,19 @@ plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
       stop("Need cov index when type is equal to ", type)
 
     if(missing(ylab))
-      ylab = colnames(object$a_t_d_s)[cov_index]
+      ylab = colnames(object$state_vecs)[cov_index]
 
-    lb = object$a_t_d_s[, cov_index] - 1.96 * sqrt(object$V_t_d_s[cov_index, cov_index, ])
-    ub = object$a_t_d_s[, cov_index] + 1.96 * sqrt(object$V_t_d_s[cov_index, cov_index, ])
+    lb = object$state_vecs[, cov_index] - 1.96 * sqrt(object$state_vars[cov_index, cov_index, ])
+    ub = object$state_vecs[, cov_index] + 1.96 * sqrt(object$state_vars[cov_index, cov_index, ])
 
     if(missing(ylim))
       ylim = range(lb, ub)
 
     if(!add){
-      plot(object$times, object$a_t_d_s[, cov_index], type = plot_type,
+      plot(object$times, object$state_vecs[, cov_index], type = plot_type,
            ylim = ylim, xlab = xlab, ylab = ylab, col = col, ...)
     } else {
-      lines(object$times, object$a_t_d_s[, cov_index],
+      lines(object$times, object$state_vecs[, cov_index],
             col = col, ...)
     }
 
@@ -46,7 +46,7 @@ plot.fahrmeier_94_SpaceErrors = function(object, mod, vars_ = NA, t_index = NA,
                                          xlab = "Time", ...){
   bin_times = mod$times[-1]
 
-  var_index = if(length(t_index) == 1 && is.na(vars_)) seq_len(ncol(mod$a_t_d_s)) else vars_
+  var_index = if(length(t_index) == 1 && is.na(vars_)) seq_len(ncol(mod$state_vecs)) else vars_
   res_std = object$residuals[, var_index, drop = F]
   n_vars = length(var_index)
 

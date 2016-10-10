@@ -26,7 +26,7 @@ predict_terms <- function(object, new_data, m, sds){
   term_names_org = c("(Intercept)", attr(object$formula,"term.labels"))
   term_names = stringr::str_replace_all(term_names_org, "(\\W)", "\\\\\\1") # add escape version of charecters
 
-  var_names = colnames(object$a_t_d_s)
+  var_names = colnames(object$state_vecs)
   terms_to_vars = sapply(term_names, function(t_name) which(grepl(t_name, var_names)))
 
   stopifnot(!duplicated(unlist(terms_to_vars)))
@@ -39,14 +39,14 @@ predict_terms <- function(object, new_data, m, sds){
   sds_res = if(sds) terms_res else NULL
 
   for(i in seq_along(term_names)){
-    terms_res[, , i] = object$a_t_d_s[ , terms_to_vars[[i]], drop = F] %*%
+    terms_res[, , i] = object$state_vecs[ , terms_to_vars[[i]], drop = F] %*%
       t(m[, terms_to_vars[[i]], drop = F])
     if(!sds)
       next
 
     for(j in seq_len(d))
       sds_res[j, , i] = sqrt(diag(m[, terms_to_vars[[i]], drop = F] %*%
-                                    object$V_t_d_s[j, terms_to_vars[[i]], terms_to_vars[[i]]] %*%
+                                    object$state_vars[j, terms_to_vars[[i]], terms_to_vars[[i]]] %*%
                                     t(m[, terms_to_vars[[i]], drop = F])))
   }
 
@@ -79,7 +79,7 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
     stop("First start time is before time zero")
 
   # Make prediction of covariates if last stop is beyond last period
-  parems = object$a_t_d_s
+  parems = object$state_vecs
   times = object$times
 
   max_stop = max(stop_)

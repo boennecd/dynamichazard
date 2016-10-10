@@ -20,7 +20,7 @@ logLik.fahrmeier_94 = function(object, data_, id, ...){
                            id = id)
 
   val <- logLike_cpp(X = X$X, risk_obj = risk_obj, F = object$F_,
-                     Q_0 = object$Q_0, Q = object$Q, a_t_d_s = t(object$a_t_d_s),
+                     Q_0 = object$Q_0, Q = object$Q, a_t_d_s = t(object$state_vecs),
                      tstart = X$Y[, 1], tstop = X$Y[, 2], order_ = object$order,
                      model = object$model)
 
@@ -30,7 +30,7 @@ logLik.fahrmeier_94 = function(object, data_, id, ...){
   if(object$est_Q_0)
     warning("parameters for Q_0 are not included in attribute df")
 
-  n_parems <- ncol(object$a_t_d_s) / object$order
+  n_parems <- ncol(object$state_vecs) / object$order
   attr(val, "df") <- n_parems * object$order +  # from a_0
     n_parems * (n_parems + 1) / 2 # from Q
   class(val) <- "logLik"
