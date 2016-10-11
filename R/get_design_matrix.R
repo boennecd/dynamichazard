@@ -1,5 +1,4 @@
-#' Find the design matrix and returns it LHS and RHS
-#' @export
+# Find the design matrix and returns it LHS and RHS
 get_design_matrix = function(formula, data, response = T){
   Call <- match.call()
   indx <- match(c("formula", "data"),  names(Call), nomatch = 0)

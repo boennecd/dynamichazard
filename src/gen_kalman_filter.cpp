@@ -68,8 +68,7 @@ int vecmin(const T x){
   return *it;
 }
 
-//' Function to perform one iteration of the Kalman filter in parallel
-//' @export
+// Previous function used to estimate logistic model. Kept for testing
 // [[Rcpp::export]]
 List gen_kalman_filter_cpp(const arma::colvec &a_0, const arma::mat &Q_0, const arma::mat &Q, const arma::mat &F_,
                            const List &risk_sets, const NumericVector &I_len,

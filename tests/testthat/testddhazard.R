@@ -1,4 +1,5 @@
 library(survival)
+
 # Test on data set that is one of Farhmiers papers
 result = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
@@ -7,7 +8,7 @@ result = ddhazard(
   control = list(est_Q_0 = T, n_max = 10^4, eps = 10^-4),
   a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
   max_T = 45,
-  id = head_neck_cancer$id, order_ = 1
+  id = head_neck_cancer$id, order = 1
 )
 
 test_that("Testing previous computed values vs. current on head and neck cancer set assuming that the previous is correct", {
@@ -63,7 +64,7 @@ result_exp = ddhazard(
   Q = diag(1e-3, 2),
   control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4),
   max_T = 30,
-  id = head_neck_cancer$id, order_ = 1,
+  id = head_neck_cancer$id, order = 1,
   verbose = F,
   model = "exponential"
 )
@@ -131,7 +132,7 @@ result_exp = ddhazard(
   Q = diag(1e-3, 2),
   control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4),
   max_T = 30,
-  id = head_neck_cancer$id, order_ = 1,
+  id = head_neck_cancer$id, order = 1,
   verbose = F,
   model = "exponential"
 )
@@ -191,7 +192,7 @@ result_exp = ddhazard(
   Q = diag(1e-3, 11),
   control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^4),
   max_T = 10,
-  id = sims$res$id, order_ = 1,
+  id = sims$res$id, order = 1,
   verbose = F,
   model = "exponential"
 )
@@ -273,7 +274,7 @@ test_that("Unmacthed control variable throw error",
               by = 1, # Use by month intervals
               a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
               max_T = 45,
-              id = head_neck_cancer$id, order_ = 1,
+              id = head_neck_cancer$id, order = 1,
               control = list("None_existing_parem" = 1)
             )}, regexp = "These control parameters are not recognized"))
 
@@ -293,7 +294,7 @@ test_that("Decreasing learning rate in NR can get method to convergece",{
     Q = diag(1e-3, 11),
     control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-2),
     max_T = 10,
-    id = sims$res$id, order_ = 1,
+    id = sims$res$id, order = 1,
     model = "exponential")
 
   expect_error(do.call(ddhazard, arg_list))
@@ -322,7 +323,7 @@ test_that("Not suppling a_0 for exponential yields message and different results
     Q = diag(1e-3, 11),
     control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^4),
     max_T = 10,
-    id = sims$res$id, order_ = 1,
+    id = sims$res$id, order = 1,
     verbose = F,
     model = "exponential")
 
@@ -330,7 +331,7 @@ test_that("Not suppling a_0 for exponential yields message and different results
                  regexp = "a_0 not supplied. One iteration IWLS of static glm model is used")
 
   arg_list$a_0 <- rep(-1, 11)
-  fit_with_start <- do.call(ddhazard, arg_list)
+  suppressMessages(fit_with_start <- do.call(ddhazard, arg_list))
 
   expect_equal(mean(fit_no_start$state_vecs - fit_with_start$state_vecs),
                0.0003084506686478310)
@@ -339,12 +340,12 @@ test_that("Not suppling a_0 for exponential yields message and different results
 
 test_that("EKF method with exponential yields previous computed results on PBC dataset", {
   # First order random walk
-  pbc_fit <- ddhazard(
+  suppressMessages(pbc_fit <- ddhazard(
     formula = survival::Surv(tstart, tstop, status == 2) ~ log(bili) + log(protime),
     data = pbc2, model = "exponential", by = 100, max_T = 3600,
     Q_0 = diag(10, 3), Q = diag(1e-3, 3), verbose = F,
     id = pbc2$id,
-    control = list(LR = .5, eps = 1e-3, save_risk_set = F))
+    control = list(LR = .5, eps = 1e-3, save_risk_set = F)))
 
   # get_expect_equal(pbc_fit, eps = 1e-4)
   expect_equal(c(pbc_fit$state_vecs),
@@ -371,12 +372,12 @@ test_that("EKF method with exponential yields previous computed results on PBC d
   # plot(pbc_fit, type = "cov", cov_index = 3)
 
   # Second order random walk
-  pbc_fit <- ddhazard(
+  suppressMessages(pbc_fit <- ddhazard(
     formula = survival::Surv(tstart, tstop, status == 2) ~ log(bili) + log(protime),
     data = pbc2, model = "exponential", by = 100, max_T = 3600,
     Q_0 = diag(10, 6), Q = diag(c(rep(1e-3, 3), rep(0, 3))),
-    id = pbc2$id, order_ = 2,
-    control = list(LR = .35, eps = 1e-2, save_risk_set = F))
+    id = pbc2$id, order = 2,
+    control = list(LR = .35, eps = 1e-2, save_risk_set = F)))
   # get_expect_equal(pbc_fit, eps = 1e-4)
 
   expect_equal(c(pbc_fit$state_vecs),

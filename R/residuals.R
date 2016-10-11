@@ -1,23 +1,39 @@
 #' Residuals function for result of ddhazard fit
+#'
+#' @param object Result of \code{\link{ddhazard}} call
+#' @param Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See below for details
+#' @param data Data frame with data for Pearson or raw residuals
+#'
+#' @section Pearson and Raw residuals
+#' WHAT IS IT. WHAT IS RETURNED
+#'
+#' @section State space errors
+#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
+#' \describin{
+#' \item{\code{residuals}}{2D array with either standardised or unstandardised state space errors. The row are bins and the columns are the parameters in the regression}
+#' \item{\code{standardize}}{\code{TRUE} if standardised state space errors}
+#' \item{\code{Covariances}}{3D array with the smoothed co-variance matrix for each set of the state space errors}
+#'}
+#'
 #' @export
-residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data_){
+residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data = NULL){
   type = type[1]
 
   if(type %in% c("std_space_error", "space_error")){
-    return(space_errors(object, data_, type == "std_space_error"))
+    return(space_errors(object, data, type == "std_space_error"))
   }
 
   if(!object$model %in% c("logit", "exponential"))
     stop("Functions for model '",  object$model, "' is not implemented")
 
   if(type == "pearson" || type == "raw"){
-    return(obs_res(object, data_, type))
+    return(obs_res(object, if(is.null(object$data)) data else object$data, type))
   }
 
   stop("Method '", type, "' not implemented for residuals method")
 }
 
-space_errors <- function(object, data_, standardize){
+space_errors <- function(object, data, standardize){
   if(!object$method %in% c("EKF"))
     stop("Functions for with method '", object$method, "' is not implemented")
 
@@ -41,8 +57,8 @@ space_errors <- function(object, data_, standardize){
                    "class" = "fahrmeier_94_SpaceErrors"))
 }
 
-obs_res <- function(object, data_, type){
-  if(missing(data_) || is.na(object$risk_set))
+obs_res <- function(object, data, type){
+  if(is.null(data) || is.null(object$risk_set))
     stop("Missing risk set or data to compute residuals")
 
   # Wee need these to check if there is an event in the bin
@@ -55,7 +71,7 @@ obs_res <- function(object, data_, type){
     stop_ = object$times[i + 1]
     r_set = object$risk_set[[1]][[i]]
 
-    tmp_dat = data_[r_set, ]
+    tmp_dat = data[r_set, ]
     tmp_dat$tstart = rep(start_, length(r_set))
     tmp_dat$tstop = rep(stop_, length(r_set))
 

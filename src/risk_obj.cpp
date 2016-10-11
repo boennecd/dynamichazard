@@ -12,7 +12,6 @@ using namespace Rcpp;
 #undef NDEBUG
 #endif
 
-//' Function to find the risk set in c++
 // [[Rcpp::export]]
 List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
                        const LogicalVector &event,
