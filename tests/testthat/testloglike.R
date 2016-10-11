@@ -7,7 +7,7 @@ test_that("Verbose on ddhazard prints a log likelihood", {
       control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
       a_0 = rep(0, 2), Q_0 = diag(1, 2),
       max_T = 45,
-      id = head_neck_cancer$id, order_ = 1,
+      id = head_neck_cancer$id, order = 1,
       verbose = 5
     )
   }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
@@ -20,7 +20,7 @@ test_that("Verbose on ddhazard prints a log likelihood", {
       control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
       a_0 = rep(0, 2), Q_0 = diag(1, 2),
       max_T = 45,
-      id = head_neck_cancer$id, order_ = 1,
+      id = head_neck_cancer$id, order = 1,
       verbose = 5,
       model = "exponential"
     )
@@ -35,17 +35,48 @@ test_that("logLik for head_neck_cancer data set match previous results", {
     control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
     a_0 = rep(0, 2), Q_0 = diag(1, 2),
     max_T = 45,
-    id = head_neck_cancer$id, order_ = 1,
+    id = head_neck_cancer$id, order = 1,
     verbose = F
   )
 
-  log_like <- logLik(object = result, data_ = head_neck_cancer, id =  head_neck_cancer$id)
+  log_like <- logLik(object = result)
+  result$data <- NULL
+  result$risk_set <- NULL
+  logLik(object = result, data = head_neck_cancer, id = head_neck_cancer$id)
 
   old <- structure(-340.3724737164279,
                    class = "logLik",
                    df = 2 + 3)
 
   expect_equal(log_like, old)
+})
+
+test_that("Saving or not saving risk set or data gives the same result", {
+  arg_list <- list(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    a_0 = rep(0, 2), Q_0 = diag(1, 2),
+    max_T = 45,
+    id = head_neck_cancer$id, order = 1,
+    verbose = F)
+
+  control_fit <- do.call(ddhazard, arg_list)
+  control_fit$logLik <- logLik(control_fit)
+
+
+  for(save_risk_set in c(T, F))
+    for(save_data in c(T, F)){
+      if(save_risk_set && save_data)
+        next
+
+      arg_list$control <- list(save_risk_set = save_risk_set, save_data = save_data)
+      new_fit <- do.call(ddhazard, arg_list)
+      new_fit$logLik <- logLik(new_fit, data = if(save_data) NULL else head_neck_cancer,
+                               id = if(save_risk_set) NULL else head_neck_cancer$id)
+
+      expect_equal(new_fit$logLik, control_fit$logLik)
+    }
 })
 
 test_that("logLik for head_neck_cancer data set with second order model", {
@@ -57,7 +88,7 @@ test_that("logLik for head_neck_cancer data set with second order model", {
     Q = diag(c(1e-4, 1e-4, 0, 0)),
     control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4),
     max_T = 45,
-    id = head_neck_cancer$id, order_ = 2,
+    id = head_neck_cancer$id, order = 2,
     verbose = F
   )
 
@@ -85,11 +116,11 @@ test_that("logLik for simulated data versus old results", {
     control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F),
     a_0 = rep(0, 5), Q_0 = diag(1, 5),
     max_T = 10,
-    id = sims$res$id, order_ = 1,
+    id = sims$res$id, order = 1,
     verbose = F
   )
 
-  log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
+  log_like <- logLik(object = result)
   old <- structure(-2414.852657205478,
                    class = "logLik",
                    df = 5 + 5 * (1 + 5) / 2)
@@ -108,7 +139,7 @@ test_that("logLik for simulated data versus old results", {
     control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F),
     a_0 = rep(0, 6), Q_0 = diag(10, 6),
     max_T = 10,
-    id = sims$res$id, order_ = 1,
+    id = sims$res$id, order = 1,
     verbose = F, model = "exponential"
   )
 

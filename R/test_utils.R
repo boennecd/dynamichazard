@@ -308,8 +308,8 @@ suppressWarnings(rm(pbc))
 library(survival)
 
 temp <- subset(pbc, id <= 312, select=c(id:sex, stage)) # baseline
-pbc2 <- tmerge(temp, temp, id=id, death = event(time, status)) #set range
-pbc2 <- tmerge(pbc2, pbcseq, id=id, ascites = tdc(day, ascites),
-               bili = tdc(day, bili), albumin = tdc(day, albumin),
-               protime = tdc(day, protime), alk.phos = tdc(day, alk.phos))
+pbc2 <- survival::tmerge(temp, temp, id=id, death = event(time, status)) #set range
+pbc2 <- survival::tmerge(pbc2, pbcseq, id=id, ascites = tdc(day, ascites),
+                         bili = tdc(day, bili), albumin = tdc(day, albumin),
+                         protime = tdc(day, protime), alk.phos = tdc(day, alk.phos))
 

@@ -4,7 +4,7 @@ arg_list <- list(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1, max_T = 40,
-  a_0 = rep(0, 2), Q_0 = diag(10, 2),
+  a_0 = rep(0, 2), Q_0 = diag(1, 2),
   Q = diag(1e-2, 2))
 
 result = do.call(ddhazard, arg_list)
@@ -12,8 +12,8 @@ result = do.call(ddhazard, arg_list)
 test_that("Calls to residuals should succed",{
   expect_no_error(residuals(result, "std_space_error"))
   expect_no_error(residuals(result, "space_error"))
-  expect_no_error(residuals(result, type = "pearson", data_ = head_neck_cancer))
-  expect_no_error(residuals(result, type = "raw", data_ = head_neck_cancer))
+  expect_no_error(residuals(result, type = "pearson", data = head_neck_cancer))
+  expect_no_error(residuals(result, type = "raw", data = head_neck_cancer))
 })
 
 arg_list$control <- list(method = "UKF")
@@ -22,8 +22,31 @@ result = do.call(ddhazard, arg_list)
 test_that("residuals functions throws error for some types when method is UKF",{
   expect_error(residuals(result, "std_space_error"))
   expect_error(residuals(result, "space_error"))
-  expect_no_error(residuals(result, type = "pearson", data_ = head_neck_cancer))
-  expect_no_error(residuals(result, type = "raw", data_ = head_neck_cancer))
+  expect_no_error(residuals(result, type = "pearson", data = head_neck_cancer))
+  expect_no_error(residuals(result, type = "raw", data = head_neck_cancer))
+})
+
+arg_list$control <- NULL
+test_that("Residuals work when data is saved on the fit",{
+  for(ty in c("pearson", "raw")){
+    arg_list$control = list(save_data = T)
+    fit_saved_data <- do.call(ddhazard, arg_list)
+
+    expect_true(!is.null(fit_saved_data$data))
+    fit_saved_data$res <- residuals(fit_saved_data, type = ty)
+
+    arg_list$control = list(save_data = F)
+    fit_not_saved_data <- do.call(ddhazard, arg_list)
+
+    expect_true(is.null(fit_not_saved_data$data))
+    expect_error(residuals(fit_not_saved_data, type = ty))
+    fit_not_saved_data$res <- residuals(fit_not_saved_data, type = ty, data = head_neck_cancer)
+
+    for(i in seq_len(max(length(fit_saved_data$res$residuals),
+                         length(fit_not_saved_data$residuals))))
+      expect_equal(fit_saved_data$res$residuals[[i]],
+                   fit_not_saved_data$res$residuals[[i]])
+  }
 })
 
 ########
@@ -57,16 +80,16 @@ library(timereg)
 pbc <- pbc[, c("id", "time", "status", "age", "edema", "bili", "protime")]
 pbc <- pbc[complete.cases(pbc), ]
 max(pbc$time[pbc$status == 2])
-fit <- ddhazard(
+suppressMessages(fit <- ddhazard(
   formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~
     age + edema + log(bili) + log(protime),
   data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
   Q = diag(rep(1e-2, 5)), max_T = 3600,
-  control = list(est_Q_0 = F))
+  control = list(est_Q_0 = F)))
 
 test_that("Pearson residuals and raw residuals for logistic model are consistent with each other", {
-  pearson_res <- residuals(object = fit, type = "pearson", data_ = pbc)
-  raw_res <- residuals(object = fit, type = "raw", data_ = pbc)
+  pearson_res <- residuals(object = fit, type = "pearson", data = pbc)
+  raw_res <- residuals(object = fit, type = "raw", data = pbc)
 
   expect_s3_class(pearson_res, "fahrmeier_94_res")
   expect_s3_class(raw_res, "fahrmeier_94_res")
@@ -82,7 +105,7 @@ test_that("Pearson residuals and raw residuals for logistic model are consistent
 
 test_that("Cases in residuals match cases in data", {
     is_case <- pbc$status == 2 & pbc$time <= 3600
-    pearson_res <- residuals(object = fit, type = "pearson", data_ = pbc)
+    pearson_res <- residuals(object = fit, type = "pearson", data = pbc)
 
     is_case_residuals <- rep(0, nrow(pbc))
     for(i in seq_along(pearson_res$residuals)){
@@ -103,12 +126,12 @@ test_that("Cases in residuals match cases in data", {
 
 ##################
 # Exponential model
-fit <- ddhazard(
+suppressMessages(fit <- ddhazard(
   formula = survival::Surv(tstart, tstop, status == 2) ~
     age + log(bili) + log(protime),
   data = pbc2, Q_0 = diag(rep(1e3, 4)), by = 100,
   Q = diag(rep(1e-2, 4)), max_T = 3600,
-  model = "exponential", control = list(est_Q_0 = F, LR = .4))
+  model = "exponential", control = list(est_Q_0 = F, LR = .4)))
 
 test_that("Calls to residuals should succed for exponential model",{
   expect_no_error(residuals(fit, "std_space_error"))
@@ -116,8 +139,8 @@ test_that("Calls to residuals should succed for exponential model",{
 })
 
 test_that("pearson and raw residuals for exponential corresponds", {
-  res_pearson <- residuals(fit, type = "pearson", data_ = pbc2)
-  res_raw <- residuals(fit, type = "raw", data_ = pbc2)
+  res_pearson <- residuals(fit, type = "pearson", data = pbc2)
+  res_raw <- residuals(fit, type = "raw", data = pbc2)
 
   for(i in seq_along(res_pearson$residuals))
     expect_equal(res_pearson$residuals[[i]][, "residuals"],

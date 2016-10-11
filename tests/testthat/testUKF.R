@@ -118,11 +118,11 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
                    id = sims$res$id,
                    verbose = F,
                    max_T = 10)
-  m1 <- do.call(ddhazard, arg_list)
+  suppressMessages(m1 <- do.call(ddhazard, arg_list))
 
   arg_list$control$beta <- 2
 
-  m2 <- do.call(ddhazard, arg_list)
+  suppressMessages(m2 <- do.call(ddhazard, arg_list))
 
   expect_true(class(all.equal(m1$state_vecs, m2$state_vecs)) == "character")
   expect_true(class(all.equal(m1$state_vars, m2$state_vars)) == "character")
@@ -130,14 +130,14 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
 
   arg_list$control$alpha <- .1
 
-  m3 <- do.call(ddhazard, arg_list)
+  suppressMessages(m3 <- do.call(ddhazard, arg_list))
 
   expect_true(class(all.equal(m2$state_vecs, m3$state_vecs)) == "character")
   expect_true(class(all.equal(m2$state_vars, m3$state_vars)) == "character")
   expect_true(class(all.equal(m2$lag_one_cor, m3$lag_one_cor)) == "character")
 
   arg_list$control$kappa <- -1
-  m4 <- do.call(ddhazard, arg_list)
+  suppressMessages(m4 <- do.call(ddhazard, arg_list))
 
   expect_true(class(all.equal(m3$state_vecs, m4$state_vecs)) == "character")
   expect_true(class(all.equal(m3$state_vars, m4$state_vars)) == "character")
@@ -165,10 +165,10 @@ arg_list$data <- sims$res
 arg_list$id <- sims$res$id
 
 arg_list$control$beta <- 0
-fit1 <- do.call(ddhazard, arg_list)
+suppressMessages(fit1 <- do.call(ddhazard, arg_list))
 
 arg_list$control$beta = 2
-fit2 <- do.call(ddhazard, arg_list)
+suppressMessages(fit2 <- do.call(ddhazard, arg_list))
 
 matplot(sims$betas, type = "l", lty = 1, ylim = range(sims$betas, fit1$state_vecs, fit2$state_vecs))
 matplot(fit1$state_vecs, type = "l", lty = 2, add = T)

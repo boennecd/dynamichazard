@@ -4,13 +4,74 @@
 \alias{ddhazard}
 \title{Function to fit dynamic discrete hazard model}
 \usage{
-ddhazard(formula, data, by, a_0, Q_0, id, Q = Q_0, n_max = 10^2,
-  eps = 10^-3, save_all_output = F, max_T, save_risk_set = F,
-  order_ = 1, est_Q_0 = T, verbose = F, method = "EKF",
-  model = "logit", M_step_formulation = "Fahrmier94", kappa = NULL,
-  alpha = NULL, beta = NULL)
+ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
+  order = 1, control = list(), verbose = F)
+}
+\arguments{
+\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
+
+\item{data}{Data frame or enviroment containing the outcome and co-variates}
+
+\item{model}{"logit" or "exponential" for the discrete time function using the logistic function or for the continous time model with exponential arrival times}
+
+\item{by}{Interval length of the bins in which parameters are fixed}
+
+\item{max_T}{End of the last interval. The last stop time with an event is selected if the parameter is omitted}
+
+\item{id}{Vector of ids for each row of the in the design matrix}
+
+\item{a_0}{Vector with \eqn{\vec{a}_0} for the first iteration (optional)}
+
+\item{Q_0}{Covariance matrix for the prior \eqn{\mathbf{Q}_0}}
+
+\item{Q}{Initial covariance matrix \eqn{\mathbf{Q}} for the state equation}
+
+\item{order}{Order of the random walk}
+
+\item{control}{List of control variables (see details below)}
+}
+\value{
+A list with class \code{fahrmeier_94}. The list contains:
+\describe{
+\item{\code{formula}}{The passed formula}
+\item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin}
+\item{\code{state_vars}}{3D matrix with smoothed variance estimates for each state vector}
+\item{\code{lag_one_cor}}{3D Matrix with lagged correlation matrix for each for each change in the state vector}
+\item{\code{n_risk}}{The number of observations in each interval}
+\item{\code{times}}{The interval borders}
+\item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved}
+\item{\code{order}}{Order of the random walk}
+\item{\code{F_}}{Matrix with that map transition from one state vector to the next}
+\item{\code{method}}{Method used in the E-step}
+\item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm}
+\item{\code{hazard_func}}{Hazard function}
+\item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
+}
 }
 \description{
 Function to fit dynamic discrete hazard model
+}
+\details{
+Function to estimate a binary regression function of the form where the regression parameters follows a given order random walk. The order is specified by the \code{order} argument. 1. and 2. order random walks is implemented. The regression parameters are updated at time \code{by}, 2\code{by}, ..., \code{max_T}. See the vignette 'ddhazard' for more details
+
+The Extended Kalman filter or Uncented Kalman filter needs an initial co-variance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
+
+The model is specified through the \code{model} argument. Currently, \code{'logit'} and \code{'exponential'} is provided. The former uses an logistic model where outcomes are binned into the intervals. Be aware that there can be loss of information due to the binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time varying co-variates. The latter model use an exponential model for the arrival times where there is no loose information due to binning
+}
+\section{Control}{
+
+The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters, \code{LR} and \code{NR_eps}
+\describe{
+\item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter or \code{"UKF"}for the Unscented Kalman Filter. \code{"EKF"} is the default}
+\item{\code{LR}}{Learning rate for the Extended Kalman filter. Default is 1}
+\item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
+\item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter. Default is 1}
+\item{\code{beta}}{Hyper parameter \eqn{\beta} in the Unscented Kalman Filter. Default is 2}
+\item{\code{kappa}}{Hyper parameter \eqn{\kappa} in the Unscented Kalman Filter. Default is 0}
+\item{\code{n_max}}{Maximum number of iteration in the EM-algorithm}
+\item{\code{eps}}{Tolerance parameter for the EM-algorithm}
+\item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}}
+\item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
+}
 }
 

@@ -14,8 +14,6 @@ ddhazard_fit_cpp_prelim <- function(X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_,
     .Call('dynamichazard_ddhazard_fit_cpp_prelim', PACKAGE = 'dynamichazard', X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, save_all_output, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation)
 }
 
-#' Function to perform one iteration of the Kalman filter in parallel
-#' @export
 gen_kalman_filter_cpp <- function(a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop, is_event_in_bin, order_) {
     .Call('dynamichazard_gen_kalman_filter_cpp', PACKAGE = 'dynamichazard', a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop, is_event_in_bin, order_)
 }
@@ -24,7 +22,6 @@ logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, order_ =
     .Call('dynamichazard_logLike_cpp', PACKAGE = 'dynamichazard', X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, order_, model)
 }
 
-#' Function to find the risk set in c++
 get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model = TRUE) {
     .Call('dynamichazard_get_risk_obj_rcpp', PACKAGE = 'dynamichazard', start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model)
 }

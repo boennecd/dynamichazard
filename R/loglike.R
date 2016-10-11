@@ -1,23 +1,28 @@
 #' @export
-logLik.fahrmeier_94 = function(object, data_, id, ...){
-  if(missing(data_))
-    stop("data_ need to compute log likelihood")
+logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
+  data <- if(!is.null(object$data)) object$data else data
+  if(is.null(data))
+    stop("data need to compute log likelihood. Please, pass the data set used in 'ddhazard' call")
 
-  if(missing(id))
-    stop("id need to compute log likelihood")
-
-  if(object$model == "exponential"){
-    is_for_discrete_model <- F
-  } else if (object$model == "logit"){
-    is_for_discrete_model <- T
-  } else
-    stop("logLik not implemented for model '", object$model, "'")
-
-  X <- get_design_matrix(object$formula, data_)
+  X <- get_design_matrix(object$formula, data)
   X$X <- t(X$X)
-  risk_obj <- get_risk_obj(Y = X$Y, by = unique(diff(object$times)),
-                           max_T = max(object$times), is_for_discrete_model = is_for_discrete_model,
-                           id = id)
+
+  risk_obj <- object$risk_set
+  if(is.null(risk_obj)){
+    if(missing(id))
+      stop("id need to compute log likelihood. Please, pass the id used in 'ddhazard' call")
+
+    if(object$model == "exponential"){
+      is_for_discrete_model <- F
+    } else if (object$model == "logit"){
+      is_for_discrete_model <- T
+    } else
+      stop("logLik not implemented for model '", object$model, "'")
+
+    risk_obj <- get_risk_obj(Y = X$Y, by = unique(diff(object$times)),
+                             max_T = max(object$times), is_for_discrete_model = is_for_discrete_model,
+                             id = id)
+  }
 
   val <- logLike_cpp(X = X$X, risk_obj = risk_obj, F = object$F_,
                      Q_0 = object$Q_0, Q = object$Q, a_t_d_s = t(object$state_vecs),

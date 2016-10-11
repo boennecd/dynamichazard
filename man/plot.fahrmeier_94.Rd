@@ -5,8 +5,8 @@
 \title{Plots to illustrate the estimate state space variables from a ddhazardfit}
 \usage{
 \method{plot}{fahrmeier_94}(object, new_data, xlab = "Time",
-  ylab = "Hazard", method = "delta", type, plot_type = "l", cov_index,
-  ylim, col = "black", add = F, ...)
+  ylab = "Hazard", type = "cov", plot_type = "l", cov_index, ylim,
+  col = "black", add = F, ...)
 }
 \description{
 Plots to illustrate the estimate state space variables from a ddhazardfit

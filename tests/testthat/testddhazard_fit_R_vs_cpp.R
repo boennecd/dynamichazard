@@ -33,6 +33,8 @@ Sys.time() - tmp_time
 tmp_file <- file("testddhazard_fit_R_vs_cpp_2.log")
 sink(tmp_file)
 tmp_time <- Sys.time()
+arg_list$oder = arg_list$oder_
+arg_list$oder_ = NULL
 res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
 Sys.time() - tmp_time
 sink()
@@ -76,6 +78,8 @@ Sys.time() - tmp_time
 # tmp_file <- file("testddhazard_fit_R_vs_cpp_2.log")
 # sink(tmp_file)
 tmp_time <- Sys.time()
+arg_list$oder = arg_list$oder_
+arg_list$oder_ = NULL
 res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
 Sys.time() - tmp_time
 # sink()
@@ -135,6 +139,8 @@ Sys.time() - tmp_time
 # tmp_file <- file("tests/testthat/testddhazard_fit_R_vs_cpp_2.log")
 # sink(tmp_file)
 tmp_time <- Sys.time()
+arg_list$oder = arg_list$oder_
+arg_list$oder_ = NULL
 res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
 Sys.time() - tmp_time
 # sink()
@@ -172,6 +178,8 @@ res <- do.call(ddhazard_fit, arg_list)
 Sys.time() - tmp_time
 
 tmp_time <- Sys.time()
+arg_list$oder = arg_list$oder_
+arg_list$oder_ = NULL
 res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
 Sys.time() - tmp_time
 
