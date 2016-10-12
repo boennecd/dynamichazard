@@ -161,7 +161,7 @@ public:
   bool try_pop(T& value)
   {
     std::unique_ptr<node> const old_head=try_pop_head(value);
-    return !!old_head;
+    return old_head && true;
   }
 
   void empty()
@@ -186,6 +186,8 @@ public:
       if(threads[i].joinable())
         threads[i].join();
     }
+
+    Rcpp::Rcout << "Me to" << std::endl;
   }
 };
 
@@ -284,6 +286,9 @@ public:
 
 
 // Listing 9.8:
+static thread_local work_stealing_queue* local_work_queue;
+static thread_local unsigned my_index;
+
 class thread_pool
 {
   typedef function_wrapper task_type;
@@ -294,8 +299,8 @@ class thread_pool
   std::vector<std::thread> threads;
   join_threads joiner;
 
-  static thread_local work_stealing_queue* local_work_queue;
-  static thread_local unsigned my_index;
+  //static thread_local work_stealing_queue* local_work_queue;
+  //static thread_local unsigned my_index;
 
   void worker_thread(unsigned my_index_)
   {
@@ -332,10 +337,10 @@ class thread_pool
   }
 
 public:
-  thread_pool():
+  thread_pool(unsigned int n_jobs):
   done(false), joiner(threads)
   {
-    unsigned const thread_count=std::thread::hardware_concurrency();
+    unsigned const thread_count = std::min(n_jobs, std::thread::hardware_concurrency());
 
     try
     {
@@ -357,6 +362,7 @@ public:
   ~thread_pool()
   {
     done=true;
+    Rcpp::Rcout << "I am finished" << std::endl;
   }
 
   // template<typename ResultType>
