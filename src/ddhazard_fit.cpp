@@ -3,7 +3,8 @@
 #include <iostream>
 #include <thread>
 #include <future>
-#include "thread_pool.cpp"
+#include <RcppArmadillo.h>
+#include "thread_pool"
 
 #if defined(USE_OPEN_BLAS) // Used to set the number of threads later
 #include "cblas.h"
@@ -26,7 +27,6 @@ extern int openblas_get_num_threads();
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
 
-#include <RcppArmadillo.h>
 #include <armadillo> // has to come after the #define ARMA_DONT_USE_WRAPPER
 
 #define ARMA_HAVE_STD_ISFINITE
@@ -165,6 +165,10 @@ public:
 
       lag_one_cor = arma::cube(n_parems * order_, n_parems * order_, d);
     }
+
+  problem_data & operator=(const problem_data&) = delete;
+  problem_data(const problem_data&) = delete;
+  problem_data() = delete;
 };
 
 // Class with further members for the Extended Kalman Filter
@@ -219,6 +223,10 @@ public:
     z_dot = arma::mat(n_parems * order_, n_in_last_set * (is_cont_time + 1));
     H_diag_inv = arma::vec(n_in_last_set * (is_cont_time + 1));
   }
+
+  problem_data_EKF & operator=(const problem_data_EKF&) = delete;
+  problem_data_EKF(const problem_data_EKF&) = delete;
+  problem_data_EKF() = delete;
 };
 
 // Abstact solver class
@@ -480,7 +488,6 @@ class EKF_helper{
   problem_data_EKF &p_data;
   std::vector<std::shared_ptr<filter_worker> > workers;
   const std::string model;
-  thread_pool pool;
 
 public:
   EKF_helper(problem_data_EKF &p_data_, const std::string model_):
@@ -493,6 +500,8 @@ public:
                             const bool &compute_H_and_z,
                             const int &bin_number,
                             const double &bin_tstart, const double &bin_tstop){
+    Rcpp::Rcout << "Trying " << std::endl;
+
     // Set entries to zero
     p_data.U.zeros();
     p_data.u.zeros();
@@ -504,20 +513,20 @@ public:
     // Compute the number of threads to create
     unsigned long const length = std::distance(first, last);
 
-    unsigned long const min_per_thread = 25; // TODO: figure out how to set?
-    unsigned long const max_threads =
-      (length + min_per_thread - 1) / min_per_thread;
+    Rcpp::Rcout << "my " << std::endl;
 
-    unsigned long const num_blocks =
-      std::min(hardware_threads != 0 ? hardware_threads : 2, max_threads); // at least use two threads if hardware thread is not set
+    unsigned long const block_size = 250;
+    unsigned long const num_blocks=(length+block_size-1)/block_size;
+    std::vector<std::future<void> > futures(num_blocks-1);
 
-    unsigned long const block_size = length / num_blocks;
-    std::vector<std::future<void> > futures(num_blocks - 1);
-    std::vector<std::thread> threads(num_blocks - 1);
-    join_threads joiner(threads);
+    Rcpp::Rcout << "wait for it " << std::endl;
+
+    thread_pool pool(num_blocks - 1);
 
     // Create workers if needed
     // create workers
+
+    Rcpp::Rcout << "best " << std::endl;
     for(auto i = workers.size(); i < num_blocks; i++){
       if(model == "logit"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
@@ -534,6 +543,8 @@ public:
     uvec_iter block_start = first;
     auto it = workers.begin();
     int i_start = 0;
+
+    Rcpp::Rcout << "Boh" << std::endl;
     for(unsigned long i = 0; i < num_blocks - 1; ++i, ++it)
     {
       uvec_iter block_end = block_start;
@@ -541,7 +552,7 @@ public:
 
       auto func =
         [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
-            return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
+            (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
                     i_start, bin_number, bin_tstart, bin_tstop);
         };
 
@@ -551,10 +562,14 @@ public:
     }
     (*(it->get()))(block_start, last, i_a_t, compute_H_and_z, i_start, bin_number, bin_tstart, bin_tstop); // compute last enteries on this thread
 
+    Rcpp::Rcout << "ya" << std::endl;
+
     for(unsigned long i = 0; i < num_blocks - 1; ++i)
     {
-      futures[i].get(); // will throw if any of the threads did
+      futures[i].get();   // will throw if any of the threads did
     }
+
+    Rcpp::Rcout << "!?" << std::endl;
   }
 };
 
@@ -571,6 +586,8 @@ public:
   void solve(){
     double bin_tstop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
+      Rcpp::Rcout << "that start " << t << std::endl;
+
       double bin_tstart = bin_tstop;
       double delta_t = p_dat.I_len[t - 1];
       bin_tstop += delta_t;
@@ -596,15 +613,15 @@ public:
 
 #if defined(MYDEBUG_EKF)
         Rcpp::Rcout << "t = " << t << std::endl;
-        Rcpp::Rcout << std::fixed;
         p_dat.U.print("U:");
-        Rcpp::Rcout << std::fixed;
         p_dat.u.print("u:");
 #endif
 
 #ifdef USE_OPEN_BLAS
         openblas_set_num_threads(p_dat.n_threads);
 #endif
+
+        Rcpp::Rcout << "what " << std::endl;
 
         // E-step: scoring step: update values
         if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
@@ -619,6 +636,9 @@ public:
 
         p_dat.a_t_t_s.col(t) = i_a_t + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
 
+
+        Rcpp::Rcout << "the " << std::endl;
+
         if(!p_dat.is_mult_NR || arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) < p_dat.NR_eps)
           break;
 
@@ -631,6 +651,8 @@ public:
 #endif
 
         i_a_t = p_dat.a_t_t_s.col(t);
+
+        Rcpp::Rcout << "fuck " << std::endl;
       }
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
@@ -643,7 +665,11 @@ public:
       Rcpp::Rcout << "V_(" + str.str() + ")\n" << std::fixed << p_dat.V_t_t_s.slice(t) <<  std::endl;
 #endif
 
+      Rcpp::Rcout << "?! " << std::endl;
+
       if(t == p_dat.d){
+
+        Rcpp::Rcout << ":) " << std::endl;
 
         arma::mat tmp_inv_mat;
         if(!arma::inv(tmp_inv_mat, arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U * p_dat.V_t_less_s.slice(t - 1))){
@@ -656,8 +682,12 @@ public:
         p_dat.K_d = p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot * diagmat(p_dat.H_diag_inv) -  p_dat.K_d;
 
         p_dat.lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(p_dat.U)) - p_dat.K_d * p_dat.z_dot.t()) * p_dat.F_ * p_dat.V_t_t_s.slice(t - 1);
+
+        Rcpp::Rcout << ":> " << std::endl;
       }
     }
+
+    Rcpp::Rcout << "Yay!!" << std::endl;
   }
 };
 
@@ -1201,6 +1231,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     // E-step
     solver->solve();
 
+    Rcpp::Rcout << "The ";
+
     // E-step: smoothing
     for (int t = p_data->d - 1; t > -1; t--){
       // we need to compute the correlation matrix first
@@ -1278,6 +1310,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     Q.print("Q");
     p_data->a_t_t_s.print("a_t_d_s");
 #endif
+
+    Rcpp::Rcout << "End" << std::endl;
 
     //if(save_all_output) // TODO: make similar save all output function?
 
