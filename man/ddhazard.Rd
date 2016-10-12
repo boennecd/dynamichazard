@@ -20,7 +20,7 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 
 \item{id}{Vector of ids for each row of the in the design matrix}
 
-\item{a_0}{Vector with \eqn{\vec{a}_0} for the first iteration (optional)}
+\item{a_0}{Vector with \eqn{\vec{a}_0} for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}})}
 
 \item{Q_0}{Covariance matrix for the prior \eqn{\mathbf{Q}_0}}
 
@@ -40,6 +40,7 @@ A list with class \code{fahrmeier_94}. The list contains:
 \item{\code{n_risk}}{The number of observations in each interval}
 \item{\code{times}}{The interval borders}
 \item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved}
+\item{\code{data}}{The \code{data} argument if saved}
 \item{\code{order}}{Order of the random walk}
 \item{\code{F_}}{Matrix with that map transition from one state vector to the next}
 \item{\code{method}}{Method used in the E-step}
@@ -72,6 +73,15 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \item{\code{eps}}{Tolerance parameter for the EM-algorithm}
 \item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}}
 \item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
+\item{\code{save_data}}{\code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
 }
+}
+\references{
+Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation for discrete time survival data}. Biometrika 81.2 (1994): 317-330.
+
+Durbin, James, and Siem Jan Koopman. \emph{Time series analysis by state space methods}. No. 38. Oxford University Press, 2012.
+}
+\seealso{
+\code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}
 }
 

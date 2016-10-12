@@ -5,7 +5,7 @@
 #' @param by Interval length of the bins in which parameters are fixed
 #' @param max_T End of the last interval. The last stop time with an event is selected if the parameter is omitted
 #' @param id Vector of ids for each row of the in the design matrix
-#' @param a_0 Vector with \eqn{\vec{a}_0} for the first iteration (optional)
+#' @param a_0 Vector with \eqn{\vec{a}_0} for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}})
 #' @param Q_0 Covariance matrix for the prior \eqn{\mathbf{Q}_0}
 #' @param Q Initial covariance matrix \eqn{\mathbf{Q}} for the state equation
 #' @param order Order of the random walk
@@ -52,6 +52,15 @@
 #' \item{\code{hazard_func}}{Hazard function}
 #' \item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
 #'}
+#'
+#' @seealso
+#' \code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}
+#'
+#' @references
+#' Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation for discrete time survival data}. Biometrika 81.2 (1994): 317-330.
+#'
+#' Durbin, James, and Siem Jan Koopman. \emph{Time series analysis by state space methods}. No. 38. Oxford University Press, 2012.
+#'
 #' @export
 ddhazard = function(formula, data,
                     model = "logit",

@@ -1,5 +1,5 @@
 # library(testthat); library(survival); library(parallel); source("R/test_utils.R")
-suppressMessages(result = ddhazard(
+suppressMessages(result <- ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,

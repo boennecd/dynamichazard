@@ -1,6 +1,17 @@
-#' Plots to illustrate the estimate state space variables from a ddhazardfit
+#' Plot to illustrate the estimate state space variables from a ddhazardfit
+#'
+#' @param object Result of \code{\link{ddhazard}} call
+#' @param type Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters
+#' @param plot_type The \code{type} argument passed to \code{plot}
+#' @param cov_index The index (indices) of the state space parameter(s) to plot
+#' @param add \code{FALSE} if you want to make a new plot
+#' @param ... Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}
+#'
+#' @details
+#' Creates or adds a plot of state variables with indices \code{cov_index}. Point wise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
+#'
 #' @export
-plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
+plot.fahrmeier_94 = function(object, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
                              col = "black", add = F, ...){
@@ -37,16 +48,24 @@ plot.fahrmeier_94 = function(object, new_data, xlab = "Time",
   stop("Type '", type, "' is not implemented for plot.fahrmeier_94")
 }
 
-#' Plot function for standadized statespace errors from ddhazardfit
+#' Plot function for state space errors from \code{\link{ddhazard}} fit
+#'
+#' @param object Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors
+#' @param mod The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call
+#' @param p_cex \code{cex} argument for the points
+#' @param cov_index The indices of state vector errors to plot. Default is to use all. Make no sense if errors are standardised
+#' @param t_index The bin indices to plot. Default is to use all bins
+#' @param ... Arguments passed to plot
+#'
 #' @export
-plot.fahrmeier_94_SpaceErrors = function(object, mod, vars_ = NA, t_index = NA,
+plot.fahrmeier_94_SpaceErrors = function(object, mod, cov_index = NA, t_index = NA,
                                          p_cex = par()$cex * .2, pch = 16,
                                          ylab = "Std. state space error",
                                          x_tick_loc = NA, x_tick_mark = NA,
                                          xlab = "Time", ...){
   bin_times = mod$times[-1]
 
-  var_index = if(length(t_index) == 1 && is.na(vars_)) seq_len(ncol(mod$state_vecs)) else vars_
+  var_index = if(length(t_index) == 1 && is.na(cov_index)) seq_len(ncol(mod$state_vecs)) else cov_index
   res_std = object$residuals[, var_index, drop = F]
   n_vars = length(var_index)
 

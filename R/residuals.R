@@ -1,15 +1,19 @@
-#' Residuals function for result of ddhazard fit
+#' Residuals function for the result of \code{\link{ddhazard}} fit
 #'
 #' @param object Result of \code{\link{ddhazard}} call
-#' @param Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See below for details
+#' @param type Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See below for details
 #' @param data Data frame with data for Pearson or raw residuals
 #'
-#' @section Pearson and Raw residuals
-#' WHAT IS IT. WHAT IS RETURNED
+#' @section Pearson and raw residuals:
+#' Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"fahrmeier_94_res"} with the following elements
+#' \describe{
+#' \item{\code{residuals}}{List of residuals for each bin. Each element of the list contains a 2D array where the rows corresponds to the passed \code{data} and columns are the residuals (\code{residuals}), estimated probability of death (\code{p_est}), outcome (\code{Y}) and row number in the initial dataset (\code{row_num}). The \code{data} rows will only have a residuals in a given risk list if they are at risk in that risk set}
+#' \item{type}{The type of residual}
+#'}
 #'
-#' @section State space errors
+#' @section State space errors:
 #' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
-#' \describin{
+#' \describe{
 #' \item{\code{residuals}}{2D array with either standardised or unstandardised state space errors. The row are bins and the columns are the parameters in the regression}
 #' \item{\code{standardize}}{\code{TRUE} if standardised state space errors}
 #' \item{\code{Covariances}}{3D array with the smoothed co-variance matrix for each set of the state space errors}

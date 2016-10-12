@@ -2,14 +2,37 @@
 % Please edit documentation in R/static_glm.R
 \name{static_glm}
 \alias{static_glm}
-\title{Function to make a static glm fit from a input with a \code{Surv} object
-as the right hand site of forumla}
+\title{Function to make a static glm fit}
 \usage{
-static_glm(formula, data, by, max_T, id, family = "binomial", model = F,
+static_glm(formula, data, by, max_T, id, family = "logit", model = F,
   weights, risk_obj = NULL, ...)
 }
+\arguments{
+\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
+
+\item{data}{Data frame or environment containing the outcome and co-variates}
+
+\item{by}{Length of each intervals that cases are binned into}
+
+\item{max_T}{The end time of the last bin}
+
+\item{id}{The id for each row in \code{data}. This is important when variables are time varying}
+
+\item{family}{\code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}}
+
+\item{model}{\code{TRUE} if you want to save the design matrix used in \code{\link{glm}}}
+
+\item{risk_obj}{A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations}
+
+\item{...}{arguments passed to \code{\link{glm}}}
+}
+\value{
+The returned list from the \code{\link{glm}} call
+}
 \description{
-Function to make a static glm fit from a input with a \code{Surv} object
-as the right hand site of forumla
+Function to make a static glm fit
+}
+\details{
+Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_Weigths_and_data}} for details on weights
 }
 

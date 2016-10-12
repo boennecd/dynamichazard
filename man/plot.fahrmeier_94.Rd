@@ -2,13 +2,29 @@
 % Please edit documentation in R/plot.R
 \name{plot.fahrmeier_94}
 \alias{plot.fahrmeier_94}
-\title{Plots to illustrate the estimate state space variables from a ddhazardfit}
+\title{Plot to illustrate the estimate state space variables from a ddhazardfit}
 \usage{
-\method{plot}{fahrmeier_94}(object, new_data, xlab = "Time",
-  ylab = "Hazard", type = "cov", plot_type = "l", cov_index, ylim,
-  col = "black", add = F, ...)
+\method{plot}{fahrmeier_94}(object, xlab = "Time", ylab = "Hazard",
+  type = "cov", plot_type = "l", cov_index, ylim, col = "black",
+  add = F, ...)
+}
+\arguments{
+\item{object}{Result of \code{\link{ddhazard}} call}
+
+\item{type}{Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters}
+
+\item{plot_type}{The \code{type} argument passed to \code{plot}}
+
+\item{cov_index}{The index (indices) of the state space parameter(s) to plot}
+
+\item{add}{\code{FALSE} if you want to make a new plot}
+
+\item{...}{Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}}
 }
 \description{
-Plots to illustrate the estimate state space variables from a ddhazardfit
+Plot to illustrate the estimate state space variables from a ddhazardfit
+}
+\details{
+Creates or adds a plot of state variables with indices \code{cov_index}. Point wise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
 }
 
