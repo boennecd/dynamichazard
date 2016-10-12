@@ -18,7 +18,7 @@ test_that("Static glm yields expected number of events, correct rows and same re
 
   design_mat = get_design_matrix(form, sims$res)
   risk_obj = get_risk_obj(Y = design_mat$Y, by = 1, max_T = 10,
-                          id = sims$res$id, is_for_discrete_model = T)
+                          id = sims$res$id)
   res_own_risk_obj <- dynamichazard::static_glm(
     form = form, data = sims$res, risk_obj = risk_obj)
 
@@ -49,6 +49,26 @@ test_that("static glm gives results with exponential that match previous computa
     family = "exponential", model = T)
 
   expect_equal(unname(res_lower$coefficients), c(-3.04404847708056359, -0.01960283768708104,  0.09531074598781726, -1.53279736136739375))
+})
+
+test_that("design_matrix yields equal result with different values of use_weights", {
+  form <- formula(survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event, data = sims$res)
+  res <- dynamichazard::static_glm(
+    form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
+    family = "logit", model = T)
+
+  expect_equal(unname(res$coefficients), c(-3.0034120780114382, 0.4201450126532649, 0.7693816806898961, -0.5438611125188229))
+
+
+  data_f <- get_survival_case_Weigths_and_data(formula = form, data = sims$res, by = 1,
+                                               max_T = 10, id = sims$res$id, use_weights = F)
+
+  expect_true(all(data_f$weigths == 1))
+
+  form <- update(old = form, new = Y ~ x1 + x2 + x3 , data = data_f)
+  glm_res <- glm(form, family = binomial, data = data_f, weights = data_f$weigths)
+
+  expect_equal(glm_res$coefficients, res$coefficients)
 })
 
 # cols <- rainbow(4)

@@ -1,9 +1,37 @@
-#' Function used to get design matrix and weigths for a static fit where
-#' there are not duplicate rows but weights instead
+#' Function used to get design matrix and weights for a static fit
+#'
+#' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
+#' @param data Data frame or environment containing the outcome and co-variates
+#' @param by Length of each intervals that cases are binned into
+#' @param max_T The end time of the last bin
+#' @param id The id for each row in \code{data}. This is important when variables are time varying
+#' @param init_weights Weights for the rows \code{data}. Useful with skewed sampling and will be used when computing the final weights
+#' @param risk_obj A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations
+#' @param use_weights \code{TRUE} if weights should be used. See details
+#' @param is_for_discrete_model \code{TRUE} if the model is for a discrete hazard model like the logistic model. Affects how deaths are included when individuals have time varying coefficients
+#'
+#' @details
+#' This function is used to get the data frame for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For instance, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Further, we focus on two rows in the initial data frame
+#'
+#' The first one is case with an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the co-variates and \code{weights} is the weights for the regression. The next individual does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 2)}
+#'
+#' This function use similar logic as the \code{ddhazard} for individuals with time varying co-variates (see the vignette "ddhazard" for details)
+#'
+#' If \code{use_weights = FALSE} then the two individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. (2016) (see reference)
+#'
+#' @return
+#' Returns a data frame with the design matrix from formula where the following is added: column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}
+#'
+#' @seealso
+#' \code{\link{ddhazard}}, \code{\link{static_glm}}
+#'
+#' @references
+#' Tutz, Gerhard, and Matthias Schmid. \emph{Nonparametric Modeling and Smooth Effects}. Modeling Discrete Time-to-Event Data. Springer International Publishing, 2016. 105-127.
+#'
 #' @export
 get_survival_case_Weigths_and_data = function(
   formula, data, by, max_T, id, init_weights, risk_obj,
-  is_for_discrete_model = T){
+  use_weights = T, is_for_discrete_model = T){
   X_Y = get_design_matrix(formula, data)
 
   if(missing(init_weights))
@@ -12,6 +40,11 @@ get_survival_case_Weigths_and_data = function(
   if(any(colnames(data) == "weights")){
     warning("Column called weights will be replaced")
     data = data[, colnames(data) != "weights"]
+  }
+
+  if(!use_weights && any(colnames(data) == "t")){
+    warning("Column called t will be replaced")
+    data = data[, colnames(data) != "t"]
   }
 
   compute_risk_obj <- missing(risk_obj) || is.null(risk_obj)
@@ -32,32 +65,65 @@ get_survival_case_Weigths_and_data = function(
       id = id, is_for_discrete_model = is_for_discrete_model)
   }
 
-  new_weights = rep(0, nrow(data))
-  new_case_rows = data.frame()
+  if(use_weights){
+    new_weights = rep(0, nrow(data))
+    new_case_rows = data.frame()
 
-  for(i in seq_along(risk_obj$risk_sets)){
-    time_ = risk_obj$event_times[i]
-    r_set = risk_obj$risk_sets[[i]]
+    for(i in seq_along(risk_obj$risk_sets)){
+      time_ = risk_obj$event_times[i]
+      r_set = risk_obj$risk_sets[[i]]
 
-    is_case = risk_obj$is_event_in[r_set] == i - 1
+      is_case = risk_obj$is_event_in[r_set] == i - 1
 
-    new_case_rows = rbind(new_case_rows, cbind(
-      Y = rep(1, sum(is_case)), data[r_set[is_case], ], weights = init_weights[r_set[is_case]]))
+      new_case_rows = rbind(new_case_rows, cbind(
+        Y = rep(1, sum(is_case)), data[r_set[is_case], ], weights = init_weights[r_set[is_case]]))
 
-    new_weights[r_set[!is_case]] = new_weights[r_set[!is_case]] + init_weights[r_set[!is_case]]
+      new_weights[r_set[!is_case]] = new_weights[r_set[!is_case]] + init_weights[r_set[!is_case]]
+    }
+
+    X = cbind(Y = rep(0, nrow(data)), data, weights = new_weights)[new_weights > 0, ]
+    X = rbind(X, new_case_rows)
+
+  }else {
+    n_rows_final <- sum(unlist(lapply(risk_obj$risk_sets, length)))
+    X <- data.frame(matrix(NA, nrow = n_rows_final, ncol = 3 + ncol(data),
+                           dimnames = list(NULL, c(colnames(data), "Y", "t", "weigths"))))
+
+    j <- 1
+    for(i in seq_along(risk_obj$risk_sets)){
+      time_ = risk_obj$event_times[i]
+      r_set = risk_obj$risk_sets[[i]]
+
+      n_risk <- length(r_set)
+      is_case = risk_obj$is_event_in[r_set] == i - 1
+
+      X[j:(j + n_risk -1), ] <- cbind(
+        data[r_set, ],
+        is_case, rep(time_, n_risk), rep(1, n_risk))
+
+      j <- j + n_risk
+    }
+
   }
 
-  X = cbind(Y = rep(0, nrow(data)), data, weights = new_weights)[new_weights > 0, ]
-  X = rbind(X, new_case_rows)
-
-  X
+  data.frame(X)
 }
 
 
-#' Function to make a static glm fit from a input with a \code{Surv} object
-#' as the right hand site of forumla
+#' Function to make a static glm fit
+#' @inheritParams get_survival_case_Weigths_and_data
+#' @param family \code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}
+#' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
+#' @param ... arguments passed to \code{\link{glm}}
+#'
+#' @details
+#' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_Weigths_and_data}} for details on weights
+#'
+#' @return
+#' The returned list from the \code{\link{glm}} call
+#'
 #' @export
-static_glm = function(formula, data, by, max_T, id, family = "binomial", model = F, weights, risk_obj = NULL, ...){
+static_glm = function(formula, data, by, max_T, id, family = "logit", model = F, weights, risk_obj = NULL, ...){
   if(family %in% c("binomial", "logit")){
     family <- binomial()
 

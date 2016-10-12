@@ -1,4 +1,26 @@
-#' Predict function for result of ddhazard
+#' Predict function for result of \code{\link{ddhazard}}
+#' @param object Result of a \code{\link{ddhazard}} call
+#' @param new_data New data to base predictions on
+#' @param type Either \code{"response"} for predicted probability of death or \code{"term"} for predicted terms in the linear predictor
+#' @param tstart Name of the start time column in \code{new_data}. It must corresponds to tstart used in the \code{\link[survival]{Surv}(tstart, tstop, event)} in the \code{formula} passed to \code{\link{ddhazard}}
+#' @param tstop same as \code{tstart} for the stop argument
+#' @param use_parallel \code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{parallel} package
+#' @param sds \code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}
+#'
+#' @section Term:
+#' The result of \code{type = "term"} is a list with the following elements
+#' \describe{
+#' \item{terms}{Is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms}
+#' \item{sds}{Similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices}
+#'}
+#'
+#' @section Response:
+#' The result of \code{type = "response"} is a list with the elements below. The function check if there are columns in \code{new_data} which's names match \code{tstart} and \code{tstop}. If not, then each row in new data will get a predicted probability of dying in every bin.
+#' \describe{
+#' \item{fits}{Fitted probability of dying}
+#' \item{istart}{Vector with the start time of the first bin the elements in \code{fits} are in}
+#' \item{istop}{Vector with the end times of the last bin the elements in \code{fits} are in}
+#'}
 #' @export
 predict.fahrmeier_94 = function(object, new_data,
                                 type = c("response", "term"),
@@ -46,7 +68,7 @@ predict_terms <- function(object, new_data, m, sds){
 
     for(j in seq_len(d))
       sds_res[j, , i] = sqrt(diag(m[, terms_to_vars[[i]], drop = F] %*%
-                                    object$state_vars[j, terms_to_vars[[i]], terms_to_vars[[i]]] %*%
+                                    object$state_vars[terms_to_vars[[i]], terms_to_vars[[i]], j] %*%
                                     t(m[, terms_to_vars[[i]], drop = F])))
   }
 

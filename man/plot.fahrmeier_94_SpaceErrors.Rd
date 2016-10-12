@@ -2,14 +2,27 @@
 % Please edit documentation in R/plot.R
 \name{plot.fahrmeier_94_SpaceErrors}
 \alias{plot.fahrmeier_94_SpaceErrors}
-\title{Plot function for standadized statespace errors from ddhazardfit}
+\title{Plot function for state space errors from \code{\link{ddhazard}} fit}
 \usage{
-\method{plot}{fahrmeier_94_SpaceErrors}(object, mod, vars_ = NA,
+\method{plot}{fahrmeier_94_SpaceErrors}(object, mod, cov_index = NA,
   t_index = NA, p_cex = par()$cex * 0.2, pch = 16,
   ylab = "Std. state space error", x_tick_loc = NA, x_tick_mark = NA,
   xlab = "Time", ...)
 }
+\arguments{
+\item{object}{Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors}
+
+\item{mod}{The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call}
+
+\item{cov_index}{The indices of state vector errors to plot. Default is to use all. Make no sense if errors are standardised}
+
+\item{t_index}{The bin indices to plot. Default is to use all bins}
+
+\item{p_cex}{\code{cex} argument for the points}
+
+\item{...}{Arguments passed to plot}
+}
 \description{
-Plot function for standadized statespace errors from ddhazardfit
+Plot function for state space errors from \code{\link{ddhazard}} fit
 }
 
