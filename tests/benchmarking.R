@@ -6,6 +6,10 @@ sims <- test_sim_func_logit(n_series = 10^5, n_vars = 20, t_0 = 0, t_max = 10,
                             x_range = .1, x_mean = -.4, re_draw = T)
 sims$res <- as.data.frame(sims$res)
 
+get_design_matrix <- with(environment(ddhazard), get_design_matrix)
+ddhazard_fit_cpp_prelim <- with(environment(ddhazard), ddhazard_fit_cpp_prelim)
+ddhazard_fit <- with(environment(ddhazard), ddhazard_fit)
+
 design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3, sims$res)
 rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
 
@@ -22,7 +26,7 @@ arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_m
 library(microbenchmark)
 microbenchmark(fit2 <- do.call(ddhazard_fit_cpp_prelim, arg_list),
                fit1 <- do.call(ddhazard_fit, arg_list),
-               times = 100)
+               times = 10)
 
 test_that("Expecting similar outcome with new and old method", {
   expect_equal(c(fit1$a_t_d_s), c(fit2$a_t_d_s))
