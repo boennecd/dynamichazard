@@ -3,6 +3,7 @@
 #include <iostream>
 #include <thread>
 #include <future>
+#include "thread_pool.cpp"
 
 #if defined(USE_OPEN_BLAS) // Used to set the number of threads later
 #include "cblas.h"
@@ -478,24 +479,14 @@ class EKF_helper{
   unsigned long const hardware_threads;
   problem_data_EKF &p_data;
   std::vector<std::shared_ptr<filter_worker> > workers;
+  const std::string model;
+  thread_pool pool;
 
 public:
-  EKF_helper(problem_data_EKF &p_data_, const std::string model):
+  EKF_helper(problem_data_EKF &p_data_, const std::string model_):
   hardware_threads(std::thread::hardware_concurrency()),
-  p_data(p_data_), workers()
-  {
-    // create workers
-    for(uword i = 0; i < hardware_threads; i++){
-      if(model == "logit"){
-        std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
-        workers.push_back(std::move(new_p));
-      } else if (model == "exponential"){
-        std::shared_ptr<filter_worker> new_p(new filter_worker_exponential(p_data));
-        workers.push_back(std::move(new_p));
-      } else
-        Rcpp::stop("EKF is not implemented for model '" + model  +"'");
-    }
-  }
+  p_data(p_data_), workers(), model(model_)
+  {}
 
   void parallel_filter_step(uvec_iter first, uvec_iter last,
                             const arma::vec &i_a_t,
@@ -517,37 +508,50 @@ public:
     unsigned long const max_threads =
       (length + min_per_thread - 1) / min_per_thread;
 
-    unsigned long const num_threads =
+    unsigned long const num_blocks =
       std::min(hardware_threads != 0 ? hardware_threads : 2, max_threads); // at least use two threads if hardware thread is not set
 
-    unsigned long const block_size = length / num_threads;
-    std::vector<std::future<void> > futures(num_threads - 1);
-    std::vector<std::thread> threads(num_threads - 1);
+    unsigned long const block_size = length / num_blocks;
+    std::vector<std::future<void> > futures(num_blocks - 1);
+    std::vector<std::thread> threads(num_blocks - 1);
     join_threads joiner(threads);
+
+    // Create workers if needed
+    // create workers
+    for(auto i = workers.size(); i < num_blocks; i++){
+      if(model == "logit"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
+        workers.push_back(std::move(new_p));
+      } else if (model == "exponential"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exponential(p_data));
+        workers.push_back(std::move(new_p));
+      } else
+        Rcpp::stop("EKF is not implemented for model '" + model  +"'");
+    }
 
     // start workers
     // declare outsite for loop to ref after loop
     uvec_iter block_start = first;
     auto it = workers.begin();
     int i_start = 0;
-    for(unsigned long i = 0; i < num_threads - 1; ++i, ++it)
+    for(unsigned long i = 0; i < num_blocks - 1; ++i, ++it)
     {
       uvec_iter block_end = block_start;
       std::advance(block_end, block_size);
-      std::packaged_task<void()> task(
-          [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
+
+      auto func =
+        [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
             return (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
                     i_start, bin_number, bin_tstart, bin_tstop);
-          });
-      futures[i] = task.get_future();
-      threads[i] = std::thread(std::move(task));
+        };
 
+      futures[i] = pool.submit(func);
       i_start += block_size;
       block_start = block_end;
     }
     (*(it->get()))(block_start, last, i_a_t, compute_H_and_z, i_start, bin_number, bin_tstart, bin_tstop); // compute last enteries on this thread
 
-    for(unsigned long i = 0; i < num_threads - 1; ++i)
+    for(unsigned long i = 0; i < num_blocks - 1; ++i)
     {
       futures[i].get(); // will throw if any of the threads did
     }
@@ -561,7 +565,7 @@ class EKF_solver : public Solver{
 
 public:
   EKF_solver(problem_data_EKF &p_, const std::string model):
-  p_dat(p_), filter_helper(EKF_helper(p_, model))
+  p_dat(p_), filter_helper(p_, model)
   {}
 
   void solve(){

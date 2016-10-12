@@ -333,7 +333,7 @@ class thread_pool
 
 public:
   thread_pool():
-  joiner(threads),done(false)
+  done(false), joiner(threads)
   {
     unsigned const thread_count=std::thread::hardware_concurrency();
 
