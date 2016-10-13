@@ -24,3 +24,4 @@ Suggests:
     timereg,
     captioner
 VignetteBuilder: knitr
+SystemRequirements: C++11

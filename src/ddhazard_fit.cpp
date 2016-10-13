@@ -48,7 +48,7 @@ extern int openblas_get_num_threads();
 // #undef NDEBUG
 // #endif
 
-#define NDEBUG
+// #define NDEBUG
 
 using uword = arma::uword;
 
@@ -500,8 +500,6 @@ public:
                             const bool &compute_H_and_z,
                             const int &bin_number,
                             const double &bin_tstart, const double &bin_tstop){
-    Rcpp::Rcout << "Trying " << std::endl;
-
     // Set entries to zero
     p_data.U.zeros();
     p_data.u.zeros();
@@ -513,20 +511,13 @@ public:
     // Compute the number of threads to create
     unsigned long const length = std::distance(first, last);
 
-    Rcpp::Rcout << "my " << std::endl;
-
-    unsigned long const block_size = 250;
+    unsigned long const block_size = 500;
     unsigned long const num_blocks=(length+block_size-1)/block_size;
     std::vector<std::future<void> > futures(num_blocks-1);
-
-    Rcpp::Rcout << "wait for it " << std::endl;
-
     thread_pool pool(num_blocks - 1);
 
     // Create workers if needed
     // create workers
-
-    Rcpp::Rcout << "best " << std::endl;
     for(auto i = workers.size(); i < num_blocks; i++){
       if(model == "logit"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
@@ -544,7 +535,6 @@ public:
     auto it = workers.begin();
     int i_start = 0;
 
-    Rcpp::Rcout << "Boh" << std::endl;
     for(unsigned long i = 0; i < num_blocks - 1; ++i, ++it)
     {
       uvec_iter block_end = block_start;
@@ -562,14 +552,10 @@ public:
     }
     (*(it->get()))(block_start, last, i_a_t, compute_H_and_z, i_start, bin_number, bin_tstart, bin_tstop); // compute last enteries on this thread
 
-    Rcpp::Rcout << "ya" << std::endl;
-
     for(unsigned long i = 0; i < num_blocks - 1; ++i)
     {
       futures[i].get();   // will throw if any of the threads did
     }
-
-    Rcpp::Rcout << "!?" << std::endl;
   }
 };
 
@@ -586,7 +572,6 @@ public:
   void solve(){
     double bin_tstop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
-      Rcpp::Rcout << "that start " << t << std::endl;
 
       double bin_tstart = bin_tstop;
       double delta_t = p_dat.I_len[t - 1];
@@ -621,8 +606,6 @@ public:
         openblas_set_num_threads(p_dat.n_threads);
 #endif
 
-        Rcpp::Rcout << "what " << std::endl;
-
         // E-step: scoring step: update values
         if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
           Rcpp::warning("V_(t|t-1) seemd non positive definit. Using general inverse instead");
@@ -636,9 +619,6 @@ public:
 
         p_dat.a_t_t_s.col(t) = i_a_t + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
 
-
-        Rcpp::Rcout << "the " << std::endl;
-
         if(!p_dat.is_mult_NR || arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) < p_dat.NR_eps)
           break;
 
@@ -651,8 +631,6 @@ public:
 #endif
 
         i_a_t = p_dat.a_t_t_s.col(t);
-
-        Rcpp::Rcout << "fuck " << std::endl;
       }
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
@@ -665,11 +643,7 @@ public:
       Rcpp::Rcout << "V_(" + str.str() + ")\n" << std::fixed << p_dat.V_t_t_s.slice(t) <<  std::endl;
 #endif
 
-      Rcpp::Rcout << "?! " << std::endl;
-
       if(t == p_dat.d){
-
-        Rcpp::Rcout << ":) " << std::endl;
 
         arma::mat tmp_inv_mat;
         if(!arma::inv(tmp_inv_mat, arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U * p_dat.V_t_less_s.slice(t - 1))){
@@ -682,12 +656,8 @@ public:
         p_dat.K_d = p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot * diagmat(p_dat.H_diag_inv) -  p_dat.K_d;
 
         p_dat.lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(p_dat.U)) - p_dat.K_d * p_dat.z_dot.t()) * p_dat.F_ * p_dat.V_t_t_s.slice(t - 1);
-
-        Rcpp::Rcout << ":> " << std::endl;
       }
     }
-
-    Rcpp::Rcout << "Yay!!" << std::endl;
   }
 };
 
@@ -1231,8 +1201,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     // E-step
     solver->solve();
 
-    Rcpp::Rcout << "The ";
-
     // E-step: smoothing
     for (int t = p_data->d - 1; t > -1; t--){
       // we need to compute the correlation matrix first
@@ -1310,8 +1278,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     Q.print("Q");
     p_data->a_t_t_s.print("a_t_d_s");
 #endif
-
-    Rcpp::Rcout << "End" << std::endl;
 
     //if(save_all_output) // TODO: make similar save all output function?
 

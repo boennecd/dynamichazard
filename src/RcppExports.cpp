@@ -70,28 +70,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// gen_kalman_filter_cpp
-List gen_kalman_filter_cpp(const arma::colvec& a_0, const arma::mat& Q_0, const arma::mat& Q, const arma::mat& F_, const List& risk_sets, const NumericVector& I_len, const int d, const NumericMatrix& X, const IntegerVector& start, const arma::ivec& stop, const arma::ivec& is_event_in_bin, const int& order_);
-RcppExport SEXP dynamichazard_gen_kalman_filter_cpp(SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP F_SEXP, SEXP risk_setsSEXP, SEXP I_lenSEXP, SEXP dSEXP, SEXP XSEXP, SEXP startSEXP, SEXP stopSEXP, SEXP is_event_in_binSEXP, SEXP order_SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::colvec& >::type a_0(a_0SEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type Q_0(Q_0SEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type Q(QSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type F_(F_SEXP);
-    Rcpp::traits::input_parameter< const List& >::type risk_sets(risk_setsSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type I_len(I_lenSEXP);
-    Rcpp::traits::input_parameter< const int >::type d(dSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector& >::type start(startSEXP);
-    Rcpp::traits::input_parameter< const arma::ivec& >::type stop(stopSEXP);
-    Rcpp::traits::input_parameter< const arma::ivec& >::type is_event_in_bin(is_event_in_binSEXP);
-    Rcpp::traits::input_parameter< const int& >::type order_(order_SEXP);
-    rcpp_result_gen = Rcpp::wrap(gen_kalman_filter_cpp(a_0, Q_0, Q, F_, risk_sets, I_len, d, X, start, stop, is_event_in_bin, order_));
-    return rcpp_result_gen;
-END_RCPP
-}
 // logLike_cpp
 std::vector<double> logLike_cpp(const arma::mat& X, const Rcpp::List& risk_obj, const arma::mat& F, const arma::mat& Q_0, arma::mat Q, const arma::mat& a_t_d_s, const arma::vec& tstart, const arma::vec& tstop, const int order_, const std::string model);
 RcppExport SEXP dynamichazard_logLike_cpp(SEXP XSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP a_t_d_sSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP order_SEXP, SEXP modelSEXP) {

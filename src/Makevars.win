@@ -16,11 +16,11 @@ SOURCES_CPP = $(wildcard *.cpp)
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o)
 
-## -- compiling for OpenMP and c++11 n more
-##PKG_CPPFLAGS = $(USE_OPEN_BLAS)
-PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS)
+## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags. Most commonly used to set define directives with -D.
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS) $(SHLIB_PTHREAD_FLAGS)
 ## -- linking (do not ask if all of these are needed. I saw them in sourcecpp call with verbose = T)
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS_USE) $(FLIBS) -fopenmp $(USE_OPEN_BLAS)
+## PKG_LIBS: Linker flags. A common use is PKG_LIBS = $(BLAS_LIBS). This allows you to use the same BLAS library as R.
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS_USE) $(FLIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS)
 
 ifeq "$(WIN)" "64"
 PKG_LIBS += -D ARMA_64BIT_WORD
