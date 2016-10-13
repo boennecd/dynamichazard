@@ -1,4 +1,4 @@
-library(dynamichazard); library(testthat); library(survival); source("R/test_utils.R")
+library(dynamichazard); library(testthat); library(survival); source("C://Users//boennecd//Dropbox//skole_backup//phd//dynamichazard//R//test_utils.R")
 
 # Simulate series to work with
 set.seed(2972)
@@ -26,10 +26,18 @@ arg_list <- list(X = design_mat$X, tstart = design_mat$Y[, 1],  tstop = design_m
                  est_Q_0 = F)
 
 fit2 <- do.call(ddhazard_fit_cpp_prelim, arg_list)
-matplot(fit2$a_t_d_s)
 
 library(microbenchmark)
-microbenchmark(fit1 <- do.call(ddhazard_fit_cpp_prelim, arg_list), times = 100)
+matplot(fit2$a_t_d_s)
+
+microbenchmark(fit1 <- do.call(ddhazard_fit_cpp_prelim, arg_list), times = 10)
+# for(i in 1:1e3){
+#   print(i)
+#   fit2 <- do.call(ddhazard_fit_cpp_prelim, arg_list)
+# }
+
+library(microbenchmark)
+# microbenchmark(fit1 <- do.call(ddhazard_fit_cpp_prelim, arg_list), times = 100)
 # microbenchmark(fit2 <- do.call(ddhazard_fit_cpp_prelim, arg_list),
 #                fit1 <- do.call(ddhazard_fit, arg_list),
 #                times = 10)
