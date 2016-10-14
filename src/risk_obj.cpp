@@ -1,16 +1,7 @@
-#include <iostream>
-#include <Rcpp.h>
-#include <algorithm>
+#include "dynamichazard.h"
 
-// [[Rcpp::plugins(cpp11)]]
 using namespace std;
 using namespace Rcpp;
-
-
-
-#if defined(NDEBUG)
-#undef NDEBUG
-#endif
 
 // [[Rcpp::export]]
 List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
