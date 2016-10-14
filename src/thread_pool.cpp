@@ -24,16 +24,7 @@
  DEALINGS IN THE SOFTWARE.
  */
 
-#include <deque>
-#include <future>
-#include <memory>
-#include <functional>
-#include <iostream>
-#include <iostream>
-#include <mutex>
-#include <condition_variable>
-#include <queue>
-#include <type_traits>
+#include "thread_pool.h"
 
 /* // Listing 6.7 to 6.10
 template<typename T>
