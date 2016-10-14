@@ -1,5 +1,5 @@
 #include "dynamichazard.h"
-#include "thread_pool"
+#include "thread_pool.h"
 
 using uword = arma::uword;
 
@@ -193,32 +193,9 @@ public:
 
 
 
-
-
-
-
 // Class to handle parallel computation in extended Kalman filter
 class EKF_helper{
   using uvec_iter = arma::uvec::const_iterator;
-
-  // handy class to ensure that all ressources are cleaned up once scope of the
-  // is expired
-  class join_threads
-  {
-    std::vector<std::thread>& threads;
-  public:
-    explicit join_threads(std::vector<std::thread>& threads_):
-      threads(threads_)
-    {}
-    ~join_threads()
-    {
-      for(unsigned long i=0;i<threads.size();++i)
-      {
-        if(threads[i].joinable())
-          threads[i].join();
-      }
-    }
-  };
 
   // worker class for parallel computation
   // This class is abstact as the method do_computation will differ between
@@ -491,7 +468,7 @@ public:
       uvec_iter block_end = block_start;
       std::advance(block_end, block_size);
 
-      auto func =
+      std::function<void()> func =
         [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
             (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
                     i_start, bin_number, bin_tstart, bin_tstop);
