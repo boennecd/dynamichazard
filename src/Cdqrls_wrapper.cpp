@@ -1,8 +1,3 @@
-// [[Rcpp::depends("RcppArmadillo")]]
-// [[Rcpp::plugins(cpp11)]]
-#include <RcppArmadillo.h>
-#include <armadillo>
-
 extern "C" {
   #include <R_ext/Constants.h> // for DOUBLE_EPS
   #include "stats/statsR.h"

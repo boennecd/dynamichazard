@@ -1,7 +1,8 @@
 library(dynamichazard); library(testthat); library(survival); source("C://Users//boennecd//Dropbox//skole_backup//phd//dynamichazard//R//test_utils.R")
 
 # Simulate series to work with
-set.seed(2972)
+tmp <- round(runif(1, max = 1e5))
+set.seed(tmp)
 sims <- test_sim_func_logit(n_series = 1e5, n_vars = 20, t_0 = 0, t_max = 10,
                             x_range = 1, x_mean = 0, re_draw = T, intercept_start = -5,
                             sds = c(.1, rep(1, 20)))
@@ -10,7 +11,6 @@ sum(sims$res$event)
 
 get_design_matrix <- with(environment(ddhazard), get_design_matrix)
 ddhazard_fit_cpp_prelim <- with(environment(ddhazard), ddhazard_fit_cpp_prelim)
-ddhazard_fit <- with(environment(ddhazard), ddhazard_fit)
 
 design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event, sims$res)
 rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
