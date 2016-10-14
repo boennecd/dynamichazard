@@ -193,16 +193,16 @@ public:
 
 
 
+
 // Class to handle parallel computation in extended Kalman filter
 class EKF_helper{
-  using uvec_iter = arma::uvec::const_iterator;
 
   // worker class for parallel computation
   // This class is abstact as the method do_computation will differ between
   // the models
   class filter_worker{
   protected:
-    virtual void do_comps(const uvec_iter it, int &i,
+    virtual void do_comps(const arma::uvec::const_iterator it, int &i,
                           const arma::vec &i_a_t, const bool &compute_z_and_H,
                           const int &bin_number,
                           const double &bin_tstart, const double &bin_tstop) = 0; // abstact method to be implemented
@@ -219,7 +219,7 @@ class EKF_helper{
     is_first_call(true), dat(p_data)
     {}
 
-    void operator()(uvec_iter first, const uvec_iter &last,
+    void operator()(arma::uvec::const_iterator first, const arma::uvec::const_iterator &last,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
                   const int &i_start, const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
@@ -234,7 +234,7 @@ class EKF_helper{
 
       // compute local results
       int i = i_start;
-      for(uvec_iter it = first; it != last; it++){
+      for(arma::uvec::const_iterator it = first; it != last; it++){
         do_comps(it, i, i_a_t, compute_z_and_H, bin_number,
                  bin_tstart, bin_tstop);
       }
@@ -255,7 +255,7 @@ class EKF_helper{
   // worker for the logit model
   class filter_worker_logit : public filter_worker {
   private:
-    void do_comps(const uvec_iter it, int &i,
+    void do_comps(const arma::uvec::const_iterator it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
@@ -290,7 +290,7 @@ class EKF_helper{
   // worker for the continous model with exponential distribution
   class filter_worker_exponential : public filter_worker {
   private:
-    void do_comps(const uvec_iter it, int &i,
+    void do_comps(const arma::uvec::const_iterator it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
@@ -423,7 +423,7 @@ public:
   p_data(p_data_), workers(), model(model_)
   {}
 
-  void parallel_filter_step(uvec_iter first, uvec_iter last,
+  void parallel_filter_step(arma::uvec::const_iterator first, arma::uvec::const_iterator last,
                             const arma::vec &i_a_t,
                             const bool &compute_H_and_z,
                             const int &bin_number,
@@ -459,22 +459,22 @@ public:
 
     // start workers
     // declare outsite for loop to ref after loop
-    uvec_iter block_start = first;
+    arma::uvec::const_iterator block_start = first;
     auto it = workers.begin();
     int i_start = 0;
 
     for(unsigned long i = 0; i < num_blocks - 1; ++i, ++it)
     {
-      uvec_iter block_end = block_start;
+      arma::uvec::const_iterator block_end = block_start;
       std::advance(block_end, block_size);
 
-      std::function<void()> func =
-        [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
+      function_wrapper func(
+          [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
             (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
                     i_start, bin_number, bin_tstart, bin_tstop);
-        };
+      });
 
-      futures[i] = pool.submit(func);
+      futures[i] = pool.submit(std::move(func));
       i_start += block_size;
       block_start = block_end;
     }
