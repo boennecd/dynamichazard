@@ -1,9 +1,7 @@
-// [[Rcpp::depends("RcppArmadillo")]]
 // [[Rcpp::plugins(cpp11)]]
 #include <iostream>
 #include <thread>
 #include <future>
-#include <RcppArmadillo.h>
 #include "thread_pool"
 
 #if defined(USE_OPEN_BLAS) // Used to set the number of threads later
@@ -27,8 +25,6 @@ extern int openblas_get_num_threads();
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
 
-#include <armadillo> // has to come after the #define ARMA_DONT_USE_WRAPPER
-
 #define ARMA_HAVE_STD_ISFINITE
 #define ARMA_HAVE_STD_ISINF
 #define ARMA_HAVE_STD_ISNAN
@@ -47,8 +43,22 @@ extern int openblas_get_num_threads();
 // #if defined(NDEBUG)
 // #undef NDEBUG
 // #endif
+#define NDEBUG
 
-// #define NDEBUG
+#define ARMA_NO_DEBUG
+// from armadillo config.hpp
+//// Uncomment the above line if you want to disable all run-time checks.
+//// This will result in faster code, but you first need to make sure that your code runs correctly!
+//// We strongly recommend to have the run-time checks enabled during development,
+//// as this greatly aids in finding mistakes in your code, and hence speeds up development.
+//// We recommend that run-time checks be disabled _only_ for the shipped version of your program.
+
+
+// from armadillo config.hpp: "Comment out the above line if you don't want errors and warnings printed (eg. failed decompositions)"
+#define ARMA_DONT_PRINT_ERRORS
+
+#include <RcppArmadillo.h> // has to come after defines: http://artax.karlin.mff.cuni.cz/r-help/library/RcppArmadillo/html/RcppArmadillo-package.html
+// [[Rcpp::depends("RcppArmadillo")]]
 
 using uword = arma::uword;
 
@@ -511,7 +521,7 @@ public:
     // Compute the number of threads to create
     unsigned long const length = std::distance(first, last);
 
-    unsigned long const block_size = 500;
+    unsigned long const block_size = 250;
     unsigned long const num_blocks=(length+block_size-1)/block_size;
     std::vector<std::future<void> > futures(num_blocks-1);
     thread_pool pool(num_blocks - 1);
@@ -609,12 +619,17 @@ public:
         // E-step: scoring step: update values
         if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
           Rcpp::warning("V_(t|t-1) seemd non positive definit. Using general inverse instead");
-          V_t_less_s_inv = arma::inv(p_dat.V_t_less_s.slice(t - 1));
+          if(!arma::inv(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
+            Rcpp::stop("Failed to invert V_(t|t-1)");
+          }
         }
+
 
         if(!arma::inv_sympd(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
           Rcpp::warning("V_(t|t) seemd non positive definit. Using general inverse instead");
-          p_dat.V_t_t_s.slice(t) = arma::inv(V_t_less_s_inv + p_dat.U);
+          if(!arma::inv(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
+            Rcpp::stop("Failed to compute inverse for V_(t|t)");
+          }
         }
 
         p_dat.a_t_t_s.col(t) = i_a_t + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
@@ -780,7 +795,9 @@ public:
       // Compute new estimates
       if(!arma::inv_sympd(P_v_v, P_v_v)){ // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
         Rcpp::warning("Failed to use inversion for symmetric square matrix for P_v_v. Trying with general inversion method");
-        P_v_v = arma::inv_sympd(P_v_v);
+        if(!arma::inv_sympd(P_v_v, P_v_v)){
+          Rcpp::stop("Failed to invert P_v_v");
+        }
       }
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
@@ -973,7 +990,9 @@ public:
 
         // Compute intermediate matrix
         arma::mat tmp_mat;
-        arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O); // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+        if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+          Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+        }
         tmp_mat = O * tmp_mat;
 
 #if defined(MYDEBUG_UKF)
@@ -990,7 +1009,9 @@ public:
         c_vec = c_vec -  tmp_mat * c_vec;
 
         // Re-compute intermediate matrix using the other weight vector
-        arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O);
+        if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
+          Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+        }
         tmp_mat = O * tmp_mat;
 
         // compute matrix for co-variance
