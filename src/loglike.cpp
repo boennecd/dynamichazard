@@ -1,46 +1,4 @@
-// [[Rcpp::depends("RcppArmadillo")]]
-// [[Rcpp::plugins(cpp11)]]
-#include <iostream>
-
-#define _USE_MATH_DEFINES
-#include <cmath>
-
-#if defined(USE_OPEN_BLAS) // Used to set the number of threads later
-#include "cblas.h"
-extern void openblas_set_num_threads(int num_threads);
-extern int openblas_get_num_threads();
-#define ARMA_USE_OPENBLAS
-#define ARMA_DONT_USE_WRAPPER
-#else
-#define ARMA_USE_BLAS
-#endif
-
-// we know these are avialble with all R installations
-#define ARMA_USE_LAPACK
-
-#include <RcppArmadillo.h>
-#include <armadillo> // has to come after the #define ARMA_DONT_USE_WRAPPER
-
-#define ARMA_HAVE_STD_ISFINITE
-#define ARMA_HAVE_STD_ISINF
-#define ARMA_HAVE_STD_ISNAN
-#define ARMA_HAVE_STD_SNPRINTF
-
-// Rcpp has its own stream object which cooperates more nicely
-// with R's i/o -- and as of Armadillo 2.4.3, we can use this
-// stream object as well
-#if !defined(ARMA_DEFAULT_OSTREAM)
-#define ARMA_DEFAULT_OSTREAM Rcpp::Rcout
-#endif
-
-// R now defines NDEBUG which suppresses a number of useful
-// Armadillo tests Users can still defined it later, and/or
-// define ARMA_NO_DEBUG
-#if defined(NDEBUG)
-#undef NDEBUG
-#endif
-
-
+#include "dynamichazard.h"
 
 class logLike_link_term_helper{
 private:

@@ -1,64 +1,5 @@
-// [[Rcpp::plugins(cpp11)]]
-#include <iostream>
-#include <thread>
-#include <future>
+#include "dynamichazard.h"
 #include "thread_pool"
-
-#if defined(USE_OPEN_BLAS) // Used to set the number of threads later
-#include "cblas.h"
-extern void openblas_set_num_threads(int num_threads);
-extern int openblas_get_num_threads();
-#define ARMA_USE_OPENBLAS
-#define ARMA_DONT_USE_WRAPPER
-#else
-#define ARMA_USE_BLAS
-#endif
-
-// DEBUG flags
-// Only define this if the observational equation and state space equation
-// have reasonable dimensions
-// #define MYDEBUG_UKF
-
-// #define MYDEBUG_EKF
-// #define MYDEBUG_M_STEP
-
-// we know these are avialble with all R installations
-#define ARMA_USE_LAPACK
-
-#define ARMA_HAVE_STD_ISFINITE
-#define ARMA_HAVE_STD_ISINF
-#define ARMA_HAVE_STD_ISNAN
-#define ARMA_HAVE_STD_SNPRINTF
-
-// Rcpp has its own stream object which cooperates more nicely
-// with R's i/o -- and as of Armadillo 2.4.3, we can use this
-// stream object as well
-#if !defined(ARMA_DEFAULT_OSTREAM)
-#define ARMA_DEFAULT_OSTREAM Rcpp::Rcout
-#endif
-
-// R now defines NDEBUG which suppresses a number of useful
-// Armadillo tests Users can still defined it later, and/or
-// define ARMA_NO_DEBUG
-// #if defined(NDEBUG)
-// #undef NDEBUG
-// #endif
-#define NDEBUG
-
-#define ARMA_NO_DEBUG
-// from armadillo config.hpp
-//// Uncomment the above line if you want to disable all run-time checks.
-//// This will result in faster code, but you first need to make sure that your code runs correctly!
-//// We strongly recommend to have the run-time checks enabled during development,
-//// as this greatly aids in finding mistakes in your code, and hence speeds up development.
-//// We recommend that run-time checks be disabled _only_ for the shipped version of your program.
-
-
-// from armadillo config.hpp: "Comment out the above line if you don't want errors and warnings printed (eg. failed decompositions)"
-#define ARMA_DONT_PRINT_ERRORS
-
-#include <RcppArmadillo.h> // has to come after defines: http://artax.karlin.mff.cuni.cz/r-help/library/RcppArmadillo/html/RcppArmadillo-package.html
-// [[Rcpp::depends("RcppArmadillo")]]
 
 using uword = arma::uword;
 
@@ -617,16 +558,25 @@ public:
 #endif
 
         // E-step: scoring step: update values
+        static bool inv_V_t_less_s_inv_have_failed;
         if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
-          Rcpp::warning("V_(t|t-1) seemd non positive definit. Using general inverse instead");
+          if(!inv_V_t_less_s_inv_have_failed){
+            Rcpp::warning("V_(t|t-1) seems non-positive symmetric (or even worse non definit) at least once. Using general inverse instead");
+            inv_V_t_less_s_inv_have_failed = true;
+          }
+
           if(!arma::inv(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
             Rcpp::stop("Failed to invert V_(t|t-1)");
           }
         }
 
-
+        static bool inv_V_t_t_s_inv_have_failed;
         if(!arma::inv_sympd(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
-          Rcpp::warning("V_(t|t) seemd non positive definit. Using general inverse instead");
+          if(!inv_V_t_t_s_inv_have_failed){
+            Rcpp::warning("V_(t|t) seems non-positive symmetric (or even worse non definit) at least once. Using general inverse instead");
+            inv_V_t_t_s_inv_have_failed = true;
+          }
+
           if(!arma::inv(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
             Rcpp::stop("Failed to compute inverse for V_(t|t)");
           }

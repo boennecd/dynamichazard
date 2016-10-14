@@ -1,3 +1,5 @@
+#include "dynamichazard.h"
+
 extern "C" {
   #include <R_ext/Constants.h> // for DOUBLE_EPS
   #include "stats/statsR.h"
