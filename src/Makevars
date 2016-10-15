@@ -1,11 +1,16 @@
 ## include the C code in the sub directory
 SOURCES_C = $(wildcard stats/*.c)
 SOURCES_CPP = $(wildcard *.cpp)
-
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o)
 
-## -- compiling for OpenMP and c++11 n more
-PKG_CXXFLAGS = ## -fopenmp
-## -- linking (do not ask if all of these are needed. I saw them in sourcecpp call with verbose = T)
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) ## -lm -lquadmath  -fopenmp
+## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags. Most commonly used to set define directives with -D.
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(SHLIB_PTHREAD_FLAGS)
+## PKG_LIBS: Linker flags. A common use is PKG_LIBS = $(BLAS_LIBS). This allows you to use the same BLAS library as R.
+PKG_LIBS = $(BLAS_LIBS) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS)
+
+all: $(SHLIB)
+
+$(SOURCES_CPP:.cpp=.o): dynamichazard.h
+
+ddhazard_fit.o: ddhazard_fit.cpp thread_pool.h

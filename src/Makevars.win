@@ -27,5 +27,8 @@ endif
 
 all: $(SHLIB)
 
-ddhazard_fit.o: ddhazard_fit.cpp thread_pool.o thread_pool.h
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c ddhazard_fit.cpp
+$(SOURCES_CPP:.cpp=.o): dynamichazard.h
+
+ddhazard_fit.o: ddhazard_fit.cpp thread_pool.h
+
+thread_pool.o: thread_pool.cpp thread_pool.h
