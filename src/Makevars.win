@@ -18,10 +18,14 @@ OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o)
 
 ## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags. Most commonly used to set define directives with -D.
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS) $(SHLIB_PTHREAD_FLAGS)
-## -- linking (do not ask if all of these are needed. I saw them in sourcecpp call with verbose = T)
 ## PKG_LIBS: Linker flags. A common use is PKG_LIBS = $(BLAS_LIBS). This allows you to use the same BLAS library as R.
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS_USE) $(FLIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS)
+PKG_LIBS = $(BLAS_LIBS_USE) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS)
 
 ifeq "$(WIN)" "64"
 PKG_LIBS += -D ARMA_64BIT_WORD
 endif
+
+all: $(SHLIB)
+
+ddhazard_fit.o: ddhazard_fit.cpp thread_pool.o thread_pool.h
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c ddhazard_fit.cpp
