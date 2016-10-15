@@ -2,7 +2,7 @@
 
 extern "C" {
   #include <R_ext/Constants.h> // for DOUBLE_EPS
-  #include "stats/statsR.h"
+  #include "statsR.h"
   SEXP Cdqrls(SEXP x, SEXP y, SEXP tol, SEXP chk);
 }
 

@@ -188,8 +188,8 @@ class thread_pool
 {
   typedef function_wrapper task_type;
 
-  std::atomic_bool start; // added
   std::atomic_bool done;
+  std::atomic_bool start; // added
   thread_safe_queue<task_type> pool_work_queue;
   std::vector<std::unique_ptr<work_stealing_queue> > queues;
   std::vector<std::thread> threads;
@@ -239,7 +239,7 @@ class thread_pool
 
 public:
   thread_pool(unsigned int n_jobs):
-  done(false), joiner(threads), start(false)
+  done(false), start(false), joiner(threads)
   {
     unsigned const thread_count = std::min(n_jobs, std::thread::hardware_concurrency());
 

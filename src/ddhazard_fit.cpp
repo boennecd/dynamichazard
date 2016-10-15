@@ -505,7 +505,7 @@ public:
       arma::uvec::const_iterator block_end = block_start;
       std::advance(block_end, block_size);
 
-      std::function<void() > func =
+      auto func =
         [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
             (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
                     i_start, bin_number, bin_tstart, bin_tstop);
