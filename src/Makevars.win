@@ -11,7 +11,7 @@ BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
 ## include the C code in the sub directory
-SOURCES_C = $(wildcard stats/*.c)
+SOURCES_C = $(wildcard *.c)
 SOURCES_CPP = $(wildcard *.cpp)
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o)
@@ -26,6 +26,7 @@ PKG_LIBS += -D ARMA_64BIT_WORD
 endif
 
 all: $(SHLIB)
+	@echo $(OBJECTS)
 
 $(SOURCES_CPP:.cpp=.o): dynamichazard.h
 
