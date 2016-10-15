@@ -1,4 +1,3 @@
-#' Returns the discretized risk set
 #' @export
 get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T)
   get_risk_obj_rcpp(

@@ -3,6 +3,7 @@
 #' @param object Result of \code{\link{ddhazard}} call
 #' @param type Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See below for details
 #' @param data Data frame with data for Pearson or raw residuals
+#' @param ... Not used
 #'
 #' @section Pearson and raw residuals:
 #' Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"fahrmeier_94_res"} with the following elements
@@ -20,7 +21,7 @@
 #'}
 #'
 #' @export
-residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data = NULL){
+residuals.fahrmeier_94 = function(object, ..., type = c("std_space_error", "space_error", "pearson", "raw"), data = NULL){
   type = type[1]
 
   if(type %in% c("std_space_error", "space_error")){
