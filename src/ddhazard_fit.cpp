@@ -231,7 +231,6 @@ public:
   Callable& operator=(const Callable&)=delete;
 };
 
-
 class EKF_helper{
 
   // worker class for parallel computation
@@ -800,6 +799,7 @@ public:
 // Julier, Simon J., and Jeffrey K. Uhlmann. "Unscented filtering and nonlinear
 // estimation." Proceedings of the IEEE 92.3 (2004): 401-422.
 class UKF_solver_New : public Solver{
+protected:
   problem_data &p_dat;
   const uword m;
   const double k;
@@ -811,6 +811,14 @@ class UKF_solver_New : public Solver{
   const double w_i;
   const double sqrt_m_lambda;
   arma::mat sigma_points;
+
+  arma::vec weights_vec;
+  arma::vec weights_vec_inv;
+  arma::vec weights_vec_c;
+  arma::vec weights_vec_c_inv;
+
+  virtual void Compute_intermediates(const arma::uvec &r_set, const int t,
+                                     arma::vec &c_vec, arma::mat &O) = 0;
 
   static constexpr double min_var = (lower_trunc_exp_exp_thres / (1 + lower_trunc_exp_exp_thres)) / (1 + lower_trunc_exp_exp_thres);
 
@@ -854,7 +862,15 @@ public:
   sqrt_m_lambda(std::sqrt(m + lambda)),
 
   sigma_points(arma::mat(m, 2 * m + 1))
-  {}
+  {
+    weights_vec = arma::vec(std::vector<double>(2 * m + 1, w_i));
+    weights_vec[0] = w_0;
+    weights_vec_inv = arma::pow(weights_vec, -1);
+
+    weights_vec_c = weights_vec;
+    weights_vec_c[0] = w_0_c;
+    weights_vec_c_inv = arma::pow(weights_vec_c, -1);
+  }
 
   void solve(){
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -862,15 +878,6 @@ public:
     openblas_set_num_threads(p_dat.n_threads);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
-
-    // will be usefull later
-    arma::vec weights_vec(std::vector<double>(2 * m + 1, w_i));
-    weights_vec[0] = w_0;
-    arma::vec weights_vec_inv = arma::pow(weights_vec, -1);
-
-    arma::vec weights_vec_c = weights_vec;
-    weights_vec_c[0] = w_0_c;
-    arma::vec weights_vec_c_inv = arma::pow(weights_vec_c, -1);
 
     double event_time = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
@@ -914,73 +921,9 @@ public:
       // E-step: correction-step
       arma::mat O;
       arma::vec c_vec;
+      arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
-      //TODO: can this be done more effeciently?
-      { // Define scope here as there is a lot of varialbes that are not needed after scope
-        // First we use O to store expected observations given sigma points
-        arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
-        O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
-
-        O.transform(trunc_exp_functor);
-
-        O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
-
-#if defined(MYDEBUG_UKF)
-        O.print("etas");
-#endif
-
-        // Compute mean observation sing sigma points
-        const arma::vec y_bar = w_0 * O.unsafe_col(0) +
-          w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
-
-        arma::vec vars = w_0_c * (O.unsafe_col(0) % (1.0 - O.unsafe_col(0)));
-        for(uword i = 1; i < O.n_cols; ++i){
-          vars += w_i * (O.unsafe_col(i) % (1.0 - O.unsafe_col(i)));
-        }
-
-        // There is a risk that the product of the weigths and the variances
-        // are small in which case some of the vars indicies are small. We
-        // overcome this issue by setting these elements to the smallest
-        // posible value given the truncation we apply to the exponential
-        // function
-        vars.elem(arma::find(vars <= min_var)).fill(min_var);
-
-        // Substract y_bar to get deviations
-        O.each_col() -= y_bar;
-
-        // first we compute the c_vec and then y deviation times y deveation scaled by inverse weighted variance
-        c_vec = (O.each_col() / vars).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
-        O = O.t() * (O.each_col() / vars);
-
-        // Compute intermediate matrix
-        arma::mat tmp_mat;
-        if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
-          Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
-        }
-        tmp_mat = O * tmp_mat;
-
-#if defined(MYDEBUG_UKF)
-        Rcpp::Rcout << "________" << std::endl;
-        sigma_points.print("sigma points");
-        vars.print("vars");
-        tmp_mat.print("O (R^- + O)^-1");
-        ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar).print("y - y_hat");
-        O.print("y_delta * R^-1 y_delta_T");
-        Rcpp::Rcout << "________" << std::endl;
-#endif
-
-        // Compute vector for state space vector
-        c_vec = c_vec -  tmp_mat * c_vec;
-
-        // Re-compute intermediate matrix using the other weight vector
-        if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-          Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
-        }
-        tmp_mat = O * tmp_mat;
-
-        // compute matrix for co-variance
-        O = O - tmp_mat * O;
-      }
+      Compute_intermediates(r_set, t, c_vec, O);
 
       // Substract mean to get delta sigma points
       arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
@@ -1038,6 +981,103 @@ public:
     openblas_set_num_threads(prev_n_thread);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
+  }
+};
+
+
+class UKF_solver_New_logit : public UKF_solver_New{
+  void Compute_intermediates(const arma::uvec &r_set, const int t,
+                             arma::vec &c_vec, arma::mat &O){
+    O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
+
+    O.transform(trunc_exp_functor);
+
+    O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
+
+#if defined(MYDEBUG_UKF)
+    O.print("etas");
+#endif
+
+    // Compute mean observation sing sigma points
+    const arma::vec y_bar = w_0 * O.unsafe_col(0) +
+      w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
+
+    arma::vec vars = w_0_c * (O.unsafe_col(0) % (1.0 - O.unsafe_col(0)));
+    for(uword i = 1; i < O.n_cols; ++i){
+      vars += w_i * (O.unsafe_col(i) % (1.0 - O.unsafe_col(i)));
+    }
+
+    // There is a risk that the product of the weigths and the variances
+    // are small in which case some of the vars indicies are small. We
+    // overcome this issue by setting these elements to the smallest
+    // posible value given the truncation we apply to the exponential
+    // function
+    vars.elem(arma::find(vars <= min_var)).fill(min_var);
+
+    // Substract y_bar to get deviations
+    O.each_col() -= y_bar;
+
+    // first we compute the c_vec and then y deviation times y deveation scaled by inverse weighted variance
+    c_vec = (O.each_col() / vars).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
+    O = O.t() * (O.each_col() / vars);
+
+    // Compute intermediate matrix
+    arma::mat tmp_mat;
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+      Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+    }
+    tmp_mat = O * tmp_mat;
+
+#if defined(MYDEBUG_UKF)
+    Rcpp::Rcout << "________" << std::endl;
+    sigma_points.print("sigma points");
+    vars.print("vars");
+    tmp_mat.print("O (R^- + O)^-1");
+    ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar).print("y - y_hat");
+    O.print("y_delta * R^-1 y_delta_T");
+    Rcpp::Rcout << "________" << std::endl;
+#endif
+
+    // Compute vector for state space vector
+    c_vec = c_vec -  tmp_mat * c_vec;
+
+    // Re-compute intermediate matrix using the other weight vector
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
+      Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+    }
+    tmp_mat = O * tmp_mat;
+
+    // compute matrix for co-variance
+    O = O - tmp_mat * O;
+  }
+
+public:
+  UKF_solver_New_logit(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
+                       Rcpp::Nullable<Rcpp::NumericVector> &alpha,
+                       Rcpp::Nullable<Rcpp::NumericVector> &beta):
+    UKF_solver_New(p_, kappa, alpha, beta)
+  {}
+};
+
+
+class UKF_solver_New_exponential : public UKF_solver_New{
+  void Compute_intermediates(const arma::uvec &r_set, const int t,
+                             arma::vec &c_vec, arma::mat &O)
+  {
+    // See comments in UKF_solver_New_logit. The main difference here is that
+    // we have tuples as outcomes
+    O = (sigma_points.t() * p_dat._X.cols(r_set)).t();
+
+
+
+  }
+
+public:
+  UKF_solver_New_exponential(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
+                       Rcpp::Nullable<Rcpp::NumericVector> &alpha,
+                       Rcpp::Nullable<Rcpp::NumericVector> &beta):
+  UKF_solver_New(p_, kappa, alpha, beta)
+  {
   }
 };
 
@@ -1121,7 +1161,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
       order_, est_Q_0);
-    solver = new UKF_solver_New(*p_data, kappa, alpha, beta);
+    solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
   } else if (method == "UKF_org"){
     if(model != "logit")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
