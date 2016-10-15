@@ -191,10 +191,47 @@ public:
 
 
 
+class Callable
+{
+  struct impl_base {
+    virtual void call()=0;
+    virtual ~impl_base() {}
+  };
+
+  std::unique_ptr<impl_base> impl;
+
+  template<typename F>
+  struct impl_type : impl_base
+  {
+    F f;
+    impl_type(F&& f_): f(std::move(f_)) {}
+    void call() { f(); }
+  };
+
+public:
+  template<typename F>
+  Callable(F&& f):
+    impl(new impl_type<F>(std::move(f)))
+  {}
+
+  void operator()() { impl->call(); }
+
+  Callable& operator=(Callable&& other)
+  {
+    impl=std::move(other.impl);
+    return *this;
+  }
+
+  Callable(Callable&& other):
+    impl(std::move(other.impl))
+  {}
+
+  Callable(const Callable&)=delete;
+  Callable(Callable&)=delete;
+  Callable& operator=(const Callable&)=delete;
+};
 
 
-
-// Class to handle parallel computation in extended Kalman filter
 class EKF_helper{
 
   // worker class for parallel computation
@@ -468,13 +505,13 @@ public:
       arma::uvec::const_iterator block_end = block_start;
       std::advance(block_end, block_size);
 
-      function_wrapper func(
-          [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
+      std::function<void() > func =
+        [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
             (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
                     i_start, bin_number, bin_tstart, bin_tstop);
-      });
+          };
 
-      futures[i] = pool.submit(std::move(func));
+      futures[i] = pool.submit(func);
       i_start += block_size;
       block_start = block_end;
     }
