@@ -12,10 +12,10 @@
 #' Creates or adds a plot of state variables with indices \code{cov_index}. Point wise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
 #'
 #' @export
-plot.fahrmeier_94 = function(x, ..., xlab = "Time",
+plot.fahrmeier_94 = function(x, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
-                             col = "black", add = F){
+                             col = "black", add = F, ...){
   if(!x$model %in% c("logit", "exponential"))
     stop("Functions for model '", x$model, "' is not implemented")
 
@@ -61,11 +61,11 @@ plot.fahrmeier_94 = function(x, ..., xlab = "Time",
 #' @param ... Arguments passed to plot
 #'
 #' @export
-plot.fahrmeier_94_SpaceErrors = function(x, ..., mod, cov_index = NA, t_index = NA,
+plot.fahrmeier_94_SpaceErrors = function(x, mod, cov_index = NA, t_index = NA,
                                          p_cex = par()$cex * .2, pch = 16,
                                          ylab = "Std. state space error",
                                          x_tick_loc = NA, x_tick_mark = NA,
-                                         xlab = "Time"){
+                                         xlab = "Time", ...){
   bin_times = mod$times[-1]
 
   var_index = if(length(t_index) == 1 && is.na(cov_index)) seq_len(ncol(mod$state_vecs)) else cov_index

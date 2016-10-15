@@ -23,10 +23,10 @@
 #' \item{istop}{Vector with the end times of the last bin the elements in \code{fits} are in}
 #'}
 #' @export
-predict.fahrmeier_94 = function(object, ..., new_data,
+predict.fahrmeier_94 = function(object, new_data,
                                 type = c("response", "term"),
                                 tstart = "start", tstop = "stop",
-                                use_parallel = F, sds = F)
+                                use_parallel = F, sds = F, ...)
 {
   if(!object$model %in% c("logit", "exponential"))
     stop("Functions for model '", object$model, "' is not implemented")
