@@ -231,6 +231,46 @@ public:
   Callable& operator=(const Callable&)=delete;
 };
 
+namespace exp_model_funcs {
+  // Namespace to avoid namespace pollution and avoid error-40 for Taylor/Laruens series
+  // By definition:
+  //  a                   at risk length
+  //  eta                 linear predictor x^T * beta
+  //  v                   a * exp(eta)
+  //  exp_x               exp(x)
+  //  inv_x               inv(x)
+  //  expect_chance_die   1 - exp(- v)
+
+  inline double expect_time(const double v, const double a,
+                            const double inv_exp_v, const double exp_eta){
+   return((v >= 1e-8) ? (1.0 - inv_exp_v) / exp_eta :
+      a * ((1 - v / 2 * (1 - v / 6 * (1 - v / 24 * (1 - v / 120)))))
+   );
+  }
+
+  inline double expect_chance_die(const double v, const double inv_exp_v){
+    return((v >= 1e-5) ? 1.0 - inv_exp_v :
+             v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0)))));
+  }
+
+  inline double inv_var_wait_time(const double v, const double exp_eta, const double inv_exp_v){
+    return((v >= 1e-6) ?
+             exp_eta * exp_eta / (1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) :
+             // Laruent series from https://www.wolframalpha.com/input/?i=1%2F(1-exp(2v)-2v*exp(v))
+             exp_eta * exp_eta *
+               (-1 / v * (1 / 4 - v * (1 / 4 - v * (5 / 48 - v * (1/48 - v /1440)))))
+             );
+  }
+
+  inline double inv_var_chance_die(const double v, const double expect_chance_die){
+    return((v >= 1e-6) ?
+             1 / (expect_chance_die * (1 - expect_chance_die)) :
+             //Lauren series from https://www.wolframalpha.com/input/?i=1%2F((1-exp(-v))exp(-v))
+             1 / v * (1 + v * (3 / 2 + v * (13 / 12 + v * (1 / 2 + v * 119 / 720))))
+             );
+  }
+}
+
 class EKF_helper{
 
   // worker class for parallel computation
@@ -341,38 +381,35 @@ class EKF_helper{
       const double exp_eta = exp(eta); // exp(x^T * beta)
       const double inv_exp_eta = pow(exp_eta, -1);
 
-      const double exp_term = exp(at_risk_length * exp_eta); // exp(d_t * exp(x^T * beta))
-      const double inv_exp_term = pow(exp_term, -1);
-
-      //TODO: remove intermediate when done debugging
+      //TODO: remove intermediates when done debugging
       const double v = at_risk_length * exp_eta;
       const double exp_v = exp(v);
       const double inv_exp_v = pow(exp_v, -1.0);
 
-      const double expect_time = (v >= 1e-8) ? (1.0 - inv_exp_term) / exp_eta :
+      const double expect_time = (v >= 1e-8) ? (1.0 - inv_exp_v) / exp_eta :
         at_risk_length * ((1 - v / 2 * (1 - v / 6 * (1 - v / 24 * (1 - v / 120)))));
 
-      const double expect_chance_die = (v >= 1e-5) ? 1.0 - inv_exp_term :
+      const double expect_chance_die = (v >= 1e-5) ? 1.0 - inv_exp_v :
         v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0))));
 
       const double score_fac_t = (v >= 1e-4) ?
         // Use regular formula
-        (inv_exp_term +  at_risk_length * exp_eta * inv_exp_term - 1.0) /
-          (inv_exp_eta  - inv_exp_term * inv_exp_term * inv_exp_eta
-                                     - 2 * at_risk_length * inv_exp_term) :
+        (inv_exp_v +  at_risk_length * exp_eta * inv_exp_v - 1.0) /
+          (inv_exp_eta  - inv_exp_v * inv_exp_v * inv_exp_eta
+                                     - 2 * at_risk_length * inv_exp_v) :
         // Use Laurent series approximation
         // See https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%2F(exp(v)+-++exp(-v)+-+2v)
         exp_eta * (- 3.0 / (2.0 * v) - 0.5 - v / 20.0 + pow(v, 3) / 8400.0);
 
       const double score_fac_y = (v >= 1e-6) ?
-        at_risk_length * exp_eta / (1.0 - inv_exp_term) :
+        at_risk_length * exp_eta / (1.0 - inv_exp_v) :
         // See this for Taylor series: https://www.wolframalpha.com/input/?i=v%2F(1-exp(-v))
         1 + v * (1 / 2 + v * (1/12 - v * v /720));
 
       const double info_fac_t = (v > 20.0) ? // deals with overflow in the numerator
         1.0 : ((v >= 1e-4) ?
-          pow(1.0 + at_risk_length * exp_eta - exp_term, 2.0) /
-            (exp_term * exp_term - 1.0 - 2.0 * at_risk_length * exp_eta * exp_term) :
+          pow(1.0 + at_risk_length * exp_eta - exp_v, 2.0) /
+            (exp_v * exp_v - 1.0 - 2.0 * at_risk_length * exp_eta * exp_v) :
                  // See this link for the Taylor series https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%5E2+%2F+(exp(2*v)+-+1-+2+*+v*+exp(v))
                  v * (3 / 4 - v * (1 / 4 - v * (11 / 240 - v * (1 / 240 - v / 16800)))));
 
@@ -421,13 +458,13 @@ class EKF_helper{
       if(compute_z_and_H){
         // Compute terms from waiting time
         dat.H_diag_inv(i) = (v >= 1e-6) ?
-          exp_eta * exp_eta / (1.0 - inv_exp_term * inv_exp_term - 2.0 * exp_eta * at_risk_length * inv_exp_term) :
+          exp_eta * exp_eta / (1.0 - inv_exp_v * inv_exp_v - 2.0 * exp_eta * at_risk_length * inv_exp_v) :
             // Laruent series from https://www.wolframalpha.com/input/?i=1%2F(1-exp(2v)-2v*exp(v))
             exp_eta * exp_eta *
               (-1 / v * (1 / 4 - v * (1 / 4 - v * (5 / 48 - v * (1/48 - v /1440)))));
 
         dat.z_dot.rows(0, dat.n_parems - 1).col(i) =  x_ * ((v >= 1e-6) ?
-          inv_exp_term * (inv_exp_eta + at_risk_length) - inv_exp_eta :
+          inv_exp_v * (inv_exp_eta + at_risk_length) - inv_exp_eta :
             // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)%2Bv*exp(-v)-1
             inv_exp_eta * (- v * v) * (1/2 - v * (1/3 - v * (1/8 - v * (1/30 - v/144)))));
 
@@ -436,8 +473,9 @@ class EKF_helper{
           1 / (expect_chance_die * (1 - expect_chance_die)) :
             //Lauren series from https://www.wolframalpha.com/input/?i=1%2F((1-exp(-v))exp(-v))
             1 / v * (1 + v * (3 / 2 + v * (13 / 12 + v * (1 / 2 + v * 119 / 720))));
+
         dat.z_dot.rows(0, dat.n_parems - 1).col(i + dat.n_in_last_set) =
-          x_ * (at_risk_length * exp_eta * inv_exp_term);
+          x_ * (at_risk_length * exp_eta * inv_exp_v);
         ++i;
       }
     }
