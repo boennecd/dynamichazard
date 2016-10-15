@@ -1056,7 +1056,6 @@ extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
 
 
 
-//' @export
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec &tstart,
                                    const arma::vec &tstop,

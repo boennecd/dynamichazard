@@ -1,46 +1,47 @@
 #' Plot to illustrate the estimate state space variables from a ddhazardfit
 #'
-#' @param object Result of \code{\link{ddhazard}} call
+#' @param x Result of \code{\link{ddhazard}} call
 #' @param type Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters
 #' @param plot_type The \code{type} argument passed to \code{plot}
 #' @param cov_index The index (indices) of the state space parameter(s) to plot
 #' @param add \code{FALSE} if you want to make a new plot
+#' @param xlab,ylab,ylim,col Arguments to overide defaults
 #' @param ... Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}
 #'
 #' @details
 #' Creates or adds a plot of state variables with indices \code{cov_index}. Point wise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
 #'
 #' @export
-plot.fahrmeier_94 = function(object, xlab = "Time",
+plot.fahrmeier_94 = function(x, ..., xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
-                             col = "black", add = F, ...){
-  if(!object$model %in% c("logit", "exponential"))
-    stop("Functions for model '", object$model, "' is not implemented")
+                             col = "black", add = F){
+  if(!x$model %in% c("logit", "exponential"))
+    stop("Functions for model '", x$model, "' is not implemented")
 
   if(type == "cov"){
     if(missing(cov_index))
       stop("Need cov index when type is equal to ", type)
 
     if(missing(ylab))
-      ylab = colnames(object$state_vecs)[cov_index]
+      ylab = colnames(x$state_vecs)[cov_index]
 
-    lb = object$state_vecs[, cov_index] - 1.96 * sqrt(object$state_vars[cov_index, cov_index, ])
-    ub = object$state_vecs[, cov_index] + 1.96 * sqrt(object$state_vars[cov_index, cov_index, ])
+    lb = x$state_vecs[, cov_index] - 1.96 * sqrt(x$state_vars[cov_index, cov_index, ])
+    ub = x$state_vecs[, cov_index] + 1.96 * sqrt(x$state_vars[cov_index, cov_index, ])
 
     if(missing(ylim))
       ylim = range(lb, ub)
 
     if(!add){
-      plot(object$times, object$state_vecs[, cov_index], type = plot_type,
+      plot(x$times, x$state_vecs[, cov_index], type = plot_type,
            ylim = ylim, xlab = xlab, ylab = ylab, col = col, ...)
     } else {
-      lines(object$times, object$state_vecs[, cov_index],
+      lines(x$times, x$state_vecs[, cov_index],
             col = col, ...)
     }
 
-    lines(object$times, lb, lty = 2, col = col)
-    lines(object$times, ub, lty = 2, col = col)
+    lines(x$times, lb, lty = 2, col = col)
+    lines(x$times, ub, lty = 2, col = col)
 
     return(invisible())
   }
@@ -50,23 +51,25 @@ plot.fahrmeier_94 = function(object, xlab = "Time",
 
 #' Plot function for state space errors from \code{\link{ddhazard}} fit
 #'
-#' @param object Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors
+#' @param x Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors
 #' @param mod The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call
 #' @param p_cex \code{cex} argument for the points
 #' @param cov_index The indices of state vector errors to plot. Default is to use all. Make no sense if errors are standardised
 #' @param t_index The bin indices to plot. Default is to use all bins
+#' @param pch,ylab,col Arguments to override defaults
+#' @param x_tick_loc,x_tick_mark \code{at} and \code{labels} arguments passed to \code{axis}
 #' @param ... Arguments passed to plot
 #'
 #' @export
-plot.fahrmeier_94_SpaceErrors = function(object, mod, cov_index = NA, t_index = NA,
+plot.fahrmeier_94_SpaceErrors = function(x, ..., mod, cov_index = NA, t_index = NA,
                                          p_cex = par()$cex * .2, pch = 16,
                                          ylab = "Std. state space error",
                                          x_tick_loc = NA, x_tick_mark = NA,
-                                         xlab = "Time", ...){
+                                         xlab = "Time"){
   bin_times = mod$times[-1]
 
   var_index = if(length(t_index) == 1 && is.na(cov_index)) seq_len(ncol(mod$state_vecs)) else cov_index
-  res_std = object$residuals[, var_index, drop = F]
+  res_std = x$residuals[, var_index, drop = F]
   n_vars = length(var_index)
 
   # assume equal distance

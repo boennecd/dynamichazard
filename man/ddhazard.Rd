@@ -29,6 +29,8 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 \item{order}{Order of the random walk}
 
 \item{control}{List of control variables (see details below)}
+
+\item{verbose}{\code{TRUE} if you want status messages during execution}
 }
 \value{
 A list with class \code{fahrmeier_94}. The list contains:

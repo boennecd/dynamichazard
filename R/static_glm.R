@@ -114,6 +114,7 @@ get_survival_case_Weigths_and_data = function(
 #' @inheritParams get_survival_case_Weigths_and_data
 #' @param family \code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
+#' @param weights weights if a skewed sample or similar is used
 #' @param ... arguments passed to \code{\link{glm}}
 #'
 #' @details

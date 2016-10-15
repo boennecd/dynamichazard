@@ -6,6 +6,7 @@
 #' @param tstop same as \code{tstart} for the stop argument
 #' @param use_parallel \code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{parallel} package
 #' @param sds \code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}
+#' @param ... Not used
 #'
 #' @section Term:
 #' The result of \code{type = "term"} is a list with the following elements
@@ -22,10 +23,10 @@
 #' \item{istop}{Vector with the end times of the last bin the elements in \code{fits} are in}
 #'}
 #' @export
-predict.fahrmeier_94 = function(object, new_data,
+predict.fahrmeier_94 = function(object, ..., new_data,
                                 type = c("response", "term"),
                                 tstart = "start", tstop = "stop",
-                                use_parallel = F, sds = F, ...)
+                                use_parallel = F, sds = F)
 {
   if(!object$model %in% c("logit", "exponential"))
     stop("Functions for model '", object$model, "' is not implemented")

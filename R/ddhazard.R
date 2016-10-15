@@ -10,6 +10,7 @@
 #' @param Q Initial covariance matrix \eqn{\mathbf{Q}} for the state equation
 #' @param order Order of the random walk
 #' @param control List of control variables (see details below)
+#' @param verbose \code{TRUE} if you want status messages during execution
 #'
 #' @details
 #' Function to estimate a binary regression function of the form where the regression parameters follows a given order random walk. The order is specified by the \code{order} argument. 1. and 2. order random walks is implemented. The regression parameters are updated at time \code{by}, 2\code{by}, ..., \code{max_T}. See the vignette 'ddhazard' for more details

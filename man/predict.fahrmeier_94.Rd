@@ -4,11 +4,13 @@
 \alias{predict.fahrmeier_94}
 \title{Predict function for result of \code{\link{ddhazard}}}
 \usage{
-\method{predict}{fahrmeier_94}(object, new_data, type = c("response", "term"),
-  tstart = "start", tstop = "stop", use_parallel = F, sds = F, ...)
+\method{predict}{fahrmeier_94}(object, ..., new_data, type = c("response",
+  "term"), tstart = "start", tstop = "stop", use_parallel = F, sds = F)
 }
 \arguments{
 \item{object}{Result of a \code{\link{ddhazard}} call}
+
+\item{...}{Not used}
 
 \item{new_data}{New data to base predictions on}
 
