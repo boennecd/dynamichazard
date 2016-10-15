@@ -40,23 +40,6 @@ join_threads::~join_threads()
   }
 }
 
-// Listing 9.2
-template<typename F>
-function_wrapper::function_wrapper(F&& f):
-  impl(new impl_type<F>(std::move(f)))
-{}
-
-void function_wrapper::operator()() { impl->call(); }
-function_wrapper::function_wrapper(function_wrapper&& other):
-    impl(std::move(other.impl))
-{}
-
-function_wrapper& function_wrapper::operator=(function_wrapper&& other)
-{
-  impl=std::move(other.impl);
-  return *this;
-}
-
 // Listing 9.7:
 void work_stealing_queue::push(data_type data)
 {
