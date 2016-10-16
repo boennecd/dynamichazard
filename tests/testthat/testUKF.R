@@ -176,7 +176,3 @@ matplot(fit2$state_vecs, type = "l", lty = 4, add = T)
 
 diag(fit1$Q)
 diag(fit2$Q)
-
-test_that("Implement cont time model for UKF when Feodor aggress on implementation", {
-  expect_true(F)
-})

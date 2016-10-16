@@ -222,8 +222,15 @@ inline double inv_var_wait_time(const double v, const double exp_eta, const doub
   );
 }
 
-inline double var_wait_time(const double v, const double exp_eta, const double inv_exp_v){
-  return((1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) / (exp_eta * exp_eta));
+inline double var_wait_time(const double v, const double a,  const double exp_eta, const double inv_exp_v){
+  // exp(eta)^(-2) * (1 - exp(-2v) - 2 * v * exp(-v))
+  // v = a * exp(eta) => ... = a^2 * v^(-2) * (1 - exp(-2v) - 2 * v * exp(-v))
+  //
+  // Use Taylor series for the latter when v is small: https://www.wolframalpha.com/input/?i=(1-exp(-2v)-2v*exp(-v))%2F(v%5E2)
+
+  return((v >= 1e-4) ?
+           (1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) / (exp_eta * exp_eta) :
+           a * a * v * (1/3 - v * (1/3 - v * (11/60 - v * (13/180 - v * 19/840)))));
 }
 
 inline double inv_var_chance_die(const double v, const double inv_exp_v){
@@ -236,7 +243,10 @@ inline double inv_var_chance_die(const double v, const double inv_exp_v){
 }
 
 inline double var_chance_die(const double v, const double inv_exp_v){
-  return(inv_exp_v * (1 - inv_exp_v));
+  // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)+*+(1+-+exp(-v))
+  return((v >= 1e-4) ?
+           inv_exp_v * (1 - inv_exp_v) :
+           v * (1 - v * (3/2 - v * (7/6 - v * (5/8 - v * 31 /120)))));
 }
 }
 
@@ -824,8 +834,6 @@ protected:
                                      const double bin_tstart, const double bin_tstop,
                                      arma::vec &c_vec, arma::mat &O) = 0;
 
-  static constexpr double min_var = (lower_trunc_exp_exp_thres / (1 + lower_trunc_exp_exp_thres)) / (1 + lower_trunc_exp_exp_thres);
-
   void compute_sigma_points(const arma::vec &a_t,
                             arma::mat &s_points,
                             const arma::mat &P_x_x){
@@ -860,7 +868,7 @@ public:
   m(p_.a_t_t_s.n_rows),
 
   k(!kappa.isNull() ? Rcpp::as< Rcpp::NumericVector >(kappa)[0] : 0.0),
-  a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 0.01),
+  a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 1),
   b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 2.0),
   lambda(pow(a, 2) * (m + k) - m),
 
@@ -1020,13 +1028,6 @@ class UKF_solver_New_logit : public UKF_solver_New{
     }
 
     // ** 4: Compute c **
-    // There is a risk that the product of the weigths and the variances
-    // are small in which case some of the vars indicies are small. We
-    // overcome this issue by setting these elements to the smallest
-    // posible value given the truncation we apply to the exponential
-    // function
-    vars.elem(arma::find(vars <= min_var)).fill(min_var);
-
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
 
@@ -1075,6 +1076,8 @@ public:
 
 
 class UKF_solver_New_exponential : public UKF_solver_New{
+  static constexpr double min_var = trunc_exp_delta;
+
   void Compute_intermediates(const arma::uvec &r_set, const int t,
                              const double bin_tstart, const double bin_tstop,
                              arma::vec &c_vec, arma::mat &O)
@@ -1124,13 +1127,14 @@ class UKF_solver_New_exponential : public UKF_solver_New{
         O(j + n_risk, i) = exp_model_funcs::expect_time(
           v, at_risk_length(j), inv_exp_v, exp_eta);
         vars(j + n_risk) += w_c * exp_model_funcs::var_wait_time(
-          v, exp_eta, inv_exp_v);
+          v, at_risk_length(j), exp_eta, inv_exp_v);
       }
 
       y_bar += w * O.col(i);
     }
 
     // ** 4: Compute c **
+    vars.elem(arma::find(vars <= min_var)).fill(min_var);
     O.each_col() -= y_bar;
     {
       arma::vec outcome(n_risk * 2);

@@ -504,7 +504,7 @@ The EKF method for the exponential model has shown to have issues with divergenc
 The direct formulas for the conditional mean, conditional variance and derivatives of the conditional mean are numerically unstable for certain combinations of interval lengths ($t_{i,s} - t_{i, s - 1}$) and the linear predictor ($\eta = \vec{x}_{is}^T \vec{\alpha}_{\Lceil{t_{i,s}}}$). In particular they are subject to cancellation. This can cause both high relative errors and even wrong sign in some of the cases. Thus, Lauren series or Tylor series are used for critical points. This requires no action for user but is stressed for readers who worry after seeing both the conditional mean and conditional variance of $\Delta_{i,s}$
 
 ## UKF
-The UKF is not yet implemented for the exponential problem
+TODO: ADD AND POINT OUT THAT VARIANCE IS TRUNCATED (NOT LINEAR PREDICTOR THOUGH)
 
 ## Starting value
 QUESTION: Should I write about the static model that cen be used for $\vec{\alpha}_0$?
