@@ -163,10 +163,10 @@ public:
                  Q_0, Q_, risk_obj, F__, n_max, eps, verbose, save_all_output,
                  order_, est_Q_0),
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
-    is_mult_NR(NR_eps_.isNotNull()),
-    NR_eps(is_mult_NR ? Rcpp::as< Rcpp::NumericVector >(NR_eps_)[0] : 0.0),
-    NR_it_max(NR_it_max_),
-    LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0)
+                 is_mult_NR(NR_eps_.isNotNull()),
+                 NR_eps(is_mult_NR ? Rcpp::as< Rcpp::NumericVector >(NR_eps_)[0] : 0.0),
+                 NR_it_max(NR_it_max_),
+                 LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0)
   {
     u = arma::colvec(n_parems * order_);
     U = arma::mat(n_parems * order_, n_parems * order_);
@@ -191,84 +191,53 @@ public:
 
 
 
-class Callable
-{
-  struct impl_base {
-    virtual void call()=0;
-    virtual ~impl_base() {}
-  };
-
-  std::unique_ptr<impl_base> impl;
-
-  template<typename F>
-  struct impl_type : impl_base
-  {
-    F f;
-    impl_type(F&& f_): f(std::move(f_)) {}
-    void call() { f(); }
-  };
-
-public:
-  template<typename F>
-  Callable(F&& f):
-    impl(new impl_type<F>(std::move(f)))
-  {}
-
-  void operator()() { impl->call(); }
-
-  Callable& operator=(Callable&& other)
-  {
-    impl=std::move(other.impl);
-    return *this;
-  }
-
-  Callable(Callable&& other):
-    impl(std::move(other.impl))
-  {}
-
-  Callable(const Callable&)=delete;
-  Callable(Callable&)=delete;
-  Callable& operator=(const Callable&)=delete;
-};
-
 namespace exp_model_funcs {
-  // Namespace to avoid namespace pollution and avoid error-40 for Taylor/Laruens series
-  // By definition:
-  //  a                   at risk length
-  //  eta                 linear predictor x^T * beta
-  //  v                   a * exp(eta)
-  //  exp_x               exp(x)
-  //  inv_x               inv(x)
-  //  expect_chance_die   1 - exp(- v)
+// Namespace to avoid namespace pollution and avoid error-40 for Taylor/Laruens series
+// By definition:
+//  a                   at risk length
+//  eta                 linear predictor x^T * beta
+//  v                   a * exp(eta)
+//  exp_x               exp(x)
+//  inv_x               inv(x)
+//  expect_chance_die   1 - exp(- v)
 
-  inline double expect_time(const double v, const double a,
-                            const double inv_exp_v, const double exp_eta){
-   return((v >= 1e-8) ? (1.0 - inv_exp_v) / exp_eta :
-      a * ((1 - v / 2 * (1 - v / 6 * (1 - v / 24 * (1 - v / 120)))))
-   );
-  }
+inline double expect_time(const double v, const double a,
+                          const double inv_exp_v, const double exp_eta){
+  return((v >= 1e-8) ? (1.0 - inv_exp_v) / exp_eta :
+           a * ((1 - v / 2 * (1 - v / 6 * (1 - v / 24 * (1 - v / 120)))))
+  );
+}
 
-  inline double expect_chance_die(const double v, const double inv_exp_v){
-    return((v >= 1e-5) ? 1.0 - inv_exp_v :
-             v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0)))));
-  }
+inline double expect_chance_die(const double v, const double inv_exp_v){
+  return((v >= 1e-5) ? 1.0 - inv_exp_v :
+           v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0)))));
+}
 
-  inline double inv_var_wait_time(const double v, const double exp_eta, const double inv_exp_v){
-    return((v >= 1e-6) ?
-             exp_eta * exp_eta / (1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) :
-             // Laruent series from https://www.wolframalpha.com/input/?i=1%2F(1-exp(2v)-2v*exp(v))
-             exp_eta * exp_eta *
-               (-1 / v * (1 / 4 - v * (1 / 4 - v * (5 / 48 - v * (1/48 - v /1440)))))
-             );
-  }
+inline double inv_var_wait_time(const double v, const double exp_eta, const double inv_exp_v){
+  return((v >= 1e-6) ?
+           exp_eta * exp_eta / (1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) :
+           // Laruent series from https://www.wolframalpha.com/input/?i=1%2F(1-exp(2v)-2v*exp(v))
+           exp_eta * exp_eta *
+             (-1 / v * (1 / 4 - v * (1 / 4 - v * (5 / 48 - v * (1/48 - v /1440)))))
+  );
+}
 
-  inline double inv_var_chance_die(const double v, const double expect_chance_die){
-    return((v >= 1e-6) ?
-             1 / (expect_chance_die * (1 - expect_chance_die)) :
-             //Lauren series from https://www.wolframalpha.com/input/?i=1%2F((1-exp(-v))exp(-v))
-             1 / v * (1 + v * (3 / 2 + v * (13 / 12 + v * (1 / 2 + v * 119 / 720))))
-             );
-  }
+inline double var_wait_time(const double v, const double exp_eta, const double inv_exp_v){
+  return((1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) / (exp_eta * exp_eta));
+}
+
+inline double inv_var_chance_die(const double v, const double inv_exp_v){
+  return((v >= 1e-6) ?
+           1 / (inv_exp_v * (1 - inv_exp_v)) :
+           //Lauren series from https://www.wolframalpha.com/input/?i=1%2F((1-exp(-v))exp(-v))
+           1 / v * (1 + v * (3 / 2 + v * (13 / 12 + v * (1 / 2 + v * 119 / 720))))
+  );
+
+}
+
+inline double var_chance_die(const double v, const double inv_exp_v){
+  return(inv_exp_v * (1 - inv_exp_v));
+}
 }
 
 class EKF_helper{
@@ -344,7 +313,7 @@ class EKF_helper{
       //   v - 2 v^2 + 3 v^3 approx v for v small
       double tmp_denom = pow(1.0 + exp_eta, 2.0);
       const double var = std::isinf(tmp_denom) ?
-        pow(exp_eta, -1) : (exp_eta / pow(exp_eta + 1.0, 2.0));
+      pow(exp_eta, -1) : (exp_eta / pow(exp_eta + 1.0, 2.0));
 
 
       u_ += x_ * ((dat.is_event_in_bin(*it) == bin_number) - exp_eta / (1.0 + exp_eta));
@@ -386,32 +355,31 @@ class EKF_helper{
       const double exp_v = exp(v);
       const double inv_exp_v = pow(exp_v, -1.0);
 
-      const double expect_time = (v >= 1e-8) ? (1.0 - inv_exp_v) / exp_eta :
-        at_risk_length * ((1 - v / 2 * (1 - v / 6 * (1 - v / 24 * (1 - v / 120)))));
+      const double expect_time = exp_model_funcs::expect_time(
+        v, at_risk_length, inv_exp_v, exp_eta);
 
-      const double expect_chance_die = (v >= 1e-5) ? 1.0 - inv_exp_v :
-        v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0))));
+      const double expect_chance_die = exp_model_funcs::expect_chance_die(v, inv_exp_v);
 
       const double score_fac_t = (v >= 1e-4) ?
-        // Use regular formula
-        (inv_exp_v +  at_risk_length * exp_eta * inv_exp_v - 1.0) /
-          (inv_exp_eta  - inv_exp_v * inv_exp_v * inv_exp_eta
-                                     - 2 * at_risk_length * inv_exp_v) :
+      // Use regular formula
+      (inv_exp_v +  at_risk_length * exp_eta * inv_exp_v - 1.0) /
+      (inv_exp_eta  - inv_exp_v * inv_exp_v * inv_exp_eta
+         - 2 * at_risk_length * inv_exp_v) :
         // Use Laurent series approximation
         // See https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%2F(exp(v)+-++exp(-v)+-+2v)
         exp_eta * (- 3.0 / (2.0 * v) - 0.5 - v / 20.0 + pow(v, 3) / 8400.0);
 
       const double score_fac_y = (v >= 1e-6) ?
-        at_risk_length * exp_eta / (1.0 - inv_exp_v) :
+      at_risk_length * exp_eta / (1.0 - inv_exp_v) :
         // See this for Taylor series: https://www.wolframalpha.com/input/?i=v%2F(1-exp(-v))
         1 + v * (1 / 2 + v * (1/12 - v * v /720));
 
       const double info_fac_t = (v > 20.0) ? // deals with overflow in the numerator
-        1.0 : ((v >= 1e-4) ?
-          pow(1.0 + at_risk_length * exp_eta - exp_v, 2.0) /
-            (exp_v * exp_v - 1.0 - 2.0 * at_risk_length * exp_eta * exp_v) :
-                 // See this link for the Taylor series https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%5E2+%2F+(exp(2*v)+-+1-+2+*+v*+exp(v))
-                 v * (3 / 4 - v * (1 / 4 - v * (11 / 240 - v * (1 / 240 - v / 16800)))));
+      1.0 : ((v >= 1e-4) ?
+      pow(1.0 + at_risk_length * exp_eta - exp_v, 2.0) /
+               (exp_v * exp_v - 1.0 - 2.0 * at_risk_length * exp_eta * exp_v) :
+               // See this link for the Taylor series https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%5E2+%2F+(exp(2*v)+-+1-+2+*+v*+exp(v))
+               v * (3 / 4 - v * (1 / 4 - v * (11 / 240 - v * (1 / 240 - v / 16800)))));
 
       const double info_fac_y = v * v * inv_exp_v / (1.0 - inv_exp_v);
 
@@ -433,9 +401,9 @@ class EKF_helper{
 
       std::stringstream str;
       if(10 < std::abs(score_fac_y * (do_die - expect_chance_die)) ||
-          10 < std::abs(score_fac_t * (time_outcome - expect_time)) ||
-            info_fac_t + info_fac_y < 1e-8 ||
-              info_fac_t < 0 || info_fac_y < 0)
+         10 < std::abs(score_fac_t * (time_outcome - expect_time)) ||
+         info_fac_t + info_fac_y < 1e-8 ||
+         info_fac_t < 0 || info_fac_y < 0)
       {
         std::lock_guard<std::mutex> lk(dat.m_U);
 
@@ -457,22 +425,16 @@ class EKF_helper{
 
       if(compute_z_and_H){
         // Compute terms from waiting time
-        dat.H_diag_inv(i) = (v >= 1e-6) ?
-          exp_eta * exp_eta / (1.0 - inv_exp_v * inv_exp_v - 2.0 * exp_eta * at_risk_length * inv_exp_v) :
-            // Laruent series from https://www.wolframalpha.com/input/?i=1%2F(1-exp(2v)-2v*exp(v))
-            exp_eta * exp_eta *
-              (-1 / v * (1 / 4 - v * (1 / 4 - v * (5 / 48 - v * (1/48 - v /1440)))));
+        dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
 
         dat.z_dot.rows(0, dat.n_parems - 1).col(i) =  x_ * ((v >= 1e-6) ?
-          inv_exp_v * (inv_exp_eta + at_risk_length) - inv_exp_eta :
-            // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)%2Bv*exp(-v)-1
-            inv_exp_eta * (- v * v) * (1/2 - v * (1/3 - v * (1/8 - v * (1/30 - v/144)))));
+                                                              inv_exp_v * (inv_exp_eta + at_risk_length) - inv_exp_eta :
+                                                              // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)%2Bv*exp(-v)-1
+                                                              inv_exp_eta * (- v * v) * (1/2 - v * (1/3 - v * (1/8 - v * (1/30 - v/144)))));
 
         // Compute terms from binary out come
-        dat.H_diag_inv(i + dat.n_in_last_set) = (v >= 1e-6) ?
-          1 / (expect_chance_die * (1 - expect_chance_die)) :
-            //Lauren series from https://www.wolframalpha.com/input/?i=1%2F((1-exp(-v))exp(-v))
-            1 / v * (1 + v * (3 / 2 + v * (13 / 12 + v * (1 / 2 + v * 119 / 720))));
+        dat.H_diag_inv(i + dat.n_in_last_set) = exp_model_funcs::inv_var_chance_die(
+          v, expect_chance_die);
 
         dat.z_dot.rows(0, dat.n_parems - 1).col(i + dat.n_in_last_set) =
           x_ * (at_risk_length * exp_eta * inv_exp_v);
@@ -544,13 +506,13 @@ public:
 
       auto func =
         [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
-            (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
-                    i_start, bin_number, bin_tstart, bin_tstop);
-          };
+          (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
+           i_start, bin_number, bin_tstart, bin_tstop);
+        };
 
-      futures[i] = pool.submit(func);
-      i_start += block_size;
-      block_start = block_end;
+        futures[i] = pool.submit(func);
+        i_start += block_size;
+        block_start = block_end;
     }
     (*(it->get()))(block_start, last, i_a_t, compute_H_and_z, i_start, bin_number, bin_tstart, bin_tstop); // compute last enteries on this thread
 
@@ -702,7 +664,10 @@ class UKF_solver_Org : public Solver{
   inline void compute_sigma_points(const arma::vec &a_t,
                                    arma::mat &s_points,
                                    const arma::mat &P_x_x){
-    const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
+    arma::mat cholesky_decomp;
+    if(!arma::chol(cholesky_decomp, P_x_x, "lower")){ // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
+      Rcpp::stop("Cholesky decomposition failed");
+    }
 
     s_points.col(0) = a_t;
     for(uword i = 1; i < s_points.n_cols; ++i)
@@ -856,19 +821,24 @@ protected:
   arma::vec weights_vec_c_inv;
 
   virtual void Compute_intermediates(const arma::uvec &r_set, const int t,
+                                     const double bin_tstart, const double bin_tstop,
                                      arma::vec &c_vec, arma::mat &O) = 0;
 
   static constexpr double min_var = (lower_trunc_exp_exp_thres / (1 + lower_trunc_exp_exp_thres)) / (1 + lower_trunc_exp_exp_thres);
 
-  inline void compute_sigma_points(const arma::vec &a_t,
-                                   arma::mat &s_points,
-                                   const arma::mat &P_x_x){
+  void compute_sigma_points(const arma::vec &a_t,
+                            arma::mat &s_points,
+                            const arma::mat &P_x_x){
 #if defined(MYDEBUG_UKF)
     P_x_x.print("P_x_x for Cholesky");
     a_t.print("a_t for Cholesky");
 #endif
 
-    const arma::mat cholesky_decomp = arma::chol(P_x_x, "upper").t(); // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
+    arma::mat cholesky_decomp;
+    if(!arma::chol(cholesky_decomp, P_x_x, "lower")){ // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
+      P_x_x.print();
+      Rcpp::stop("Cholesky decomposition failed");
+    }
 
     s_points.col(0) = a_t;
     for(uword i = 1; i < s_points.n_cols; ++i)
@@ -917,14 +887,15 @@ public:
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
 
-    double event_time = p_dat.min_start;
+    double bin_stop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
 #if defined(MYDEBUG_UKF)
       Rcpp::Rcout << "t = " << t << std::endl;
 #endif
 
+      double bin_start = bin_stop;
       double delta_t = p_dat.I_len[t - 1];
-      event_time += delta_t;
+      bin_stop += delta_t;
 
       // Update sigma pooints
       // The orginal Julier paper only updates sigma points here
@@ -961,7 +932,7 @@ public:
       arma::vec c_vec;
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
-      Compute_intermediates(r_set, t, c_vec, O);
+      Compute_intermediates(r_set, t, bin_start, bin_stop, c_vec, O);
 
       // Substract mean to get delta sigma points
       arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
@@ -1025,7 +996,9 @@ public:
 
 class UKF_solver_New_logit : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set, const int t,
+                             const double bin_tstart, const double bin_tstop,
                              arma::vec &c_vec, arma::mat &O){
+    // ** 1: Compute expected outcomes given sigma points **
     O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
 
     O.transform(trunc_exp_functor);
@@ -1036,15 +1009,17 @@ class UKF_solver_New_logit : public UKF_solver_New{
     O.print("etas");
 #endif
 
-    // Compute mean observation sing sigma points
+    // ** 2: Compute mean observation sing sigma points **
     const arma::vec y_bar = w_0 * O.unsafe_col(0) +
       w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
 
+    // ** 3: Compute variances and expected variance **
     arma::vec vars = w_0_c * (O.unsafe_col(0) % (1.0 - O.unsafe_col(0)));
     for(uword i = 1; i < O.n_cols; ++i){
       vars += w_i * (O.unsafe_col(i) % (1.0 - O.unsafe_col(i)));
     }
 
+    // ** 4: Compute c **
     // There is a risk that the product of the weigths and the variances
     // are small in which case some of the vars indicies are small. We
     // overcome this issue by setting these elements to the smallest
@@ -1079,6 +1054,7 @@ class UKF_solver_New_logit : public UKF_solver_New{
     // Compute vector for state space vector
     c_vec = c_vec -  tmp_mat * c_vec;
 
+    // ** 5: Compute L using the notation in vignette **
     // Re-compute intermediate matrix using the other weight vector
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
       Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
@@ -1093,27 +1069,99 @@ public:
   UKF_solver_New_logit(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
                        Rcpp::Nullable<Rcpp::NumericVector> &alpha,
                        Rcpp::Nullable<Rcpp::NumericVector> &beta):
-    UKF_solver_New(p_, kappa, alpha, beta)
+  UKF_solver_New(p_, kappa, alpha, beta)
   {}
 };
 
 
 class UKF_solver_New_exponential : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set, const int t,
+                             const double bin_tstart, const double bin_tstop,
                              arma::vec &c_vec, arma::mat &O)
   {
     // See comments in UKF_solver_New_logit. The main difference here is that
     // we have tuples as outcomes
-    O = (sigma_points.t() * p_dat._X.cols(r_set)).t();
 
+    // ** 1-3: compute outcome given sigma points, means and variances **
+    //
+    const arma::uword n_risk = r_set.n_elem;
+    O.set_size(n_risk * 2, sigma_points.n_cols);
+    arma::vec vars(n_risk * 2, arma::fill::zeros);
+    arma::vec y_bar(n_risk * 2, arma::fill::zeros);
 
+    arma::mat etas = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // linear predictors
 
+    // Armadillo do not have a bool vector so we use an integer vector instead
+    arma::ivec do_die = arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
+
+    // We need two times: the length at risk and the outcome in case the
+    // individual dies before the end of the bin
+    arma::vec at_risk_length(n_risk), time_outcome(n_risk);
+
+    auto it = r_set.begin();
+    for(arma::uword i = 0; i < n_risk; ++i, ++it){
+      time_outcome(i) = std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
+      at_risk_length(i) = do_die(i) ?
+      bin_tstop - std::max(p_dat.tstart(*it), bin_tstart) : time_outcome(i);
+    }
+
+    // Compute variance and mean
+    for(arma::uword i = 0; i < sigma_points.n_cols; ++i){
+      double w = (i == 0) ? w_0 : w_i;
+      double w_c = (i == 0) ? w_0_c : w_i;
+
+      const arma::vec eta = p_dat._X.cols(r_set).t() * sigma_points.col(i);
+
+      for(arma::uword j = 0; j < n_risk; ++j){
+        const double e = eta(j);
+        const double exp_eta = exp(e);
+        const double v = at_risk_length(j) * exp_eta;
+        const double inv_exp_v = exp(-1 * v);
+
+        O(j, i) = exp_model_funcs::expect_chance_die(v, inv_exp_v);
+        vars(j) += w_c * exp_model_funcs::var_chance_die(v, inv_exp_v);
+
+        O(j + n_risk, i) = exp_model_funcs::expect_time(
+          v, at_risk_length(j), inv_exp_v, exp_eta);
+        vars(j + n_risk) += w_c * exp_model_funcs::var_wait_time(
+          v, exp_eta, inv_exp_v);
+      }
+
+      y_bar += w * O.col(i);
+    }
+
+    // ** 4: Compute c **
+    O.each_col() -= y_bar;
+    {
+      arma::vec outcome(n_risk * 2);
+      outcome.subvec(0, n_risk - 1) = arma::conv_to<arma::vec>::from(do_die);
+      outcome.subvec(n_risk, n_risk * 2 - 1) = time_outcome;
+
+      c_vec = (O.each_col() / vars).t() * (outcome - y_bar);
+    }
+
+    O = O.t() * (O.each_col() / vars);
+    arma::mat tmp_mat;
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+      Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+    }
+    tmp_mat = O * tmp_mat;
+
+    c_vec = c_vec -  tmp_mat * c_vec;
+
+    // ** 5: Compute L using the notation in vignette **
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
+      Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+    }
+    tmp_mat = O * tmp_mat;
+
+    O = O - tmp_mat * O;
   }
 
 public:
   UKF_solver_New_exponential(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
-                       Rcpp::Nullable<Rcpp::NumericVector> &alpha,
-                       Rcpp::Nullable<Rcpp::NumericVector> &beta):
+                             Rcpp::Nullable<Rcpp::NumericVector> &alpha,
+                             Rcpp::Nullable<Rcpp::NumericVector> &beta):
   UKF_solver_New(p_, kappa, alpha, beta)
   {
   }
@@ -1191,7 +1239,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       order_, est_Q_0, model == "exponential");
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
   } else if (method == "UKF"){
-    if(model != "logit")
+    if(model != "logit" && model != "exponential")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
     p_data = new problem_data(
       X, tstart, tstop, is_event_in_bin,
@@ -1199,7 +1247,12 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       risk_obj, F_,
       n_max, eps, verbose, save_all_output,
       order_, est_Q_0);
-    solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
+    if(model == "logit"){
+      solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
+    } else if (model == "exponential"){
+      solver = new UKF_solver_New_exponential(*p_data, kappa, alpha, beta);
+    }
+
   } else if (method == "UKF_org"){
     if(model != "logit")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
@@ -1294,10 +1347,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       if(M_step_formulation == "Fahrmier94"){
         B = &p_data->B_s.slice(t - 1);
 
-               Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-               - F_ * *B * *V
-               - (F_ * *B * *V).t()
-               + F_ * *V_less * p_data->T_F_) / delta_t;
+        Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
+                - F_ * *B * *V
+                - (F_ * *B * *V).t()
+                + F_ * *V_less * p_data->T_F_) / delta_t;
       } else if (M_step_formulation == "SmoothedCov"){
         B = &p_data->lag_one_cor.slice(t - 1); // this is not B but the lagged one smooth correlation. Do not mind the variable name
 
