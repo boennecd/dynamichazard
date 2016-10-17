@@ -815,8 +815,8 @@ class UKF_solver_New : public Solver{
 protected:
   problem_data &p_dat;
   const uword m;
-  const double k;
   const double a;
+  const double k;
   const double b;
   const double lambda;
   const double w_0;
@@ -867,8 +867,8 @@ public:
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
 
-  k(!kappa.isNull() ? Rcpp::as< Rcpp::NumericVector >(kappa)[0] : 0.0),
-  a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 1),
+  a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 1e-1),
+  k(!kappa.isNull() ? Rcpp::as< Rcpp::NumericVector >(kappa)[0] : m / pow(a, 2.0) - m),
   b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 2.0),
   lambda(pow(a, 2) * (m + k) - m),
 
@@ -1400,10 +1400,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
     //if(save_all_output) // TODO: make similar save all output function?
 
-    if(*(conv_values.end() -1) < eps){
-      break;
-    }
-
     if(verbose && it % 5 < verbose){
       auto rcout_width = Rcpp::Rcout.width();
       double log_like =
@@ -1414,6 +1410,10 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
         " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
           "\t" << "The log likelihood is " << log_like <<
             std::setw(rcout_width) << std::endl;
+    }
+
+    if(*(conv_values.end() -1) < eps){
+      break;
     }
 
     a_prev = p_data->a_t_t_s.col(0);
