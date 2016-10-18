@@ -4,15 +4,13 @@
 \alias{plot.fahrmeier_94_SpaceErrors}
 \title{Plot function for state space errors from \code{\link{ddhazard}} fit}
 \usage{
-\method{plot}{fahrmeier_94_SpaceErrors}(x, ..., mod, cov_index = NA,
+\method{plot}{fahrmeier_94_SpaceErrors}(x, mod, cov_index = NA,
   t_index = NA, p_cex = par()$cex * 0.2, pch = 16,
   ylab = "Std. state space error", x_tick_loc = NA, x_tick_mark = NA,
-  xlab = "Time")
+  xlab = "Time", ...)
 }
 \arguments{
 \item{x}{Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors}
-
-\item{...}{Arguments passed to plot}
 
 \item{mod}{The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call}
 
@@ -25,6 +23,8 @@
 \item{pch, ylab, col}{Arguments to override defaults}
 
 \item{x_tick_loc, x_tick_mark}{\code{at} and \code{labels} arguments passed to \code{axis}}
+
+\item{...}{Arguments passed to plot}
 }
 \description{
 Plot function for state space errors from \code{\link{ddhazard}} fit

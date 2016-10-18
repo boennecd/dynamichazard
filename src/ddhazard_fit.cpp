@@ -85,7 +85,7 @@ public:
                const Rcpp::List &risk_obj,
                const arma::mat &F__,
                const int n_max = 100, const double eps = 0.001,
-               const bool verbose = false, const bool save_all_output = false,
+               const bool verbose = false,
                const int order_ = 1, const bool est_Q_0 = true):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
@@ -155,12 +155,12 @@ public:
                    Rcpp::Nullable<Rcpp::NumericVector> NR_eps_,
                    Rcpp::Nullable<Rcpp::NumericVector> LR_,
                    const int n_max = 100, const double eps = 0.001,
-                   const bool verbose = false, const bool save_all_output = false,
+                   const bool verbose = false,
                    const int order_ = 1, const bool est_Q_0 = true,
                    const bool is_cont_time = false,
                    const unsigned int NR_it_max_ = 100):
     problem_data(X, tstart_, tstop_, is_event_in_bin_, a_0,
-                 Q_0, Q_, risk_obj, F__, n_max, eps, verbose, save_all_output,
+                 Q_0, Q_, risk_obj, F__, n_max, eps, verbose,
                  order_, est_Q_0),
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),
@@ -1195,7 +1195,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
                                    const Rcpp::List &risk_obj,
                                    const arma::mat &F_,
                                    const arma::uword n_max = 100, const double eps = 0.001,
-                                   const arma::uword verbose = 0, const bool save_all_output = false,
+                                   const arma::uword verbose = 0,
                                    const int order_ = 1, const bool est_Q_0 = true,
                                    const std::string method = "EKF",
                                    Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
@@ -1218,7 +1218,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
   Rcpp::NumericVector conv_values;
 
   arma::colvec a_prev(a_0.begin(), a_0.size());
-  Rcpp::List all_output; // only need if save_all_output = true
 
   uword it = 0;
 
@@ -1239,7 +1238,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       X, tstart, tstop, is_event_in_bin,
       a_0, Q_0, Q,
       risk_obj, F_, NR_eps, LR,
-      n_max, eps, verbose, save_all_output,
+      n_max, eps, verbose,
       order_, est_Q_0, model == "exponential");
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
   } else if (method == "UKF"){
@@ -1249,7 +1248,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       X, tstart, tstop, is_event_in_bin,
       a_0, Q_0, Q,
       risk_obj, F_,
-      n_max, eps, verbose, save_all_output,
+      n_max, eps, verbose,
       order_, est_Q_0);
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
@@ -1265,7 +1264,7 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
       X, tstart, tstop, is_event_in_bin,
       a_0, Q_0, Q,
       risk_obj, F_,
-      n_max, eps, verbose, save_all_output,
+      n_max, eps, verbose,
       order_, est_Q_0);
     solver = new UKF_solver_Org(*p_data, kappa);
   }else
@@ -1398,8 +1397,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
     p_data->a_t_t_s.print("a_t_d_s");
 #endif
 
-    //if(save_all_output) // TODO: make similar save all output function?
-
     if(verbose && it % 5 < verbose){
       auto rcout_width = Rcpp::Rcout.width();
       double log_like =
@@ -1418,10 +1415,6 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec
 
     a_prev = p_data->a_t_t_s.col(0);
   }while(++it < n_max);
-
-  /* if(save_all_output){
-  all_output
-}else */
 
   if(it == n_max)
     throw std::runtime_error("EM algorithm did not converge within the n_max number of iterations");

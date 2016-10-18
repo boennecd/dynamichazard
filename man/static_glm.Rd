@@ -22,11 +22,11 @@ static_glm(formula, data, by, max_T, id, family = "logit", model = F,
 
 \item{model}{\code{TRUE} if you want to save the design matrix used in \code{\link{glm}}}
 
+\item{weights}{weights if a skewed sample or similar is used}
+
 \item{risk_obj}{A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations}
 
 \item{...}{arguments passed to \code{\link{glm}}}
-
-\item{Initial}{weights if a skewed sample or similar is used}
 }
 \value{
 The returned list from the \code{\link{glm}} call

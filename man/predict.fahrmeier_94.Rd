@@ -4,13 +4,11 @@
 \alias{predict.fahrmeier_94}
 \title{Predict function for result of \code{\link{ddhazard}}}
 \usage{
-\method{predict}{fahrmeier_94}(object, ..., new_data, type = c("response",
-  "term"), tstart = "start", tstop = "stop", use_parallel = F, sds = F)
+\method{predict}{fahrmeier_94}(object, new_data, type = c("response", "term"),
+  tstart = "start", tstop = "stop", use_parallel = F, sds = F, ...)
 }
 \arguments{
 \item{object}{Result of a \code{\link{ddhazard}} call}
-
-\item{...}{Not used}
 
 \item{new_data}{New data to base predictions on}
 
@@ -23,6 +21,8 @@
 \item{use_parallel}{\code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{parallel} package}
 
 \item{sds}{\code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}}
+
+\item{...}{Not used}
 }
 \description{
 Predict function for result of \code{\link{ddhazard}}

@@ -4,14 +4,12 @@
 \alias{plot.fahrmeier_94}
 \title{Plot to illustrate the estimate state space variables from a ddhazardfit}
 \usage{
-\method{plot}{fahrmeier_94}(x, ..., xlab = "Time", ylab = "Hazard",
+\method{plot}{fahrmeier_94}(x, xlab = "Time", ylab = "Hazard",
   type = "cov", plot_type = "l", cov_index, ylim, col = "black",
-  add = F)
+  add = F, ...)
 }
 \arguments{
 \item{x}{Result of \code{\link{ddhazard}} call}
-
-\item{...}{Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}}
 
 \item{xlab, ylab, ylim, col}{Arguments to overide defaults}
 
@@ -22,6 +20,8 @@
 \item{cov_index}{The index (indices) of the state space parameter(s) to plot}
 
 \item{add}{\code{FALSE} if you want to make a new plot}
+
+\item{...}{Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}}
 }
 \description{
 Plot to illustrate the estimate state space variables from a ddhazardfit

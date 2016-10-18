@@ -4,17 +4,17 @@
 \alias{residuals.fahrmeier_94}
 \title{Residuals function for the result of \code{\link{ddhazard}} fit}
 \usage{
-\method{residuals}{fahrmeier_94}(object, ..., type = c("std_space_error",
-  "space_error", "pearson", "raw"), data = NULL)
+\method{residuals}{fahrmeier_94}(object, type = c("std_space_error",
+  "space_error", "pearson", "raw"), data = NULL, ...)
 }
 \arguments{
 \item{object}{Result of \code{\link{ddhazard}} call}
 
-\item{...}{Not used}
-
 \item{type}{Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See below for details}
 
 \item{data}{Data frame with data for Pearson or raw residuals}
+
+\item{...}{Not used}
 }
 \description{
 Residuals function for the result of \code{\link{ddhazard}} fit

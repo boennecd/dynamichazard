@@ -1,5 +1,7 @@
-# library(survival); library(testthat); source("R/test_utils.R")
-library(survival)
+if(interactive()){
+  library(survival); library(testthat); source("R/test_utils.R"); library(dynamichazard)
+  get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
+}
 
 # Simulate data
 set.seed(11111)
@@ -20,6 +22,38 @@ test_that("Testing get design marix", {
   expect_equal(colnames(design$X), c("(Intercept)", "x1", "x2", "x3"))
   expect_equal(design$X[, 2:4], as.matrix(sims[, c("x1", "x2", "x3")]), check.attributes = F)
   })
+
+########
+# Test fixed terms
+
+test_that("Fixed terms works as expected",{
+  design_with_fixed <- get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + x2 + x3), sims)
+
+  expect_equal(design_with_fixed$X[, c("x1", "x2", "x3")], as.matrix(sims[, c("x1", "x2", "x3")]),
+               check.attributes = F)
+  expect_length(design_with_fixed$fixed_terms, 0)
+
+
+  design_with_fixed <- get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + x3), sims)
+  expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
+               check.attributes = F)
+  expect_equal(as.matrix(design_with_fixed$fixed_terms), as.matrix(sims[, c("x2")]),
+               check.attributes = F)
+
+
+  design_with_fixed <- get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + ddFixed(x3)), sims)
+  expect_equal(design_with_fixed$X[, c("x1"), drop = F], as.matrix(sims[, c("x1")]),
+               check.attributes = F)
+  expect_equal(as.matrix(design_with_fixed$fixed_terms), as.matrix(sims[, c("x2", "x3")]),
+               check.attributes = F)
+
+  dum <- function(x) cbind(x, -x)
+  design_with_fixed <- get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + ddFixed(dum(x2)) + x3), sims)
+  expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
+               check.attributes = F)
+  expect_equal(as.matrix(design_with_fixed$fixed_terms), dum(sims$x2),
+               check.attributes = F)
+})
 
 
 ############
