@@ -39,8 +39,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // ddhazard_fit_cpp_prelim
-Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const arma::uword n_max, const double eps, const arma::uword verbose, const bool save_all_output, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, Rcpp::Nullable<Rcpp::NumericVector> NR_eps, Rcpp::Nullable<Rcpp::NumericVector> LR, const std::string model, const std::string M_step_formulation);
-RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP save_all_outputSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP NR_epsSEXP, SEXP LRSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP) {
+Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const arma::uword n_max, const double eps, const arma::uword verbose, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, Rcpp::Nullable<Rcpp::NumericVector> NR_eps, Rcpp::Nullable<Rcpp::NumericVector> LR, const std::string model, const std::string M_step_formulation);
+RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP NR_epsSEXP, SEXP LRSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -55,7 +55,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::uword >::type n_max(n_maxSEXP);
     Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
     Rcpp::traits::input_parameter< const arma::uword >::type verbose(verboseSEXP);
-    Rcpp::traits::input_parameter< const bool >::type save_all_output(save_all_outputSEXP);
     Rcpp::traits::input_parameter< const int >::type order_(order_SEXP);
     Rcpp::traits::input_parameter< const bool >::type est_Q_0(est_Q_0SEXP);
     Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
@@ -66,7 +65,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type LR(LRSEXP);
     Rcpp::traits::input_parameter< const std::string >::type model(modelSEXP);
     Rcpp::traits::input_parameter< const std::string >::type M_step_formulation(M_step_formulationSEXP);
-    rcpp_result_gen = Rcpp::wrap(ddhazard_fit_cpp_prelim(X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, save_all_output, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation));
+    rcpp_result_gen = Rcpp::wrap(ddhazard_fit_cpp_prelim(X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation));
     return rcpp_result_gen;
 END_RCPP
 }
