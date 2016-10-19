@@ -254,26 +254,47 @@ get_data_func <- with(new.env(), {
     sims$res[start:cursor, ]
   }})
 
-get_data_func(T)
-test_that("", expect_equal(sims$res[1:300, ], get_data_func()))
-test_that("", expect_equal(sims$res[301:600, ], get_data_func()))
-get_data_func(T)
-test_that("", expect_equal(sims$res[1:300, ], get_data_func()))
-test_that("", expect_equal(sims$res[301:600, ], get_data_func()))
+test_that("I did not mess up with get_data_func", {
+  get_data_func(T)
+  test_that("", expect_equal(sims$res[1:300, ], get_data_func()))
+  test_that("", expect_equal(sims$res[301:600, ], get_data_func()))
+  get_data_func(T)
+  test_that("", expect_equal(sims$res[1:300, ], get_data_func()))
+  test_that("", expect_equal(sims$res[301:600, ], get_data_func()))
+})
 
+test_that("bigglm and my c++ version yields similar results", {
+  form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
 
+  for(model in c("logit", "exponential")){
+    suppressWarnings(bigglm_res <- bigglm(
+      form, get_data_func,
+      family = if(model == "logit") binomial() else poisson()))
 
+  # matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
+  # abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
 
+    suppressWarnings(b <- biglm_func(form, get_data_func, model = model))
 
+    expect_equal(unname(coef(bigglm_res)), c(b))
+  }
+})
 
-form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
+test_that("bigglm and my c++ version yields similar results with offsets", {
+  set.seed(195834)
+  sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
+  form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
-# debug(bigglm.function)
-# undebug(bigglm.function)
-bigglm_res <- bigglm(form, get_data_func, family = binomial())
+  for(model in c("logit", "exponential")){
+    suppressWarnings(bigglm_res <- bigglm(
+      form, get_data_func,
+      family = if(model == "logit") binomial() else poisson()))
 
-matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
-abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
+    # matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
+    # abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
 
-# debug(biglm_func)
-b <- biglm_func(form, get_data_func, model = "logit")
+    suppressWarnings(b <- biglm_func(form, get_data_func, model = model))
+
+    expect_equal(unname(coef(bigglm_res)), c(b))
+  }
+})
