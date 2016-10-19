@@ -7,10 +7,15 @@ if(interactive()){
   bigqr.init <- with(environment(bigglm), bigqr.init)
 }
 
+
+# From bigglm.function()
 biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12){
   tt<-terms(formula)
   # beta <- start
+  # etafun <- function(x) if(is.null(beta)) rep(0,nrow(x)) else x%*%beta
 
+
+  converged<-FALSE
   for (i in 1:maxit){
     firstchunk <- TRUE
     deviance<-0
@@ -26,6 +31,11 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
       mf<-model.frame(tt,chunk)
       mm<-model.matrix(tt,mf) # Get the terms
       p<-NCOL(mm)
+      #if (!is.null(weights)){
+      #    if (!inherits(weights, "formula"))
+      #        stop("`weights' must be a formula")
+      #    w<-model.frame(weights, chunk)[[1]]
+      #} else w<-rep(1,nrow(mm))
       # w <- rep(1,nrow(mm))
 
       ##########
@@ -33,10 +43,28 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
 
       if (firstchunk) {
         qr<-bigqr.init(p) # simple function that create a list with dummy entries
-        attach(qr)
 
-        if(i == 1)
+        D <- qr$D
+        rbar <- qr$rbar
+        thetab <- qr$thetab
+        ss <- qr$ss
+        checked <- qr$checked
+        tol <- qr$tol
+
+        if(!exists("beta"))
           beta <- rep(0, p)
+
+        #function (p)
+        #{
+        #    rval <- list(D = numeric(p), rbar = numeric(choose(p, 2)),
+        #        thetab = numeric(p), ss = 0, checked = FALSE, tol = numeric(p))
+        #    class(rval) <- "bigqr"
+        #    rval
+        #}
+
+        #assn<-attr(mm,"assign")
+        #if(sandwich) # <-- ignore. Relates to sandwhich estimate of variance
+        #    xyqr<-bigqr.init(p*(p+1))
       }
       #if (!identical(assn, attr(mm,"assign")))
       #    stop("model matrices incompatible")
@@ -50,14 +78,27 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
       ##########
       ## Find linear predcitor etc.
 
-      eta<- beta %*% mm
+      eta <- beta %*% mm
+
+      bigglm_updateQR_rcpp(D = D, rbar = rbar, ss = ss,
+                           checked = checked, tol = tol, model = model,
+                           X = mm, eta = eta, offset = off, y = y)
+
+      # eta<-etafun(mm)+off
+      # mu <- family$linkinv(eta)
+      # dmu <- family$mu.eta(eta)
+      # z<- eta+(y-mu)/dmu
+      # ww<-w*dmu*dmu/(family$variance(mu))
 
       ##########
       ## Update QR
 
-      bigglm_updateQR_rcpp(D, rbar, thetab, ss, checked, tol,
-                           model,
-                           mm, eta, offset, y)
+
+
+
+      # qr<-update(qr,mm,z-off,ww) # calls update.bigqr
+
+
 
       ##update.bigqr:
       ##function (bigQR, X, y, w = NULL, singcheck = FALSE, add.intercept = FALSE)
@@ -95,6 +136,9 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
       #}
       firstchunk <- FALSE
     }
+
+
+
     # iwlm <- list(call=sys.call(-1), qr=qr, iterations=i, # Create "biglm" class
     #              assign=attr(mm,"assign"), terms=tt, converged=FALSE,
     #              n=n,names=colnames(mm), weights=weights,rss=rss)
@@ -103,8 +147,10 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
     # class(iwlm) <- "biglm"
 
     betaold <- beta
-    beta <- bigglm_regcf_rcpp(D, rbar, thetab,
-                              ss, checked, tol)
+    beta <- bigglm_regcf_rcpp(D = D, rbar = rbar, thetab = thetab, ss = ss, checked = checked, tol = tol)
+
+
+    # beta <- coef(iwlm)
 
     ##coef.biglm
     ##function (object, ...)
@@ -144,13 +190,24 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
     }
 
     if (!is.null(betaold)){
-      delta <- betaold-beta
+      delta <- (betaold-beta)/sqrt(diag(vcov(iwlm)))
       if (max(abs(delta)) < tolerance){
         iwlm$converged<-TRUE
         break
       }
     }
+
+
   }
+
+  #rval <- iwlm
+  #rval$family <- family
+  #rval$deviance <- deviance
+  #rval$df.resid <- rval$n-length(rval$qr$D)
+  #class(rval) <- c("bigglm","biglm")
+  #rval
 
   return(beta)
 }
+
+

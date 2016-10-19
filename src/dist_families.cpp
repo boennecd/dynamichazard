@@ -1,7 +1,7 @@
 #include "dynamichazard.h"
 
 //logit_fam
-static double logit_fam::link_func(const double &mu){
+double logit_fam::link_func(const double &mu) const{
   return (log(mu / (1 - mu)));
 }
 

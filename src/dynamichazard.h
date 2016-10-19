@@ -91,15 +91,7 @@ public:
   double dev_resids(const double&, const double&, const double&) const;
 };
 
-int binomialCoeff(int n, int k)
-{
-  // Base Cases
-  if (k==0 || k==n)
-    return 1;
-
-  // Recur
-  return  binomialCoeff(n-1, k-1) + binomialCoeff(n-1, k);
-}
+int binomialCoeff(int n, int k);
 
 class qr_obj{
 public:
