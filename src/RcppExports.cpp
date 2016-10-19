@@ -7,13 +7,13 @@
 using namespace Rcpp;
 
 // bigglm_updateQR_rcpp
-void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, arma::vec& y);
+void bigglm_updateQR_rcpp(Rcpp::NumericVector& D, Rcpp::NumericVector& rbar, Rcpp::NumericVector& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, arma::vec& y);
 RcppExport SEXP dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec& >::type D(DSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type rbar(rbarSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type thetab(thetabSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type rbar(rbarSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector& >::type thetab(thetabSEXP);
     Rcpp::traits::input_parameter< double& >::type ss(ssSEXP);
     Rcpp::traits::input_parameter< bool& >::type checked(checkedSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type tol(tolSEXP);
