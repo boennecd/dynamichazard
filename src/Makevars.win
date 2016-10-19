@@ -33,3 +33,5 @@ $(SOURCES_CPP:.cpp=.o): dynamichazard.h
 ddhazard_fit.o: ddhazard_fit.cpp thread_pool.h
 
 thread_pool.o: thread_pool.cpp thread_pool.h
+
+bigglm_wrapper.o Cdqrls_wrapper.o: dist_families.cpp
