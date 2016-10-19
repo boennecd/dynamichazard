@@ -46,7 +46,6 @@ int binomialCoeff(int n, int k)
 
 
 
-
 template<class T>
 class bigglm_updateQR{
   // match logic update.bigqr
@@ -93,32 +92,40 @@ public:
     arma::vec mu = linkinv(eta_plus_off);
     arma::vec dmu = d_mu_d_eta(eta_plus_off);
     arma::vec z = eta + (y - mu) / dmu; // note that offset is not added as in bigglm.function
-    arma::vec ww = dmu % dmu % variance(mu);
+    arma::vec ww = dmu % dmu / variance(mu);
 
     int n_parems = X.n_rows;
     int nrbar = qr.rbar->n_elem;
     int ier = 0;
 
 
-    auto y_ptr = y.memptr();
-    auto z_ptr = z.memptr();
-    for(int i = 0; i < ww.n_cols; ++i, ++y_ptr, ++z_ptr){
+    double *y_ptr = z.memptr(); // a bit confussion with the chance of notion! This is "the same y as in the C code"
+    double *w_ptr = ww.memptr();
+
+    for(int i = 0; i < ww.n_elem; ++i, ++y_ptr, ++w_ptr){
       // created as subroutine will overwrite values so we take a copy
-      arma::vec x_row(X.colptr(i), X.n_rows);
+      arma::vec x_row = X.col(i);
 
       //Here is the stack trace from bigglm:
       //qr<-update(qr,mm,z-off,ww)
       //function (bigQR, X, y, w = NULL, singcheck = FALSE, add.intercept = FALSE)
+      //bigQR = qr  X = mm  y = z-off w = ww
       //  .Call("updateQR", X, y, w, bigQR, add.intercept)
       //  updateQR(SEXP X, SEXP y, SEXP w, SEXP bigQR, SEXP intercept)
       //    F77_CALL(includ)(&p, &nrbar, REAL(w)+i, row,
       //    REAL(y)+i, REAL(D), REAL(Rbar), REAL(thetab),
       //    REAL(sse), &ier);
 
-      includ_(&n_parems, &nrbar, z_ptr, x_row.memptr(),
+      includ_(&n_parems, &nrbar, w_ptr, x_row.memptr(),
               y_ptr, qr.D->memptr(), qr.rbar->memptr(), qr.thetab->memptr(),
               &qr.ss, &ier);
     }
+    /*
+    qr.D->print();
+    qr.rbar->print();
+    qr.thetab->print();
+
+    Rcpp::stop("dum dum");*/
   }
 };
 
@@ -143,16 +150,16 @@ arma::vec bigglm_regcf(qr_obj &qr){
 
 // Only exported for tests
 // [[Rcpp::export]]
-void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
+void bigglm_updateQR_rcpp(Rcpp::NumericVector &D, Rcpp::NumericVector &rbar, Rcpp::NumericVector &thetab,
                           double &ss, bool &checked, arma::vec &tol,
                           std::string model,
 
                           const arma::mat &X, const arma::vec &eta,
                           const arma::vec &offset, arma::vec &y){
   qr_obj qr;
-  qr.D = &D;
-  qr.rbar = &rbar;
-  qr.thetab = &thetab;
+  qr.D = new arma::vec(&D[0], D.length(), false); // the latter make sure that the same memory is used
+  qr.rbar = new arma::vec(&rbar[0], rbar.length(), false);
+  qr.thetab = new arma::vec(&thetab[0], thetab.length(), false);
   qr.ss = ss;
   qr.checked = checked;
   qr.tol = &tol;

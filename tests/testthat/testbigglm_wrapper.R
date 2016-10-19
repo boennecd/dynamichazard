@@ -1,12 +1,12 @@
 if(interactive()){
+  library(survival); library(dynamichazard); library(testthat)
+  source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
+
   library(biglm)
-  bigglm_updateQR_rcpp <- function(...)
-    with(environment(ddhazard), bigglm_updateQR_rcpp(...))
-  bigglm_regcf_rcpp <- function(...)
-    with(environment(ddhazard), bigglm_regcf_rcpp(...))
+  bigglm_updateQR_rcpp <- with(environment(ddhazard), bigglm_updateQR_rcpp)
+  bigglm_regcf_rcpp <- with(environment(ddhazard), bigglm_regcf_rcpp)
   bigqr.init <- with(environment(bigglm), bigqr.init)
 }
-
 
 # From bigglm.function()
 biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12){
@@ -51,7 +51,7 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
         checked <- qr$checked
         tol <- qr$tol
 
-        if(!exists("beta"))
+        if(i == 1)
           beta <- rep(0, p)
 
         #function (p)
@@ -73,16 +73,17 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
       ## Find y and offsets
 
       y<-model.response(mf)
-      if(is.null(off<-model.offset(mf))) off<-0
+      if(is.null(off<-model.offset(mf))) off <- rep(0, nrow(mm))
 
       ##########
       ## Find linear predcitor etc.
 
-      eta <- beta %*% mm
+      eta <- mm %*% beta
 
-      bigglm_updateQR_rcpp(D = D, rbar = rbar, ss = ss,
+      bigglm_updateQR_rcpp(D = D, rbar = rbar, ss = ss, thetab = thetab,
                            checked = checked, tol = tol, model = model,
-                           X = mm, eta = eta, offset = off, y = y)
+                           X = t(as.matrix(mm)), # both R and Fotran are column-major so we transpose
+                           eta = eta, offset = off, y = y)
 
       # eta<-etafun(mm)+off
       # mu <- family$linkinv(eta)
@@ -185,14 +186,14 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
     ## regcf(...)
 
     if (i >= maxit){
-      if (!quiet) warning("ran out of iterations and failed to converge")
+      warning("ran out of iterations and failed to converge")
       break
     }
 
     if (!is.null(betaold)){
-      delta <- (betaold-beta)/sqrt(diag(vcov(iwlm)))
+      delta <- betaold - beta
       if (max(abs(delta)) < tolerance){
-        iwlm$converged<-TRUE
+        converged<-TRUE
         break
       }
     }
@@ -210,4 +211,69 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
   return(beta)
 }
 
+# from ?bigglm
+make.data<-function(urlname, chunksize,...){
+  conn<-NULL
+  function(reset=FALSE){
+    if(reset){
+      if(!is.null(conn)) close(conn)
+      conn<<-url(urlname,open="r")
+    } else{
+      rval<-read.table(conn, nrows=chunksize,...)
+      if (nrow(rval)==0) {
+        close(conn)
+        conn<<-NULL
+        rval<-NULL
+      }
+      return(rval)
+    }
+  }
+}
 
+set.seed(72343)
+sims <- test_sim_func_exp(n_series = 1e3, n_vars = 10, t_0 = 0, t_max = 10,
+                          x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+                          intercept_start = -5, sds = c(.1, rep(1, 10)))
+
+get_data_func <- with(new.env(), {
+  n <- nrow(sims$res)
+  cursor <- 0
+  chunksize <- 3e2
+
+  function(reset = F){
+    if(reset){
+      cursor <<- 0
+      return(invisible())
+
+    }
+    if (cursor >= n)
+      return(NULL)
+
+    start <- cursor + 1
+    cursor <<- cursor + min(chunksize, n - cursor)
+    sims$res[start:cursor, ]
+  }})
+
+get_data_func(T)
+test_that("", expect_equal(sims$res[1:300, ], get_data_func()))
+test_that("", expect_equal(sims$res[301:600, ], get_data_func()))
+get_data_func(T)
+test_that("", expect_equal(sims$res[1:300, ], get_data_func()))
+test_that("", expect_equal(sims$res[301:600, ], get_data_func()))
+
+
+
+
+
+
+form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
+
+# debug(bigglm.function)
+# undebug(bigglm.function)
+bigglm_res <- bigglm(form, get_data_func, family = binomial())
+
+matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
+abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
+
+# debug(biglm_func)
+b <- biglm_func(form, get_data_func, model = "logit")
