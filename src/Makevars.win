@@ -10,16 +10,16 @@ else
 BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
-## include the C code in the sub directory
-SOURCES_C = $(wildcard *.c)
+SOURCES_C = $(wildcard stats/*.c)
 SOURCES_CPP = $(wildcard *.cpp)
+SOURCES_F = $(wildcard biglm/*.f)
 CXX_STD = CXX11
-OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o)
+OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
 
 ## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags. Most commonly used to set define directives with -D.
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS) $(SHLIB_PTHREAD_FLAGS)
 ## PKG_LIBS: Linker flags. A common use is PKG_LIBS = $(BLAS_LIBS). This allows you to use the same BLAS library as R.
-PKG_LIBS = $(BLAS_LIBS_USE) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS)
+PKG_LIBS = $(FLIBS) $(BLAS_LIBS_USE) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS)
 
 ifeq "$(WIN)" "64"
 PKG_LIBS += -D ARMA_64BIT_WORD
