@@ -1187,8 +1187,8 @@ extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
 
 
 // [[Rcpp::export]]
-Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const arma::vec &tstart,
-                                   const arma::vec &tstop,
+Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const Rcpp::NumericMatrix &fixed_terms,
+                                   const arma::vec &tstart, const arma::vec &tstop,
                                    const arma::colvec &a_0,
                                    arma::mat Q_0, // by value copy. This  is key cuz we will change it if est_Q_0 = T
                                    arma::mat Q, // similary this is a copy

@@ -6,6 +6,42 @@
 
 using namespace Rcpp;
 
+// bigglm_updateQR_rcpp
+void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, const arma::vec& y);
+RcppExport SEXP dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type rbar(rbarSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type thetab(thetabSEXP);
+    Rcpp::traits::input_parameter< double& >::type ss(ssSEXP);
+    Rcpp::traits::input_parameter< bool& >::type checked(checkedSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type offset(offsetSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    bigglm_updateQR_rcpp(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y);
+    return R_NilValue;
+END_RCPP
+}
+// bigglm_regcf_rcpp
+arma::vec bigglm_regcf_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol);
+RcppExport SEXP dynamichazard_bigglm_regcf_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type rbar(rbarSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type thetab(thetabSEXP);
+    Rcpp::traits::input_parameter< double& >::type ss(ssSEXP);
+    Rcpp::traits::input_parameter< bool& >::type checked(checkedSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(bigglm_regcf_rcpp(D, rbar, thetab, ss, checked, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 // IWLS_logit
 arma::vec IWLS_logit(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
 RcppExport SEXP dynamichazard_IWLS_logit(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
@@ -39,12 +75,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // ddhazard_fit_cpp_prelim
-Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const arma::uword n_max, const double eps, const arma::uword verbose, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, Rcpp::Nullable<Rcpp::NumericVector> NR_eps, Rcpp::Nullable<Rcpp::NumericVector> LR, const std::string model, const std::string M_step_formulation);
-RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP NR_epsSEXP, SEXP LRSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP) {
+Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix& X, const Rcpp::NumericMatrix& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const arma::uword n_max, const double eps, const arma::uword verbose, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, Rcpp::Nullable<Rcpp::NumericVector> NR_eps, Rcpp::Nullable<Rcpp::NumericVector> LR, const std::string model, const std::string M_step_formulation);
+RcppExport SEXP dynamichazard_ddhazard_fit_cpp_prelim(SEXP XSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP NR_epsSEXP, SEXP LRSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type fixed_terms(fixed_termsSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type tstart(tstartSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type tstop(tstopSEXP);
     Rcpp::traits::input_parameter< const arma::colvec& >::type a_0(a_0SEXP);
@@ -65,7 +102,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type LR(LRSEXP);
     Rcpp::traits::input_parameter< const std::string >::type model(modelSEXP);
     Rcpp::traits::input_parameter< const std::string >::type M_step_formulation(M_step_formulationSEXP);
-    rcpp_result_gen = Rcpp::wrap(ddhazard_fit_cpp_prelim(X, tstart, tstop, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation));
+    rcpp_result_gen = Rcpp::wrap(ddhazard_fit_cpp_prelim(X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F_, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation));
     return rcpp_result_gen;
 END_RCPP
 }
