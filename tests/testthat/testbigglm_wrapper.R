@@ -1,11 +1,12 @@
+library(biglm)
+bigqr.init <- with(environment(bigglm), bigqr.init)
+
 if(interactive()){
   library(survival); library(dynamichazard); library(testthat)
   source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
 
-  library(biglm)
   bigglm_updateQR_rcpp <- with(environment(ddhazard), bigglm_updateQR_rcpp)
   bigglm_regcf_rcpp <- with(environment(ddhazard), bigglm_regcf_rcpp)
-  bigqr.init <- with(environment(bigglm), bigqr.init)
 }
 
 # From bigglm.function()

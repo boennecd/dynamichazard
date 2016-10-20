@@ -179,19 +179,24 @@ ddhazard = function(formula, data,
     message("Running EM")
   }
 
-  result = ddhazard_fit_cpp_prelim(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
-                                   Q = Q, n_max = control$n_max,
-                                   risk_obj = risk_set, eps = control$eps, X = X_Y$X,
-                                   tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
-                                   order_ = order,
-                                   est_Q_0 = control$est_Q_0, method = control$method,
-                                   model = model,
-                                   kappa = control$kappa, alpha = control$alpha, beta = control$beta,
-                                   NR_eps = control$NR_eps,
-                                   LR = control$LR)
+  X_Y$X <- t(X_Y$X) # we transpose for performance due to the column-major storage
+  X_Y$fixed_terms <- t(X_Y$fixed_terms) # same
+
+  result = ddhazard_fit_cpp(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
+                            Q = Q, n_max = control$n_max,
+                            risk_obj = risk_set, eps = control$eps,
+                            X = X_Y$X, fixed_terms = X_Y$fixed_terms,
+                            fixed_parems_start = rep(0, nrow(X_Y$fixed_terms)), # TODO: make a better choice of starting value?
+                            tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
+                            order_ = order,
+                            est_Q_0 = control$est_Q_0, method = control$method,
+                            model = model,
+                            kappa = control$kappa, alpha = control$alpha, beta = control$beta,
+                            NR_eps = control$NR_eps,
+                            LR = control$LR)
 
   # Set names
-  tmp_names = rep(colnames(X_Y$X), order)
+  tmp_names = rep(rownames(X_Y$X), order)
   colnames(result$a_t_d_s) = tmp_names
   dimnames(result$V_t_d_s) = list(tmp_names, tmp_names, NULL)
   dimnames(result$Q) = dimnames(result$Q_0) = list(tmp_names, tmp_names)

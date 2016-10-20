@@ -150,16 +150,16 @@ arma::vec bigglm_regcf(qr_obj &qr){
 
 // Only exported for tests
 // [[Rcpp::export]]
-void bigglm_updateQR_rcpp(Rcpp::NumericVector &D, Rcpp::NumericVector &rbar, Rcpp::NumericVector &thetab,
+void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
                           double &ss, bool &checked, arma::vec &tol,
                           std::string model,
 
                           const arma::mat &X, const arma::vec &eta,
                           const arma::vec &offset, arma::vec &y){
   qr_obj qr;
-  qr.D = new arma::vec(&D[0], D.length(), false); // the latter make sure that the same memory is used
-  qr.rbar = new arma::vec(&rbar[0], rbar.length(), false);
-  qr.thetab = new arma::vec(&thetab[0], thetab.length(), false);
+  qr.D = &D; // the latter make sure that the same memory is used
+  qr.rbar = &rbar;
+  qr.thetab = &thetab;
   qr.ss = ss;
   qr.checked = checked;
   qr.tol = &tol;
