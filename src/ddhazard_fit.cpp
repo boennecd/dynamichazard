@@ -332,7 +332,8 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      const double exp_eta = exp(arma::dot(i_a_t, x_));
+      double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
+      const double exp_eta = exp(arma::dot(i_a_t, x_) + offset);
 
       // Can be issue here with overflow in denominator
       // Set exp(-eta) = v such that we are computing v^-1 / (1 + v^-1)^2
@@ -1204,6 +1205,62 @@ extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
 
 
 
+// Method to estimate fixed effects like in biglm::bigglm
+void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
+  int cursor_risk_set = 0;
+  int n_elements = 0;
+
+  // Set up look variables
+  int t = 1; // start looping at one to be consistent with other implementations
+  arma::mat fixed_terms(p_data->fixed_parems.n_elem, chunk_size, arma::fill::none);
+  arma::vec offsets(chunk_size);
+  auto it = p_data->risk_sets.begin();
+  double bin_stop = p_data->min_start;
+
+  for(; it != p_data->risk_sets.end(); ++it, ++ t){
+    // Update time variables
+    double bin_start = bin_stop;
+    double delta_t = p_data->I_len[t];
+    bin_stop += delta_t;
+
+    // Find the risk set and the number of elements to take
+    arma::uvec r_set = Rcpp::as<arma::uvec>(p_data->risk_sets[t - 1]) - 1;
+    int n_elements_to_take = std::min(chunk_size - n_elements, r_set.n_cols - cursor_risk_set);
+    r_set = r_set.subvec(cursor_risk_set, cursor_risk_set + n_elements_to_take - 1);
+
+    // Add the fixed terms and compute the offsets
+    fixed_terms.cols(n_elements, n_elements + n_elements_to_take - 1) = p_data->fixed_terms.cols(r_set);
+    offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) = p_data->a_t_t_s.row(t) * p_data->_X.cols(r_set);
+
+    n_elements += n_elements_to_take;
+
+    if(n_elements == chunk_size){
+      if(is_final_and_should_remove_rows){
+
+
+      }
+
+      perform_qr_update();
+
+      n_elements = 0;
+    } else if(it == risk_sets.end()){
+      fixed_terms...
+      offsets...
+
+      perform_qr_update();
+    }
+
+    if(!finished_risk_set){
+      cursor_risk_set = ??;
+      --it;
+    }
+  }
+
+
+}
+
+
+
 
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assumed to have observations in the columns for performance due to column-major storage
@@ -1224,7 +1281,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             Rcpp::Nullable<Rcpp::NumericVector> NR_eps = R_NilValue,
                             Rcpp::Nullable<Rcpp::NumericVector> LR = R_NilValue,
                             const std::string model = "logit",
-                            const std::string M_step_formulation = "Fahrmier94"){
+                            const std::string M_step_formulation = "Fahrmier94",
+                            const int fixed_effect_chunk_size = 2e4){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -1422,10 +1480,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     }
 
     if(p_data->any_fixed){
+      estimate_fixed_effects(p_data, fixed_effect_chunk_size);
       Rcpp::stop("TODO: implement");
     }
 
-    conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0)));
+    conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0))); //TODO: take fixed effects into account!
 
 #if defined(MYDEBUG_M_STEP)
     Q.print("Q");
