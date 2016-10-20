@@ -1206,7 +1206,8 @@ extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
 
 
 // Method to estimate fixed effects like in biglm::bigglm
-void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
+void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
+                            bigglm_updateQR * const updater){
   int cursor_risk_set = 0;
   int n_elements = 0;
 
@@ -1214,6 +1215,9 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
   int t = 1; // start looping at one to be consistent with other implementations
   arma::mat fixed_terms(p_data->fixed_parems.n_elem, chunk_size, arma::fill::none);
   arma::vec offsets(chunk_size);
+  arma::vec y(chunk_size);
+  arma::vec eta;
+  qr_obj qr(p_data->fixed_parems.n_elem);
   auto it = p_data->risk_sets.begin();
   double bin_stop = p_data->min_start;
 
@@ -1228,37 +1232,39 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
     int n_elements_to_take = std::min(chunk_size - n_elements, r_set.n_cols - cursor_risk_set);
     r_set = r_set.subvec(cursor_risk_set, cursor_risk_set + n_elements_to_take - 1);
 
-    // Add the fixed terms and compute the offsets
-    fixed_terms.cols(n_elements, n_elements + n_elements_to_take - 1) = p_data->fixed_terms.cols(r_set);
-    offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) = p_data->a_t_t_s.row(t) * p_data->_X.cols(r_set);
+    // Find the outcomes, fixed terms and compute the offsets
+    y.subvec(n_elements, n_elements + n_elements_to_take - 1) =
+      p_data->is_event_in_bin.subvec(r_set) == (t - 1);
+    fixed_terms.cols(n_elements, n_elements + n_elements_to_take - 1) =
+      p_data->fixed_terms.cols(r_set);
+    offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
+      p_data->a_t_t_s.row(t) * p_data->_X.cols(r_set);
 
     n_elements += n_elements_to_take;
 
-    if(n_elements == chunk_size){
-      if(is_final_and_should_remove_rows){
-
-
-      }
-
-      perform_qr_update();
+    if(n_elements == chunk_size){ // we have reached the chunk_size
+      arma::vec eta = a_t.t() * fixed_terms;
+      updater->update(...);
 
       n_elements = 0;
-    } else if(it == risk_sets.end()){
-      fixed_terms...
-      offsets...
+    } else if(it == p_data->risk_sets.end()){ // there is no more bins to process
+      y = y.subvec(0, n_elements - 1);
+      fixed_terms = fixed_terms.cols(0, n_elements - 1);
+      offsets = offsets.subvec(0, n_elements - 1);
 
-      perform_qr_update();
+      arma::vec eta = a_t.t() * fixed_terms;
+      updater->update(...);
     }
 
-    if(!finished_risk_set){
-      cursor_risk_set = ??;
+    if(!finished_risk_set){ // there are still elements left in the bin
+      cursor_risk_set = cursor_risk_set + n_elements_to_take;
       --it;
-    }
+    } else
+      cursor_risk_set = 0;
   }
 
 
 }
-
 
 
 
@@ -1522,7 +1528,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             Rcpp::Named("conv_values") = conv_values,
                             Rcpp::Named("Q") = Rcpp::wrap(Q),
                             Rcpp::Named("Q_0") = Rcpp::wrap(Q_0)));
-  }
+}
 
 
 /*** R
