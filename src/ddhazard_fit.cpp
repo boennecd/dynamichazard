@@ -49,7 +49,11 @@ public:
   const arma::mat T_F_;
 
   // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
+  const bool any_dynamic;
+  const bool any_fixed;
+
   arma::mat _X;
+  arma::mat fixed_terms;
 
   const std::vector<double> I_len;
   const double event_eps; // something small
@@ -65,6 +69,8 @@ public:
   const double min_start;
 
   // Declare and maybe intialize non constants
+  arma::vec fixed_parems;
+
   arma::mat &Q;
 
   arma::mat a_t_t_s;
@@ -76,10 +82,12 @@ public:
 
   arma::cube lag_one_cor;
 
-  problem_data(const Rcpp::NumericMatrix &X, // notice that we assume that x has each row as an observation
+  problem_data(arma::mat &X,
+               arma::mat &fixed_terms_,
                const arma::vec &tstart_,
                const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
                const arma::colvec &a_0,
+               const arma::vec &fixed_parems_start,
                arma::mat &Q_0,
                arma::mat &Q_,
                const Rcpp::List &risk_obj,
@@ -92,6 +100,13 @@ public:
     n_parems(a_0.size() / order_),
     F_(F__),
     T_F_(F_.t()),
+
+    any_dynamic(X.n_elem > 0),
+    any_fixed(fixed_terms_.n_elem > 0),
+
+    _X(X.begin(), X.n_rows, X.n_cols),
+    fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols),
+
     I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
     event_eps(d * std::numeric_limits<double>::epsilon()),
 #if defined(USE_OPEN_BLAS)
@@ -101,11 +116,11 @@ public:
     tstop(tstop_),
     is_event_in_bin(is_event_in_bin_),
     min_start(Rcpp::as<double>(risk_obj["min_start"])),
+
+
+    fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_)
     {
-      // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
-      _X = arma::mat(X.begin(), X.nrow(), X.ncol()).t(); // Armadillo use column major ordering https://en.wikipedia.org/wiki/Row-major_order
-
       a_t_t_s = arma::mat(n_parems * order_, d + 1);
       a_t_less_s = arma::mat(n_parems * order_, d);
       V_t_t_s = arma::cube(n_parems * order_, n_parems * order_, d + 1);
@@ -145,9 +160,11 @@ public:
   arma::vec H_diag_inv;
   arma::mat K_d;
 
-  problem_data_EKF(const Rcpp::NumericMatrix &X, const arma::vec &tstart_,
+  problem_data_EKF(arma::mat &X, arma::mat &fixed_terms,
+                   const arma::vec &tstart_,
                    const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
                    const arma::colvec &a_0,
+                   const arma::vec &fixed_parems_start,
                    arma::mat &Q_0,
                    arma::mat &Q_,
                    const Rcpp::List &risk_obj,
@@ -159,7 +176,7 @@ public:
                    const int order_ = 1, const bool est_Q_0 = true,
                    const bool is_cont_time = false,
                    const unsigned int NR_it_max_ = 100):
-    problem_data(X, tstart_, tstop_, is_event_in_bin_, a_0,
+    problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
                  Q_0, Q_, risk_obj, F__, n_max, eps, verbose,
                  order_, est_Q_0),
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
@@ -351,7 +368,9 @@ class EKF_helper{
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
       const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
-      const double eta = arma::dot(i_a_t, x_);
+
+      double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
+      const double eta = arma::dot(i_a_t, x_) + offset;
 
       const double do_die = (dat.is_event_in_bin(*it) == bin_number);
       const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
@@ -1187,24 +1206,25 @@ extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
 
 
 // [[Rcpp::export]]
-Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const Rcpp::NumericMatrix &fixed_terms,
-                                   const arma::vec &tstart, const arma::vec &tstop,
-                                   const arma::colvec &a_0,
-                                   arma::mat Q_0, // by value copy. This  is key cuz we will change it if est_Q_0 = T
-                                   arma::mat Q, // similary this is a copy
-                                   const Rcpp::List &risk_obj,
-                                   const arma::mat &F_,
-                                   const arma::uword n_max = 100, const double eps = 0.001,
-                                   const arma::uword verbose = 0,
-                                   const int order_ = 1, const bool est_Q_0 = true,
-                                   const std::string method = "EKF",
-                                   Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
-                                   Rcpp::Nullable<Rcpp::NumericVector> alpha = R_NilValue,
-                                   Rcpp::Nullable<Rcpp::NumericVector> beta = R_NilValue,
-                                   Rcpp::Nullable<Rcpp::NumericVector> NR_eps = R_NilValue,
-                                   Rcpp::Nullable<Rcpp::NumericVector> LR = R_NilValue,
-                                   const std::string model = "logit",
-                                   const std::string M_step_formulation = "Fahrmier94"){
+Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assumed to have observations in the columns for performance due to column-major storage
+                            const arma::vec &tstart, const arma::vec &tstop,
+                            const arma::colvec &a_0,
+                            const arma::vec &fixed_parems_start,
+                            arma::mat Q_0, // by value copy. This  is key cuz we will change it if est_Q_0 = T
+                            arma::mat Q, // similary this is a copy
+                            const Rcpp::List &risk_obj,
+                            const arma::mat &F_,
+                            const arma::uword n_max = 100, const double eps = 0.001,
+                            const arma::uword verbose = 0,
+                            const int order_ = 1, const bool est_Q_0 = true,
+                            const std::string method = "EKF",
+                            Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
+                            Rcpp::Nullable<Rcpp::NumericVector> alpha = R_NilValue,
+                            Rcpp::Nullable<Rcpp::NumericVector> beta = R_NilValue,
+                            Rcpp::Nullable<Rcpp::NumericVector> NR_eps = R_NilValue,
+                            Rcpp::Nullable<Rcpp::NumericVector> LR = R_NilValue,
+                            const std::string model = "logit",
+                            const std::string M_step_formulation = "Fahrmier94"){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -1235,8 +1255,8 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const Rcpp::Num
 
   if(method == "EKF"){
     p_data = new problem_data_EKF(
-      X, tstart, tstop, is_event_in_bin,
-      a_0, Q_0, Q,
+      X, fixed_terms, tstart, tstop, is_event_in_bin,
+      a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_, NR_eps, LR,
       n_max, eps, verbose,
       order_, est_Q_0, model == "exponential");
@@ -1245,11 +1265,15 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const Rcpp::Num
     if(model != "logit" && model != "exponential")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
     p_data = new problem_data(
-      X, tstart, tstop, is_event_in_bin,
-      a_0, Q_0, Q,
+      X, fixed_terms, tstart, tstop, is_event_in_bin,
+      a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
       n_max, eps, verbose,
       order_, est_Q_0);
+
+    if(p_data->any_fixed)
+      Rcpp::stop("Fixed effects is not implemented with UKF"); // TODO: Implement
+
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
     } else if (model == "exponential"){
@@ -1261,11 +1285,15 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const Rcpp::Num
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
 
     p_data = new problem_data(
-      X, tstart, tstop, is_event_in_bin,
-      a_0, Q_0, Q,
+      X, fixed_terms, tstart, tstop, is_event_in_bin,
+      a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
       n_max, eps, verbose,
       order_, est_Q_0);
+
+    if(p_data->any_fixed)
+      Rcpp::stop("Fixed effects is not implemented with UKF");
+
     solver = new UKF_solver_Org(*p_data, kappa);
   }else
     Rcpp::stop("method '" + method  +"'is not implemented");
@@ -1314,80 +1342,87 @@ Rcpp::List ddhazard_fit_cpp_prelim(const Rcpp::NumericMatrix &X, const Rcpp::Num
     if((it + 1) % 25 == 0)
       Rcpp::checkUserInterrupt(); // this is expensive - you do not want to check too often
 
-    p_data->V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
-    // E-step
-    solver->solve();
+    if(p_data->any_dynamic){
+      p_data->V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
-    // E-step: smoothing
-    for (int t = p_data->d - 1; t > -1; t--){
-      // we need to compute the correlation matrix first
-      if(t > 0){
-        p_data->lag_one_cor.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
-          p_data->B_s.slice(t) * (
-              p_data->lag_one_cor.slice(t) - F_ * p_data->V_t_t_s.slice(t)) * p_data->B_s.slice(t - 1).t();
+      // E-step
+      solver->solve();
+
+      // E-step: smoothing
+      for (int t = p_data->d - 1; t > -1; t--){
+        // we need to compute the correlation matrix first
+        if(t > 0){
+          p_data->lag_one_cor.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
+            p_data->B_s.slice(t) * (
+                p_data->lag_one_cor.slice(t) - F_ * p_data->V_t_t_s.slice(t)) * p_data->B_s.slice(t - 1).t();
+        }
+
+        p_data->a_t_t_s.col(t) = p_data->a_t_t_s.unsafe_col(t) + p_data->B_s.slice(t) *
+          (p_data->a_t_t_s.unsafe_col(t + 1) - p_data->a_t_less_s.unsafe_col(t));
+        p_data->V_t_t_s.slice(t) = p_data->V_t_t_s.slice(t) + p_data->B_s.slice(t) *
+          (p_data->V_t_t_s.slice(t + 1) - p_data->V_t_less_s.slice(t)) * p_data->B_s.slice(t).t();
       }
 
-      p_data->a_t_t_s.col(t) = p_data->a_t_t_s.unsafe_col(t) + p_data->B_s.slice(t) *
-        (p_data->a_t_t_s.unsafe_col(t + 1) - p_data->a_t_less_s.unsafe_col(t));
-      p_data->V_t_t_s.slice(t) = p_data->V_t_t_s.slice(t) + p_data->B_s.slice(t) *
-        (p_data->V_t_t_s.slice(t + 1) - p_data->V_t_less_s.slice(t)) * p_data->B_s.slice(t).t();
-    }
-
-    // M-step
-    if(est_Q_0){
-      Q_0 = p_data->V_t_t_s.slice(0);
-    }
-    Q.zeros();
-    for (int t = 1; t < p_data->d + 1; t++){
-      delta_t = p_data->I_len[t - 1];
-
-      V_less = &p_data->V_t_t_s.slice(t - 1);
-      V = &p_data->V_t_t_s.slice(t);
-      a_less = p_data->a_t_t_s.unsafe_col(t - 1);
-      a = p_data->a_t_t_s.unsafe_col(t);
-
-      if(M_step_formulation == "Fahrmier94"){
-        B = &p_data->B_s.slice(t - 1);
-
-        Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-                - F_ * *B * *V
-                - (F_ * *B * *V).t()
-                + F_ * *V_less * p_data->T_F_) / delta_t;
-      } else if (M_step_formulation == "SmoothedCov"){
-        B = &p_data->lag_one_cor.slice(t - 1); // this is not B but the lagged one smooth correlation. Do not mind the variable name
-
-        Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-                - F_ * *B
-                - (F_ * *B).t()
-                + F_ * *V_less * p_data->T_F_) / delta_t;
-      } else
-        Rcpp::stop("'M_step_formulation' of type '" + M_step_formulation + "' is not implemented");
-    }
-    Q /= p_data->d;
-
-    if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > Q_warn_eps){
-      std::ostringstream warning;
-      warning << "Q - Q.t() maximal element difference was " << test_max_diff <<
-        " in iteration " << it + 1;
-      Rcpp::warning(warning.str());
-    }
-
-    if((test_max_diff = static_cast<arma::mat>(Q_0 - Q_0.t()).max()) > Q_warn_eps){
-      std::ostringstream warning;
-      warning << "Q_0 - Q_0.t() maximal element difference was " << test_max_diff <<
-        " in iteration " << it + 1;
-      Rcpp::warning(warning.str());
-    }
-
-    //TODO: better way to ensure that Q and Q_0 are symmetric?
-    Q = (Q + Q.t()) / 2.0;
-    Q_0 = (Q_0 + Q_0.t()) / 2.0;
-
-    if(order_ > 1){ // CHANGED # TODO: I figure I should set the primaery element to zero, right?
-      arma::mat tmp_Q = Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1);
+      // M-step
+      if(est_Q_0){
+        Q_0 = p_data->V_t_t_s.slice(0);
+      }
       Q.zeros();
-      Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1) = tmp_Q;
+      for (int t = 1; t < p_data->d + 1; t++){
+        delta_t = p_data->I_len[t - 1];
+
+        V_less = &p_data->V_t_t_s.slice(t - 1);
+        V = &p_data->V_t_t_s.slice(t);
+        a_less = p_data->a_t_t_s.unsafe_col(t - 1);
+        a = p_data->a_t_t_s.unsafe_col(t);
+
+        if(M_step_formulation == "Fahrmier94"){
+          B = &p_data->B_s.slice(t - 1);
+
+          Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
+                  - F_ * *B * *V
+                  - (F_ * *B * *V).t()
+                  + F_ * *V_less * p_data->T_F_) / delta_t;
+        } else if (M_step_formulation == "SmoothedCov"){
+          B = &p_data->lag_one_cor.slice(t - 1); // this is not B but the lagged one smooth correlation. Do not mind the variable name
+
+          Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
+                  - F_ * *B
+                  - (F_ * *B).t()
+                  + F_ * *V_less * p_data->T_F_) / delta_t;
+        } else
+          Rcpp::stop("'M_step_formulation' of type '" + M_step_formulation + "' is not implemented");
+      }
+      Q /= p_data->d;
+
+      if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > Q_warn_eps){
+        std::ostringstream warning;
+        warning << "Q - Q.t() maximal element difference was " << test_max_diff <<
+          " in iteration " << it + 1;
+        Rcpp::warning(warning.str());
+      }
+
+      if((test_max_diff = static_cast<arma::mat>(Q_0 - Q_0.t()).max()) > Q_warn_eps){
+        std::ostringstream warning;
+        warning << "Q_0 - Q_0.t() maximal element difference was " << test_max_diff <<
+          " in iteration " << it + 1;
+        Rcpp::warning(warning.str());
+      }
+
+      //TODO: better way to ensure that Q and Q_0 are symmetric?
+      Q = (Q + Q.t()) / 2.0;
+      Q_0 = (Q_0 + Q_0.t()) / 2.0;
+
+      if(order_ > 1){ // CHANGED # TODO: I figure I should set the primaery element to zero, right?
+        arma::mat tmp_Q = Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1);
+        Q.zeros();
+        Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1) = tmp_Q;
+      }
+    }
+
+    if(p_data->any_fixed){
+      Rcpp::stop("TODO: implement");
     }
 
     conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0)));

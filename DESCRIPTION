@@ -22,6 +22,7 @@ Suggests:
     knitr,
     rmarkdown,
     timereg,
-    captioner
+    captioner,
+    biglm
 VignetteBuilder: knitr
 SystemRequirements: C++11
