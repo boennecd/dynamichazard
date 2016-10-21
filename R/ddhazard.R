@@ -107,7 +107,8 @@ ddhazard = function(formula, data,
   control_default <- list(kappa = NULL, alpha = NULL, beta = NULL,
                           NR_eps = NULL, LR = NULL, n_max = 10^2, eps = 10^-3,
                           est_Q_0 = F, method = "EKF", save_risk_set = T,
-                          save_data = T)
+                          save_data = T, eps_fixed_parems = 1e-3,
+                          max_it_fixed_parems = 10, fixed_effect_chunk_size = 1e4)
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
          paste0(names(control)[is.na(control_match)], collapse = "\t"))
@@ -193,7 +194,10 @@ ddhazard = function(formula, data,
                             model = model,
                             kappa = control$kappa, alpha = control$alpha, beta = control$beta,
                             NR_eps = control$NR_eps,
-                            LR = control$LR)
+                            LR = control$LR,
+                            eps_fixed_parems = control$eps_fixed_parems,
+                            max_it_fixed_parems = control$max_it_fixed_parems,
+                            fixed_effect_chunk_size = control$fixed_effect_chunk_size)
 
   # Set names
   tmp_names = rep(rownames(X_Y$X), order)
