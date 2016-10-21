@@ -58,6 +58,7 @@ extern int openblas_get_num_threads();
 // #define MYDEBUG_EKF
 // #define MYDEBUG_M_STEP
 
+// Classes for R like distributions families
 class dist_family {
 public:
   virtual double link_func(const double&) const = 0;
@@ -91,6 +92,8 @@ public:
   double dev_resids(const double&, const double&, const double&) const;
 };
 
+
+// Functions and classes for fixed effects
 int binomialCoeff(int n, int k);
 
 class qr_obj{
@@ -109,3 +112,32 @@ public:
   bool checked;
   arma::vec *tol;
 };
+
+
+
+
+
+template<class T>
+class bigglm_updateQR{
+  // match logic update.bigqr
+  arma::vec linkinv(const arma::vec &eta);
+
+  arma::vec d_mu_d_eta(const arma::vec &eta);
+
+  arma::vec variance(const arma::vec &mu);
+
+protected:
+  T t;
+
+public:
+  bigglm_updateQR<T>(): t() {}
+
+  void update(qr_obj &qr, // Previous/starting value. Will be overwritten
+              const arma::mat &X, const arma::vec &eta,
+              const arma::vec &offset, arma::vec &y); // y will not be altered
+};
+
+using bigglm_updateQR_logit = bigglm_updateQR<logit_fam>;
+using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
+
+arma::vec bigglm_regcf(qr_obj &qr);

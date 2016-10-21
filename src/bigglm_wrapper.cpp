@@ -47,91 +47,74 @@ int binomialCoeff(int n, int k)
 
 
 template<class T>
-class bigglm_updateQR{
-  // match logic update.bigqr
-  arma::vec linkinv(const arma::vec &eta){
-    arma::vec out(eta.n_elem);
+arma::vec bigglm_updateQR<T>::linkinv(const arma::vec &eta){
+  arma::vec out(eta.n_elem);
 
-    for(arma::uword i = 0; i < eta.n_elem; i++)
-      out[i] = t.link_func_inv(eta[i]);
+  for(arma::uword i = 0; i < eta.n_elem; i++)
+    out[i] = t.link_func_inv(eta[i]);
 
-    return(out);
+  return(out);
+}
+
+template<class T>
+arma::vec bigglm_updateQR<T>::d_mu_d_eta(const arma::vec &eta){
+  arma::vec out(eta.n_elem);
+
+  for(arma::uword i = 0; i < eta.n_elem; i++)
+    out[i] = t.d_mu_d_eta(eta[i]);
+
+  return(out);
+}
+
+template<class T>
+arma::vec bigglm_updateQR<T>::variance(const arma::vec &mu){
+  arma::vec out(mu.n_elem);
+
+  for(arma::uword i = 0; i < mu.n_elem; i++)
+    out[i] = t.variance(mu[i]);
+
+  return(out);
+}
+
+
+template<class T>
+void bigglm_updateQR<T>::update(qr_obj &qr, // Previous/starting value. Will be overwritten
+            const arma::mat &X, const arma::vec &eta,
+            const arma::vec &offset, arma::vec &y) // y will not be altered
+{
+  arma::vec eta_plus_off = eta + offset;
+  arma::vec mu = linkinv(eta_plus_off);
+  arma::vec dmu = d_mu_d_eta(eta_plus_off);
+  arma::vec z = eta + (y - mu) / dmu; // note that offset is not added as in bigglm.function
+  arma::vec ww = dmu % dmu / variance(mu);
+
+  int n_parems = X.n_rows;
+  int nrbar = qr.rbar->n_elem;
+  int ier = 0;
+
+
+  double *y_ptr = z.memptr(); // a bit confussion with the chance of notion! This is "the same y as in the C code"
+  double *w_ptr = ww.memptr();
+
+  for(int i = 0; i < ww.n_elem; ++i, ++y_ptr, ++w_ptr){
+    // created as subroutine will overwrite values so we take a copy
+    arma::vec x_row = X.col(i);
+
+    //Here is the stack trace from bigglm:
+    //qr<-update(qr,mm,z-off,ww)
+    //function (bigQR, X, y, w = NULL, singcheck = FALSE, add.intercept = FALSE)
+    //bigQR = qr  X = mm  y = z-off w = ww
+    //  .Call("updateQR", X, y, w, bigQR, add.intercept)
+    //  updateQR(SEXP X, SEXP y, SEXP w, SEXP bigQR, SEXP intercept)
+    //    F77_CALL(includ)(&p, &nrbar, REAL(w)+i, row,
+    //    REAL(y)+i, REAL(D), REAL(Rbar), REAL(thetab),
+    //    REAL(sse), &ier);
+
+    includ_(&n_parems, &nrbar, w_ptr, x_row.memptr(),
+            y_ptr, qr.D->memptr(), qr.rbar->memptr(), qr.thetab->memptr(),
+            &qr.ss, &ier);
   }
-
-  arma::vec d_mu_d_eta(const arma::vec &eta){
-    arma::vec out(eta.n_elem);
-
-    for(arma::uword i = 0; i < eta.n_elem; i++)
-      out[i] = t.d_mu_d_eta(eta[i]);
-
-    return(out);
-  }
-
-  arma::vec variance(const arma::vec &mu){
-    arma::vec out(mu.n_elem);
-
-    for(arma::uword i = 0; i < mu.n_elem; i++)
-      out[i] = t.variance(mu[i]);
-
-    return(out);
-  }
-
-protected:
-  T t;
-
-public:
-  bigglm_updateQR<T>(): t() {}
-
-  void update(qr_obj &qr, // Previous/starting value. Will be overwritten
-              const arma::mat &X, const arma::vec &eta,
-              const arma::vec &offset, arma::vec &y) // y will not be altered
-  {
-    //TODO: look into fortran memory storage versus C++ / armadillo
-
-    arma::vec eta_plus_off = eta + offset;
-    arma::vec mu = linkinv(eta_plus_off);
-    arma::vec dmu = d_mu_d_eta(eta_plus_off);
-    arma::vec z = eta + (y - mu) / dmu; // note that offset is not added as in bigglm.function
-    arma::vec ww = dmu % dmu / variance(mu);
-
-    int n_parems = X.n_rows;
-    int nrbar = qr.rbar->n_elem;
-    int ier = 0;
-
-
-    double *y_ptr = z.memptr(); // a bit confussion with the chance of notion! This is "the same y as in the C code"
-    double *w_ptr = ww.memptr();
-
-    for(int i = 0; i < ww.n_elem; ++i, ++y_ptr, ++w_ptr){
-      // created as subroutine will overwrite values so we take a copy
-      arma::vec x_row = X.col(i);
-
-      //Here is the stack trace from bigglm:
-      //qr<-update(qr,mm,z-off,ww)
-      //function (bigQR, X, y, w = NULL, singcheck = FALSE, add.intercept = FALSE)
-      //bigQR = qr  X = mm  y = z-off w = ww
-      //  .Call("updateQR", X, y, w, bigQR, add.intercept)
-      //  updateQR(SEXP X, SEXP y, SEXP w, SEXP bigQR, SEXP intercept)
-      //    F77_CALL(includ)(&p, &nrbar, REAL(w)+i, row,
-      //    REAL(y)+i, REAL(D), REAL(Rbar), REAL(thetab),
-      //    REAL(sse), &ier);
-
-      includ_(&n_parems, &nrbar, w_ptr, x_row.memptr(),
-              y_ptr, qr.D->memptr(), qr.rbar->memptr(), qr.thetab->memptr(),
-              &qr.ss, &ier);
-    }
-    /*
-    qr.D->print();
-    qr.rbar->print();
-    qr.thetab->print();
-
-    Rcpp::stop("dum dum");*/
-  }
-};
-
-using bigglm_updateQR_logit = bigglm_updateQR<logit_fam>;
-using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
-
+}
 
 arma::vec bigglm_regcf(qr_obj &qr){
   int p = qr.D->n_elem;
