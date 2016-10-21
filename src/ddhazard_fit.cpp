@@ -1230,14 +1230,19 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
     // Set up look variables
     int t = 1; // start looping at one to be consistent with other implementations
     arma::mat fixed_terms(p_data->fixed_parems.n_elem, chunk_size, arma::fill::none);
-    arma::vec offsets(chunk_size);
+    arma::vec offsets(chunk_size, arma::fill::zeros);
     arma::vec y(chunk_size);
     arma::vec eta;
     qr_obj qr(p_data->fixed_parems.n_elem);
     auto it = p_data->risk_sets.begin();
     double bin_stop = p_data->min_start;
 
+    Rcpp::Rcout << "made" << std::endl;
+
+
     for(; it != p_data->risk_sets.end(); ++it, ++ t){
+      Rcpp::Rcout << "it" << std::endl;
+
       // Update time variables
       double bin_start = bin_stop;
       double delta_t = p_data->I_len[t];
@@ -1245,21 +1250,42 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
 
       // Find the risk set and the number of elements to take
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_data->risk_sets[t - 1]) - 1;
-      int n_elements_to_take = std::min(chunk_size - n_elements, static_cast<int>(r_set.n_cols) - cursor_risk_set);
+      int n_elements_to_take = std::min(chunk_size - n_elements, static_cast<int>(r_set.n_elem) - cursor_risk_set);
       r_set = r_set.subvec(cursor_risk_set, cursor_risk_set + n_elements_to_take - 1);
 
+
+      Rcpp::Rcout << y.n_elem << "\t" << offsets.n_elem << "\t" << fixed_terms.n_elem
+                  << "\t" << n_elements << "\t" << n_elements_to_take;
+
       // Find the outcomes, fixed terms and compute the offsets
+      Rcpp::Rcout << "1" << std::endl;
+
       y.subvec(n_elements, n_elements + n_elements_to_take - 1) =
         arma::conv_to<arma::vec>::from(p_data->is_event_in_bin.elem(r_set) == (t - 1));
+
+      Rcpp::Rcout << "2" << std::endl;
+
       fixed_terms.cols(n_elements, n_elements + n_elements_to_take - 1) =
         p_data->fixed_terms.cols(r_set);
-      offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
-        p_data->a_t_t_s.row(t) * p_data->_X.cols(r_set);
+
+      Rcpp::Rcout << "3" << std::endl;
+
+      if(p_data->any_dynamic){
+        offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
+          p_data->a_t_t_s.row(t) * p_data->_X.cols(r_set);
+      }
 
       n_elements += n_elements_to_take;
 
+      Rcpp::Rcout << "Boh" << std::endl;
+
       if(n_elements == chunk_size){ // we have reached the chunk_size
-        arma::vec eta = p_data->a_t_t_s.row(t - 1).t() * fixed_terms;
+        Rcpp::Rcout << ":)" << std::endl;
+
+        arma::vec eta = fixed_terms.t() * p_data->fixed_parems;
+
+        Rcpp::Rcout << "?!" << std::endl;
+
         updater.update(qr, fixed_terms, eta, offsets, y);
 
         n_elements = 0;
@@ -1560,6 +1586,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             Rcpp::Named("a_t_d_s") = Rcpp::wrap(p_data->a_t_t_s.t()),
                             Rcpp::Named("B_s") = Rcpp::wrap(p_data->B_s),
                             Rcpp::Named("lag_one_cor") = Rcpp::wrap(p_data->lag_one_cor),
+                            Rcpp::Named("fixed_effects") = Rcpp::wrap(p_data->fixed_parems),
 
                             Rcpp::Named("n_iter") = it + 1,
                             Rcpp::Named("conv_values") = conv_values,

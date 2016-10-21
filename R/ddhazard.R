@@ -121,8 +121,11 @@ ddhazard = function(formula, data,
   risk_set <-
     get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
                  id = id, is_for_discrete_model = is_for_discrete_model)
-
-  if(missing(a_0) && model == "logit"){
+  if(n_parems == 0){
+    # Model is fitted using ddhazard_fit_cpp for testing and because doing it with static_glm is easy
+    warning("The model can be estimated more effeciently static_glm when there is no time varying parameters")
+    a_0 = vector()
+  } else if(missing(a_0) && model == "logit"){
     # Assume that logit models is used
     message("a_0 not supplied. One iteration IWLS of static logit model is used")
     tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
@@ -232,6 +235,7 @@ ddhazard = function(formula, data,
     state_vecs = result$a_t_d_s,
     state_vars = result$V_t_d_s,
     lag_one_cor = result$lag_one_cor,
+    fixed_effects = result$fixed_effects,
     n_iter = result$n_iter,
     Q = result$Q,
     Q_0 = result$Q_0,
