@@ -95,11 +95,11 @@ public:
                arma::mat &Q_,
                const Rcpp::List &risk_obj,
                const arma::mat &F__,
+               const double eps_fixed_parems_,
+               const int max_it_fixed_parems_,
                const int n_max = 100, const double eps = 0.001,
                const bool verbose = false,
-               const int order_ = 1, const bool est_Q_0 = true,
-               const double eps_fixed_parems_ = 0.001,
-               const int max_it_fixed_parems_ = 10):
+               const int order_ = 1, const bool est_Q_0 = true):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
     n_parems(a_0.size() / order_),
@@ -178,13 +178,17 @@ public:
                    const arma::mat &F__,
                    Rcpp::Nullable<Rcpp::NumericVector> NR_eps_,
                    Rcpp::Nullable<Rcpp::NumericVector> LR_,
+                   const double eps_fixed_parems_,
+                   const int max_it_fixed_parems_,
                    const int n_max = 100, const double eps = 0.001,
                    const bool verbose = false,
                    const int order_ = 1, const bool est_Q_0 = true,
                    const bool is_cont_time = false,
                    const unsigned int NR_it_max_ = 100):
     problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
-                 Q_0, Q_, risk_obj, F__, n_max, eps, verbose,
+                 Q_0, Q_, risk_obj, F__,
+                 eps_fixed_parems_, max_it_fixed_parems_,
+                 n_max, eps, verbose,
                  order_, est_Q_0),
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),
@@ -1298,6 +1302,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             arma::mat Q, // similary this is a copy
                             const Rcpp::List &risk_obj,
                             const arma::mat &F_,
+                            const double eps_fixed_parems, const int max_it_fixed_parems,
                             const arma::uword n_max = 100, const double eps = 0.001,
                             const arma::uword verbose = 0,
                             const int order_ = 1, const bool est_Q_0 = true,
@@ -1342,7 +1347,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     p_data = new problem_data_EKF(
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
-      risk_obj, F_, NR_eps, LR,
+      risk_obj, F_,
+      NR_eps, LR,
+      eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
       order_, est_Q_0, model == "exponential");
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
@@ -1353,6 +1360,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
+      eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
       order_, est_Q_0);
 
