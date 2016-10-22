@@ -83,12 +83,22 @@ res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims
                  verbose = 5)
 
 
+form <- formula(survival::Surv(tstart, tstop, event) ~
+                   + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
+
+res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+                 control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3),
+                 verbose = 5)
+
+
 
 test_that("Make the above into a test", expect_true(F))
 
 
 
 test_that("Mixtures versus previous fit for both types of models", expect_true(F))
+test_that("Model with only one random", expect_true(F))
+test_that("Manually check offsets in both parts of the algorithm", expect_true(F))
 test_that("Implement UKF", expect_true(F))
 test_that("Implement EKF", expect_true(F))
 test_that("Test new control variables", expect_true(F))
