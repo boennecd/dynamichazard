@@ -27,6 +27,18 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 })
 
 
+form <- formula(survival::Surv(tstart, tstop, event) ~
+                  -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + ddFixed(x3))
+
+res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
+                 control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
+
+matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
+abline(h = res1$fixed_effects, col = c(1,4))
+
+test_that("Make the above into a test", expect_true(F))
+
 
 
 set.seed(312237)
@@ -51,7 +63,31 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
 })
 
 
-test_that("Only fixed terms yields the same as bigglm", expect_true(F))
+form <- formula(survival::Surv(tstart, tstop, event) ~
+                  -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + ddFixed(x3))
+
+res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+                 control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
+
+matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
+abline(h = res1$fixed_effects, col = c(1,4))
+
+
+
+form <- formula(survival::Surv(tstart, tstop, event) ~
+                  -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + x3)
+
+res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+                 control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3),
+                 verbose = 5)
+
+
+
+test_that("Make the above into a test", expect_true(F))
+
+
+
 test_that("Mixtures versus previous fit for both types of models", expect_true(F))
 test_that("Implement UKF", expect_true(F))
 test_that("Implement EKF", expect_true(F))

@@ -19,7 +19,7 @@ get_design_matrix = function(formula, data, response = T){
   fixed_terms_indicies <- attr(Terms, "specials")$ddFixed
   fixed_terms <- mf[, fixed_terms_indicies, drop = F]
 
-  # Frp, coxph
+  # From, coxph
   if(length(fixed_terms_indicies) > 0){
     temppred <- attr(terms, "predvars")
     Terms2 <- Terms[-fixed_terms_indicies + 1]
