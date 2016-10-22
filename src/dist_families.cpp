@@ -27,6 +27,10 @@ double logit_fam::dev_resids(const double &y, const double &mu, const double &w)
   return (y > 0.0) ? - log(mu) : - log(1 - mu);
 };
 
+double logit_fam::time_offset(const double &delta_t) const{
+  return 0.;
+}
+
 
 
 //poisson_fam
@@ -49,4 +53,8 @@ double poisson_fam::d_mu_d_eta(const double &eta) const{
 
 double poisson_fam::dev_resids(const double &y, const double &mu, const double &w) const{
   return (y > 0.0) ? w * (y * log(y / mu) - (y - mu)) : mu * w;
+}
+
+double poisson_fam::time_offset(const double &delta_t) const{
+  return log(delta_t);
 }

@@ -66,6 +66,8 @@ public:
   virtual double variance(const double&) const = 0;
   virtual double d_mu_d_eta(const double&) const = 0; // d mu / d eta
   virtual double dev_resids(const double&, const double&, const double&) const = 0;
+
+  virtual double time_offset(const double&) const = 0;
 };
 
 class logit_fam : public dist_family {
@@ -80,6 +82,8 @@ public:
   double variance(const double&) const;
   double d_mu_d_eta(const double&) const; // d mu / d eta
   double dev_resids(const double&, const double&, const double&) const;
+
+  double time_offset(const double&) const;
 };
 
 class poisson_fam : public dist_family
@@ -90,6 +94,8 @@ public:
   double variance(const double&) const;
   double d_mu_d_eta(const double&) const; // d mu / d eta
   double dev_resids(const double&, const double&, const double&) const;
+
+  double time_offset(const double&) const;
 };
 
 
@@ -99,9 +105,9 @@ int binomialCoeff(int n, int k);
 class qr_obj{
 public:
   qr_obj(unsigned int p):
-  D(new arma::vec(p, arma::fill::ones)), rbar(new arma::vec(binomialCoeff(p, 2), arma::fill::ones)),
-  thetab(new arma::vec(p, arma::fill::ones)), ss(0.), checked(false),
-  tol(new arma::vec(p, arma::fill::ones))
+  D(new arma::vec(p, arma::fill::zeros)), rbar(new arma::vec(binomialCoeff(p, 2), arma::fill::zeros)),
+  thetab(new arma::vec(p, arma::fill::zeros)), ss(0.), checked(false),
+  tol(new arma::vec(p, arma::fill::zeros))
   {}
   qr_obj() = default;
 
