@@ -105,7 +105,7 @@ int binomialCoeff(int n, int k);
 class qr_obj{
 public:
   qr_obj(unsigned int p):
-  D(new arma::vec(p, arma::fill::zeros)), rbar(new arma::vec(binomialCoeff(p, 2), arma::fill::zeros)),
+  D(new arma::vec(p, arma::fill::zeros)), rbar(new arma::vec((p == 1)? 0 : binomialCoeff(p, 2), arma::fill::zeros)),
   thetab(new arma::vec(p, arma::fill::zeros)), ss(0.), checked(false),
   tol(new arma::vec(p, arma::fill::zeros))
   {}
