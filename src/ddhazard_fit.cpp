@@ -1220,7 +1220,6 @@ extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
 template<typename T>
 void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
                             bigglm_updateQR<T> &updater){
-
   int it_outer = 0;
   arma::vec old_beta;
   do{
