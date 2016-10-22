@@ -28,6 +28,13 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 
 
 
+
+set.seed(312237)
+sims <- test_sim_func_exp(n_series = 1e4, n_vars = 3, t_0 = 0, t_max = 10,
+                          x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+                          intercept_start = -4, sds = c(.1, rep(1, 3)))
+# sum(sims$res$event)
+
 test_that("Only fixed effects yields same results as bigglm with exponential model", {
   form <- formula(survival::Surv(tstart, tstop, event) ~
                     -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
@@ -36,9 +43,9 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
                    control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
 
   tmp_design <- get_survival_case_Weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
-                                                   use_weights = F, max_T = 10)
+                                                   use_weights = F, max_T = 10, is_for_discrete_model = F)
 
-  res2 <- bigglm(update(form, Y ~ .), data = tmp_design, family = binomial(), chunksize = 1e3)
+  res2 <- bigglm(update(form, Y ~ . + offset(log(pmin(tstop, t) - pmax(tstart, t - 1)))), data = tmp_design, family = poisson(), chunksize = 1e3)
 
   expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects)))
 })
