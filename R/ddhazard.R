@@ -123,7 +123,7 @@ ddhazard = function(formula, data,
                  id = id, is_for_discrete_model = is_for_discrete_model)
   if(n_parems == 0){
     # Model is fitted using ddhazard_fit_cpp for testing and because doing it with static_glm is easy
-    warning("The model can be estimated more effeciently static_glm when there is no time varying parameters")
+    warning("The model can be estimated more effeciently by using get_survival_case_Weigths_and_data and static_glm when there is no time varying parameters")
     a_0 = vector()
   } else if(missing(a_0) && model == "logit"){
     # Assume that logit models is used
@@ -150,7 +150,7 @@ ddhazard = function(formula, data,
   # Report pre-liminary stats
   if(verbose){
     tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
-    colnames(tmp_tbl) = c("Risk size", "Num events")
+    colnames(tmp_tbl) = cin("Risk size", "Num events")
 
     # Find the number of event in each bin
     n_events <- xtabs(~ risk_set$is_event_in)
