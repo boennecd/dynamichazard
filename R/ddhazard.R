@@ -130,14 +130,16 @@ ddhazard = function(formula, data,
     message("a_0 not supplied. One iteration IWLS of static logit model is used")
     tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
                          control = glm.control(epsilon = Inf), family = "binomial")
-    a_0 = rep(tmp_mod$coefficients, order)
+    a_0 = rep(tmp_mod$coefficients[
+      !seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)], order)
     rm(tmp_mod)
 
   } else if (missing(a_0) && model == "exponential"){
     message("a_0 not supplied. One iteration IWLS of static glm model is used")
     tmp_mod = static_glm(form = formula, data = data, max_T = max_T,
                          control = glm.control(epsilon = Inf), family = "exponential")
-    a_0 = rep(tmp_mod$coefficients, order)
+    a_0 = rep(tmp_mod$coefficients[
+      !seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)], order)
     rm(tmp_mod)
   }
 
@@ -150,7 +152,7 @@ ddhazard = function(formula, data,
   # Report pre-liminary stats
   if(verbose){
     tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
-    colnames(tmp_tbl) = cin("Risk size", "Num events")
+    colnames(tmp_tbl) = c("Risk size", "Num events")
 
     # Find the number of event in each bin
     n_events <- xtabs(~ risk_set$is_event_in)
