@@ -1237,9 +1237,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
     auto it = p_data->risk_sets.begin();
     double bin_stop = p_data->min_start;
 
-
     for(; it != p_data->risk_sets.end(); ++it, ++t){
-      // Update time variables
       double bin_start = bin_stop;
       double delta_t = p_data->I_len[t - 1];
       bin_stop += delta_t;
@@ -1257,17 +1255,17 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
       fixed_terms.cols(n_elements, n_elements + n_elements_to_take - 1) =
         p_data->fixed_terms.cols(r_set);
 
-      if(it_outer < 1)
-        Rcpp::Rcout << "Writting to "<< n_elements << "\t" << n_elements + n_elements_to_take - 1 << "\t" <<  t - 1 << std::endl;
-
       if(p_data->any_dynamic){
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
           p_data->a_t_t_s.row(t) * p_data->_X.cols(r_set);
+      } else {
+        offsets.subvec(n_elements, n_elements + n_elements_to_take - 1).fill(0.);
       }
+
       for(int i = 0; i < r_set.n_elem; ++i){
         offsets(n_elements + i) +=
           T().time_offset(std::min(p_data->tstop(r_set(i)), bin_stop)
-                           - std::max(p_data->tstart(r_set(i)), bin_start));
+                            - std::max(p_data->tstart(r_set(i)), bin_start));
       }
 
       n_elements += n_elements_to_take;
@@ -1292,6 +1290,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
         cursor_risk_set = cursor_risk_set + n_elements_to_take;
         --it;
         --t;
+        bin_stop -= delta_t;
       } else
         cursor_risk_set = 0;
     }
@@ -1301,15 +1300,13 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
   } while(!arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems ||
     ++it_outer < p_data->max_it_fixed_parems);
 
-  Rcpp::Rcout << "Number of iterations was " << it_outer << std::endl;
-
-  static bool failed_to_converge_once = false;
-  if(it_outer == p_data->max_it_fixed_parems && !failed_to_converge_once){
-    failed_to_converge_once = true;
-    std::stringstream msg;
-    msg << "Failed to estimate fixed effects in " << p_data->max_it_fixed_parems << " iterations at least once" << std::endl;
-    Rcpp::warning(msg.str());
-  }
+    static bool failed_to_converge_once = false;
+    if(it_outer == p_data->max_it_fixed_parems && !failed_to_converge_once){
+      failed_to_converge_once = true;
+      std::stringstream msg;
+      msg << "Failed to estimate fixed effects in " << p_data->max_it_fixed_parems << " iterations at least once" << std::endl;
+      Rcpp::warning(msg.str());
+    }
 }
 
 
