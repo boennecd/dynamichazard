@@ -25,6 +25,20 @@ test_that("Verbose on ddhazard prints a log likelihood", {
       model = "exponential"
     )
   }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
+
+  expect_output({
+    result = ddhazard(
+      formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+      data = head_neck_cancer,
+      by = 1,
+      control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
+      a_0 = 0, Q_0 = as.matrix(1),
+      max_T = 45,
+      id = head_neck_cancer$id, order = 1,
+      verbose = 5,
+      model = "exponential"
+    )
+  }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
 })
 
 test_that("logLik for head_neck_cancer data set match previous results", {
@@ -101,6 +115,52 @@ test_that("logLik for head_neck_cancer data set with second order model", {
   expect_equal(log_like, old)
 })
 
+
+test_that("logLik for head_neck_cancer data set match previous results with fixed effects", {
+  result = ddhazard(
+    formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+    data = head_neck_cancer,
+    by = 1,
+    control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
+    a_0 = 0, Q_0 = as.matrix(1),
+    max_T = 45,
+    id = head_neck_cancer$id, order = 1)
+
+  log_like <- logLik(result, data = head_neck_cancer)
+
+  old <- structure(-302.8375676988051,
+                   class = "logLik",
+                   df = 1 + 1 + 1)
+
+  expect_equal(log_like, old)
+})
+
+test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
+  form <- survival::Surv(start, stop, event) ~ -1 + ddFixed(rep(1, length(group))) +
+    ddFixed(as.numeric(group == 1))
+
+  result = ddhazard(
+    formula = form,
+    data = head_neck_cancer,
+    by = 1,
+    max_T = 45,
+    id = head_neck_cancer$id, order = 1)
+
+  tmp_design <- get_survival_case_Weigths_and_data(
+    formula = form, data = head_neck_cancer, by = 1, max_T = 45, id = head_neck_cancer$id,
+    use_weights = F)
+
+  glm_fit <- glm(Y ~ as.factor(group), binomial(), tmp_design)
+
+  tmp <- logLik(glm_fit)
+  attributes(tmp)
+  attr(tmp, "nobs") <- NULL
+
+  expect_equal(c(unname(result$fixed_effects)), unname(glm_fit$coefficients))
+  expect_equal(logLik(result), tmp)
+})
+
+
 ##############
 
 test_that("logLik for simulated data versus old results", {
@@ -148,6 +208,32 @@ test_that("logLik for simulated data versus old results", {
                    class = "logLik",
                    df = 6 + 6 * (1 + 6) / 2)
   expect_equal(log_like, old, tolerance = 1e-6)
+
+
+
+
+
+  set.seed(4578234)
+  sims <- test_sim_func_logit(n_series = 2e3, n_vars = 5, t_0 = 0, t_max = 10,
+                              x_range = 1, x_mean = -.2, re_draw = T)
+
+  result <- ddhazard(
+    survival::Surv(tstart, tstop, event) ~ ddFixed(x1) + ddFixed(x2) + x3 + x4 + x5,
+    sims$res,
+    by = 1,
+    control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F),
+    a_0 = rep(0, 4), Q_0 = diag(1, 4),
+    max_T = 10,
+    id = sims$res$id, order = 1,
+    verbose = F)
+
+  log_like <- logLik(result)
+  old <- structure(-2909.663034719353,
+                   class = "logLik",
+                   df = 4 + 4 * (1 + 4) / 2 + 2)
+  expect_equal(log_like, old, tolerance = 1e-6)
 })
+
+test_that("Add one example of exponential fit and loglike with fixed effects", expect_true(F))
 
 

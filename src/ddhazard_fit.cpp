@@ -1212,7 +1212,8 @@ extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
                                        const arma::mat&, const arma::mat&,
                                        arma::mat Q, const arma::mat&,
                                        const arma::vec&, const arma::vec&,
-                                       const int order_, const std::string);
+                                       const arma::vec &,
+                                       const int, const std::string);
 
 
 
@@ -1561,10 +1562,14 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     if(verbose && it % 5 < verbose){
       auto rcout_width = Rcpp::Rcout.width();
+
+      arma::vec fixed_effects_offsets = p_data->any_fixed ?
+      p_data->fixed_terms.t() * p_data->fixed_parems : arma::vec(p_data->_X.n_cols, arma::fill::zeros);
+
       double log_like =
         logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
                     p_data->a_t_t_s, p_data->tstart, p_data->tstop,
-                    order_, model)[0];
+                    fixed_effects_offsets, order_, model)[0];
       Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
         " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
           "\t" << "The log likelihood is " << log_like <<

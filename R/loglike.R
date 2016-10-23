@@ -7,6 +7,10 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
   X <- get_design_matrix(object$formula, data)
   X$X <- t(X$X)
 
+  fixed_effects_offsets <- if(ncol(X$fixed_terms) == 0)
+    rep(0, nrow(X$fixed_terms)) else
+      X$fixed_terms %*% object$fixed_effects
+
   risk_obj <- object$risk_set
   if(is.null(risk_obj)){
     if(missing(id))
@@ -27,7 +31,7 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
   val <- logLike_cpp(X = X$X, risk_obj = risk_obj, F = object$F_,
                      Q_0 = object$Q_0, Q = object$Q, a_t_d_s = t(object$state_vecs),
                      tstart = X$Y[, 1], tstop = X$Y[, 2], order_ = object$order,
-                     model = object$model)
+                     model = object$model, fixed_effects_offsets = fixed_effects_offsets)
 
   attr(val, "prior_loglike") <- val[2]
   val <- val[1]
@@ -37,7 +41,8 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
 
   n_parems <- ncol(object$state_vecs) / object$order
   attr(val, "df") <- n_parems * object$order +  # from a_0
-    n_parems * (n_parems + 1) / 2 # from Q
+    n_parems * (n_parems + 1) / 2 +  # from Q
+    length(object$fixed_effects) # from fixed effects
   class(val) <- "logLik"
 
   val
