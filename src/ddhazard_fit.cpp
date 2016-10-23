@@ -1296,8 +1296,8 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
 
     old_beta = p_data->fixed_parems;
     p_data->fixed_parems = bigglm_regcf(qr);
-  } while(!arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems ||
-    ++it_outer < p_data->max_it_fixed_parems);
+  } while(++it_outer < p_data->max_it_fixed_parems && // Key that this the first condition we check when we use &&
+    !arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems);
 
     static bool failed_to_converge_once = false;
     if(it_outer == p_data->max_it_fixed_parems && !failed_to_converge_once){
@@ -1531,7 +1531,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       }
     }
 
+    conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0)));
+
     if(p_data->any_fixed){
+      arma::vec old = p_data->fixed_parems;
+
       if(model == "logit"){
         bigglm_updateQR_logit  updater;
         estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
@@ -1542,14 +1546,17 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
       } else
         Rcpp::stop("Fixed effects is not implemented for '" + model  +"'");
-    }
 
-    conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0))); //TODO: take fixed effects into account!
+      *(conv_values.end() -1) += conv_criteria(old, p_data->fixed_parems);
+    }
 
 #if defined(MYDEBUG_M_STEP)
     Q.print("Q");
     p_data->a_t_t_s.print("a_t_d_s");
 #endif
+
+    if(p_data->any_dynamic)
+      break;
 
     if(verbose && it % 5 < verbose){
       auto rcout_width = Rcpp::Rcout.width();
@@ -1563,9 +1570,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
             std::setw(rcout_width) << std::endl;
     }
 
-    if(*(conv_values.end() -1) < eps){
+    if(*(conv_values.end() -1) < eps)
       break;
-    }
 
     a_prev = p_data->a_t_t_s.col(0);
   }while(++it < n_max);

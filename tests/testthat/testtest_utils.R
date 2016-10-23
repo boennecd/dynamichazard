@@ -1,3 +1,6 @@
+if(interactive())
+  source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
+
 set.seed(101010)
 
 test_that("Testing util functions to sim for test", {
@@ -56,3 +59,21 @@ test_that("The head_neck_cancer must be defined for the ddhazard tests",
 
 test_that("The pbc2 must be defined for the ddhazard tests",
           expect_true(exists("pbc2")))
+
+
+test_that("Covs are fixed or not depends on is fixed argument", {
+  set.seed(1999293)
+  inter_start <- rnorm(1)
+  beta_start <- rnorm(10)
+  for(func in c(test_sim_func_logit, test_sim_func_exp)){
+    sims <- func(n_series = 1e2, n_vars = 10, beta_start = beta_start,
+                 intercept_start = inter_start, t_max = 10)
+
+    expect_true(all(apply(sims$betas, 2, function(x) sum(duplicated(x)) == 0)))
+
+    sims <- test_sim_func_exp(n_series = 1e2, n_vars = 10, beta_start = beta_start,
+                              intercept_start = inter_start, t_max = 10, is_fixed = c(1, 4))
+    expect_equal(apply(sims$betas, 2, function(x) sum(duplicated(x)) == 0),
+                 !seq_len(11) %in% c(1, 4))
+  }
+})
