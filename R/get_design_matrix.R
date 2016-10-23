@@ -11,17 +11,23 @@ get_design_matrix = function(formula, data, response = T){
       temp$formula <- eval(bquote(terms(update(formula, rep(1, .(nrow(data))) ~ .), data = data,
                                   specials = specials))) # remove right hand site of formula
 
+  temp$drop.unused.levels <- TRUE
   mf <- eval(temp, parent.frame())
 
   Y <- if(response) model.extract(mf, "response") else NULL
 
   Terms <- terms(mf)
   fixed_terms_indicies <- attr(Terms, "specials")$ddFixed
-  fixed_terms <- mf[, fixed_terms_indicies, drop = F]
 
-  # From, coxph
+  # From coxph
   if(length(fixed_terms_indicies) > 0){
+    # First deal with fixed effects
     temppred <- attr(terms, "predvars")
+    Terms1 <- Terms[fixed_terms_indicies - 1]
+    fixed_terms <- model.matrix(Terms1, mf)
+    fixed_terms <- fixed_terms[, colnames(fixed_terms) != "(Intercept)", drop = F] # remove intercept
+
+    # Then deal with dynamic effects
     Terms2 <- Terms[-fixed_terms_indicies + 1]
     if (!is.null(temppred)) {
       attr(Terms2, "predvars") <- temppred[-(1 + fixed_terms_indicies)]
@@ -30,8 +36,10 @@ get_design_matrix = function(formula, data, response = T){
     renumber <- match(colnames(attr(Terms2, "factors")),
                       colnames(attr(Terms, "factors")))
     attr(X, "assign") <- c(0, renumber)[1 + attr(X, "assign")]
-  } else
+  } else{
     X <- model.matrix(Terms, mf)
+    fixed_terms <- matrix(nrow = nrow(X), ncol = 0)
+  }
 
   list(X = X, fixed_terms = fixed_terms, Y = Y, formula = temp$formula)
 }
