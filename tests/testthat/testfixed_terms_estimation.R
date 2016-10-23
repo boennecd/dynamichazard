@@ -15,8 +15,9 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
   form <- formula(survival::Surv(tstart, tstop, event) ~
                     -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
 
-  res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
-                   control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
+  suppressWarnings(
+    res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
+                   control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3)))
 
   tmp_design <- get_survival_case_Weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10)
@@ -27,19 +28,35 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 })
 
 
-form <- formula(survival::Surv(tstart, tstop, event) ~
-                  -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + ddFixed(x3))
-
-res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
-                 control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
-
-matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
-matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
-abline(h = res1$fixed_effects, col = c(1,4))
+# form <- formula(survival::Surv(tstart, tstop, event) ~
+#                   -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + ddFixed(x3))
+#
+# res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10)
+#
+# matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+# matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
+# abline(h = res1$fixed_effects, col = c(1,4))
+#
+#
+#
+#
+#
+#
+#
+# set.seed(548237)
+# sims <- test_sim_func_logit(n_series = 1e4, n_vars = 3, t_0 = 0, t_max = 10,
+#                             x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+#                             intercept_start = -4, sds = c(.1, rep(1, 3)),
+#                             is_fixed = c(1, 4))
+# sum(sims$res$event)
+#
+# res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10)
+#
+# matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+# matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
+# abline(h = res1$fixed_effects, col = c(1,4))
 
 test_that("Make the above into a test", expect_true(F))
-
-
 
 set.seed(312237)
 sims <- test_sim_func_exp(n_series = 1e4, n_vars = 3, t_0 = 0, t_max = 10,
@@ -63,32 +80,60 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
 })
 
 
-form <- formula(survival::Surv(tstart, tstop, event) ~
-                  -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + ddFixed(x3))
-
-res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
-                 control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
-
-matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
-matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
-abline(h = res1$fixed_effects, col = c(1,4))
-
-
-
-form <- formula(survival::Surv(tstart, tstop, event) ~
-                  -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + x3)
-
-res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
-                 control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3),
-                 verbose = 5)
-
-
-form <- formula(survival::Surv(tstart, tstop, event) ~
-                   + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
-
-res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
-                 control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3),
-                 verbose = 5)
+# form <- formula(survival::Surv(tstart, tstop, event) ~
+#                   -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + ddFixed(x3))
+#
+# res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+#                  control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
+#
+# matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+# matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
+# abline(h = res1$fixed_effects, col = c(1,4))
+#
+#
+#
+#
+#
+# form <- formula(survival::Surv(tstart, tstop, event) ~
+#                   -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + x3)
+#
+# res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+#                  control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3, LR = .5), Q_0 = diag(rep(10, 3)))
+#
+# matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+# matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
+# abline(h = res1$fixed_effects, col = c(1,4))
+#
+#
+#
+#
+#
+# form <- formula(survival::Surv(tstart, tstop, event) ~
+#                    + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
+#
+# res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10)
+#
+# matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+# matplot(res1$state_vecs, add = T, col = 1, type = "l", lty = 1)
+# abline(h = res1$fixed_effects, col = 2:4)
+#
+#
+#
+#
+#
+#
+# set.seed(312237)
+# sims <- test_sim_func_exp(n_series = 1e5, n_vars = 3, t_0 = 0, t_max = 10,
+#                           x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+#                           intercept_start = -4, sds = c(.1, rep(1, 3)), is_fixed = 2:3)
+#
+# form <- formula(survival::Surv(tstart, tstop, event) ~ 1 + ddFixed(x1) + ddFixed(x2) + x3)
+#
+# res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10)
+#
+# matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+# matplot(res1$state_vecs, add = T, col = c(1,4), type = "l", lty = 1)
+# abline(h = res1$fixed_effects, col = 2:3)
 
 
 
