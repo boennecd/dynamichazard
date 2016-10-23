@@ -11,7 +11,6 @@ get_design_matrix = function(formula, data, response = T){
       temp$formula <- eval(bquote(terms(update(formula, rep(1, .(nrow(data))) ~ .), data = data,
                                   specials = specials))) # remove right hand site of formula
 
-  temp$drop.unused.levels <- TRUE
   mf <- eval(temp, parent.frame())
 
   Y <- if(response) model.extract(mf, "response") else NULL

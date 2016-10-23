@@ -13,6 +13,7 @@
 #' \describe{
 #' \item{terms}{Is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms}
 #' \item{sds}{Similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices}
+#' \item{fixed_terms}{Vector of the fixed effects for each observation}
 #'}
 #'
 #' @section Response:
@@ -32,18 +33,18 @@ predict.fahrmeier_94 = function(object, new_data,
     stop("Functions for model '", object$model, "' is not implemented")
 
   type = type[1]
-  m = get_design_matrix(formula = object$formula, data = new_data, response = F)$X
+  tmp = get_design_matrix(formula = object$formula, data = new_data, response = F)
 
   if(type %in% c("term"))
-    return(predict_terms(object, new_data, m, sds))
+    return(predict_terms(object, new_data, tmp$X, sds, tmp$fixed_terms))
 
   if(type %in% c("response"))
-    return(predict_response(object, new_data, m, tstart, tstop, use_parallel, sds))
+    return(predict_response(object, new_data, tmp$X, tstart, tstop, use_parallel, sds, tmp$fixed_terms))
 
   stop("Type '", type, "' not implemented in predict.fahrmeier_94")
 }
 
-predict_terms <- function(object, new_data, m, sds){
+predict_terms <- function(object, new_data, m, sds, fixed_terms){
   # Find the string index maps
   # We have to format the string to a regexp
   term_names_org = c("(Intercept)", attr(object$formula,"term.labels"))
@@ -51,17 +52,21 @@ predict_terms <- function(object, new_data, m, sds){
 
   var_names = colnames(object$state_vecs)
   terms_to_vars = sapply(term_names, function(t_name) which(grepl(t_name, var_names)))
+  found_match <- which(lapply(terms_to_vars, length)  > 0)
+  terms_to_vars <- terms_to_vars[found_match]
 
   stopifnot(!duplicated(unlist(terms_to_vars)))
   stopifnot(length(setdiff(unlist(terms_to_vars), seq_along(var_names))) == 0)
 
+  term_names_org <- term_names_org[found_match]
+
   # Predict terms
   d <- length(object$times)
-  terms_res = array(NA_real_, dim = c(d, nrow(new_data), length(term_names)), dimnames = list(NULL, NULL, term_names_org))
+  terms_res = array(NA_real_, dim = c(d, nrow(new_data), length(term_names_org)), dimnames = list(NULL, NULL, term_names_org))
 
   sds_res = if(sds) terms_res else NULL
 
-  for(i in seq_along(term_names)){
+  for(i in seq_along(term_names_org)){
     terms_res[, , i] = object$state_vecs[ , terms_to_vars[[i]], drop = F] %*%
       t(m[, terms_to_vars[[i]], drop = F])
     if(!sds)
@@ -73,10 +78,12 @@ predict_terms <- function(object, new_data, m, sds){
                                     t(m[, terms_to_vars[[i]], drop = F])))
   }
 
-  return(list(terms = terms_res, sds = sds_res))
+  fixed_terms <- fixed_terms %*% object$fixed_effects
+
+  return(list(terms = terms_res, sds = sds_res, fixed_terms = fixed_terms))
 }
 
-predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, sds){
+predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, sds, fixed_terms){
   # Check order of random walk
   if(object$order > 1)
     warning("Predict not test with new data for order ", object$order)

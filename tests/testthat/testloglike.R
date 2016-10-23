@@ -139,12 +139,12 @@ test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
   form <- survival::Surv(start, stop, event) ~ -1 + ddFixed(rep(1, length(group))) +
     ddFixed(as.numeric(group == 1))
 
-  result = ddhazard(
+  suppressWarnings(result = ddhazard(
     formula = form,
     data = head_neck_cancer,
     by = 1,
     max_T = 45,
-    id = head_neck_cancer$id, order = 1)
+    id = head_neck_cancer$id, order = 1))
 
   tmp_design <- get_survival_case_Weigths_and_data(
     formula = form, data = head_neck_cancer, by = 1, max_T = 45, id = head_neck_cancer$id,

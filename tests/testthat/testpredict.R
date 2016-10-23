@@ -68,6 +68,32 @@ test_that("Testing term prediction",{
   }
 })
 
+test_that("Term prediction with fixed effects",{
+  fit <- ddhazard(
+    formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+    data = head_neck_cancer,
+    by = 1, a_0 = 0, Q_0 = as.matrix(1))
+
+  for(g in 0:1){
+    predict_terms = predict(fit, new_data = data.frame(group = g), type = "term")
+
+    expect_equal(c(predict_terms$terms[,,]), c(unname(fit$state_vecs)),
+                 check.attributes = F)
+    expect_equal(c(predict_terms$fixed_terms), c((g == 1) * fit$fixed_effects))
+  }
+
+  suppressWarnings(fit <- ddhazard(
+    formula = survival::Surv(start, stop, event) ~ -1 + ddFixed(group),
+    data = head_neck_cancer, by = 1))
+
+  for(g in 1:2){
+    predict_terms = predict(fit, new_data = data.frame(group = factor(x = g, levels = 1:2)), type = "term")
+
+    expect_equal(dim(predict_terms$terms), c(60, 1, 0))
+    expect_equal(c(predict_terms$fixed_terms), c(fit$fixed_effects[g,]))
+  }
+})
+
 test_that("Terms prediction when parsing two observations",{
   predict_terms = predict(result, new_data = data.frame(group = 0:1), type = "term")
   expect_equal(dim(predict_terms$terms), c(60, 2, 2))
