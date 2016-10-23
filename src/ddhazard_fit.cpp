@@ -1296,8 +1296,9 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
 
     old_beta = p_data->fixed_parems;
     p_data->fixed_parems = bigglm_regcf(qr);
+
   } while(++it_outer < p_data->max_it_fixed_parems && // Key that this the first condition we check when we use &&
-    !arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems);
+    arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems);
 
     static bool failed_to_converge_once = false;
     if(it_outer == p_data->max_it_fixed_parems && !failed_to_converge_once){
@@ -1555,7 +1556,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     p_data->a_t_t_s.print("a_t_d_s");
 #endif
 
-    if(p_data->any_dynamic)
+    if(!p_data->any_dynamic) // No reason to take further iterations
       break;
 
     if(verbose && it % 5 < verbose){

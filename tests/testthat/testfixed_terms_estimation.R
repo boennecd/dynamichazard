@@ -17,12 +17,12 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 
   suppressWarnings(
     res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
-                   control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3)))
+                   control = list(eps_fixed_parems = 1e-3, fixed_effect_chunk_size = 1e3, max_it_fixed_parems = 100)))
 
   tmp_design <- get_survival_case_Weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10)
 
-  res2 <- bigglm(update(form, Y ~ .), data = tmp_design, family = binomial(), chunksize = 1e3)
+  suppressWarnings(res2 <- bigglm(update(form, Y ~ .), data = tmp_design, family = binomial(), chunksize = 1e3))
 
   expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects)))
 })
@@ -68,13 +68,13 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
   form <- formula(survival::Surv(tstart, tstop, event) ~
                     -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
 
-  res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
-                   control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
+  suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+                   control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3)))
 
   tmp_design <- get_survival_case_Weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10, is_for_discrete_model = F)
 
-  res2 <- bigglm(update(form, Y ~ . + offset(log(pmin(tstop, t) - pmax(tstart, t - 1)))), data = tmp_design, family = poisson(), chunksize = 1e3)
+  suppressWarnings(res2 <- bigglm(update(form, Y ~ . + offset(log(pmin(tstop, t) - pmax(tstart, t - 1)))), data = tmp_design, family = poisson(), chunksize = 1e3))
 
   expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects)))
 })
