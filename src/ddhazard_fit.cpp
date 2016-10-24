@@ -861,7 +861,9 @@ protected:
   arma::vec weights_vec_c;
   arma::vec weights_vec_c_inv;
 
-  virtual void Compute_intermediates(const arma::uvec &r_set, const int t,
+  virtual void Compute_intermediates(const arma::uvec &r_set,
+                                     const arma::vec offsets,
+                                     const int t,
                                      const double bin_tstart, const double bin_tstop,
                                      arma::vec &c_vec, arma::mat &O) = 0;
 
@@ -926,6 +928,8 @@ public:
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
 
+    const arma::vec offsets = p_dat.any_fixed ?
+      p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat._X.n_cols, arma::fill::zeros);
     double bin_stop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
 #if defined(MYDEBUG_UKF)
@@ -971,7 +975,7 @@ public:
       arma::vec c_vec;
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
-      Compute_intermediates(r_set, t, bin_start, bin_stop, c_vec, O);
+      Compute_intermediates(r_set, offsets(r_set), t, bin_start, bin_stop, c_vec, O);
 
       // Substract mean to get delta sigma points
       arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
@@ -1034,11 +1038,15 @@ public:
 
 
 class UKF_solver_New_logit : public UKF_solver_New{
-  void Compute_intermediates(const arma::uvec &r_set, const int t,
+  void Compute_intermediates(const arma::uvec &r_set,
+                             const arma::vec offsets,
+                             const int t,
                              const double bin_tstart, const double bin_tstop,
                              arma::vec &c_vec, arma::mat &O){
     // ** 1: Compute expected outcomes given sigma points **
     O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
+
+    O.each_col() += offsets;
 
     O.transform(trunc_exp_functor);
 
@@ -1109,7 +1117,9 @@ public:
 class UKF_solver_New_exponential : public UKF_solver_New{
   static constexpr double min_var = trunc_exp_delta;
 
-  void Compute_intermediates(const arma::uvec &r_set, const int t,
+  void Compute_intermediates(const arma::uvec &r_set,
+                             const arma::vec offsets,
+                             const int t,
                              const double bin_tstart, const double bin_tstop,
                              arma::vec &c_vec, arma::mat &O)
   {
@@ -1144,7 +1154,7 @@ class UKF_solver_New_exponential : public UKF_solver_New{
       double w = (i == 0) ? w_0 : w_i;
       double w_c = (i == 0) ? w_0_c : w_i;
 
-      const arma::vec eta = p_dat._X.cols(r_set).t() * sigma_points.col(i);
+      const arma::vec eta = offsets + p_dat._X.cols(r_set).t() * sigma_points.col(i);
 
       for(arma::uword j = 0; j < n_risk; ++j){
         const double e = eta(j);
@@ -1382,9 +1392,6 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
       order_, est_Q_0);
-
-    if(p_data->any_fixed)
-      Rcpp::stop("Fixed effects is not implemented with UKF"); // TODO: Implement
 
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
