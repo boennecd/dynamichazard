@@ -84,6 +84,10 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms){
 }
 
 predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, sds, fixed_terms){
+  # Change drop behavior inside this function
+  old <- `[`
+  `[` <- function(...) { old(..., drop=FALSE) }
+
   # Check order of random walk
   if(object$order > 1)
     warning("Predict not test with new data for order ", object$order)
@@ -95,8 +99,8 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
     message("start and stop times ('", tstart, "' and '", tstop, "') are in data. Prediction will match these periods")
 
     # Find min start. Throw error if before time zero
-    start = new_data[, tstart]
-    stop_ = new_data[, tstop]
+    start = new_data[[tstart]]
+    stop_ = new_data[[tstop]]
   } else{
     message("start and stop times ('", tstart, "' and '", tstop, "') are not in data columns. Each row in new_data will get a row for every bin")
     n_obs <- nrow(m)
@@ -144,8 +148,7 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
   # Make function to predict for each observations
   # assume that covariates do not change
   hazard_func = object$hazard_func
-  tmp_func = function(x_, istart, istop, tstart, tstop){
-
+  tmp_func = function(x_, istart, istop, tstart, tstop, offset){
     i <- 0
     i_max <- istop - istart
 
@@ -153,13 +156,26 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
       tart <- if(i == 0) tstart else times[t]
       ttop <- if(i == i_max) tstop else times[t + 1]
       i <<- i + 1
-      hazard_func(parems[t, ] %*% x_, tstart = tart, tstop = ttop)
+
+      hazard_func(parems[t, ] %*% x_ + offset, tstart = tart, tstop = ttop)
     })
 
     1 - prod(survival_probs)
   }
 
+
+
   # Compute hazard
+  apply_func <- function(row_)
+    tmp_func(x_ = row_[-(1:5)], istart = row_[1], istop = row_[2],
+             tstart =  row_[3], tstop =  row_[4], offset = row_[5])
+  apply_data_frame <- data.frame(istart = int_start, istop = int_stop_,
+                                 tstart = start, tstop = stop_,
+                                 offset = if(length(object$fixed_effects) == 0)
+                                   rep(0, length(tstart)) else fixed_terms %*% object$fixed_effects,
+                                 x_ = m)
+
+
   if(use_parallel){
     tryCatch({
       no_cores <- min(parallel::detectCores() - 1, ceiling(nrow(m) / 25))
@@ -167,22 +183,12 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
       parallel::clusterExport(cl, c("parems", "hazard_func", "times"),
                               envir = environment())
 
-      fits = parallel::parRapply(cl = cl, data.frame(istart = int_start, istop = int_stop_,
-                                                     tstart = start, tstop = stop_, x_ = m),
-                                 function(row_){
-                                   tmp_func(x_ = row_[-(1:4)], istart = row_[1], istop = row_[2],
-                                            tstart =  row_[3], tstop =  row_[4])
-                                 })
+      fits = parallel::parRapply(cl = cl, apply_data_frame, apply_func)
 
     }, finally = { parallel::stopCluster(cl)})
   }
   else{
-    fits = apply(data.frame(istart = int_start, istop = int_stop_,
-                            tstart = start, tstop = stop_, x_ = m), 1,
-                 function(row_){
-                   tmp_func(x_ = row_[-(1:4)], istart = row_[1], istop = row_[2],
-                            tstart =  row_[3], tstop =  row_[4])
-                 })
+    fits = apply(apply_data_frame, 1, apply_func)
   }
 
   return(list(fits = fits, istart = times[int_start], istop = times[int_stop_]))
