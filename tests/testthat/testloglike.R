@@ -1,3 +1,6 @@
+if(interactive())
+  library(testthat); library(survival); library(parallel); source("R/test_utils.R")
+
 test_that("Verbose on ddhazard prints a log likelihood", {
   expect_output({
     result = ddhazard(
@@ -115,7 +118,6 @@ test_that("logLik for head_neck_cancer data set with second order model", {
   expect_equal(log_like, old)
 })
 
-
 test_that("logLik for head_neck_cancer data set match previous results with fixed effects", {
   result = ddhazard(
     formula = survival::Surv(start, stop, event) ~ ddFixed(group),
@@ -139,7 +141,7 @@ test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
   form <- survival::Surv(start, stop, event) ~ -1 + ddFixed(rep(1, length(group))) +
     ddFixed(as.numeric(group == 1))
 
-  suppressWarnings(result = ddhazard(
+  suppressWarnings(result <- ddhazard(
     formula = form,
     data = head_neck_cancer,
     by = 1,

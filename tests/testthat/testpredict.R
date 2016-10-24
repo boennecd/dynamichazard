@@ -99,6 +99,25 @@ test_that("Terms prediction when parsing two observations",{
   expect_equal(dim(predict_terms$terms), c(60, 2, 2))
 })
 
+
+for(use_parallel in c(T, F)){
+  # Test that we get same estimate in one period estimates
+  test_that(paste0("Testing one period in sample with use_parallel = and fixed effects", use_parallel),{
+    result <- ddhazard(
+      formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+      data = head_neck_cancer,
+      by = 1, a_0 = 0, Q_0 = as.matrix(1))
+
+    for(g in c(0, 1)){
+      predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(g, 60)),
+                         use_parallel = use_parallel)
+      tmp_state_vecs <- rbind(result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
+      expect_equal(predict_$fits, c(result$hazard_func(tmp_state_vecs %*% 1 + c(result$fixed_effects * g))),
+                   use.names = F, check.attributes = F)
+    }
+  })
+}
+
 # Check for second order
 result = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
