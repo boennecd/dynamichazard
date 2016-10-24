@@ -115,6 +115,18 @@ for(use_parallel in c(T, F)){
       expect_equal(predict_$fits, c(result$hazard_func(tmp_state_vecs %*% 1 + c(result$fixed_effects * g))),
                    use.names = F, check.attributes = F)
     }
+
+    suppressWarnings(result <- ddhazard(
+      formula = survival::Surv(start, stop, event) ~ -1 + ddFixed(group),
+      data = head_neck_cancer, by = 1))
+
+    for(g in c(1, 2)){
+      predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = factor(rep(g, 60), levels = 1:2)),
+                         use_parallel = use_parallel)
+      tmp_state_vecs <- rbind(result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
+      expect_equal(unname(predict_$fits), rep(result$hazard_func(c(c(g == 1, g == 2) %*% result$fixed_effects)), 60),
+                   use.names = F, check.attributes = F)
+    }
   })
 }
 

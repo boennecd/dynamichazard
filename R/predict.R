@@ -133,8 +133,10 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
     times = c(times, new_times)
   }
 
-  parems = parems[-1, ] # remove first row it is the initial state space vector
-  parems = parems[, 1:(dim(parems)[2] / object$order)] # We only need the current estimates (relevant for higher than 1. order)
+  if(length(parems) > 0){
+    parems = parems[-1, ] # remove first row it is the initial state space vector
+    parems = parems[, 1:(dim(parems)[2] / object$order)] # We only need the current estimates (relevant for higher than 1. order)
+  }
 
   # Round if needed. Throw error if so
   int_start = findInterval(start, times)
@@ -162,8 +164,6 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
 
     1 - prod(survival_probs)
   }
-
-
 
   # Compute hazard
   apply_func <- function(row_)
