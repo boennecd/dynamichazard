@@ -299,7 +299,7 @@ str_func <- function(x, n_digist = 16){
        x = tmp, perl = T)
 }
 
-get_expect_equal <- function(x, eps){
+get_expect_equal <- function(x, eps, file = ""){
   arg_name <- deparse(substitute(x))
   expects <- unlist(lapply(x, str_func))
   tol_string = if(!missing(eps)) paste0("\n, tolerance = " , eval(bquote(.(eps)))) else ""
@@ -309,7 +309,7 @@ get_expect_equal <- function(x, eps){
     e = expects, index_name = names(expects))
 
   out <- paste0(c("{", paste0(expects, collapse = "\n\n"), "}\n"), collapse = "\n")
-  cat(out)
+  cat(out, file = file)
   invisible()
 }
 

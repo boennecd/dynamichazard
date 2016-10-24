@@ -1,5 +1,6 @@
-if(interactive())
+if(interactive()){
   library(testthat); library(survival); library(parallel); source("R/test_utils.R")
+}
 
 test_that("Verbose on ddhazard prints a log likelihood", {
   expect_output({

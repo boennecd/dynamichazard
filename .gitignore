@@ -10,3 +10,4 @@ src/*.dll
 .pdf
 inst/doc
 vignettes/figures
+get_expect_equal.txt
