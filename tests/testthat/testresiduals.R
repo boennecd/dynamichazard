@@ -49,13 +49,40 @@ test_that("Residuals work when data is saved on the fit",{
   }
 })
 
+test_that("Residuals work when data is saved on the fit and fixed effects are present",{
+  arg_list_new <- list(
+    formula = formula(survival::Surv(start, stop, event) ~ ddFixed(group)),
+    data = head_neck_cancer,
+    by = 1, a_0 = 0, Q_0 = as.matrix(1))
+
+  for(ty in c("pearson", "raw")){
+    arg_list_new$control = list(save_data = T)
+    fit_saved_data <- do.call(ddhazard, arg_list_new)
+
+    expect_true(!is.null(fit_saved_data$data))
+    fit_saved_data$res <- residuals(fit_saved_data, type = ty)
+
+    arg_list_new$control = list(save_data = F)
+    fit_not_saved_data <- do.call(ddhazard, arg_list_new)
+
+    expect_true(is.null(fit_not_saved_data$data))
+    expect_error(residuals(fit_not_saved_data, type = ty))
+    fit_not_saved_data$res <- residuals(fit_not_saved_data, type = ty, data = head_neck_cancer)
+
+    for(i in seq_len(max(length(fit_saved_data$res$residuals),
+                         length(fit_not_saved_data$residuals))))
+      expect_equal(fit_saved_data$res$residuals[[i]],
+                   fit_not_saved_data$res$residuals[[i]])
+  }
+})
+
 ########
 # Test state space errors
 
 arg_list$control <- list(method = "EKF")
 result = do.call(ddhazard, arg_list)
 
-test_that("State space error gives previous result with logit model", {
+test_that("State space error match whether standarized or not for logit model", {
   std_res <- residuals(result, "std_space_error")
 
   expect_true(std_res$standardize)
@@ -71,6 +98,23 @@ test_that("State space error gives previous result with logit model", {
     expect_equal(unname(std_res$residuals[i, ]),
                  c(solve(t(chol(non_std$Covariances[, , i]))) %*% non_std$residuals[i, ]))
 
+})
+
+test_that("State space error gives correct dimension with fixed effects", {
+  fit <- ddhazard(
+    formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+    data = head_neck_cancer,
+    by = 1, a_0 = 0, Q_0 = as.matrix(1))
+
+  std_res <- residuals(fit, "std_space_error")
+  expect_equal(dim(std_res$residuals), c(59, 1))
+
+  suppressWarnings(fit <- ddhazard(
+    formula = survival::Surv(start, stop, event) ~ -1 + ddFixed(group),
+    data = head_neck_cancer, by = 1))
+
+  expect_warning(std_res <- residuals(fit, "std_space_error"))
+  expect_null(std_res)
 })
 
 # PBC dataset described in Fleming & Harrington (1991)

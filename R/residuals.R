@@ -45,6 +45,11 @@ space_errors <- function(object, data, standardize){
   if(object$order != 1)
     stop("Method for is not implemented for order ", object$order)
 
+  if(length(object$state_vecs) == 0){
+    warning("Residuals with State space errors called for model with no time varying effects. Returning NULL")
+    return(NULL)
+  }
+
   res = diff(object$state_vecs)
 
   covs <- vars <- object$state_vars
