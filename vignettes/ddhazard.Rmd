@@ -13,8 +13,8 @@ bibliography: ddhazard_bibliography.bib
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-\newcommand{\mat}[1]{\mathbf{#1}}
 \renewcommand{\vec}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
 %
 \newcommand{\Lparen}[1]{\left( #1\right)} 
 \newcommand{\Lbrack}[1]{\left[ #1\right]} 
@@ -43,6 +43,7 @@ knitr::opts_chunk$set(echo = TRUE)
 \newcommand{\wvec}[1]{\widehat{\vec{#1}}}
 \newcommand{\wmat}[1]{\widehat{\mat{#1}}}
 %
+\newcommand{\deter}[1]{\left| #1 \right|}
 
 # Intro
 This note will cover the `ddhazard` function in `dynamichazard` library. You can install the the library through github for the `devtools` library as follows:
@@ -57,7 +58,7 @@ The `ddhazard` function estimates a binary regression model where the parameters
 2) The dimension of the observation equation (this will be defined soon) can vary through time
 3) It is fast due and scalable due the `C++` implementation which uses `Armadillo` library and use of multithreading through the standard library `thread` 
 
-We will breifly introduce the in model in the following paragraphs. Let $\vec{x}_{it}$ denote the co-variate vector for indvidual $i$ at time $t$ and let $Y_{it}$ be the random variable for whether the $i$'th individual dies within time $(t-1, t]$. Denote the parameters at time $t$ by $\vec{\alpha}_t$. For given parameters at time $t$ the probability of death is:
+We will briefly introduce the in model in the following paragraphs. Let $\vec{x}_{it}$ denote the co-variate vector for individual $i$ at time $t$ and let $Y_{it}$ be the random variable for whether the $i$'th individual dies within time $(t-1, t]$. Denote the parameters at time $t$ by $\vec{\alpha}_t$. For given parameters at time $t$ the probability of death is:
 
 $$\begin{aligned}
   \vec{y}_{it} = (y_{i1}, \dots, y_{it})^T, 
@@ -93,7 +94,7 @@ $$\mat{F} = \begin{pmatrix}
 
 where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The models are estimated by an Extended Kalman filter (EKF) or an Unscented Kalman filter (UKF). The method is chosen by passing a list to the `control` argument of `ddhazard` with `list(method = "EKF", ...)` or `list(method = "UKF", ...)` respectively
 
-Either methods require a vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and co-variance matrix $\mat{Q}_0$ to start the filters. They can be estimated with an EM-algorithm as suggested in  [@fahrmeir94]. [@fahrmeir94] states that $\mat{Q}_0$ can be estimated to. Though, it does not seem posible and doing as [@fahrmeir94] will make all the elements tend towards zero. Hence, the default is not to estimate the co-variance matrix $\mat{Q}_0$ and only estimate the state vector $\vec{\alpha}_0$ and co-variance matrix $\mat{Q}$. You can estimate $\mat{Q}_0$ in the way [@fahrmeir94] describes by setting the `est_Q_0` element of the `control` to `TRUE` (`list(est_Q_0 = T, ...)`)
+Either methods require a vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and co-variance matrix $\mat{Q}_0$ to start the filters. They can be estimated with an EM-algorithm as suggested in  [@fahrmeir94]. [@fahrmeir94] states that $\mat{Q}_0$ can be estimated to. Though, it does not seem possible and doing as [@fahrmeir94] will make all the elements tend towards zero. Hence, the default is not to estimate the co-variance matrix $\mat{Q}_0$ and only estimate the state vector $\vec{\alpha}_0$ and co-variance matrix $\mat{Q}$. You can estimate $\mat{Q}_0$ in the way [@fahrmeir94] describes by setting the `est_Q_0` element of the `control` to `TRUE` (`list(est_Q_0 = T, ...)`)
 
 The rest of this note is structured as follows. The section 'Example of usage' will show how to quickly fit a model. This is followed by the section 'EM algorithm' where the EM algorithm will be explained. The sections 'Extended Kalman Filter' and 'Unscented Kalman Filter' respectively covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Exponential model' which cover the models
 
@@ -146,7 +147,7 @@ $$\begin{aligned}
       \left. \vphantom{\left( \emNote{\vec{a}}{t}{d}{k} - \mat{F}\emNote{\vec{a}}{t - 1}{d}{k} \right)^T} \right)\mat{R}
 \end{aligned}$$
 
-We test the relative norm of the change in the intial state vector to check for convergence. The convergence criteria is given by $\rVert \widehat{\vec{\alpha}}_0^{(k)} - \widehat{\vec{\alpha}}_0^{(k - 1)} \lVert / (\rVert \widehat{\vec{\alpha}}_0^{(k - 1)} \lVert + \delta) < \epsilon$  where $\delta$ is small number and $\epsilon$ is a pre-specified threshhold. You can select $\epsilon$ by chaning setting the `eps` element of the list passed to the `control` arugment of `ddhazard` (e.g. `list(eps = 0.01, ...)`)
+We test the relative norm of the change in the initial state vector to check for convergence. The convergence criteria is given by $\rVert \widehat{\vec{\alpha}}_0^{(k)} - \widehat{\vec{\alpha}}_0^{(k - 1)} \lVert / (\rVert \widehat{\vec{\alpha}}_0^{(k - 1)} \lVert + \delta) < \epsilon$  where $\delta$ is a small number and $\epsilon$ is a pre-specified threshold. You can select $\epsilon$ by changing setting the `eps` element of the list passed to the `control` argument of `ddhazard` (e.g. `list(eps = 0.01, ...)`)
 
 # Kalman Filter
 The standard Kalman filter is carried out by recursively doing two steps. This also applies for the EKF and UKF. Thus, this paragraph is included to introduce general notions. The first step is in the Kalman Filter is the *filter step* where we estimate $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ based on $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$. Secondly, we carny out the *correction step* where we estimate $\emNotee{\vec{a}}{t}{t}$ and $\emNotee{\mat{V}}{t}{t}$ based on $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ and the observations. We then repeat the process until $t=T$
@@ -178,7 +179,7 @@ $$\begin{aligned}
 		 \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{iit}(\vec{\alpha}_t)} \right\vert_{\eta = \vec{z}_{it}^T \vec{\alpha}_t}
 \end{aligned}$$
 
-$R_t$ is the set of indicies of individuals who are add risk at time $t$. It is commonly referred to as the risk set. Thus, the dimension the observational equation can varry as individual dies or are right censored
+$R_t$ is the set of indices of individuals who are add risk at time $t$. It is commonly referred to as the risk set. Thus, the dimension the observational equation can vary as individual dies or are right censored
 
 ## Divergence
 Initial testing shows that the EKF has issues with divergence for some data set. The cause of divergence seems to be overstepping in the correction step where we update $\emNotee{\vec{a}}{t}{t}$. In particular, the signs of the margins of $\emNotee{\vec{a}}{t}{t}$ tends to alter between $t-1, t, t+1$ etc. and the absolute values tends to increase when the algorithm diverges.  The following section describes a solution to this issue
@@ -205,9 +206,9 @@ $l$ and $\epsilon_{\text{NR}}$ are set by respectively setting the elements `LR`
 ## Parallel BLAS or LAPACK
 All the computations use objects from the `Armadillo` library. Thus, an optimized version LAPACK and BLAS can speed up the computation
 
-A multithreaded version of LAPACK or BLAS can cause issues with performance. The majority of the computation time is spend in the correction step of the EKF when have to compute $\vec{u}_t (\vec{\alpha}_t)$ and $\mat{U}_t (\vec{\alpha}_t)$ when the number of regression parameter is low and we have a lot of observations. For this reason, this part of the code is computed in parallel with the standard library 'thread'. The reduction in computation time can midigated if multithreaded version of LAPLACK or BLAS is used as the code already use multithreading
+A multithreaded version of LAPACK or BLAS can cause issues with performance. The majority of the computation time is spend in the correction step of the EKF when have to compute $\vec{u}_t (\vec{\alpha}_t)$ and $\mat{U}_t (\vec{\alpha}_t)$ when the number of regression parameter is low and we have a lot of observations. For this reason, this part of the code is computed in parallel with the standard library 'thread'. The reduction in computation time can mitigated if multithreaded version of LAPLACK or BLAS is used as the code already use multithreading
 
-A very specefic solution to the issues is implemented for windows users who compiles with openBLAS. the `src/Makevars.win` checks if there is `C:\OpenBLAS` folder. If so, we assume that the structure is:
+A very specific solution to the issues is implemented for windows users who compiles with openBLAS. the `src/Makevars.win` checks if there is `C:\OpenBLAS` folder. If so, we assume that the structure is:
 ```
 C:/OpenBLAS/
 |--lib/
@@ -278,7 +279,7 @@ $$\begin{aligned}
 \end{aligned}$$
 
 ## Re-writting
-The above formulation has the draw back that we have to invert $\ukfNotee{y}{y}{t}^{-1}$ which is infeasible when the number observation is moderately large (say greater than 1000). We can re-write the above using the Woodbury matrix identity to get algorithm $O(\vert R_t \vert)$ instead of $O(\vert R_t \vert^3)$ where $R_t$ is the indicies at risk in the $i$'th interval
+The above formulation has the draw back that we have to invert $\ukfNotee{y}{y}{t}^{-1}$ which is infeasible when the number observation is moderately large (say greater than 1000). We can re-write the above using the Woodbury matrix identity to get algorithm $O(\vert R_t \vert)$ instead of $O(\vert R_t \vert^3)$ where $R_t$ is the indices at risk in the $i$'th interval
 
 The proposed correction step can be computed as:
 $$\begin{aligned}
@@ -306,6 +307,55 @@ Experience with different data sets and the UKF is that the method is sensitive 
 
 $\mat{Q}$ has a similar effect although it is harder to illustrate with a small example as it occurs as an intermediate in the UKF. Question is then how to select $\mat{Q}$ and $\mat{Q}_0$. At this point, I can suggest to pick at diagonal matrix for $\mat{Q}_0$ with a "*somewhat*" large values and $\mat{Q}_0$ to a diagonal matrix with small values. This is based on experience. Though, what is "*somewhat*" large and what is small dependent on the data set
 
+# Fixed effects
+This section will motivate the fixed effects (non time varying) and cover how they are estimated. We start with the latter. The likelihood we are working with can be written as follows by application of the markovian property of the model:
+$$\begin{split}
+	\proppCond{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}{\vec{y}_{t},\dots,\vec{y}_T} &\propto 
+		L\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} \\
+	 & = p(\vec{\alpha}_0)\prod_{t = 1}^d \proppCond{\vec{\alpha}_t}{\vec{\alpha}_{t-1}}	
+		\prod_{i \in \mathcal{R}_t} \proppCond{y_{it}}{\vec{\alpha}_t}
+\end{split}$$
+
+This is what we approximately find the expectation of in the E-step of the EM-algorithm where $\mat{Q}$, $\mat{Q}_0$ and $\vec{\alpha}_0$ are assumed fixed. Denote the entries of the latter two matrices and vector by $\vec{\theta}$. Then the M-step proceeds by maximizing $\vec{\theta}$ conditional on the estimates in the E-step. Expanding the log likelihood yields:  
+
+$$\begin{aligned}
+	\mathcal{L}\Lparen{\vec{\theta}} =    
+		\log L \Lparen{\vec{\theta}} = & 
+		- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^T \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
+	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^T \mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
+	&  - \frac{1}{2} \deter{\mat{Q}_0} - \frac{1}{2d} \deter{\mat{Q}} \\
+	&  - \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\vec{\alpha}_t})
+\end{aligned}$$
+
+$$l_{it}(\vec{\alpha}_t) = y_{it} \log h(\vec{x}_{it}^T \vec{\alpha}_t) + (1 - y_{it}) 
+	\log \Lparen{1 - h(\vec{x}_{it}^T \vec{\alpha}_t)}$$
+	
+Notice that the entries in $\vec{\theta}$ only appears in the first three lines while the fourth line only depends on the estimate from the E-step. Suppose now that we assume that some of the effects are fixed such that we replace the linear predictor $\vec{x}_{it}^T\vec{\alpha}_t$ by $\vec{x}_{it}^T\vec{\alpha}_t + \widetilde{\vec{x}}_{it}^T\vec{\gamma}$ where $\vec{\gamma}$ is the fixed effects and $\widetilde{\vec{x}}_{it}$ are the corresponding co-variates. The new definition of $l_{it}$ is:
+
+$$l_{it}(\vec{\alpha}_t) = y_{it} \log h(\vec{z}_{it}^T \vec{\alpha}_t + \widetilde{\vec{x}}_{it}^T\vec{\gamma}) + (1 - y_{it}) 
+	\log \Lparen{1 - h(\vec{x}_{it}^T \vec{\alpha}_t + \widetilde{\vec{x}}_{it}^T\vec{\gamma})}$$
+	
+Say that we fix $\vec{\gamma}$ doing the E-step and estimate $\vec{\gamma}$ doing the M-step. Then we observe that: 
+
+1. $\widetilde{\vec{x}}_{it}^T\vec{\gamma}$ acts like offsets doing the E-step. Thus, we only need to add these offsets in the UKF or EKF
+2. $\vec{\gamma}$ is estimated separately from $\vec{\theta}$ in the M-step. Thus, no changes are needed in the update formulas for $\mat{Q}$, $\mat{Q}_0$ and $\vec{\alpha}_0$
+3. $\vec{x}_{it}^T \vec{a}_t$ acts like offsets in the M-step when we estimate $\vec{\gamma}$
+4. The optimization of $\vec{\gamma}$ in the M-step is a generalized linear model for distributions from the exponential family 
+
+## Implementation
+Point number 4 above implies that we can use a typical Newton Raphson algorithm to compute an updated estimate of $\vec{\gamma}$ when we are using a distribution from the exponential family. This can be solved by a QR decomposition as done in `glm`. However, point 3 implies that every observation will have a different offset in every bin the observation is in. Thus, we can end with a large design matrix
+
+To overcome the memory issue this package use the same Fortran function that `bigglm` function in the `biglm` package uses. The Fortran function recursively performs a QR update for each row in the design matrix. Hence, we do not need to store the entire design matrix at any given point. The Fortran code is described in [@miller1992] and written by the author. It is an updated version of the algorithm described in [@gentleman1972] which has a time complexity of $O(\vert\vec{\gamma}\vert^2)$ for the QR-update of each row in the design matrix
+
+Surely, other methods to solve the QR problem or fit a generalized linear model could be used that does not require us to store the entire design matrix and are faster and/or more stable. An example could be the algorithm described in [@hammarling08]. The current method is used since it has shown to work well in the `bigglm` function and as we assume that few parameters will be fixed. Thus, the $O(\vert\vec{\gamma}\vert^2)$ cost of doing the M-step should not be an issue
+
+Fixed terms can be estimated by wrapping the co-variates in the formula of `ddhazard` in the `ddFixed` function. As an example, `ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), ...)` will fit a model where `x1` is time varying and `x2` is not. The M-step recursively updates the $\vec{\gamma}$ starting with the previous estimated value. The estimation stops when $\rVert\vec{\gamma}^{(k)} - \vec{\gamma}^{(k - 1)}\lVert / (\rVert\vec{\gamma}^{(k - 1)}\lVert + \delta) < \epsilon$ where superscript denotes the estimation number, $\epsilon$ is the tolerance and $\delta$ is a small number. $\epsilon$ can be changed by setting  `eps_fixed_parems` element of the list passed to the `control` argument of `ddhazard`. 
+
+The estimation will stop if the criteria given by $\epsilon$ is not meet within a given number of iterations. The maximum number of iteration can be set by setting the `max_it_fixed_parems` element of the `control` argument to `ddhazard`. The user will be warned if the criteria is not meet within `max_it_fixed_parems` iterations. The estimation though continues with the latest estimate of $\vec{\gamma}$ in the E-step 
+
+## Why use fixed effects
+Question: Should I motivate the use of fixed effects or is this obvious?
+
 # Logistic model
 The logistic model is fitted with by setting `model = "logit"` in the call to `ddhazard`. The link function $h$ is defined as inverse logit function $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The following paragraphs will cover the a few comments to the EKF and UKF implementation. This is followed by some comments about the loss of information due to binning which motivates the exponential model
 
@@ -330,8 +380,32 @@ $$\frac{1 - 2 \delta - \sqrt{1-4 \delta }}{1 - \sqrt{1-4 \delta}}
   
 The current implementation uses $\delta = 10^{-4}$ 
 
+## Fixed effects
+Fixed effects are estimated by a logistic model where each individuals' observation will get a an observation in the new model with an individual offset for each bin the observation is in. Say for instance that we want to fit: 
+```{r, echo=FALSE}
+set.seed(1010101012)
+data_frame <- 
+  data.frame(id = c(1, 1, 1, 2, 2),
+             tstop = c(0, 2, 3, 0, 2), tstart = c(2, 3, 4, 2, 4), y = c(0, 0, 1, 0, 0), 
+             x1 = round(rnorm(5), 2), x2 = round(rnorm(5), 2))
+```
+
+```{r}
+# The data we use
+head(data_frame)
+```
+
+```{r, eval=FALSE}
+# The fit
+fit <- ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), data_frame, 
+                by = 1, # bin lengths are 1
+                id = data_frame$id)
+```
+
+The model is with one fixed effect for `x2` and a time varying effect for `x1`. The individual with `id = 1` will yield 4 observation in the M-step: two for the first row, one for the second row and one for the third row. The first row will have two observations as it crosses two bins. Each observation in the M-step will have a separate offset given by $\emNotee{\vec{a}}{t}{d}$ times the value of `x1` where $t$ match the bin number. For example, the third rows' observation will have an offset of $\emNotee{\vec{a}}{4}{d}$ times `r data_frame$x1[3]`
+
 ## Starting value
-QUESTION: Should I write about the static model that cen be used for $\vec{\alpha}_0$?
+QUESTION: Should I write about the static model that can be used for $\vec{\alpha}_0$?
 
 ## Binning
 ```{r binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of binning. See the text for explanation", fig.height=3}
@@ -504,10 +578,40 @@ The EKF method for the exponential model has shown to have issues with divergenc
 The direct formulas for the conditional mean, conditional variance and derivatives of the conditional mean are numerically unstable for certain combinations of interval lengths ($t_{i,s} - t_{i, s - 1}$) and the linear predictor ($\eta = \vec{x}_{is}^T \vec{\alpha}_{\Lceil{t_{i,s}}}$). In particular they are subject to cancellation. This can cause both high relative errors and even wrong sign in some of the cases. Thus, Lauren series or Tylor series are used for critical points. This requires no action for user but is stressed for readers who worry after seeing both the conditional mean and conditional variance of $\Delta_{i,s}$
 
 ## UKF
-TODO: ADD AND POINT OUT THAT VARIANCE IS TRUNCATED (NOT LINEAR PREDICTOR THOUGH)
+TODO: WRITE ONCE QUESTION ABOUT CORRELATION IS SOLVED
+
+## Fixed effects
+Fixed effects in the M-step are estimated using a Poisson model with an offset equal to the logarithm of the time observed in each bin plus the estimated offset from time varying effects. That is, we use that if an arrival time $T$ is exponential distributed with rate $\lambda$ then having an outcome at at time $t$ is Poisson distributed $Y\sim\text{Poisson}(\lambda t)$. For example, say that we fit the following model:
+
+```{r}
+# The data we use
+head(data_frame)
+```
+
+```{r, eval=FALSE}
+# The fit
+fit <- ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), data_frame, 
+                by = 1, # bin lengths are 1
+                id = data_frame$id, model = "exponential")
+```
+
+Take the individual with  `id = 1`. As in the logistic model, he will yield four observations in the M-step. Each will have an offset of $\log (1) = 0$ because the interval length is $1$ plus $\emNotee{\vec{a}}{t}{d}$ times the value of `x1`. Say instead that the data frame was:
+
+```{r, echo=FALSE}
+data_frame_new <- data_frame
+data_frame_new[1, 2:3] <- c(.5, 2)
+data_frame_new <- rbind(c(1, 0, .5, 0, .43, .33),
+                        data_frame_new)
+```
+
+```{r}
+head(data_frame_new)
+```
+
+Then individual 1 would yield five observation. The first row would only have an offset $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[1]`. The second row will yield two observations: one with an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[2]` and the other with an offset $\log 1$ plus $\emNotee{\vec{a}}{2}{d}$ times `r data_frame_new$x1[2]`. Note that this is not the case with the logistic model as we have the same binning issue as described in the Binning section
 
 ## Starting value
-QUESTION: Should I write about the static model that cen be used for $\vec{\alpha}_0$?
+QUESTION: Should I write about the static model that can be used for $\vec{\alpha}_0$?
 
 # Further tasks and ideas
 The last section will cover further task and ideas. Please, let me know what you think. Is it relevant, got ideas to the question I pose and how would you priorities?
@@ -518,9 +622,6 @@ Look further at the vignette I have made where I compare with other packages. Th
 1. Show how the API for package works
 2. Show how these modal compares with other models
 3. Illustrate the pros and cons of the model I have implemented compared to other models 
-
-## Fixed effects
-Fixed parameters effects can be incorporated. Due to the likelihood function, these can be estimated in the M-step separately from $\mat{Q}$ and $\vec{\alpha}_0$. The problem is particularly easy to implement for the exponential family. The fixed effects will acts as offsets doing the E-step where the dynamic effects are estimated and vice versa in M-step. Thus, the `glm.fit` function can be used M-step and only minor changes are needed EKF and UKF in the correction step
 
 ## Confidence bounds
 How do we construct confidence bounds both for the state vectors and for the predicted values?
@@ -534,7 +635,7 @@ Further, I need to look into tests the effects are time varying or not. One idea
 We can replace the state equation with other models then a given order random walk. For example, we can replace it with a stationary process: 
 $$\vec{\alpha}_t = \vec{\mu} + \mat{F} \vec{\alpha}_{t - 1} + \mat{R}\vec{\eta}_t$$
 
-where we require $\mat{F}$ is such that the process is stable. $\mat{F}$ and $\vec{\mu}$ can be estimated in the M-step with closed form solutions when the noise is Gaussian. Both the UKF end EKF can be addapted to this setting. Further, we can change the distribution of $\vec{\eta}$ or change make a non-linear dependence between  $\vec{\alpha}_t$ and $\vec{\alpha}_{t - 1}$
+where we require $\mat{F}$ is such that the process is stable. $\mat{F}$ and $\vec{\mu}$ can be estimated in the M-step with closed form solutions when the noise is Gaussian. Both the UKF end EKF can be adapted to this setting. Further, we can change the distribution of $\vec{\eta}$ or change make a non-linear dependence between  $\vec{\alpha}_t$ and $\vec{\alpha}_{t - 1}$
 
 # References
 
