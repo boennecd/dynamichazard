@@ -36,6 +36,29 @@ inline double relative_norm_change(const arma::vec &prev_est, const arma::vec &n
 }
 double (*conv_criteria)(const arma::vec&, const arma::vec&) = relative_norm_change;
 
+// Print function to print out vectors as rows
+template<typename T>
+inline
+void
+my_print(const T& X, std::string msg = "")
+{
+  if(msg != "")
+    Rcpp::Rcout << msg << std::endl;
+
+  if(X.n_cols > 1){
+    X.print();
+
+  } else{
+    for(arma::uword col=0; col < X.n_cols; ++col)
+    {
+      for(arma::uword row=0; row < X.n_rows; ++row)
+        Rcpp::Rcout << std::setw(10) << std::setprecision(5) <<  X(row,col) << ' ';
+
+      Rcpp::Rcout << std::endl;
+    }
+  }
+}
+
 // Hepler structure to reference data
 // TODO: Figure out what is specific to the EKF
 class problem_data{
@@ -72,6 +95,7 @@ public:
   arma::vec fixed_parems;
 
   arma::mat &Q;
+  arma::mat &Q_0;
 
   arma::mat a_t_t_s;
   arma::mat a_t_less_s;
@@ -85,13 +109,15 @@ public:
   const double eps_fixed_parems;
   const int max_it_fixed_parems;
 
+  const bool debug;
+
   problem_data(arma::mat &X,
                arma::mat &fixed_terms_,
                const arma::vec &tstart_,
                const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
                const arma::colvec &a_0,
                const arma::vec &fixed_parems_start,
-               arma::mat &Q_0,
+               arma::mat &Q_0_,
                arma::mat &Q_,
                const Rcpp::List &risk_obj,
                const arma::mat &F__,
@@ -99,7 +125,8 @@ public:
                const int max_it_fixed_parems_,
                const int n_max = 100, const double eps = 0.001,
                const bool verbose = false,
-               const int order_ = 1, const bool est_Q_0 = true):
+               const int order_ = 1, const bool est_Q_0 = true,
+               const bool debug_ = false):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
     n_parems(a_0.size() / order_),
@@ -125,8 +152,10 @@ public:
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
+    Q_0(Q_0_),
     eps_fixed_parems(eps_fixed_parems_),
-    max_it_fixed_parems(max_it_fixed_parems_)
+    max_it_fixed_parems(max_it_fixed_parems_),
+    debug(debug_)
     {
       a_t_t_s = arma::mat(n_parems * order_, d + 1);
       a_t_less_s = arma::mat(n_parems * order_, d);
@@ -172,7 +201,7 @@ public:
                    const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
                    const arma::colvec &a_0,
                    const arma::vec &fixed_parems_start,
-                   arma::mat &Q_0,
+                   arma::mat &Q_0_,
                    arma::mat &Q_,
                    const Rcpp::List &risk_obj,
                    const arma::mat &F__,
@@ -184,12 +213,13 @@ public:
                    const bool verbose = false,
                    const int order_ = 1, const bool est_Q_0 = true,
                    const bool is_cont_time = false,
-                   const unsigned int NR_it_max_ = 100):
+                   const unsigned int NR_it_max_ = 1000,
+                   const bool debug_ = false):
     problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
-                 Q_0, Q_, risk_obj, F__,
+                 Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_parems_,
                  n_max, eps, verbose,
-                 order_, est_Q_0),
+                 order_, est_Q_0, debug_),
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),
                  NR_eps(is_mult_NR ? Rcpp::as< Rcpp::NumericVector >(NR_eps_)[0] : 0.0),
@@ -424,40 +454,6 @@ class EKF_helper{
 
       const double info_fac_y = v * v * inv_exp_v / (1.0 - inv_exp_v);
 
-#if defined(MYDEBUG_EKF)
-
-      auto mult_cout = [](std::string name, double d1, double d2){
-        std::stringstream out;
-        int width = 12;
-        out << "\t" << name << std::setw(width) << d1 << " x " << std::setw(width) << d2 << " = " << std::setw(width) << d1 * d2;
-        return out.str();
-      };
-
-      auto plus_cout = [](std::string name, double d1, double d2){
-        std::stringstream out;
-        int width = 12;
-        out << "\t" << name << std::setw(width) << d1 << " + " << std::setw(width) << d2 << " = " << std::setw(width) << d1 + d2;
-        return out.str();
-      };
-
-      std::stringstream str;
-      if(10 < std::abs(score_fac_y * (do_die - expect_chance_die)) ||
-         10 < std::abs(score_fac_t * (time_outcome - expect_time)) ||
-         info_fac_t + info_fac_y < 1e-8 ||
-         info_fac_t < 0 || info_fac_y < 0)
-      {
-        std::lock_guard<std::mutex> lk(dat.m_U);
-
-        str << "at risk for " << std::setw(10) << at_risk_length <<
-          "\tdo_die = " <<  do_die <<
-            "\teta = " << std::setw(10) << eta << "\n" <<
-              mult_cout("score_fac_y = ", score_fac_y, do_die - expect_chance_die) <<
-                mult_cout("score_fac_t = ", score_fac_t, time_outcome - expect_time) <<
-                  plus_cout("U fac = ", info_fac_t, info_fac_y) << "\n";
-        Rcpp::Rcout << str.str();
-      }
-#endif
-
       u_ += x_ * (
         score_fac_t * (time_outcome - expect_time)
         + score_fac_y * (do_die - expect_chance_die));
@@ -601,11 +597,11 @@ public:
         filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t.head(p_dat.n_parems), t == p_dat.d, t - 1,
                                            bin_tstart, bin_tstop);
 
-#if defined(MYDEBUG_EKF)
-        Rcpp::Rcout << "t = " << t << std::endl;
-        p_dat.U.print("U:");
-        p_dat.u.print("u:");
-#endif
+      if(p_dat.debug){
+        Rcpp::Rcout << "Score vector and diagonal of information matrix at time " << t << " are:"<< std::endl;
+        my_print(p_dat.u, "u");
+        my_print(p_dat.U.diag(), "U");
+      }
 
 #ifdef USE_OPEN_BLAS
         openblas_set_num_threads(p_dat.n_threads);
@@ -615,7 +611,7 @@ public:
         static bool inv_V_t_less_s_inv_have_failed;
         if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
           if(!inv_V_t_less_s_inv_have_failed){
-            Rcpp::warning("V_(t|t-1) seems non-positive symmetric (or even worse non definit) at least once. Using general inverse instead");
+            Rcpp::warning("V_(t|t-1) seems non-positive definite (or even worse non symmetric) at least once. Using general inverse instead");
             inv_V_t_less_s_inv_have_failed = true;
           }
 
@@ -625,16 +621,18 @@ public:
         }
 
         static bool inv_V_t_t_s_inv_have_failed;
-        if(!arma::inv_sympd(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
+        arma::mat tmp_mat; // defined to avoid unhandled error if the next code throws
+        if(!arma::inv_sympd(tmp_mat, V_t_less_s_inv + p_dat.U)){
           if(!inv_V_t_t_s_inv_have_failed){
-            Rcpp::warning("V_(t|t) seems non-positive symmetric (or even worse non definit) at least once. Using general inverse instead");
+            Rcpp::warning("V_(t|t) seems non-positive definite (or even worse non symmetric) at least once. Using general inverse instead");
             inv_V_t_t_s_inv_have_failed = true;
           }
 
-          if(!arma::inv(p_dat.V_t_t_s.slice(t), V_t_less_s_inv + p_dat.U)){
+          if(!arma::inv(tmp_mat, V_t_less_s_inv + p_dat.U)){
             Rcpp::stop("Failed to compute inverse for V_(t|t)");
           }
         }
+        p_dat.V_t_t_s.slice(t) = std::move(tmp_mat); // arma objects are moveable
 
         p_dat.a_t_t_s.col(t) = i_a_t + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
 
@@ -644,23 +642,25 @@ public:
         if(n_NR_it > p_dat.NR_it_max)
           Rcpp::stop("Failed to convergece in NR method of filter step within " + std::to_string(p_dat.NR_it_max) + " iterations");
 
-#if defined(MYDEBUG_EKF)
-        Rcpp::Rcout << "Did not converge in filter step in iteration " << n_NR_it << ". Convergence criteria value is  "
-                    << arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) << std::endl;
-#endif
+        if(p_dat.debug){
+          Rcpp::Rcout << "Did not converge in filter step in iteration " << n_NR_it << ". Convergence criteria value is  "
+                      << arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) << std::endl;
+        }
 
         i_a_t = p_dat.a_t_t_s.col(t);
       }
 
       p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_s_inv;
 
-#if defined(MYDEBUG_EKF)
-      std::stringstream str;
-      str << t << "|" << t;
-      p_dat.a_t_t_s.col(t).print("a_(" + str.str() + ")");
+      if(p_dat.debug){
+        std::stringstream str;
+        str << t << "|" << t;
 
-      Rcpp::Rcout << "V_(" + str.str() + ")\n" << std::fixed << p_dat.V_t_t_s.slice(t) <<  std::endl;
-#endif
+        my_print(p_dat.u, "u");
+        my_print(p_dat.U.diag(), "diag(U)");
+        my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
+        my_print(p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str() + "))\n");
+      }
 
       if(t == p_dat.d){
 
@@ -870,11 +870,6 @@ protected:
   void compute_sigma_points(const arma::vec &a_t,
                             arma::mat &s_points,
                             const arma::mat &P_x_x){
-#if defined(MYDEBUG_UKF)
-    P_x_x.print("P_x_x for Cholesky");
-    a_t.print("a_t for Cholesky");
-#endif
-
     arma::mat cholesky_decomp;
     if(!arma::chol(cholesky_decomp, P_x_x, "lower")){ // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
       P_x_x.print();
@@ -886,11 +881,6 @@ protected:
       if(i % 2 == 0)
         s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
           s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
-
-#if defined(MYDEBUG_UKF)
-        cholesky_decomp.print("Cholesky decomp");
-        Rcpp::Rcout << std::endl;
-#endif
   }
 
 public:
@@ -932,10 +922,6 @@ public:
       p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat._X.n_cols, arma::fill::zeros);
     double bin_stop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
-#if defined(MYDEBUG_UKF)
-      Rcpp::Rcout << "t = " << t << std::endl;
-#endif
-
       double bin_start = bin_stop;
       double delta_t = p_dat.I_len[t - 1];
       bin_stop += delta_t;
@@ -944,6 +930,11 @@ public:
       // The orginal Julier paper only updates sigma points here
       compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
                            sigma_points, p_dat.V_t_t_s.slice(t - 1));
+
+      if(p_dat.debug){
+        my_print(p_dat.V_t_t_s.slice(t - 1), "Chol decomposing:");
+        my_print(sigma_points, "sigma points");
+      }
 
       // E-step: Filter step
       //   Updates a_t_less_s and V_t_less_s
@@ -966,10 +957,6 @@ public:
           (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
       }
 
-#if defined(MYDEBUG_UKF)
-      p_dat.V_t_less_s.slice(t - 1).print("V_(t|t - 1)");
-#endif
-
       // E-step: correction-step
       arma::mat O;
       arma::vec c_vec;
@@ -983,30 +970,19 @@ public:
       // TODO: can this be done more effeciently?
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + delta_sigma_points * (weights_vec % c_vec);
 
-#if defined(MYDEBUG_UKF)
-      Rcpp::Rcout << "________" << std::endl;
-      Rcpp::Rcout << "Gain vec" << std::endl;
-      c_vec.print("y_tilde");
-      Rcpp::Rcout << std::endl;
-      (weights_vec % c_vec).print("scaled by weights");
-      Rcpp::Rcout << std::endl;
-      (delta_sigma_points * (weights_vec % c_vec)).print("final gain");
-
-      if(t > 1){
-        p_dat.a_t_t_s.col(t - 1).print("Old a_t");
-        p_dat.a_t_less_s.col(t - 1).print("a_(t|t - 1)");
-        p_dat.a_t_t_s.col(t).print("New a_t");
-      }
-
-      Rcpp::Rcout << "________" << std::endl;
-#endif
-
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
         (delta_sigma_points.each_row() % weights_vec_c.t()) * O * (delta_sigma_points.each_row() % weights_vec_c.t()).t();
 
-#if defined(MYDEBUG_UKF)
-      p_dat.V_t_t_s.slice(t).print("V_(t|t)");
-#endif
+      if(p_dat.debug){
+        std::stringstream str, str_less;
+        str_less << t << "|" << t - 1;
+        str << t << "|" << t;
+
+        my_print(p_dat.V_t_less_s.slice(t - 1).diag(), "diag(V_(" + str_less.str() + "))");
+        my_print(p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str()  + "))");
+        my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str_less.str() + ")");
+        my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
+      }
 
       // Solve should be faster than inv_sympd http://arma.sourceforge.net/docs.html#inv_sympd
       // Solves yields a solution X to A * X = B <=> X = A^-1 B
@@ -1023,10 +999,6 @@ public:
         (O.each_col() - p_dat.a_t_t_s.col(t)).t();
 
       p_dat.B_s.slice(t - 1) = arma::solve(p_dat.V_t_less_s.slice(t - 1), O.t()).t();
-
-#if defined(MYDEBUG_UKF)
-      Rcpp::Rcout << "The end" << std::endl;
-#endif
     }
 
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -1052,10 +1024,6 @@ class UKF_solver_New_logit : public UKF_solver_New{
 
     O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
-#if defined(MYDEBUG_UKF)
-    O.print("etas");
-#endif
-
     // ** 2: Compute mean observation sing sigma points **
     const arma::vec y_bar = w_0 * O.unsafe_col(0) +
       w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
@@ -1080,16 +1048,6 @@ class UKF_solver_New_logit : public UKF_solver_New{
       Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
-
-#if defined(MYDEBUG_UKF)
-    Rcpp::Rcout << "________" << std::endl;
-    sigma_points.print("sigma points");
-    vars.print("vars");
-    tmp_mat.print("O (R^- + O)^-1");
-    ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar).print("y - y_hat");
-    O.print("y_delta * R^-1 y_delta_T");
-    Rcpp::Rcout << "________" << std::endl;
-#endif
 
     // Compute vector for state space vector
     c_vec = c_vec -  tmp_mat * c_vec;
@@ -1343,7 +1301,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             Rcpp::Nullable<Rcpp::NumericVector> LR = R_NilValue,
                             const std::string model = "logit",
                             const std::string M_step_formulation = "Fahrmier94",
-                            const int fixed_effect_chunk_size = 2e4){
+                            const int fixed_effect_chunk_size = 2e4,
+                            const bool debug = false){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -1380,7 +1339,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       NR_eps, LR,
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
-      order_, est_Q_0, model == "exponential");
+      order_, est_Q_0, model == "exponential", debug);
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
   } else if (method == "UKF"){
     if(model != "logit" && model != "exponential")
@@ -1391,7 +1350,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       risk_obj, F_,
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
-      order_, est_Q_0);
+      order_, est_Q_0, debug);
 
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
@@ -1408,7 +1367,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
       n_max, eps, verbose,
-      order_, est_Q_0);
+      order_, est_Q_0, debug);
 
     if(p_data->any_fixed)
       Rcpp::stop("Fixed effects is not implemented with UKF");
@@ -1458,6 +1417,14 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
   do
   {
+    if(p_data->debug){
+      Rcpp::Rcout << "\n\n\n##########################################\nStarting iteration " << it
+                  << " with the following values" << std::endl;
+      my_print(p_data->a_t_t_s.col(0), "a_0");
+      my_print(p_data->Q.diag(), "diag(Q)");
+    }
+
+
     if((it + 1) % 25 == 0)
       Rcpp::checkUserInterrupt(); // this is expensive - you do not want to check too often
 
@@ -1558,11 +1525,6 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
       *(conv_values.end() -1) += conv_criteria(old, p_data->fixed_parems);
     }
-
-#if defined(MYDEBUG_M_STEP)
-    Q.print("Q");
-    p_data->a_t_t_s.print("a_t_d_s");
-#endif
 
     if(!p_data->any_dynamic) // No reason to take further iterations
       break;
