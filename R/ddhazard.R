@@ -210,6 +210,9 @@ ddhazard = function(formula, data,
   dimnames(result$V_t_d_s) = list(tmp_names, tmp_names, NULL)
   dimnames(result$Q) = dimnames(result$Q_0) = list(tmp_names, tmp_names)
 
+  result$fixed_effects <- c(result$fixed_effects)
+  names(result$fixed_effects) <-gsub("(^ddFixed\\()(.+)(\\)$)","\\2", rownames(X_Y$fixed_terms))
+
   if(model == "logit") {
     res <- list(
     hazard_func =  function(eta, ...){

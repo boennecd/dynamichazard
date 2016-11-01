@@ -11,3 +11,5 @@ src/*.dll
 inst/doc
 vignettes/figures
 get_expect_equal.txt
+dunsurv.txt
+dynsurv.txt
