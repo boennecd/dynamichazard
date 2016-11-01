@@ -79,7 +79,7 @@ test_that("Term prediction with fixed effects",{
 
     expect_equal(c(predict_terms$terms[,,]), c(unname(fit$state_vecs)),
                  check.attributes = F)
-    expect_equal(c(predict_terms$fixed_terms), c((g == 1) * fit$fixed_effects))
+    expect_equal(c(predict_terms$fixed_terms), c((g == 1) * unname(fit$fixed_effects)))
   }
 
   suppressWarnings(fit <- ddhazard(
@@ -90,7 +90,7 @@ test_that("Term prediction with fixed effects",{
     predict_terms = predict(fit, new_data = data.frame(group = factor(x = g, levels = 1:2)), type = "term")
 
     expect_equal(dim(predict_terms$terms), c(60, 1, 0))
-    expect_equal(c(predict_terms$fixed_terms), c(fit$fixed_effects[g,]))
+    expect_equal(c(predict_terms$fixed_terms), unname(fit$fixed_effects[g]))
   }
 })
 
