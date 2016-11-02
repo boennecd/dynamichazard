@@ -109,7 +109,7 @@ ddhazard = function(formula, data,
                           est_Q_0 = F, method = "EKF", save_risk_set = T,
                           save_data = T, eps_fixed_parems = 1e-3,
                           max_it_fixed_parems = 10, fixed_effect_chunk_size = 1e4,
-                          debug = F)
+                          debug = F, fixed_parems_start = NULL)
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
          paste0(names(control)[is.na(control_match)], collapse = "\t"))
@@ -122,27 +122,50 @@ ddhazard = function(formula, data,
   risk_set <-
     get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
                  id = id, is_for_discrete_model = is_for_discrete_model)
+
   if(n_parems == 0){
     # Model is fitted using ddhazard_fit_cpp for testing and because doing it with static_glm is easy
     warning("The model can be estimated more effeciently by using get_survival_case_Weigths_and_data and static_glm when there is no time varying parameters")
     a_0 = vector()
-  } else if(missing(a_0) && model == "logit"){
-    # Assume that logit models is used
-    message("a_0 not supplied. One iteration IWLS of static logit model is used")
+
+    if(is.null(control$fixed_parems_start))
+      control$fixed_parems_start <- rep(0, ncol(X_Y$fixed_terms)) else
+        control$fixed_parems_start <- control$fixed_parems_start
+
+  } else if(((missing_a_0 <- missing(a_0)) |
+             (missing_fixed <- is.null(control$fixed_parems_start))) && model == "logit"){
     tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
                          control = glm.control(epsilon = Inf), family = "binomial")
-    a_0 = rep(tmp_mod$coefficients[
-      !seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)], order)
+
+    is_fixed <- seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)
+
+    if(missing_a_0){
+      message("a_0 not supplied. One iteration IWLS of static logit model is used")
+      a_0 = rep(tmp_mod$coefficients[!is_fixed], order)
+    }
+    if(missing_fixed){
+      control$fixed_parems_start <- tmp_mod$coefficients[is_fixed]
+    }
+
     rm(tmp_mod)
 
-  } else if (missing(a_0) && model == "exponential"){
-    message("a_0 not supplied. One iteration IWLS of static glm model is used")
+  } else if ((missing_a_0 || missing_fixed) && model == "exponential"){
     tmp_mod = static_glm(form = formula, data = data, max_T = max_T,
                          control = glm.control(epsilon = Inf), family = "exponential")
-    a_0 = rep(tmp_mod$coefficients[
-      !seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)], order)
+    is_fixed <- seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)
+
+    if(missing_a_0){
+      message("Not suppling a_0 for exponential yields message and different results")
+      a_0 = rep(tmp_mod$coefficients[!is_fixed], order)
+    }
+    if(missing_fixed){
+      control$fixed_parems_start <- tmp_mod$coefficients[is_fixed]
+    }
+
     rm(tmp_mod)
   }
+
+
 
   if(ncol(F_) != n_parems * order ||
      ncol(Q) != n_parems * order ||
@@ -193,7 +216,7 @@ ddhazard = function(formula, data,
                             Q = Q, n_max = control$n_max,
                             risk_obj = risk_set, eps = control$eps,
                             X = X_Y$X, fixed_terms = X_Y$fixed_terms,
-                            fixed_parems_start = rep(0, nrow(X_Y$fixed_terms)), # TODO: make a better choice of starting value?
+                            fixed_parems_start = control$fixed_parems_start,
                             tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
                             order_ = order,
                             est_Q_0 = control$est_Q_0, method = control$method,

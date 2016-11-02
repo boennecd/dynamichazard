@@ -737,6 +737,7 @@ public:
 
     double event_time = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
+
       double delta_t = p_dat.I_len[t - 1];
       event_time += delta_t;
 
@@ -1206,6 +1207,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
     double bin_stop = p_data->min_start;
 
     for(; it != p_data->risk_sets.end(); ++it, ++t){
+
       double bin_start = bin_stop;
       double delta_t = p_data->I_len[t - 1];
       bin_stop += delta_t;
@@ -1302,7 +1304,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const std::string model = "logit",
                             const std::string M_step_formulation = "Fahrmier94",
                             const int fixed_effect_chunk_size = 2e4,
-                            const bool debug = false){
+                            const bool debug = false,
+                            const unsigned int NR_it_max = 100){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -1339,7 +1342,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       NR_eps, LR,
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
-      order_, est_Q_0, model == "exponential", debug);
+      order_, est_Q_0, model == "exponential", NR_it_max, debug);
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
   } else if (method == "UKF"){
     if(model != "logit" && model != "exponential")
@@ -1366,6 +1369,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
+      eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
       order_, est_Q_0, debug);
 
@@ -1376,49 +1380,12 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   }else
     Rcpp::stop("method '" + method  +"'is not implemented");
 
-  /*Rcpp::Rcout << "X" << std::endl; TODO: Clean up or move
-  p_data._X.print();
-  Rcpp::Rcout << "a_t_less_s" << std::endl;
-  p_data.a_t_less_s.print();
-  Rcpp::Rcout << "a_t_t_s" << std::endl;
-  p_data.a_t_t_s.print();
-  Rcpp::Rcout << "B_s" << std::endl;
-  p_data.B_s.print();
-  Rcpp::Rcout << "d " << p_data.d << std::endl;
-  Rcpp::Rcout << "event_eps " << p_data.event_eps << std::endl;
-  Rcpp::Rcout << "is_event_in_bin" << std::endl;
-  p_data.is_event_in_bin.print();
-  Rcpp::Rcout << "F_" << std::endl;
-  p_data.F_.print();
-  Rcpp::Rcout << "H_diag_inv" << std::endl;
-  p_data.H_diag_inv.print();
-  Rcpp::Rcout << "I_len size" << p_data.I_len.size() << std::endl;
-  Rcpp::Rcout << "K_d" << std::endl;
-  p_data.K_d.print();
-  Rcpp::Rcout << "lag_one_cor" << std::endl;
-  p_data.lag_one_cor.print();
-  Rcpp::Rcout << "risk_sets size" << p_data.risk_sets.size() <<  std::endl;
-  Rcpp::Rcout << "T_F_" << std::endl;
-  p_data.T_F_.print();
-  Rcpp::Rcout << "tstart" << std::endl;
-  p_data.tstart.print();
-  Rcpp::Rcout << "tstop" << std::endl;
-  p_data.tstop.print();
-  Rcpp::Rcout << "U" << std::endl;
-  p_data.U.print();
-  Rcpp::Rcout << "u" << std::endl;
-  p_data.u.print();
-  Rcpp::Rcout << "V_t_less_s" << std::endl;
-  p_data.V_t_less_s.print();
-  Rcpp::Rcout << "V_t_t_s" << std::endl;
-  p_data.V_t_t_s.print();
-  Rcpp::Rcout << "z_dot" << std::endl;
-  p_data.z_dot.print();*/
-
   do
   {
     if(p_data->debug){
-      Rcpp::Rcout << "\n\n\n##########################################\nStarting iteration " << it
+      if(it > 0)
+        Rcpp::Rcout << "\n\n\n";
+      Rcpp::Rcout << "##########################################\nStarting iteration " << it
                   << " with the following values" << std::endl;
       my_print(p_data->a_t_t_s.col(0), "a_0");
       my_print(p_data->Q.diag(), "diag(Q)");

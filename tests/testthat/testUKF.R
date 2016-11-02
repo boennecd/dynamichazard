@@ -1,3 +1,7 @@
+if(interactive()){
+  library(dynamichazard); library(testthat); library(survival); source("R/test_utils.R")
+}
+
 set.seed(2972)
 sims <- test_sim_func_logit(n_series = 5e2, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = 1, x_mean = -.5, re_draw = T, beta_start = 1,

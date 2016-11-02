@@ -2,6 +2,8 @@
 title: "Comparing methods for logistic models"
 author: "Benjamin Christoffersen"
 date: "31 October 2016"
+header-includes:
+   - \usepackage{bm}
 output: pdf_document
 ---
 
@@ -24,9 +26,7 @@ knitr::knit_hooks$set(
 knitr::opts_chunk$set(echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6)
 ```
 
-
-
-
+\renewcommand{\vec}[1]{\bm{#1}}
 \newcommand{\mat}[1]{\mathbf{#1}}
 
 # Intro
@@ -386,8 +386,7 @@ tryCatch({
     Surv(tstart, tstop, death == 2) ~ -1 + ddFixed(rep(1, length(age))) + 
       ddFixed(age) + ddFixed(log(albumin)) + edema +log(protime) + log(bili), 
     pbc2, id = pbc2$id, by = 100, max_T = 3600, 
-    Q_0 = diag(rep(1, 3)), Q = diag(rep(0.0001, 3)), control = list(eps = 0.01))
-}, error = print)
+    Q_0 = diag(rep(1, 3)), Q = diag(rep(0.0001, 3)), control = list(eps = 0.02))
 
 # Decreasing the learning rate (LR) helps
 dd_fit <- ddhazard(
@@ -408,7 +407,7 @@ for(i in 1:3)
 
 Moreover, the fixed effects are in aggrement with our expectations:
 
-```{r, fig.height = 6, mySettings=FALSE}
+```{r, fig.height = 6}
 dd_fit$fixed_effects
 ```
 
@@ -421,7 +420,7 @@ dd_fit <- ddhazard(
   Surv(tstart, tstop, death == 2) ~ -1 + ddFixed(rep(1, length(age))) + 
     ddFixed(age) + ddFixed(log(albumin)) + edema +log(protime) + log(bili), 
   pbc2, id = pbc2$id, by = 100, max_T = 3600, 
-  Q_0 = diag(rep(1, 3)), Q = diag(rep(0.0001, 3)), control = list(eps = 0.01, debug = T))
+  Q_0 = diag(rep(1, 3)), Q = diag(rep(0.0001, 3)), control = list(eps = 0.015), verbose = 5)
 sink()
 close(f)
 
