@@ -1,3 +1,7 @@
+if(interactive()){
+  get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
+}
+
 sims <- test_sim_func_logit(n_series = 1e4, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = 1, x_mean = .5, re_draw = T, beta_start = 0,
                             intercept_start = -3, sds = c(.1, rep(1, 3)))

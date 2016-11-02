@@ -17,7 +17,7 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 
   suppressWarnings(
     res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
-                     control = list(eps_fixed_parems = 1e-3, fixed_effect_chunk_size = 1e3, max_it_fixed_parems = 100)))
+                     control = list(eps_fixed_parems = 1e-3, fixed_effect_chunk_size = 1e3, max_it_fixed_parems = 10)))
 
   tmp_design <- get_survival_case_Weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10)
@@ -56,7 +56,7 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 # matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
 # abline(h = res1$fixed_effects, col = c(1,4))
 
-test_that("Make the above into a test", expect_true(F))
+if(!interactive()) test_that("Make the above into a test", expect_true(F))
 
 set.seed(312237)
 sims <- test_sim_func_exp(n_series = 1e4, n_vars = 3, t_0 = 0, t_max = 10,
@@ -154,7 +154,7 @@ test_that("Changing fixed effect control parems changes the result", {
 
 
 
-test_that("Make the above into a test", expect_true(F))
+if(!interactive()) test_that("Make the above into a test", expect_true(F))
 
 test_that("UKF with fixed effects works", {
   set.seed(2231412)
@@ -165,7 +165,7 @@ test_that("UKF with fixed effects works", {
   fit <- ddhazard(formula(survival::Surv(tstart, tstop, event) ~
                             -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + x2 + x3),
                   data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
-                  control = list(method = "UKF"))
+                  control = list(method = "UKF", fixed_parems_start = rep(0, 2)))
 
   # get_expect_equal(fit, file = "get_expect_equal.txt")
 
@@ -206,6 +206,6 @@ test_that("UKF with fixed effects works", {
   # abline(h = fit$fixed_effects, col = 1:2)
 })
 
-test_that("Mixtures versus previous fit for both types of models", expect_true(F))
-test_that("Model with only one random", expect_true(F))
-test_that("Manually check offsets in both parts of the algorithm", expect_true(F))
+if(!interactive()) test_that("Mixtures versus previous fit for both types of models", expect_true(F))
+if(!interactive()) test_that("Model with only one random", expect_true(F))
+if(!interactive()) test_that("Manually check offsets in both parts of the algorithm", expect_true(F))
