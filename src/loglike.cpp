@@ -120,7 +120,17 @@ std::vector<double>
   if(any_dynamic){
     // We want to deal with degenered case
     Q = Q.submat(0, 0, n_parems - 1, n_parems - 1);
-    Q_inv = arma::inv_sympd(Q);
+
+    static bool have_fail_to_invert;
+    if(!arma::inv_sympd(Q_inv, Q)){
+      if(!have_fail_to_invert){
+        Rcpp::warning("Failed at least once to invert Q in the log likelihood evaluation with symmetrical inversion method");
+        have_fail_to_invert = true;
+      }
+      if(!arma::inv(Q_inv, Q)){
+        Rcpp::stop("Failed to invert Q in log likelihood evalution");
+      }
+    }
 
     // compute first terms and normalizing constant
     t_0_logLike = - 1.0 / 2.0 * arma::det(Q_0)
