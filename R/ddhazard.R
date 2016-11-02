@@ -132,30 +132,21 @@ ddhazard = function(formula, data,
       control$fixed_parems_start <- rep(0, ncol(X_Y$fixed_terms)) else
         control$fixed_parems_start <- control$fixed_parems_start
 
-  } else if(((missing_a_0 <- missing(a_0)) |
-             (missing_fixed <- is.null(control$fixed_parems_start))) && model == "logit"){
-    tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
-                         control = glm.control(epsilon = Inf), family = "binomial")
+  } else if((missing_a_0 <- missing(a_0)) |
+            (missing_fixed <- is.null(control$fixed_parems_start))){
+    if(model == "logit"){
+      tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
+                           control = glm.control(epsilon = Inf), family = "binomial")
+    } else if(model == "exponential"){
+      tmp_mod = static_glm(form = formula, data = data, max_T = max_T,
+                           control = glm.control(epsilon = Inf), family = "exponential")
+    } else
+      stop("Method not implemented to find initial values for '", model, "'")
 
     is_fixed <- seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)
 
     if(missing_a_0){
-      message("a_0 not supplied. One iteration IWLS of static logit model is used")
-      a_0 = rep(tmp_mod$coefficients[!is_fixed], order)
-    }
-    if(missing_fixed){
-      control$fixed_parems_start <- tmp_mod$coefficients[is_fixed]
-    }
-
-    rm(tmp_mod)
-
-  } else if ((missing_a_0 || missing_fixed) && model == "exponential"){
-    tmp_mod = static_glm(form = formula, data = data, max_T = max_T,
-                         control = glm.control(epsilon = Inf), family = "exponential")
-    is_fixed <- seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)
-
-    if(missing_a_0){
-      message("Not suppling a_0 for exponential yields message and different results")
+      message("a_0 not supplied. One iteration IWLS of static glm model is used")
       a_0 = rep(tmp_mod$coefficients[!is_fixed], order)
     }
     if(missing_fixed){
@@ -164,8 +155,6 @@ ddhazard = function(formula, data,
 
     rm(tmp_mod)
   }
-
-
 
   if(ncol(F_) != n_parems * order ||
      ncol(Q) != n_parems * order ||
