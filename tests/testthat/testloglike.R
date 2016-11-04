@@ -149,7 +149,7 @@ test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
     max_T = 45,
     id = head_neck_cancer$id, order = 1))
 
-  tmp_design <- get_survival_case_Weigths_and_data(
+  tmp_design <- get_survival_case_weigths_and_data(
     formula = form, data = head_neck_cancer, by = 1, max_T = 45, id = head_neck_cancer$id,
     use_weights = F)
 

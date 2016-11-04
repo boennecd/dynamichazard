@@ -64,7 +64,7 @@ test_that("design_matrix yields equal result with different values of use_weight
   expect_equal(unname(res$coefficients), c(-3.0034120780114382, 0.4201450126532649, 0.7693816806898961, -0.5438611125188229))
 
 
-  data_f <- get_survival_case_Weigths_and_data(formula = form, data = sims$res, by = 1,
+  data_f <- get_survival_case_weigths_and_data(formula = form, data = sims$res, by = 1,
                                                max_T = 10, id = sims$res$id, use_weights = F)
 
   expect_true(all(data_f$weigths == 1))

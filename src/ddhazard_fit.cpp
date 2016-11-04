@@ -1227,7 +1227,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
 
       if(p_data->any_dynamic){
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
-          p_data->_X.cols(r_set).t() * p_data->a_t_t_s.col(t);
+          p_data->_X.cols(r_set).t() * p_data->a_t_t_s.col(t).head(p_data->n_parems);
       } else {
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1).fill(0.);
       }

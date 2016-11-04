@@ -33,6 +33,7 @@ The result of \code{type = "term"} is a list with the following elements
 \describe{
 \item{terms}{Is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms}
 \item{sds}{Similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices}
+\item{fixed_terms}{Vector of the fixed effects for each observation}
 }
 }
 
