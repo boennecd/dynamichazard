@@ -19,7 +19,7 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
     res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
                      control = list(eps_fixed_parems = 1e-3, fixed_effect_chunk_size = 1e3, max_it_fixed_parems = 10)))
 
-  tmp_design <- get_survival_case_Weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
+  tmp_design <- get_survival_case_weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10)
 
   suppressWarnings(res2 <- bigglm(update(form, Y ~ .), data = tmp_design, family = binomial(), chunksize = 1e3))
@@ -71,7 +71,7 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
   suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
                                     control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3)))
 
-  tmp_design <- get_survival_case_Weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
+  tmp_design <- get_survival_case_weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10, is_for_discrete_model = F)
 
   suppressWarnings(res2 <- bigglm(update(form, Y ~ . + offset(log(pmin(tstop, t) - pmax(tstart, t - 1)))), data = tmp_design, family = poisson(), chunksize = 1e3))

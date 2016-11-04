@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_design_matrix.R
 \name{ddFixed}
 \alias{ddFixed}
-\title{Function used in formula of \code{ddhazard} for time-invariant effects}
+\title{Function used in formula of \code{\link{ddhazard}} for time-invariant effects}
 \usage{
 ddFixed(object)
 }
@@ -10,6 +10,6 @@ ddFixed(object)
 \item{object}{Expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}}
 }
 \description{
-Function used in formula of \code{ddhazard} for time-invariant effects
+Function used in formula of \code{\link{ddhazard}} for time-invariant effects
 }
 
