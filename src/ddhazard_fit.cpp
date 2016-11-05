@@ -271,6 +271,7 @@ inline double expect_chance_die(const double v, const double inv_exp_v){
            v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0)))));
 }
 
+// TODO: Delete
 inline double inv_var_wait_time(const double v, const double exp_eta, const double inv_exp_v){
   return((v >= 1e-6) ?
            exp_eta * exp_eta / (1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) :
@@ -279,6 +280,53 @@ inline double inv_var_wait_time(const double v, const double exp_eta, const doub
              (-1 / v * (1 / 4 - v * (1 / 4 - v * (5 / 48 - v * (1/48 - v /1440)))))
   );
 }
+
+
+
+
+
+inline double inv_var_fac_chance_to_die(const double v, const double exp_v){
+  // Taylor series from: https://www.wolframalpha.com/input/?i=exp(x)(exp(2x)+-+1+-+2+exp(x)x)%2F(1%2Bexp(2x)+-+exp(x)(2%2Bx%5E2))
+  if(v < 1e-2){
+    return(1 / v * (4 + v * (4 + v * (31/15 + v * (11/15 + v * 1261/6300)))));
+  } else {
+    return(exp_v * (exp_v * exp_v - 1 - 2 * exp_v * v) /
+           (1 + exp_v * exp_v - exp_v * (2 + v * v)));
+  }
+}
+
+inline double inv_var_fac_wait_time(const double v, const double exp_v, const double exp_eta){
+  // Taylor series from: https://www.wolframalpha.com/input/?i=exp(x)(exp(x)+-+1)%2F(1%2Bexp(2x)+-+exp(x)(2%2Bx%5E2))
+  double res;
+  if(v < 1e-2){
+    res = 1 / (v * v * v) * (12 + v *(6 + v * (8/5 + v * (3/10 + v * 83/2100))));
+  } else {
+    res = exp_v * (exp_v - 1) / (1 + exp_v * exp_v - exp_v * (2 + v * v));
+  }
+
+  return(res * exp_eta * exp_eta);
+}
+
+inline double inv_var_fac_cross(const double v, const double exp_v, const double exp_eta){
+  // Taylor series from: https://www.wolframalpha.com/input/?i=exp(x)(1%2Bexp(x)(x-1))%2F(1%2Bexp(2x)-exp(x)(2%2Bx%5E2))
+  double res;
+  if(v < 1e-2){
+    res = 1/(v * v) * (6 + v * (4 + v * (13/10 + v * (4/15 + v * 51/1400))));
+  } else {
+    res = exp_v * (1 + exp_v * (v - 1)) / (1 + exp_v * exp_v - exp_v * (2 + v * v));
+  }
+
+  return(res * exp_eta);
+}
+
+inline double dh_fac_die(const double v, const double inv_exp_v){
+  return(v * inv_exp_v);
+}
+
+inline double dh_fac_time(const double v, const double inv_exp_v, const double inv_exp_eta){
+  return((inv_exp_v - 1 + inv_exp_v * v) * inv_exp_eta);
+}
+
 
 inline double var_wait_time(const double v, const double a,  const double exp_eta, const double inv_exp_v){
   // exp(eta)^(-2) * (1 - exp(-2v) - 2 * v * exp(-v))
@@ -291,6 +339,8 @@ inline double var_wait_time(const double v, const double a,  const double exp_et
            a * a * v * (1/3 - v * (1/3 - v * (11/60 - v * (13/180 - v * 19/840)))));
 }
 
+
+// TODO: Delete
 inline double inv_var_chance_die(const double v, const double inv_exp_v){
   return((v >= 1e-6) ?
            1 / (inv_exp_v * (1 - inv_exp_v)) :
@@ -431,34 +481,51 @@ class EKF_helper{
 
       const double expect_chance_die = exp_model_funcs::expect_chance_die(v, inv_exp_v);
 
-      const double score_fac_t = (v >= 1e-4) ?
-      // Use regular formula
-      (inv_exp_v +  at_risk_length * exp_eta * inv_exp_v - 1.0) /
-      (inv_exp_eta  - inv_exp_v * inv_exp_v * inv_exp_eta
-         - 2 * at_risk_length * inv_exp_v) :
-        // Use Laurent series approximation
-        // See https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%2F(exp(v)+-++exp(-v)+-+2v)
-        exp_eta * (- 3.0 / (2.0 * v) - 0.5 - v / 20.0 + pow(v, 3) / 8400.0);
+      const double cross_term_inv = exp_model_funcs::inv_var_fac_cross(v, exp_v, exp_eta);
+      const double t_term_inv = exp_model_funcs::inv_var_fac_wait_time(v, exp_v, exp_eta);
+      const double die_term_inv = exp_model_funcs::inv_var_fac_chance_to_die(v, exp_v);
 
-      const double score_fac_y = (v >= 1e-6) ?
-      at_risk_length * exp_eta / (1.0 - inv_exp_v) :
-        // See this for Taylor series: https://www.wolframalpha.com/input/?i=v%2F(1-exp(-v))
-        1 + v * (1 / 2 + v * (1/12 - v * v /720));
+      const double dh_fac_die = exp_model_funcs::dh_fac_die(v, inv_exp_v);
+      const double dh_fac_time = exp_model_funcs::dh_fac_time(v, inv_exp_v, inv_exp_eta);
 
-      const double info_fac_t = (v > 20.0) ? // deals with overflow in the numerator
-      1.0 : ((v >= 1e-4) ?
-      pow(1.0 + at_risk_length * exp_eta - exp_v, 2.0) /
-               (exp_v * exp_v - 1.0 - 2.0 * at_risk_length * exp_eta * exp_v) :
-               // See this link for the Taylor series https://www.wolframalpha.com/input/?i=(1+%2B+v+-+exp(v))%5E2+%2F+(exp(2*v)+-+1-+2+*+v*+exp(v))
-               v * (3 / 4 - v * (1 / 4 - v * (11 / 240 - v * (1 / 240 - v / 16800)))));
+      //TODO: Delete
+      if(rand() % 100 > 95){
+        Rcpp::Rcout << v << "\t"
+                    << exp_v << "\t"
+                    << inv_exp_v << "\t"
+                    << eta << "\t"
+                    << exp_eta << "\t"
+                    << inv_exp_eta << "\t"
+                    << std::endl;
 
-      const double info_fac_y = v * v * inv_exp_v / (1.0 - inv_exp_v);
+        Rcpp::Rcout << v << "\t"
+                    << at_risk_length << "\t"
+                    << eta << "\t"
+                    << cross_term_inv << "\t"
+                    << t_term_inv << "\t"
+                    << die_term_inv << "\t"
+                    << dh_fac_die << "\t"
+                    << dh_fac_time
+                    << std::endl;
+
+        Rcpp::Rcout << dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time) << "\t"
+                    << dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die) << "\t"
+                    << std::endl;
+
+        Rcpp::Rcout << dh_fac_die * dh_fac_die * die_term_inv << "\t"
+                    << dh_fac_time * dh_fac_time * t_term_inv << "\t"
+                    << 2 * dh_fac_die * dh_fac_time * cross_term_inv
+                    << std::endl;
+      }
 
       u_ += x_ * (
-        score_fac_t * (time_outcome - expect_time)
-        + score_fac_y * (do_die - expect_chance_die));
+        dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time)
+        + dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die));
 
-      U_ += x_ * (x_.t() * (info_fac_t + info_fac_y));
+      U_ += x_ * (x_.t() *
+        (dh_fac_die * dh_fac_die * die_term_inv +
+         dh_fac_time * dh_fac_time * t_term_inv +
+         2 * dh_fac_die * dh_fac_time * cross_term_inv));
 
       if(compute_z_and_H){
         // Compute terms from waiting time
@@ -597,6 +664,14 @@ public:
         filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t.head(p_dat.n_parems), t == p_dat.d, t - 1,
                                            bin_tstart, bin_tstop);
 
+      if(p_dat.u.has_inf() || p_dat.u.has_nan()){
+        Rcpp::stop("Score vector in correction step had inf or nan elements in bin " +
+          std::to_string(t) + ". Try decreasing the learning rate");
+      } else if(p_dat.U.has_inf() || p_dat.U.has_nan()){
+        Rcpp::stop("Score vector in correction step had inf or nan elements in bin " +
+          std::to_string(t) + ". Try decreasing the learning rate");
+      }
+
       if(p_dat.debug){
         Rcpp::Rcout << "Score vector and diagonal of information matrix at time " << t << " are:"<< std::endl;
         my_print(p_dat.u, "u");
@@ -656,8 +731,6 @@ public:
         std::stringstream str;
         str << t << "|" << t;
 
-        my_print(p_dat.u, "u");
-        my_print(p_dat.U.diag(), "diag(U)");
         my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
         my_print(p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str() + "))\n");
       }
