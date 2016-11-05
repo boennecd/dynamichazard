@@ -566,7 +566,7 @@ Moreover, we can show that the variance is:
 $$\begin{aligned}
   \hspace{50pt}&\hspace{-50pt}\varpCond{\Delta_{i,s}}
     {\Delta_{i,s - 1} = t_{i,s - 1} - t_{i,s - 2} \wedge \vec{\alpha}_{\Lceil{t_{i,s}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,s}} - 1}, \dots , \vec{\alpha}_0  } \\
-  &= \frac{1 - \exp\Lparen{-2\delta\lambda} - 2 \lambda \exp \Lparen{-\delta\lambda}}{\lambda^2}
+  &= \frac{1 - \exp\Lparen{-2\delta\lambda} - 2 \lambda \delta \exp \Lparen{-\delta\lambda}}{\lambda^2}
 \end{aligned}$$
 
 Right censoring is treated the same way as for $Y_{i,s}$. That is, we can have $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case censoring. Further, we still round up in the case where $T_i = t_{i,l_i}$ (in the case of a death). The individual could have survived $\Lceil{t_{i,l_i}}$ but only survived $t_{i,l_i}$. Denote the predicted mean $\Delta_{i,l_i}$ by $\widehat{\Delta}_{i,l_i}$. We can have $\widehat{\Delta}_{i,l_i} \geq \Delta_{i,l_i}$ in the case of death. This will affect the correction step in both the UKF end EKF when we compute $\emNotee{\vec{a}}{t}{t}$

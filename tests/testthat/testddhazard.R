@@ -73,6 +73,7 @@ result_exp = ddhazard(
 )
 
 # matplot(result_exp$state_vecs, type = "l")
+# plot(result_exp, cov_index = 1)
 # get_expect_equal(result_exp)
 
 test_that("Result of exponential model on head_neck_data match previous results", {
@@ -109,18 +110,24 @@ test_that("Testing names of output from ddhazard on head and neck cancer dataset
 
 
 # Change by argument
+
+tmp_file <- file("exponential.log")
+sink(tmp_file)
 result_exp = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 2,
   a_0 = rep(0, 2), Q_0 = diag(1, 2),
   Q = diag(1e-3, 2),
-  control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4),
+  control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4,
+                 debug = T),
   max_T = 30,
   id = head_neck_cancer$id, order = 1,
   verbose = F,
   model = "exponential"
 )
+sink()
+close(tmp_file)
 
 # matplot(result_exp$state_vecs, type = "l")
 # get_expect_equal(result_exp)
@@ -160,14 +167,17 @@ test_that("Result of exponential model on head_neck_data match previous results 
                c(FALSE ))
 })
 
-set.seed(93143)
+# sum(sims$res$event)
+
+for(s in sample.int(1e6, 100, replace = F)){
+print(s)
+# set.seed(s)
+set.seed(599479)
 sims <- test_sim_func_exp(n_series = 1e4, n_vars = 10, t_0 = 0, t_max = 10,
                           x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
                           intercept_start = -5, sds = c(.1, rep(1, 10)))
-# sum(sims$res$event)
-
-# tmp_file <- file("exponential.log")
-# sink(tmp_file)
+tmp_file <- file("exponential.log")
+sink(tmp_file)
 result_exp = ddhazard(
   formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
   data = sims$res,
@@ -175,16 +185,17 @@ result_exp = ddhazard(
   a_0 = rep(0, 11),
   Q_0 = diag(100, 11),
   Q = diag(1e-3, 11),
-  control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^4),
+  control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3, debug = T),
   max_T = 10,
   id = sims$res$id, order = 1,
-  verbose = F,
+  verbose = 1,
   model = "exponential")
-# sink()
-# close(tmp_file)
+sink()
+close(tmp_file)
+}
 
-# matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
-# matplot(result_exp$times, result_exp$state_vecs, result_exp$state_vecs, type = "l", lty = 2, add = T)
+matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
+matplot(result_exp$times, result_exp$state_vecs, result_exp$state_vecs, type = "l", lty = 2, add = T)
 
 # get_expect_equal(result_exp, eps = 1e-5)
 
