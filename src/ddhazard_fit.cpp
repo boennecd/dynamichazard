@@ -498,23 +498,28 @@ class EKF_helper{
                     << inv_exp_eta << "\t"
                     << std::endl;
 
-        Rcpp::Rcout << v << "\t"
-                    << at_risk_length << "\t"
-                    << eta << "\t"
-                    << cross_term_inv << "\t"
-                    << t_term_inv << "\t"
-                    << die_term_inv << "\t"
-                    << dh_fac_die << "\t"
-                    << dh_fac_time
+        Rcpp::Rcout << "v = " << v
+                    << "\ta = " << at_risk_length
+                    << "\teta = " << eta
+                    << "\tcross term = " << cross_term_inv
+                    << "\tt term = " << t_term_inv
+                    << "\tdie term = " <<die_term_inv
+                    << "\tdh die = " << dh_fac_die
+                    << "\tdh time = " << dh_fac_time
                     << std::endl;
 
-        Rcpp::Rcout << dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time) << "\t"
-                    << dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die) << "\t"
+        Rcpp::Rcout << "score fac time = " << dh_fac_time * (cross_term_inv + t_term_inv)
+                    << "\tscore fac die " << dh_fac_die * (cross_term_inv + die_term_inv)
+                    << "\ttime residual " << time_outcome - expect_time << "\t" << expect_time
+                    << "\tdie residual " << do_die - expect_chance_die << "\t" << expect_chance_die
                     << std::endl;
 
         Rcpp::Rcout << dh_fac_die * dh_fac_die * die_term_inv << "\t"
                     << dh_fac_time * dh_fac_time * t_term_inv << "\t"
-                    << 2 * dh_fac_die * dh_fac_time * cross_term_inv
+                    << 2 * dh_fac_die * dh_fac_time * cross_term_inv << "\t"
+                    << (dh_fac_die * dh_fac_die * die_term_inv +
+                        dh_fac_time * dh_fac_time * t_term_inv +
+                        2 * dh_fac_die * dh_fac_time * cross_term_inv)
                     << std::endl;
       }
 

@@ -116,11 +116,10 @@ sink(tmp_file)
 result_exp = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
-  by = 2,
-  a_0 = rep(0, 2), Q_0 = diag(1, 2),
+  by = 2, Q_0 = diag(1, 2),
   Q = diag(1e-3, 2),
   control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4,
-                 debug = T),
+                 debug = T, LR = .1),
   max_T = 30,
   id = head_neck_cancer$id, order = 1,
   verbose = F,
@@ -129,7 +128,7 @@ result_exp = ddhazard(
 sink()
 close(tmp_file)
 
-# matplot(result_exp$state_vecs, type = "l")
+matplot(result_exp$state_vecs, type = "l")
 # get_expect_equal(result_exp)
 
 test_that("Result of exponential model on head_neck_data match previous results with altered by argument", {
@@ -182,10 +181,9 @@ result_exp = ddhazard(
   formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
   data = sims$res,
   by = (by_ <- 1),
-  a_0 = rep(0, 11),
   Q_0 = diag(100, 11),
   Q = diag(1e-3, 11),
-  control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3, debug = T),
+  control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3, debug = T, LR = .1),
   max_T = 10,
   id = sims$res$id, order = 1,
   verbose = 1,
