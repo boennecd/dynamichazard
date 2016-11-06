@@ -33,17 +33,21 @@ knitr::opts_chunk$set(echo = TRUE)
 %
 \newcommand{\corpCond}[2]{\textrm{Cor} \Lparen{\left. #1 \right\vert  #2}}
 %
+\newcommand{\covp}[1]{\textrm{Cov} \Lparen{#1}}
+%
 \newcommand{\emNotee}[3]{#1_{\left. #2 \right\vert #3}}
 \newcommand{\emNote}[4]{#1_{\left. #2 \right\vert #3}^{(#4)}} 
 %
 \newcommand{\ukfNote}[2]{\mat{P}_{\vec{#1}, \vec{#2}}}
 \newcommand{\ukfNotee}[3]{\mat{P}_{\vec{#1}_{#3}, \vec{#2}_{#3}}}
 %
-\newcommand{\diag}[1]{\text{diag}{(#1)}}
+\newcommand{\diag}[1]{\text{diag}{\Lparen{#1}}}
 \newcommand{\wvec}[1]{\widehat{\vec{#1}}}
 \newcommand{\wmat}[1]{\widehat{\mat{#1}}}
 %
 \newcommand{\deter}[1]{\left| #1 \right|}
+%
+\newcommand{\MyInd}[2]{\Lparen{#1}_{#2}}
 
 # Intro
 This note will cover the `ddhazard` function in `dynamichazard` library. You can install the the library through github for the `devtools` library as follows:
@@ -573,6 +577,93 @@ Right censoring is treated the same way as for $Y_{i,s}$. That is, we can have $
 
 ## Why not use $\Delta_{i,s}$ solely
 The reason also to use the binary $Y_{i,t}$ is that we cannot distinguish between deaths when times are rounded. For example, say that the observed times are rounded up to multiplies of $0.5$ (i.e. $0$, $0.5$, $1$, $1.5$ etc.). We cannot distinguish between the death of an individual, change in co-variate vector or change of parameters if $t_{i,s}$ is a whole number. That is, $\Delta_{i,s} = 1$ either because $T_i = 1$ or because $t_{i,s} = 1$ since we have new co-variate vector $\vec{x}_{i,s+1}$ or(/and) because the parameters changed from $\vec{\alpha}_1$ to $\vec{\alpha}_2$
+
+## Covariance 
+$Y_{i,t}$ and $\Delta_{i,s} = 1$ are correlated and we have to account for that. This will affect the score vector and information matrix ($\vec{u}_t(\emNotee{\vec{a}}{t}{t-1})$ and $\mat{U}_t(\emNotee{\vec{a}}{t}{t-1})$) in the EKF. Further, it will affect the covariance matrix $\widehat{\mat{H}}$ en the UKF. First though, we have to derive the covariance. We start by defining the following variables to ease the notation:
+$$\delta = t_{i,s}-t_{i,s-1}, \qquad \lambda = \exp \Lparen{\vec{x}_{is}^T \vec{\alpha}_{\lceil t_{i,s} \rceil}}, \qquad
+  Z \sim \text{Exp}\Lparen{\lambda}$$
+
+Thus, we get the have the following relation (conditional on having survied up the this point):
+$$Y_{i,s} \sim 1_{\Lbrace{Z\in[0,\delta\}}}, \qquad \Delta_{i,s} \sim Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}}$$
+
+where $\sim$ denotes "similary destributed" and $1_{\Lbrace{\cdot}}$ is one if the condition in the braces are satisfied and zero otherwise. Hence, we can find the covariance by: 
+$$\begin{aligned}
+\covp{1_{\Lbrace{Z\in[0,\delta\}}}, Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}}}
+  =\hspace{-150pt}& \\ 
+  &\covp{1_{\Lbrace{Z\in[0,\delta\}}}, Z}
+  + \delta\covp{1_{\Lbrace{Z\in[0,\delta\}}},1_{\Lbrace{Z\in[\delta,\infty\}}}} 
+  - \covp{1_{\Lbrace{Z\in[0,\delta\}}}, Z 1_{\Lbrace{Z\in[\delta,\infty\}}}} =\\
+  &-\exp (-\lambda\delta)\delta 
+    + \delta \Lparen{- \Lparen{1 - \exp(-\lambda\delta)} \exp(-\lambda\delta)} 
+    - \frac{- \Lparen{1 - \exp(-\lambda\delta)} \exp(-\lambda\delta)(1+\delta\lambda)}{\lambda} = \\
+  &  - \frac{\exp (-2\lambda\delta)\Lparen{1 + \lambda\delta\exp(\lambda\delta)-\exp(\lambda\delta)}}{\lambda}
+\end{aligned}$$
+
+Next, we will turn to the EKF. Define:
+$$\varp{Y_{i,s}} = \sigma_{Y_{i,s}}^2, \qquad \varp{\Delta_{i,s}} = \sigma_{\Delta_{i,s}}^2,  \qquad
+  \covp{Y_{i,s}, \Delta_{i,s}} = \rho_{i,s} \sigma_{Y_{i,s}} \sigma_{\Delta_{i,s}} = \xi_{i,s}$$
+  
+Say that we are in looking at a given bin and order the observation equation such that:
+$$\vec{y}_t = \Lparen{y_{1,i_{1,1}}, y_{1,i_{1,2}}, \dots y_{m,i_{m,k}}, \Delta_{1,i_{1,1}}, \Delta_{1,i_{1,2}}, \dots, \Delta_{m,i_{m,k}}}^T$$
+
+where $i_{j,i}$ is an index function that returns the index of the $j$'th individuals $i$'th observation in this bin. Although this is tedious, it is included to stress that any given individual could have none, one or multiple enteries in this bin. Further, notice that $\vec{y}_t$ refers to the whole state vector while $y_{i,j}$ refers to the indicator for whetehr invidiual $i$ dies for his $j$'th observations. The co-variance matrix $\mat{H}(\alpha)$ is then of the following structure due to the ordering of the elements of $\vec{y}_t$:
+
+$$\mat{H}(\vec{\alpha}_t) =\begin{pmatrix}
+  \diag{\sigma_{Y_{1,i_{1,1}}}^2, \sigma_{Y_{1,i_{1,2}}}^2,\dots, \sigma_{Y_{m,i_{m,k}}}^2}
+    & \diag{\xi_{1,i_{1,1}}, \xi_{1,i_{1,2}},\dots, \xi_{m,i_{m,k}}} \\
+  \diag{\xi_{1,i_{1,1}}, \xi_{1,i_{1,2}},\dots, \xi_{m,i_{m,k}}} 
+    & \diag{\sigma_{\Delta_{1,i_{1,1}}}^2, \sigma_{\Delta_{1,i_{1,2}}}^2,\dots, \sigma_{\Delta_{m,i_{m,k}}}^2}
+\end{pmatrix}$$
+
+where all the entries implicitly depends on the state vector $\vec{\alpha}_t$. In order to update the EKF we have to go back to how the forumlas for the score vector and information matrix is derived. They are:
+$$\begin{array}{c}
+  \dot{\vec{z}}_t(\alpha_t) = \left. \frac{\partial\vec{z}_t(\vec{\eta})}{\partial \vec{\eta}} \right\vert_{\vec{\eta}= \vec{\alpha}_t}\vspace{10pt} \\
+  \vec{u}_t(\vec{\alpha}_t) = \dot{\vec{z}}_t(\alpha_t) \mat{H}(\vec{\alpha}_t)^{-1}\Lparen{\vec{y}_t - \vec{z}_t(\vec{\alpha}_t)}, \qquad
+\mat{U}_t(\vec{\alpha}_t) = \dot{\vec{z}}_t(\alpha_t) \mat{H}(\vec{\alpha}_t)^{-1} \dot{\vec{z}}_t(\alpha_t)^T
+\end{array}$$
+
+where we get the simplier expression we saw previously when $\mat{H}(\vec{\alpha}_t)$ is a diagonal matrix. In the case with off-diagonal terms we can use the idenity: 
+$$\begin{bmatrix} \mathbf{A} & \mathbf{C}^T \\ \mathbf{C} & \mathbf{D} \end{bmatrix}^{-1} = \begin{bmatrix} (\mathbf{A}-\mathbf{C}^T\mathbf{D}^{-1}\mathbf{C})^{-1} & -\mathbf{A}^{-1}\mathbf{C}^T(\mathbf{D}-\mathbf{C}\mathbf{A}^{-1}\mathbf{C}^T)^{-1} \\ -(\mathbf{D}-\mathbf{CA}^{-1}\mathbf{C}^T)^{-1}\mathbf{CA}^{-1} & (\mathbf{D}-\mathbf{CA}^{-1}\mathbf{C}^T)^{-1} \end{bmatrix}$$
+We can find a closed form solution since the three matrices are diagonal matricies. Define:
+$$\mat{K}(\vec{\alpha}_t) = \mat{H}(\vec{\alpha}_t)^{-1} = \begin{pmatrix}
+  \mat{K}_{11} & \mat{K}_{12} \\
+  \mat{K}_{12} & \mat{K}_{22}
+\end{pmatrix}$$
+
+Then:
+$$\begin{aligned}
+&\mat{K}_{11} = \diag{\frac{\exp\Lparen{\delta _{s,j} \lambda _{s,j}} \left(-2 \delta _{s,j} \lambda _{s,j} \exp\Lparen{\delta
+   _{s,j} \lambda _{s,j}}+\exp\Lparen{2 \delta _{s,j} \lambda _{s,j}}-1\right)}{-\exp\Lparen{\delta _{s,j}
+   \lambda _{s,j}} \left(\delta _{s,j}^2 \lambda _{s,j}^2+2\right)+\exp\Lparen{2 \delta _{s,j}
+   \lambda _{s,j}}+1}} \\
+&\mat{K}_{22} = \diag{\frac{\lambda _{s,j}^2 \exp\Lparen{\delta _{s,j} \lambda _{s,j}} \left(\exp\Lparen{\delta _{s,j} \lambda
+   _{s,j}}-1\right)}{-\exp\Lparen{\delta _{s,j} \lambda _{s,j}} \left(\delta _{s,j}^2 \lambda
+   _{s,j}^2+2\right)+\exp\Lparen{2 \delta _{s,j} \lambda _{s,j}}+1}} \\
+&\mat{K}_{12} = \diag{\frac{\lambda _{s,j} \exp\Lparen{\delta _{s,j} \lambda _{s,j}} \left(\exp\Lparen{\delta _{s,j} \lambda _{s,j}}
+   \left(\delta _{s,j} \lambda _{s,j}-1\right)+1\right)}{-\exp\Lparen{\delta _{s,j} \lambda _{s,j}}
+   \left(\delta _{s,j}^2 \lambda _{s,j}^2+2\right)+\exp\Lparen{2 \delta _{s,j} \lambda _{s,j}}+1}}
+\end{aligned}$$
+
+where we have omitted the exact entries of the subscript. They follow such that the pair match the order for the observation vector ($(1,i_{1,1}),(1,i_{1,2}),\dots,(m,i_{m,k})$). The score and information matrix can than be computed as follows. Suppose we $r$ observations such that the observation equation has dimension $2r$. Next, denote the binaries of $\vec{y}_t$ by $y_1,y_2,\dots,y_r$ and denote the truncated times by $\Delta_1,\Delta_2,\dots,\Delta_r$. The score vector is then:
+
+$$\begin{aligned}
+\vec{u}_t(\vec{\alpha}_t) = \sum_{i=1}^r 
+  &\vec{x}_i\Lparen{h^y_i}'(\eta_i)\Lparen{\MyInd{\mat{K}_{11}}{ii} + \MyInd{\mat{K}_{12}}{ii}}(y_i - h^y_i(\eta_i)) \\
+  &\hspace{4pt}+\vec{x}_i\Lparen{h^\Delta_i}'(\eta_i)\Lparen{\MyInd{\mat{K}_{22}}{ii} + \MyInd{\mat{K}_{12}}{ii}}(\Delta_i - h^\Delta_i(\eta_i))
+\end{aligned}$$
+
+where $\eta_i$ is the linear predictor and $\Lparen{h^\Delta_i}'$ and $\Lparen{h^y_i}'$ are the first deriatives of the link function w.r.t. the linear predictor for the truncated waiting time and the binary outcome. Similarly, $h^\Delta_i$ and $h^y_i$ are the link functions the truncated waiting time and the binary outcome. We need the subscript because each observation can be add risk for different amount of time in the bin we are focusing on. Lastly, $(\cdot)_{ij}$ is the $(i,j)$'th entry of the matrix in the parenthsis. Finally, the infomration matrix can be computed by:
+
+$$\begin{aligned}
+\mat{U}_t(\vec{\alpha}_t) = \sum_{i=1}^r 
+  &\vec{x}_i\Lparen{\Lparen{\Lparen{h^y_i}'(\eta_i)}^2\MyInd{\mat{K}_{11}}{ii} +
+    \Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii}}\vec{x}_i^T\\
+  & \hspace{4pt}+\vec{x}_i\Lparen{\Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii} +
+    \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}}\vec{x}_i^T
+\end{aligned}$$
+
+Ok so why is this a problem?
+
 
 ## EKF
 The EKF method for the exponential model has shown to have issues with divergence. The cause seem to be overstepping in the correction step. Hence, we can set the learning rate below 1. For example, you can do so by passing `list(LR = .5, ...)` to the `control` argument of `ddhazard` to gain a learning rate of $0.5$
