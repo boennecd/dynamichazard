@@ -119,7 +119,7 @@ result_exp = ddhazard(
   by = 2, Q_0 = diag(1, 2),
   Q = diag(1e-3, 2),
   control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4,
-                 debug = T, LR = .1),
+                 debug = T),
   max_T = 30,
   id = head_neck_cancer$id, order = 1,
   verbose = F,

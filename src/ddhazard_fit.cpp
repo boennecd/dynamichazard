@@ -512,14 +512,8 @@ class EKF_helper{
                     << "\tscore fac die " << dh_fac_die * (cross_term_inv + die_term_inv)
                     << "\ttime residual " << time_outcome - expect_time << "\t" << expect_time
                     << "\tdie residual " << do_die - expect_chance_die << "\t" << expect_chance_die
-                    << std::endl;
-
-        Rcpp::Rcout << dh_fac_die * dh_fac_die * die_term_inv << "\t"
-                    << dh_fac_time * dh_fac_time * t_term_inv << "\t"
-                    << 2 * dh_fac_die * dh_fac_time * cross_term_inv << "\t"
-                    << (dh_fac_die * dh_fac_die * die_term_inv +
-                        dh_fac_time * dh_fac_time * t_term_inv +
-                        2 * dh_fac_die * dh_fac_time * cross_term_inv)
+                    << "\tTotal factor " << dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time)
+        + dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die)
                     << std::endl;
       }
 

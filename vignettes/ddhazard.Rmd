@@ -10,6 +10,7 @@ bibliography: ddhazard_bibliography.bib
 ---
 
 ```{r setup, include=FALSE}
+options(digist = 4)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -579,11 +580,11 @@ Right censoring is treated the same way as for $Y_{i,s}$. That is, we can have $
 The reason also to use the binary $Y_{i,t}$ is that we cannot distinguish between deaths when times are rounded. For example, say that the observed times are rounded up to multiplies of $0.5$ (i.e. $0$, $0.5$, $1$, $1.5$ etc.). We cannot distinguish between the death of an individual, change in co-variate vector or change of parameters if $t_{i,s}$ is a whole number. That is, $\Delta_{i,s} = 1$ either because $T_i = 1$ or because $t_{i,s} = 1$ since we have new co-variate vector $\vec{x}_{i,s+1}$ or(/and) because the parameters changed from $\vec{\alpha}_1$ to $\vec{\alpha}_2$
 
 ## Covariance 
-$Y_{i,t}$ and $\Delta_{i,s} = 1$ are correlated and we have to account for that. This will affect the score vector and information matrix ($\vec{u}_t(\emNotee{\vec{a}}{t}{t-1})$ and $\mat{U}_t(\emNotee{\vec{a}}{t}{t-1})$) in the EKF. Further, it will affect the covariance matrix $\widehat{\mat{H}}$ en the UKF. First though, we have to derive the covariance. We start by defining the following variables to ease the notation:
+$Y_{i,t}$ and $\Delta_{i,s} = 1$ are correlated and we have to account for that. This will affect the score vector and information matrix ($\vec{u}_t(\emNotee{\vec{a}}{t}{t-1})$ and $\mat{U}_t(\emNotee{\vec{a}}{t}{t-1})$) in the EKF. Further, it will affect the covariance matrix $\widehat{\mat{H}}$ in the UKF. First though, we have to derive the covariance. We start by defining the following variables to ease the notation:
 $$\delta = t_{i,s}-t_{i,s-1}, \qquad \lambda = \exp \Lparen{\vec{x}_{is}^T \vec{\alpha}_{\lceil t_{i,s} \rceil}}, \qquad
   Z \sim \text{Exp}\Lparen{\lambda}$$
 
-Thus, we get the have the following relation (conditional on having survied up the this point):
+Thus, we have the following relation (conditional on having survied up the this point):
 $$Y_{i,s} \sim 1_{\Lbrace{Z\in[0,\delta\}}}, \qquad \Delta_{i,s} \sim Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}}$$
 
 where $\sim$ denotes "similary destributed" and $1_{\Lbrace{\cdot}}$ is one if the condition in the braces are satisfied and zero otherwise. Hence, we can find the covariance by: 
@@ -599,14 +600,14 @@ $$\begin{aligned}
   &  - \frac{\exp (-2\lambda\delta)\Lparen{1 + \lambda\delta\exp(\lambda\delta)-\exp(\lambda\delta)}}{\lambda}
 \end{aligned}$$
 
-Next, we will turn to the EKF. Define:
+Next, we turn to the EKF. Define:
 $$\varp{Y_{i,s}} = \sigma_{Y_{i,s}}^2, \qquad \varp{\Delta_{i,s}} = \sigma_{\Delta_{i,s}}^2,  \qquad
   \covp{Y_{i,s}, \Delta_{i,s}} = \rho_{i,s} \sigma_{Y_{i,s}} \sigma_{\Delta_{i,s}} = \xi_{i,s}$$
   
 Say that we are in looking at a given bin and order the observation equation such that:
 $$\vec{y}_t = \Lparen{y_{1,i_{1,1}}, y_{1,i_{1,2}}, \dots y_{m,i_{m,k}}, \Delta_{1,i_{1,1}}, \Delta_{1,i_{1,2}}, \dots, \Delta_{m,i_{m,k}}}^T$$
 
-where $i_{j,i}$ is an index function that returns the index of the $j$'th individuals $i$'th observation in this bin. Although this is tedious, it is included to stress that any given individual could have none, one or multiple enteries in this bin. Further, notice that $\vec{y}_t$ refers to the whole state vector while $y_{i,j}$ refers to the indicator for whetehr invidiual $i$ dies for his $j$'th observations. The co-variance matrix $\mat{H}(\alpha)$ is then of the following structure due to the ordering of the elements of $\vec{y}_t$:
+where $i_{j,i}$ is an index function that returns the index of the $j$'th individuals $i$'th observation in this bin. Although this is tedious, it is included to stress that any given individual could have none, one or multiple enteries in this bin. Further, notice that $\vec{y}_t$ refers to the whole state vector while $y_{i,j}$ refers to the indicator for whetehr invidiual $i$ dies at his $j$'th observations. The co-variance matrix $\mat{H}(\alpha)$ is then of the following structure due to the ordering of the elements of $\vec{y}_t$:
 
 $$\mat{H}(\vec{\alpha}_t) =\begin{pmatrix}
   \diag{\sigma_{Y_{1,i_{1,1}}}^2, \sigma_{Y_{1,i_{1,2}}}^2,\dots, \sigma_{Y_{m,i_{m,k}}}^2}
@@ -615,7 +616,7 @@ $$\mat{H}(\vec{\alpha}_t) =\begin{pmatrix}
     & \diag{\sigma_{\Delta_{1,i_{1,1}}}^2, \sigma_{\Delta_{1,i_{1,2}}}^2,\dots, \sigma_{\Delta_{m,i_{m,k}}}^2}
 \end{pmatrix}$$
 
-where all the entries implicitly depends on the state vector $\vec{\alpha}_t$. In order to update the EKF we have to go back to how the forumlas for the score vector and information matrix is derived. They are:
+where all the entries implicitly depends on the state vector $\vec{\alpha}_t$. In order to update the EKF we have to go back to the forumlas for the score vector and information matrix. They are:
 $$\begin{array}{c}
   \dot{\vec{z}}_t(\alpha_t) = \left. \frac{\partial\vec{z}_t(\vec{\eta})}{\partial \vec{\eta}} \right\vert_{\vec{\eta}= \vec{\alpha}_t}\vspace{10pt} \\
   \vec{u}_t(\vec{\alpha}_t) = \dot{\vec{z}}_t(\alpha_t) \mat{H}(\vec{\alpha}_t)^{-1}\Lparen{\vec{y}_t - \vec{z}_t(\vec{\alpha}_t)}, \qquad
@@ -644,7 +645,7 @@ $$\begin{aligned}
    \left(\delta _{s,j}^2 \lambda _{s,j}^2+2\right)+\exp\Lparen{2 \delta _{s,j} \lambda _{s,j}}+1}}
 \end{aligned}$$
 
-where we have omitted the exact entries of the subscript. They follow such that the pair match the order for the observation vector ($(1,i_{1,1}),(1,i_{1,2}),\dots,(m,i_{m,k})$). The score and information matrix can than be computed as follows. Suppose we $r$ observations such that the observation equation has dimension $2r$. Next, denote the binaries of $\vec{y}_t$ by $y_1,y_2,\dots,y_r$ and denote the truncated times by $\Delta_1,\Delta_2,\dots,\Delta_r$. The score vector is then:
+where we have omitted the exact entries of the subscript. The subscripts follow such that the pair match the order for the observation vector ($(1,i_{1,1}),(1,i_{1,2}),\dots,(m,i_{m,k})$). The score and information matrix can than be computed as follows. Suppose we have $r$ observations such that the observation equation has dimension $2r$. Next, denote the binaries of $\vec{y}_t$ by $y_1,y_2,\dots,y_r$ and denote the truncated times by $\Delta_1,\Delta_2,\dots,\Delta_r$. The score vector is then:
 
 $$\begin{aligned}
 \vec{u}_t(\vec{\alpha}_t) = \sum_{i=1}^r 
@@ -652,7 +653,7 @@ $$\begin{aligned}
   &\hspace{4pt}+\vec{x}_i\Lparen{h^\Delta_i}'(\eta_i)\Lparen{\MyInd{\mat{K}_{22}}{ii} + \MyInd{\mat{K}_{12}}{ii}}(\Delta_i - h^\Delta_i(\eta_i))
 \end{aligned}$$
 
-where $\eta_i$ is the linear predictor and $\Lparen{h^\Delta_i}'$ and $\Lparen{h^y_i}'$ are the first deriatives of the link function w.r.t. the linear predictor for the truncated waiting time and the binary outcome. Similarly, $h^\Delta_i$ and $h^y_i$ are the link functions the truncated waiting time and the binary outcome. We need the subscript because each observation can be add risk for different amount of time in the bin we are focusing on. Lastly, $(\cdot)_{ij}$ is the $(i,j)$'th entry of the matrix in the parenthsis. Finally, the infomration matrix can be computed by:
+where $\vec{x}_i$ is the $i$'th observation's covariate vector, $\eta_i = \vec{x}_i^T\vec{\alpha}_t$ is the linear predictor and $\Lparen{h^\Delta_i}'$ and $\Lparen{h^y_i}'$ are the first deriatives of the link function w.r.t. the linear predictor for the truncated waiting time and the binary outcome. Similarly, $h^\Delta_i$ and $h^y_i$ are the link functions the truncated waiting time and the binary outcome. We need the subscript because each observation can be add risk for different amount of time in the bin we are focusing on. Lastly, $(\cdot)_{ij}$ is the $(i,j)$'th entry of the matrix in the parenthsis. Finally, the infomration matrix can be computed by:
 
 $$\begin{aligned}
 \mat{U}_t(\vec{\alpha}_t) = \sum_{i=1}^r 
@@ -662,8 +663,85 @@ $$\begin{aligned}
     \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}}\vec{x}_i^T
 \end{aligned}$$
 
-Ok so why is this a problem?
+We could implement the above. I have done that for the EKF. There is and issue though with divergence. The entries of $\mat{K}$ can become numerically large. In particular, we can show that: 
 
+$$\mat{K} = \begin{pmatrix}
+  \diag{\frac{1}{\sigma_{Y_1}^2(1 - \rho_1^2)}, \dots, \frac{1}{\sigma_{Y_r}^2(1 - \rho_r^2)}} &
+    \diag{\frac{\rho_1}{\sigma_{Y_1}\sigma_{\Delta_1}(\rho_1^2 - 1)}, \dots, \frac{\rho_r}{\sigma_{Y_r}\sigma_{\Delta_r}(\rho_r^2 - 1)}} \\
+  \diag{\frac{\rho_1}{\sigma_{Y_1}\sigma_{\Delta_1}(\rho_1^2 - 1)}, \dots, \frac{\rho_r}{\sigma_{Y_r}\sigma_{\Delta_r}(\rho_r^2 - 1)}} &
+    \diag{\frac{1}{\sigma_{\Delta_1}^2(1 - \rho_1^2)}, \dots, \frac{1}{\sigma_{\Delta_r}^2(1 - \rho_r^2)}}
+\end{pmatrix}$$
+
+We can compute some numerical examples to illustrate why this is an issue. This is done below. `eta` refers to the linear predictor, `delta` refers to at the at risk length and `Delta` refers to the outcome:
+
+```{r}
+grid <- expand.grid(delta = c(.1, 1, 2, 3), eta = c(-2, -1, 0, 1))
+
+grid$`Link Y` <- 1 - exp(- exp(grid$eta) * grid$delta)
+grid$`Var Y` <- grid$`Link Y` * (1 - grid$`Link Y`)
+grid$`Deriv link Y` <- exp(- exp(grid$eta) * grid$delta) * exp(grid$eta) * grid$delta
+
+
+grid$`Link Delta` <- (1 - exp(- exp(grid$eta) * grid$delta)) / exp(grid$eta)
+grid$`Var Delta` <- (1 - exp(- 2 * exp(grid$eta) * grid$delta) 
+                     - 2 * exp(grid$eta) * grid$delta 
+                     * exp(- exp(grid$eta) * grid$delta)) / exp(2 * grid$eta)
+grid$`Deriv link Delta` <- exp(- exp(grid$eta) * grid$delta) * (
+  1 - exp(exp(grid$eta) * grid$delta) + exp(grid$eta) * grid$delta) / 
+    exp(grid$eta)
+
+grid$Covariance <- - exp(- 2 * exp(grid$eta) * grid$delta) * 
+  (1 + exp(grid$eta) * grid$delta * exp(exp(grid$eta) * grid$delta)
+   - exp(exp(grid$eta) * grid$delta)) / exp(grid$eta)
+
+grid$Correlation <- grid$Covariance / sqrt(grid$`Var Delta` * grid$`Var Y`)
+
+grid$K11 <- 1 / (grid$`Var Y` * (1 - grid$Correlation^2))
+grid$K22 <- 1 / (grid$`Var Delta` * (1 - grid$Correlation^2))
+grid$K12 <- grid$Correlation / (sqrt(grid$`Var Y` * grid$`Var Delta`) * 
+                   (grid$Correlation^2 - 1))
+
+knitr::kable(grid[, 1:8], digits = 3)
+```
+```{r}
+knitr::kable(grid[, -(3:8)], digits = 3)
+```
+
+Where we see that certain combinations of $(\delta, \eta)$ cause $\mat{K}$ are large. We will illustrate why this may be an issue in the following paragraphs. Notice that the deriatives of the two link functions have opposing signs while all the entries of $\mat{K}$ are positive. Thus, there is a canceling effect in the computation of $\mat{U}_t(\vec{\alpha}_t)$. Hence, $\emNotee{\mat{V}}{t}{t}$ seems not to be an issue in the sense that it "stays around" sensible values before divergence
+
+The update from $\emNotee{\vec{a}}{t}{t-1}$ to $\emNotee{\vec{a}}{t}{t}$ seems to be cause divergence. Re-call that:
+
+$$\emNotee{\vec{a}}{t}{t} = \vec{a} + l \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})$$
+```{r, echo=FALSE}
+ex <- 3
+```
+
+Supose now that we have somewhat rare events, the linear predictor $\eta$ is `r grid$eta[ex]`, $\delta$ is `r grid$delta[ex]`  and the indvidual with $\Delta = 2$. The latter can occour often if times are reported discritly (in say days or months). Then the factor from the residual in the term  with $(y_i - h_i^y(\eta_i))$ is the product of `r grid[ex, "Deriv link Y"]` ($\Lparen{h_i^y(\eta_i)}'$), (`r grid[ex, "K11"]` plus `r grid[ex, "K12"]`) ($\MyInd{\mat{K}_{11}}{ii} + \MyInd{\mat{K}_{12}}{ii}$) and ($y_i$ minus `r grid[ex, "Link Y"]` ($h_i^y(\eta_i)$)). The result is `r grid[ex, "Deriv link Y"] * (grid[ex, "K11"] + grid[ex, "K12"]) * (1 - grid[ex, "Link Y"])` if it is a death and `r grid[ex, "Deriv link Y"] * (grid[ex, "K11"] + grid[ex, "K12"]) * (0 - grid[ex, "Deriv link Y"])` otherwise
+
+The factor for the residual time is the product of `r grid[ex, "Deriv link Delta"]`, (`r grid[ex, "K22"]` plus `r grid[ex, "K12"]`) and (2 minus `r grid[ex, "Link Delta"]`). The result is `r grid[ex, "Deriv link Delta"] * (grid[ex, "K22"] + grid[ex, "K12"]) * (2 - grid[ex, "Link Delta"])`. Meanwhile the factor for the information matrix $\mat{U}_t(\vec{\alpha})_t$ is `r grid[ex, "Deriv link Y"]^2 * grid[ex, "K11"] + 2 * grid[ex, "Deriv link Y"] * grid[ex, "Deriv link Delta"] * grid[ex, "K12"] + grid[ex, "Deriv link Delta"]^2 * grid[ex, "K22"]` ($\Lparen{\Lparen{h^y_i}'(\eta_i)}^2\MyInd{\mat{K}_{11}}{ii} + 2\cdot\Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii} + \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}$). Recalling that:
+
+$$\emNotee{\mat{V}}{t}{t} = \left(\emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}$$
+Depending on the co-varaite vectors $\vec{x}_i$ and covariance matrix $\emNotee{\mat{V}}{t}{t - 1}$ this can imply that $\vec{u}_t(\vec{\alpha}_t)$ becomes large compared to $\emNotee{\mat{V}}{t}{t }$ which causes a large step in the score direction. One solution is to set the learning rate $l$ (very) low. Though, I have to stress that this has to be set it at a very low level 
+
+A solution may be to make the two variables uncorrelated. For example, we can set:
+$$\begin{aligned}
+&\begin{pmatrix} y_i \\ \Delta_i + c y_i \end{pmatrix} = 
+  \underbrace{\begin{pmatrix} 1 & 0 \\ c & 1 \end{pmatrix}}_C \begin{pmatrix} y_i \\ \Delta_i \end{pmatrix} \\
+\Leftrightarrow\hspace{4pt}& 
+  \covp{\begin{pmatrix} y_i \\ \Delta_i + c y_i \end{pmatrix}} = C 
+    \begin{pmatrix}\sigma_{Y_i}^2 & \xi_i \\ \xi_i  & \sigma_{\Delta_i}^2\end{pmatrix} C^T
+\end{aligned}$$
+
+and get zero correlation by selecting $c$ such that:
+$$\begin{aligned}
+& c \sigma_{Y_i}^2 + \xi_i = 0 \\
+\Leftrightarrow\hspace{4pt}& 
+  c = -\frac{\xi_i}{\sigma_{Y_i}^2} = -\frac{\exp\Lparen{-\eta _i} \left(\delta _i \left(-\exp\Lparen{\eta
+   _i}\right)-\exp\Lparen{\delta _i \left(-\exp\Lparen{\eta _i}\right)}+1\right)}{1-\exp\Lparen{\delta _i
+   \left(-\exp\Lparen{\eta _i}\right)}}
+\end{aligned}$$
+
+Though, this requires that we know the $\vec{\alpha}_t$ in order to compute $\eta_i$. Question: Would it be ok to plug in the current estimate of $\emNotee{\vec{a}}{t}{t - 1}$? Do you think this is a good idea?
 
 ## EKF
 The EKF method for the exponential model has shown to have issues with divergence. The cause seem to be overstepping in the correction step. Hence, we can set the learning rate below 1. For example, you can do so by passing `list(LR = .5, ...)` to the `control` argument of `ddhazard` to gain a learning rate of $0.5$
