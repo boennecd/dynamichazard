@@ -489,7 +489,7 @@ class EKF_helper{
       const double dh_fac_time = exp_model_funcs::dh_fac_time(v, inv_exp_v, inv_exp_eta);
 
       //TODO: Delete
-      if(rand() % 100 > 95){
+      if(rand() % 100 > 101){
         Rcpp::Rcout << v << "\t"
                     << exp_v << "\t"
                     << inv_exp_v << "\t"
