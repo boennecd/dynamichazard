@@ -675,7 +675,7 @@ $$\mat{K} = \begin{pmatrix}
 We can compute some numerical examples to illustrate why this is an issue. This is done below. `eta` refers to the linear predictor, `delta` refers to at the at risk length and `Delta` refers to the outcome:
 
 ```{r}
-grid <- expand.grid(delta = c(.1, 1, 2, 3), eta = c(-2, -1, 0, 1))
+grid <- expand.grid(delta = c(.1, 1, 2, 3), eta = c(-4, -2, -1, 0, 1))
 
 grid$`Link Y` <- 1 - exp(- exp(grid$eta) * grid$delta)
 grid$`Var Y` <- grid$`Link Y` * (1 - grid$`Link Y`)
@@ -713,12 +713,12 @@ The update from $\emNotee{\vec{a}}{t}{t-1}$ to $\emNotee{\vec{a}}{t}{t}$ seems t
 
 $$\emNotee{\vec{a}}{t}{t} = \vec{a} + l \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})$$
 ```{r, echo=FALSE}
-ex <- 3
+ex <- 6
 ```
 
-Supose now that we have somewhat rare events, the linear predictor $\eta$ is `r grid$eta[ex]`, $\delta$ is `r grid$delta[ex]`  and the indvidual with $\Delta = 2$. The latter can occour often if times are reported discritly (in say days or months). Then the factor from the residual in the term  with $(y_i - h_i^y(\eta_i))$ is the product of `r grid[ex, "Deriv link Y"]` ($\Lparen{h_i^y(\eta_i)}'$), (`r grid[ex, "K11"]` plus `r grid[ex, "K12"]`) ($\MyInd{\mat{K}_{11}}{ii} + \MyInd{\mat{K}_{12}}{ii}$) and ($y_i$ minus `r grid[ex, "Link Y"]` ($h_i^y(\eta_i)$)). The result is `r grid[ex, "Deriv link Y"] * (grid[ex, "K11"] + grid[ex, "K12"]) * (1 - grid[ex, "Link Y"])` if it is a death and `r grid[ex, "Deriv link Y"] * (grid[ex, "K11"] + grid[ex, "K12"]) * (0 - grid[ex, "Deriv link Y"])` otherwise
+Supose now that we have somewhat rare events, the linear predictor $\eta$ is `r grid$eta[ex]`, $\delta$ is `r grid$delta[ex]`  and the indvidual with $\Delta = 1$. The latter can occour often if times are reported discritly (in say days or months). Then the factor from the residual in the term  with $(y_i - h_i^y(\eta_i))$ is the product of `r grid[ex, "Deriv link Y"]` ($\Lparen{h_i^y(\eta_i)}'$), (`r grid[ex, "K11"]` plus `r grid[ex, "K12"]`) ($\MyInd{\mat{K}_{11}}{ii} + \MyInd{\mat{K}_{12}}{ii}$) and ($y_i$ minus `r grid[ex, "Link Y"]` ($h_i^y(\eta_i)$)). The result is `r grid[ex, "Deriv link Y"] * (grid[ex, "K11"] + grid[ex, "K12"]) * (1 - grid[ex, "Link Y"])` if it is a death and `r grid[ex, "Deriv link Y"] * (grid[ex, "K11"] + grid[ex, "K12"]) * (0 - grid[ex, "Deriv link Y"])` otherwise
 
-The factor for the residual time is the product of `r grid[ex, "Deriv link Delta"]`, (`r grid[ex, "K22"]` plus `r grid[ex, "K12"]`) and (2 minus `r grid[ex, "Link Delta"]`). The result is `r grid[ex, "Deriv link Delta"] * (grid[ex, "K22"] + grid[ex, "K12"]) * (2 - grid[ex, "Link Delta"])`. Meanwhile the factor for the information matrix $\mat{U}_t(\vec{\alpha})_t$ is `r grid[ex, "Deriv link Y"]^2 * grid[ex, "K11"] + 2 * grid[ex, "Deriv link Y"] * grid[ex, "Deriv link Delta"] * grid[ex, "K12"] + grid[ex, "Deriv link Delta"]^2 * grid[ex, "K22"]` ($\Lparen{\Lparen{h^y_i}'(\eta_i)}^2\MyInd{\mat{K}_{11}}{ii} + 2\cdot\Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii} + \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}$). Recalling that:
+The factor for the residual time is the product of `r grid[ex, "Deriv link Delta"]`, (`r grid[ex, "K22"]` plus `r grid[ex, "K12"]`) and (1 minus `r grid[ex, "Link Delta"]`). The result is `r grid[ex, "Deriv link Delta"] * (grid[ex, "K22"] + grid[ex, "K12"]) * (1 - grid[ex, "Link Delta"])`. Meanwhile the factor for the information matrix $\mat{U}_t(\vec{\alpha})_t$ is `r grid[ex, "Deriv link Y"]^2 * grid[ex, "K11"] + 2 * grid[ex, "Deriv link Y"] * grid[ex, "Deriv link Delta"] * grid[ex, "K12"] + grid[ex, "Deriv link Delta"]^2 * grid[ex, "K22"]` ($\Lparen{\Lparen{h^y_i}'(\eta_i)}^2\MyInd{\mat{K}_{11}}{ii} + 2\cdot\Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii} + \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}$). Recalling that:
 
 $$\emNotee{\mat{V}}{t}{t} = \left(\emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}$$
 Depending on the co-varaite vectors $\vec{x}_i$ and covariance matrix $\emNotee{\mat{V}}{t}{t - 1}$ this can imply that $\vec{u}_t(\vec{\alpha}_t)$ becomes large compared to $\emNotee{\mat{V}}{t}{t }$ which causes a large step in the score direction. One solution is to set the learning rate $l$ (very) low. Though, I have to stress that this has to be set it at a very low level 
@@ -742,6 +742,4025 @@ $$\begin{aligned}
 \end{aligned}$$
 
 Though, this requires that we know the $\vec{\alpha}_t$ in order to compute $\eta_i$. Question: Would it be ok to plug in the current estimate of $\emNotee{\vec{a}}{t}{t - 1}$? Do you think this is a good idea?
+
+As an example here is the output from the E-step of the EKF for the head neck data in [@fahrmeir94]. `U` is the diagonal of the information matrix $\mat{U}$:
+
+```
+##########################################
+Starting iteration 0 with the following values
+a_0
+    -2.157    0.25186 
+diag(Q)
+     0.001      0.001 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -249.44    -143.08 # <-- the big issue. This is way larger than ... 
+U
+    22.422     13.128 # <-- this
+a_(1|1)
+   -12.538   -0.22944 # <-- hence big step here
+diag(V_(1|1))
+
+  0.089128    0.14777 # <-- this is reasonable though 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    119.99     78.996 
+U
+0.00057956 0.00027098 
+a_(2|2)
+   -8.1467     1.6628 
+diag(V_(2|2))
+
+  0.091125    0.14977 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    244.06     151.36 
+U
+   0.14404    0.12203 
+a_(3|3)
+    2.0082     4.3287 
+diag(V_(3|3))
+
+  0.092922    0.15104 
+(Divergence)
+```
+
+The starting value here is not too far off from the what we would expect. The logit model is estimated to start of at roughly $\vec{\alpha}_0 = (-3, 0)$. Here is the output from the exponential model with a learning rate of 0.1 (it is rather long). Both the final state vector and smoothed covariance matricies match well with the logistic:
+
+```
+##########################################
+Starting iteration 0 with the following values
+a_0
+    -2.157    0.25186 
+diag(Q)
+     0.001      0.001 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -249.44    -143.08 
+U
+    22.422     13.128 
+a_(1|1)
+   -3.1951    0.20373 # <-- we take a ten fold smaller step now
+diag(V_(1|1))
+
+  0.089128    0.14777 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    15.903     19.187 
+U
+    7.9229     4.5404 
+a_(2|2)
+   -3.2088    0.32334 
+diag(V_(2|2))
+
+  0.069521    0.11604 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    150.07      96.22 
+U
+     7.176      4.226 
+a_(3|3)
+   -2.8486     0.4468 
+diag(V_(3|3))
+
+  0.058956   0.097866 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -33.291    -32.133 
+U
+    7.1251     4.0622 
+a_(4|4)
+    -2.869    0.32938 
+diag(V_(4|4))
+
+  0.051267   0.085012 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -15.404   -0.39358 
+U
+    5.7482     3.0655 
+a_(5|5)
+    -2.939    0.39036 
+diag(V_(5|5))
+
+  0.046521   0.077379 
+Score vector and diagonal of information matrix at time 6 are:
+u
+    -39.33    -29.158 
+U
+    4.5565     2.2466 
+a_(6|6)
+   -2.9999    0.32706 
+diag(V_(6|6))
+
+  0.043551   0.072777 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -30.221    -4.4363 
+U
+    3.9255      1.935 
+a_(7|7)
+   -3.1102    0.40249 
+diag(V_(7|7))
+
+  0.041675   0.069663 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -10.016    -6.5804 
+U
+    3.2901     1.4984 
+a_(8|8)
+    -3.129    0.39104 
+diag(V_(8|8))
+
+  0.040419   0.067686 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -24.125    -10.405 
+U
+    2.9275     1.3352 
+a_(9|9)
+    -3.192    0.39768 
+diag(V_(9|9))
+
+  0.039638   0.066326 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -16.012    0.34931 
+U
+    2.2985     1.0362 
+a_(10|10)
+   -3.2562    0.44826 
+diag(V_(10|10))
+
+  0.039464   0.065768 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -12.381    -10.299 
+U
+     1.946    0.79563 
+a_(11|11)
+   -3.2751    0.41665 
+diag(V_(11|11))
+
+  0.039487   0.065664 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -16.116    -9.8222 
+U
+    1.7783    0.75864 
+a_(12|12)
+   -3.3114    0.39762 
+diag(V_(12|12))
+
+    0.0397   0.065729 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -20.784    -9.3242 
+U
+    1.5999    0.72003 
+a_(13|13)
+    -3.369    0.39351 
+diag(V_(13|13))
+
+  0.040107   0.065953 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   -6.2501     -8.796 
+U
+    1.4775    0.67909 
+a_(14|14)
+   -3.3705    0.35214 
+diag(V_(14|14))
+
+  0.040609   0.066282 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -17.921    -8.4453 
+U
+    1.3827    0.65193 
+a_(15|15)
+   -3.4218    0.34361 
+diag(V_(15|15))
+
+   0.04118    0.06668 
+
+
+
+##########################################
+Starting iteration 1 with the following values
+a_0
+   -3.2328    0.43541 
+diag(Q)
+ 0.0011127   0.001026 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -79.602    -49.196 
+U
+    9.2682     5.8545 
+a_(1|1)
+   -3.9465    0.32723 
+diag(V_(1|1))
+
+   0.18996    0.28459 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    65.921      46.29 
+U
+    4.1094     2.4795 
+a_(2|2)
+   -3.5845    0.51198 
+diag(V_(2|2))
+
+    0.1454     0.2234 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    171.19     105.44 
+U
+    5.5898     3.5382 
+a_(3|3)
+   -2.7342    0.59168 
+diag(V_(3|3))
+
+   0.11278    0.17393 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -51.733    -46.032 
+U
+    8.5425     5.1317 
+a_(4|4)
+   -2.8101    0.38962 
+diag(V_(4|4))
+
+   0.08231    0.12931 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -22.039    -5.0397 
+U
+    6.2555     3.4198 
+a_(5|5)
+   -2.9287    0.47201 
+diag(V_(5|5))
+
+  0.068053    0.10908 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.189    -31.722 
+U
+    4.7778     2.4453 
+a_(6|6)
+   -3.0111    0.38969 
+diag(V_(6|6))
+
+  0.060277   0.098025 
+Score vector and diagonal of information matrix at time 7 are:
+u
+    -31.19     -5.678 
+U
+    3.9993     2.0299 
+a_(7|7)
+   -3.1567    0.49023 
+diag(V_(7|7))
+
+  0.055549   0.090945 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -9.7665    -7.3468 
+U
+    3.2711     1.5573 
+a_(8|8)
+    -3.175    0.47054 
+diag(V_(8|8))
+
+   0.05247   0.086388 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -23.787    -10.957 
+U
+    2.9014     1.3777 
+a_(9|9)
+    -3.249    0.47889 
+diag(V_(9|9))
+
+  0.050379   0.083105 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -15.454   0.037081 
+U
+     2.255       1.06 
+a_(10|10)
+   -3.3255    0.54049 
+diag(V_(10|10))
+
+  0.049387   0.081264 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -11.633    -10.523 
+U
+    1.8891    0.81299 
+a_(11|11)
+   -3.3424    0.50014 
+diag(V_(11|11))
+
+  0.048795   0.080198 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -15.434    -9.9729 
+U
+     1.726    0.77032 
+a_(12|12)
+    -3.381    0.47708 
+diag(V_(12|12))
+
+   0.04853   0.079461 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -20.128     -9.411 
+U
+    1.5494    0.72675 
+a_(13|13)
+   -3.4456    0.47372 
+diag(V_(13|13))
+
+  0.048587   0.079022 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    -5.535    -8.8259 
+U
+    1.4228    0.68141 
+a_(14|14)
+   -3.4423    0.42319 
+diag(V_(14|14))
+
+  0.048819   0.078789 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -17.281    -8.4395 
+U
+    1.3332    0.65148 
+a_(15|15)
+    -3.499    0.41476 
+diag(V_(15|15))
+
+  0.049162   0.078687 
+
+
+
+##########################################
+Starting iteration 2 with the following values
+a_0
+   -3.3217    0.51158 
+diag(Q)
+ 0.0012475  0.0010641 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -75.067    -48.294 
+U
+    8.9186     5.7849 
+a_(1|1)
+   -4.0017    0.37946 
+diag(V_(1|1))
+
+   0.20069     0.2934 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    67.136     46.382 
+U
+    4.0166     2.4725 
+a_(2|2)
+   -3.6006    0.53668 
+diag(V_(2|2))
+
+   0.15358    0.23051 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    171.23     105.05 
+U
+     5.587     3.5672 
+a_(3|3)
+   -2.7037    0.57949 
+diag(V_(3|3))
+
+   0.11806    0.17856 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -54.111    -47.122 
+U
+    8.7251     5.2157 
+a_(4|4)
+    -2.794    0.38268 
+diag(V_(4|4))
+
+  0.084377    0.13102 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -22.981    -5.4175 
+U
+    6.3277     3.4487 
+a_(5|5)
+   -2.9191    0.46824 
+diag(V_(5|5))
+
+  0.069332    0.11006 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.636    -31.891 
+U
+    4.8123     2.4585 
+a_(6|6)
+   -3.0063    0.38628 
+diag(V_(6|6))
+
+  0.061314    0.09875 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -31.342    -5.7132 
+U
+     4.011     2.0325 
+a_(7|7)
+   -3.1554    0.48754 
+diag(V_(7|7))
+
+  0.056528   0.091582 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -9.7646     -7.319 
+U
+     3.271     1.5551 
+a_(8|8)
+   -3.1748    0.46767 
+diag(V_(8|8))
+
+  0.053471    0.08701 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -23.744    -10.912 
+U
+    2.8981     1.3742 
+a_(9|9)
+   -3.2514    0.47531 
+diag(V_(9|9))
+
+  0.051428   0.083732 
+Score vector and diagonal of information matrix at time 10 are:
+u
+    -15.34    0.11517 
+U
+    2.2463      1.054 
+a_(10|10)
+   -3.3294    0.53678 
+diag(V_(10|10))
+
+  0.050528   0.081922 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -11.505    -10.448 
+U
+    1.8792    0.80719 
+a_(11|11)
+   -3.3478    0.49543 
+diag(V_(11|11))
+
+  0.050039   0.080903 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -15.276    -9.8793 
+U
+    1.7138    0.76306 
+a_(12|12)
+   -3.3884    0.47116 
+diag(V_(12|12))
+
+  0.049881   0.080212 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -19.934    -9.2935 
+U
+    1.5344    0.71765 
+a_(13|13)
+   -3.4559    0.46629 
+diag(V_(13|13))
+
+  0.050052   0.079819 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   -5.2925    -8.6793 
+U
+    1.4041    0.67005 
+a_(14|14)
+   -3.4532    0.41504 
+diag(V_(14|14))
+
+  0.050402   0.079633 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -17.037    -8.2881 
+U
+    1.3143    0.63974 
+a_(15|15)
+   -3.5126    0.40512 
+diag(V_(15|15))
+
+  0.050859   0.079577 
+
+
+
+##########################################
+Starting iteration 3 with the following values
+a_0
+   -3.3134    0.51433 
+diag(Q)
+ 0.0014215  0.0011136 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -76.183    -49.081 
+U
+    9.0047     5.8456 
+a_(1|1)
+   -3.9973    0.38132 
+diag(V_(1|1))
+
+   0.19963    0.29176 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    66.853     46.185 
+U
+    4.0382     2.4874 
+a_(2|2)
+   -3.5989    0.53664 
+diag(V_(2|2))
+
+     0.153    0.22932 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    171.11     104.97 
+U
+     5.596     3.5729 
+a_(3|3)
+   -2.7009    0.58081 
+diag(V_(3|3))
+
+   0.11784    0.17784 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -54.483    -47.373 
+U
+    8.7538      5.235 
+a_(4|4)
+   -2.7941    0.38343 
+diag(V_(4|4))
+
+  0.084331    0.13058 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -23.006    -5.4457 
+U
+    6.3297     3.4508 
+a_(5|5)
+   -2.9198    0.46804 
+diag(V_(5|5))
+
+  0.069494    0.10983 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.591    -31.866 
+U
+    4.8088     2.4565 
+a_(6|6)
+   -3.0097    0.38437 
+diag(V_(6|6))
+
+  0.061661   0.098679 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -31.127    -5.5812 
+U
+    3.9945     2.0225 
+a_(7|7)
+   -3.1603    0.48418 
+diag(V_(7|7))
+
+  0.057059    0.09165 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    -9.508    -7.1654 
+U
+    3.2513     1.5433 
+a_(8|8)
+     -3.18     0.4638 
+diag(V_(8|8))
+
+  0.054178   0.087207 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -23.495    -10.761 
+U
+    2.8789     1.3626 
+a_(9|9)
+   -3.2587    0.46983 
+diag(V_(9|9))
+
+  0.052298   0.084035 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -15.067    0.28026 
+U
+    2.2253     1.0414 
+a_(10|10)
+   -3.3375    0.53049 
+diag(V_(10|10))
+
+  0.051579   0.082328 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -11.255    -10.308 
+U
+      1.86    0.79631 
+a_(11|11)
+   -3.3574    0.48789 
+diag(V_(11|11))
+
+  0.051267   0.081413 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -15.004     -9.721 
+U
+    1.6927    0.75079 
+a_(12|12)
+   -3.4002    0.46196 
+diag(V_(12|12))
+
+  0.051279   0.080815 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -19.631    -9.1109 
+U
+    1.5109    0.70349 
+a_(13|13)
+   -3.4708    0.45493 
+diag(V_(13|13))
+
+  0.051621   0.080506 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   -4.9413    -8.4658 
+U
+     1.377    0.65351 
+a_(14|14)
+   -3.4689    0.40301 
+diag(V_(14|14))
+
+  0.052141   0.080404 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -16.691    -8.0731 
+U
+    1.2875     0.6231 
+a_(15|15)
+   -3.5313     0.3911 
+diag(V_(15|15))
+
+  0.052759   0.080423 
+
+
+
+##########################################
+Starting iteration 4 with the following values
+a_0
+   -3.3064     0.5139 
+diag(Q)
+ 0.0016482  0.0011785 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -76.925    -49.547 
+U
+    9.0619     5.8816 
+a_(1|1)
+   -3.9935    0.38103 
+diag(V_(1|1))
+
+   0.19876    0.29062 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    66.663     46.072 
+U
+    4.0526      2.496 
+a_(2|2)
+   -3.5963    0.53668 
+diag(V_(2|2))
+
+   0.15259    0.22851 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    170.92     104.86 
+U
+    5.6099     3.5818 
+a_(3|3)
+   -2.6953    0.58438 
+diag(V_(3|3))
+
+   0.11774    0.17731 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -55.276    -47.926 
+U
+    8.8147     5.2776 
+a_(4|4)
+   -2.7932    0.38535 
+diag(V_(4|4))
+
+  0.084314    0.13013 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -23.155    -5.5628 
+U
+    6.3411     3.4597 
+a_(5|5)
+   -2.9199    0.46858 
+diag(V_(5|5))
+
+  0.069715     0.1096 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.597    -31.876 
+U
+    4.8092     2.4573 
+a_(6|6)
+   -3.0136    0.38261 
+diag(V_(6|6))
+
+  0.062108   0.098622 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -30.895    -5.4431 
+U
+    3.9767     2.0119 
+a_(7|7)
+   -3.1659    0.48054 
+diag(V_(7|7))
+
+  0.057737   0.091758 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -9.2144    -6.9921 
+U
+    3.2287       1.53 
+a_(8|8)
+   -3.1862    0.45952 
+diag(V_(8|8))
+
+  0.055078   0.087471 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -23.207    -10.589 
+U
+    2.8567     1.3494 
+a_(9|9)
+   -3.2675    0.46351 
+diag(V_(9|9))
+
+    0.0534   0.084428 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -14.746    0.47301 
+U
+    2.2007     1.0268 
+a_(10|10)
+   -3.3473    0.52318 
+diag(V_(10|10))
+
+  0.052909   0.082845 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -10.961    -10.144 
+U
+    1.8373     0.7836 
+a_(11|11)
+    -3.369    0.47904 
+diag(V_(11|11))
+
+  0.052821   0.082059 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -14.681    -9.5354 
+U
+    1.6678     0.7364 
+a_(12|12)
+   -3.4145    0.45108 
+diag(V_(12|12))
+
+  0.053047   0.081576 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -19.272    -8.8965 
+U
+    1.4832    0.68688 
+a_(13|13)
+   -3.4889     0.4414 
+diag(V_(13|13))
+
+  0.053604   0.081371 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   -4.5262    -8.2153 
+U
+     1.345    0.63411 
+a_(14|14)
+   -3.4877    0.38874 
+diag(V_(14|14))
+
+  0.054337   0.081373 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -16.285    -7.8225 
+U
+    1.2561     0.6037 
+a_(15|15)
+   -3.5538     0.3744 
+diag(V_(15|15))
+
+  0.055155   0.081484 
+
+
+
+##########################################
+Starting iteration 5 with the following values
+a_0
+   -3.2981    0.51357 
+diag(Q)
+ 0.0019499  0.0012654 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -77.833    -50.123 
+U
+    9.1319      5.926 
+a_(1|1)
+   -3.9889    0.38082 
+diag(V_(1|1))
+
+   0.19772    0.28924 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    66.431     45.932 
+U
+    4.0703     2.5067 
+a_(2|2)
+    -3.593     0.5369 
+diag(V_(2|2))
+
+   0.15213    0.22754 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    170.67     104.69 
+U
+    5.6285     3.5938 
+a_(3|3)
+   -2.6877    0.58909 
+diag(V_(3|3))
+
+   0.11765    0.17667 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -56.357    -48.677 
+U
+    8.8979     5.3355 
+a_(4|4)
+   -2.7918    0.38785 
+diag(V_(4|4))
+
+    0.0843    0.12956 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -23.361    -5.7217 
+U
+    6.3568     3.4719 
+a_(5|5)
+   -2.9201    0.46929 
+diag(V_(5|5))
+
+  0.070007    0.10931 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.608    -31.893 
+U
+    4.8101     2.4586 
+a_(6|6)
+   -3.0185    0.38036 
+diag(V_(6|6))
+
+  0.062691   0.098549 
+Score vector and diagonal of information matrix at time 7 are:
+u
+     -30.6    -5.2673 
+U
+     3.954     1.9985 
+a_(7|7)
+   -3.1731    0.47592 
+diag(V_(7|7))
+
+  0.058617   0.091897 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -8.8431    -6.7734 
+U
+    3.2002     1.5132 
+a_(8|8)
+    -3.194    0.45414 
+diag(V_(8|8))
+
+  0.056244   0.087809 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -22.847    -10.374 
+U
+     2.829     1.3329 
+a_(9|9)
+   -3.2786    0.45559 
+diag(V_(9|9))
+
+  0.054825   0.084929 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -14.347    0.71163 
+U
+    2.1701     1.0086 
+a_(10|10)
+   -3.3595    0.51409 
+diag(V_(10|10))
+
+  0.054625   0.083505 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -10.598    -9.9432 
+U
+    1.8093    0.76802 
+a_(11|11)
+   -3.3835    0.46808 
+diag(V_(11|11))
+
+  0.054823   0.082883 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -14.287    -9.3096 
+U
+    1.6374    0.71889 
+a_(12|12)
+   -3.4323    0.43763 
+diag(V_(12|12))
+
+  0.055322   0.082545 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -18.836    -8.6375 
+U
+    1.4496    0.66681 
+a_(13|13)
+   -3.5113    0.42469 
+diag(V_(13|13))
+
+  0.056152   0.082471 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   -4.0259     -7.915 
+U
+    1.3065    0.61086 
+a_(14|14)
+   -3.5109    0.37125 
+diag(V_(14|14))
+
+  0.057157   0.082603 
+Score vector and diagonal of information matrix at time 15 are:
+u
+     -15.8    -7.5252 
+U
+    1.2186    0.58068 
+a_(15|15)
+   -3.5814    0.35397 
+diag(V_(15|15))
+
+  0.058229    0.08283 
+
+
+
+##########################################
+Starting iteration 6 with the following values
+a_0
+   -3.2887    0.51274 
+diag(Q)
+ 0.0023603   0.001384 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -78.827     -50.74 
+U
+    9.2086     5.9736 
+a_(1|1)
+   -3.9837    0.38027 
+diag(V_(1|1))
+
+   0.19656    0.28773 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    66.177     45.782 
+U
+    4.0896      2.518 
+a_(2|2)
+   -3.5886    0.53743 
+diag(V_(2|2))
+
+   0.15168    0.22651 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    170.33     104.47 
+U
+    5.6542     3.6108 
+a_(3|3)
+   -2.6767    0.59571 
+diag(V_(3|3))
+
+   0.11763    0.17596 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -57.912    -49.756 
+U
+    9.0175     5.4187 
+a_(4|4)
+   -2.7897    0.39131 
+diag(V_(4|4))
+
+  0.084298    0.12885 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -23.666    -5.9528 
+U
+    6.3802     3.4895 
+a_(5|5)
+   -2.9201    0.47037 
+diag(V_(5|5))
+
+  0.070398    0.10893 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.638    -31.923 
+U
+    4.8124     2.4609 
+a_(6|6)
+   -3.0249    0.37755 
+diag(V_(6|6))
+
+  0.063461    0.09846 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -30.226    -5.0452 
+U
+    3.9252     1.9815 
+a_(7|7)
+   -3.1824    0.47008 
+diag(V_(7|7))
+
+  0.059776   0.092081 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -8.3733    -6.4978 
+U
+    3.1642      1.492 
+a_(8|8)
+   -3.2038    0.44743 
+diag(V_(8|8))
+
+  0.057777   0.088249 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -22.397    -10.108 
+U
+    2.7944     1.3123 
+a_(9|9)
+   -3.2925    0.44569 
+diag(V_(9|9))
+
+  0.056689   0.085577 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -13.851     1.0064 
+U
+    2.1321    0.98615 
+a_(10|10)
+   -3.3748    0.50279 
+diag(V_(10|10))
+
+  0.056869   0.084357 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -10.152    -9.6977 
+U
+     1.775    0.74898 
+a_(11|11)
+   -3.4015    0.45451 
+diag(V_(11|11))
+
+   0.05744   0.083943 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -13.807    -9.0359 
+U
+    1.6003    0.69768 
+a_(12|12)
+   -3.4544    0.42101 
+diag(V_(12|12))
+
+   0.05829   0.083788 
+Score vector and diagonal of information matrix at time 13 are:
+u
+    -18.31    -8.3262 
+U
+    1.4089     0.6427 
+a_(13|13)
+   -3.5392    0.40405 
+diag(V_(13|13))
+
+  0.059472   0.083881 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   -3.4253    -7.5573 
+U
+    1.2602    0.58316 
+a_(14|14)
+   -3.5393    0.34983 
+diag(V_(14|14))
+
+  0.060832   0.084179 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -15.225     -7.175 
+U
+    1.1741    0.55357 
+a_(15|15)
+   -3.6153    0.32897 
+diag(V_(15|15))
+
+   0.06223   0.084554 
+
+
+
+##########################################
+Starting iteration 7 with the following values
+a_0
+   -3.2785    0.51115 
+diag(Q)
+ 0.0029315  0.0015494 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -79.875    -51.372 
+U
+    9.2894     6.0224 
+a_(1|1)
+    -3.978    0.37922 
+diag(V_(1|1))
+
+   0.19531    0.28613 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    65.909      45.63 
+U
+      4.11     2.5296 
+a_(2|2)
+   -3.5827    0.53849 
+diag(V_(2|2))
+
+   0.15131    0.22545 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    169.85     104.14 
+U
+    5.6902      3.635 
+a_(3|3)
+    -2.661    0.60507 
+diag(V_(3|3))
+
+   0.11773     0.1752 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -60.177    -51.327 
+U
+    9.1918     5.5398 
+a_(4|4)
+   -2.7865     0.3961 
+diag(V_(4|4))
+
+  0.084314    0.12794 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -24.115    -6.2876 
+U
+    6.4144     3.5151 
+a_(5|5)
+     -2.92    0.47194 
+diag(V_(5|5))
+
+  0.070928    0.10846 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.692    -31.973 
+U
+    4.8166     2.4648 
+a_(6|6)
+   -3.0332    0.37399 
+diag(V_(6|6))
+
+  0.064493    0.09835 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -29.743    -4.7602 
+U
+    3.8882     1.9597 
+a_(7|7)
+   -3.1944    0.46266 
+diag(V_(7|7))
+
+  0.061322   0.092326 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -7.7741    -6.1481 
+U
+    3.1182     1.4651 
+a_(8|8)
+   -3.2164      0.439 
+diag(V_(8|8))
+
+  0.059818   0.088827 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -21.835    -9.7757 
+U
+    2.7511     1.2867 
+a_(9|9)
+   -3.3103    0.43326 
+diag(V_(9|9))
+
+   0.05916   0.086421 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -13.236     1.3702 
+U
+     2.085    0.95844 
+a_(10|10)
+    -3.394    0.48876 
+diag(V_(10|10))
+
+  0.059843   0.085465 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -9.6068    -9.3989 
+U
+    1.7329    0.72582 
+a_(11|11)
+    -3.424    0.43772 
+diag(V_(11|11))
+
+  0.060905   0.085319 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -13.224    -8.7062 
+U
+    1.5553    0.67214 
+a_(12|12)
+   -3.4819    0.40049 
+diag(V_(12|12))
+
+  0.062215   0.085399 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -17.676    -7.9548 
+U
+      1.36    0.61394 
+a_(13|13)
+   -3.5739    0.37857 
+diag(V_(13|13))
+
+   0.06386   0.085705 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   -2.7094    -7.1349 
+U
+     1.205    0.55047 
+a_(14|14)
+   -3.5743    0.32369 
+diag(V_(14|14))
+
+  0.065689   0.086218 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -14.549    -6.7674 
+U
+    1.1219    0.52204 
+a_(15|15)
+   -3.6569    0.29846 
+diag(V_(15|15))
+
+  0.067513    0.08678 
+
+
+
+##########################################
+Starting iteration 8 with the following values
+a_0
+   -3.2679     0.5083 
+diag(Q)
+ 0.0037463  0.0017857 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -80.879    -51.941 
+U
+    9.3668     6.0663 
+a_(1|1)
+   -3.9719    0.37731 
+diag(V_(1|1))
+
+   0.19402    0.28458 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    65.653     45.497 
+U
+    4.1295     2.5397 
+a_(2|2)
+   -3.5745    0.54043 
+diag(V_(2|2))
+
+   0.15113    0.22449 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    169.16     103.67 
+U
+    5.7418     3.6702 
+a_(3|3)
+   -2.6381    0.61837 
+diag(V_(3|3))
+
+   0.11805    0.17443 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -63.517    -53.641 
+U
+    9.4489     5.7183 
+a_(4|4)
+   -2.7817    0.40273 
+diag(V_(4|4))
+
+  0.084348    0.12677 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -24.768    -6.7702 
+U
+    6.4644     3.5519 
+a_(5|5)
+   -2.9197    0.47419 
+diag(V_(5|5))
+
+  0.071648    0.10784 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.776    -32.048 
+U
+    4.8232     2.4706 
+a_(6|6)
+   -3.0442    0.36941 
+diag(V_(6|6))
+
+  0.065886   0.098214 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -29.113      -4.39 
+U
+    3.8398     1.9315 
+a_(7|7)
+     -3.21    0.45315 
+diag(V_(7|7))
+
+   0.06341   0.092656 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -7.0068    -5.7032 
+U
+    3.0593      1.431 
+a_(8|8)
+   -3.2324    0.42847 
+diag(V_(8|8))
+
+   0.06257   0.089593 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -21.133     -9.364 
+U
+     2.697      1.255 
+a_(9|9)
+   -3.3329    0.41771 
+diag(V_(9|9))
+
+  0.062474   0.087529 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -12.477     1.8159 
+U
+    2.0268    0.92452 
+a_(10|10)
+    -3.418    0.47142 
+diag(V_(10|10))
+
+   0.06383   0.086915 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -8.9451    -9.0395 
+U
+     1.682    0.69796 
+a_(11|11)
+    -3.452    0.41711 
+diag(V_(11|11))
+
+   0.06555   0.087117 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -12.526    -8.3146 
+U
+    1.5014     0.6418 
+a_(12|12)
+   -3.5159    0.37535 
+diag(V_(12|12))
+
+   0.06747   0.087498 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -16.925    -7.5185 
+U
+     1.302    0.58016 
+a_(13|13)
+    -3.617    0.34728 
+diag(V_(13|13))
+
+  0.069733    0.08808 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   -1.8677    -6.6443 
+U
+    1.1402    0.51252 
+a_(14|14)
+   -3.6168    0.29207 
+diag(V_(14|14))
+
+  0.072199   0.088874 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -13.769    -6.3021 
+U
+    1.0616    0.48605 
+a_(15|15)
+   -3.7076     0.2615 
+diag(V_(15|15))
+
+  0.074588   0.089677 
+
+
+
+##########################################
+Starting iteration 9 with the following values
+a_0
+   -3.2581    0.50346 
+diag(Q)
+ 0.0049382  0.0021315 
+Score vector and diagonal of information matrix at time 1 are:
+u
+    -81.65    -52.307 
+U
+    9.4263     6.0945 
+a_(1|1)
+   -3.9663    0.37403 
+diag(V_(1|1))
+
+   0.19286    0.28333 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    65.458     45.419 
+U
+    4.1444     2.5456 
+a_(2|2)
+   -3.5631    0.54385 
+diag(V_(2|2))
+
+   0.15136    0.22386 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    168.16     102.97 
+U
+    5.8169     3.7222 
+a_(3|3)
+    -2.605    0.63715 
+diag(V_(3|3))
+
+   0.11873    0.17374 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -68.467    -57.071 
+U
+    9.8301     5.9828 
+a_(4|4)
+   -2.7747    0.41182 
+diag(V_(4|4))
+
+  0.084384    0.12525 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -25.701     -7.455 
+U
+    6.5358     3.6041 
+a_(5|5)
+   -2.9193    0.47728 
+diag(V_(5|5))
+
+  0.072621    0.10703 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.891    -32.151 
+U
+    4.8321     2.4786 
+a_(6|6)
+    -3.059    0.36341 
+diag(V_(6|6))
+
+  0.067776   0.098045 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -28.281    -3.9034 
+U
+    3.7758     1.8943 
+a_(7|7)
+   -3.2307    0.44098 
+diag(V_(7|7))
+
+  0.066251   0.093106 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -6.0255    -5.1385 
+U
+     2.984     1.3876 
+a_(8|8)
+   -3.2527    0.41542 
+diag(V_(8|8))
+
+  0.066316   0.090617 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -20.267    -8.8596 
+U
+    2.6303     1.2162 
+a_(9|9)
+   -3.3614    0.39845 
+diag(V_(9|9))
+
+  0.066957   0.088988 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -11.552     2.3536 
+U
+     1.956    0.88359 
+a_(10|10)
+   -3.4476    0.45032 
+diag(V_(10|10))
+
+  0.069233   0.088825 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -8.1572    -8.6158 
+U
+    1.6213    0.66513 
+a_(11|11)
+   -3.4862    0.39219 
+diag(V_(11|11))
+
+  0.071845   0.089479 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -11.706    -7.8596 
+U
+    1.4381    0.60657 
+a_(12|12)
+   -3.5576    0.34497 
+diag(V_(12|12))
+
+  0.074585   0.090247 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -16.051    -7.0179 
+U
+    1.2346    0.54142 
+a_(13|13)
+   -3.6699    0.30932 
+diag(V_(13|13))
+
+  0.077687   0.091188 
+Score vector and diagonal of information matrix at time 14 are:
+u
+  -0.89917    -6.0883 
+U
+    1.0657    0.46952 
+a_(14|14)
+   -3.6679    0.25446 
+diag(V_(14|14))
+
+  0.081042   0.092358 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -12.891    -5.7858 
+U
+    0.9937    0.44614 
+a_(15|15)
+   -3.7688    0.21737 
+diag(V_(15|15))
+
+  0.084194   0.093474 
+
+
+
+##########################################
+Starting iteration 10 with the following values
+a_0
+   -3.2511     0.4956 
+diag(Q)
+ 0.0067267  0.0026506 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -81.877    -52.242 
+U
+    9.4438     6.0895 
+a_(1|1)
+    -3.962    0.36866 
+diag(V_(1|1))
+
+   0.19206    0.28279 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    65.409     45.456 
+U
+    4.1482     2.5428 
+a_(2|2)
+   -3.5471    0.54973 
+diag(V_(2|2))
+
+   0.15235    0.22391 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    166.67     101.92 
+U
+    5.9284     3.8007 
+a_(3|3)
+   -2.5579    0.66307 
+diag(V_(3|3))
+
+   0.11998    0.17326 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -75.752    -62.118 
+U
+    10.391     6.3724 
+a_(4|4)
+   -2.7651      0.424 
+diag(V_(4|4))
+
+  0.084364    0.12327 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -26.993    -8.3999 
+U
+    6.6346     3.6763 
+a_(5|5)
+   -2.9191    0.48125 
+diag(V_(5|5))
+
+  0.073922    0.10599 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -43.016    -32.272 
+U
+    4.8418      2.488 
+a_(6|6)
+   -3.0792    0.35541 
+diag(V_(6|6))
+
+  0.070342   0.097848 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -27.172    -3.2583 
+U
+    3.6907      1.845 
+a_(7|7)
+   -3.2577    0.42544 
+diag(V_(7|7))
+
+  0.070143   0.093733 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -4.7797    -4.4281 
+U
+    2.8884      1.333 
+a_(8|8)
+   -3.2781    0.39954 
+diag(V_(8|8))
+
+   0.07146   0.092002 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -19.218    -8.2553 
+U
+    2.5496     1.1697 
+a_(9|9)
+   -3.3969      0.375 
+diag(V_(9|9))
+
+  0.073065   0.090923 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -10.451     2.9865 
+U
+    1.8717    0.83543 
+a_(10|10)
+   -3.4835    0.42522 
+diag(V_(10|10))
+
+  0.076615   0.091352 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -7.2455    -8.1316 
+U
+    1.5512    0.62763 
+a_(11|11)
+   -3.5273    0.36279 
+diag(V_(11|11))
+
+  0.080451   0.092594 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -10.771    -7.3482 
+U
+     1.366    0.56698 
+a_(12|12)
+   -3.6077    0.30909 
+diag(V_(12|12))
+
+  0.084304   0.093863 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -15.066    -6.4622 
+U
+    1.1586    0.49844 
+a_(13|13)
+    -3.734    0.26413 
+diag(V_(13|13))
+
+  0.088571   0.095277 
+Score vector and diagonal of information matrix at time 14 are:
+u
+   0.18348    -5.4786 
+U
+   0.98241     0.4224 
+a_(14|14)
+    -3.728    0.21087 
+diag(V_(14|14))
+
+    0.0932   0.096958 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -11.935    -5.2341 
+U
+   0.91991     0.4035 
+a_(15|15)
+   -3.8414    0.16579 
+diag(V_(15|15))
+
+  0.097397   0.098481 
+
+
+
+##########################################
+Starting iteration 11 with the following values
+a_0
+     -3.25    0.48332 
+diag(Q)
+ 0.0094775  0.0034491 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -81.101     -51.42 
+U
+    9.3839     6.0261 
+a_(1|1)
+    -3.961    0.36023 
+diag(V_(1|1))
+
+   0.19204    0.28358 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    65.625     45.695 
+U
+    4.1317     2.5247 
+a_(2|2)
+    -3.524    0.55971 
+diag(V_(2|2))
+
+   0.15461    0.22521 
+Score vector and diagonal of information matrix at time 3 are:
+u
+     164.4     100.29 
+U
+    6.0978      3.922 
+a_(3|3)
+   -2.4935    0.69704 
+diag(V_(3|3))
+
+   0.12202    0.17312 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -86.167    -69.328 
+U
+    11.194     6.9294 
+a_(4|4)
+   -2.7525    0.43964 
+diag(V_(4|4))
+
+  0.084166     0.1207 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -28.693     -9.645 
+U
+    6.7647     3.7713 
+a_(5|5)
+   -2.9201    0.48585 
+diag(V_(5|5))
+
+  0.075636    0.10468 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -43.094    -32.378 
+U
+    4.8478     2.4962 
+a_(6|6)
+   -3.1069    0.34443 
+diag(V_(6|6))
+
+  0.073814   0.097662 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -25.691    -2.3987 
+U
+    3.5769     1.7794 
+a_(7|7)
+    -3.293    0.40571 
+diag(V_(7|7))
+
+  0.075502   0.094648 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -3.2241    -3.5499 
+U
+    2.7691     1.2656 
+a_(8|8)
+   -3.3091    0.38073 
+diag(V_(8|8))
+
+  0.078571   0.093914 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -17.992    -7.5557 
+U
+    2.4552     1.1159 
+a_(9|9)
+     -3.44    0.34716 
+diag(V_(9|9))
+
+  0.081411   0.093511 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -9.1839     3.7057 
+U
+    1.7746    0.78074 
+a_(10|10)
+   -3.5254     0.3964 
+diag(V_(10|10))
+
+  0.086757   0.094723 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -6.2338    -7.6019 
+U
+    1.4733    0.58662 
+a_(11|11)
+   -3.5751    0.32928 
+diag(V_(11|11))
+
+  0.092276   0.096726 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -9.7493    -6.7982 
+U
+    1.2872    0.52443 
+a_(12|12)
+   -3.6663    0.26802 
+diag(V_(12|12))
+
+  0.097649   0.098636 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -13.999    -5.8712 
+U
+    1.0763    0.45274 
+a_(13|13)
+   -3.8101    0.21166 
+diag(V_(13|13))
+
+   0.10356    0.10068 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    1.3496    -4.8371 
+U
+   0.89275    0.37284 
+a_(14|14)
+   -3.7962    0.16208 
+diag(V_(14|14))
+
+   0.11008    0.10307 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -10.942    -4.6722 
+U
+   0.84321    0.36011 
+a_(15|15)
+   -3.9253    0.10717 
+diag(V_(15|15))
+
+   0.11571    0.10512 
+
+
+
+##########################################
+Starting iteration 12 with the following values
+a_0
+   -3.2589    0.46493 
+diag(Q)
+  0.013792  0.0047011 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -78.757    -49.445 
+U
+    9.2031     5.8737 
+a_(1|1)
+   -3.9653     0.3477 
+diag(V_(1|1))
+
+    0.1933    0.28656 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    66.254     46.235 
+U
+     4.084     2.4837 
+a_(2|2)
+   -3.4904    0.57636 
+diag(V_(2|2))
+
+   0.15886    0.22849 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    160.88     97.731 
+U
+    6.3611     4.1132 
+a_(3|3)
+   -2.4123     0.7371 
+diag(V_(3|3))
+
+   0.12492    0.17338 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -100.01    -78.881 
+U
+    12.262      7.668 
+a_(4|4)
+   -2.7376    0.45795 
+diag(V_(4|4))
+
+  0.083645    0.11755 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -30.742    -11.147 
+U
+    6.9215     3.8861 
+a_(5|5)
+   -2.9238    0.48985 
+diag(V_(5|5))
+
+  0.077886     0.1032 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.995    -32.387 
+U
+    4.8402     2.4969 
+a_(6|6)
+   -3.1445     0.3286 
+diag(V_(6|6))
+
+  0.078491   0.097639 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -23.725     -1.255 
+U
+     3.426     1.6922 
+a_(7|7)
+   -3.3378    0.38067 
+diag(V_(7|7))
+
+  0.082899   0.096086 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   -1.3372    -2.4935 
+U
+    2.6244     1.1846 
+a_(8|8)
+   -3.3449    0.35912 
+diag(V_(8|8))
+
+  0.088426   0.096646 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -16.633    -6.7869 
+U
+    2.3506     1.0567 
+a_(9|9)
+   -3.4903    0.31506 
+diag(V_(9|9))
+
+  0.092762    0.09702 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -7.7938     4.4841 
+U
+    1.6681    0.72155 
+a_(10|10)
+   -3.5717    0.36472 
+diag(V_(10|10))
+
+   0.10066   0.099261 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -5.1769    -7.0559 
+U
+     1.392    0.54436 
+a_(11|11)
+   -3.6277    0.29271 
+diag(V_(11|11))
+
+   0.10847    0.10223 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -8.6958    -6.2402 
+U
+     1.206    0.48127 
+a_(12|12)
+   -3.7317    0.22274 
+diag(V_(12|12))
+
+   0.11591    0.10495 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -12.902    -5.2754 
+U
+   0.99167     0.4067 
+a_(13|13)
+   -3.8974    0.15253 
+diag(V_(13|13))
+
+   0.12418    0.10783 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    2.5489    -4.1949 
+U
+   0.80059    0.32325 
+a_(14|14)
+   -3.8699     0.1099 
+diag(V_(14|14))
+
+   0.13359    0.11124 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -9.9672    -4.1332 
+U
+   0.76796    0.31849 
+a_(15|15)
+   -4.0189    0.04281 
+diag(V_(15|15))
+
+   0.14115    0.11396 
+
+
+
+##########################################
+Starting iteration 13 with the following values
+a_0
+   -3.2821    0.43846 
+diag(Q)
+  0.020583  0.0066691 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -74.315    -45.961 
+U
+    8.8605      5.605 
+a_(1|1)
+   -3.9772    0.33011 
+diag(V_(1|1))
+
+   0.19647    0.29271 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    67.424     47.162 
+U
+     3.995     2.4133 
+a_(2|2)
+   -3.4416    0.60323 
+diag(V_(2|2))
+
+   0.16587    0.23458 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    155.36     93.649 
+U
+    6.7746     4.4179 
+a_(3|3)
+   -2.3248    0.77504 
+diag(V_(3|3))
+
+   0.12838    0.17381 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -115.64    -89.561 
+U
+    13.469     8.4944 
+a_(4|4)
+   -2.7234    0.47457 
+diag(V_(4|4))
+
+  0.082864    0.11423 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -32.701    -12.578 
+U
+    7.0714     3.9954 
+a_(5|5)
+   -2.9329    0.48961 
+diag(V_(5|5))
+
+  0.080906    0.10196 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -42.459    -32.112 
+U
+    4.7989     2.4756 
+a_(6|6)
+   -3.1943    0.30425 
+diag(V_(6|6))
+
+  0.084724   0.098189 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -21.182    0.24352 
+U
+    3.2309     1.5778 
+a_(7|7)
+   -3.3919    0.34858 
+diag(V_(7|7))
+
+  0.093062   0.098535 
+Score vector and diagonal of information matrix at time 8 are:
+u
+   0.83592    -1.2778 
+U
+    2.4579     1.0913 
+a_(8|8)
+   -3.3821    0.33486 
+diag(V_(8|8))
+
+   0.10195     0.1007 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -15.258    -6.0056 
+U
+    2.2448    0.99667 
+a_(9|9)
+   -3.5446    0.27902 
+diag(V_(9|9))
+
+   0.10782    0.10183 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -6.3765     5.2729 
+U
+    1.5596     0.6616 
+a_(10|10)
+   -3.6181     0.3315 
+diag(V_(10|10))
+
+   0.11933     0.1054 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -4.1686    -6.5375 
+U
+    1.3145    0.50426 
+a_(11|11)
+   -3.6807    0.25453 
+diag(V_(11|11))
+
+   0.13012    0.10954 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -7.6953     -5.715 
+U
+    1.1289    0.44067 
+a_(12|12)
+   -3.7999    0.17469 
+diag(V_(12|12))
+
+   0.14028    0.11323 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -11.848    -4.7128 
+U
+   0.91048    0.36324 
+a_(13|13)
+   -3.9925   0.087953 
+diag(V_(13|13))
+
+   0.15195    0.11723 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    3.7112    -3.5891 
+U
+   0.71133     0.2765 
+a_(14|14)
+   -3.9433   0.056894 
+diag(V_(14|14))
+
+   0.16585    0.12213 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -9.0834    -3.6534 
+U
+   0.69976    0.28146 
+a_(15|15)
+   -4.1176  -0.025247 
+diag(V_(15|15))
+
+   0.17584    0.12564 
+
+
+
+##########################################
+Starting iteration 14 with the following values
+a_0
+   -3.3226    0.40192 
+diag(Q)
+  0.030888  0.0096497 
+Score vector and diagonal of information matrix at time 1 are:
+u
+     -67.6     -40.86 
+U
+    8.3429     5.2117 
+a_(1|1)
+   -3.9976    0.30696 
+diag(V_(1|1))
+
+   0.20201    0.30285 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    69.156     48.483 
+U
+    3.8633      2.313 
+a_(2|2)
+   -3.3737    0.64351 
+diag(V_(2|2))
+
+   0.17604    0.24404 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    146.91     87.317 
+U
+    7.4075     4.8907 
+a_(3|3)
+   -2.2548    0.79568 
+diag(V_(3|3))
+
+    0.1314    0.17378 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -128.07    -97.772 
+U
+    14.429     9.1301 
+a_(4|4)
+    -2.718    0.47889 
+diag(V_(4|4))
+
+  0.082409    0.11175 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -33.368     -13.04 
+U
+    7.1225     4.0307 
+a_(5|5)
+   -2.9501    0.47847 
+diag(V_(5|5))
+
+  0.085064    0.10183 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -41.151    -31.293 
+U
+    4.6978     2.4121 
+a_(6|6)
+    -3.255    0.26653 
+diag(V_(6|6))
+
+  0.092766    0.10002 
+Score vector and diagonal of information matrix at time 7 are:
+u
+    -18.13     2.0861 
+U
+    2.9968     1.4374 
+a_(7|7)
+   -3.4505    0.30795 
+diag(V_(7|7))
+
+   0.10657    0.10271 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    3.1064  0.0093888 
+U
+    2.2839    0.99266 
+a_(8|8)
+   -3.4133     0.3083 
+diag(V_(8|8))
+
+   0.11967     0.1067 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -14.081    -5.3099 
+U
+    2.1543     0.9432 
+a_(9|9)
+   -3.5956    0.23976 
+diag(V_(9|9))
+
+   0.12647    0.10826 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -5.0879     5.9988 
+U
+     1.461    0.60645 
+a_(10|10)
+    -3.657    0.29828 
+diag(V_(10|10))
+
+   0.14288    0.11347 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -3.3352    -6.0991 
+U
+    1.2505    0.47036 
+a_(11|11)
+   -3.7269    0.21621 
+diag(V_(11|11))
+
+    0.1572    0.11887 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -6.8513    -5.2663 
+U
+    1.0639      0.406 
+a_(12|12)
+   -3.8636    0.12554 
+diag(V_(12|12))
+
+   0.17074    0.12367 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -10.927    -4.2228 
+U
+   0.83959    0.32541 
+a_(13|13)
+   -4.0878   0.019999 
+diag(V_(13|13))
+
+   0.18716    0.12914 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    4.7509    -3.0583 
+U
+   0.63151    0.23556 
+a_(14|14)
+   -4.0068  0.0059823 
+diag(V_(14|14))
+
+   0.20789    0.13621 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -8.3682     -3.266 
+U
+   0.64459    0.25157 
+a_(15|15)
+   -4.2125  -0.094244 
+diag(V_(15|15))
+
+   0.22045    0.14049 
+
+
+
+##########################################
+Starting iteration 15 with the following values
+a_0
+   -3.3771    0.35479 
+diag(Q)
+  0.044975    0.01371 
+Score vector and diagonal of information matrix at time 1 are:
+u
+    -59.29    -34.635 
+U
+    7.7026      4.732 
+a_(1|1)
+   -4.0237    0.27921 
+diag(V_(1|1))
+
+   0.20971    0.31681 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    71.229     50.042 
+U
+    3.7057     2.1946 
+a_(2|2)
+   -3.2888    0.69628 
+diag(V_(2|2))
+
+   0.18858    0.25639 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    135.11     78.362 
+U
+    8.2913     5.5598 
+a_(3|3)
+   -2.2265    0.78807 
+diag(V_(3|3))
+
+   0.13273    0.17254 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -131.78    -99.709 
+U
+    14.715     9.2801 
+a_(4|4)
+   -2.7304    0.46121 
+diag(V_(4|4))
+
+  0.083062    0.11107 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -31.492     -11.63 
+U
+     6.979     3.9229 
+a_(5|5)
+   -2.9739    0.45346 
+diag(V_(5|5))
+
+   0.09053    0.10353 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -39.116    -29.923 
+U
+    4.5405     2.3059 
+a_(6|6)
+   -3.3182    0.21628 
+diag(V_(6|6))
+
+    0.1022    0.10351 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -15.006     4.0197 
+U
+    2.7574       1.29 
+a_(7|7)
+   -3.5031    0.26213 
+diag(V_(7|7))
+
+   0.12288    0.10884 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    5.1136     1.1773 
+U
+    2.1302    0.90318 
+a_(8|8)
+   -3.4299    0.28219 
+diag(V_(8|8))
+
+   0.14036    0.11456 
+Score vector and diagonal of information matrix at time 9 are:
+u
+    -13.34    -4.8192 
+U
+    2.0973    0.90549 
+a_(9|9)
+   -3.6346    0.20055 
+diag(V_(9|9))
+
+   0.14648    0.11584 
+Score vector and diagonal of information matrix at time 10 are:
+u
+    -4.094     6.5805 
+U
+     1.385    0.56228 
+a_(10|10)
+   -3.6817    0.26772 
+diag(V_(10|10))
+
+   0.16902    0.12294 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -2.7755    -5.7826 
+U
+    1.2074    0.44589 
+a_(11|11)
+   -3.7599    0.18021 
+diag(V_(11|11))
+
+    0.1869    0.12952 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -6.2397     -4.926 
+U
+    1.0168     0.3797 
+a_(12|12)
+   -3.9149   0.078504 
+diag(V_(12|12))
+
+   0.20428    0.13546 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -10.212    -3.8361 
+U
+   0.78448    0.29556 
+a_(13|13)
+    -4.173   -0.04642 
+diag(V_(13|13))
+
+   0.22686    0.14276 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    5.5913    -2.6349 
+U
+   0.56702    0.20291 
+a_(14|14)
+   -4.0517  -0.038955 
+diag(V_(14|14))
+
+   0.25708    0.15274 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.8727    -2.9904 
+U
+   0.60638    0.23032 
+a_(15|15)
+   -4.2931    -0.1592 
+diag(V_(15|15))
+
+   0.27136    0.15748 
+
+
+
+##########################################
+Starting iteration 16 with the following values
+a_0
+   -3.4348    0.30202 
+diag(Q)
+  0.061139   0.018347 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -51.045    -28.484 
+U
+    7.0677     4.2584 
+a_(1|1)
+   -4.0489    0.25082 
+diag(V_(1|1))
+
+   0.21821    0.33242 
+Score vector and diagonal of information matrix at time 2 are:
+u
+     73.19     51.519 
+U
+    3.5566     2.0825 
+a_(2|2)
+      -3.2    0.75332 
+diag(V_(2|2))
+
+   0.20118    0.26948 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    121.19     67.666 
+U
+    9.3346     6.3597 
+a_(3|3)
+   -2.2371    0.76122 
+diag(V_(3|3))
+
+    0.1321    0.17003 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -127.62    -96.223 
+U
+    14.394     9.0102 
+a_(4|4)
+   -2.7577    0.42856 
+diag(V_(4|4))
+
+  0.084747    0.11189 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -27.783    -8.9234 
+U
+    6.6951     3.7162 
+a_(5|5)
+   -2.9971    0.42353 
+diag(V_(5|5))
+
+  0.096571    0.10651 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -37.053    -28.495 
+U
+    4.3812     2.1953 
+a_(6|6)
+    -3.372    0.16593 
+diag(V_(6|6))
+
+   0.11145    0.10777 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -12.437      5.628 
+U
+    2.5606     1.1675 
+a_(7|7)
+    -3.541    0.22142 
+diag(V_(7|7))
+
+   0.13938    0.11569 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    6.5511     2.0365 
+U
+    2.0201    0.83739 
+a_(8|8)
+    -3.431    0.26212 
+diag(V_(8|8))
+
+   0.16042    0.12271 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.086    -4.5819 
+U
+    2.0778    0.88727 
+a_(9|9)
+   -3.6588    0.16796 
+diag(V_(9|9))
+
+   0.16396    0.12293 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -3.4488     6.9772 
+U
+    1.3357    0.53216 
+a_(10|10)
+   -3.6929    0.24395 
+diag(V_(10|10))
+
+   0.19327    0.13202 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -2.4759    -5.5909 
+U
+    1.1844    0.43108 
+a_(11|11)
+   -3.7796    0.15101 
+diag(V_(11|11))
+
+   0.21413    0.13951 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -5.8526    -4.6974 
+U
+   0.98696    0.36205 
+a_(12|12)
+   -3.9517   0.039448 
+diag(V_(12|12))
+
+    0.2354    0.14656 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -9.7127    -3.5621 
+U
+   0.74605    0.27442 
+a_(13|13)
+   -4.2407   -0.10281 
+diag(V_(13|13))
+
+   0.26485    0.15586 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    6.2026    -2.3315 
+U
+   0.52013    0.17952 
+a_(14|14)
+   -4.0769  -0.072829 
+diag(V_(14|14))
+
+   0.30615    0.16919 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.5846    -2.8217 
+U
+   0.58416    0.21731 
+a_(15|15)
+   -4.3535   -0.21238 
+diag(V_(15|15))
+
+   0.32028    0.17378 
+
+
+
+##########################################
+Starting iteration 17 with the following values
+a_0
+    -3.484    0.25444 
+diag(Q)
+  0.076484   0.022722 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -44.443    -23.579 
+U
+    6.5595      3.881 
+a_(1|1)
+   -4.0683     0.2276 
+diag(V_(1|1))
+
+   0.22579    0.34649 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    74.674     52.639 
+U
+    3.4439     1.9976 
+a_(2|2)
+   -3.1235    0.80375 
+diag(V_(2|2))
+
+   0.21162     0.2807 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    107.77     57.248 
+U
+    10.341     7.1394 
+a_(3|3)
+   -2.2623    0.73409 
+diag(V_(3|3))
+
+   0.13048    0.16707 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -121.31    -91.473 
+U
+    13.906     8.6425 
+a_(4|4)
+   -2.7866    0.39786 
+diag(V_(4|4))
+
+  0.086596    0.11304 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -24.184    -6.3589 
+U
+    6.4197     3.5205 
+a_(5|5)
+   -3.0141    0.40006 
+diag(V_(5|5))
+
+    0.1019    0.10941 
+Score vector and diagonal of information matrix at time 6 are:
+u
+    -35.55    -27.449 
+U
+    4.2651     2.1144 
+a_(6|6)
+   -3.4107    0.12779 
+diag(V_(6|6))
+
+   0.11886    0.11142 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -10.682     6.7208 
+U
+    2.4262     1.0843 
+a_(7|7)
+   -3.5642    0.19324 
+diag(V_(7|7))
+
+   0.15322    0.12153 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    7.4248     2.5657 
+U
+    1.9532    0.79687 
+a_(8|8)
+   -3.4247    0.25072 
+diag(V_(8|8))
+
+   0.17655    0.12933 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.124    -4.5257 
+U
+    2.0807    0.88294 
+a_(9|9)
+   -3.6727    0.14595 
+diag(V_(9|9))
+
+   0.17668    0.12818 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -3.0689     7.2172 
+U
+    1.3067    0.51394 
+a_(10|10)
+   -3.6968    0.22889 
+diag(V_(10|10))
+
+   0.21237    0.13911 
+Score vector and diagonal of information matrix at time 11 are:
+u
+    -2.336     -5.489 
+U
+    1.1736     0.4232 
+a_(11|11)
+   -3.7912    0.13132 
+diag(V_(11|11))
+
+   0.23539    0.14724 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -5.6205    -4.5568 
+U
+   0.96908    0.35119 
+a_(12|12)
+   -3.9767   0.012117 
+diag(V_(12|12))
+
+   0.26012    0.15525 
+Score vector and diagonal of information matrix at time 13 are:
+u
+    -9.386    -3.3842 
+U
+    0.7209     0.2607 
+a_(13|13)
+   -4.2903   -0.14365 
+diag(V_(13|13))
+
+     0.296     0.1664 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    6.6147    -2.1325 
+U
+   0.48853    0.16418 
+a_(14|14)
+   -4.0888  -0.093784 
+diag(V_(14|14))
+
+   0.34794    0.18292 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.4395    -2.7319 
+U
+   0.57297    0.21039 
+a_(15|15)
+   -4.3951    -0.2494 
+diag(V_(15|15))
+
+   0.36006    0.18681 
+
+
+
+##########################################
+Starting iteration 18 with the following values
+a_0
+   -3.5206    0.21954 
+diag(Q)
+  0.089179   0.026315 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -39.877    -20.226 
+U
+    6.2082     3.6231 
+a_(1|1)
+   -4.0815    0.21223 
+diag(V_(1|1))
+
+   0.23163    0.35721 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    75.646     53.366 
+U
+      3.37     1.9424 
+a_(2|2)
+   -3.0661    0.84219 
+diag(V_(2|2))
+
+   0.21928    0.28893 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    96.802     48.662 
+U
+    11.164     7.7824 
+a_(3|3)
+   -2.2852    0.71525 
+diag(V_(3|3))
+
+   0.12883    0.16447 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -116.23    -87.792 
+U
+    13.514     8.3575 
+a_(4|4)
+   -2.8091    0.37656 
+diag(V_(4|4))
+
+  0.088043    0.11389 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -21.582     -4.548 
+U
+    6.2207     3.3823 
+a_(5|5)
+   -3.0251    0.38551 
+diag(V_(5|5))
+
+   0.10588    0.11153 
+Score vector and diagonal of information matrix at time 6 are:
+u
+    -34.62    -26.809 
+U
+    4.1933     2.0648 
+a_(6|6)
+   -3.4366     0.1033 
+diag(V_(6|6))
+
+   0.12407    0.11395 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -9.5784     7.3954 
+U
+    2.3418      1.033 
+a_(7|7)
+   -3.5779    0.17648 
+diag(V_(7|7))
+
+   0.16348    0.12572 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    7.9263     2.8676 
+U
+    1.9149    0.77377 
+a_(8|8)
+   -3.4176    0.24575 
+diag(V_(8|8))
+
+   0.18813    0.13395 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.256    -4.5494 
+U
+    2.0909    0.88477 
+a_(9|9)
+   -3.6811     0.1329 
+diag(V_(9|9))
+
+   0.18509    0.13155 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -2.8452     7.3568 
+U
+    1.2896    0.50334 
+a_(10|10)
+   -3.6983    0.22061 
+diag(V_(10|10))
+
+   0.22609      0.144 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -2.2703    -5.4375 
+U
+    1.1685    0.41922 
+a_(11|11)
+   -3.7985    0.11956 
+diag(V_(11|11))
+
+   0.25055    0.15255 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -5.4788    -4.4728 
+U
+   0.95817    0.34471 
+a_(12|12)
+   -3.9937 -0.0050317 
+diag(V_(12|12))
+
+   0.27804    0.16132 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -9.1753    -3.2728 
+U
+   0.70468     0.2521 
+a_(13|13)
+   -4.3252   -0.17046 
+diag(V_(13|13))
+
+   0.31916    0.17399 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    6.8844    -2.0064 
+U
+   0.46785    0.15447 
+a_(14|14)
+    -4.094   -0.10496 
+diag(V_(14|14))
+
+   0.37997    0.19313 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.3722    -2.6884 
+U
+   0.56778    0.20703 
+a_(15|15)
+   -4.4228   -0.27267 
+diag(V_(15|15))
+
+   0.38916    0.19607 
+
+
+
+##########################################
+Starting iteration 19 with the following values
+a_0
+   -3.5463     0.1968 
+diag(Q)
+  0.098907   0.029043 
+Score vector and diagonal of information matrix at time 1 are:
+u
+     -36.9    -18.076 
+U
+    5.9792     3.4577 
+a_(1|1)
+   -4.0904    0.20323 
+diag(V_(1|1))
+
+   0.23583    0.36469 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    76.253      53.81 
+U
+    3.3238     1.9086 
+a_(2|2)
+    -3.026     0.8693 
+diag(V_(2|2))
+
+   0.22462    0.29454 
+Score vector and diagonal of information matrix at time 3 are:
+u
+     88.64     42.243 
+U
+    11.777     8.2634 
+a_(3|3)
+   -2.3016     0.7038 
+diag(V_(3|3))
+
+   0.12753    0.16249 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -112.83    -85.377 
+U
+    13.251     8.1706 
+a_(4|4)
+   -2.8248    0.36334 
+diag(V_(4|4))
+
+  0.089034    0.11438 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -19.883    -3.3896 
+U
+    6.0907      3.294 
+a_(5|5)
+   -3.0319    0.37719 
+diag(V_(5|5))
+
+   0.10864    0.11291 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -34.064    -26.434 
+U
+    4.1504     2.0358 
+a_(6|6)
+   -3.4536   0.088397 
+diag(V_(6|6))
+
+   0.12758    0.11556 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -8.8899     7.8072 
+U
+     2.289     1.0017 
+a_(7|7)
+   -3.5862    0.16694 
+diag(V_(7|7))
+
+    0.1707    0.12853 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    8.2194     3.0406 
+U
+    1.8924    0.76052 
+a_(8|8)
+   -3.4119    0.24409 
+diag(V_(8|8))
+
+    0.1961    0.13698 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.387    -4.5943 
+U
+     2.101    0.88822 
+a_(9|9)
+   -3.6866    0.12545 
+diag(V_(9|9))
+
+   0.19055    0.13362 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -2.7081     7.4397 
+U
+    1.2791    0.49705 
+a_(10|10)
+    -3.699    0.21629 
+diag(V_(10|10))
+
+   0.23562    0.14724 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -2.2367     -5.411 
+U
+     1.166    0.41717 
+a_(11|11)
+   -3.8035     0.1128 
+diag(V_(11|11))
+
+     0.261    0.15605 
+Score vector and diagonal of information matrix at time 12 are:
+u
+    -5.389    -4.4219 
+U
+   0.95125    0.34078 
+a_(12|12)
+   -4.0053  -0.015457 
+diag(V_(12|12))
+
+   0.29056    0.16539 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -9.0381    -3.2027 
+U
+   0.69411    0.24669 
+a_(13|13)
+   -4.3493   -0.18757 
+diag(V_(13|13))
+
+   0.33565    0.17919 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    7.0612    -1.9263 
+U
+   0.45429     0.1483 
+a_(14|14)
+   -4.0961    -0.1105 
+diag(V_(14|14))
+
+   0.40328    0.20032 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.3422    -2.6682 
+U
+   0.56546    0.20547 
+a_(15|15)
+   -4.4413   -0.28687 
+diag(V_(15|15))
+
+    0.4095    0.20232 
+
+
+
+##########################################
+Starting iteration 20 with the following values
+a_0
+    -3.564    0.18246 
+diag(Q)
+   0.10606   0.031027 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -34.967    -16.704 
+U
+    5.8306     3.3522 
+a_(1|1)
+   -4.0964    0.19812 
+diag(V_(1|1))
+
+   0.23878    0.36977 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    76.636     54.084 
+U
+    3.2947     1.8879 
+a_(2|2)
+   -2.9986    0.88785 
+diag(V_(2|2))
+
+    0.2283    0.29829 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    82.827      37.66 
+U
+    12.213      8.607 
+a_(3|3)
+   -2.3127    0.69702 
+diag(V_(3|3))
+
+   0.12658    0.16107 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -110.64    -83.849 
+U
+    13.082     8.0524 
+a_(4|4)
+   -2.8354     0.3553 
+diag(V_(4|4))
+
+  0.089688    0.11466 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -18.792    -2.6586 
+U
+    6.0073     3.2382 
+a_(5|5)
+   -3.0363    0.37245 
+diag(V_(5|5))
+
+   0.11051    0.11379 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -33.725     -26.21 
+U
+    4.1242     2.0185 
+a_(6|6)
+   -3.4649   0.079303 
+diag(V_(6|6))
+
+   0.12992    0.11657 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -8.4519      8.064 
+U
+    2.2555    0.98211 
+a_(7|7)
+   -3.5915    0.16147 
+diag(V_(7|7))
+
+   0.17569    0.13038 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    8.3978     3.1434 
+U
+    1.8788    0.75266 
+a_(8|8)
+   -3.4077    0.24383 
+diag(V_(8|8))
+
+   0.20152    0.13895 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.493    -4.6372 
+U
+    2.1092    0.89152 
+a_(9|9)
+   -3.6903    0.12116 
+diag(V_(9|9))
+
+   0.19412    0.13489 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -2.6206     7.4905 
+U
+    1.2724     0.4932 
+a_(10|10)
+   -3.6995    0.21405 
+diag(V_(10|10))
+
+   0.24218    0.14935 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -2.2177    -5.3967 
+U
+    1.1645    0.41607 
+a_(11|11)
+    -3.807    0.10888 
+diag(V_(11|11))
+
+   0.26816    0.15833 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -5.3304    -4.3903 
+U
+   0.94674    0.33834 
+a_(12|12)
+   -4.0134  -0.021828 
+diag(V_(12|12))
+
+   0.29922    0.16808 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -8.9473    -3.1577 
+U
+   0.68713    0.24323 
+a_(13|13)
+    -4.366   -0.19849 
+diag(V_(13|13))
+
+    0.3472    0.18269 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    7.1784    -1.8745 
+U
+   0.44531     0.1443 
+a_(14|14)
+    -4.097   -0.11313 
+diag(V_(14|14))
+
+   0.41985    0.20528 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.3293    -2.6591 
+U
+   0.56447    0.20478 
+a_(15|15)
+   -4.4536   -0.29555 
+diag(V_(15|15))
+
+   0.42351    0.20647 
+
+
+
+##########################################
+Starting iteration 21 with the following values
+a_0
+   -3.5762    0.17337 
+diag(Q)
+    0.1112   0.032429 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -33.698    -15.815 
+U
+    5.7329     3.2838 
+a_(1|1)
+   -4.1005    0.19517 
+diag(V_(1|1))
+
+   0.24083     0.3732 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    76.883     54.255 
+U
+     3.276     1.8749 
+a_(2|2)
+   -2.9799     0.9004 
+diag(V_(2|2))
+
+   0.23083     0.3008 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    78.768     34.454 
+U
+    12.518     8.8474 
+a_(3|3)
+   -2.3201    0.69292 
+diag(V_(3|3))
+
+   0.12592    0.16008 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -109.23    -82.877 
+U
+    12.973     7.9772 
+a_(4|4)
+   -2.8424    0.35034 
+diag(V_(4|4))
+
+   0.09012    0.11482 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -18.086    -2.1918 
+U
+    5.9533     3.2026 
+a_(5|5)
+   -3.0392    0.36968 
+diag(V_(5|5))
+
+   0.11178    0.11434 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -33.512    -26.073 
+U
+    4.1078     2.0078 
+a_(6|6)
+   -3.4725   0.073665 
+diag(V_(6|6))
+
+   0.13149     0.1172 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -8.1674     8.2279 
+U
+    2.2337    0.96965 
+a_(7|7)
+   -3.5949    0.15825 
+diag(V_(7|7))
+
+   0.17914    0.13159 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    8.5104     3.2067 
+U
+    1.8702    0.74781 
+a_(8|8)
+   -3.4049    0.24407 
+diag(V_(8|8))
+
+   0.20522    0.14022 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.572     -4.672 
+U
+    2.1152    0.89418 
+a_(9|9)
+   -3.6929    0.11864 
+diag(V_(9|9))
+
+   0.19649    0.13566 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -2.5633     7.5225 
+U
+     1.268    0.49076 
+a_(10|10)
+   -3.6999    0.21287 
+diag(V_(10|10))
+
+   0.24669    0.15073 
+Score vector and diagonal of information matrix at time 11 are:
+u
+    -2.206    -5.3886 
+U
+    1.1636    0.41544 
+a_(11|11)
+   -3.8094    0.10658 
+diag(V_(11|11))
+
+   0.27307    0.15981 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -5.2915    -4.3701 
+U
+   0.94374    0.33678 
+a_(12|12)
+   -4.0189  -0.025764 
+diag(V_(12|12))
+
+   0.30519    0.16984 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -8.8866    -3.1285 
+U
+   0.68246    0.24097 
+a_(13|13)
+   -4.3775    -0.2055 
+diag(V_(13|13))
+
+   0.35524    0.18502 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    7.2569    -1.8405 
+U
+   0.43929    0.14169 
+a_(14|14)
+   -4.0972   -0.11431 
+diag(V_(14|14))
+
+    0.4315    0.20864 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.3243    -2.6553 
+U
+   0.56408    0.20448 
+a_(15|15)
+    -4.462    -0.3009 
+diag(V_(15|15))
+
+   0.43313     0.2092 
+
+
+
+##########################################
+Starting iteration 22 with the following values
+a_0
+   -3.5846    0.16752 
+diag(Q)
+   0.11485   0.033401 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -32.854     -15.23 
+U
+     5.668     3.2389 
+a_(1|1)
+   -4.1034    0.19344 
+diag(V_(1|1))
+
+   0.24225    0.37553 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    77.044     54.366 
+U
+    3.2637     1.8665 
+a_(2|2)
+   -2.9672    0.90886 
+diag(V_(2|2))
+
+   0.23256    0.30248 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    75.959     32.236 
+U
+    12.729     9.0137 
+a_(3|3)
+    -2.325    0.69035 
+diag(V_(3|3))
+
+   0.12546     0.1594 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -108.32     -82.25 
+U
+    12.902     7.9287 
+a_(4|4)
+   -2.8472    0.34722 
+diag(V_(4|4))
+
+  0.090407     0.1149 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -17.624     -1.889 
+U
+     5.918     3.1795 
+a_(5|5)
+   -3.0412    0.36801 
+diag(V_(5|5))
+
+   0.11264    0.11469 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -33.375    -25.986 
+U
+    4.0972     2.0011 
+a_(6|6)
+   -3.4776   0.070121 
+diag(V_(6|6))
+
+   0.13256     0.1176 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -7.9797     8.3344 
+U
+    2.2193    0.96154 
+a_(7|7)
+   -3.5972    0.15633 
+diag(V_(7|7))
+
+   0.18151    0.13238 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    8.5838     3.2468 
+U
+    1.8646    0.74474 
+a_(8|8)
+   -3.4029    0.24445 
+diag(V_(8|8))
+
+   0.20775    0.14104 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.628    -4.6981 
+U
+    2.1195    0.89619 
+a_(9|9)
+   -3.6947    0.11715 
+diag(V_(9|9))
+
+   0.19809    0.13614 
+Score vector and diagonal of information matrix at time 10 are:
+u
+    -2.525     7.5432 
+U
+    1.2651    0.48919 
+a_(10|10)
+   -3.7002    0.21225 
+diag(V_(10|10))
+
+   0.24981    0.15162 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -2.1982    -5.3837 
+U
+     1.163    0.41506 
+a_(11|11)
+   -3.8111    0.10523 
+diag(V_(11|11))
+
+   0.27645    0.16076 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -5.2653    -4.3571 
+U
+   0.94172    0.33577 
+a_(12|12)
+   -4.0228  -0.028203 
+diag(V_(12|12))
+
+   0.30931    0.17098 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -8.8458    -3.1093 
+U
+   0.67932    0.23949 
+a_(13|13)
+   -4.3854      -0.21 
+diag(V_(13|13))
+
+   0.36082    0.18656 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    7.3098     -1.818 
+U
+   0.43524    0.13995 
+a_(14|14)
+   -4.0973   -0.11476 
+diag(V_(14|14))
+
+   0.43964    0.21088 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.3227     -2.654 
+U
+   0.56396    0.20438 
+a_(15|15)
+   -4.4677   -0.30419 
+diag(V_(15|15))
+
+   0.43973    0.21097 
+
+
+
+##########################################
+Starting iteration 23 with the following values
+a_0
+   -3.5904    0.16372 
+diag(Q)
+   0.11741   0.034062 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -32.288    -14.841 
+U
+    5.6245     3.2089 
+a_(1|1)
+   -4.1053     0.1924 
+diag(V_(1|1))
+
+   0.24323    0.37711 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    77.152     54.438 
+U
+    3.2556      1.861 
+a_(2|2)
+   -2.9585    0.91454 
+diag(V_(2|2))
+
+   0.23376    0.30361 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    74.026     30.711 
+U
+    12.875     9.1281 
+a_(3|3)
+   -2.3282     0.6887 
+diag(V_(3|3))
+
+   0.12515    0.15894 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -107.72    -81.839 
+U
+    12.856     7.8969 
+a_(4|4)
+   -2.8504    0.34522 
+diag(V_(4|4))
+
+    0.0906    0.11495 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -17.318    -1.6902 
+U
+    5.8946     3.1644 
+a_(5|5)
+   -3.0425    0.36698 
+diag(V_(5|5))
+
+   0.11323    0.11491 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -33.285     -25.93 
+U
+    4.0903     1.9968 
+a_(6|6)
+   -3.4811    0.06788 
+diag(V_(6|6))
+
+    0.1333    0.11784 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -7.8545     8.4044 
+U
+    2.2097    0.95622 
+a_(7|7)
+   -3.5988    0.15517 
+diag(V_(7|7))
+
+   0.18315    0.13289 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    8.6327     3.2729 
+U
+    1.8608    0.74275 
+a_(8|8)
+   -3.4016    0.24482 
+diag(V_(8|8))
+
+    0.2095    0.14156 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.668    -4.7172 
+U
+    2.1226    0.89766 
+a_(9|9)
+    -3.696    0.11626 
+diag(V_(9|9))
+
+   0.19919    0.13642 
+Score vector and diagonal of information matrix at time 10 are:
+u
+    -2.499     7.5567 
+U
+    1.2631    0.48817 
+a_(10|10)
+   -3.7005    0.21193 
+diag(V_(10|10))
+
+   0.25197    0.15218 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -2.1925    -5.3806 
+U
+    1.1626    0.41483 
+a_(11|11)
+   -3.8123    0.10444 
+diag(V_(11|11))
+
+   0.27878    0.16136 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -5.2475    -4.3486 
+U
+   0.94035    0.33512 
+a_(12|12)
+   -4.0254  -0.029697 
+diag(V_(12|12))
+
+   0.31217    0.17171 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -8.8181    -3.0966 
+U
+   0.67719    0.23851 
+a_(13|13)
+   -4.3909   -0.21286 
+diag(V_(13|13))
+
+   0.36469    0.18755 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    7.3458     -1.803 
+U
+   0.43248     0.1388 
+a_(14|14)
+   -4.0973   -0.11482 
+diag(V_(14|14))
+
+   0.44531    0.21235 
+Score vector and diagonal of information matrix at time 15 are:
+u
+   -7.3225    -2.6538 
+U
+   0.56395    0.20437 
+a_(15|15)
+   -4.4716   -0.30618 
+diag(V_(15|15))
+
+   0.44427    0.21209 
+
+
+
+##########################################
+Starting iteration 24 with the following values
+a_0
+   -3.5944    0.16123 
+diag(Q)
+    0.1192   0.034503 
+Score vector and diagonal of information matrix at time 1 are:
+u
+   -31.905     -14.58 
+U
+    5.5951     3.1889 
+a_(1|1)
+   -4.1067    0.19177 
+diag(V_(1|1))
+
+   0.24391    0.37818 
+Score vector and diagonal of information matrix at time 2 are:
+u
+    77.224     54.486 
+U
+    3.2501     1.8574 
+a_(2|2)
+   -2.9525    0.91832 
+diag(V_(2|2))
+
+    0.2346    0.30437 
+Score vector and diagonal of information matrix at time 3 are:
+u
+    72.701     29.667 
+U
+    12.974     9.2064 
+a_(3|3)
+   -2.3304    0.68759 
+diag(V_(3|3))
+
+   0.12494    0.15862 
+Score vector and diagonal of information matrix at time 4 are:
+u
+   -107.32    -81.567 
+U
+    12.825     7.8758 
+a_(4|4)
+   -2.8525    0.34392 
+diag(V_(4|4))
+
+  0.090731    0.11498 
+Score vector and diagonal of information matrix at time 5 are:
+u
+   -17.114    -1.5583 
+U
+     5.879     3.1543 
+a_(5|5)
+   -3.0434    0.36633 
+diag(V_(5|5))
+
+   0.11364    0.11505 
+Score vector and diagonal of information matrix at time 6 are:
+u
+   -33.225    -25.893 
+U
+    4.0856     1.9939 
+a_(6|6)
+   -3.4835   0.066468 
+diag(V_(6|6))
+
+    0.1338    0.11799 
+Score vector and diagonal of information matrix at time 7 are:
+u
+   -7.7702     8.4508 
+U
+    2.2033    0.95269 
+a_(7|7)
+      -3.6    0.15447 
+diag(V_(7|7))
+
+   0.18429     0.1332 
+Score vector and diagonal of information matrix at time 8 are:
+u
+    8.6661     3.2901 
+U
+    1.8582    0.74143 
+a_(8|8)
+   -3.4007    0.24514 
+diag(V_(8|8))
+
+   0.21071    0.14188 
+Score vector and diagonal of information matrix at time 9 are:
+u
+   -13.695    -4.7308 
+U
+    2.1247     0.8987 
+a_(9|9)
+   -3.6969    0.11576 
+diag(V_(9|9))
+
+   0.19995    0.13658 
+Score vector and diagonal of information matrix at time 10 are:
+u
+   -2.4813     7.5656 
+U
+    1.2618     0.4875 
+a_(10|10)
+   -3.7007    0.21178 
+diag(V_(10|10))
+
+   0.25347    0.15252 
+Score vector and diagonal of information matrix at time 11 are:
+u
+   -2.1882    -5.3786 
+U
+    1.1622    0.41467 
+a_(11|11)
+   -3.8132      0.104 
+diag(V_(11|11))
+
+   0.28041    0.16173 
+Score vector and diagonal of information matrix at time 12 are:
+u
+   -5.2353    -4.3431 
+U
+   0.93942     0.3347 
+a_(12|12)
+   -4.0273  -0.030582 
+diag(V_(12|12))
+
+   0.31416    0.17216 
+Score vector and diagonal of information matrix at time 13 are:
+u
+   -8.7992    -3.0882 
+U
+   0.67574    0.23786 
+a_(13|13)
+   -4.3948   -0.21465 
+diag(V_(13|13))
+
+   0.36739    0.18817 
+Score vector and diagonal of information matrix at time 14 are:
+u
+    7.3703     -1.793 
+U
+    0.4306    0.13803 
+a_(14|14)
+   -4.0973   -0.11469 
+diag(V_(14|14))
+
+   0.44926    0.21329 
+Score vector and diagonal of information matrix at time 15 are:
+u
+    -7.323    -2.6542 
+U
+   0.56398     0.2044 
+a_(15|15)
+   -4.4743   -0.30733 
+diag(V_(15|15))
+
+   0.44742    0.21278 
+```
 
 ## EKF
 The EKF method for the exponential model has shown to have issues with divergence. The cause seem to be overstepping in the correction step. Hence, we can set the learning rate below 1. For example, you can do so by passing `list(LR = .5, ...)` to the `control` argument of `ddhazard` to gain a learning rate of $0.5$
