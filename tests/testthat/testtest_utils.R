@@ -1,5 +1,7 @@
-if(interactive())
+if(interactive()){
   source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
+  library(testthat)
+}
 
 set.seed(101010)
 
@@ -51,6 +53,9 @@ test_that("Testing util functions to sim series for tests", {
     expect_true(all(tmp[-1, "id"] == tmp[-nrow(tmp), "id"] |
                       tmp[-nrow(tmp), "tstop"] > 4 |
                       tmp[-nrow(tmp), "event"]))
+
+    expect_true(all(!(tmp$res$event == 1 &
+                        tmp$res$tstop > t_max)))
   }
 })
 

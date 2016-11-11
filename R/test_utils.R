@@ -170,11 +170,12 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
 
       tmp_t <- tstart
-      while(tmp_t < tstop && tmp_t < t_max){
+      while(tmp_t < ceiling(tstop) && # start before this bins ends
+              tmp_t <= t_max - 1){ # does not start within the last bin
         exp_eta <- exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1])
         event <- exp_eta / (1 + exp_eta) > get_unif_draw(1)
         if(event){
-          tstop <- tmp_t + 1
+          tstop <- min(tmp_t + 1, t_max) # tstop can at most be t_max
           break
         }
 
