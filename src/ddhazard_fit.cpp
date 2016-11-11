@@ -39,25 +39,25 @@ double (*conv_criteria)(const arma::vec&, const arma::vec&) = relative_norm_chan
 // Print function to print out vectors as rows
 template<typename T>
 inline
-void
-my_print(const T& X, std::string msg = "")
-{
-  if(msg != "")
-    Rcpp::Rcout << msg << std::endl;
+  void
+  my_print(const T& X, std::string msg = "")
+  {
+    if(msg != "")
+      Rcpp::Rcout << msg << std::endl;
 
-  if(X.n_cols > 1){
-    X.print();
+    if(X.n_cols > 1){
+      X.print();
 
-  } else{
-    for(arma::uword col=0; col < X.n_cols; ++col)
-    {
-      for(arma::uword row=0; row < X.n_rows; ++row)
-        Rcpp::Rcout << std::setw(10) << std::setprecision(5) <<  X(row,col) << ' ';
+    } else{
+      for(arma::uword col=0; col < X.n_cols; ++col)
+      {
+        for(arma::uword row=0; row < X.n_rows; ++row)
+          Rcpp::Rcout << std::setw(10) << std::setprecision(5) <<  X(row,col) << ' ';
 
-      Rcpp::Rcout << std::endl;
+        Rcpp::Rcout << std::endl;
+      }
     }
   }
-}
 
 // Hepler structure to reference data
 // TODO: Figure out what is specific to the EKF
@@ -514,7 +514,7 @@ class EKF_helper{
                     << "\tdie residual " << do_die - expect_chance_die << "\t" << expect_chance_die
                     << "\tTotal factor " << dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time)
         + dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die)
-                    << std::endl;
+        << std::endl;
       }
 
       u_ += x_ * (
@@ -522,9 +522,9 @@ class EKF_helper{
         + dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die));
 
       U_ += x_ * (x_.t() *
-        (dh_fac_die * dh_fac_die * die_term_inv +
-         dh_fac_time * dh_fac_time * t_term_inv +
-         2 * dh_fac_die * dh_fac_time * cross_term_inv));
+      (dh_fac_die * dh_fac_die * die_term_inv +
+      dh_fac_time * dh_fac_time * t_term_inv +
+      2 * dh_fac_die * dh_fac_time * cross_term_inv));
 
       if(compute_z_and_H){
         // Compute terms from waiting time
@@ -663,19 +663,19 @@ public:
         filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t.head(p_dat.n_parems), t == p_dat.d, t - 1,
                                            bin_tstart, bin_tstop);
 
-      if(p_dat.u.has_inf() || p_dat.u.has_nan()){
-        Rcpp::stop("Score vector in correction step had inf or nan elements in bin " +
-          std::to_string(t) + ". Try decreasing the learning rate");
-      } else if(p_dat.U.has_inf() || p_dat.U.has_nan()){
-        Rcpp::stop("Score vector in correction step had inf or nan elements in bin " +
-          std::to_string(t) + ". Try decreasing the learning rate");
-      }
+        if(p_dat.u.has_inf() || p_dat.u.has_nan()){
+          Rcpp::stop("Score vector in correction step had inf or nan elements in bin " +
+            std::to_string(t) + ". Try decreasing the learning rate");
+        } else if(p_dat.U.has_inf() || p_dat.U.has_nan()){
+          Rcpp::stop("Score vector in correction step had inf or nan elements in bin " +
+            std::to_string(t) + ". Try decreasing the learning rate");
+        }
 
-      if(p_dat.debug){
-        Rcpp::Rcout << "Score vector and diagonal of information matrix at time " << t << " are:"<< std::endl;
-        my_print(p_dat.u, "u");
-        my_print(p_dat.U.diag(), "U");
-      }
+        if(p_dat.debug){
+          Rcpp::Rcout << "Score vector and diagonal of information matrix at time " << t << " are:"<< std::endl;
+          my_print(p_dat.u, "u");
+          my_print(p_dat.U.diag(), "U");
+        }
 
 #ifdef USE_OPEN_BLAS
         openblas_set_num_threads(p_dat.n_threads);
@@ -814,7 +814,6 @@ public:
       event_time += delta_t;
 
       // Update sigma pooints
-      // The orginal Julier paper only updates sigma points here
       compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
                            sigma_points, p_dat.V_t_t_s.slice(t - 1));
 
@@ -837,6 +836,10 @@ public:
           (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
           (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
       }
+
+      // Regenerate
+      compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
+                           sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
       // E-step: correction-step
       //   Compute a_t_t_s and v_t_t_s
@@ -925,6 +928,7 @@ protected:
   const double lambda;
   const double w_0;
   const double w_0_c;
+  const double w_0_cc;
   const double w_i;
   const double sqrt_m_lambda;
   arma::mat sigma_points;
@@ -933,6 +937,7 @@ protected:
   arma::vec weights_vec_inv;
   arma::vec weights_vec_c;
   arma::vec weights_vec_c_inv;
+  arma::vec weights_vec_cc;
 
   virtual void Compute_intermediates(const arma::uvec &r_set,
                                      const arma::vec offsets,
@@ -945,8 +950,7 @@ protected:
                             const arma::mat &P_x_x){
     arma::mat cholesky_decomp;
     if(!arma::chol(cholesky_decomp, P_x_x, "lower")){ // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
-      P_x_x.print();
-      Rcpp::stop("Cholesky decomposition failed");
+      P_x_x.print("Cholesky decomposition failed for the following covariance matrix:");
     }
 
     s_points.col(0) = a_t;
@@ -969,7 +973,8 @@ public:
   lambda(pow(a, 2) * (m + k) - m),
 
   w_0(lambda / (m + lambda)),
-  w_0_c(w_0 + 1 - pow(a, 2) + b), // TODO: how to set?
+  w_0_c(w_0 + 1 - pow(a, 2) + b),
+  w_0_cc(w_0 + 1 - a),
   w_i(1 / (2 * (m + lambda))),
   sqrt_m_lambda(std::sqrt(m + lambda)),
 
@@ -982,6 +987,22 @@ public:
     weights_vec_c = weights_vec;
     weights_vec_c[0] = w_0_c;
     weights_vec_c_inv = arma::pow(weights_vec_c, -1);
+
+    weights_vec_cc = weights_vec;
+    weights_vec_cc[0] = w_0_cc;
+
+    if(p_dat.debug){
+      Rcpp::Rcout << "alpha, beta, kappa = "
+                  << a << ", "
+                  << b << ", "
+                  << k << std::endl;
+      Rcpp::Rcout << "w_0, w_0_c, w_0_cc, w_i, lambda = "
+                  << w_0 << ", "
+                  << w_0_c << ", "
+                  << w_0_cc << ", "
+                  << w_i << ", "
+                  << lambda << std::endl;
+    }
   }
 
   void solve(){
@@ -992,15 +1013,14 @@ public:
 #endif
 
     const arma::vec offsets = p_dat.any_fixed ?
-      p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat._X.n_cols, arma::fill::zeros);
+    p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat._X.n_cols, arma::fill::zeros);
     double bin_stop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
       double bin_start = bin_stop;
       double delta_t = p_dat.I_len[t - 1];
       bin_stop += delta_t;
 
-      // Update sigma pooints
-      // The orginal Julier paper only updates sigma points here
+      // Update sigma points
       compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
                            sigma_points, p_dat.V_t_t_s.slice(t - 1));
 
@@ -1020,7 +1040,7 @@ public:
         w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols - 1), 1);
 
       // Then the variance
-      p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q; // weigths sum to one // TODO: Include or not?
+      p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q; // weigths sum to one
 
       for(uword i = 0; i < sigma_points.n_cols; ++i){
         const double &w = i == 0 ? w_0_c : w_i;
@@ -1028,6 +1048,15 @@ public:
         p_dat.V_t_less_s.slice(t - 1) +=
           (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
           (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
+      }
+
+      // Regenerate
+      compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
+                           sigma_points, p_dat.V_t_less_s.slice(t - 1));
+
+      if(p_dat.debug){
+        my_print(p_dat.V_t_less_s.slice(t - 1), "Chol decomposing for regenerations:");
+        my_print(sigma_points, "new sigma points");
       }
 
       // E-step: correction-step
@@ -1041,10 +1070,10 @@ public:
       arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
 
       // TODO: can this be done more effeciently?
-      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + delta_sigma_points * (weights_vec % c_vec);
+      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + delta_sigma_points * (weights_vec_cc % c_vec);
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
-        (delta_sigma_points.each_row() % weights_vec_c.t()) * O * (delta_sigma_points.each_row() % weights_vec_c.t()).t();
+        (delta_sigma_points.each_row() % weights_vec_cc.t()) * O * (delta_sigma_points.each_row() % weights_vec_cc.t()).t();
 
       if(p_dat.debug){
         std::stringstream str, str_less;
@@ -1062,16 +1091,8 @@ public:
       // We are looking at:
       //  X = B A^-1
       // X^T = A^-1 B^T <=> A X^T = B^T
-
-      // TODO: Comment this back - yields the same
-      // p_dat.B_s.slice(t - 1) = arma::solve(
-      //   p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
-
-      O = p_dat.F_ * sigma_points; // we do not need O more at this point
-      O = ((sigma_points.each_col() - p_dat.a_t_t_s.col(t - 1)).each_row() % weights_vec.t()) *
-        (O.each_col() - p_dat.a_t_t_s.col(t)).t();
-
-      p_dat.B_s.slice(t - 1) = arma::solve(p_dat.V_t_less_s.slice(t - 1), O.t()).t();
+      p_dat.B_s.slice(t - 1) = arma::solve(
+        p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
     }
 
 #ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
@@ -1343,13 +1364,13 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
   } while(++it_outer < p_data->max_it_fixed_parems && // Key that this the first condition we check when we use &&
     arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems);
 
-    static bool failed_to_converge_once = false;
-    if(it_outer == p_data->max_it_fixed_parems && !failed_to_converge_once){
-      failed_to_converge_once = true;
-      std::stringstream msg;
-      msg << "Failed to estimate fixed effects in " << p_data->max_it_fixed_parems << " iterations at least once" << std::endl;
-      Rcpp::warning(msg.str());
-    }
+  static bool failed_to_converge_once = false;
+  if(it_outer == p_data->max_it_fixed_parems && !failed_to_converge_once){
+    failed_to_converge_once = true;
+    std::stringstream msg;
+    msg << "Failed to estimate fixed effects in " << p_data->max_it_fixed_parems << " iterations at least once" << std::endl;
+    Rcpp::warning(msg.str());
+  }
 }
 
 
@@ -1475,6 +1496,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       solver->solve();
 
       // E-step: smoothing
+      if(p_data->debug){
+        Rcpp::Rcout << "Started smoothing" << std::endl;
+      }
+
       for (int t = p_data->d - 1; t > -1; t--){
         // we need to compute the correlation matrix first
         if(t > 0){
@@ -1487,6 +1512,13 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
           (p_data->a_t_t_s.unsafe_col(t + 1) - p_data->a_t_less_s.unsafe_col(t));
         p_data->V_t_t_s.slice(t) = p_data->V_t_t_s.slice(t) + p_data->B_s.slice(t) *
           (p_data->V_t_t_s.slice(t + 1) - p_data->V_t_less_s.slice(t)) * p_data->B_s.slice(t).t();
+
+        if(p_data->debug){
+          std::stringstream ss;
+          ss << t << "|" <<  p_data->d;
+          my_print(p_data->a_t_t_s.col(t), "a(" + ss.str() + ")");
+          my_print(p_data->V_t_t_s.slice(t), "diag(a(" + ss.str() + "))");
+        }
       }
 
       // M-step
