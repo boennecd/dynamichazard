@@ -28,12 +28,12 @@ set.seed(20161109)
 # Default arguments for simulation
 default_args <- list(
   n_vars = n_beta, # Number of betas not including intercept
-  beta_start = rnorm(n_beta, mean = 1), # start value of coeffecients
-  intercept_start = -5, # start value of intercept
-  sds = c(.1, rep(.5, n_beta)), # std. deviation in state equation
+  beta_start = c(-1, -.5, 0, 1.5, 2), # start value of coeffecients
+  intercept_start = -4, # start value of intercept
+  sds = c(.1, rep(1, n_beta)), # std. deviation in state equation
   t_max = T_max, # Large time we observe
-  x_range = 2, # range of covariates
-  x_mean = 0) # mean of covariates)
+  x_range = 1, # range of covariates
+  x_mean = .5) # mean of covariates)
 
 # We get a decent amount of failures
 # We use do.call to avoid repeating the above argument list
@@ -48,15 +48,6 @@ n_fails_in_sim
 
 # We can simulate by
 sims <- do.call(test_sim_func_logit, c(list(n_series = max(ns)), default_args))
-
-# Have to adjust the stop time to T_max
-# First we illustrate that this why this is ok
-all(!(sims$res[, "event"] == 1 &
-        sims$res$tstop > T_max)) # no one dies after T_max
-all(sims$res$tstart < T_max) # no one starts after T_max
-
-# Thus, we can truncate
-sims$res$tstop <- pmax(sims$res$tstop, T_max)
 
 # This is how the state vectors look
 (plot_func <- function(ylim = c()) # we define a function here so we can use it later
@@ -91,6 +82,7 @@ fit_funcs$dd <- function(s = sims$res, LR = 1, NR_eps = NULL)
   tryCatch({
     ddhazard(formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
              data = s, max_T = T_max, by = 1, id = s$id, 
+             Q_0 = diag(1, n_beta + 1), 
              control = list(LR = LR, NR_eps = NR_eps))
   }, error = function(...) NA) # Return NA if fails
 
@@ -102,7 +94,7 @@ matplot(fit$state_vecs, col = 1:(n_beta + 1), lty = 2,
         type = "l", add = T)
 
 # Same call with extra iterations
-fit <- fit_funcs$dd(LR = .5, NR_eps = 0.1)
+fit <- fit_funcs$dd(LR = 1, NR_eps = 1)
 
 # Look at new plot
 plot_func(ylim = fit$state_vecs)
@@ -121,11 +113,11 @@ fit_funcs$gam <- function(s = sims$res){
   gam(
     formula = Y ~ 
       # cr is cubic basis with dim of k
-      s(t, bs = "cr", k = 5, by = x1) + 
-      s(t, bs = "cr", k = 5, by = x2) + 
-      s(t, bs = "cr", k = 5, by = x3) + 
-      s(t, bs = "cr", k = 5, by = x4) + 
-      s(t, bs = "cr", k = 5, by = x5),
+      s(t, bs = "cr", k = 10, by = x1) + 
+      s(t, bs = "cr", k = 10, by = x2) + 
+      s(t, bs = "cr", k = 10, by = x3) + 
+      s(t, bs = "cr", k = 10, by = x4) + 
+      s(t, bs = "cr", k = 10, by = x5),
   family = binomial, data = dat_frame,
   method = "GCV.Cp")
 }
@@ -135,8 +127,10 @@ fit <- fit_funcs$gam()
 
 # Compare plot
 layout(matrix(1:6, nrow = 2))
-for(i in 1:n_beta)
-  plot(fit, pages = 0, rug = F, col = i + 1, select = i)
+for(i in 1:n_beta){
+  plot(fit, pages = 0, rug = F, col = i + 1, select = i, lty = 2)
+  lines(sims$betas[-1, i + 1], col = i + 1)
+}
 ```
 
 ```{r est_true_pred_funcs_static}
@@ -156,8 +150,6 @@ length(intersect(tmp$test_dat$id, tmp$fit_dat$id))
 length(union(tmp$test_dat$id, tmp$fit_dat$id))
 
 # Define prediction function for static model
-fit <- fit_funcs$static(tmp$fit_dat)
-
 brier_funcs <- list() 
 brier_funcs$static <- function(fit, d_frame){
   # Find people who dies
@@ -176,6 +168,8 @@ brier_funcs$static <- function(fit, d_frame){
   mean.default((do_die - preds)^2)
 }
 
+# Test function
+fit <- fit_funcs$static(tmp$fit_dat)
 brier_funcs$static(fit, tmp$fit_dat) # in sample brier score
 brier_funcs$static(fit, tmp$test_dat) # out sample brier score
 ```
@@ -186,29 +180,45 @@ fit <- fit_funcs$dd(tmp$fit_dat)
 
 d_frame <- tmp$test_dat
 
-d_frame$tstop <- pmax(d_frame$tstop, T_max) # Have to adjust due to definition 
-                                            # of predict function
-
 do_die <- tapply(d_frame$event, d_frame$id, sum)
+
+d_frame$tstart_ceil <- ceiling(d_frame$tstart)
+d_frame$tstart_stop <- ceiling(ceiling(d_frame$tstop))
+            
+preds <- predict(fit, new_data = d_frame, tstart = "tstart_ceil", tstop = "tstart_stop")
+preds <- 1 - tapply(preds$fits, d_frame$id, function(x) prod(1 - x))
+
+mean.default((preds - do_die)^2)
+
+d_frame <- get_survival_case_weigths_and_data(
+    formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+                   data = tmp$test_dat, max_T = T_max, by = 1, id = tmp$test_dat$id, 
+    use_weights = F)
+
+d_frame$tstart <- d_frame$t - 1
+d_frame$tstop <- d_frame$t
 
 preds <- predict(fit, new_data = d_frame, tstart = "tstart", tstop = "tstop")
 preds <- 1 - tapply(preds$fits, d_frame$id, function(x) prod(1 - x))
 
 mean.default((preds - do_die)^2)
 
-brier_funcs <- list() 
-brier_funcs$dd <- function(fit, d_frame){
-  # Find data frame for prediction
-  d_frame <- get_survival_case_weigths_and_data(
-    formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
-                   data = d_frame, max_T = T_max, by = 1, id = d_frame$id, 
-    use_weights = F)
-  
-  # Find predicted probablities and return Brier score
-  preds <- predict(fit, newdata = d_frame, type = "response")
-  mean.default((d_frame$Y - preds)^2)
-}
+yeta <- cbind(id = d_frame$id, d_frame$tstart, d_frame$tstop,
+              tstart_new = d_frame$t - 1, tstop_new = d_frame$t)
 
-brier_funcs$static(fit, tmp$fit_dat) # in sample brier score
-brier_funcs$static(fit, tmp$test_dat) # out sample brier score
+# brier_funcs <- list() 
+# brier_funcs$dd <- function(fit, d_frame){
+#   # Find data frame for prediction
+#   d_frame <- get_survival_case_weigths_and_data(
+#     formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+#                    data = d_frame, max_T = T_max, by = 1, id = d_frame$id, 
+#     use_weights = F)
+#   
+#   # Find predicted probablities and return Brier score
+#   preds <- predict(fit, newdata = d_frame, type = "response")
+#   mean.default((d_frame$Y - preds)^2)
+# }
+# 
+# brier_funcs$static(fit, tmp$fit_dat) # in sample brier score
+# brier_funcs$static(fit, tmp$test_dat) # out sample brier score
 ```

@@ -1,4 +1,8 @@
-# library(testthat); library(survival); library(parallel); source("R/test_utils.R")
+if(interactive()){
+  rm(list = ls())
+  library(testthat); library(survival); library(dynamichazard); library(parallel); source("R/test_utils.R")
+}
+
 suppressMessages(result <- ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
@@ -140,6 +144,79 @@ result = ddhazard(
   control = list(n_max = 1e3, save_risk_set = T, est_Q_0 = F),
   order = 2
 )
+
+test_that("get_survival_case_weigths_and_data and predict yields consistent result with ids", {
+  set.seed(1992)
+
+  s <- test_sim_func_logit(
+    n_series = 1e3,
+    n_vars = 5,
+    beta_start = c(-1, -.5, 0, 1.5, 2),
+    intercept_start = -4,
+    sds = c(.1, rep(1, 5)),
+    t_max = 10,
+    x_range = 1,
+    x_mean = .5)
+
+  suppressMessages(
+    fit <- ddhazard(formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+                    data = s$res, max_T = 10, by = 1, id = s$res$id,
+                    control = list(LR = .5)))
+
+  s$res$tstart_ceil <- ceiling(s$res$tstart)
+  s$res$tstop_ceil <- as.integer(pmin(ceiling(s$res$tstop), 10))
+
+  suppressMessages(preds <- predict(fit, new_data = s$res, tstart = "tstart_ceil", tstop = "tstop_ceil"))
+  preds <- 1 - tapply(preds$fits, s$res$id, function(x) prod(1 - x))
+
+  other_s <- get_survival_case_weigths_and_data(
+    formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+    data = s$res, max_T = 10, by = 1, id = s$res$id,
+    use_weights = F)
+
+  other_s$tstart <- other_s$t - 1
+  other_s$tstop <- other_s$t
+
+  suppressMessages(other_preds <- predict(fit, new_data = other_s, tstart = "tstart", tstop = "tstop"))
+  other_preds <- 1 - tapply(other_preds$fits, other_s$id, function(x) prod(1 - x))
+
+  expect_equal(other_preds, preds)
+
+  # # May be usefull for debugging
+  # unique(other_s$id)[abs(other_preds - preds) > 1e-14]
+  # dumdum <- cbind(other_preds - preds, id = unique(other_s$id))[abs(other_preds - preds) > 1e-14,]
+  #
+  # dumdum[dumdum[, "id"] == 5, ]
+  # s$res[s$res$id == 5, ]
+  # other_s[other_s$id == 5, ]
+  #
+  # suppressMessages(preds <- predict(fit, new_data = s$res, tstart = "tstart_ceil", tstop = "tstop_ceil"))
+  # preds$fits[s$res$id == 5]
+  #
+  # suppressMessages(other_preds <- predict(fit, new_data = other_s, tstart = "tstart", tstop = "tstop"))
+  # other_preds$fits[other_s$id == 5]
+  #
+  # (1 - prod(1 - other_preds$fits[other_s$id == 5][1:2])) - preds$fits[s$res$id == 5][1]
+  # 1 - prod(1 - other_preds$fits[other_s$id == 5][3:3]) - preds$fits[s$res$id == 5][2]
+  # 1 - prod(1 - other_preds$fits[other_s$id == 5][4:5]) - preds$fits[s$res$id == 5][3]
+  # 1 - prod(1 - other_preds$fits[other_s$id == 5][6:7]) - preds$fits[s$res$id == 5][4]
+  # 1 - prod(1 - other_preds$fits[other_s$id == 5][8:9]) - preds$fits[s$res$id == 5][5]
+  # 1 - prod(1 - other_preds$fits[other_s$id == 5][10:10]) - preds$fits[s$res$id == 5][6]
+  #
+  # d1 <- fit$state_vecs[9,] %*% c(1, unlist(s$res[s$res$id == 5, c("x1", "x2", "x3", "x4", "x5")][5, ]))
+  # d2 <- fit$state_vecs[10,] %*% c(1, unlist(s$res[s$res$id == 5, c("x1", "x2", "x3", "x4", "x5")][5, ]))
+  #
+  # d1 <- exp(d1) / (1 + exp(d1))
+  # d2 <- exp(d2) / (1 + exp(d2))
+  #
+  # d1 <- fit$state_vecs[10,] %*% c(1, unlist(s$res[s$res$id == 5, c("x1", "x2", "x3", "x4", "x5")][5, ]))
+  # d2 <- fit$state_vecs[11,] %*% c(1, unlist(s$res[s$res$id == 5, c("x1", "x2", "x3", "x4", "x5")][5, ]))
+  #
+  # d1 <- exp(d1) / (1 + exp(d1))
+  # d2 <- exp(d2) / (1 + exp(d2))
+  #
+  # 1 - (1 - d1) * (1 - d2)
+})
 
 test_that("Calls with second order models do not throw errors", {
   for(g in c(0, 1))
