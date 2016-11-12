@@ -1517,7 +1517,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
           std::stringstream ss;
           ss << t << "|" <<  p_data->d;
           my_print(p_data->a_t_t_s.col(t), "a(" + ss.str() + ")");
-          my_print(p_data->V_t_t_s.slice(t), "diag(a(" + ss.str() + "))");
+          my_print(p_data->V_t_t_s.slice(t).diag(), "diag(V(" + ss.str() + "))");
         }
       }
 
