@@ -165,6 +165,8 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
     tstart <- tstop <- t_0
     repeat{
       tstop <- tstart + get_exp_draw(1) + 1
+      if(ceiling(tstop) >= t_max)
+        tstop <- t_max
 
       x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
@@ -190,7 +192,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
       }
       cur_row <- cur_row + 1
 
-      if(event || tstop > t_max)
+      if(event || tstop >= t_max)
         break
 
       tstart <- tstop
@@ -271,7 +273,7 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
       }
       cur_row <- cur_row + 1
 
-      if(event || tstop > t_max)
+      if(event || tstop >= t_max)
         break
 
       tstart <- tstop

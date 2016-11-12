@@ -1,5 +1,6 @@
 if(interactive()){
-  source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
+  rm(list = ls())
+  source("./R/test_utils.R")
   library(testthat)
 }
 
@@ -30,7 +31,7 @@ test_that("Testing util functions to sim for test", {
 })
 
 set.seed(4321)
-n_series <- 1e5
+n_series <- 1e4
 t_max <- 10
 
 test_that("Testing util functions to sim series for tests", {
@@ -40,7 +41,7 @@ test_that("Testing util functions to sim series for tests", {
     expect_equal(unique(tmp[, "id"]), seq_len(n_series))
 
     expect_true(all(tapply(tmp[, "tstop"], tmp[, "id"], function(ts) sum(ts > 10)) < 2))
-    expect_true(any(tapply(tmp[, "tstop"], tmp[, "id"], function(ts) sum(ts > 10)) > 0))
+    expect_true(any(tapply(tmp[, "tstop"], tmp[, "id"], function(ts) sum(ts >= 10)) > 0))
 
     expect_true(all(tapply(tmp[, "event"], tmp[, "id"], function(ev) sum(ev)) < 2))
     expect_true(any(tapply(tmp[, "event"], tmp[, "id"], function(ev) sum(ev)) > 0))
