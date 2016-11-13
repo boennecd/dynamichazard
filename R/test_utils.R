@@ -133,7 +133,7 @@ get_norm_draw = compiler::cmpfun(get_norm_draw, options = list(
 test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = .1, x_mean = -.1,
                                 re_draw = T, beta_start = 3, intercept_start,
                                 sds = rep(1, n_vars + !missing(intercept_start)),
-                                is_fixed = c()){
+                                is_fixed = c(), lambda = 1){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
@@ -164,7 +164,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
   for(id in 1:n_series){
     tstart <- tstop <- t_0
     repeat{
-      tstop <- tstart + get_exp_draw(1) + 1
+      tstop <- tstart + 1 / lambda * get_exp_draw(1) + 1
       if(ceiling(tstop) >= t_max)
         tstop <- t_max
 
@@ -172,8 +172,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
 
       tmp_t <- tstart
-      while(tmp_t < ceiling(tstop) && # start before this bins ends
-              tmp_t <= t_max - 1){ # does not start within the last bin
+      while(tmp_t < ceiling(tstop)){
         exp_eta <- exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1])
         event <- exp_eta / (1 + exp_eta) > get_unif_draw(1)
         if(event){
