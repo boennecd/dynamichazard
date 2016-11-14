@@ -31,10 +31,10 @@ struct {
 
 
 // Define convergence criteria
-inline double relative_norm_change(const arma::vec &prev_est, const arma::vec &new_est){
+inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &new_est){
   return arma::norm(prev_est - new_est, 2) / (arma::norm(prev_est, 2) + 1.0e-10);
 }
-double (*conv_criteria)(const arma::vec&, const arma::vec&) = relative_norm_change;
+double (*conv_criteria)(const arma::mat&, const arma::mat&) = relative_norm_change;
 
 // Print function to print out vectors as rows
 template<typename T>
@@ -1411,8 +1411,6 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
   Rcpp::NumericVector conv_values;
 
-  arma::colvec a_prev(a_0.begin(), a_0.size());
-
   uword it = 0;
 
   // M-stp pointers for convenience
@@ -1472,6 +1470,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     solver = new UKF_solver_Org(*p_data, kappa);
   }else
     Rcpp::stop("method '" + method  +"'is not implemented");
+
+  arma::mat a_prev;
+  a_prev.copy_size(p_data->a_t_t_s);
+  a_prev.zeros();
 
   do
   {
@@ -1578,7 +1580,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       }
     }
 
-    conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s.unsafe_col(0)));
+    conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s));
 
     if(p_data->any_fixed){
       arma::vec old = p_data->fixed_parems;
@@ -1619,7 +1621,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(*(conv_values.end() -1) < eps)
       break;
 
-    a_prev = p_data->a_t_t_s.col(0);
+    a_prev = p_data->a_t_t_s;
   }while(++it < n_max);
 
   if(it == n_max)
