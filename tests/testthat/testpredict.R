@@ -246,20 +246,21 @@ suppressMessages(fit <- ddhazard(
   formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~ splines::ns(log(bili),df = 4),
   data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
   Q = diag(rep(1e-2, 5)), max_T = 3600,
-  control = list(est_Q_0 = F)))
+  control = list(est_Q_0 = F, eps = .01)))
 
 predict(fit, new_data = pbc[1:5, ], type = "term")
-
 
 ######
 # Exponential model
 suppressMessages(fit <- ddhazard(
   formula = survival::Surv(tstart, tstop, status == 2) ~
     age + log(bili) + log(protime),
-  data = pbc2, Q_0 = diag(rep(1e3, 4)), by = 100,
+  data = pbc2, Q_0 = diag(rep(1, 4)), by = 100,
+  id = pbc2$id,
   Q = diag(rep(1e-2, 4)), max_T = 3600,
-  model = "exponential", control = list(est_Q_0 = F, LR = .4)))
+  model = "exponential", control = list(est_Q_0 = F, LR = .1)))
 
+# plot(fit, cov_index = 4)
 
 test_that("Terms from predict with exponential outcome are correct", {
   pred <- predict(fit, new_data = pbc2, type = "term", tstart = "tstart", tstop = "tstop")

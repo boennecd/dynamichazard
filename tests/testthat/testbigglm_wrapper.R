@@ -1,8 +1,6 @@
 library(biglm)
 bigqr.init <- with(environment(bigglm), bigqr.init)
 
-bigqr.init(1)
-
 if(interactive()){
   library(survival); library(dynamichazard); library(testthat)
   source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
