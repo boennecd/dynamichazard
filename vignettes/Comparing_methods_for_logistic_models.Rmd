@@ -24,7 +24,8 @@ knitr::knit_hooks$set(
       options(digits = 3, width = 80)
     }})
 
-knitr::opts_chunk$set(echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6)
+knitr::opts_chunk$set(echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6,
+                      message = FALSE)
 ```
 
 \renewcommand{\vec}[1]{\bm{#1}}
@@ -32,7 +33,7 @@ knitr::opts_chunk$set(echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 
 
 # Intro
 
-This note will compare the dynamic logistic model in `dynamichazard` with others methods within the package and methods from `timereg` and `mgcv` package. The note will serve both as a comparison with other packages and as an illustration of how to use the `ddhazard` function for the logistic model. We will use the `pbc2` dataset from the `survival` package. The motivation is that the `pbc2` data set is commonly used in survival analysis for illustrations. Consequently, we have expectation to the outcome of our analysis
+This note will compare the dynamic logistic model in `dynamichazard` with others methods within the package and methods from the `timereg` and `mgcv` package. The note will serve both as a comparison with other packages and as an illustration of how to use the `ddhazard` function for the logistic model. We will use the `pbc2` dataset from the `survival` package. The motivation is that the `pbc2` data set is commonly used in survival analysis for illustrations. Consequently, we have expectation to the outcome of our analysis
 
 The note is structured as follows: First, we cover the `pbc2` data set. Then we estimate two non-dynamic logistic regression models using `glm`. This is followed by a fit using a Generalized Additive model with the `gam` function in the `mgcv` package. Next, we will estimate a cox-model with time varying parameters using the `timecox` function in the `timereg` package. Finally, we will end by illustrating the new methods in this package for time varying parameters in a logistic regression
 
@@ -122,7 +123,7 @@ glm_fit_big <- glm(Y ~ age + edema + log(albumin) + log(protime) +
                     log(bili), binomial, pbc2_big_frame)
 glm_fit_small <- glm(Y ~ age + edema + log(albumin) + log(protime) + 
                       log(bili), binomial, pbc2_small_frame, 
-                     weights = pbc2_small_frame$weights)
+                     weights = pbc2_small_frame$weights) # <-- we use weights
 ```
 
 We can confirm that the two models give the same estimate:
@@ -171,7 +172,7 @@ spline_fit <- gam(
                   
 ```    
 
-The above estimates the GAM model where the likelihood is penalized by a quadratical penalty for each spline function. The tuning parameters is chosen by generalized cross validation. As suggested in the help menu in regard to  the number of knots `k`, *"... [the] exact choice of k is not generally critical: it should be chosen to be large enough that you are reasonably sure of having enough degrees of freedom to represent the underlying ‘truth’ reasonably well, but small enough to maintain reasonable computational efficiency"*. See `?gam` or `?choose.k` for details
+The above estimates the GAM model where the likelihood is penalized by a quadratical penalty for each of the spline functions. The tuning parameters is chosen by generalized cross validation. As suggested in the help menu in regard to  the number of knots `k`, *"... [the] exact choice of k is not generally critical: it should be chosen to be large enough that you are reasonably sure of having enough degrees of freedom to represent the underlying ‘truth’ reasonably well, but small enough to maintain reasonable computational efficiency"*. See `?gam` or `?choose.k` for details
 
 Below are plots of the estimates. The effective degree of freedom is noted in the parentheses and is computed given the number knots and final tuning parameter for spline function. For instance, `s(t,1.84):...` means that the effective degrees of freedom for that term is `1.84`
 
@@ -194,11 +195,11 @@ spline_fit$coefficients["(Intercept)"]
 which again seems to match. The plot suggest that there may be time varying effects for `bili` particularly
 
 # Time varying cox model from `timereg`
-Another method we can try is a time varying effects Cox model. The motivation to look into Cox models is the similarity between the cloglog link function and logit function in discrete time. Hence, a Cox regression would be of interesting to compare with as continuous model. We will use the Cox model from the package `timereg` based on [@martinussen07]. The model we fit has an instantaneous hazard $\lambda(t)$ given by:
+Another method we can try is a time varying effects Cox model. The motivation to compare with a Cox models is the similarity between the cloglog link function and logit function in discrete time. Hence, a Cox regression would be of interesting to compare with as continuous model. We will use the Cox model from the package `timereg` based on [@martinussen07]. The model we fit has an instantaneous hazard $\lambda(t)$ given by:
 
 $$\lambda(t) = \lambda_0(t) \exp \left( \vec{x}\vec{\beta}(t) \right)$$
 
-where each margin of $\vec{\beta}(t)$ is estimated recursively with an update equation that is simplified through a first order Taylor expansion and by adding a smoothness through weighting the time changes with a uniform continuous kernel. Thus, it differs from other alternatives in `R` that use splines for the time varying effects (like the `cox.ph` in the `mgcv` package). The baseline is $\lambda_0(t)=\exp(\alpha_0(t))$ where $\alpha_0(t)$ is estimated in a similar to way to $\vec{\beta}(t)$. For details see [@martinussen07] in chapter 6. Below we estimate the model similar to the previous:
+where each margin of $\vec{\beta}(t)$ is estimated recursively with an update equation that is simplified through a first order Taylor expansion and by adding a smoothness by using weighting depending on time changes with a uniform continuous kernel. Thus, it differs from other alternatives in `R` that use splines for the time varying effects (like the `cox.ph` in the `mgcv` package). The baseline is $\lambda_0(t)=\exp(\alpha_0(t))$ where $\alpha_0(t)$ is estimated in a similar to way to $\vec{\beta}(t)$. For details see [@martinussen07] in chapter 6. Below we estimate the model similar to the previous:
 
 ```{r, message=FALSE, fig.height = 7, mySettings=FALSE}
 library(timereg)
@@ -212,7 +213,7 @@ par(mfcol = c(3, 2))
 plot(cox_fit)
 ```
 
-We set last observation time (`max.time`) lower than in the previous model as there are issues with converge if we do not. For the same reason we specify the effect of `log(protime)` to be constant (non time varying). We end the above code by plotting the cumulative coefficients given by $B(t) = \int_0^t \beta(t) dt$. Thus a constant effect should be roughly linear. The `timecox` further provides two test for whether the coefficient is time invariant or not:
+We set the last observation time (`max.time`) lower than in the previous model as there are issues with converge if we do not. For the same reason we specify the effect of `log(protime)` to be constant (non time varying). We end the above code by plotting the cumulative coefficients given by $B(t) = \int_0^t \beta(t) dt$. Thus, a constant effect should be roughly linear. The `timecox` packages provides two test for whether the coefficient is time invariant or not:
 
 ```{r, message=FALSE, fig.height = 6, mySettings=FALSE}
 summary(cox_fit)
@@ -242,14 +243,14 @@ which seems to be of minor use. Question: Include this or just make draw conclus
 # Dynamic hazard model
 In this section, we will cover the dynamic hazard model with the logistic link function that is implemented in this package. Firstly, we will briefly cover the model. Secondly, we will turn to different ways of designing the model and fitting the model 
 
-The idea is that we discretize the outcomes into $1,2,\dots,T$ bins (or intervals if you prefer this notion). In each bin, we observe whether the individual dies or survives. The state space model we are applying is of the form: 
+The idea is that we discretize the outcomes into $1,2,\dots,d$ bins (or intervals if you prefer this notion). In each bin, we observe whether the individual dies or survives. The state space model we are applying is of the form: 
 $$\begin{array}{ll}
     	\vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad & 
          	\vec{\epsilon}_t \sim (\vec{0}, \mathbf{H}_t(\vec{\alpha}_t))  \\
     	\vec{\alpha}_{t + 1} = \mathbf{F}\vec{\alpha}_t + \mathbf{R}\vec{\eta}_t \qquad & 
          	\vec{\eta}_t \sim N(\vec{0}, \mathbf{Q}) \\
 	\end{array}
-	, \qquad t = 1,\dots, n$$
+	, \qquad t = 1,\dots, d$$
 	
 where $y_{it} \in \{0,1\}$ is an indicator for whether the $i$'th individual dies in interval $t$. $\cdots \sim (a, b)$ denotes a random variable with mean (or mean vector) $a$ and variance (or co-variance matrix) $b$. It needs not to be normally distributed. $z_{it}(\vec{\alpha}_t) = h(\vec{\alpha}_t\vec{x}_{it})$ is the non-linear map from state space variables to mean outcomes where $h$ is the link function. We use the logit model model in this example. Thus, $h(x) = \text{logit}^{-1}(x)$. The current implementation supports $\mathbf{F}$ and $\mathbf{R}$ such that we have first and second order random walk for the state equation
 
@@ -272,7 +273,7 @@ for(i in 1:6)
 
 We start by estimating the model. The arguments `Q_0` and `Q` corresponds to the co-variance matrix at time zero and the co-variance matrix in the state equation. The latter values is only used in the first iteration of the EM algorithm after which we update $\mathbf{Q}$
 
-Next, we plot the coefficient. Notice that the coefficient are close the estimates we saw previously for the GAM. A key thing to notice is that `Q_0` is not scaled by the time difference but `Q` is. Hence, `Q` should not change much if we alter the length of the interval. We can illustrate this by fitting a model with a shorter bin lengths:
+Next, we plot the coefficient. Notice that the coefficient are close the estimates we saw previously for the GAM model. A key thing to notice is that `Q_0` is not scaled by the time difference but `Q` is. Hence, `Q` should not change much if we alter the length of the interval. We can illustrate this by fitting a model with a shorter bin lengths:
 
 ```{r, warning=FALSE}
 # First diagonal of the the current co-variance matrix estimate
@@ -339,9 +340,9 @@ for(i in 1:6)
   plot(dd_fit, cov_index = i)
 ```
 
-First, we run the code with the `NR_eps` element of the list passed to the `control` argument set to something that is finite. The value is the threshold for the relative change of in the state vectored in correction step. Notice that we decrease `Q_0`. The algorithm diverges if we do not. You can run the out commented code and see that the value of $\vec{\alpha}_t$ gets large in absolute terms. It is the `debug = T` in the list passed to `control` that yields the extra output
+First, we run the code with the `NR_eps` element of the list passed to the `control` argument set to something that is finite. The value is the threshold for the relative change of in the state vectore in correction step of the EKF. Notice that we decrease `Q_0`. The algorithm diverges if we do not. You can run the out commented code and see that the value of $\vec{\alpha}_t$ gets large in absolute terms. It is the `debug = T` in the list passed to `control` that yields the extra output
 
-We end the code above by creating plots of the new estimates. The curves seems to be less smooth. Further, the confidence bounds from the conditional covariance matrix are tighter for `log(bili)`. One of the motivation to use extra iterations is that experimental simulation have shown decrease predicted mean square error for the state vector
+We end the code above by creating plots of the new estimates. The curves seems to be less smooth. One of the motivation to use extra iterations is that experimental simulation have shown decrease predicted mean square error for the state vector (TODO: insert reference two sim study)
 
 ## Estimation with Unscented Kalman Filter
 Another option is to perform the E-step using an unscented Kalman filter. This is done below. We start by setting the initial co-variance matrix $\mat{Q}$ large:
@@ -349,8 +350,9 @@ Another option is to perform the E-step using an unscented Kalman filter. This i
 dd_fit_UKF <- ddhazard(Surv(tstart, tstop, death == 2) ~ age +
                          edema + log(albumin) + log(protime) + log(bili), pbc2,
                    id = pbc2$id, by = 100, max_T = 3600, 
-                   Q_0 = diag(rep(10, 6)), Q = diag(rep(0.01, 6)),
-                   control = list(method = "UKF", beta = 0, alpha = 1))
+                   Q_0 = diag(rep(1, 6)), Q = diag(rep(0.1, 6)),
+                   control = list(method = "UKF", beta = 0, alpha = 1,
+                                  eps = 0.01, n_max = 1e4))
 
 par(mfcol = c(2, 3))
 for(i in 1:6)
@@ -366,7 +368,7 @@ sink(tmp_file)
 dd_fit_UKF <- ddhazard(Surv(tstart, tstop, death == 2) ~ age +
                          edema + log(albumin) + log(protime) + log(bili), pbc2,
                    id = pbc2$id, by = 100, max_T = 3600, 
-                   Q_0 = diag(rep(10, 6)), Q = diag(rep(0.01, 6)),
+                   Q_0 = diag(rep(1, 6)), Q = diag(rep(0.01, 6)),
                    control = 
                      list(method = "UKF", beta = 0, alpha = 1, 
                           debug = T)) # <-- prints information in each iteration
@@ -387,7 +389,7 @@ dd_fit_UKF <- ddhazard(
   Surv(tstart, tstop, death == 2) ~ age +
     edema + log(albumin) + log(protime) + log(bili), pbc2,
   id = pbc2$id, by = 100, max_T = 3600, 
-  Q_0 = diag(c(0.001, 0.00001, rep(0.001, 4))) * 100, # 
+  Q_0 = diag(c(0.001, 0.00001, rep(0.001, 4))) * 100, 
   Q = diag(rep(0.0001, 6)),
   control = 
     list(method = "UKF", beta = 0, alpha = 1, 
@@ -400,7 +402,7 @@ for(i in 1:6)
 
 This is comparable to the fits from the EKF and GAM model. The main point here is:
 
-1. The UKF may work for certain data set. It may require a bit more care for certain data sets
+1. The UKF may work for certain data set. It may require "more care"" for some data sets
 2. The algorithm is sensitive to the choice of $\mat{Q}$ and $\mat{Q}_0$. Further, there is dependence on hyper parameters $\alpha$, $\kappa$ and $\beta$ which we have not explored
 3. The output you get by setting `debug` in the list passed to the `control` argument can be useful. Combine this with `sink` because the output may be long
 4. The UKF has shown better performs than the EKF previously. Examples includes [@romanenko04], [@kandepu08], [@julier04], [@wan00] and chapter 11 of [@durbin12]
@@ -447,7 +449,7 @@ We see that the curve is less smooth similar to what we saw previously
 
 ## Second order random walk
 
-We will end by fitting a second order random walk to model where only `log(bili)` time varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have time varying coefficient. We fit the model below:
+We will end by fitting a second order random walk to model where only `log(bili)` effect is time varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have time varying coefficient. We fit the model below:
 
 ```{r}
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ -1 + 
