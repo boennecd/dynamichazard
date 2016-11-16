@@ -316,6 +316,15 @@ $$\begin{aligned}
 
 where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(\vert R_t \vert)$ since $\widehat{\mat{H}}$ is a diagonal matrix and all products involves at worst multiplication $m\times \vert R_t \vert$ or $\vert R_t \vert \times m$ matrices
 
+## Simplifying the filter step
+As pointed out in [@julier04] and [@menegaz16], the regular Kalman filter prediction formulas can be used when the state equation is Gaussian linear model. Thus, we can simplify the filter step to: 
+$$\begin{aligned}
+  \emNotee{\vec{a}}{t}{t - 1} = \mat{F} \emNotee{\vec{a}}{t - 1}{t - 1}, \quad \\
+  \emNotee{\mat{V}}{t}{t - 1} = \mat{F}\emNotee{\mat{V}}{t - 1}{t - 1}\mat{F}^T + \mat{R}\mat{Q}\mat{R}^T
+\end{aligned}$$
+
+That is, we use the closed form solution. This is what is implemented. This version is both exact given the previous estimates $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$ and computationally easier. The previous version of the filter step (the one with the Unscented filter) is first introduced to stress that we could replace linear Gaussian model in the state equation with a non-linear non-Gaussian model
+
 ## Selecting hyperparameters
 We still need to select the hyperparameters $\kappa$, $\alpha$ and $\beta$. We will cover these in the given order. $\kappa$ is usually set to $\kappa = 0$ or $\kappa = 3 - m$ which [@julier97] state is a "*useful heuristic*" when the state equation is Gaussian and $\alpha = 1$. The default is $\kappa = m/\alpha^2 - m$ and can be altered by setting the list element `kappa` in the list passed as the `control` argument to `ddhazard`. For example, `control = list(kappa = 1, ...)` yields $\kappa = 1$. The default is set to ensure that $W_0^{(m)} = 0$ such that all weights are positive. Hence, we are guaranteed that $\emNotee{\mat{V}}{t}{t-1}$ and $\ukfNotee{y}{y}{t}$ are positive semi-definite. This follows since both are sum of outer products with positive weights and that $\widehat{\mat{H}}$ is a diagonal matrix with positive entries. Notice though that this means that $\alpha$ only affects $W_0^{(c)}$ and $W_0^{(cc)} = 1 - \alpha^2$
 
