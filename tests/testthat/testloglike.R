@@ -62,7 +62,7 @@ test_that("logLik for head_neck_cancer data set match previous results", {
   result$risk_set <- NULL
   logLik(object = result, data = head_neck_cancer, id = head_neck_cancer$id)
 
-  old <- structure(-340.3724737164279,
+  old <- structure(-340.3145190696090,
                    class = "logLik",
                    df = 2 + 3)
 
@@ -112,7 +112,7 @@ test_that("logLik for head_neck_cancer data set with second order model", {
 
   log_like <- logLik(object = result, data_ = head_neck_cancer, id =  head_neck_cancer$id)
 
-  old <- structure(-349.569928801165,
+  old <- structure(-345.6825641752276,
                    class = "logLik",
                    df = 2 * 2 + 3)
 
@@ -131,7 +131,7 @@ test_that("logLik for head_neck_cancer data set match previous results with fixe
 
   log_like <- logLik(result, data = head_neck_cancer)
 
-  old <- structure(-302.8375676988051,
+  old <- structure(-302.8370356489254,
                    class = "logLik",
                    df = 1 + 1 + 1)
 
@@ -184,7 +184,7 @@ test_that("logLik for simulated data versus old results", {
   )
 
   log_like <- logLik(object = result)
-  old <- structure(-2414.852657205478,
+  old <- structure(-2653.945043767617,
                    class = "logLik",
                    df = 5 + 5 * (1 + 5) / 2)
   expect_equal(log_like, old)
@@ -195,7 +195,7 @@ test_that("logLik for simulated data versus old results", {
                             x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
                             intercept_start = -3, sds = c(.1, rep(1, 5)))
 
-  result = ddhazard(
+  suppressMessages(result <- ddhazard(
     survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     sims$res,
     by = 1,
@@ -204,10 +204,10 @@ test_that("logLik for simulated data versus old results", {
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F, model = "exponential"
-  )
+  ))
 
   log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
-  old <- structure(-1561.570688141223,
+  old <- structure(-1611.331941036346,
                    class = "logLik",
                    df = 6 + 6 * (1 + 6) / 2)
   expect_equal(log_like, old, tolerance = 1e-6)
@@ -231,7 +231,7 @@ test_that("logLik for simulated data versus old results", {
     verbose = F)
 
   log_like <- logLik(result)
-  old <- structure(-2909.663034719353,
+  old <- structure(-3011.231969352533,
                    class = "logLik",
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)
