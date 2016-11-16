@@ -186,6 +186,7 @@ public:
   const double NR_eps;
   const unsigned int NR_it_max;
   const double LR;
+  const std::string EKF_inv_Cov_method;
 
   // Vector for score and information matrix
   arma::colvec u;
@@ -214,7 +215,8 @@ public:
                    const int order_ = 1, const bool est_Q_0 = true,
                    const bool is_cont_time = false,
                    const unsigned int NR_it_max_ = 1000,
-                   const bool debug_ = false):
+                   const bool debug_ = false,
+                   const std::string EKF_inv_Cov_method_ = "org"):
     problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
                  Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_parems_,
@@ -224,13 +226,17 @@ public:
                  is_mult_NR(NR_eps_.isNotNull()),
                  NR_eps(is_mult_NR ? Rcpp::as< Rcpp::NumericVector >(NR_eps_)[0] : 0.0),
                  NR_it_max(NR_it_max_),
-                 LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0)
+                 LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
+                 EKF_inv_Cov_method(EKF_inv_Cov_method_)
   {
     u = arma::colvec(n_parems * order_);
     U = arma::mat(n_parems * order_, n_parems * order_);
 
     z_dot = arma::mat(n_parems * order_, n_in_last_set * (is_cont_time + 1));
     H_diag_inv = arma::vec(n_in_last_set * (is_cont_time + 1));
+
+    if(!(EKF_inv_Cov_method == "org" || EKF_inv_Cov_method == "not org"))
+      Rcpp::stop("'EKF_inv_Cov_method' is not implemented with value '" +  EKF_inv_Cov_method + "'");
   }
 
   problem_data_EKF & operator=(const problem_data_EKF&) = delete;
@@ -271,13 +277,45 @@ inline double expect_chance_die(const double v, const double inv_exp_v){
            v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0)))));
 }
 
-// TODO: Delete
+
+
+
 inline double inv_var_wait_time(const double v, const double exp_eta, const double inv_exp_v){
-  return((v >= 1e-6) ?
+  return((v >= 1e-4) ?
+           // Set v = delta * exp(eta)
+           // Then: exp(2eta) / (1 - exp(-2 delta * exp(eta)) - 2 exp(-delta * exp(eta)) delta exp(eta)) =
+           //               exp(2eta) / (1 - exp(-2v) - 2 * v * exp(-v))
            exp_eta * exp_eta / (1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) :
            // Laruent series from https://www.wolframalpha.com/input/?i=1%2F(1-exp(2v)-2v*exp(v))
            exp_eta * exp_eta *
              (-1 / v * (1 / 4 - v * (1 / 4 - v * (5 / 48 - v * (1/48 - v /1440)))))
+  );
+}
+
+inline double inv_var_chance_die(const double v, const double inv_exp_v){
+  return((v >= 1e-4) ?
+           // Set v = a exp(eta)
+           // Then: 1 / exp(- a exp(eta))(1 - exp(-a exp(eta))) = 1 / exp(-v) (1 - exp(-v))
+           1 / (inv_exp_v * (1 - inv_exp_v)) :
+           //Lauren series from https://www.wolframalpha.com/input/?i=1%2F((1-exp(-v))exp(-v))
+           1 / v * (1 + v * (3 / 2 + v * (13 / 12 + v * (1 / 2 + v * 119 / 720))))
+  );
+
+}
+
+// TODO: Name better
+inline double suggest_inv_cov_cross_term(const double v, const double exp_eta,
+                                         const double inv_exp_v, const double exp_v){
+  return((v >= 1e-4) ?
+           // Set v = a exp(eta)
+           // Then: exp(-a exp(eta)) exp(eta) (1 + exp(a exp(eta)) (a exp(eta) - 1)) /
+           //             (1 - exp(-a exp(eta))) (1 - exp(-2a exp(eta)) - 2exp(-a exp(eta)) a exp(eta)) =
+           //       exp(-v) exp(eta) (1 + exp(v) (v - 1)) / ((1 - exp(-v)) (1 - exp(-2v) - 2exp(-v) v))
+
+           exp_eta * inv_exp_v * (1 + exp_v * (v - 1)) /
+             ((1 - inv_exp_v) * (1 - inv_exp_v * inv_exp_v - 2 * inv_exp_v * v)) :
+           // Laurent series from https://www.wolframalpha.com/input/?i=exp(-v)+(1+%2B+exp(v)+(v+-+1))+%2F+((1+-+exp(-v))+(1+-+exp(-2v)+-+2exp(-v)+v))
+           exp_eta * 1 / (v * v) * (3 / 2 + v * (7/4 + v * (37/40 + v * (17/60 + v * 291/5600))))
   );
 }
 
@@ -337,17 +375,6 @@ inline double var_wait_time(const double v, const double a,  const double exp_et
   return((v >= 1e-4) ?
            (1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) / (exp_eta * exp_eta) :
            a * a * v * (1/3 - v * (1/3 - v * (11/60 - v * (13/180 - v * 19/840)))));
-}
-
-
-// TODO: Delete
-inline double inv_var_chance_die(const double v, const double inv_exp_v){
-  return((v >= 1e-6) ?
-           1 / (inv_exp_v * (1 - inv_exp_v)) :
-           //Lauren series from https://www.wolframalpha.com/input/?i=1%2F((1-exp(-v))exp(-v))
-           1 / v * (1 + v * (3 / 2 + v * (13 / 12 + v * (1 / 2 + v * 119 / 720))))
-  );
-
 }
 
 inline double var_chance_die(const double v, const double inv_exp_v){
@@ -481,9 +508,20 @@ class EKF_helper{
 
       const double expect_chance_die = exp_model_funcs::expect_chance_die(v, inv_exp_v);
 
-      const double cross_term_inv = exp_model_funcs::inv_var_fac_cross(v, exp_v, exp_eta);
-      const double t_term_inv = exp_model_funcs::inv_var_fac_wait_time(v, exp_v, exp_eta);
-      const double die_term_inv = exp_model_funcs::inv_var_fac_chance_to_die(v, exp_v);
+      double cross_term_inv;
+      double t_term_inv;
+      double die_term_inv;
+
+      if(dat.EKF_inv_Cov_method == "org"){
+        cross_term_inv = exp_model_funcs::inv_var_fac_cross(v, exp_v, exp_eta);
+        t_term_inv = exp_model_funcs::inv_var_fac_wait_time(v, exp_v, exp_eta);
+        die_term_inv = exp_model_funcs::inv_var_fac_chance_to_die(v, exp_v);
+      } else{
+        cross_term_inv = exp_model_funcs::suggest_inv_cov_cross_term(
+           v, exp_eta, inv_exp_v, exp_v);
+        t_term_inv = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
+        die_term_inv = exp_model_funcs::inv_var_chance_die(v, inv_exp_v);
+      }
 
       const double dh_fac_die = exp_model_funcs::dh_fac_die(v, inv_exp_v);
       const double dh_fac_time = exp_model_funcs::dh_fac_time(v, inv_exp_v, inv_exp_eta);
@@ -664,10 +702,10 @@ public:
                                            bin_tstart, bin_tstop);
 
         if(p_dat.u.has_inf() || p_dat.u.has_nan()){
-          Rcpp::stop("Score vector in correction step had inf or nan elements in bin " +
+          Rcpp::stop("ddhazard_fit_cpp estimation error: Score vector in correction step had inf or nan elements in bin " +
             std::to_string(t) + ". Try decreasing the learning rate");
         } else if(p_dat.U.has_inf() || p_dat.U.has_nan()){
-          Rcpp::stop("Score vector in correction step had inf or nan elements in bin " +
+          Rcpp::stop("ddhazard_fit_cpp estimation error: Score vector in correction step had inf or nan elements in bin " +
             std::to_string(t) + ". Try decreasing the learning rate");
         }
 
@@ -690,7 +728,7 @@ public:
           }
 
           if(!arma::inv(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
-            Rcpp::stop("Failed to invert V_(t|t-1)");
+            Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert V_(t|t-1)");
           }
         }
 
@@ -703,7 +741,7 @@ public:
           }
 
           if(!arma::inv(tmp_mat, V_t_less_s_inv + p_dat.U)){
-            Rcpp::stop("Failed to compute inverse for V_(t|t)");
+            Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
           }
         }
         p_dat.V_t_t_s.slice(t) = std::move(tmp_mat); // arma objects are moveable
@@ -738,7 +776,7 @@ public:
 
         arma::mat tmp_inv_mat;
         if(!arma::inv(tmp_inv_mat, arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U * p_dat.V_t_less_s.slice(t - 1))){
-          Rcpp::stop("Failed to invert intermediate for K_d matrix");
+          Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate for K_d matrix");
         }
 
         p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * tmp_inv_mat * p_dat.z_dot * diagmat(p_dat.H_diag_inv);
@@ -779,7 +817,7 @@ class UKF_solver_Org : public Solver{
                                    const arma::mat &P_x_x){
     arma::mat cholesky_decomp;
     if(!arma::chol(cholesky_decomp, P_x_x, "lower")){ // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
-      Rcpp::stop("Cholesky decomposition failed");
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Cholesky decomposition failed");
     }
 
     s_points.col(0) = a_t;
@@ -879,7 +917,7 @@ public:
       if(!arma::inv_sympd(P_v_v, P_v_v)){ // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
         Rcpp::warning("Failed to use inversion for symmetric square matrix for P_v_v. Trying with general inversion method");
         if(!arma::inv_sympd(P_v_v, P_v_v)){
-          Rcpp::stop("Failed to invert P_v_v");
+          Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert P_v_v");
         }
       }
 
@@ -1139,7 +1177,7 @@ class UKF_solver_New_logit : public UKF_solver_New{
     // Compute intermediate matrix
     arma::mat tmp_mat;
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
-      Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
 
@@ -1149,7 +1187,7 @@ class UKF_solver_New_logit : public UKF_solver_New{
     // ** 5: Compute L using the notation in vignette **
     // Re-compute intermediate matrix using the other weight vector
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-      Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
 
@@ -1240,7 +1278,7 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     O = O.t() * (O.each_col() / vars);
     arma::mat tmp_mat;
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
-      Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
 
@@ -1248,7 +1286,7 @@ class UKF_solver_New_exponential : public UKF_solver_New{
 
     // ** 5: Compute L using the notation in vignette **
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-      Rcpp::stop("Failed to invert intermediate matrix in the scoring step");
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
 
@@ -1398,7 +1436,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const std::string M_step_formulation = "Fahrmier94",
                             const int fixed_effect_chunk_size = 2e4,
                             const bool debug = false,
-                            const unsigned int NR_it_max = 100){
+                            const unsigned int NR_it_max = 100,
+                            const std::string EKF_inv_Cov_method = "org"){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -1433,7 +1472,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       NR_eps, LR,
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
-      order_, est_Q_0, model == "exponential", NR_it_max, debug);
+      order_, est_Q_0, model == "exponential", NR_it_max, debug,
+      EKF_inv_Cov_method);
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
   } else if (method == "UKF"){
     if(model != "logit" && model != "exponential")

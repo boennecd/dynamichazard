@@ -206,7 +206,7 @@ $$\begin{aligned}
   &\text{else set } \vec{a} = \emNotee{\vec{a}}{t}{t} \text{ and repeat} 
 \end{aligned}$$
 
-where $\delta$ is small like $10^{-9}$. The defaults are $l = 1$ and $\epsilon_{\text{NR}} = \infty$. Selecting $l < 1$ in case of divergence seems to help. Further, while [@fahrmeir92] does not observe improvements with multiple repetitions, we find improvements in terms of mean square error of the state vector by taking multiple steps (for example by setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower)
+where $\delta$ is small like $10^{-9}$. The defaults are $l = 1$ and $\epsilon_{\text{NR}} = \infty$. The latter yield only a single iteration in the scorring step. Selecting $l < 1$ in case of divergence can resovle the issue. Thus, the `ddhazard` function will try learning rates of $l, l\zeta, l\zeta^2 \dots l\zeta^w$ for given $0<\zeta<1$ and we succeed to fit the model or $w$ is reach without succeding in estimating the model. Further, while [@fahrmeir92] does not observe improvements with multiple repetitions, we find improvements in terms of mean square error of the state vector by taking multiple steps (for example by setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower) (TODO: Insert reference to simulation note)
 
 $l$ and $\epsilon_{\text{NR}}$ are set by respectively setting the elements `LR` and `NR_eps` of the list passed to `control` argument of `ddhazard`. By default, `LR = 1` and `NR_eps = NULL` which yields a learning rate of 1 and a single Fischer scoring step (which is the same as $\epsilon_{\text{NR}=\infty}$. These arguments can be altered by setting `control = list(LR = .75, NR_eps = 0.001)` for a learning rate of 0.75 and a threshold in the Fischer Scoring of $10^{-3}$
 
@@ -251,7 +251,7 @@ $$\begin{aligned}
   W_0^{(m)} &= \frac{\lambda}{m + \lambda} \\
   W_0^{(c)} &= \frac{\lambda}{m + \lambda} + 1 - \alpha^2 + \beta \\
   W_0^{(cc)} &= \frac{\lambda}{m + \lambda} + 1 - \alpha \\
-  W_i^{(m)} &= W_0^{(c)} = \frac{1}{2(m+\lambda)}, \qquad i = 1,\dots, 2m \\
+  W_i^{(m)} &= W_i^{(c)} = \frac{1}{2(m+\lambda)}, \qquad i = 1,\dots, 2m \\
   \lambda &= \alpha^2 (m + \kappa) - m
 \end{aligned}$$
 
@@ -678,7 +678,7 @@ $$\begin{aligned}
     \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}}\vec{x}_i^T
 \end{aligned}$$
 
-We could implement the above. I have done that for the EKF. There is and issue though with divergence. The entries of $\mat{K}$ can become numerically large. In particular, we can show that: 
+We could implement the above. I have done that for the EKF. There is and issue though with divergence. The cause it that the entries of $\mat{K}$ can become numerically large. In particular, we can show that: 
 
 $$\mat{K} = \begin{pmatrix}
   \diag{\frac{1}{\sigma_{Y_1}^2(1 - \rho_1^2)}, \dots, \frac{1}{\sigma_{Y_r}^2(1 - \rho_r^2)}} &
@@ -689,8 +689,8 @@ $$\mat{K} = \begin{pmatrix}
 
 We can compute some numerical examples to illustrate why this is an issue. This is done below. `eta` refers to the linear predictor, `delta` refers to at the at risk length and `Delta` refers to the outcome:
 
-```{r}
-grid <- expand.grid(delta = c(.1, 1, 2, 3), eta = c(-4, -2, -1, 0, 1))
+```{r, echo=FALSE}
+grid <- expand.grid(delta = c(.1, 1, 2), eta = c(-4, -2, 0))
 
 grid$`Link Y` <- 1 - exp(- exp(grid$eta) * grid$delta)
 grid$`Var Y` <- grid$`Link Y` * (1 - grid$`Link Y`)
@@ -718,27 +718,27 @@ grid$K12 <- grid$Correlation / (sqrt(grid$`Var Y` * grid$`Var Delta`) *
 
 knitr::kable(grid[, 1:8], digits = 3)
 ```
-```{r}
+```{r, echo=FALSE}
 knitr::kable(grid[, -(3:8)], digits = 3)
 ```
 
-Where we see that certain combinations of $(\delta, \eta)$ cause the entries of $\mat{K}$ to be large. We will illustrate why this may be an issue in the following paragraphs. Notice that the deriatives of the two link functions (the entries under `Deriv ...`) have opposing signs while all the entries of $\mat{K}$ are positive. Thus, there is a canceling effect in the computation of $\mat{U}_t(\vec{\alpha}_t)$. Hence, $\emNotee{\mat{V}}{t}{t}$ seems not to be an issue in the sense that it "stays around" sensible values before divergence
+We see that certain combinations of $(\delta, \eta)$ cause the entries of $\mat{K}$ to be large. We will illustrate why this may be an issue in the following paragraphs. Notice that the deriatives of the two link functions (the entries under `Deriv ...`) have opposing signs while all the entries of $\mat{K}$ (column K11, K12, K22) are positive. Thus, there is a canceling effect in the computation of $\mat{U}_t(\vec{\alpha}_t)$. Hence, $\emNotee{\mat{V}}{t}{t}$ seems not to be an issue in the sense that it "stays around" sensible values before divergence
 
-The update from $\emNotee{\vec{a}}{t}{t-1}$ to $\emNotee{\vec{a}}{t}{t}$ seems to be cause divergence. Re-call that:
+The update from $\emNotee{\vec{a}}{t}{t-1}$ to $\emNotee{\vec{a}}{t}{t}$ seems to be the cause divergence. Re-call that:
 
 $$\emNotee{\vec{a}}{t}{t} = \vec{a} + l \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})$$
 ```{r, echo=FALSE}
-ex <- 6
+ex <- 5
 ```
 
 Supose now that we have somewhat rare events, the linear predictor $\eta$ is `r grid$eta[ex]`, $\delta$ is `r grid$delta[ex]`  and the indvidual with $\Delta = 1$. The latter can occour often if times are reported discritly (in say days or months). Then the factor from the residual in the term  with $(y_i - h_i^y(\eta_i))$ is the product of `r grid[ex, "Deriv link Y"]` ($\Lparen{h_i^y(\eta_i)}'$), (`r grid[ex, "K11"]` plus `r grid[ex, "K12"]`) ($\MyInd{\mat{K}_{11}}{ii} + \MyInd{\mat{K}_{12}}{ii}$) and ($y_i$ minus `r grid[ex, "Link Y"]` ($h_i^y(\eta_i)$)). The result is `r grid[ex, "Deriv link Y"] * (grid[ex, "K11"] + grid[ex, "K12"]) * (1 - grid[ex, "Link Y"])` if it is a death and `r grid[ex, "Deriv link Y"] * (grid[ex, "K11"] + grid[ex, "K12"]) * (0 - grid[ex, "Deriv link Y"])` otherwise
 
-The factor for the residual time is the product of `r grid[ex, "Deriv link Delta"]`, (`r grid[ex, "K22"]` plus `r grid[ex, "K12"]`) and (1 minus `r grid[ex, "Link Delta"]`). The result is `r grid[ex, "Deriv link Delta"] * (grid[ex, "K22"] + grid[ex, "K12"]) * (1 - grid[ex, "Link Delta"])`. Meanwhile the factor for the information matrix $\mat{U}_t(\vec{\alpha})_t$ is `r grid[ex, "Deriv link Y"]^2 * grid[ex, "K11"] + 2 * grid[ex, "Deriv link Y"] * grid[ex, "Deriv link Delta"] * grid[ex, "K12"] + grid[ex, "Deriv link Delta"]^2 * grid[ex, "K22"]` ($\Lparen{\Lparen{h^y_i}'(\eta_i)}^2\MyInd{\mat{K}_{11}}{ii} + 2\cdot\Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii} + \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}$). Recalling that:
+The factor for the residual time is the product of `r grid[ex, "Deriv link Delta"]`, (`r grid[ex, "K22"]` plus `r grid[ex, "K12"]`) and (1 minus `r grid[ex, "Link Delta"]`). The result is `r grid[ex, "Deriv link Delta"] * (grid[ex, "K22"] + grid[ex, "K12"]) * (1 - grid[ex, "Link Delta"])`. Meanwhile the factor for the information matrix $\mat{U}_t(\vec{\alpha})_t$ is `r grid[ex, "Deriv link Y"]^2 * grid[ex, "K11"] + 2 * grid[ex, "Deriv link Y"] * grid[ex, "Deriv link Delta"] * grid[ex, "K12"] + grid[ex, "Deriv link Delta"]^2 * grid[ex, "K22"]` ($\Lparen{\Lparen{h^y_i}'(\eta_i)}^2\MyInd{\mat{K}_{11}}{ii} + 2\cdot\Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii} + \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}$). Recall that:
 
 $$\emNotee{\mat{V}}{t}{t} = \left(\emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}$$
 Depending on the co-varaite vectors $\vec{x}_i$ and covariance matrix $\emNotee{\mat{V}}{t}{t - 1}$ this can imply that $\vec{u}_t(\vec{\alpha}_t)$ becomes large compared to $\emNotee{\mat{V}}{t}{t }$ which causes a large step in the score direction. One solution is to set the learning rate $l$ (very) low. Though, I have to stress that this has to be set it at a very low level 
 
-A solution may be to make the two variables uncorrelated. For example, we can set:
+Another solution may be to make the two variables uncorrelated. For example, we can set:
 $$\begin{aligned}
 &\begin{pmatrix} y_i \\ \Delta_i + c y_i \end{pmatrix} = 
   \underbrace{\begin{pmatrix} 1 & 0 \\ c & 1 \end{pmatrix}}_C \begin{pmatrix} y_i \\ \Delta_i \end{pmatrix} \\
@@ -756,9 +756,114 @@ $$\begin{aligned}
    \left(-\exp\Lparen{\eta _i}\right)}}
 \end{aligned}$$
 
-Though, this requires that we know the $\vec{\alpha}_t$ in order to compute $\eta_i$. Question: Would it be ok to plug in the current estimate of $\emNotee{\vec{a}}{t}{t - 1}$? Do you think this is a good idea? Issue: The resultning variable may have very low variance 
+Though, this requires that we know the $\vec{\alpha}_t$ in order to compute $y_i$. Question: Would it be ok to plug in the current estimate of $\emNotee{\vec{a}}{t}{t - 1}$? Do you think this is a good idea? Issue: The resultning variable has very low variance and thus does not resolve the problem.
 
-As an example here is the output from the E-step of the EKF for the head neck data in [@fahrmeir94]. `U` is the diagonal of the information matrix $\mat{U}$:
+Two other solutions are: 1) decrease the learning rate until we get a fit or 2) notice the entries of the inverse covariance matrix, $\mat{K}$, are large due the division by $1-\rho_i^2$. Hence, scale $\mat{K}$ by $1-\rho^2_i$ to get:
+
+$$\mat{K} = \begin{pmatrix}
+  \diag{\frac{1}{\sigma_{Y_1}^2}, \dots, \frac{1}{\sigma_{Y_r}^2}} &
+    \diag{\frac{-\rho_1}{\sigma_{Y_1}\sigma_{\Delta_1}}, \dots, \frac{-\rho_r}{\sigma_{Y_r}\sigma_{\Delta_r}}} \\
+  \diag{\frac{-\rho_1}{\sigma_{Y_1}\sigma_{\Delta_1}}, \dots, \frac{-\rho_r}{\sigma_{Y_r}\sigma_{\Delta_r}}} &
+    \diag{\frac{1}{\sigma_{\Delta_1}^2}, \dots, \frac{1}{\sigma_{\Delta_r}^2}}
+\end{pmatrix}$$
+
+with
+$$\frac{-\rho_i}{\sigma_{Y}\sigma_{\Delta}} = 
+  -\frac{\eta  \exp\Lparen{-\delta  \eta } \left(\exp\Lparen{\delta  \eta } (1-\delta  \eta )-1\right)}{\left(1-\exp\Lparen{-\delta 
+   \eta }\right) \left(-2 \delta  \eta  \exp\Lparen{-\delta  \eta }-\exp\Lparen{-2 \delta  \eta }+1\right)}$$
+
+```{r, echo = FALSE}
+source("../R/test_utils.R")
+n_sims <- 100
+arg_list <- list(n_series = 1e3, n_vars = 5, t_0 = 0, t_max = 10,
+                 x_range = 1, x_mean = 0, re_draw = T, beta_start = c(-2:2) / 2,
+                 intercept_start = -3, sds = c(.1, rep(1, 5)))
+```
+
+where we supressed the subscript on the right hand site for. We will run the following simulation to test the difference between using the true inverse covariance or the suggested scaled inverse covariance. In short, we try to fit the true model. We simulate `r n_sims` runs each with `r arg_list$n_series` individuals. We have `r arg_list$n_vars` covariates starting at `r arg_list$beta_start[1:4]` and `r arg_list$beta_start[5]` and all being independent with a standard deviation of `r arg_list$sds[2]`. Moreover, the intercept starts at `r arg_list$intercept_start` with a standard deviation of `r arg_list$sds[1]`. An example of the covariates are given in a plot below. The black line s the intercept: 
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+set.seed(44444314)
+sims <- do.call(test_sim_func_exp, arg_list)
+
+matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, 
+                type = "l", lty = 1, xlab = "Time", ylab = "Coeffecient")
+```
+
+The inviduals covaraites are simulated from a uniform distribution on $[0,1]$. The link function is the exponential model suggested above. Each bin has length 1 and we stop observering at time `r arg_list$t_max`
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+library(dynamichazard)
+dd1_args <- list(
+  formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+  data = sims$res,
+  by = 1,
+  Q_0 = diag(1, 6),
+  Q = diag(1e-2, 6),
+  control = list(est_Q_0 = F, eps = 10^-1, n_max = 10^3, LR_max_try = 20),
+  max_T = 10,
+  id = sims$res$id, order = 1,
+  model = "exponential")
+
+dd2_args <- dd1_args
+dd2_args$control$EKF_inv_Cov_method <- "not org"
+
+out <- array(NA_real_, dim = c(n_sims, 2, 2),
+              dimnames = list(NULL, c("Normal inv covariance", "Altered inv covariance"),
+                              c("In sample Brier score", "Learning rate")))
+
+set.seed(1992)
+for(i in 1:n_sims){
+  repeat{
+    sims <- do.call(test_sim_func_exp, arg_list)
+    
+    if(sum(sims$res$event) > 50 && arg_list$n_series - sum(sims$res$event) > 50)
+      break
+  }
+  
+  dd1_args$data <- sims$res
+  dd1_args$id <- sims$res$id
+  f1 <- do.call(ddhazard, dd1_args)
+  
+  dd2_args$data <- sims$res
+  dd2_args$id <- sims$res$id
+  f2 <- do.call(ddhazard, dd2_args)
+  
+  # matplot(sims$betas, type = "l", lty = 1)
+  # matplot(f1$state_vecs, type = "l", lty = 2, add = T)
+  # matplot(f2$state_vecs, type = "l", lty = 4, add = T)
+  
+  dat_frame <- get_survival_case_weigths_and_data(
+    dd1_args$formula, dd1_args$data, 
+    max_T = dd1_args$max_T, by = dd1_args$by, id = dd1_args$id, use_weights = F)
+  
+  out[i, "Normal inv covariance", "In sample Brier score"] <-
+    mean.default((dat_frame$Y - predict(f1, new_data = dat_frame, tstart = "tstart", tstop = "tstop")$fits)^2)
+  out[i, "Altered inv covariance", "In sample Brier score"] <-
+    mean.default((dat_frame$Y - predict(f2, new_data = dat_frame, tstart = "tstart", tstop = "tstop")$fits)^2)
+  
+  out[i, "Normal inv covariance", "Learning rate"] <- f1$LR
+  out[i, "Altered inv covariance", "Learning rate"] <- f2$LR
+}
+```
+
+The result of the simulation is printed in the table below. We report the in sample Brier score, standard deviation of the Brier score and mean and median learning rate. It seems that there is little difference between the two in terms of Brier score. However, the used learning rate is higher for the method where we have scaled up the element of the inverse covariance matrix
+
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
+tbl <- matrix(NA_real_, nrow = 2, ncol = 4, 
+              dimnames = list(
+                dimnames(out)[[2]], c("Mean in-sample Brier score", "Sd in-sample Brier score", "Mean learning rate", "Median learning rate")))
+
+tbl[, "Mean in-sample Brier score"] <- colMeans(out[, , "In sample Brier score"])
+tbl[, "Sd in-sample Brier score"] <- apply(out[, , "In sample Brier score"], 2, sd)
+tbl[, "Mean learning rate"] <- colMeans(out[, , "Learning rate"])
+tbl[, "Median learning rate"] <- apply(out[, , "Learning rate"], 2, median)
+
+knitr::kable(tbl[, 1:2], digest = 3)
+knitr::kable(tbl[, 3:4], digest = 3)
+```
+
+As a final example, here is the output from the E-step of the EKF for the head neck data in [@fahrmeir94]. `U` is the diagonal of the information matrix $\mat{U}$:
 
 ```
 ##########################################

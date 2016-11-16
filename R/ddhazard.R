@@ -105,11 +105,12 @@ ddhazard = function(formula, data,
     stop("Model '", model, "' is not implemented")
 
   control_default <- list(kappa = NULL, alpha = NULL, beta = NULL,
-                          NR_eps = NULL, LR = NULL, n_max = 10^2, eps = 10^-3,
+                          NR_eps = NULL, LR = 1, n_max = 10^2, eps = 10^-3,
                           est_Q_0 = F, method = "EKF", save_risk_set = T,
                           save_data = T, eps_fixed_parems = 1e-3,
                           max_it_fixed_parems = 10, fixed_effect_chunk_size = 1e4,
-                          debug = F, fixed_parems_start = NULL)
+                          debug = F, fixed_parems_start = NULL, LR_max_try = 10,
+                          LR_decrease_fac = 1.5, EKF_inv_Cov_method = "org")
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
          paste0(names(control)[is.na(control_match)], collapse = "\t"))
@@ -201,22 +202,45 @@ ddhazard = function(formula, data,
   X_Y$X <- t(X_Y$X) # we transpose for performance due to the column-major storage
   X_Y$fixed_terms <- t(X_Y$fixed_terms) # same
 
-  result = ddhazard_fit_cpp(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
-                            Q = Q, n_max = control$n_max,
-                            risk_obj = risk_set, eps = control$eps,
-                            X = X_Y$X, fixed_terms = X_Y$fixed_terms,
-                            fixed_parems_start = control$fixed_parems_start,
-                            tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
-                            order_ = order,
-                            est_Q_0 = control$est_Q_0, method = control$method,
-                            model = model,
-                            kappa = control$kappa, alpha = control$alpha, beta = control$beta,
-                            NR_eps = control$NR_eps,
-                            LR = control$LR,
-                            eps_fixed_parems = control$eps_fixed_parems,
-                            max_it_fixed_parems = control$max_it_fixed_parems,
-                            fixed_effect_chunk_size = control$fixed_effect_chunk_size,
-                            debug = control$debug)
+  result <- NA
+  k_vals <- if(control$method == "EKF") seq_len(control$LR_max_try) - 1 else 0
+  for(k in k_vals){
+    tryCatch({
+      result <- ddhazard_fit_cpp(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
+                                 Q = Q, n_max = control$n_max,
+                                 risk_obj = risk_set, eps = control$eps,
+                                 X = X_Y$X, fixed_terms = X_Y$fixed_terms,
+                                 fixed_parems_start = control$fixed_parems_start,
+                                 tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
+                                 order_ = order,
+                                 est_Q_0 = control$est_Q_0, method = control$method,
+                                 model = model,
+                                 kappa = control$kappa, alpha = control$alpha, beta = control$beta,
+                                 NR_eps = control$NR_eps,
+                                 LR = control$LR / control$LR_decrease_fac^(k),
+                                 eps_fixed_parems = control$eps_fixed_parems,
+                                 max_it_fixed_parems = control$max_it_fixed_parems,
+                                 fixed_effect_chunk_size = control$fixed_effect_chunk_size,
+                                 debug = control$debug,
+                                 EKF_inv_Cov_method = control$EKF_inv_Cov_method)
+    }, error = function(e)
+      if(!grepl("^ddhazard_fit_cpp estimation error:", e$message))
+        stop(e))
+
+    LR <- control$LR / control$LR_decrease_fac^(k)
+    if(did_fit <- !(length(result) == 1 && is.na(result)))
+      break
+  }
+
+  # Check if fit succeeded
+  if(!did_fit)
+    stop("Failed to estimate model. The following learning rates was tried: ",
+         paste0(control$LR / control$LR_decrease_fac^k_vals, collapse = ", "),
+         ". Try decreasing the learning rate")
+
+  if(k != 0)
+    message("Did not succed to fit the model wit a learning rate of ", control$LR,
+            ". The learning rate was decrease by a factor ", control$LR_decrease_fac^k, " to yield a fit")
 
   # Set names
   tmp_names = rep(rownames(X_Y$X), order)
@@ -265,6 +289,7 @@ ddhazard = function(formula, data,
     order = order, F_ = F_,
     method = control$method,
     model = model,
-    est_Q_0 = control$est_Q_0)),
+    est_Q_0 = control$est_Q_0),
+    LR = LR),
     "class" = "fahrmeier_94")
 }

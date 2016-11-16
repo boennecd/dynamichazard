@@ -17,8 +17,8 @@ IWLS_poisson <- function(X, y, beta, offsets, it_max = 1e3L, eps = 1.0e-4) {
     .Call('dynamichazard_IWLS_poisson', PACKAGE = 'dynamichazard', X, y, beta, offsets, it_max, eps)
 }
 
-ddhazard_fit_cpp <- function(X, fixed_terms, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_parems, n_max = 100L, eps = 0.001, verbose = 0L, order_ = 1L, est_Q_0 = TRUE, method = "EKF", kappa = NULL, alpha = NULL, beta = NULL, NR_eps = NULL, LR = NULL, model = "logit", M_step_formulation = "Fahrmier94", fixed_effect_chunk_size = 2e4L, debug = FALSE, NR_it_max = 100L) {
-    .Call('dynamichazard_ddhazard_fit_cpp', PACKAGE = 'dynamichazard', X, fixed_terms, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_parems, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation, fixed_effect_chunk_size, debug, NR_it_max)
+ddhazard_fit_cpp <- function(X, fixed_terms, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_parems, n_max = 100L, eps = 0.001, verbose = 0L, order_ = 1L, est_Q_0 = TRUE, method = "EKF", kappa = NULL, alpha = NULL, beta = NULL, NR_eps = NULL, LR = NULL, model = "logit", M_step_formulation = "Fahrmier94", fixed_effect_chunk_size = 2e4L, debug = FALSE, NR_it_max = 100L, EKF_inv_Cov_method = "org") {
+    .Call('dynamichazard_ddhazard_fit_cpp', PACKAGE = 'dynamichazard', X, fixed_terms, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_parems, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation, fixed_effect_chunk_size, debug, NR_it_max, EKF_inv_Cov_method)
 }
 
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {
