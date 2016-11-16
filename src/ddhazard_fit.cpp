@@ -1058,35 +1058,9 @@ public:
       double delta_t = p_dat.I_len[t - 1];
       bin_stop += delta_t;
 
-      // Update sigma points
-      compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
-                           sigma_points, p_dat.V_t_t_s.slice(t - 1));
-
-      if(p_dat.debug){
-        my_print(p_dat.V_t_t_s.slice(t - 1), "Chol decomposing:");
-        my_print(sigma_points, "sigma points");
-      }
-
       // E-step: Filter step
-      //   Updates a_t_less_s and V_t_less_s
-      //   Requires T(sigma point) + a_t_less_s computed before V_t_less_s
-      //     Requries that we have updated the sigma points
-      //     Requires for-loop with 2m + 1 itertions
-
-      // First we compute the mean
-      p_dat.a_t_less_s.col(t - 1) = w_0 * sigma_points.unsafe_col(0) +
-        w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols - 1), 1);
-
-      // Then the variance
-      p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q; // weigths sum to one
-
-      for(uword i = 0; i < sigma_points.n_cols; ++i){
-        const double &w = i == 0 ? w_0_c : w_i;
-
-        p_dat.V_t_less_s.slice(t - 1) +=
-          (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
-          (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
-      }
+      p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
+      p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
       // Regenerate
       compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
