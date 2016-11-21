@@ -23,6 +23,7 @@ Suggests:
     rmarkdown,
     timereg,
     captioner,
-    biglm
+    biglm,
+    httr
 VignetteBuilder: knitr
 SystemRequirements: C++11
