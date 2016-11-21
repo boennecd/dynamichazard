@@ -526,35 +526,6 @@ class EKF_helper{
       const double dh_fac_die = exp_model_funcs::dh_fac_die(v, inv_exp_v);
       const double dh_fac_time = exp_model_funcs::dh_fac_time(v, inv_exp_v, inv_exp_eta);
 
-      //TODO: Delete
-      if(rand() % 100 > 101){
-        Rcpp::Rcout << v << "\t"
-                    << exp_v << "\t"
-                    << inv_exp_v << "\t"
-                    << eta << "\t"
-                    << exp_eta << "\t"
-                    << inv_exp_eta << "\t"
-                    << std::endl;
-
-        Rcpp::Rcout << "v = " << v
-                    << "\ta = " << at_risk_length
-                    << "\teta = " << eta
-                    << "\tcross term = " << cross_term_inv
-                    << "\tt term = " << t_term_inv
-                    << "\tdie term = " <<die_term_inv
-                    << "\tdh die = " << dh_fac_die
-                    << "\tdh time = " << dh_fac_time
-                    << std::endl;
-
-        Rcpp::Rcout << "score fac time = " << dh_fac_time * (cross_term_inv + t_term_inv)
-                    << "\tscore fac die " << dh_fac_die * (cross_term_inv + die_term_inv)
-                    << "\ttime residual " << time_outcome - expect_time << "\t" << expect_time
-                    << "\tdie residual " << do_die - expect_chance_die << "\t" << expect_chance_die
-                    << "\tTotal factor " << dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time)
-        + dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die)
-        << std::endl;
-      }
-
       u_ += x_ * (
         dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time)
         + dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die));

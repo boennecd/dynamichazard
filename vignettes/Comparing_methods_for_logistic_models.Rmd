@@ -350,9 +350,9 @@ Another option is to perform the E-step using an unscented Kalman filter. This i
 dd_fit_UKF <- ddhazard(Surv(tstart, tstop, death == 2) ~ age +
                          edema + log(albumin) + log(protime) + log(bili), pbc2,
                    id = pbc2$id, by = 100, max_T = 3600, 
-                   Q_0 = diag(rep(1, 6)), Q = diag(rep(0.1, 6)),
+                   Q_0 = diag(rep(1, 6)), Q = diag(rep(0.01, 6)),
                    control = list(method = "UKF", beta = 0, alpha = 1,
-                                  eps = 0.01, n_max = 1e4))
+                                  eps = 0.1, n_max = 1e4))
 
 par(mfcol = c(2, 3))
 for(i in 1:6)
@@ -469,7 +469,7 @@ dd_fit$fixed_effects
 We plot the curve after the fit. We see that the estimate is more smooth as expected with a second order random walk. Further, we can confirm that the fixed effects are comparable with our previous fits
 
 ## Residuals and predict
-Question: Is this note too long now or should I also show how to compute residuals and predict outcomes?
+Question: Is this note too long now or should I also show how to compute residuals and predict outcomes? What about doing a K-fold cross validation here?
 
 # Summary
 We have estimated a model using Generalized additive models with the `mgcv` package and a time varying Cox model with the `timereg` package. Further, we have illustrated how the `ddhazard` function in the `dynamichazard` package can be used. In particular, we have used the logit link function and showed how to estimate with fixed effects, taking extra Newton Raphson steps in the correction step, fitting second order random walks, decreasing the learning rate in the correction step and using the Unscented Kalman filter in the E-step. All the fits have been comparable with the Generalized Additive model
