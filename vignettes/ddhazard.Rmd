@@ -51,10 +51,24 @@ knitr::opts_chunk$set(echo = TRUE)
 \newcommand{\MyInd}[2]{\Lparen{#1}_{#2}}
 
 # Intro
-This note will cover the `ddhazard` function in `dynamichazard` library. You can install the the library through github for the `devtools` library as follows:
+This note will cover the `ddhazard` function in `dynamichazard` library. You can install the version of the library used to make this vignettes from github with the `devtools` library as follows:
+
+```{r echo=FALSE}
+current_sha <- httr::content(
+  httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
+  )$object$sha
+
+stopifnot(length(current_sha) > 0 && class(current_sha) == "character")
+
+current_version <- paste0("boennecd/dynamichazard@", current_sha)
+```
+
+```{r}
+current_version
+```
 
 ```{r eval=FALSE}
-devtools::install_github("boennecd/dynamichazard")
+devtools::install_github(current_version)
 ```
 
 The `ddhazard` function estimates a binary regression model where the parameters are assumed to time-variant and follow a pre-defined random walk. The function is implemented such that: 

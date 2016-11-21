@@ -34,15 +34,27 @@ The final fourth objective is to show that both the EKF and UKF scales linearly 
 
 The models will be compared in terms of Brier score, median absolute residuals and standard deviation of the absolute residuals. All metrics will be reported on out-sample data. All plots will have true coefficients as continuous lines while dashed lines are estimates
 
-You can install the version of the code used to compile this vignette by using the code below. Moreover, you will also find the source code for the vignette in the github package under the same version:
+You can install the version of the library used to make this vignettes from github with the `devtools` library as follows:
 
-```{r, eval = FALSE}
-# TODO: Make sure to update
-devtools::install_github(
-  "boennecd/dynamichazard@081323df8af85e7c26eaad449b720ccbfbaebb35")
+```{r echo=FALSE}
+current_sha <- httr::content(
+  httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
+  )$object$sha
+
+stopifnot(length(current_sha) > 0 && class(current_sha) == "character")
+
+current_version <- paste0("boennecd/dynamichazard@", current_sha)
 ```
 
-The note is not meant to be self contained. It is recommend to see (TODO: Insert reference) for an introduction to the models and methods in the `dynamichazard` package
+```{r}
+current_version
+```
+
+```{r eval=FALSE}
+devtools::install_github(current_version)
+```
+
+Moreover, you will also find the source code for the vignette in the github package. The note is not meant to be self contained. It is recommend to see (TODO: Insert reference) for an introduction to the models and methods in the `dynamichazard` package
 
 ## Notions
 For clarity, here is a list of notions used:
