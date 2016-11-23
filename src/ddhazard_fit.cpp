@@ -1214,6 +1214,9 @@ class UKF_solver_New_exponential : public UKF_solver_New{
         const double v = at_risk_length(j) * exp_eta;
         const double inv_exp_v = exp(-1 * v);
 
+        if(v <= 1e-3 || v >= 1e2)
+          Rcpp::Rcout << j + 1 << "\t ";
+
         O(j, i) = exp_model_funcs::expect_chance_die(v, inv_exp_v);
         vars(j) += w_c * exp_model_funcs::var_chance_die(v, inv_exp_v);
 
@@ -1224,6 +1227,8 @@ class UKF_solver_New_exponential : public UKF_solver_New{
         vars(j + n_risk) += w_c * exp_model_funcs::var_wait_time(
           v, at_risk_length(j), exp_eta, inv_exp_v);
       }
+
+      Rcpp::Rcout << std::endl;
 
       y_bar += w * O.col(i);
     }
@@ -1247,37 +1252,32 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     arma::vec inv_covmat_off_diag(n_risk);
     inv_covmat_off_diag = -1 * inv_covmat_diag.subvec(span_time) % covars / vars.subvec(span_binary);
 
-    O.each_col() -= y_bar;
+    // Compute inverse covariance matrix dot centered sigma points
+    O.each_col() -= y_bar; // center
+
+    arma::mat tmp_mat = O.each_col() % inv_covmat_diag;
+    tmp_mat.rows(span_binary) +=
+      O.rows(span_time).each_col() %  inv_covmat_off_diag;
+    tmp_mat.rows(span_time) +=
+      O.rows(span_binary).each_col() %  inv_covmat_off_diag;
+
     {
       arma::vec outcome(n_risk * 2);
       outcome.subvec(span_binary) = arma::conv_to<arma::vec>::from(do_die);
       outcome.subvec(span_time) = time_outcome;
 
-      c_vec =
-        // Terms from diagonal covariance elements
-        (O.rows(span_binary).each_col() % inv_covmat_diag.subvec(span_binary)).t() *
-        (outcome.subvec(span_binary) - y_bar.subvec(span_binary)) +
-
-        (O.rows(span_time).each_col() % inv_covmat_diag.subvec(span_time)).t() *
-        (outcome.subvec(span_time) - y_bar.subvec(span_time)) +
-
-        // Terms from off diagonal covariance elements
-        (O.rows(span_time).each_col() % inv_covmat_off_diag).t() *
-        (outcome.subvec(span_time) - y_bar.subvec(span_time)) +
-
-        (O.rows(span_binary).each_col() % inv_covmat_off_diag).t() *
-        (outcome.subvec(span_binary) - y_bar.subvec(span_binary));
+      c_vec = tmp_mat.t() * (outcome - y_bar);
     }
 
-    arma::mat tmp_mat;
-    tmp_mat = O.each_col() % inv_covmat_diag;
-    tmp_mat.rows(span_binary) +=
-      O.rows(span_time).each_col() %  inv_covmat_off_diag;
-    tmp_mat.rows(span_time) +=
-      O.rows(span_binary).each_col() %  inv_covmat_off_diag;
-    Rcpp::Rcout << "?" << std::endl;
-
     O = O.t() * tmp_mat;
+
+    my_print(O.diag(), "diag G mat");
+    arma::uvec dumdum = arma::find(inv_covmat_diag > 1e5) + 1; //TODO: Delete
+    dumdum.transform([n_risk](int val){ return(1 + (val % (n_risk + 1))) ;});
+    my_print(dumdum, "inv cov mat diag that are extreme");
+    dumdum = arma::find(inv_covmat_off_diag > 1e5) + 1;
+    my_print(dumdum, "inv cov mat off diag that are extreme");
+
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
