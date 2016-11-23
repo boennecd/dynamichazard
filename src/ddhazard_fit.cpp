@@ -110,6 +110,8 @@ public:
   const int max_it_fixed_parems;
 
   const bool debug;
+  const double LR;
+  const std::string inv_Cov_method;
 
   problem_data(arma::mat &X,
                arma::mat &fixed_terms_,
@@ -126,7 +128,9 @@ public:
                const int n_max = 100, const double eps = 0.001,
                const bool verbose = false,
                const int order_ = 1, const bool est_Q_0 = true,
-               const bool debug_ = false):
+               const bool debug_ = false,
+               Rcpp::Nullable<Rcpp::NumericVector> LR_ = R_NilValue,
+               const std::string inv_Cov_method_ = "org"):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
     n_parems(a_0.size() / order_),
@@ -155,7 +159,9 @@ public:
     Q_0(Q_0_),
     eps_fixed_parems(eps_fixed_parems_),
     max_it_fixed_parems(max_it_fixed_parems_),
-    debug(debug_)
+    debug(debug_),
+    LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
+    inv_Cov_method(inv_Cov_method_)
     {
       a_t_t_s = arma::mat(n_parems * order_, d + 1);
       a_t_less_s = arma::mat(n_parems * order_, d);
@@ -166,6 +172,9 @@ public:
       a_t_t_s.col(0) = a_0;
 
       lag_one_cor = arma::cube(n_parems * order_, n_parems * order_, d);
+
+      if(!(inv_Cov_method_ == "org" || inv_Cov_method_ == "not org"))
+        Rcpp::stop("'inv_Cov_method_' is not implemented with value '" +  inv_Cov_method_ + "'");
     }
 
   problem_data & operator=(const problem_data&) = delete;
@@ -185,8 +194,6 @@ public:
   const bool is_mult_NR;
   const double NR_eps;
   const unsigned int NR_it_max;
-  const double LR;
-  const std::string EKF_inv_Cov_method;
 
   // Vector for score and information matrix
   arma::colvec u;
@@ -216,27 +223,25 @@ public:
                    const bool is_cont_time = false,
                    const unsigned int NR_it_max_ = 1000,
                    const bool debug_ = false,
-                   const std::string EKF_inv_Cov_method_ = "org"):
+                   const std::string inv_Cov_method_ = "org"):
     problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
                  Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_parems_,
                  n_max, eps, verbose,
-                 order_, est_Q_0, debug_),
+                 order_, est_Q_0, debug_,
+                 LR_,
+                 inv_Cov_method_),
+
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),
                  NR_eps(is_mult_NR ? Rcpp::as< Rcpp::NumericVector >(NR_eps_)[0] : 0.0),
-                 NR_it_max(NR_it_max_),
-                 LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
-                 EKF_inv_Cov_method(EKF_inv_Cov_method_)
+                 NR_it_max(NR_it_max_)
   {
     u = arma::colvec(n_parems * order_);
     U = arma::mat(n_parems * order_, n_parems * order_);
 
     z_dot = arma::mat(n_parems * order_, n_in_last_set * (is_cont_time + 1));
     H_diag_inv = arma::vec(n_in_last_set * (is_cont_time + 1));
-
-    if(!(EKF_inv_Cov_method == "org" || EKF_inv_Cov_method == "not org"))
-      Rcpp::stop("'EKF_inv_Cov_method' is not implemented with value '" +  EKF_inv_Cov_method + "'");
   }
 
   problem_data_EKF & operator=(const problem_data_EKF&) = delete;
@@ -383,6 +388,15 @@ inline double var_chance_die(const double v, const double inv_exp_v){
            inv_exp_v * (1 - inv_exp_v) :
            v * (1 - v * (3/2 - v * (7/6 - v * (5/8 - v * 31 /120)))));
 }
+
+inline double covar(const double v, const double exp_v,
+                    const double inv_exp_v, const double exp_eta){
+  // Taylor series from http://www.wolframalpha.com/input/?i=-1+*+exp(-2v)+*+(1+%2B+v+*+exp(v)+-+exp(v))
+  return(
+    (v >= 1e-4) ?
+  -1 * inv_exp_v * inv_exp_v * (1 + v * exp_v - exp_v) / exp_eta :
+  -v * v * (1/2 - v * (2/3 - v * (11/24 - v * (13/60 - 19 * v / 240)))) / exp_eta);
+}
 }
 
 class EKF_helper{
@@ -512,7 +526,7 @@ class EKF_helper{
       double t_term_inv;
       double die_term_inv;
 
-      if(dat.EKF_inv_Cov_method == "org"){
+      if(dat.inv_Cov_method == "org"){
         cross_term_inv = exp_model_funcs::inv_var_fac_cross(v, exp_v, exp_eta);
         t_term_inv = exp_model_funcs::inv_var_fac_wait_time(v, exp_v, exp_eta);
         die_term_inv = exp_model_funcs::inv_var_fac_chance_to_die(v, exp_v);
@@ -959,7 +973,8 @@ protected:
                             const arma::mat &P_x_x){
     arma::mat cholesky_decomp;
     if(!arma::chol(cholesky_decomp, P_x_x, "lower")){ // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
-      P_x_x.print("Cholesky decomposition failed for the following covariance matrix:");
+      // P_x_x.print("Cholesky decomposition failed for the following covariance matrix:");
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Cholesky decomposition failed");
     }
 
     s_points.col(0) = a_t;
@@ -1053,7 +1068,7 @@ public:
       arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
 
       // TODO: can this be done more effeciently?
-      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + delta_sigma_points * (weights_vec_cc % c_vec);
+      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.LR * delta_sigma_points * (weights_vec_cc % c_vec);
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
         (delta_sigma_points.each_row() % weights_vec_cc.t()) * O * (delta_sigma_points.each_row() % weights_vec_cc.t()).t();
@@ -1166,6 +1181,8 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     const arma::uword n_risk = r_set.n_elem;
     O.set_size(n_risk * 2, sigma_points.n_cols);
     arma::vec vars(n_risk * 2, arma::fill::zeros);
+    arma::vec covars(n_risk, arma::fill::zeros);
+
     arma::vec y_bar(n_risk * 2, arma::fill::zeros);
 
     arma::mat etas = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // linear predictors
@@ -1200,6 +1217,8 @@ class UKF_solver_New_exponential : public UKF_solver_New{
         O(j, i) = exp_model_funcs::expect_chance_die(v, inv_exp_v);
         vars(j) += w_c * exp_model_funcs::var_chance_die(v, inv_exp_v);
 
+        covars(j) += w_c * exp_model_funcs::covar(v, exp(v), inv_exp_v, exp_eta);
+
         O(j + n_risk, i) = exp_model_funcs::expect_time(
           v, at_risk_length(j), inv_exp_v, exp_eta);
         vars(j + n_risk) += w_c * exp_model_funcs::var_wait_time(
@@ -1210,18 +1229,55 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     }
 
     // ** 4: Compute c **
-    vars.elem(arma::find(vars <= min_var)).fill(min_var);
+    // Defines span to avoid errors
+    arma::span span_binary(0, n_risk - 1);
+    arma::span span_time(n_risk, 2 * n_risk -1);
+
+    // Compute diagonal terms of inverse covariance matrix
+    arma::vec inv_covmat_diag(2 * n_risk);
+    inv_covmat_diag.subvec(span_binary) =
+      (vars.subvec(span_binary) - covars % arma::pow(vars.subvec(span_time), -1) % covars);
+
+    inv_covmat_diag.subvec(span_time) =
+      (vars.subvec(span_time) - covars % arma::pow(vars.subvec(span_binary), -1) % covars);
+
+    inv_covmat_diag.transform([](double val) { return(1 / val); });
+
+    // Compute off diagonal terms of inverse covariance matrix
+    arma::vec inv_covmat_off_diag(n_risk);
+    inv_covmat_off_diag = -1 * inv_covmat_diag.subvec(span_time) % covars / vars.subvec(span_binary);
+
     O.each_col() -= y_bar;
     {
       arma::vec outcome(n_risk * 2);
-      outcome.subvec(0, n_risk - 1) = arma::conv_to<arma::vec>::from(do_die);
-      outcome.subvec(n_risk, n_risk * 2 - 1) = time_outcome;
+      outcome.subvec(span_binary) = arma::conv_to<arma::vec>::from(do_die);
+      outcome.subvec(span_time) = time_outcome;
 
-      c_vec = (O.each_col() / vars).t() * (outcome - y_bar);
+      c_vec =
+        // Terms from diagonal covariance elements
+        (O.rows(span_binary).each_col() % inv_covmat_diag.subvec(span_binary)).t() *
+        (outcome.subvec(span_binary) - y_bar.subvec(span_binary)) +
+
+        (O.rows(span_time).each_col() % inv_covmat_diag.subvec(span_time)).t() *
+        (outcome.subvec(span_time) - y_bar.subvec(span_time)) +
+
+        // Terms from off diagonal covariance elements
+        (O.rows(span_time).each_col() % inv_covmat_off_diag).t() *
+        (outcome.subvec(span_time) - y_bar.subvec(span_time)) +
+
+        (O.rows(span_binary).each_col() % inv_covmat_off_diag).t() *
+        (outcome.subvec(span_binary) - y_bar.subvec(span_binary));
     }
 
-    O = O.t() * (O.each_col() / vars);
     arma::mat tmp_mat;
+    tmp_mat = O.each_col() % inv_covmat_diag;
+    tmp_mat.rows(span_binary) +=
+      O.rows(span_time).each_col() %  inv_covmat_off_diag;
+    tmp_mat.rows(span_time) +=
+      O.rows(span_binary).each_col() %  inv_covmat_off_diag;
+    Rcpp::Rcout << "?" << std::endl;
+
+    O = O.t() * tmp_mat;
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
@@ -1429,7 +1485,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       risk_obj, F_,
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
-      order_, est_Q_0, debug);
+      order_, est_Q_0, debug, LR,
+      EKF_inv_Cov_method);
 
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
@@ -1623,94 +1680,3 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             Rcpp::Named("Q") = Rcpp::wrap(Q),
                             Rcpp::Named("Q_0") = Rcpp::wrap(Q_0)));
 }
-
-
-/*** R
-library(survival); library(testthat); library(dynamichazard); source("../R/test_utils.R")
-
-  set.seed(2972)
-  sims <- test_sim_func_logit(n_series = 10^4, n_vars = 3, t_0 = 0, t_max = 10,
-                              x_range = .1, x_mean = -.4, re_draw = T)
-  sims$res <- as.data.frame(sims$res)
-
-  design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
-  rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
-
-  log_file = file("debug.log")
-  sink(log_file)
-
-  arg_list <- list(
-      X = design_mat$X,
-      tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2],
-                                                       a_0 = rep(0, ncol(design_mat$X)),
-                                                       Q_0 = diag(10, ncol(design_mat$X)), # something large
-                                                         Q = diag(1, ncol(design_mat$X)), # something large
-                                                           F_ = diag(1, ncol(design_mat$X)), # first order random walk
-                                                             risk_obj = rist_sets,
-                                                               eps = 10^-4, n_max = 10^4,
-                                                               order_ = 1,
-                                                               est_Q_0 = F
-  )
-
-  res <- do.call(ddhazard_fit, arg_list)
-
-  tryCatch({
-    res_new <- do.call(ddhazard_fit_cpp_prelim, arg_list)
-  }, finally = {
-    sink()
-    close(log_file)
-  })
-
-
-  test_that("Testing old versus new implementation", {
-    expect_equal(res$a_t_d_s, res_new$a_t_d_s)
-    expect_equal(res$V_t_d_s, res_new$V_t_d_s)
-    expect_equal(res$B_s, res_new$B_s)
-  })
-
-# Test UKF
-  sims <- test_sim_func_logit(n_series = 10^3, n_vars = 3, t_0 = 0, t_max = 10,
-                              x_range = .1, x_mean = -.4, re_draw = T)
-  sims$res <- as.data.frame(sims$res)
-
-  log_file = file("debug.log", open = "a")
-  sink(log_file)
-
-  design_mat <- get_design_matrix(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 - 1, sims$res)
-  sum(design_mat$Y[, 3] & design_mat$Y[, 2] <= 10)
-  rist_sets <- get_risk_obj(design_mat$Y, by = 1, max_T = 10, id = sims$res$id)
-
-  design_mat$Y[, 2] <- rist_sets$stop_new
-  design_mat$Y[, 3] <- rist_sets$new_events_flags
-
-  arg_list <- list(
-      X = design_mat$X,
-      tstart = design_mat$Y[, 1],  tstop = design_mat$Y[, 2], events = design_mat$Y[, 3],
-                                                                                   a_0 = c(1, 1, 1),
-                                                                                   Q_0 = diag(1.0e1, ncol(design_mat$X)), # something large
-                                                                                     Q = diag(1.0e-0, ncol(design_mat$X)), # something large
-                                                                                       F_ = diag(1, ncol(design_mat$X)), # first order random walk
-                                                                                         risk_obj = rist_sets,
-                                                                                           eps = 10^-2, n_max = 10^4,
-                                                                                           order_ = 1,
-                                                                                           est_Q_0 = F,
-                                                                                           verbose = T,
-                                                                                           method = "UKF"
-  )
-
-  tryCatch({
-    cat("UKF runtime\n")
-    print(system.time(res_UKF <- do.call(ddhazard_fit_cpp_prelim, arg_list)))
-    arg_list$method <- "EKF"
-    cat("EKF runtime\n")
-    print(system.time(res_EKF <- do.call(ddhazard_fit_cpp_prelim, arg_list)))
-
-    cat("MSE for UKF\n")
-    print(mean((res_UKF$a_t_d_s - sims$betas)^2))
-    cat("MSE for EKF\n")
-    print(mean((res_EKF$a_t_d_s - sims$betas)^2))
-  }, finally = {
-    sink()
-    close(log_file)
-  })
-  */

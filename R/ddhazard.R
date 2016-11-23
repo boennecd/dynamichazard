@@ -203,7 +203,7 @@ ddhazard = function(formula, data,
   X_Y$fixed_terms <- t(X_Y$fixed_terms) # same
 
   result <- NA
-  k_vals <- if(control$method == "EKF") seq_len(control$LR_max_try) - 1 else 0
+  k_vals <- seq_len(control$LR_max_try) - 1
   for(k in k_vals){
     tryCatch({
       result <- ddhazard_fit_cpp(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
