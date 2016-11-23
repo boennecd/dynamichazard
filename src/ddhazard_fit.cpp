@@ -1202,6 +1202,12 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     }
 
     // Compute variance and mean
+    static bool have_seen_low_v = false;
+    const double treshold_low_v = -1 * log(.999);
+
+    static bool have_seen_up_v = false;
+    const double treshold_up_v = -1 * log(0.001);
+
     for(arma::uword i = 0; i < sigma_points.n_cols; ++i){
       double w = (i == 0) ? w_0 : w_i;
       double w_c = (i == 0) ? w_0_c : w_i;
@@ -1209,13 +1215,38 @@ class UKF_solver_New_exponential : public UKF_solver_New{
       const arma::vec eta = offsets + p_dat._X.cols(r_set).t() * sigma_points.col(i);
 
       for(arma::uword j = 0; j < n_risk; ++j){
-        const double e = eta(j);
-        const double exp_eta = exp(e);
-        const double v = at_risk_length(j) * exp_eta;
-        const double inv_exp_v = exp(-1 * v);
+        double e = eta(j);
+        double exp_eta = exp(e);
+        double v = at_risk_length(j) * exp_eta;
 
-        if(v <= 1e-3 || v >= 1e2)
-          Rcpp::Rcout << j + 1 << "\t ";
+        if(v <= treshold_low_v){
+          if(!have_seen_low_v){
+            std::stringstream ss;
+            ss << "[at risk length] * exp([linear predictor]) was below the threshold of " << treshold_low_v
+               << " at least once doing estimation. The linear predictors are left truncated in these cases doing estimation";
+            Rcpp::warning(ss.str());
+            have_seen_low_v = true;
+          }
+
+          e = log(treshold_low_v / at_risk_length(j));
+          exp_eta = exp(e);
+          v = at_risk_length(j) * exp_eta;
+
+        } else if(v >= treshold_up_v){
+          if(!have_seen_up_v){
+            std::stringstream ss;
+            ss << "[at risk length] * exp([linear predictor]) was above the threshold of " << treshold_up_v
+               << " at least once doing estimation. The linear predictors are right truncated in these cases doing estimation";
+            Rcpp::warning(ss.str());
+            have_seen_up_v = true;
+          }
+
+          e = log(treshold_up_v / at_risk_length(j));
+          exp_eta = exp(e);
+          v = at_risk_length(j) * exp_eta;
+        }
+
+        const double inv_exp_v = exp(-1 * v);
 
         O(j, i) = exp_model_funcs::expect_chance_die(v, inv_exp_v);
         vars(j) += w_c * exp_model_funcs::var_chance_die(v, inv_exp_v);
@@ -1227,8 +1258,6 @@ class UKF_solver_New_exponential : public UKF_solver_New{
         vars(j + n_risk) += w_c * exp_model_funcs::var_wait_time(
           v, at_risk_length(j), exp_eta, inv_exp_v);
       }
-
-      Rcpp::Rcout << std::endl;
 
       y_bar += w * O.col(i);
     }
@@ -1271,12 +1300,13 @@ class UKF_solver_New_exponential : public UKF_solver_New{
 
     O = O.t() * tmp_mat;
 
-    my_print(O.diag(), "diag G mat");
-    arma::uvec dumdum = arma::find(inv_covmat_diag > 1e5) + 1; //TODO: Delete
-    dumdum.transform([n_risk](int val){ return(1 + (val % (n_risk + 1))) ;});
-    my_print(dumdum, "inv cov mat diag that are extreme");
-    dumdum = arma::find(inv_covmat_off_diag > 1e5) + 1;
-    my_print(dumdum, "inv cov mat off diag that are extreme");
+    // TODO: Clean up
+    // my_print(O.diag(), "diag G mat");
+    // arma::uvec dumdum = arma::find(inv_covmat_diag > 1e6) + 1; //TODO: Delete
+    // dumdum.transform([n_risk](int val){ return(1 + (val % (n_risk + 1))) ;});
+    // my_print(dumdum, "inv cov mat diag that are extreme");
+    // dumdum = arma::find(inv_covmat_off_diag > 1e6) + 1;
+    // my_print(dumdum, "inv cov mat off diag that are extreme");
 
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
