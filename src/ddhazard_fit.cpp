@@ -11,7 +11,6 @@ constexpr double upper_trunc_exp_log_thres =
   log((1 + sqrt(1 - 4 * trunc_exp_delta) - 2 * trunc_exp_delta) / (2 * trunc_exp_delta));
 constexpr double upper_trunc_exp_exp_thres = exp(upper_trunc_exp_log_thres);
 
-
 struct {
   template<typename T>
   T operator()(T &&val){
@@ -60,7 +59,6 @@ inline
   }
 
 // Hepler structure to reference data
-// TODO: Figure out what is specific to the EKF
 class problem_data{
 public:
   // Initalize constants
@@ -71,11 +69,10 @@ public:
   const arma::mat &F_;
   const arma::mat T_F_;
 
-  // Note a copy of data is made below and it is not const for later initalization of pointer to memory (this is not possible with a const pointer)
   const bool any_dynamic;
   const bool any_fixed;
 
-  arma::mat _X;
+  arma::mat X;
   arma::mat fixed_terms;
 
   const std::vector<double> I_len;
@@ -91,7 +88,14 @@ public:
 
   const double min_start;
 
-  // Declare and maybe intialize non constants
+  const double eps_fixed_parems;
+  const int max_it_fixed_parems;
+
+  const bool debug;
+  const double LR;
+  const std::string inv_Cov_method;
+
+  // Declare non constants. Some are intialize
   arma::vec fixed_parems;
 
   arma::mat &Q;
@@ -106,14 +110,7 @@ public:
 
   arma::cube lag_one_cor;
 
-  const double eps_fixed_parems;
-  const int max_it_fixed_parems;
-
-  const bool debug;
-  const double LR;
-  const std::string inv_Cov_method;
-
-  problem_data(arma::mat &X,
+  problem_data(arma::mat &X_,
                arma::mat &fixed_terms_,
                const arma::vec &tstart_,
                const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
@@ -137,11 +134,17 @@ public:
     F_(F__),
     T_F_(F_.t()),
 
-    any_dynamic(X.n_elem > 0),
+    any_dynamic(X_.n_elem > 0),
     any_fixed(fixed_terms_.n_elem > 0),
 
-    _X(X.begin(), X.n_rows, X.n_cols),
-    fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols),
+    X(X_.begin(), X_.n_rows, X_.n_cols, false),
+    fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols, false),
+
+    eps_fixed_parems(eps_fixed_parems_),
+    max_it_fixed_parems(max_it_fixed_parems_),
+    debug(debug_),
+    LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
+    inv_Cov_method(inv_Cov_method_),
 
     I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
     event_eps(d * std::numeric_limits<double>::epsilon()),
@@ -153,15 +156,9 @@ public:
     is_event_in_bin(is_event_in_bin_),
     min_start(Rcpp::as<double>(risk_obj["min_start"])),
 
-
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
-    Q_0(Q_0_),
-    eps_fixed_parems(eps_fixed_parems_),
-    max_it_fixed_parems(max_it_fixed_parems_),
-    debug(debug_),
-    LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
-    inv_Cov_method(inv_Cov_method_)
+    Q_0(Q_0_)
     {
       a_t_t_s = arma::mat(n_parems * order_, d + 1);
       a_t_less_s = arma::mat(n_parems * order_, d);
@@ -185,8 +182,8 @@ public:
 // Class with further members for the Extended Kalman Filter
 class problem_data_EKF : public problem_data{
 public:
-  // locks for parallel implementation when we need to reduce score vector
-  // and information matrix
+  // locks for parallel implementation when we need to perform reduction from
+  // local score vectors and information matricies
   std::mutex m_u;
   std::mutex m_U;
 
@@ -200,6 +197,7 @@ public:
   arma::mat U;
 
   // Needed for lag one covariance
+  // TODO: Are they needed?
   arma::mat z_dot;
   arma::vec H_diag_inv;
   arma::mat K_d;
@@ -282,9 +280,6 @@ inline double expect_chance_die(const double v, const double inv_exp_v){
            v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0)))));
 }
 
-
-
-
 inline double inv_var_wait_time(const double v, const double exp_eta, const double inv_exp_v){
   return((v >= 1e-4) ?
            // Set v = delta * exp(eta)
@@ -323,10 +318,6 @@ inline double suggest_inv_cov_cross_term(const double v, const double exp_eta,
            exp_eta * 1 / (v * v) * (3 / 2 + v * (7/4 + v * (37/40 + v * (17/60 + v * 291/5600))))
   );
 }
-
-
-
-
 
 inline double inv_var_fac_chance_to_die(const double v, const double exp_v){
   // Taylor series from: https://www.wolframalpha.com/input/?i=exp(x)(exp(2x)+-+1+-+2+exp(x)x)%2F(1%2Bexp(2x)+-+exp(x)(2%2Bx%5E2))
@@ -370,7 +361,6 @@ inline double dh_fac_time(const double v, const double inv_exp_v, const double i
   return((inv_exp_v - 1 + inv_exp_v * v) * inv_exp_eta);
 }
 
-
 inline double var_wait_time(const double v, const double a,  const double exp_eta, const double inv_exp_v){
   // exp(eta)^(-2) * (1 - exp(-2v) - 2 * v * exp(-v))
   // v = a * exp(eta) => ... = a^2 * v^(-2) * (1 - exp(-2v) - 2 * v * exp(-v))
@@ -396,11 +386,9 @@ inline double covar(const double v, const double exp_v,
     (v >= 1e-4) ?
   -1 * inv_exp_v * inv_exp_v * (1 + v * exp_v - exp_v) / exp_eta :
   -v * v * (1/2 - v * (2/3 - v * (11/24 - v * (13/60 - 19 * v / 240)))) / exp_eta);
-}
-}
+}}
 
 class EKF_helper{
-
   // worker class for parallel computation
   // This class is abstact as the method do_computation will differ between
   // the models
@@ -463,18 +451,14 @@ class EKF_helper{
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
-      const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
+      const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
       double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double exp_eta = exp(arma::dot(i_a_t, x_) + offset);
 
       // Can be issue here with overflow in denominator
-      // Set exp(-eta) = v such that we are computing v^-1 / (1 + v^-1)^2
-      // A Taylor series expansion is than
-      //   v - 2 v^2 + 3 v^3 approx v for v small
       double tmp_denom = pow(1.0 + exp_eta, 2.0);
       const double var = std::isinf(tmp_denom) ?
-      pow(exp_eta, -1) : (exp_eta / pow(exp_eta + 1.0, 2.0));
-
+        pow(exp_eta, -1) : (exp_eta / pow(exp_eta + 1.0, 2.0));
 
       u_ += x_ * ((dat.is_event_in_bin(*it) == bin_number) - exp_eta / (1.0 + exp_eta));
       U_ += x_ *  (x_.t() * var);
@@ -500,7 +484,7 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
-      const arma::vec x_(dat._X.colptr(*it), dat.n_parems, false);
+      const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
 
       double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
@@ -530,11 +514,13 @@ class EKF_helper{
         cross_term_inv = exp_model_funcs::inv_var_fac_cross(v, exp_v, exp_eta);
         t_term_inv = exp_model_funcs::inv_var_fac_wait_time(v, exp_v, exp_eta);
         die_term_inv = exp_model_funcs::inv_var_fac_chance_to_die(v, exp_v);
+
       } else{
         cross_term_inv = exp_model_funcs::suggest_inv_cov_cross_term(
            v, exp_eta, inv_exp_v, exp_v);
         t_term_inv = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
         die_term_inv = exp_model_funcs::inv_var_chance_die(v, inv_exp_v);
+
       }
 
       const double dh_fac_die = exp_model_funcs::dh_fac_die(v, inv_exp_v);
@@ -598,7 +584,7 @@ public:
       p_data.H_diag_inv.zeros();
     }
 
-    // Compute the number of threads to create
+    // Compute the number of blocks to create
     unsigned long const length = std::distance(first, last);
 
     unsigned long const block_size = 250;
@@ -607,14 +593,15 @@ public:
     thread_pool pool(num_blocks - 1);
 
     // Create workers if needed
-    // create workers
     for(auto i = workers.size(); i < num_blocks; i++){
       if(model == "logit"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
         workers.push_back(std::move(new_p));
+
       } else if (model == "exponential"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_exponential(p_data));
         workers.push_back(std::move(new_p));
+
       } else
         Rcpp::stop("EKF is not implemented for model '" + model  +"'");
     }
@@ -689,9 +676,11 @@ public:
         if(p_dat.u.has_inf() || p_dat.u.has_nan()){
           Rcpp::stop("ddhazard_fit_cpp estimation error: Score vector in correction step had inf or nan elements in bin " +
             std::to_string(t) + ". Try decreasing the learning rate");
+
         } else if(p_dat.U.has_inf() || p_dat.U.has_nan()){
           Rcpp::stop("ddhazard_fit_cpp estimation error: Score vector in correction step had inf or nan elements in bin " +
             std::to_string(t) + ". Try decreasing the learning rate");
+
         }
 
         if(p_dat.debug){
@@ -758,7 +747,6 @@ public:
       }
 
       if(t == p_dat.d){
-
         arma::mat tmp_inv_mat;
         if(!arma::inv(tmp_inv_mat, arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U * p_dat.V_t_less_s.slice(t - 1))){
           Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate for K_d matrix");
@@ -782,13 +770,16 @@ public:
 // This is the orginal UKF formulation from:
 // Julier, Simon J., and Jeffrey K. Uhlmann. "New extension of the Kalman filter
 // to nonlinear systems." AeroSense'97. International Society for Optics and
-// Photonics, 1997.Julier et al 1997.
+// Photonics, 1997
+
+// Sigma points are though re-generated as suggested in:
+// Menegaz, Henrique Marra Taira. "Unscented kalman filtering on euclidean and
+// riemannian manifolds." (2016).
 
 // The methods requires inversion of matrix with dimension equal to the dim of
 // observational equation. Hence, it does not scale well in the number of
-// observation per bin
+// observation per bin. The code is kept to test against
 class UKF_solver_Org : public Solver{
-
   problem_data &p_dat;
   const uword m;
   const double k;
@@ -801,7 +792,7 @@ class UKF_solver_Org : public Solver{
                                    arma::mat &s_points,
                                    const arma::mat &P_x_x){
     arma::mat cholesky_decomp;
-    if(!arma::chol(cholesky_decomp, P_x_x, "lower")){ // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
+    if(!arma::chol(cholesky_decomp, P_x_x, "lower")){
       Rcpp::stop("ddhazard_fit_cpp estimation error: Cholesky decomposition failed");
     }
 
@@ -824,7 +815,7 @@ public:
   {}
 
   void solve(){
-#ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+#ifdef USE_OPEN_BLAS
     const int prev_n_thread = openblas_get_num_threads();
     openblas_set_num_threads(p_dat.n_threads);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
@@ -841,17 +832,12 @@ public:
                            sigma_points, p_dat.V_t_t_s.slice(t - 1));
 
       // E-step: Filter step
-      //   Updates a_t_less_s and V_t_less_s
-      //   Requires T(sigma point) + a_t_less_s computed before V_t_less_s
-      //     Requries that we have updated the sigma points
-      //     Requires for-loop with 2m + 1 itertions
-
       // First we compute the mean
       p_dat.a_t_less_s.col(t - 1) = w_0 * sigma_points.unsafe_col(0) +
         w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols - 1), 1);
 
       // Then the variance
-      p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q; // weigths sum to one // TODO: Include or not?
+      p_dat.V_t_less_s.slice(t - 1) = delta_t * p_dat.Q;
       for(uword i = 0; i < sigma_points.n_cols; ++i){
         const double &w = i == 0 ? w_0 : w_i;
 
@@ -860,23 +846,15 @@ public:
           (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
       }
 
-      // Regenerate
+      // Re-generate
       compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
                            sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
       // E-step: correction-step
-      //   Compute a_t_t_s and v_t_t_s
-      //   Update y_bar, P_a_v, P_v_v
-      //     Can be done in 2m + 1 iterations
-      //   Update a_t_t_s
-      //   Requires comptation of the (2m + 1) x | risk_set |  matrix
-      //   Need to update sigma points (TODO: unless it is the last iteration?)
-      //     Thus a Cholesky decomposition V_t_less_s
-
       // First, we compute the mean of the outcome
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
-      arma::mat Z_t = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
+      arma::mat Z_t = (sigma_points.t() * p_dat.X.cols(r_set)).t(); // we transpose due to the column-major
       Z_t.transform(trunc_exp_functor);
       Z_t.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
@@ -888,8 +866,7 @@ public:
         (Z_t.unsafe_col(0) - y_bar).t();
 
       arma::mat P_v_v = (w_0 * (Z_t.unsafe_col(0) - y_bar)) * (Z_t.unsafe_col(0) - y_bar).t() +
-        //arma::diagmat(y_bar % (1 - y_bar));
-        arma::diagmat(w_0 * Z_t.unsafe_col(0) % (1 - Z_t.unsafe_col(0))); // % is element-wise product. TODO: I think we have to time with w_0 here too? same applies for w_i below
+        arma::diagmat(w_0 * Z_t.unsafe_col(0) % (1 - Z_t.unsafe_col(0)));
 
       for(uword i = 1; i < sigma_points.n_cols; ++i){
         P_a_v += (w_i * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
@@ -907,15 +884,14 @@ public:
       }
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
-        P_a_v * (P_v_v * (
-            (p_dat.is_event_in_bin(r_set) == t - 1) - y_bar));
+        P_a_v * (P_v_v * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar));
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
 
       p_dat.B_s.slice(t - 1) = arma::solve(p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
     }
 
-#ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+#ifdef USE_OPEN_BLAS
     openblas_set_num_threads(prev_n_thread);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
@@ -929,18 +905,16 @@ public:
 // beta = 0.0 and alpha = 1.0 yields the same sigma points as in:
 // Julier, Simon J., and Jeffrey K. Uhlmann. "New extension of the Kalman filter
 // to nonlinear systems." AeroSense'97. International Society for Optics and
-// Photonics, 1997.Julier et al 1997.
+// Photonics, 1997
 
 // Altering these will yields parameter estimate similar to:
 // Wan, Eric A., and Rudolph Van Der Merwe. "The unscented Kalman filter for
 // nonlinear estimation." Adaptive Systems for Signal Processing, Communications
 // and Control Symposium 2000. AS-SPCC. The IEEE 2000. Ieee, 2000.
 
-// This allows one to match third moment. In this case you have to set beta =
-// 2.0 as we have a Gaussian state space model. Another good article is this
-// one which yields the same results but with a different parameterization:
-// Julier, Simon J., and Jeffrey K. Uhlmann. "Unscented filtering and nonlinear
-// estimation." Proceedings of the IEEE 92.3 (2004): 401-422.
+// We re-generate the sigma points as suggested in:
+// Menegaz, Henrique Marra Taira. "Unscented kalman filtering on euclidean and
+// riemannian manifolds." (2016).
 class UKF_solver_New : public Solver{
 protected:
   problem_data &p_dat;
@@ -972,8 +946,7 @@ protected:
                             arma::mat &s_points,
                             const arma::mat &P_x_x){
     arma::mat cholesky_decomp;
-    if(!arma::chol(cholesky_decomp, P_x_x, "lower")){ // TODO: cholesky_decomp * cholesky_decomp.t() = inital mat. I.e. cholesky_decomp should be lower triangular matrix. See http://arma.sourceforge.net/docs.html#chol
-      // P_x_x.print("Cholesky decomposition failed for the following covariance matrix:");
+    if(!arma::chol(cholesky_decomp, P_x_x, "lower")){
       Rcpp::stop("ddhazard_fit_cpp estimation error: Cholesky decomposition failed");
     }
 
@@ -1030,14 +1003,14 @@ public:
   }
 
   void solve(){
-#ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+#ifdef USE_OPEN_BLAS
     const int prev_n_thread = openblas_get_num_threads();
     openblas_set_num_threads(p_dat.n_threads);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
 
     const arma::vec offsets = p_dat.any_fixed ?
-    p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat._X.n_cols, arma::fill::zeros);
+      p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat.X.n_cols, arma::fill::zeros);
     double bin_stop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
       double bin_start = bin_stop;
@@ -1048,7 +1021,7 @@ public:
       p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
       p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
-      // Regenerate
+      // Re-generate
       compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
                            sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
@@ -1067,7 +1040,6 @@ public:
       // Substract mean to get delta sigma points
       arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
 
-      // TODO: can this be done more effeciently?
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.LR * delta_sigma_points * (weights_vec_cc % c_vec);
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
@@ -1093,7 +1065,7 @@ public:
         p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
     }
 
-#ifdef USE_OPEN_BLAS //TODO: Move somewhere else?
+#ifdef USE_OPEN_BLAS
     openblas_set_num_threads(prev_n_thread);
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
@@ -1108,7 +1080,7 @@ class UKF_solver_New_logit : public UKF_solver_New{
                              const double bin_tstart, const double bin_tstop,
                              arma::vec &c_vec, arma::mat &O){
     // ** 1: Compute expected outcomes given sigma points **
-    O = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // we transpose due to the column-major
+    O = (sigma_points.t() * p_dat.X.cols(r_set)).t(); // we transpose due to the column-major
 
     O.each_col() += offsets;
 
@@ -1130,7 +1102,6 @@ class UKF_solver_New_logit : public UKF_solver_New{
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
 
-    // first we compute the c_vec and then y deviation times y deveation scaled by inverse weighted variance
     c_vec = (O.each_col() / vars).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
     O = O.t() * (O.each_col() / vars);
 
@@ -1174,10 +1145,9 @@ class UKF_solver_New_exponential : public UKF_solver_New{
                              arma::vec &c_vec, arma::mat &O)
   {
     // See comments in UKF_solver_New_logit. The main difference here is that
-    // we have tuples as outcomes
+    // we have tuples as outcomes. Thus, we have to deal with covariance terms
 
     // ** 1-3: compute outcome given sigma points, means and variances **
-    //
     const arma::uword n_risk = r_set.n_elem;
     O.set_size(n_risk * 2, sigma_points.n_cols);
     arma::vec vars(n_risk * 2, arma::fill::zeros);
@@ -1185,7 +1155,7 @@ class UKF_solver_New_exponential : public UKF_solver_New{
 
     arma::vec y_bar(n_risk * 2, arma::fill::zeros);
 
-    arma::mat etas = (sigma_points.t() * p_dat._X.cols(r_set)).t(); // linear predictors
+    arma::mat etas = (sigma_points.t() * p_dat.X.cols(r_set)).t(); // linear predictors
 
     // Armadillo do not have a bool vector so we use an integer vector instead
     arma::ivec do_die = arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
@@ -1203,16 +1173,16 @@ class UKF_solver_New_exponential : public UKF_solver_New{
 
     // Compute variance and mean
     static bool have_seen_low_v = false;
-    const double treshold_low_v = -1 * log(.999);
+    const static double treshold_low_v = -1 * log(.999);
 
     static bool have_seen_up_v = false;
-    const double treshold_up_v = -1 * log(0.001);
+    const static double treshold_up_v = -1 * log(0.001);
 
     for(arma::uword i = 0; i < sigma_points.n_cols; ++i){
       double w = (i == 0) ? w_0 : w_i;
       double w_c = (i == 0) ? w_0_c : w_i;
 
-      const arma::vec eta = offsets + p_dat._X.cols(r_set).t() * sigma_points.col(i);
+      const arma::vec eta = offsets + p_dat.X.cols(r_set).t() * sigma_points.col(i);
 
       for(arma::uword j = 0; j < n_risk; ++j){
         double e = eta(j);
@@ -1263,7 +1233,7 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     }
 
     // ** 4: Compute c **
-    // Defines span to avoid errors
+    // Defines span to avoid 40-error
     arma::span span_binary(0, n_risk - 1);
     arma::span span_time(n_risk, 2 * n_risk -1);
 
@@ -1299,15 +1269,6 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     }
 
     O = O.t() * tmp_mat;
-
-    // TODO: Clean up
-    // my_print(O.diag(), "diag G mat");
-    // arma::uvec dumdum = arma::find(inv_covmat_diag > 1e6) + 1; //TODO: Delete
-    // dumdum.transform([n_risk](int val){ return(1 + (val % (n_risk + 1))) ;});
-    // my_print(dumdum, "inv cov mat diag that are extreme");
-    // dumdum = arma::find(inv_covmat_off_diag > 1e6) + 1;
-    // my_print(dumdum, "inv cov mat off diag that are extreme");
-
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
@@ -1389,7 +1350,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
 
       if(p_data->any_dynamic){
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
-          p_data->_X.cols(r_set).t() * p_data->a_t_t_s.col(t).head(p_data->n_parems);
+          p_data->X.cols(r_set).t() * p_data->a_t_t_s.col(t).head(p_data->n_parems);
       } else {
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1).fill(0.);
       }
@@ -1475,7 +1436,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = false which should be true for model '" + model  +"'");
   }
 
-  // Declare and maybe intialize non constants
+  // Declare non constants and intialize some of them
   double delta_t, test_max_diff;
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
 
@@ -1484,8 +1445,6 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   uword it = 0;
 
   // M-stp pointers for convenience
-  // see http://stackoverflow.com/questions/35983814/access-column-of-matrix-without-creating-copy-of-data-using-armadillo-library
-  // the use of unsafe_col is key
   arma::mat *B, *V_less, *V;
   arma::vec a_less, a;
 
@@ -1506,6 +1465,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       order_, est_Q_0, model == "exponential", NR_it_max, debug,
       EKF_inv_Cov_method);
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
+
   } else if (method == "UKF"){
     if(model != "logit" && model != "exponential")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
@@ -1520,8 +1480,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
+
     } else if (model == "exponential"){
       solver = new UKF_solver_New_exponential(*p_data, kappa, alpha, beta);
+
     }
 
   } else if (method == "UKF_org"){
@@ -1560,7 +1522,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
 
     if((it + 1) % 25 == 0)
-      Rcpp::checkUserInterrupt(); // this is expensive - you do not want to check too often
+      Rcpp::checkUserInterrupt(); // this is expensive (on Windows) - you do not want to check too often
 
 
     if(p_data->any_dynamic){
@@ -1615,6 +1577,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                   - F_ * *B * *V
                   - (F_ * *B * *V).t()
                   + F_ * *V_less * p_data->T_F_) / delta_t;
+
         } else if (M_step_formulation == "SmoothedCov"){
           B = &p_data->lag_one_cor.slice(t - 1); // this is not B but the lagged one smooth correlation. Do not mind the variable name
 
@@ -1624,6 +1587,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                   + F_ * *V_less * p_data->T_F_) / delta_t;
         } else
           Rcpp::stop("'M_step_formulation' of type '" + M_step_formulation + "' is not implemented");
+
       }
       Q /= p_data->d;
 
@@ -1641,11 +1605,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         Rcpp::warning(warning.str());
       }
 
-      //TODO: better way to ensure that Q and Q_0 are symmetric?
+      // Ensure that Q and Q_0 are symmetric
       Q = (Q + Q.t()) / 2.0;
       Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
-      if(order_ > 1){ // CHANGED # TODO: I figure I should set the primaery element to zero, right?
+      if(order_ > 1){
         arma::mat tmp_Q = Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1);
         Q.zeros();
         Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1) = tmp_Q;
@@ -1678,10 +1642,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       auto rcout_width = Rcpp::Rcout.width();
 
       arma::vec fixed_effects_offsets = p_data->any_fixed ?
-      p_data->fixed_terms.t() * p_data->fixed_parems : arma::vec(p_data->_X.n_cols, arma::fill::zeros);
+      p_data->fixed_terms.t() * p_data->fixed_parems : arma::vec(p_data->X.n_cols, arma::fill::zeros);
 
       double log_like =
-        logLike_cpp(p_data->_X, risk_obj, p_data->F_, Q_0, Q,
+        logLike_cpp(p_data->X, risk_obj, p_data->F_, Q_0, Q,
                     p_data->a_t_t_s, p_data->tstart, p_data->tstop,
                     fixed_effects_offsets, order_, model)[0];
       Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
