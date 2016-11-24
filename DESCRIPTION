@@ -1,29 +1,15 @@
 Package: dynamichazard
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Dynamic hazard models using state space models
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+Author: Benjamin Christoffersen
+Maintainer: Benjamin Christoffersen <boennecd@gmail.com>
+Description: Fits dynamic hazard model using state space models for binary outcome. Some hyper parameters are fitted using an EM algortihm. The E-step uses the extended Kalman filter (as suggested in Fahrmeier (1992) and Fahrmeier (1994)) or an unscented kalman filter with futher extension
+License: GPL-2
 LazyData: TRUE
-Imports:
-    Rcpp (>= 0.12.6),
-    RcppArmadillo,
-    survival,
-    stringr
-LinkingTo:
-    Rcpp,
-    RcppArmadillo
+Imports: Rcpp (>= 0.12.6), RcppArmadillo, survival, stringr
+LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 5.0.1
-Suggests:
-    testthat,
-    parallel,
-    knitr,
-    rmarkdown,
-    timereg,
-    captioner,
-    biglm,
-    httr
+Suggests: testthat, parallel, knitr, rmarkdown, timereg, captioner, biglm, httr
 VignetteBuilder: knitr
 SystemRequirements: C++11

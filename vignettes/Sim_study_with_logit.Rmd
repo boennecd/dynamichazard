@@ -81,7 +81,7 @@ The following values will be used in the simulation:
 ns <- c(200, 800, 2000)
 n_beta <- 5
 T_max <- 10
-n_sims <- 4
+n_sims <- 100
 
 gsub("(^.+)(/dynamichazard.+$)", "...\\2", getwd())
 source("../R/test_utils.R")
