@@ -13,7 +13,6 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
                        const IntegerVector &id,
                        const bool &is_for_discrete_model = true
 ){
-  // See this page for rcpp sugar functions http://dirk.eddelbuettel.com/code/rcpp/html/unique_8h.html
   NumericVector stop_events = stop[event];
   stop_events = stop_events[stop_events <= max_T];
 
@@ -23,7 +22,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
   const unsigned int n = start.size();
   unsigned int d, i, j, d_;
   NumericVector event_times; // vector of event times
-  vector<int> indicies; // see http://stackoverflow.com/questions/13324431/c-vectors-insert-push-back-difference
+  vector<int> indicies;
 
   // Find event times
   if(by < 0.0){ // set event times to all the unique stop times
@@ -42,13 +41,11 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
   //  E.g. we have a row at time [.25, .75) with an event
   //  and a bins with times [0, 1).
   LogicalVector is_within_bin(n);
-  //LogicalVector new_events_flags = clone(event); // TODO: Delete
 
   // Find risket sets
   List risk_sets(d);
   I_stop_time = event_times(d - 1);
 
-  // Set bin start time
   for(d_ = d - 1; ; d_--){
     if(d_ == 0)
       I_start_time = min_start;
@@ -73,14 +70,6 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
         }
       } else {
         if(I_start_time < stop[i]){
-          // we all ready know it start before the interval stops and now we
-          // know it stop after the interval starts so it is in
-          /*if(std::min(stop[i], I_stop_time) - std::max(start[i], I_start_time) < delta_t_eps){ //TODO: Delete
-            // there is numerical imprecission with float comparisson. Thus the check is added
-            // TODO: is there something better?
-            continue;
-          }*/
-
           indicies.push_back(i + 1); // R use one indexing!
         }
       }
@@ -127,7 +116,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
       continue;
     }
 
-    // Find the bin (see http://stackoverflow.com/a/15724226/5861244)
+    // Find the bin
     tmp_pointer =  lower_bound(dum_for_find_interval.begin(), dum_for_find_interval.end(), stop[i]);
     int bin_number = std::distance(dum_for_find_interval.begin(), tmp_pointer) - 1;
 
@@ -145,6 +134,8 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
       j++;
       continue;
     }
+
+    // Here we need to handle the case where the observation does not cross two bins
 
     this_bin = tmp_pointer - dum_for_find_interval.begin() - 1;
     this_id = id[i];

@@ -118,7 +118,6 @@ std::vector<double>
   double logLike = 0.;
 
   if(any_dynamic){
-    // We want to deal with degenered case
     Q = Q.submat(0, 0, n_parems - 1, n_parems - 1);
 
     static bool have_fail_to_invert;
@@ -143,12 +142,12 @@ std::vector<double>
   logLike_link_term_helper *helper;
   if(model == "logit"){
     helper = new logLike_link_term_helper_logit(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets);
+
   } else if (model == "exponential"){
     helper = new logLike_link_term_helper_cloglog(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets);
+
   } else{
-    std::stringstream ss;
-    ss << "Model '" << model << "' not implemented for logLike method";
-    Rcpp::stop(ss.str());
+    Rcpp::stop("Model '" + model + "' not implemented for logLike method");
   }
 
   double bin_stop = Rcpp::as<double>(risk_obj["min_start"]);

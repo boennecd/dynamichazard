@@ -4,9 +4,9 @@ SOURCES_F = $(wildcard biglm/*.f)
 CXX_STD = CXX11
 OBJECTS = $(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
 
-## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags. Most commonly used to set define directives with -D.
+## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(SHLIB_PTHREAD_FLAGS)
-## PKG_LIBS: Linker flags. A common use is PKG_LIBS = $(BLAS_LIBS). This allows you to use the same BLAS library as R.
+## PKG_LIBS: Linker flags
 PKG_LIBS = $(FLIBS) $(BLAS_LIBS) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS)
 
 all: $(SHLIB)

@@ -42,7 +42,6 @@ double poisson_fam::link_func_inv(const double &eta) const{
   return std::max(exp(eta), DOUBLE_EPS);
 }
 
-
 double poisson_fam::variance(const double &mu) const{
   return mu;
 }

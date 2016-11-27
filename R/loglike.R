@@ -2,7 +2,7 @@
 logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
   data <- if(!is.null(object$data)) object$data else data
   if(is.null(data))
-    stop("data need to compute log likelihood. Please, pass the data set used in 'ddhazard' call")
+    stop("data is needed to compute log likelihood. Please, pass the data set used in 'ddhazard' call")
 
   X <- get_design_matrix(object$formula, data)
   X$X <- t(X$X)
@@ -18,8 +18,10 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
 
     if(object$model == "exponential"){
       is_for_discrete_model <- F
+
     } else if (object$model == "logit"){
       is_for_discrete_model <- T
+
     } else
       stop("logLik not implemented for model '", object$model, "'")
 

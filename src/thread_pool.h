@@ -24,6 +24,9 @@
  DEALINGS IN THE SOFTWARE.
  */
 
+// Code from:
+// Williams, Anthony. C++ concurrency in action. London, 2012
+
 #include <deque>
 #include <future>
 #include <memory>
@@ -195,9 +198,6 @@ class thread_pool
   std::vector<std::thread> threads;
   join_threads joiner;
 
-  //static thread_local work_stealing_queue* local_work_queue;
-  //static thread_local unsigned my_index;
-
   void worker_thread(unsigned my_index_)
   {
     my_index=my_index_;
@@ -268,7 +268,8 @@ public:
   }
 
   // template<typename ResultType>
-  // using task_handle = std::future<ResultType>; // future is re-named as far as i gather. using task_handle=std::unique_future<ResultType>;
+  // using task_handle = std::future<ResultType>;
+  // future is re-named in the book as far as I gather. using task_handle=std::unique_future<ResultType>;
   template<typename FunctionType>
   std::future<typename std::result_of<FunctionType()>::type> submit(FunctionType f)
   {

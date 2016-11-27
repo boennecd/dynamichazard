@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.fahrmeier_94}
 \alias{plot.fahrmeier_94}
-\title{Plot to illustrate the estimate state space variables from a ddhazardfit}
+\title{Plot to illustrate the estimate state space variables from a ddhazard fit}
 \usage{
 \method{plot}{fahrmeier_94}(x, xlab = "Time", ylab = "Hazard",
   type = "cov", plot_type = "l", cov_index, ylim, col = "black",
@@ -11,7 +11,7 @@
 \arguments{
 \item{x}{Result of \code{\link{ddhazard}} call}
 
-\item{xlab, ylab, ylim, col}{Arguments to overide defaults}
+\item{xlab, ylab, ylim, col}{Arguments to overide defaults set in this function}
 
 \item{type}{Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters}
 
@@ -24,7 +24,7 @@
 \item{...}{Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}}
 }
 \description{
-Plot to illustrate the estimate state space variables from a ddhazardfit
+Plot to illustrate the estimate state space variables from a ddhazard fit
 }
 \details{
 Creates or adds a plot of state variables with indices \code{cov_index}. Point wise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit

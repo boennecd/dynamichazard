@@ -8,7 +8,8 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#if defined(USE_OPEN_BLAS) // Used to set the number of threads later
+#if defined(USE_OPEN_BLAS)
+// Used to set the number of threads later
 #include "cblas.h"
 extern void openblas_set_num_threads(int num_threads);
 extern int openblas_get_num_threads();
@@ -49,14 +50,6 @@ extern int openblas_get_num_threads();
 
 #include <RcppArmadillo.h> // has to come after defines: http://artax.karlin.mff.cuni.cz/r-help/library/RcppArmadillo/html/RcppArmadillo-package.html
 // [[Rcpp::depends("RcppArmadillo")]]
-
-// DEBUG flags
-// Only define this if the observational equation and state space equation
-// have reasonable dimensions
-//#define MYDEBUG_UKF
-
-// #define MYDEBUG_EKF
-// #define MYDEBUG_M_STEP
 
 // Classes for R like distributions families
 class dist_family {
@@ -99,7 +92,7 @@ public:
 };
 
 
-// Functions and classes for fixed effects
+// Functions and classes for fixed effects. Similar to object in bigglm
 int binomialCoeff(int n, int k);
 
 class qr_obj{

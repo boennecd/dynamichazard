@@ -1,4 +1,5 @@
-# Find the design matrix and returns it LHS and RHS
+# Find the design matrix and returns it left hand site and right hand site of
+# regression equation
 get_design_matrix = function(formula, data, response = T){
   Call <- match.call()
   indx <- match(c("formula", "data"),  names(Call), nomatch = 0)
@@ -38,6 +39,7 @@ get_design_matrix = function(formula, data, response = T){
   } else{
     X <- model.matrix(Terms, mf)
     fixed_terms <- matrix(nrow = nrow(X), ncol = 0)
+
   }
 
   list(X = X, fixed_terms = fixed_terms, Y = Y, formula = temp$formula)
