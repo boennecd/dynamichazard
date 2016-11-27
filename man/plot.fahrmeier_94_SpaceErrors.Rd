@@ -20,7 +20,7 @@
 
 \item{p_cex}{\code{cex} argument for the points}
 
-\item{pch, ylab, col}{Arguments to override defaults set in this function}
+\item{pch, ylab, xlab}{Arguments to override defaults set in this function}
 
 \item{x_tick_loc, x_tick_mark}{\code{at} and \code{labels} arguments passed to \code{axis}}
 

@@ -57,7 +57,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
 #' @param p_cex \code{cex} argument for the points
 #' @param cov_index The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standarized
 #' @param t_index The bin indices to plot. Default is to use all bins
-#' @param pch,ylab,col Arguments to override defaults set in this function
+#' @param pch,ylab,xlab Arguments to override defaults set in this function
 #' @param x_tick_loc,x_tick_mark \code{at} and \code{labels} arguments passed to \code{axis}
 #' @param ... Arguments passed to plot
 #'

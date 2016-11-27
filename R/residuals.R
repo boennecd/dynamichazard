@@ -7,17 +7,17 @@
 #'
 #' @section Pearson and raw residuals:
 #' Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"fahrmeier_94_res"} with the following elements
-#' \describe{
-#' \item{\code{residuals}}{List of residuals for each bin. Each element of the list contains a 2D array where the rows corresponds to the passed \code{data} and columns are the residuals (\code{residuals}), estimated probability of death (\code{p_est}), outcome (\code{Y}) and row number in the initial dataset (\code{row_num}). The \code{data} rows will only have a residuals in a given risk list if they are at risk in that risk set}
-#' \item{type}{The type of residual}
+#' \tabular{ll}{
+#' \code{residuals}\verb{ }\tab List of residuals for each bin. Each element of the list contains a 2D array where the rows corresponds to the passed \code{data} and columns are the residuals (\code{residuals}), estimated probability of death (\code{p_est}), outcome (\code{Y}) and row number in the initial dataset (\code{row_num}). The \code{data} rows will only have a residuals in a given risk list if they are at risk in that risk set\cr
+#' \code{type}\verb{ }\tab The type of residual\cr
 #'}
 #'
 #' @section State space errors:
 #' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
-#' \describe{
-#' \item{\code{residuals}}{2D array with either standardised or unstandardised state space errors. The row are bins and the columns are the parameters in the regression}
-#' \item{\code{standardize}}{\code{TRUE} if standardised state space errors}
-#' \item{\code{Covariances}}{3D array with the smoothed co-variance matrix for each set of the state space errors}
+#' \tabular{ll}{
+#' \code{residuals}\verb{ }\tab 2D array with either standardised or unstandardised state space errors. The row are bins and the columns are the parameters in the regression \cr
+#' \code{standardize}\verb{ }\tab \code{TRUE} if standardised state space errors \cr
+#' \code{Covariances}\verb{ }\tab 3D array with the smoothed co-variance matrix for each set of the state space errors \cr
 #'}
 #'
 #' @export

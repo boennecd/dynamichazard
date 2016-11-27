@@ -321,7 +321,8 @@ get_expect_equal <- function(x, eps, file = ""){
 
 # Remove a globally defined pbc dataset if it is present
 suppressWarnings(rm(pbc))
-library(survival)
+pbc <- survival::pbc
+pbcseq <- survival::pbcseq
 
 temp <- subset(pbc, id <= 312, select=c(id:sex, stage)) # baseline
 pbc2 <- survival::tmerge(temp, temp, id=id, death = event(time, status)) #set range
