@@ -1,6 +1,5 @@
-SOURCES_C = $(wildcard stats/*.c)
-SOURCES_CPP = $(wildcard *.cpp)
-SOURCES_F = $(wildcard biglm/*.f)
+SOURCES_C = stats/lm.c
+SOURCES_F = biglm/boundedQRf.f
 CXX_STD = CXX11
 OBJECTS = $(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
 

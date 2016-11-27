@@ -10,9 +10,8 @@ else
 BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
-SOURCES_C = $(wildcard stats/*.c)
-SOURCES_CPP = $(wildcard *.cpp)
-SOURCES_F = $(wildcard biglm/*.f)
+SOURCES_C = stats/lm.c
+SOURCES_F = biglm/boundedQRf.f
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
 
@@ -22,18 +21,10 @@ PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS) $(
 PKG_LIBS = $(FLIBS) $(BLAS_LIBS_USE) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS)
 
 ifeq "$(WIN)" "64"
-PKG_LIBS += -D ARMA_64BIT_WORD
-endif
-
-do_profile = "do profile"
-ifeq ("$(do_profile)","do profile")
-	CXXFLAGS+=-gdwarf-2
-	DLLFLAGS=
+PKG_LIBS := $(PKG_LIBS) -D ARMA_64BIT_WORD
 endif
 
 all: $(SHLIB)
-	@echo $(OBJECTS)
-	@echo $(do_profile)
 
 $(SOURCES_CPP:.cpp=.o): dynamichazard.h
 

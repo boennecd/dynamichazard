@@ -140,12 +140,12 @@ ddhazard = function(formula, data,
   } else if((missing_a_0 <- missing(a_0)) |
             (missing_fixed <- is.null(control$fixed_parems_start))){
     if(model == "logit"){
-      tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
-                           control = glm.control(epsilon = Inf), family = "binomial")
+      tmp_mod = static_glm(formula = formula, data = data, risk_obj = risk_set,
+                           control = stats::glm.control(epsilon = Inf), family = "binomial")
 
     } else if(model == "exponential"){
-      tmp_mod = static_glm(form = formula, data = data, max_T = max_T,
-                           control = glm.control(epsilon = Inf), family = "exponential")
+      tmp_mod = static_glm(formula = formula, data = data, max_T = max_T,
+                           control = stats::glm.control(epsilon = Inf), family = "exponential")
 
     } else
       stop("Method not implemented to find initial values for '", model, "'")
@@ -277,7 +277,7 @@ ddhazard = function(formula, data,
     hazard_func =  function(eta, tstart, tstop, ...){
       1 - exp( - exp(eta) * (tstop - tstart))
     },
-    hazard_first_deriv = function(beta, x_, ...){
+    hazard_first_deriv = function(beta, x_, tstart, tstop, ...){
       eta <- beta %*% x_
       x_ * (tstop - tstart) * exp(eta - exp(eta) * (tstop - tstart))
     })
