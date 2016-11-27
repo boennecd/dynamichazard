@@ -36,14 +36,6 @@ arma::vec IWLS(const arma::mat &X, const arma::vec &y,
   arma::vec mu = eta;
   mu.for_each([&](arma::mat::value_type &val) { val = family->link_func_inv(val); });
 
-  // TODO: delete
-  // weights.for_each([&](arma::mat::value_type &val) { Rcpp::Rcout << val << "\t"; });
-  // Rcpp::Rcout << std::endl;
-  // eta.for_each([&](arma::mat::value_type &val) { Rcpp::Rcout << val << "\t"; });
-  // Rcpp::Rcout << std::endl;
-  // mu.for_each([&](arma::mat::value_type &val) { Rcpp::Rcout << val << "\t"; });
-  // Rcpp::Rcout << std::endl;
-
   double deviance_old = 0.0;
   for(unsigned int i = 0; i < y.size(); i++)
     deviance_old += family->dev_resids(y[i], mu[i], weights[i]);
@@ -69,32 +61,15 @@ arma::vec IWLS(const arma::mat &X, const arma::vec &y,
       arma::conv_to<arma::mat>::from(X.rows(good)).each_col() % w,
       z % w, eps, false);
 
-    // TODO: deal with
-    //if(any(fit$coefficients))
-    // ...
-    //if (nobs < fit$rank)
-    // ...
-
     beta.elem(fit.pivot) = fit.coefficients;
 
     eta = X * beta + offsets;
     mu = eta;
     mu.for_each([&](arma::mat::value_type &val) { val = family->link_func_inv(val); });
 
-    // TODO: delete
-    // Rcpp::Rcout << "boh" << std::endl;
-    // beta.print();
-    //eta.head(10).print();
-
     double deviance = 0.0;
     for(unsigned int i = 0; i < y.size(); i++)
       deviance += family->dev_resids(y[i], mu[i], weights[i]);
-
-    //TODO: Deal with
-    //if (!is.finite(deviance))
-    // ...
-    //if (!(valideta(eta) && validmu(mu)))
-    // ...
 
     if (std::abs(deviance - deviance_old) / (0.1 + std::abs(deviance)) < eps) {
       converged = true;

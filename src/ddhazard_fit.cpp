@@ -139,14 +139,8 @@ public:
 
     X(X_.begin(), X_.n_rows, X_.n_cols, false),
     fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols, false),
-
-    eps_fixed_parems(eps_fixed_parems_),
-    max_it_fixed_parems(max_it_fixed_parems_),
-    debug(debug_),
-    LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
-    inv_Cov_method(inv_Cov_method_),
-
     I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
+
     event_eps(d * std::numeric_limits<double>::epsilon()),
 #if defined(USE_OPEN_BLAS)
     n_threads(std::thread::hardware_concurrency()),
@@ -155,6 +149,12 @@ public:
     tstop(tstop_),
     is_event_in_bin(is_event_in_bin_),
     min_start(Rcpp::as<double>(risk_obj["min_start"])),
+
+    eps_fixed_parems(eps_fixed_parems_),
+    max_it_fixed_parems(max_it_fixed_parems_),
+    debug(debug_),
+    LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
+    inv_Cov_method(inv_Cov_method_),
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
@@ -1254,21 +1254,25 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     // Compute inverse covariance matrix dot centered sigma points
     O.each_col() -= y_bar; // center
 
-    arma::mat tmp_mat = O.each_col() % inv_covmat_diag;
-    tmp_mat.rows(span_binary) +=
-      O.rows(span_time).each_col() %  inv_covmat_off_diag;
-    tmp_mat.rows(span_time) +=
-      O.rows(span_binary).each_col() %  inv_covmat_off_diag;
+    O = O.t(); // transpose to ease the next computations
+
+    arma::mat tmp_mat = O.each_row() % inv_covmat_diag.t();
+    tmp_mat.cols(span_binary) +=
+      O.cols(span_time).each_row() %  inv_covmat_off_diag.t();
+    tmp_mat.cols(span_time) +=
+      O.cols(span_binary).each_row() %  inv_covmat_off_diag.t();
+
+    O = O.t(); // transpose back
 
     {
       arma::vec outcome(n_risk * 2);
       outcome.subvec(span_binary) = arma::conv_to<arma::vec>::from(do_die);
       outcome.subvec(span_time) = time_outcome;
 
-      c_vec = tmp_mat.t() * (outcome - y_bar);
+      c_vec = tmp_mat * (outcome - y_bar);
     }
 
-    O = O.t() * tmp_mat;
+    O = tmp_mat * O;
     if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
@@ -1355,7 +1359,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1).fill(0.);
       }
 
-      for(int i = 0; i < r_set.n_elem; ++i){
+      for(arma::uword i = 0; i < r_set.n_elem; ++i){
         offsets(n_elements + i) +=
           T().time_offset(std::min(p_data->tstop(r_set(i)), bin_stop)
                             - std::max(p_data->tstart(r_set(i)), bin_start));
@@ -1452,7 +1456,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
   // Intialize the solver for the E-step
   problem_data *p_data;
-  Solver  *solver;
+  Solver  *solver = NULL;
 
   if(method == "EKF"){
     p_data = new problem_data_EKF(
@@ -1502,8 +1506,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Rcpp::stop("Fixed effects is not implemented with UKF");
 
     solver = new UKF_solver_Org(*p_data, kappa);
-  }else
-    Rcpp::stop("method '" + method  +"'is not implemented");
+  }else{
+    Rcpp::stop("method '" + method  + "'is not implemented");
+  }
 
   arma::mat a_prev;
   a_prev.copy_size(p_data->a_t_t_s);

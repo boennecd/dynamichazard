@@ -96,11 +96,11 @@ void bigglm_updateQR<T>::update(qr_obj &qr, // Previous/starting value. Will be 
   double *y_ptr = z.memptr(); // a bit confussion with the chance of notion! This is "the same y as in the C code"
   double *w_ptr = ww.memptr();
 
-  for(int i = 0; i < ww.n_elem; ++i, ++y_ptr, ++w_ptr){
-    // created as subroutine will overwrite values so we take a copy
+  for(unsigned int i = 0; i < ww.n_elem; ++i, ++y_ptr, ++w_ptr){
+    // copy taken as subroutine will overwrite values so we take a copy
     arma::vec x_row = X.col(i);
 
-    //Here is the stack trace from bigglm:
+    //Here is the "stack trace" from bigglm:
     //qr<-update(qr,mm,z-off,ww)
     //function (bigQR, X, y, w = NULL, singcheck = FALSE, add.intercept = FALSE)
     //bigQR = qr  X = mm  y = z-off w = ww
