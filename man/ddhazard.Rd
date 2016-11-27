@@ -34,21 +34,21 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 }
 \value{
 A list with class \code{fahrmeier_94}. The list contains:
-\describe{
-\item{\code{formula}}{The passed formula}
-\item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin}
-\item{\code{state_vars}}{3D matrix with smoothed variance estimates for each state vector}
-\item{\code{lag_one_cor}}{3D Matrix with lagged correlation matrix for each for each change in the state vector}
-\item{\code{n_risk}}{The number of observations in each interval}
-\item{\code{times}}{The interval borders}
-\item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved}
-\item{\code{data}}{The \code{data} argument if saved}
-\item{\code{order}}{Order of the random walk}
-\item{\code{F_}}{Matrix with that map transition from one state vector to the next}
-\item{\code{method}}{Method used in the E-step}
-\item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm}
-\item{\code{hazard_func}}{Hazard function}
-\item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
+\tabular{ll}{
+\code{formula}\verb{ }\tab The passed formula \cr
+\code{state_vecs}\verb{ }\tab 2D matrix with the estimated state vectors (regression parameters) in each bin \cr
+\code{state_vars}\verb{ }\tab 3D matrix with smoothed variance estimates for each state vector \cr
+\code{lag_one_cor}\verb{ }\tab 3D Matrix with lagged correlation matrix for each for each change in the state vector \cr
+\code{n_risk}\verb{ }\tab The number of observations in each interval \cr
+\code{times}\verb{ }\tab The interval borders \cr
+\code{risk_set}\verb{ }\tab The object from \code{\link{get_risk_obj}} if saved \cr
+\code{data}\verb{ }\tab The \code{data} argument if saved \cr
+\code{order}\verb{ }\tab Order of the random walk \cr
+\code{F_}\verb{ }\tab Matrix with that map transition from one state vector to the next \cr
+\code{method}\verb{ }\tab Method used in the E-step \cr
+\code{est_Q_0}\verb{ }\tab\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm \cr
+\code{hazard_func}\verb{ }\tab Hazard function \cr
+\code{hazard_first_deriv}\verb{ }\tab First derivative of the hazard function with respect to the linear predictor \cr
 }
 }
 \description{
@@ -64,18 +64,18 @@ The model is specified through the \code{model} argument. Currently, \code{'logi
 \section{Control}{
 
 The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters, \code{LR} and \code{NR_eps}
-\describe{
-\item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter or \code{"UKF"}for the Unscented Kalman Filter. \code{"EKF"} is the default}
-\item{\code{LR}}{Learning rate for the Extended Kalman filter. Default is 1}
-\item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
-\item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter. Default is 1}
-\item{\code{beta}}{Hyper parameter \eqn{\beta} in the Unscented Kalman Filter. Default is 2}
-\item{\code{kappa}}{Hyper parameter \eqn{\kappa} in the Unscented Kalman Filter. Default is 0}
-\item{\code{n_max}}{Maximum number of iteration in the EM-algorithm}
-\item{\code{eps}}{Tolerance parameter for the EM-algorithm}
-\item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}}
-\item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
-\item{\code{save_data}}{\code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
+\tabular{ll}{
+\code{method}\verb{  }\tab Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter or \code{"UKF"}for the Unscented Kalman Filter. \code{"EKF"} is the default \cr
+\code{LR}\verb{  }\tab Learning rate for the Extended Kalman filter. Default is 1 \cr
+\code{NR_eps}\verb{  }\tab Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step \cr
+\code{alpha}\verb{  }\tab Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter. Default is 1 \cr
+\code{beta}\verb{  }\tab Hyper parameter \eqn{\beta} in the Unscented Kalman Filter. Default is 2 \cr
+\code{kappa}\verb{  }\tab Hyper parameter \eqn{\kappa} in the Unscented Kalman Filter. Default is 0 \cr
+\code{n_max}\verb{  }\tab Maximum number of iteration in the EM-algorithm \cr
+\code{eps}\verb{  }\tab Tolerance parameter for the EM-algorithm\cr
+\code{est_Q_0}\verb{  }\tab\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}\cr
+\code{save_risk_set}\verb{  }\tab \code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory\cr
+\code{save_data}\verb{  }\tab \code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory
 }
 }
 \references{

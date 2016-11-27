@@ -14,13 +14,13 @@
 
 \item{mod}{The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call}
 
-\item{cov_index}{The indices of state vector errors to plot. Default is to use all. Make no sense if errors are standardised}
+\item{cov_index}{The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standarized}
 
 \item{t_index}{The bin indices to plot. Default is to use all bins}
 
 \item{p_cex}{\code{cex} argument for the points}
 
-\item{pch, ylab, col}{Arguments to override defaults}
+\item{pch, ylab, col}{Arguments to override defaults set in this function}
 
 \item{x_tick_loc, x_tick_mark}{\code{at} and \code{labels} arguments passed to \code{axis}}
 

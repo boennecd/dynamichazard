@@ -21,37 +21,37 @@
 #'
 #' @section Control:
 #' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters, \code{LR} and \code{NR_eps}
-#' \describe{
-#' \item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter or \code{"UKF"}for the Unscented Kalman Filter. \code{"EKF"} is the default}
-#' \item{\code{LR}}{Learning rate for the Extended Kalman filter. Default is 1}
-#' \item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
-#' \item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter. Default is 1}
-#' \item{\code{beta}}{Hyper parameter \eqn{\beta} in the Unscented Kalman Filter. Default is 2}
-#' \item{\code{kappa}}{Hyper parameter \eqn{\kappa} in the Unscented Kalman Filter. Default is 0}
-#' \item{\code{n_max}}{Maximum number of iteration in the EM-algorithm}
-#' \item{\code{eps}}{Tolerance parameter for the EM-algorithm}
-#' \item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}}
-#' \item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
-#' \item{\code{save_data}}{\code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
+#' \tabular{ll}{
+#' \code{method}\verb{  }\tab Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter or \code{"UKF"}for the Unscented Kalman Filter. \code{"EKF"} is the default \cr
+#' \code{LR}\verb{  }\tab Learning rate for the Extended Kalman filter. Default is 1 \cr
+#' \code{NR_eps}\verb{  }\tab Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step \cr
+#' \code{alpha}\verb{  }\tab Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter. Default is 1 \cr
+#' \code{beta}\verb{  }\tab Hyper parameter \eqn{\beta} in the Unscented Kalman Filter. Default is 2 \cr
+#' \code{kappa}\verb{  }\tab Hyper parameter \eqn{\kappa} in the Unscented Kalman Filter. Default is 0 \cr
+#' \code{n_max}\verb{  }\tab Maximum number of iteration in the EM-algorithm \cr
+#' \code{eps}\verb{  }\tab Tolerance parameter for the EM-algorithm\cr
+#' \code{est_Q_0}\verb{  }\tab\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}\cr
+#' \code{save_risk_set}\verb{  }\tab \code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory\cr
+#' \code{save_data}\verb{  }\tab \code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory
 #'}
 #'
 #' @return
 #' A list with class \code{fahrmeier_94}. The list contains:
-#' \describe{
-#' \item{\code{formula}}{The passed formula}
-#' \item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin}
-#' \item{\code{state_vars}}{3D matrix with smoothed variance estimates for each state vector}
-#' \item{\code{lag_one_cor}}{3D Matrix with lagged correlation matrix for each for each change in the state vector}
-#' \item{\code{n_risk}}{The number of observations in each interval}
-#' \item{\code{times}}{The interval borders}
-#' \item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved}
-#' \item{\code{data}}{The \code{data} argument if saved}
-#' \item{\code{order}}{Order of the random walk}
-#' \item{\code{F_}}{Matrix with that map transition from one state vector to the next}
-#' \item{\code{method}}{Method used in the E-step}
-#' \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm}
-#' \item{\code{hazard_func}}{Hazard function}
-#' \item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
+#' \tabular{ll}{
+#' \code{formula}\verb{ }\tab The passed formula \cr
+#' \code{state_vecs}\verb{ }\tab 2D matrix with the estimated state vectors (regression parameters) in each bin \cr
+#' \code{state_vars}\verb{ }\tab 3D matrix with smoothed variance estimates for each state vector \cr
+#' \code{lag_one_cor}\verb{ }\tab 3D Matrix with lagged correlation matrix for each for each change in the state vector \cr
+#' \code{n_risk}\verb{ }\tab The number of observations in each interval \cr
+#' \code{times}\verb{ }\tab The interval borders \cr
+#' \code{risk_set}\verb{ }\tab The object from \code{\link{get_risk_obj}} if saved \cr
+#' \code{data}\verb{ }\tab The \code{data} argument if saved \cr
+#' \code{order}\verb{ }\tab Order of the random walk \cr
+#' \code{F_}\verb{ }\tab Matrix with that map transition from one state vector to the next \cr
+#' \code{method}\verb{ }\tab Method used in the E-step \cr
+#' \code{est_Q_0}\verb{ }\tab\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm \cr
+#' \code{hazard_func}\verb{ }\tab Hazard function \cr
+#' \code{hazard_first_deriv}\verb{ }\tab First derivative of the hazard function with respect to the linear predictor \cr
 #'}
 #'
 #' @seealso
@@ -80,10 +80,10 @@ ddhazard = function(formula, data,
   }
 
   if(missing(Q_0)){
-    Q_0 = diag(10, n_parems * order) # something large. TODO: what is large?
+    Q_0 = diag(10, n_parems * order) # something large. Though depends on model, estimation method and data
 
     if(missing(Q))
-      Q = diag(c(rep(1, n_parems), rep(0, n_parems * (order - 1)))) # TODO: What to set here?
+      Q = diag(c(rep(1, n_parems), rep(0, n_parems * (order - 1)))) # (Very) arbitrary default
   }
 
   if(order == 1){
@@ -95,12 +95,15 @@ ddhazard = function(formula, data,
     F_[n_parems + 1:n_parems, 1:n_parems] = diag(1, n_parems)
     F_[1:n_parems, n_parems + 1:n_parems] = diag(-1, n_parems)
     F_[n_parems + 1:n_parems, n_parems + 1:n_parems] = 0
+
   } else stop("Method not implemented for order ", order)
 
   if(model == "logit"){
     is_for_discrete_model <- TRUE
+
   } else if (model == "exponential"){
     is_for_discrete_model <- FALSE
+
   } else
     stop("Model '", model, "' is not implemented")
 
@@ -111,6 +114,7 @@ ddhazard = function(formula, data,
                           max_it_fixed_parems = 10, fixed_effect_chunk_size = 1e4,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
                           LR_decrease_fac = 1.5, EKF_inv_Cov_method = "org")
+
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
          paste0(names(control)[is.na(control_match)], collapse = "\t"))
@@ -125,7 +129,7 @@ ddhazard = function(formula, data,
                  id = id, is_for_discrete_model = is_for_discrete_model)
 
   if(n_parems == 0){
-    # Model is fitted using ddhazard_fit_cpp for testing and because doing it with static_glm is easy
+    # Model is fitted using ddhazard_fit_cpp for testing
     warning("The model can be estimated more effeciently by using get_survival_case_Weigths_and_data and static_glm when there is no time varying parameters")
     a_0 = vector()
 
@@ -138,9 +142,11 @@ ddhazard = function(formula, data,
     if(model == "logit"){
       tmp_mod = static_glm(form = formula, data = data, risk_obj = risk_set,
                            control = glm.control(epsilon = Inf), family = "binomial")
+
     } else if(model == "exponential"){
       tmp_mod = static_glm(form = formula, data = data, max_T = max_T,
                            control = glm.control(epsilon = Inf), family = "exponential")
+
     } else
       stop("Method not implemented to find initial values for '", model, "'")
 
@@ -149,9 +155,11 @@ ddhazard = function(formula, data,
     if(missing_a_0){
       message("a_0 not supplied. One iteration IWLS of static glm model is used")
       a_0 = rep(tmp_mod$coefficients[!is_fixed], order)
+
     }
     if(missing_fixed){
       control$fixed_parems_start <- tmp_mod$coefficients[is_fixed]
+
     }
 
     rm(tmp_mod)
@@ -199,7 +207,9 @@ ddhazard = function(formula, data,
     message("Running EM")
   }
 
-  X_Y$X <- t(X_Y$X) # we transpose for performance due to the column-major storage
+  X_Y$X <- t(X_Y$X) # we transpose for performance due to the column-major
+                    # ordering. The logic is that we primary look up indviduals
+                    # (i.e. columns in the tranpose)
   X_Y$fixed_terms <- t(X_Y$fixed_terms) # same
 
   result <- NA
@@ -261,6 +271,7 @@ ddhazard = function(formula, data,
         exp_ = exp(beta %*% x_)
         x_ * exp_ / (exp_ + 1)^2
       })
+
   }else if(model == "exponential"){
     res <- list(
     hazard_func =  function(eta, tstart, tstop, ...){
