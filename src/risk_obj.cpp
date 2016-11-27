@@ -17,8 +17,6 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
   NumericVector stop_events = stop[event];
   stop_events = stop_events[stop_events <= max_T];
 
-  const double delta_t_eps = 1.0e-14;
-
   const double min_start = min(start);
 
   double I_stop_time, I_start_time; // current interval start and stop time
@@ -111,7 +109,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
 
   int this_id, this_bin;
   unsigned int k, l;
-  double bin_start, bin_stop;
+  double bin_start;
   double *tmp_pointer;
 
   // this vector is used to indicate if an observation is an event in a given
@@ -152,7 +150,6 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
     this_id = id[i];
 
     bin_start = dum_start[this_bin];
-    bin_stop = dum_stop[this_bin];
 
     if(j == n - 1){ // we reached the end. No further work needed
       j++;

@@ -1,6 +1,6 @@
 library(dynamichazard); library(testthat); library(survival); source("C://Users//boennecd//Dropbox//skole_backup//phd//dynamichazard//R//test_utils.R")
 
-# Simulate series to work with
+# Simulate series to work  with
 tmp <- round(runif(1, max = 1e5))
 set.seed(tmp)
 sims <- test_sim_func_logit(n_series = 1e5, n_vars = 20, t_0 = 0, t_max = 10,

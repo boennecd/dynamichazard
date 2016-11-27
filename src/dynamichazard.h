@@ -125,7 +125,7 @@ public:
 
 template<class T>
 class bigglm_updateQR{
-  // match logic update.bigqr
+  // match logic in update.bigqr
   arma::vec linkinv(const arma::vec &eta);
 
   arma::vec d_mu_d_eta(const arma::vec &eta);
@@ -143,7 +143,7 @@ public:
               const arma::vec &offset, arma::vec &y); // y will not be altered
 };
 
-using bigglm_updateQR_logit = bigglm_updateQR<logit_fam>;
+using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
 using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
 
 arma::vec bigglm_regcf(qr_obj &qr);
