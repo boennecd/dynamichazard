@@ -196,5 +196,3 @@ test_that("pearson and raw residuals for exponential corresponds", {
 # matplot(resids$residuals)
 # resids <- residuals(fit, "space_error")
 # matplot(resids$residuals)
-
-warning("Implement more test for residuals method (e.g. second order models, the actual values etc.)")

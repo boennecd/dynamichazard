@@ -232,8 +232,6 @@ test_that("predict functions throws error when model it is exponential",{
   expect_error(predict(dum))
 })
 
-warning("Implement test for second order random walk and predict")
-
 # PBC dataset described in Fleming & Harrington (1991)
 library(timereg)
 data(pbc)

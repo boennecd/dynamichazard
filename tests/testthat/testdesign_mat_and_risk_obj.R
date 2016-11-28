@@ -6,7 +6,7 @@ get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 
 # Simulate data
 set.seed(11111)
-sims = as.data.frame(test_sim_func_logit(n_series = 10^5, n_vars = 10, beta_start = 1,
+sims = as.data.frame(test_sim_func_logit(n_series = 2e3, n_vars = 10, beta_start = 1,
                                          intercept_start = - 16, sds = c(sqrt(.1), rep(1, 10)),
                                          x_range = 1, x_mean = .5)$res)
 
