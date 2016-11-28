@@ -6,10 +6,10 @@ vignettes/.*_cache
 vignettes/tex2pdf
 .o$
 .txt$
-.log$
 profile.R$
 benchmarking.R$
 Rplots.pdf$
 dynamichazard.dll$
 testfuture.R$
 testtest_utils.R$
+^\.travis\.yml$

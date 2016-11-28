@@ -24,12 +24,12 @@
 residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data = NULL, ...){
   type = type[1]
 
+  if(!object$model %in% c("logit", "exponential"))
+    stop("Functions for model '",  object$model, "' is not implemented")
+
   if(type %in% c("std_space_error", "space_error")){
     return(space_errors(object, data, type == "std_space_error"))
   }
-
-  if(!object$model %in% c("logit", "exponential"))
-    stop("Functions for model '",  object$model, "' is not implemented")
 
   if(type == "pearson" || type == "raw"){
     return(obs_res(object, if(is.null(object$data)) data else object$data, type))
@@ -41,6 +41,9 @@ residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_err
 space_errors <- function(object, data, standardize){
   if(!object$method %in% c("EKF"))
     stop("Functions for with method '", object$method, "' is not implemented")
+
+  if(!object$model %in% c("logit"))
+    stop("Functions for with model '", object$model, "' is not implemented")
 
   if(object$order != 1)
     stop("Method for is not implemented for order ", object$order)
@@ -54,7 +57,7 @@ space_errors <- function(object, data, standardize){
 
   covs <- vars <- object$state_vars
   for(i in seq_len(dim(vars)[3] - 1))
-    covs[, , i] = vars[, , i + 1] + vars[, , i] - object$lag_one_cor[, , i] - t(object$lag_one_cor[, , i])
+    covs[, , i] = vars[, , i + 1] + vars[, , i] - object$lag_one_cov[, , i] - t(object$lag_one_cov[, , i])
 
   if(standardize){
     for(i in seq_len(dim(vars)[3] - 1))

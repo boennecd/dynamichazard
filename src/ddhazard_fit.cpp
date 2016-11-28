@@ -108,7 +108,7 @@ public:
   arma::cube V_t_less_s;
   arma::cube B_s;
 
-  arma::cube lag_one_cor;
+  arma::cube lag_one_cov;
 
   problem_data(arma::mat &X_,
                arma::mat &fixed_terms_,
@@ -168,7 +168,7 @@ public:
 
       a_t_t_s.col(0) = a_0;
 
-      lag_one_cor = arma::cube(n_parems * order_, n_parems * order_, d);
+      lag_one_cov = arma::cube(n_parems * order_, n_parems * order_, d);
 
       if(!(inv_Cov_method_ == "org" || inv_Cov_method_ == "not org"))
         Rcpp::stop("'inv_Cov_method_' is not implemented with value '" +  inv_Cov_method_ + "'");
@@ -757,7 +757,7 @@ public:
         p_dat.K_d = (p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot * diagmat(p_dat.H_diag_inv) * p_dat.z_dot.t()) * p_dat.K_d;
         p_dat.K_d = p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot * diagmat(p_dat.H_diag_inv) -  p_dat.K_d;
 
-        p_dat.lag_one_cor.slice(t - 1) = (arma::eye<arma::mat>(size(p_dat.U)) - p_dat.K_d * p_dat.z_dot.t()) * p_dat.F_ * p_dat.V_t_t_s.slice(t - 1);
+        p_dat.lag_one_cov.slice(t - 1) = (arma::eye<arma::mat>(size(p_dat.U)) - p_dat.K_d * p_dat.z_dot.t()) * p_dat.F_ * p_dat.V_t_t_s.slice(t - 1);
       }
     }
   }
@@ -1544,9 +1544,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       for (int t = p_data->d - 1; t > -1; t--){
         // we need to compute the correlation matrix first
         if(t > 0){
-          p_data->lag_one_cor.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
+          p_data->lag_one_cov.slice(t - 1) = p_data->V_t_t_s.slice(t) * p_data->B_s.slice(t - 1).t() +
             p_data->B_s.slice(t) * (
-                p_data->lag_one_cor.slice(t) - F_ * p_data->V_t_t_s.slice(t)) * p_data->B_s.slice(t - 1).t();
+                p_data->lag_one_cov.slice(t) - F_ * p_data->V_t_t_s.slice(t)) * p_data->B_s.slice(t - 1).t();
         }
 
         p_data->a_t_t_s.col(t) = p_data->a_t_t_s.unsafe_col(t) + p_data->B_s.slice(t) *
@@ -1584,7 +1584,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                   + F_ * *V_less * p_data->T_F_) / delta_t;
 
         } else if (M_step_formulation == "SmoothedCov"){
-          B = &p_data->lag_one_cor.slice(t - 1); // this is not B but the lagged one smooth correlation. Do not mind the variable name
+          B = &p_data->lag_one_cov.slice(t - 1); // this is not B but the lagged one smooth correlation. Do not mind the variable name
 
           Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
                   - F_ * *B
@@ -1671,7 +1671,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   return(Rcpp::List::create(Rcpp::Named("V_t_d_s") = Rcpp::wrap(p_data->V_t_t_s),
                             Rcpp::Named("a_t_d_s") = Rcpp::wrap(p_data->a_t_t_s.t()),
                             Rcpp::Named("B_s") = Rcpp::wrap(p_data->B_s),
-                            Rcpp::Named("lag_one_cor") = Rcpp::wrap(p_data->lag_one_cor),
+                            Rcpp::Named("lag_one_cov") = Rcpp::wrap(p_data->lag_one_cov),
                             Rcpp::Named("fixed_effects") = Rcpp::wrap(p_data->fixed_parems),
 
                             Rcpp::Named("n_iter") = it + 1,

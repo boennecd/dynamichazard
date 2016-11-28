@@ -177,9 +177,9 @@ suppressMessages(fit <- ddhazard(
   Q = diag(rep(1e-2, 4)), max_T = 3600,
   model = "exponential", control = list(est_Q_0 = F, LR = .1)))
 
-test_that("Calls to residuals should succed for exponential model",{
-  expect_no_error(residuals(fit, "std_space_error"))
-  expect_no_error(residuals(fit, "space_error"))
+test_that("Calls to residuals should fail for exponential model and state space error",{
+  expect_error(residuals(fit, "std_space_error", regexp = "Functions for with model 'exponential' is not implemented"))
+  expect_error(residuals(fit, "space_error", regexp = "Functions for with model 'exponential' is not implemented"))
 })
 
 test_that("pearson and raw residuals for exponential corresponds", {

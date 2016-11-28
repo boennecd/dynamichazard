@@ -13,7 +13,7 @@ sims = as.data.frame(test_sim_func_logit(n_series = 2e3, n_vars = 10, beta_start
 
 #######
 # Test design mat
-design = get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + x2 +x3), sims)
+design = get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 +x3), sims)
 
 test_that("Testing get design marix", {
   expect_equal(design$Y[, 1], sims$tstart, check.attributes = F, use.names = F)
@@ -28,28 +28,28 @@ test_that("Testing get design marix", {
 # Test fixed terms
 
 test_that("Fixed terms works as expected",{
-  design_with_fixed <- get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + x2 + x3), sims)
+  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), sims)
 
   expect_equal(design_with_fixed$X[, c("x1", "x2", "x3")], as.matrix(sims[, c("x1", "x2", "x3")]),
                check.attributes = F)
   expect_length(design_with_fixed$fixed_terms, 0)
 
 
-  design_with_fixed <- get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + x3), sims)
+  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + x3), sims)
   expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
                check.attributes = F)
   expect_equal(as.matrix(design_with_fixed$fixed_terms), as.matrix(sims[, c("x2")]),
                check.attributes = F)
 
 
-  design_with_fixed <- get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + ddFixed(x3)), sims)
+  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + ddFixed(x3)), sims)
   expect_equal(design_with_fixed$X[, c("x1"), drop = F], as.matrix(sims[, c("x1")]),
                check.attributes = F)
   expect_equal(as.matrix(design_with_fixed$fixed_terms), as.matrix(sims[, c("x2", "x3")]),
                check.attributes = F)
 
   dum <- function(x) cbind(x, -x)
-  design_with_fixed <- get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + ddFixed(dum(x2)) + x3), sims)
+  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(dum(x2)) + x3), sims)
   expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
                check.attributes = F)
   expect_equal(as.matrix(design_with_fixed$fixed_terms), dum(sims$x2),
@@ -71,7 +71,7 @@ for(do_truncate in c(F, T)){
     sims = sims[!(sims$tstart == sims$tstop), ]
 
     # Have to get the design matrix again
-    design = get_design_matrix(formula(Surv(tstart, tstop, event) ~ x1 + x2 +x3), sims)
+    design = get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 +x3), sims)
   }
 
   for(by_ in c(1, 2.63)){
@@ -202,7 +202,7 @@ for(do_truncate in c(F, T)){
 # Further test for design mat
 
 # Test without Y
-arg_list <- list(formula = formula(Surv(tstart, tstop, event) ~ x1 + x2 + x3), data = sims, response = T)
+arg_list <- list(formula = formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), data = sims, response = T)
 design <- do.call(get_design_matrix, arg_list)
 
 arg_list$response <- F
@@ -230,10 +230,10 @@ tryCatch({
 })
 
 # Test that removal of intercepts works as in lm
-arg_list <- list(formula = formula(Surv(tstart, tstop, event) ~ x1 + x2 + x3), data = sims, response = T)
+arg_list <- list(formula = formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), data = sims, response = T)
 design <- do.call(get_design_matrix, arg_list)
 
-arg_list$formula <- formula(Surv(tstart, tstop, event) ~ -1 + x1 + x2 + x3)
+arg_list$formula <- formula(survival::Surv(tstart, tstop, event) ~ -1 + x1 + x2 + x3)
 design_no_intercept <- do.call(get_design_matrix, arg_list)
 
 test_that("Design mat with vs. without intercept", {
@@ -314,7 +314,7 @@ test_that("is_for_discrete_model logic work",{
       13, 1, 3.4, 1
   )))
 
-  arg_list <- list(Y = Surv(data_$tstart, data_$tstop, data_$event),
+  arg_list <- list(Y = survival::Surv(data_$tstart, data_$tstop, data_$event),
                    by = by_, max_T = t_max, id = data_$id)
 
   arg_list$is_for_discrete_model <- T
