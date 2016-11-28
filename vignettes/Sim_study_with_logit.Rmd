@@ -92,10 +92,10 @@ source("../R/test_utils.R")
 `ns` is the number of series (individuals) we will estimate in each of the simulation in each of the runs. Thus, we will perform simulations with a total of `r paste(ns[-length(ns)], collapse = ", ")` and `r tail(ns, 1)` series in each. Each simulation will have `n_beta =` `r n_beta` covariates plus an intercept. Each run will simulate `n_sims =` `r n_sims` times. Finally, we source the `test.utils.R` file to define the simulation function. You can find this on the github site. `T_max` is the number of bins/intervals we will observe. Thus, we have 1, 2, ..., `T_max` + 1 covariate vectors (+1 for the time zero coefficient vector) 
 
 # Fitting true model
-We will make runs for various number of individuals in this section where we estimate a model where all effects are time varying and we use the correct binning intervals. Thus, the only  models that are miss specified are the one with `x2` being the only time varying parameter and the model where we fit are second order random walk
+We will make runs for various number of individuals in this section where we estimate a model where all effects are time varying and we use the correct binning intervals. Thus, the only  models that are miss specified are the model with one time varying effect (which will be `x2`) and the model where we fit are second order random walk
 
 ## Definition of simulation function
-Below, we define a list of `default_args` to our simulation function which we can later use using `do.call`. 
+Below, we define a list of `default_args` (default arguments) to our simulation function which we can later use using `do.call`. 
 ```{r est_true_setup}
 # Default arguments for simulation
 default_args <- list(
@@ -109,7 +109,7 @@ default_args <- list(
 
 ```
 
-Let $\vec{\beta}_t$ denote the time varying coefficient at time $t$. Then the `beta_start` is the time 0 values of the coefficients and `intercept_start` is the starting value of the intercept. The `sds` is the standard deviations, $\sigma_i$, in the state equation. Hence, 
+Let $\vec{\beta}_t$ denote the time varying covariates at time $t$. Then the `beta_start` is the time 0 values of the coefficients and `intercept_start` is the starting value of the intercept. The `sds` are the standard deviations, $\sigma_i$, in the state equation. Hence, 
 $$\beta_{j,t} = \beta_{j,t - 1} + \epsilon_{j,t},\qquad \epsilon_{j,t} \sim N(0,\sigma_j)$$
 
 The `x_mean` and `x_range` defines how the covariate values are simulated. The above setting implies that $x_{itj} = \text{Unif}(0.5 - 1/2, 0.5 + 1/2)$ where $x_{itj}$ is the $i$'th individuals covariate $j$ at time $t$. The covariates vector $\vec{x}_{it}$ is updated with at times $1+\eta$ 
