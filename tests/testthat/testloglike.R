@@ -235,8 +235,27 @@ test_that("logLik for simulated data versus old results", {
                    class = "logLik",
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)
-})
 
-test_that("Add one example of exponential fit and loglike with fixed effects", expect_true(F))
+  set.seed(4578234)
+  sims <- test_sim_func_exp(n_series = 2e3, n_vars = 5, t_0 = 0, t_max = 10,
+                            beta_start = (seq_len(5) - 4) / 2, intercept_start = -3,
+                            x_range = .5, x_mean = 0, re_draw = T, is_fixed = c(1:2))
+
+  suppressMessages(result <- ddhazard(
+    survival::Surv(tstart, tstop, event) ~ ddFixed(x1) + ddFixed(x2) + x3 + x4 + x5,
+    sims$res,
+    by = 1,
+    control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F),
+    a_0 = rep(0, 4), Q_0 = diag(1, 4),
+    max_T = 10, model = "exponential",
+    id = sims$res$id, order = 1,
+    verbose = F))
+
+  log_like <- logLik(result)
+  old <- structure(-3813.086098998085,
+                   class = "logLik",
+                   df = 4 + 4 * (1 + 4) / 2 + 2)
+  expect_equal(log_like, old, tolerance = 1e-6)
+})
 
 
