@@ -28,10 +28,6 @@ PKG_LIBS = $(FLIBS) $(BLAS_LIBS_USE) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS) $(USE
 endif
 
 all: $(SHLIB)
-	@echo $(PKG_LIBS)
-	@echo $(SOURCES_CPP)
-	@echo $(SOURCES_C)
-	@echo $(SOURCES_F)
 
 $(SOURCES_CPP:.cpp=.o): dynamichazard.h
 

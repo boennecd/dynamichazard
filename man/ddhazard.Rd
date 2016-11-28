@@ -38,7 +38,7 @@ A list with class \code{fahrmeier_94}. The list contains:
 \code{formula}\verb{ }\tab The passed formula \cr
 \code{state_vecs}\verb{ }\tab 2D matrix with the estimated state vectors (regression parameters) in each bin \cr
 \code{state_vars}\verb{ }\tab 3D matrix with smoothed variance estimates for each state vector \cr
-\code{lag_one_cor}\verb{ }\tab 3D Matrix with lagged correlation matrix for each for each change in the state vector \cr
+\code{lag_one_cov}\verb{ }\tab 3D Matrix with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF \cr
 \code{n_risk}\verb{ }\tab The number of observations in each interval \cr
 \code{times}\verb{ }\tab The interval borders \cr
 \code{risk_set}\verb{ }\tab The object from \code{\link{get_risk_obj}} if saved \cr

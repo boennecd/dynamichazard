@@ -1,3 +1,8 @@
+if(interactive()){
+  library(testthat)
+  source("R/test_utils.R")
+}
+
 ###############
 # Simple test that methods calls succeds
 arg_list <- list(

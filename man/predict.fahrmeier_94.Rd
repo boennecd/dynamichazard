@@ -5,7 +5,8 @@
 \title{Predict function for result of \code{\link{ddhazard}}}
 \usage{
 \method{predict}{fahrmeier_94}(object, new_data, type = c("response", "term"),
-  tstart = "start", tstop = "stop", use_parallel = F, sds = F, ...)
+  tstart = "start", tstop = "stop", use_parallel = F, sds = F,
+  max_threads = -1, ...)
 }
 \arguments{
 \item{object}{Result of a \code{\link{ddhazard}} call}
@@ -21,6 +22,8 @@
 \item{use_parallel}{\code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{parallel} package}
 
 \item{sds}{\code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}}
+
+\item{max_threads}{Maximum number of threads to use. -1 if it should be determined by a call to \code{\link[parallel]{detectCores}}}
 
 \item{...}{Not used}
 }
