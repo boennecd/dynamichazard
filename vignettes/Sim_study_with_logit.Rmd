@@ -26,13 +26,15 @@ The second objective is to show how to estimate various models with the function
 
 The third objective is to illustrate how the various methods performs for out-of-time prediction. By out-of-time we mean that we only observe outcomes up to given time, $d$, and then predict the outcome for future observations at time $d+1$. Notice the distinction between out-sample and out-of-time. The former, out-of-time, is where we estimate the model up to time $d$ using one set and then apply the estimates to predict the outcomes of the other set up to time $d$. The latter is where we observe all series to time $d$ and then perform predicition for those who are still alive at time $d$ for whether they die at e.g. $d+1$
 
-The final fourth objective is to show that both the EKF and UKF scales linearly with the number individuals (series). All method with use the logistic link function. We will do three runs of experiments in the following order:
+The final fourth objective is to show that both the EKF and UKF scales linearly with the number individuals (series)
+
+All method with use the logistic link function. We will do three runs of experiments in the following order:
 
 1. A Model where all effects are time varying and we use the correct binning intervals
 2. A model where only one parameter is time varying and  we use the correct binning intervals
 3. A Model where all effects are time varying but we use incorrect binning intervals
 
-The models will be compared in terms of Brier score, median absolute residuals and standard deviation of the absolute residuals. All metrics will be reported on out-sample data. All plots will have true coefficients as continuous lines while dashed lines are estimates
+where correct or incorrect binning intervals refers to whether or not we bin at the same time where the coeffecient are simulated to change. For example, we bin correctly where we simulate the coeffecients to change at time $1,2,\dots,d$ and we estimate the coeffecient at time $1,2,\dots,d$. The models will be compared in terms of Brier score, median absolute residuals and standard deviation of the absolute residuals. All metrics will be reported on out-sample data or out-of-time data. All plots will have true coefficients as continuous lines while dashed lines are estimates
 
 You can install the version of the library used to make this vignettes from github with the `devtools` library as follows:
 
@@ -54,14 +56,14 @@ current_version
 devtools::install_github(current_version)
 ```
 
-Moreover, you will also find the source code for the vignette in the github package. The note is not meant to be self contained. It is recommend to see (TODO: Insert reference) for an introduction to the models and methods in the `dynamichazard` package
+Moreover, you will also find the source code for the vignette at the github page. The note is not meant to be self contained. It is recommend to see ddhazard vignette for an introduction to the models and methods in the `dynamichazard` package
 
 ## Notions
 For clarity, here is a list of notions used:
 
-* Run: An peppermint with one three previously specified settings where we make $k$ simulation with $n$ series in each
+* Run: An experiment with one three previously specified settings where we make $k$ simulations with $n$ series in each
 * Simulation: One simulation within a run with one set of coefficients $\vec{\beta}_0,\dots,\vec{\beta}_d$ and given number $n$ of series
-* Series/individuals: A person/individual starting at time $0$ and either making it to the end of the time in the given simulation or dying at some time during the period
+* Series/individuals: A person/individual starting at time $0$ and either making it to the end of the time of the  given simulation or dying at some time during the period
 * Coefficients: the entries of the vectors $\vec{\beta}_t$ in a given simulation
 * Covariates: vectors $\vec{x}_{it}$ for a given individual at a given time in simulation
 
@@ -69,19 +71,19 @@ For clarity, here is a list of notions used:
 The findings are: 
 
 * The UKF method seems to perform well for both small and larger number of series
-* Taking multiple iterations in the correction step of the EKF seems to be beneficial with moderate amount of series
+* Taking multiple iterations in the correction step of the EKF seems to be beneficial with moderate amount or large amount of series
 * Miss specifying a fixed effect as time varying or setting the binning number incorrectly has little effect on the results
 * The UKF and/or the EKF method with extra iteration in the correction step perform close to a Generalized Additive model in terms of out-sample Brier score
 
-It is worth stressing that it is my experience that you can always do "trail-and-error" with the initial covariance matrix, the covariance matrix at time zero and tuning parameters in order to get a model to fit a given dataset. This is disadvantages that any given data set may require some tuning by the user. Although as will be shown, tunning by the user is not be often with data sets like those presented here
+You will see that the the estimation sometimes fails. It is worth stressing that it is my experience that you can always do "trail-and-error" with the initial covariance matrix in the state equation, the covariance matrix at time zero and tuning parameters in order to get a model to fit a given dataset. Of course, it is disadvantages that any given data set may require some tuning by the user. Although as will be shown, tunning by the user is not often needed with data sets like those presented here
 
 ## Setup
 The following values will be used in the simulation:
 ```{r}
-ns <- c(200, 800, 2000)
-n_beta <- 5
-T_max <- 10
-n_sims <- 100
+ns <- c(200, 800, 2000) # Number of series
+n_beta <- 5             # Number of covariates
+T_max <- 10             # The last time we observe
+n_sims <- 100           # Number of simulation in each run
 
 gsub("(^.+)(/dynamichazard.+$)", "...\\2", getwd())
 source("../R/test_utils.R")

@@ -4,4 +4,9 @@ language: R
 sudo: false
 cache: packages
 
+addons:
+  apt:
+    packages:
+      - libusb-1.0-0-dev
+
 after_failure: "cat /home/travis/build/boennecd/dynamichazard/dynamichazard.Rcheck/00install.out"
