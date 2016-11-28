@@ -6,6 +6,7 @@
 #' @param tstop same as \code{tstart} for the stop argument
 #' @param use_parallel \code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{parallel} package
 #' @param sds \code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}
+#' @param max_threads Maximum number of threads to use. -1 if it should be determined by a call to \code{\link[parallel]{detectCores}}
 #' @param ... Not used
 #'
 #' @section Term:
@@ -27,7 +28,7 @@
 predict.fahrmeier_94 = function(object, new_data,
                                 type = c("response", "term"),
                                 tstart = "start", tstop = "stop",
-                                use_parallel = F, sds = F, ...)
+                                use_parallel = F, sds = F, max_threads = -1, ...)
 {
   if(!object$model %in% c("logit", "exponential"))
     stop("Functions for model '", object$model, "' is not implemented")
@@ -39,7 +40,8 @@ predict.fahrmeier_94 = function(object, new_data,
     return(predict_terms(object, new_data, tmp$X, sds, tmp$fixed_terms))
 
   if(type %in% c("response"))
-    return(predict_response(object, new_data, tmp$X, tstart, tstop, use_parallel, sds, tmp$fixed_terms))
+    return(predict_response(object, new_data, tmp$X, tstart, tstop, use_parallel, sds, tmp$fixed_terms,
+                            max_threads = max_threads))
 
   stop("Type '", type, "' not implemented in predict.fahrmeier_94")
 }
@@ -83,7 +85,7 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms){
   return(list(terms = terms_res, sds = sds_res, fixed_terms = fixed_terms))
 }
 
-predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, sds, fixed_terms){
+predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, sds, fixed_terms, max_threads){
   # Change drop behavior inside this function
   old <- `[`
   `[` <- function(...) { old(..., drop=FALSE) }
@@ -177,14 +179,21 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
 
 
   if(use_parallel){
+    no_cores <- parallel::detectCores()
+    if(is.na(no_cores)){
+      no_cores <- 1
+    } else
+      no_cores <- max(min(no_cores - 1, ceiling(nrow(m) / 25)), 1)
+
+    if(max_threads > 0)
+      no_cores = min(no_cores, max_threads)
+
+    cl <- parallel::makeCluster(no_cores)
+    parallel::clusterExport(cl, c("parems", "hazard_func", "times"),
+                            envir = environment())
+
     tryCatch({
-      no_cores <- min(parallel::detectCores() - 1, ceiling(nrow(m) / 25))
-      cl <- parallel::makeCluster(no_cores)
-      parallel::clusterExport(cl, c("parems", "hazard_func", "times"),
-                              envir = environment())
-
       fits = parallel::parRapply(cl = cl, apply_data_frame, apply_func)
-
     }, finally = { parallel::stopCluster(cl)})
   }
   else{

@@ -10,9 +10,9 @@ Description: Contains functions that let you fit dynamic hazard model binary
   Fahrmeier (1992) and Fahrmeier (1994)) or an unscented kalman filter
 License: GPL-2
 LazyData: TRUE
-Imports: Rcpp (>= 0.12.6), RcppArmadillo, survival, stringr, stats, graphics, utils
+Imports: Rcpp (>= 0.12.6), RcppArmadillo, survival, stringr, stats, graphics, utils, parallel
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 5.0.1
-Suggests: testthat, parallel, knitr, rmarkdown, timereg, captioner, biglm, httr
+Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr
 VignetteBuilder: knitr
 SystemRequirements: C++11

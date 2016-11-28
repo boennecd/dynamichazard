@@ -1,8 +1,7 @@
 if(interactive()){
   library(survival); library(dynamichazard); library(testthat)
-  source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
-} else
-  options(warn = -1)
+  source("../R/test_utils.R")
+}
 
 # Test on data set that is one of Farhmiers papers
 result = ddhazard(

@@ -13,13 +13,13 @@ for(use_parallel in c(T, F)){
   # Test that we get same estimate in one period estimates
   test_that(paste0("Testing one period in sample with use_parallel = ", use_parallel),{
     predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(1, 60)),
-                       use_parallel = use_parallel)
+                       use_parallel = use_parallel, max_threads = 1)
     tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
     expect_equal(predict_$fits, c(result$hazard_func(tmp_state_vecs %*% c(1, 1))),
                  use.names = F, check.attributes = F)
 
     predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(0, 60)),
-                       use_parallel = use_parallel)
+                       use_parallel = use_parallel, max_threads = 2)
     expect_equal(predict_$fits, c(result$hazard_func(tmp_state_vecs %*% c(1, 0))),
                  use.names = F, check.attributes = F)
   })
@@ -27,7 +27,7 @@ for(use_parallel in c(T, F)){
   # Check with two period estimates
   test_that(paste0("Testing two period in sample with use_parallel = ", use_parallel),{
     predict_ = predict(result, new_data = data.frame(start = 2*(0:29), stop = 2*(1:30), group = rep(1, 30)),
-                       use_parallel = use_parallel)
+                       use_parallel = use_parallel, max_threads = 2)
     tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
     fac1 = c(result$hazard_func(tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 1)))
     fac2 = c(result$hazard_func(tmp_state_vecs[2*(1:30), ] %*% c(1, 1)))
@@ -106,7 +106,7 @@ test_that("Terms prediction when parsing two observations",{
 
 for(use_parallel in c(T, F)){
   # Test that we get same estimate in one period estimates
-  test_that(paste0("Testing one period in sample with use_parallel = and fixed effects", use_parallel),{
+  test_that(paste0("Testing one period in sample with fixed effects and use_parallel ", use_parallel),{
     result <- ddhazard(
       formula = survival::Surv(start, stop, event) ~ ddFixed(group),
       data = head_neck_cancer,
@@ -114,7 +114,7 @@ for(use_parallel in c(T, F)){
 
     for(g in c(0, 1)){
       predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(g, 60)),
-                         use_parallel = use_parallel)
+                         use_parallel = use_parallel, max_threads = 1)
       tmp_state_vecs <- rbind(result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
       expect_equal(predict_$fits, c(result$hazard_func(tmp_state_vecs %*% 1 + c(result$fixed_effects * g))),
                    use.names = F, check.attributes = F)
@@ -126,7 +126,7 @@ for(use_parallel in c(T, F)){
 
     for(g in c(1, 2)){
       predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = factor(rep(g, 60), levels = 1:2)),
-                         use_parallel = use_parallel)
+                         use_parallel = use_parallel, max_threads = 2)
       tmp_state_vecs <- rbind(result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
       expect_equal(unname(predict_$fits), rep(result$hazard_func(c(c(g == 1, g == 2) %*% result$fixed_effects)), 60),
                    use.names = F, check.attributes = F)

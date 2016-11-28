@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard)
 # dynamichazard
 
 The goal of dynamichazard is to [TO BE WRITTEN]
@@ -13,8 +14,4 @@ devtools::install_github("dynamichazard/boennecd")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
-
-```R
-...
-```
+This is a basic example which shows you how to solve a common problem: [TO BE WRITTEN]
