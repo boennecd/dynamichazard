@@ -1,7 +1,8 @@
 if(interactive()){
   library(survival); library(testthat); source("R/test_utils.R"); library(dynamichazard)
-  get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 }
+
+get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 
 # Simulate data
 set.seed(11111)
