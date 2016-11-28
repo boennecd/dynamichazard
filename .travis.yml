@@ -1,12 +1,18 @@
 # R for travis: see documentation at https://docs.travis-ci.com/user/languages/r
 
 language: R
-sudo: false
 cache: packages
+sudo: false
+#sudo: required
+#dist: trusty # use Trusty for GCC 4.8.4. See http://genbattle.bitbucket.org/blog/2016/01/17/c++-travis-ci/
 
 addons:
   apt:
+    sources:
+    - ubuntu-toolchain-r-test
     packages:
-      - libusb-1.0-0-dev
+    - gcc-4.8
+    - g++-4.8
+    - libusb-1.0-0-dev
 
 after_failure: "cat /home/travis/build/boennecd/dynamichazard/dynamichazard.Rcheck/00install.out"
