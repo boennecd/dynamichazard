@@ -159,7 +159,7 @@ test_that("get_survival_case_weigths_and_data and predict yields consistent resu
     x_mean = .5)
 
   suppressMessages(
-    fit <- ddhazard(formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+    fit <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
                     data = s$res, max_T = 10, by = 1, id = s$res$id,
                     control = list(LR = .5)))
 
@@ -170,7 +170,7 @@ test_that("get_survival_case_weigths_and_data and predict yields consistent resu
   preds <- 1 - tapply(preds$fits, s$res$id, function(x) prod(1 - x))
 
   other_s <- get_survival_case_weigths_and_data(
-    formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+    formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
     data = s$res, max_T = 10, by = 1, id = s$res$id,
     use_weights = F)
 

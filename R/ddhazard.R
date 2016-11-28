@@ -41,7 +41,7 @@
 #' \code{formula}\verb{ }\tab The passed formula \cr
 #' \code{state_vecs}\verb{ }\tab 2D matrix with the estimated state vectors (regression parameters) in each bin \cr
 #' \code{state_vars}\verb{ }\tab 3D matrix with smoothed variance estimates for each state vector \cr
-#' \code{lag_one_cor}\verb{ }\tab 3D Matrix with lagged correlation matrix for each for each change in the state vector \cr
+#' \code{lag_one_cov}\verb{ }\tab 3D Matrix with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF \cr
 #' \code{n_risk}\verb{ }\tab The number of observations in each interval \cr
 #' \code{times}\verb{ }\tab The interval borders \cr
 #' \code{risk_set}\verb{ }\tab The object from \code{\link{get_risk_obj}} if saved \cr
@@ -252,6 +252,9 @@ ddhazard = function(formula, data,
     message("Did not succed to fit the model wit a learning rate of ", control$LR,
             ". The learning rate was decrease by a factor ", control$LR_decrease_fac^k, " to yield a fit")
 
+  if(model != "logit" || control$method != "EKF")
+    result$lag_one_cov = NULL
+
   # Set names
   tmp_names = rep(rownames(X_Y$X), order)
   colnames(result$a_t_d_s) = tmp_names
@@ -288,7 +291,7 @@ ddhazard = function(formula, data,
     formula = X_Y$formula,
     state_vecs = result$a_t_d_s,
     state_vars = result$V_t_d_s,
-    lag_one_cor = result$lag_one_cor,
+    lag_one_cov = result$lag_one_cov,
     fixed_effects = result$fixed_effects,
     n_iter = result$n_iter,
     Q = result$Q,
