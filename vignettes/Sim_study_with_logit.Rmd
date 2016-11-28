@@ -1,5 +1,5 @@
 ---
-title: "Simulation study with logit"
+title: "Simulation study with logit model"
 author: "Benjamin Christoffersen"
 date: "11 November 2016"
 output: pdf_document
@@ -24,7 +24,7 @@ This note has four objectives. The first objective is to test how the `ddhazard`
 
 The second objective is to show how to estimate various models with the function `ddhazard`. For this reason, the note contains intermediate `R` code which is not needed to understand the simulation results. Thus, we will use \* in the headers of section to distinguish the content. The headers marked with no \* are showing results of simulation or contains important comments. Headers with an \* and \*\* shows increasingly less important code to understand the simulation. Consequently, you can skip to the headers with no \* if you are only interested in the results
 
-The third objective is to illustrate how the various methods performs for out-of-time prediction. By out-of-time we mean that we only observe outcomes up to given time, $d$, and then predict the outcome for future observations at time $d+1$. Notice the distinction between out-sample and out-of-time. The former is where we seperate the series into two sets where we estimate the model up to time $d$ using one set and then apply the estimates to predict the outcomes of the other set up to time $d$. The latter is where we observe all series to time $d$ and then perform predicition for those who are still alive at time $d$ for whether they die at e.g. $d+1$
+The third objective is to illustrate how the various methods performs for out-of-time prediction. By out-of-time we mean that we only observe outcomes up to given time, $d$, and then predict the outcome for future observations at time $d+1$. Notice the distinction between out-sample and out-of-time. The former, out-of-time, is where we estimate the model up to time $d$ using one set and then apply the estimates to predict the outcomes of the other set up to time $d$. The latter is where we observe all series to time $d$ and then perform predicition for those who are still alive at time $d$ for whether they die at e.g. $d+1$
 
 The final fourth objective is to show that both the EKF and UKF scales linearly with the number individuals (series). All method with use the logistic link function. We will do three runs of experiments in the following order:
 
