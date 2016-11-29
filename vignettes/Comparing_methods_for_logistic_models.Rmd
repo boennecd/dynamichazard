@@ -1,11 +1,15 @@
 ---
 title: "Comparing methods for time varying logistic models"
 author: "Benjamin Christoffersen"
-date: "31 October 2016"
+date: "`r Sys.Date()`"
 header-includes:
    - \usepackage{bm}
 output: pdf_document
 bibliography: pbc_data.bib
+vignette: >
+  %\VignetteIndexEntry{Comparing methods for time varying logistic models}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
 ---
 
 ```{r setup, include=FALSE}
@@ -32,7 +36,7 @@ knitr::opts_chunk$set(echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 
 \newcommand{\mat}[1]{\mathbf{#1}}
 
 # Intro
-This note will compare the dynamic logistic model in `dynamichazard` with others methods within the package and methods from the `timereg` and `mgcv` package. The note will serve both as a comparison with other packages and as an illustration of how to use the `ddhazard` function for the logistic model. We will use the `pbc2` dataset from the `survival` package. The motivation is that the `pbc2` data set is commonly used in survival analysis for illustrations. Consequently, we have expectation to the outcome of our analysis
+This note will compare the dynamic logistic model in `dynamichazard` with others methods within the package and methods from the `timereg` and `mgcv` package. The note will serve both as a comparison with other packages and as an illustration of how to use the `ddhazard` function for the logistic model. We will use the `pbc2` dataset from the `survival` package. The motivation is that the `pbc2` data set is commonly used in survival analysis for illustrations. Consequently, we have expectation to the outcome of our analysis. It is suggested first to read the ddhazard vignette to get an introduction to the models and estimation methods in this package
 
 The note is structured as follows: First, we cover the `pbc2` data set. Then we estimate two non-dynamic logistic regression models using `glm`. This is followed by a fit using a Generalized Additive model with the `gam` function in the `mgcv` package. Next, we will estimate a cox-model with time varying parameters using the `timecox` function in the `timereg` package. Finally, we will end by illustrating the new methods in this package for time varying parameters in a logistic regression
 
@@ -238,9 +242,9 @@ We set the last observation time (`max.time`) lower than in the previous model a
 summary(cox_fit)
 ```
 
-The above test suggest that only `edema` might be "border line" time varying. A further idea could be to look at the change in the cumulative coefficient within a period of say of length 1 year to get an idea of the coefficient. This is done below:
+The above test suggest that only `edema` might be "border line" time varying <!-- A further idea could be to look at the change in the cumulative coefficient within a period of say of length 1 year to get an idea of the coefficient. This is done below: -->
 
-```{r, message=FALSE, warning=FALSE, fig.height = 6, mySettings=FALSE}
+<!--  ```{r, message=FALSE, warning=FALSE, fig.height = 6, mySettings=FALSE}
 # The cum element contains the time and cumulative timevarying regression 
 # coefficients
 head(cox_fit$cum)
@@ -255,9 +259,9 @@ diffs <- diff(tmp[, -1]) / diff(tmp[, "time"] )
 par(mfcol = c(3, 2))
 for(c_name in colnames(diffs))
   plot(diffs[, c_name], xlab = "time", ylab = c_name, type = "l")
-```
+``` -->
 
-which seems to be of minor use. Question: Include this or just make draw conclusions based on the previous plot? What they do in the book is only to infer on the cumulative regression functions
+<!-- which seems to be of minor use. Question: Include this or just make draw conclusions based on the previous plot? What they do in the book is only to infer on the cumulative regression functions -->
   
 # Dynamic hazard model
 In this section, we will cover the dynamic hazard model with the logistic link function that is implemented in this package. Firstly, we will briefly cover the model. Secondly, we will turn to different ways of designing the model and fitting the model 
@@ -273,7 +277,7 @@ $$\begin{array}{ll}
 	
 where $y_{it} \in \{0,1\}$ is an indicator for whether the $i$'th individual dies in interval $t$. $\cdots \sim (a, b)$ denotes a random variable with mean (or mean vector) $a$ and variance (or co-variance matrix) $b$. It needs not to be normally distributed. $z_{it}(\vec{\alpha}_t) = h(\vec{\alpha}_t\vec{x}_{it})$ is the non-linear map from state space variables to mean outcomes where $h$ is the link function. We use the logit model model in this note. Thus, $h(x) = \text{logit}^{-1}(x)$. The current implementation supports $\mathbf{F}$ and $\mathbf{R}$ such that we have first and second order random walk for the state equation
 
-We need to estimate the starting value $\vec{\alpha}_0$ and co-variance matrix $\mathbf{Q}$. This is done with an EM-algorithm. The E-step either use the Extended Kalman filter (EKF) or Unscented Kalman filter (UKF). Both a followed by a smoother. The result is smoothed estimates of $\vec{\alpha}_1,\dots, \vec{\alpha}_d$, smoothed co-variance matrix and smoothed correlation matrices that we need for the M-step to update $\vec{\alpha}_0$ and $\mathbf{Q}$. Further, we assume that $\mathbf{Q}_0 = \kappa \mathbf{I}$ is fixed to a large value $\kappa$ in the examples. For more details see the ddhazard vignette (TODO: Make sure this is the right reference)
+We need to estimate the starting value $\vec{\alpha}_0$ and co-variance matrix $\mathbf{Q}$. This is done with an EM-algorithm. The E-step either use the Extended Kalman filter (EKF) or Unscented Kalman filter (UKF). Both a followed by a smoother. The result is smoothed estimates of $\vec{\alpha}_1,\dots, \vec{\alpha}_d$, smoothed co-variance matrix and smoothed correlation matrices that we need for the M-step to update $\vec{\alpha}_0$ and $\mathbf{Q}$. Further, we assume that $\mathbf{Q}_0 = \kappa \mathbf{I}$ is fixed to a large value $\kappa$ in the examples. For more details see the ddhazard vignette
 
 ## Estimation with Extended Kalman Filter
 We start by estimating the model using the EKF where we let all coefficients follow a first random walk:
@@ -318,7 +322,7 @@ for(i in 1:6)
 ```
 
 ## Extra iteration in the correction step
-Another idea is to take extra iterations in the correction step. The motivation is that this step has the form of a Newton Rapshon algorithm as pointed out in [@fahrmeir92] and [@fahrmeir94]. For more details see the ddhazard vignette (TODO: Make sure this is the right reference). Below, we estimate the model with potentially extra steps in the correction step. 
+Another idea is to take extra iterations in the correction step. The motivation is that this step has the form of a Newton Rapshon algorithm as pointed out in [@fahrmeir92] and [@fahrmeir94]. For more details see the ddhazard vignette. Below, we estimate the model with potentially extra steps in the correction step. 
 
 ```{r, fig.height = 4.5, mySettings=FALSE}
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
@@ -335,9 +339,9 @@ for(i in 1:6)
   plot(dd_fit, cov_index = i)
 ```
 
-First, we run the code with the `NR_eps` element of the list passed to the `control` argument set to something that is finite. The value is the threshold for the relative change of in the state vectore in correction step of the EKF. Notice that we decrease `Q_0`. The algorithm diverges if we do not
+First, we run the code with the `NR_eps` element of the list passed to the `control` argument set to something that is finite. The value is the threshold for the relative change of in the state vector in correction step of the EKF. Notice that we decrease `Q_0`. The algorithm diverges if we do not
 
-We end the code above by creating plots of the new estimates. The curves seems to be less smooth. One of the motivation to use extra iterations is that experimental simulation have shown decrease predicted mean square error for the state vector (TODO: insert reference two sim study)
+We end the code above by creating plots of the new estimates. The curves seems to be less smooth. One of the motivation to use extra iterations is that experimental simulation have shown decrease predicted mean square error for the state vector (see the vignette 'Simulation study with logit model')
 
 ## Estimation with Unscented Kalman Filter
 Another option is to perform the E-step using an unscented Kalman filter. This is done below. We start by setting the initial co-variance matrix $\mat{Q}$ large:
@@ -462,18 +466,18 @@ dd_fit$fixed_effects
 
 We plot the curve after the fit. We see that the estimate is more smooth as expected with a second order random walk. Further, we can confirm that the fixed effects are comparable with our previous fits
 
-## Residuals and predict
-Question: Is this note too long now or should I also show how to compute residuals and predict outcomes? What about doing a K-fold cross validation here?
+
+<!-- ## Residuals and predict
+Question: Is this note too long now or should I also show how to compute residuals and predict outcomes? What about doing a K-fold cross validation here? -->
 
 # Summary
 We have estimated a model using Generalized additive models with the `mgcv` package and a time varying Cox model with the `timereg` package. Further, we have illustrated how the `ddhazard` function in the `dynamichazard` package can be used. In particular, we have used the logit link function and showed how to estimate with fixed effects, taking extra Newton Raphson steps in the correction step, fitting second order random walks and using the Unscented Kalman filter in the E-step. All the fits have been comparable with the Generalized Additive model
 
 An unaddressed question is why you should this package. Some of the advantageous of the state space model here are among other: 
 
-1. You can extrapolate beyond the last observation time. This has been useful in my research where the underlying time is the calender time. In this context, you can use the data to estimate the model to say 2016 and extrapolate forward from there
+1. You can extrapolate beyond the last observation time
 2. The implementation is linear in time complexity with the number of observations. Further, the Extended Kalman filter computes the correction step in parallel. Consequently, it is very fast even for large number observations
 3. All estimation is made in `c++` with use of the `Armadillo` library. Thus, an optimized version of `Blas` or `Lapack` can decrease the computation
-4. More general models for the co-variate can be implemented in the future. An obvious extension is to change the AR process to an ARMA model
-5. It is an alternative to spline models. This relates to 1. The main tools for including time varying coefficient in `R` seems to apply of splines. Thus, this is an alternative estimation method
+4. It is an alternative to spline models. This relates to 1. The main tools for including time varying coefficient in `R` seems to apply of splines. Thus, this is an alternative estimation method
 
 
