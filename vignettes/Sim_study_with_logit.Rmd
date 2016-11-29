@@ -1,7 +1,7 @@
 ---
 title: "Simulation study with logit model"
 author: "Benjamin Christoffersen"
-date: "11 November 2016"
+date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
@@ -24,7 +24,7 @@ This note has four objectives. The first objective is to test how the `ddhazard`
 
 The second objective is to show how to estimate various models with the function `ddhazard`. For this reason, the note contains intermediate `R` code which is not needed to understand the simulation results. Thus, we will use \* in the headers of section to distinguish the content. The headers marked with no \* are showing results of simulation or contains important comments. Headers with an \* and \*\* shows increasingly less important code to understand the simulation. Consequently, you can skip to the headers with no \* if you are only interested in the results
 
-The third objective is to illustrate how the various methods performs for out-of-time prediction. By out-of-time we mean that we only observe outcomes up to given time, $d$, and then predict the outcome for future observations at time $d+1$. Notice the distinction between out-sample and out-of-time. The former, out-of-time, is where we estimate the model up to time $d$ using one set and then apply the estimates to predict the outcomes of the other set up to time $d$. The latter is where we observe all series to time $d$ and then perform predicition for those who are still alive at time $d$ for whether they die at e.g. $d+1$
+The third objective is to illustrate how the various methods performs for out-of-time prediction. By out-of-time we mean that we only observe outcomes up to given time, $d$, and then predict the outcome for future observations at time $d+1$. Notice the distinction between out-sample and out-of-time. The former, out-of-time, is where we estimate the model up to time $d$ using one set and then apply the estimates to predict the outcomes of the other set up to time $d$. The latter is where we observe all series to time $d$ and then perform prediction for those who are still alive at time $d$ for whether they die at e.g. $d+1$
 
 The final fourth objective is to show that both the EKF and UKF scales linearly with the number individuals (series)
 
@@ -34,7 +34,7 @@ All method with use the logistic link function. We will do three runs of experim
 2. A model where only one parameter is time varying and  we use the correct binning intervals
 3. A Model where all effects are time varying but we use incorrect binning intervals
 
-where correct or incorrect binning intervals refers to whether or not we bin at the same time where the coeffecient are simulated to change. For example, we bin correctly where we simulate the coeffecients to change at time $1,2,\dots,d$ and we estimate the coeffecient at time $1,2,\dots,d$. The models will be compared in terms of Brier score, median absolute residuals and standard deviation of the absolute residuals. All metrics will be reported on out-sample data or out-of-time data. All plots will have true coefficients as continuous lines while dashed lines are estimates
+where correct or incorrect binning intervals refers to whether or not we bin at the same time where the coefficient are simulated to change. For example, we bin correctly where we simulate the coefficients to change at time $1,2,\dots,d$ and we estimate the coefficient at time $1,2,\dots,d$. The models will be compared in terms of Brier score, median absolute residuals and standard deviation of the absolute residuals. All metrics will be reported on out-sample data or out-of-time data. All plots will have true coefficients as continuous lines while dashed lines are estimates
 
 You can install the version of the library used to make this vignettes from github with the `devtools` library as follows:
 
@@ -75,7 +75,7 @@ The findings are:
 * Miss specifying a fixed effect as time varying or setting the binning number incorrectly has little effect on the results
 * The UKF and/or the EKF method with extra iteration in the correction step perform close to a Generalized Additive model in terms of out-sample Brier score
 
-You will see that the the estimation sometimes fails. It is worth stressing that it is my experience that you can always do "trail-and-error" with the initial covariance matrix in the state equation, the covariance matrix at time zero and tuning parameters in order to get a model to fit a given dataset. Of course, it is disadvantages that any given data set may require some tuning by the user. Although as will be shown, tunning by the user is not often needed with data sets like those presented here
+You will see that the the estimation sometimes fails. It is worth stressing that it is my experience that you can always do "trail-and-error" with the initial covariance matrix in the state equation, the covariance matrix at time zero and tuning parameters in order to get a model to fit a given dataset. Of course, it is disadvantages that any given data set may require some tuning by the user. Although as will be shown, tuning by the user is not often needed with data sets like those presented here
 
 ## Setup
 The following values will be used in the simulation:
@@ -128,7 +128,7 @@ sims <- do.call(test_sim_func_logit, c(list(n_series = max(ns)), default_args))
 
 ```
 
-The black line is the intercept while the colered lines are the coefficients for the covariates. Next, we can look at the number of failures in each simulation:
+The black line is the intercept while the colored lines are the coefficients for the covariates. Next, we can look at the number of failures in each simulation:
 ```{r}
 # We get a decent amount of failures and survivers in some of the simulations
 # We use do.call to avoid repeating the above argument list
@@ -406,7 +406,7 @@ unlist(
 
 ## \*\* Definition of multiple simulations function
 To make things easier, we define a function that takes in a function to simulate from. Given a function to simulate, then the new function perform `n_sims =` `r n_sims` simulations for each of values `ns` (`r ns`): 
-```{r simulations_def, warning=FALSE}
+```{r simulations_def, warning=FALSE, results='asis'}
 simulate_n_print_res <- function(
   sim_func, # Function that takes one argment which is number of series
   NR_eps = c(.01, NA)) # Tolerance in scoring step
@@ -431,7 +431,7 @@ simulate_n_print_res <- function(
     
     for(i in 1:n_sims){
       #*******  
-      info <- sprintf("%d%% done", 100 * (i - 1) / n_sims)
+      info <- sprintf("%.2f%% done", 100 * (i - 1) / n_sims)
       tcltk::setTkProgressBar(pb, i - 1, paste("Estimating with n =", n), info)
       #*******
       
@@ -499,35 +499,25 @@ simulate_n_print_res <- function(
     #*******  
     
     # Print results
-    cat(paste("##############\nNumber of series in fit and test data are", 
-              n/2, "\n"))
+    print(knitr::kable(t(apply(out[, , 1], 2, function(x) n_sims - sum(is.na(x)))), caption = paste(
+      "Number of successful fits with", n/2, "series in test and fit data.")))
+    cat("\n")
     
-    cat("Number of failed fits:\n")
-    print(apply(out[, , 1], 2, function(x) sum(is.na(x))))
+    n_cases_all_success <- sum(complete.cases(out[, , 1]))
     
-    # cat("\nNumber of failures and survivers in simulation and whether a given model\n",
-    #     "failed to fit. We only print the first 10 simulation. 1 implies that the model\n",
-    #     "or estimation method did not succed in fitting\n", sep = "")
-    # n_nas <- rbind(n_failures_and_surviers, 
-    #                t(is.na(out[, , 1])))[, seq_len(min(10, n_sims))]
-    # print(ifelse(n_nas ==0 , NA, n_nas), digits = 4, na.print = "")
-    
-    cat("\nNumber of complete cases where all succeeded to fit", 
-        n_cases_all_success <- sum(complete.cases(out[, , 1])))
     if(n_cases_all_success > 0){
-      cat("\nMean of metrics where all succeeded to fit:\n")
-      print(apply(out[complete.cases(out[, , 1]), , , drop = F], 3, colMeans), 
-            digits = 4)
-      cat("\nSds of metrics where all succeeded to fit:\n")
-      print(apply(out[complete.cases(out[, , 1]), , , drop = F], c(2,3), sd), 
-            digits = 4)
+      print(knitr::kable(t(apply(out[complete.cases(out[, , 1]), , , drop = F], 
+                                 3, colMeans)),
+            digits = 3, caption = paste(
+      "Mean of metrics with", n/2, "series in test and fit data. Only simulations that succeeds for all setups are included. There are", n_cases_all_success, "of these simulations")))
+      cat("\n")
     }
     
-    cat("\nMean of metrics:\n")
-    print(apply(out, 3, colMeans, na.rm = T), digits = 4)
+    print(knitr::kable(t(apply(out, 3, colMeans, na.rm = T)), digits = 3, 
+                       caption = paste(
+      "Mean of metrics with", n/2, "series in test and fit data. All simulations for each setup where the fit succeeds for the given setup are included in each cell estimate")))
     
-    if(n != tail(ns, 1))
-      cat("\n\n")
+    cat("\n")
   }
 }
 ```
@@ -535,7 +525,7 @@ simulate_n_print_res <- function(
 ## Simulating
 
 We are now able to simulate from the model where all effects are time varying and we use the correct binning intervals with the code below:
-```{r simulations_all_variying, warning=FALSE, cache=TRUE}
+```{r simulations_all_variying, warning=FALSE, cache=TRUE, results='asis'}
 set.seed(1243)
 # Use simulation function
 simulate_n_print_res(
@@ -551,7 +541,7 @@ All models perform better than the static model apart from the case where the nu
 The UKF performs close to the gam model when the training data has less than `r max(ns)/2` observations while taking extra iterations in the EKF seems to be worth it in terms of out-sample Brier score when the training data has `r max(ns)/2` observations. This may suggest that the UKF method is better for smaller data sets while the EKF with extra iterations in the scoring step is better suited for larger data sets. In all cases, at least one of models is close to the `gam` model in terms of out-sample Brier score 
 
 # Single time variying parameter
-In this part, we will look at the performs when only a single covariate (`x2`) varies. Thus, we can see if the model where only (`x2`) is modelled as varying performs performs better. Or in other words how the miss specified models behaves
+In this part, we will look at the performs when only a single covariate (`x2`) varies. Thus, we can see if the model where only (`x2`) is modeled as varying performs performs better. Or in other words how the miss specified models behaves
 
 ## \*\* Definition of simulation function
 We start by defining the simulation function. The main change here is that we only set a single standard deviation and that we set it larger than before:
@@ -587,7 +577,7 @@ matplot(tmp$betas, type = "l", lty = 1, ylab = "Beta", xlab = "Time")
 
 ## Simulating
 We can simulate with the following call:
-```{r simulations_one_variying, warning=FALSE, cache=TRUE}
+```{r simulations_one_variying, warning=FALSE, cache=TRUE, results='asis'}
 # Use simulation function
 set.seed(8080)
 simulate_n_print_res(sim_func = sim_one_variying)
@@ -597,7 +587,7 @@ simulate_n_print_res(sim_func = sim_one_variying)
 The main interest here is how the correctly specified model labeled `Fixed effect` roughly as good as the other fits. It seems to make a minor difference in terms of out-sample Brier score for all the settings for miss specifying the coefficients as time varying. This may suggest that incorrectly specifying an effects as time varying does not affect the result
 
 # Incorrect binning time
-Now, what happens if we get the binning wrong? This is the next experiment we will perform. Specifically, we will set the binning length to `0.1` instead `1` when we simulate. Thus, coefficients are updated at time $0, 0.1, 0.2, \dots$ and whether and individual dies is evulated at the same times when we simulate. However, the model will still use bins of length $1$
+Now, what happens if we get the binning wrong? This is the next experiment we will perform. Specifically, we will set the binning length to `0.1` instead `1` when we simulate. Thus, coefficients are updated at time $0, 0.1, 0.2, \dots$ and whether and individual dies is evaluated at the same times when we simulate. However, the model will still use bins of length $1$
 
 ## \*\* Definition of simulation function
 ```{r}
@@ -641,7 +631,7 @@ matplot(tmp$betas, type = "l", lty = 1, ylab = "Beta", xlab = "Time")
 
 ## Simulating
 We are now able to simulate with the following call:
-```{r simulations_sim_finer_binning, warning=FALSE, cache=TRUE}
+```{r simulations_sim_finer_binning, warning=FALSE, cache=TRUE, results='asis'}
 # Use simulation function
 set.seed(747)
 simulate_n_print_res(sim_func = sim_finer_binning)
@@ -679,7 +669,7 @@ split_data_func <- function(d_frame, split_time = 10){
 }
 ```
 
-We extend the time period (`t_max`) by one which is the only difference in the simulation. Notice that indviduals can be in both estimation data and test data. Any failure beyond time 10 will only count as a failure in the test data. Thus, we need to change the event flag for these in the `in_sample` data if the stop time is beyond time 10. Below, we illustrate how this looks for an individual who do die beyond time 10:
+We extend the time period (`t_max`) by one which is the only difference in the simulation. Notice that individuals can be in both estimation data and test data. Any failure beyond time 10 will only count as a failure in the test data. Thus, we need to change the event flag for these in the `in_sample` data if the stop time is beyond time 10. Below, we illustrate how this looks for an individual who do die beyond time 10:
 
 ```{r, echo=FALSE, include=FALSE}
 set.seed(1117)
@@ -799,10 +789,11 @@ Above, we do `r N` simulations with `r n` series in each simulation. The EKF wit
 
 ```{r}
 # Look at number of cases where each method got each rank
-apply(t(apply(out[complete.cases(out), ], 1, rank)), 2, function(x) xtabs(~x))
+knitr::kable(apply(t(apply(out[complete.cases(out), ], 1, rank)), 2, function(x) xtabs(~x)), 
+             caption = "Number of times each set got a given rank in terms of Brier Score")
 ```
 
-The main take away is that the EKF method with the extra iteration in the corretion step does better with these specification in terms of getting the lowest mean out-sample Brier score and getting the lowest Brier score in most of the simulation
+The main take away is that the EKF method with the extra iteration in the correction step does better with these specification in terms of getting the lowest mean out-sample Brier score and getting the lowest Brier score in most of the simulation
 
 # Linear Time complexity
 We will illustrate that the EKF and UKF have linear time complexity in the number of observation. This is particularly easy because the simulation function start of by simulating the coefficients as shown below (hence, variation will not be due to different coefficients vectors and only the number of series):
