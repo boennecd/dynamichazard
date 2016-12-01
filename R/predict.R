@@ -28,7 +28,7 @@
 predict.fahrmeier_94 = function(object, new_data,
                                 type = c("response", "term"),
                                 tstart = "start", tstop = "stop",
-                                use_parallel = F, sds = F, max_threads = -1, ...)
+                                use_parallel = F, sds = F, max_threads = getOption("ddhazard_max_threads"), ...)
 {
   if(!object$model %in% c("logit", "exponential"))
     stop("Functions for model '", object$model, "' is not implemented")

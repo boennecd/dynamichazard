@@ -1,11 +1,11 @@
 ## Test environments
 * Platform: x86_64-w64-mingw32/x64 (64-bit)
   Running under: Windows >= 8 x64 (build 9200)
-  R version 3.3.2
+  R 3.3.2
 * Ubuntu 14.04.4 LTS (on travis-ci with codename: trusty)
   R 3.3.2
   
-I used the build with codename trusty for the GCC 4.8.4. It is needed for the c++ 11 syntax I use
+I used the build with codename trusty for the GCC 4.8.4. It is needed for the c++11 syntax I use
 
 ## R CMD check results
 There were no ERRORs or WARNINGs. 
