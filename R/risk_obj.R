@@ -1,5 +1,5 @@
 #' Get the risk set at each bin over an equal distance grid
-#' @param Y outcome variable
+#' @param Y Vector of outcome variable
 #' @param by Length of each bin
 #' @param max_T Last observed time
 #' @param id Vector with ids where entries match with outcomes \code{Y}
@@ -8,7 +8,7 @@
 #' @return
 #' A list with the following elements:
 #' \tabular{ll}{
-#' \code{risk_sets}\verb{ }\tab List of lists with one for each bin. Each of the sub list have indicies that coresponds to the entries of \code{Y} that are at risk in the bin \cr
+#' \code{risk_sets}\verb{ }\tab List of lists with one for each bin. Each of the sub lists have indicies that coresponds to the entries of \code{Y} that are at risk in the bin \cr
 #' \code{min_start}\verb{ }\tab Start time of the first bin \cr
 #' \code{I_len}\verb{ }\tab Length of each bin \cr
 #' \code{d}\verb{ }\tab Number of bins \cr

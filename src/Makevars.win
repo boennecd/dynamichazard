@@ -1,8 +1,7 @@
-OPEN_BLAS_DIR = c:/OpenBLAS
 BLAS_CXXFLAGS_USE =
 USE_OPEN_BLAS =
 
-ifneq ($(wildcard $(OPEN_BLAS_DIR)),"")
+ifneq ($(wildcard c:/OpenBLAS),)
 BLAS_CXXFLAGS_USE = -I"c:/OpenBLAS/include" -lopenblas
 USE_OPEN_BLAS = -D USE_OPEN_BLAS
 BLAS_LIBS_USE = C:/OpenBLAS/lib/libopenblas.a

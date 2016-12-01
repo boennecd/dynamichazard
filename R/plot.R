@@ -1,15 +1,16 @@
-#' Plot to illustrate the estimate state space variables from a ddhazard fit
+#' @title Plots for \code{\link{ddhazard}}
+#' Plot to illustrate the estimate state space variables from a \code{\link{ddhazard}} fit
 #'
 #' @param x Result of \code{\link{ddhazard}} call
 #' @param type Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters
 #' @param plot_type The \code{type} argument passed to \code{plot}
 #' @param cov_index The index (indices) of the state space parameter(s) to plot
 #' @param add \code{FALSE} if you want to make a new plot
-#' @param xlab,ylab,ylim,col Arguments to overide defaults set in this function
+#' @param xlab,ylab,ylim,col Arguments to overide defaults set in the function
 #' @param ... Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}
 #'
 #' @details
-#' Creates or adds a plot of state variables with indices \code{cov_index}. Point wise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
+#' Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
 #'
 #' @export
 plot.fahrmeier_94 = function(x, xlab = "Time",
@@ -50,6 +51,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
   stop("Type '", type, "' is not implemented for plot.fahrmeier_94")
 }
 
+#' @title State space error plot
 #' Plot function for state space errors from \code{\link{ddhazard}} fit
 #'
 #' @param x Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors
@@ -57,7 +59,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
 #' @param p_cex \code{cex} argument for the points
 #' @param cov_index The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standarized
 #' @param t_index The bin indices to plot. Default is to use all bins
-#' @param pch,ylab,xlab Arguments to override defaults set in this function
+#' @param pch,ylab,xlab Arguments to override defaults set in the function
 #' @param x_tick_loc,x_tick_mark \code{at} and \code{labels} arguments passed to \code{axis}
 #' @param ... Arguments passed to plot
 #'
