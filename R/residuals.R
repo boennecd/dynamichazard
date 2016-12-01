@@ -1,7 +1,8 @@
-#' Residuals function for the result of \code{\link{ddhazard}} fit
+#' @title Residuals for \code{\link{ddhazard}}
+#' Residuals function for the result of a \code{\link{ddhazard}} fit
 #'
 #' @param object Result of \code{\link{ddhazard}} call
-#' @param type Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See below for details
+#' @param type Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details
 #' @param data Data frame with data for Pearson or raw residuals
 #' @param ... Not used
 #'
@@ -13,7 +14,7 @@
 #'}
 #'
 #' @section State space errors:
-#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
+#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is notstandardized. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
 #' \tabular{ll}{
 #' \code{residuals}\verb{ }\tab 2D array with either standardised or unstandardised state space errors. The row are bins and the columns are the parameters in the regression \cr
 #' \code{standardize}\verb{ }\tab \code{TRUE} if standardised state space errors \cr

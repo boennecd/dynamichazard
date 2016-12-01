@@ -4,15 +4,14 @@ Title: Dynamic hazard models using state space models
 Version: 0.1.0
 Author: Benjamin Christoffersen
 Maintainer: Benjamin Christoffersen <boennecd@gmail.com>
-Description: Contains functions that let you fit dynamic hazard model binary 
-  outcome using state space models. Some of the hyper parameters are fitted using
-  an EM algortihm. The E-step uses an extended Kalman filter (as suggested in 
-  Fahrmeier (1992) and Fahrmeier (1994)) or an unscented kalman filter
+Description: Contains functions that let you fit dynamic hazard models with binary 
+  outcomes using state space models
 License: GPL-2
 LazyData: TRUE
-Imports: Rcpp (>= 0.12.6), RcppArmadillo, survival, stringr, stats, graphics, utils, parallel
+Imports: Rcpp (>= 0.12.6), survival, stringr, stats, graphics, utils, parallel
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 5.0.1
-Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr
+Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv
 VignetteBuilder: knitr
 SystemRequirements: C++11
+URL: https://github.com/boennecd/dynamichazard
