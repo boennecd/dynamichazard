@@ -2,7 +2,8 @@
 % Please edit documentation in R/residuals.R
 \name{residuals.fahrmeier_94}
 \alias{residuals.fahrmeier_94}
-\title{Residuals function for the result of \code{\link{ddhazard}} fit}
+\title{Residuals for \code{\link{ddhazard}}
+Residuals function for the result of a \code{\link{ddhazard}} fit}
 \usage{
 \method{residuals}{fahrmeier_94}(object, type = c("std_space_error",
   "space_error", "pearson", "raw"), data = NULL, ...)
@@ -10,14 +11,11 @@
 \arguments{
 \item{object}{Result of \code{\link{ddhazard}} call}
 
-\item{type}{Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See below for details}
+\item{type}{Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details}
 
 \item{data}{Data frame with data for Pearson or raw residuals}
 
 \item{...}{Not used}
-}
-\description{
-Residuals function for the result of \code{\link{ddhazard}} fit
 }
 \section{Pearson and raw residuals}{
 
@@ -30,7 +28,7 @@ Is the result of a call with a \code{type} argument of either \code{"pearson"} o
 
 \section{State space errors}{
 
-Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
+Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is notstandardized. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
 \tabular{ll}{
 \code{residuals}\verb{ }\tab 2D array with either standardised or unstandardised state space errors. The row are bins and the columns are the parameters in the regression \cr
 \code{standardize}\verb{ }\tab \code{TRUE} if standardised state space errors \cr
