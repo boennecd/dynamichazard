@@ -78,9 +78,7 @@ public:
   const std::vector<double> I_len;
   const double event_eps; // something small
 
-#if defined(USE_OPEN_BLAS)
-  const int n_threads = std::thread::hardware_concurrency();
-#endif
+  const int n_threads;
 
   const arma::vec &tstart;
   const arma::vec &tstop;
@@ -127,7 +125,8 @@ public:
                const int order_ = 1, const bool est_Q_0 = true,
                const bool debug_ = false,
                Rcpp::Nullable<Rcpp::NumericVector> LR_ = R_NilValue,
-               const std::string inv_Cov_method_ = "org"):
+               const std::string inv_Cov_method_ = "org",
+               const int n_threads_ = -1):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
     n_parems(a_0.size() / order_),
@@ -142,9 +141,9 @@ public:
     I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
 
     event_eps(d * std::numeric_limits<double>::epsilon()),
-#if defined(USE_OPEN_BLAS)
-    n_threads(std::thread::hardware_concurrency()),
-#endif
+
+    n_threads((n_threads_ > 0) ? n_threads_ : std::thread::hardware_concurrency()),
+
     tstart(tstart_),
     tstop(tstop_),
     is_event_in_bin(is_event_in_bin_),
@@ -221,14 +220,16 @@ public:
                    const bool is_cont_time = false,
                    const unsigned int NR_it_max_ = 1000,
                    const bool debug_ = false,
-                   const std::string inv_Cov_method_ = "org"):
+                   const std::string inv_Cov_method_ = "org",
+                   const int n_threads_ = -1):
     problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
                  Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_parems_,
                  n_max, eps, verbose,
                  order_, est_Q_0, debug_,
                  LR_,
-                 inv_Cov_method_),
+                 inv_Cov_method_,
+                 n_threads_),
 
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),
@@ -560,14 +561,14 @@ class EKF_helper{
     {}
   };
 
-  unsigned long const hardware_threads;
+  unsigned long const max_threads;
   problem_data_EKF &p_data;
   std::vector<std::shared_ptr<filter_worker> > workers;
   const std::string model;
 
 public:
   EKF_helper(problem_data_EKF &p_data_, const std::string model_):
-  hardware_threads(std::thread::hardware_concurrency()),
+  max_threads((p_data_.n_threads > 1) ? p_data_.n_threads - 1 : 1),
   p_data(p_data_), workers(), model(model_)
   {}
 
@@ -1433,7 +1434,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const int fixed_effect_chunk_size = 2e4,
                             const bool debug = false,
                             const unsigned int NR_it_max = 100,
-                            const std::string EKF_inv_Cov_method = "org"){
+                            const std::string EKF_inv_Cov_method = "org",
+                            const int n_threads = -1){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -1467,7 +1469,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
       order_, est_Q_0, model == "exponential", NR_it_max, debug,
-      EKF_inv_Cov_method);
+      EKF_inv_Cov_method, n_threads);
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
 
   } else if (method == "UKF"){
@@ -1480,7 +1482,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR,
-      EKF_inv_Cov_method);
+      EKF_inv_Cov_method, n_threads);
 
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);

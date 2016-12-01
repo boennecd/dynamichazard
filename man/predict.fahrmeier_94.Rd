@@ -6,7 +6,7 @@
 \usage{
 \method{predict}{fahrmeier_94}(object, new_data, type = c("response", "term"),
   tstart = "start", tstop = "stop", use_parallel = F, sds = F,
-  max_threads = -1, ...)
+  max_threads = getOption("ddhazard_max_threads"), ...)
 }
 \arguments{
 \item{object}{Result of a \code{\link{ddhazard}} call}
