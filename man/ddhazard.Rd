@@ -2,8 +2,7 @@
 % Please edit documentation in R/ddhazard.R
 \name{ddhazard}
 \alias{ddhazard}
-\title{Function to fit dynamic discrete hazard models
-#' Function to fit dynamic discrete hazard models using state space models}
+\title{Function to fit dynamic discrete hazard models}
 \usage{
 ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
   order = 1, control = list(), verbose = F)
@@ -52,6 +51,9 @@ A list with class \code{fahrmeier_94}. The list contains:
 \code{hazard_first_deriv}\verb{ }\tab First derivative of the hazard function with respect to the linear predictor
 }
 }
+\description{
+Function to fit dynamic discrete hazard models using state space models
+}
 \details{
 This function can be used to estimate a binary regression where the regression parameters follows a given order random walk. The order is specified by the \code{order} argument. 1. and 2. order random walks is implemented. The regression parameters are updated at time \code{by}, 2\code{by}, ..., \code{max_T}. See the vignette 'ddhazard' for more details
 
@@ -73,7 +75,7 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \code{eps}\verb{  }\tab Tolerance parameter for the EM-algorithm\cr
 \code{est_Q_0}\verb{  }\tab\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}\cr
 \code{save_risk_set}\verb{  }\tab \code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory\cr
-\code{save_data}\verb{  }\tab \code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory
+\code{save_data}\verb{  }\tab \code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory \cr
 \code{EKF_inv_Cov_method}\verb{ }\tab Which form of the inverse covariance matrix should used in EKF with the exponential model. \code{"org"} gives the orginal covariance matrix and \code{"not org"} the covariance matrix where each observation is scaled by 1 minus the squared correlation \cr
 \code{eps_fixed_parems}\verb{ }\tab Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects
 }

@@ -1,5 +1,5 @@
 #' @title Static GLM fit for survival models
-#' Function used to get design matrix and weights for a static fit for survivals models where observations are binned into intervals
+#' @description Function used to get design matrix and weights for a static fit for survivals models where observations are binned into intervals
 #'
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
 #' @param data Data frame or environment containing the outcome and co-variates

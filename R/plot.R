@@ -1,5 +1,5 @@
 #' @title Plots for \code{\link{ddhazard}}
-#' Plot to illustrate the estimate state space variables from a \code{\link{ddhazard}} fit
+#' @description Plot to illustrate the estimate state space variables from a \code{\link{ddhazard}} fit
 #'
 #' @param x Result of \code{\link{ddhazard}} call
 #' @param type Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters
@@ -52,7 +52,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
 }
 
 #' @title State space error plot
-#' Plot function for state space errors from \code{\link{ddhazard}} fit
+#' @description Plot function for state space errors from \code{\link{ddhazard}} fit
 #'
 #' @param x Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors
 #' @param mod The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call

@@ -2,8 +2,7 @@
 % Please edit documentation in R/residuals.R
 \name{residuals.fahrmeier_94}
 \alias{residuals.fahrmeier_94}
-\title{Residuals for \code{\link{ddhazard}}
-Residuals function for the result of a \code{\link{ddhazard}} fit}
+\title{Residuals for \code{\link{ddhazard}}}
 \usage{
 \method{residuals}{fahrmeier_94}(object, type = c("std_space_error",
   "space_error", "pearson", "raw"), data = NULL, ...)
@@ -16,6 +15,9 @@ Residuals function for the result of a \code{\link{ddhazard}} fit}
 \item{data}{Data frame with data for Pearson or raw residuals}
 
 \item{...}{Not used}
+}
+\description{
+Residuals function for the result of a \code{\link{ddhazard}} fit
 }
 \section{Pearson and raw residuals}{
 

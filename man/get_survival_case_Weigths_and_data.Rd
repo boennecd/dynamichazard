@@ -2,8 +2,7 @@
 % Please edit documentation in R/static_glm.R
 \name{get_survival_case_weigths_and_data}
 \alias{get_survival_case_weigths_and_data}
-\title{Static GLM fit for survival models
-Function used to get design matrix and weights for a static fit for survivals models where observations are binned into intervals}
+\title{Static GLM fit for survival models}
 \usage{
 get_survival_case_weigths_and_data(formula, data, by, max_T, id, init_weights,
   risk_obj, use_weights = T, is_for_discrete_model = T)
@@ -29,6 +28,9 @@ get_survival_case_weigths_and_data(formula, data, by, max_T, id, init_weights,
 }
 \value{
 Returns a data frame with the design matrix from the formula where the following is added: column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}
+}
+\description{
+Function used to get design matrix and weights for a static fit for survivals models where observations are binned into intervals
 }
 \details{
 This function is used to get the data frame for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For example, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Next, consider an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the co-variates and \code{weights} is the weights for the regression. Consider another individual who does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 3)}

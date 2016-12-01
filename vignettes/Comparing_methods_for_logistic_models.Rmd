@@ -30,6 +30,7 @@ knitr::knit_hooks$set(
 
 knitr::opts_chunk$set(echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6,
                       warning = F, message = F)
+knitr::opts_knit$set(warning = F, message = F)
 ```
 
 \renewcommand{\vec}[1]{\bm{#1}}

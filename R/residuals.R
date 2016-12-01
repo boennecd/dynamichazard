@@ -1,5 +1,5 @@
 #' @title Residuals for \code{\link{ddhazard}}
-#' Residuals function for the result of a \code{\link{ddhazard}} fit
+#' @description Residuals function for the result of a \code{\link{ddhazard}} fit
 #'
 #' @param object Result of \code{\link{ddhazard}} call
 #' @param type Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details
