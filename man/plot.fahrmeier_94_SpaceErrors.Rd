@@ -2,8 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.fahrmeier_94_SpaceErrors}
 \alias{plot.fahrmeier_94_SpaceErrors}
-\title{State space error plot
-Plot function for state space errors from \code{\link{ddhazard}} fit}
+\title{State space error plot}
 \usage{
 \method{plot}{fahrmeier_94_SpaceErrors}(x, mod, cov_index = NA,
   t_index = NA, p_cex = par()$cex * 0.2, pch = 16,
@@ -26,5 +25,8 @@ Plot function for state space errors from \code{\link{ddhazard}} fit}
 \item{x_tick_loc, x_tick_mark}{\code{at} and \code{labels} arguments passed to \code{axis}}
 
 \item{...}{Arguments passed to plot}
+}
+\description{
+Plot function for state space errors from \code{\link{ddhazard}} fit
 }
 
