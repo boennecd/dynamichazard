@@ -2,7 +2,7 @@
 % Please edit documentation in R/predict.R
 \name{predict.fahrmeier_94}
 \alias{predict.fahrmeier_94}
-\title{Predict function for result of \code{\link{ddhazard}}}
+\title{Predict function for the result of \code{\link{ddhazard}}}
 \usage{
 \method{predict}{fahrmeier_94}(object, new_data, type = c("response", "term"),
   tstart = "start", tstop = "stop", use_parallel = F, sds = F,
@@ -28,7 +28,7 @@
 \item{...}{Not used}
 }
 \description{
-Predict function for result of \code{\link{ddhazard}}
+Predict function for the result of \code{\link{ddhazard}}
 }
 \section{Term}{
 
@@ -36,7 +36,7 @@ The result of \code{type = "term"} is a list with the following elements
 \tabular{ll}{
 \code{terms} \verb{  }\tab Is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms\cr
 \code{sds} \verb{  }\tab Similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices\cr
-\code{fixed_terms} \verb{  }\tab Vector of the fixed effects for each observation
+\code{fixed_terms} \verb{  }\tab Vector of the fixed effect terms for each observation
 }
 }
 
@@ -45,8 +45,8 @@ The result of \code{type = "term"} is a list with the following elements
 The result of \code{type = "response"} is a list with the elements below. The function check if there are columns in \code{new_data} which's names match \code{tstart} and \code{tstop}. If not, then each row in new data will get a predicted probability of dying in every bin.
 \tabular{ll}{
 \code{fits} \verb{  }\tab Fitted probability of dying \cr
-\code{istart} \verb{  }\tab Vector with the start time of the first bin the elements in \code{fits} are in \cr
-\code{istop} \verb{  }\tab Vector with the end times of the last bin the elements in \code{fits} are in
+\code{istart} \verb{  }\tab Vector with the index of the first bin the elements in \code{fits} is in \cr
+\code{istop} \verb{  }\tab Vector with the index of the last bin the elements in \code{fits} is in
 }
 }
 
