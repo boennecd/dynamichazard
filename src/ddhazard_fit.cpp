@@ -358,12 +358,12 @@ inline double var_chance_die(const double v, const double inv_exp_v){
            v * (1 - v * (3/2 - v * (7/6 - v * (5/8 - v * 31 /120)))));
 }
 
-inline double covar(const double v, const double exp_v,
+inline double covar(const double v,
                     const double inv_exp_v, const double exp_eta){
   // Taylor series from http://www.wolframalpha.com/input/?i=-1+*+exp(-2v)+*+(1+%2B+v+*+exp(v)+-+exp(v))
   return(
     (v >= 1e-4) ?
-  -1 * inv_exp_v * inv_exp_v * (1 + v * exp_v - exp_v) / exp_eta :
+  -1 * inv_exp_v * (inv_exp_v + v - 1.) / exp_eta :
   -v * v * (1/2 - v * (2/3 - v * (11/24 - v * (13/60 - 19 * v / 240)))) / exp_eta);
 }}
 
@@ -1153,65 +1153,46 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     }
 
     // Compute variance and mean
-    static bool have_seen_low_v = false;
-    const static double treshold_low_v = -1 * log(.999);
-
-    static bool have_seen_up_v = false;
-    const static double treshold_up_v = -1 * log(0.001);
-
     for(arma::uword i = 0; i < sigma_points.n_cols; ++i){
       double w = (i == 0) ? w_0 : w_i;
       double w_c = (i == 0) ? w_0_c : w_i;
 
-      const arma::vec eta = offsets + p_dat.X.cols(r_set).t() * sigma_points.col(i);
+      const arma::vec exp_etas = arma::trunc_exp(
+        offsets + p_dat.X.cols(r_set).t() * sigma_points.col(i));
 
       for(arma::uword j = 0; j < n_risk; ++j){
-        double e = eta(j);
-        double exp_eta = exp(e);
-        double v = at_risk_length(j) * exp_eta;
-
-        if(v <= treshold_low_v){
-          if(!have_seen_low_v){
-            std::stringstream ss;
-            ss << "[at risk length] * exp([linear predictor]) was below the threshold of " << treshold_low_v
-               << " at least once doing estimation. The linear predictors are left truncated in these cases doing estimation";
-            Rcpp::warning(ss.str());
-            have_seen_low_v = true;
-          }
-
-          e = log(treshold_low_v / at_risk_length(j));
-          exp_eta = exp(e);
-          v = at_risk_length(j) * exp_eta;
-
-        } else if(v >= treshold_up_v){
-          if(!have_seen_up_v){
-            std::stringstream ss;
-            ss << "[at risk length] * exp([linear predictor]) was above the threshold of " << treshold_up_v
-               << " at least once doing estimation. The linear predictors are right truncated in these cases doing estimation";
-            Rcpp::warning(ss.str());
-            have_seen_up_v = true;
-          }
-
-          e = log(treshold_up_v / at_risk_length(j));
-          exp_eta = exp(e);
-          v = at_risk_length(j) * exp_eta;
-        }
+        const double exp_eta = exp_etas(j);
+        const double v = at_risk_length(j) * exp_eta;
 
         const double inv_exp_v = exp(-1 * v);
 
         O(j, i) = exp_model_funcs::expect_chance_die(v, inv_exp_v);
         vars(j) += w_c * exp_model_funcs::var_chance_die(v, inv_exp_v);
 
-        covars(j) += w_c * exp_model_funcs::covar(v, exp(v), inv_exp_v, exp_eta);
+        covars(j) += w_c * exp_model_funcs::covar(v, inv_exp_v, exp_eta);
 
         O(j + n_risk, i) = exp_model_funcs::expect_time(
           v, at_risk_length(j), inv_exp_v, exp_eta);
         vars(j + n_risk) += w_c * exp_model_funcs::var_wait_time(
           v, at_risk_length(j), exp_eta, inv_exp_v);
+
+        //TODO: Delete
+        if(std::isnan(O(j, i)))
+          Rcpp::Rcout << "expec die is the bugger" << std::endl;
+        if(std::isnan(vars(j)))
+          Rcpp::Rcout << "var die is the bugger" << std::endl;
+        if(std::isnan(covars(j)))
+          Rcpp::Rcout << "covar is the bugger" << std::endl;
+        if(std::isnan(O(j + n_risk, i)))
+          Rcpp::Rcout << "expec time is the bugger" << std::endl;
+        if(std::isnan(vars(j + n_risk)))
+          Rcpp::Rcout << "var time is the bugger" << std::endl;
       }
 
       y_bar += w * O.col(i);
     }
+
+    vars += p_dat.ridge_eps;
 
     // ** 4: Compute c **
     // Defines span to avoid 40-error

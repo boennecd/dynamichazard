@@ -1033,6 +1033,8 @@ The EKF method for the continous time model has shown to have issues with diverg
 The direct formulas for the conditional mean, conditional variance and derivatives of the conditional mean are numerically unstable for certain combinations of interval lengths ($t_{i,s} - t_{i, s - 1}$) and the linear predictor ($\eta = \vec{x}_{is}^T \vec{\alpha}_{\Lceil{t_{i,s}}}$). In particular they are subject to cancellation. This can cause both high relative errors and even wrong sign in some of the cases. Thus, Lauren series or Taylor series are used for numerically unstable computation. This requires no action for user but is stressed for readers who worry after seeing both the conditional mean and conditional variance of $\Delta_{i,s}$
 
 ## UKF
+TODO: Re-write to ridge regression like solution
+
 The implementation is like the implementation of the UKF for the logit model. We have a similar issue when $\widehat{\mat{H}}^{-1}$ approach infinite for certain settings of at risk length and linear predictor. For simplicity of notation, denote the risk length of a given observation by $\delta$ and the linear predictor by $\eta$. Then we solve the issue by left or right truncating $\eta$ such that the probability of dying is bounded. That is, we set $\eta$ such that: 
 $$\epsilon \leq 1 - \exp \Lparen{-\exp(\eta)\delta} \leq 1 - \epsilon$$
 
