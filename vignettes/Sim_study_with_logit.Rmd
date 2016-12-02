@@ -3,6 +3,7 @@ title: "Simulation study with logit model"
 author: "Benjamin Christoffersen"
 date: "`r Sys.Date()`"
 output: pdf_document
+csl: bib_style.csl
 ---
 
 ```{r setup, include=FALSE}
