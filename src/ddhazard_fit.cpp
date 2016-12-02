@@ -3,32 +3,6 @@
 
 using uword = arma::uword;
 
-constexpr double trunc_exp_delta = 1e-4;
-constexpr double lower_trunc_exp_log_thres =
-  log((1 - sqrt(1 - 4 * trunc_exp_delta) - 2 * trunc_exp_delta) / (2 * trunc_exp_delta));
-constexpr double lower_trunc_exp_exp_thres = exp(lower_trunc_exp_log_thres);
-constexpr double upper_trunc_exp_log_thres =
-  log((1 + sqrt(1 - 4 * trunc_exp_delta) - 2 * trunc_exp_delta) / (2 * trunc_exp_delta));
-constexpr double upper_trunc_exp_exp_thres = exp(upper_trunc_exp_log_thres);
-
-struct {
-  template<typename T>
-  T operator()(T &&val){
-    if(val <= lower_trunc_exp_log_thres)
-    {
-      val = lower_trunc_exp_exp_thres;
-    } else if(val >= upper_trunc_exp_log_thres) {
-      val = upper_trunc_exp_exp_thres;
-    }
-    else
-    {
-      val = std::exp(val);
-    }
-    return(val);
-  }
-} trunc_exp_functor;
-
-
 // Define convergence criteria
 inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &new_est){
   return arma::norm(prev_est - new_est, 2) / (arma::norm(prev_est, 2) + 1.0e-10);
@@ -89,6 +63,8 @@ public:
   const double eps_fixed_parems;
   const int max_it_fixed_parems;
 
+  const double ridge_eps;
+
   const bool debug;
   const double LR;
   const std::string inv_Cov_method;
@@ -126,7 +102,8 @@ public:
                const bool debug_ = false,
                Rcpp::Nullable<Rcpp::NumericVector> LR_ = R_NilValue,
                const std::string inv_Cov_method_ = "org",
-               const int n_threads_ = -1):
+               const int n_threads_ = -1,
+               const double ridge_eps_ = .0001):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
     n_parems(a_0.size() / order_),
@@ -151,6 +128,8 @@ public:
 
     eps_fixed_parems(eps_fixed_parems_),
     max_it_fixed_parems(max_it_fixed_parems_),
+    ridge_eps(ridge_eps_),
+
     debug(debug_),
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
     inv_Cov_method(inv_Cov_method_),
@@ -196,7 +175,6 @@ public:
   arma::mat U;
 
   // Needed for lag one covariance
-  // TODO: Are they needed?
   arma::mat z_dot;
   arma::vec H_diag_inv;
   arma::mat K_d;
@@ -856,7 +834,7 @@ public:
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
       arma::mat Z_t = (sigma_points.t() * p_dat.X.cols(r_set)).t(); // we transpose due to the column-major
-      Z_t.transform(trunc_exp_functor);
+      Z_t = arma::trunc_exp(Z_t);
       Z_t.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
       // Compute y_bar, P_a_v and P_v_v
@@ -875,6 +853,8 @@ public:
         P_v_v += (w_i * (Z_t.unsafe_col(i) - y_bar)) * (Z_t.unsafe_col(i) - y_bar).t() +
           arma::diagmat(w_i * Z_t.unsafe_col(i) % (1 - Z_t.unsafe_col(i)));
       }
+
+      P_v_v.diag() += p_dat.ridge_eps;
 
       // Compute new estimates
       if(!arma::inv_sympd(P_v_v, P_v_v)){ // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
@@ -1085,7 +1065,7 @@ class UKF_solver_New_logit : public UKF_solver_New{
 
     O.each_col() += offsets;
 
-    O.transform(trunc_exp_functor);
+    O = arma::trunc_exp(O);
 
     O.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
@@ -1098,6 +1078,8 @@ class UKF_solver_New_logit : public UKF_solver_New{
     for(uword i = 1; i < O.n_cols; ++i){
       vars += w_i * (O.unsafe_col(i) % (1.0 - O.unsafe_col(i)));
     }
+
+    vars += p_dat.ridge_eps;
 
     // ** 4: Compute c **
     // Substract y_bar to get deviations
@@ -1137,8 +1119,6 @@ public:
 
 
 class UKF_solver_New_exponential : public UKF_solver_New{
-  static constexpr double min_var = trunc_exp_delta;
-
   void Compute_intermediates(const arma::uvec &r_set,
                              const arma::vec offsets,
                              const int t,
