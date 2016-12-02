@@ -239,7 +239,8 @@ ddhazard = function(formula, data,
                                  EKF_inv_Cov_method = control$EKF_inv_Cov_method,
                                  n_threads = control$n_threads)
     }, error = function(e)
-      if(!grepl("^ddhazard_fit_cpp estimation error:", e$message))
+      if(length(k_vals) == 1 ||
+          !grepl("^ddhazard_fit_cpp estimation error:", e$message))
         stop(e))
 
     LR <- control$LR / control$LR_decrease_fac^(k)

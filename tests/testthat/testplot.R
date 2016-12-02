@@ -1,3 +1,7 @@
+if(interactive()){
+  library(testthat)
+}
+
 # Test first order
 test_that("Expecting plot calls to succed with first order model", {
   arg_list <- list(

@@ -447,6 +447,8 @@ $$\left. \partial h(\eta)/ \partial \eta \right\vert_{\eta = \vec{z}_{it}^T \vec
 Given the variance $\mat{H}_t(\vec{\alpha}_t)$ and expected mean $h(\eta)$ are bound this means that all the terms are on a reasonably stable scale for all values of the linear predictor $\vec{\alpha}_t^T\vec{x}_{it}$
 
 ## UKF
+TODO: Re-write to ridge regression like solution
+
 This is not the case for the UKF method and the logistic model. We scale by $\wmat{H}^{-1}$ when we compute $\mat{G}$ and $\tilde{\vec{y}}$ which will approach infinity as linear predictor gets large in absolute value. For this reason, we truncate the linear predictor $\eta_{it} = \vec{\alpha}_t^T\vec{x}_{it}$ such that the variance cannot be less than some pre-specified quantity $\delta$. Effectively this means that we set:
 $$\begin{aligned}
   &h(\eta)(1-h(\eta) \geq \delta, \qquad \delta \in (0, 1/4) \\
