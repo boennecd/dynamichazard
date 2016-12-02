@@ -6,6 +6,7 @@ header-includes:
    - \usepackage{bm}
 output: pdf_document
 bibliography: pbc_data.bib
+csl: bib_style.csl
 vignette: >
   %\VignetteIndexEntry{Comparing methods for time varying logistic models}
   %\VignetteEngine{knitr::rmarkdown}
