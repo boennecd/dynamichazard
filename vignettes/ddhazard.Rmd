@@ -463,30 +463,6 @@ $$\frac{1 - 2 \delta - \sqrt{1-4 \delta }}{1 - \sqrt{1-4 \delta}}
   
 The current implementation uses $\delta = 10^{-4}$ 
 
-## Fixed effects
-Fixed effects in the M-step is estimated like a regular GLM with a logistic link function where each individuals' observation will get an observation in the new model with an individual offset for each bin the observation is in. Say for instance that we want to fit a model to the following data frame: 
-```{r, echo=FALSE}
-set.seed(1010101012)
-data_frame <- 
-  data.frame(id = c(1, 1, 1, 2, 2),
-             tstop = c(0, 2, 3, 0, 2), tstart = c(2, 3, 4, 2, 4), y = c(0, 0, 1, 0, 0), 
-             x1 = round(rnorm(5), 2), x2 = round(rnorm(5), 2))
-```
-
-```{r}
-# The data we use
-head(data_frame)
-```
-
-```{r, eval=FALSE}
-# The fit
-fit <- ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), data_frame, 
-                by = 1, # bin lengths are 1
-                id = data_frame$id)
-```
-
-The model is with one fixed effect for `x2` and a time-varying effect for `x1`. The individual with `id = 1` will yield 4 observation in the M-step: two for the first row, one for the second row and one for the third row. The first row will have two observations as it crosses two bins. Each observation in the M-step will have a separate offset given by $\emNotee{\vec{a}}{t}{d}$ times the value of `x1` where $t$ match the bin number. For example, the third rows' observation will have an offset of $\emNotee{\vec{a}}{4}{d}$ times `r data_frame$x1[3]`
-
 ## Binning
 ```{r binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of binning. See the text for explanation", fig.height=3}
 par(cex = .8, mar = c(1, 4, 1, 2))
