@@ -441,6 +441,8 @@ The estimation will stop if the criteria given by $\epsilon$ is not meet within 
 The logistic model is fitted by setting `model = "logit"` in the call to `ddhazard`. The link function $h$ is defined as inverse logit function $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The following paragraphs will cover a few comments to the EKF and UKF implementation. This is followed by some comments about the loss of information due to binning which motivates the continous time model
 
 ## EKF
+[TODO: Write about ridge regression]
+
 From a numerical point of view, each individual computation is stable with EKF method for the logistic model. The main reason is that:
 $$\left. \partial h(\eta)/ \partial \eta \right\vert_{\eta = \vec{z}_{it}^T \vec{\alpha}_t} = H_{iit}(\vec{\alpha}_t)$$
 

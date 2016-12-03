@@ -12,7 +12,7 @@ knitr::knit_hooks$set(default_options = function(before, options, envir) {
       options(digits = 4)
 })
 
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, message = FALSE, warning = FALSE, default_options = T)
 ```
 
 # Intro 
@@ -84,7 +84,7 @@ The following values will be used in the simulation:
 ns <- c(200, 800, 2000) # Number of series
 n_beta <- 5             # Number of covariates
 T_max <- 10             # The last time we observe
-n_sims <- 100           # Number of simulation in each run
+n_sims <- 3           # Number of simulation in each run
 
 gsub("(^.+)(/dynamichazard.+$)", "...\\2", getwd())
 source("../R/test_utils.R")
@@ -293,7 +293,9 @@ fit_funcs$gam <- function(s = sims$res){
       s(t, bs = "cr", k = 10, by = x4) + 
       s(t, bs = "cr", k = 10, by = x5),
   family = binomial, data = dat_frame,
-  method = "GCV.Cp")
+  method = "GCV.Cp", 
+  control = 
+    gam.control(nthreads = parallel::detectCores() - 1)) # Use parallel
 }
 
 # fit model
@@ -782,6 +784,9 @@ for(i in 1:N){
 colnames(out) <- c("Static", "EKF", "EKF with extra correction", "UKF")
 colMeans(out[complete.cases(out), ])
 
+# Print median 
+apply(out[complete.cases(out), ], 2, median)
+
 # Print number of cases where all methods succeed to estimate
 sum(complete.cases(out))
 ```
@@ -791,7 +796,8 @@ Above, we do `r N` simulations with `r n` series in each simulation. The EKF wit
 ```{r}
 # Look at number of cases where each method got each rank
 knitr::kable(apply(t(apply(out[complete.cases(out), ], 1, rank)), 2, function(x) xtabs(~x)), 
-             caption = "Number of times each set got a given rank in terms of Brier Score")
+             caption = "Number of times each set got a given rank in terms of Brier Score", 
+             row.names = T)
 ```
 
 The main take away is that the EKF method with the extra iteration in the correction step does better with these specification in terms of getting the lowest mean out-sample Brier score and getting the lowest Brier score in most of the simulation
