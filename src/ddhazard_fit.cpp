@@ -61,7 +61,7 @@ public:
   const double min_start;
 
   const double eps_fixed_parems;
-  const int max_it_fixed_parems;
+  const int max_it_fixed_params;
 
   const double ridge_eps;
 
@@ -94,7 +94,7 @@ public:
                const Rcpp::List &risk_obj,
                const arma::mat &F__,
                const double eps_fixed_parems_,
-               const int max_it_fixed_parems_,
+               const int max_it_fixed_params_,
                const int n_max = 100, const double eps = 0.001,
                const bool verbose = false,
                const int order_ = 1, const bool est_Q_0 = true,
@@ -125,7 +125,7 @@ public:
     min_start(Rcpp::as<double>(risk_obj["min_start"])),
 
     eps_fixed_parems(eps_fixed_parems_),
-    max_it_fixed_parems(max_it_fixed_parems_),
+    max_it_fixed_params(max_it_fixed_params_),
     ridge_eps(ridge_eps_),
 
     debug(debug_),
@@ -185,7 +185,7 @@ public:
                    Rcpp::Nullable<Rcpp::NumericVector> NR_eps_,
                    Rcpp::Nullable<Rcpp::NumericVector> LR_,
                    const double eps_fixed_parems_,
-                   const int max_it_fixed_parems_,
+                   const int max_it_fixed_params_,
                    const int n_max = 100, const double eps = 0.001,
                    const bool verbose = false,
                    const int order_ = 1, const bool est_Q_0 = true,
@@ -196,7 +196,7 @@ public:
                    const double ridge_eps_ = .0001):
     problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
                  Q_0_, Q_, risk_obj, F__,
-                 eps_fixed_parems_, max_it_fixed_parems_,
+                 eps_fixed_parems_, max_it_fixed_params_,
                  n_max, eps, verbose,
                  order_, est_Q_0, debug_,
                  LR_,
@@ -1326,14 +1326,14 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
     old_beta = p_data->fixed_parems;
     p_data->fixed_parems = bigglm_regcf(qr);
 
-  } while(++it_outer < p_data->max_it_fixed_parems && // Key that this the first condition we check when we use &&
+  } while(++it_outer < p_data->max_it_fixed_params && // Key that this the first condition we check when we use &&
     arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems);
 
   static bool failed_to_converge_once = false;
-  if(it_outer == p_data->max_it_fixed_parems && !failed_to_converge_once){
+  if(it_outer == p_data->max_it_fixed_params && !failed_to_converge_once){
     failed_to_converge_once = true;
     std::stringstream msg;
-    msg << "Failed to estimate fixed effects in " << p_data->max_it_fixed_parems << " iterations at least once" << std::endl;
+    msg << "Failed to estimate fixed effects in " << p_data->max_it_fixed_params << " iterations at least once" << std::endl;
     Rcpp::warning(msg.str());
   }
 }
@@ -1349,7 +1349,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             arma::mat Q, // similary this is a copy
                             const Rcpp::List &risk_obj,
                             const arma::mat &F_,
-                            const double eps_fixed_parems, const int max_it_fixed_parems,
+                            const double eps_fixed_parems, const int max_it_fixed_params,
                             const arma::uword n_max = 100, const double eps = 0.001,
                             const arma::uword verbose = 0,
                             const int order_ = 1, const bool est_Q_0 = true,
@@ -1396,7 +1396,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
       NR_eps, LR,
-      eps_fixed_parems, max_it_fixed_parems,
+      eps_fixed_parems, max_it_fixed_params,
       n_max, eps, verbose,
       order_, est_Q_0, model == "exponential", NR_it_max, debug, n_threads,
       ridge_eps);
@@ -1409,7 +1409,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
-      eps_fixed_parems, max_it_fixed_parems,
+      eps_fixed_parems, max_it_fixed_params,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR, n_threads, ridge_eps);
 
@@ -1429,7 +1429,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
-      eps_fixed_parems, max_it_fixed_parems,
+      eps_fixed_parems, max_it_fixed_params,
       n_max, eps, verbose,
       order_, est_Q_0, debug);
 

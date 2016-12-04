@@ -17,7 +17,7 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 
   suppressWarnings(
     res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
-                     control = list(eps_fixed_parems = 1e-3, fixed_effect_chunk_size = 1e3, max_it_fixed_parems = 10)))
+                     control = list(eps_fixed_parems = 1e-3, fixed_effect_chunk_size = 1e3, max_it_fixed_params = 10)))
 
   tmp_design <- get_survival_case_weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10)
@@ -145,7 +145,7 @@ test_that("Changing fixed effect control parems changes the result", {
 
   # Should make a difference
   arg_list_tmp <- arg_list
-  arg_list_tmp$control$max_it_fixed_parems <- 5
+  arg_list_tmp$control$max_it_fixed_params <- 5
   suppressWarnings(res2 <- do.call(ddhazard, arg_list_tmp))
   expect_true(!all(res2$fixed_effects == res1$fixed_effects))
 })
