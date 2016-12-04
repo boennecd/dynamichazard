@@ -240,6 +240,7 @@ public:
 namespace exp_model_funcs {
 // Namespace to avoid namespace pollution and avoid error-40 for Taylor/Laruens series
 // By definition:
+//  eps                 epsilon in ridge regression like solution
 //  a                   at risk length
 //  eta                 linear predictor x^T * beta
 //  v                   a * exp(eta)
@@ -332,12 +333,71 @@ inline double inv_var_fac_cross(const double v, const double exp_v, const double
   return(res * exp_eta);
 }
 
+
+
+
+
+inline double ridge_inv_var_fac_chance_to_die(const double v, const double exp_eta,
+                                              const double inv_exp_v, const double eps){
+  return((v >= 1e-5) ?
+           (1 + eps * exp_eta * exp_eta - inv_exp_v * inv_exp_v - 2*inv_exp_v*v)/
+             (eps + eps * eps *exp_eta * exp_eta + inv_exp_v * inv_exp_v * inv_exp_v +
+               inv_exp_v * (
+                   (1 + eps*exp_eta * exp_eta - 2*eps*v) +
+                   inv_exp_v * (-2 - eps - eps*exp_eta * exp_eta - v * v))) :
+
+           // Second order taylor expansion around v = 0
+           std::min(1/eps, 1 / eps - (v / eps) / eps + pow(v / eps, 2) * (1/eps + 3./2.))
+  );
+}
+
+inline double ridge_inv_var_fac_wait_time(const double v, const double exp_eta,
+                                          const double inv_exp_v, const double eps){
+  return((v >= 1e-5) ?
+           (eps * exp_eta * exp_eta + exp_eta * exp_eta * inv_exp_v - exp_eta * exp_eta * inv_exp_v * inv_exp_v)/
+             (eps + eps * eps * exp_eta * exp_eta + inv_exp_v * inv_exp_v * inv_exp_v +
+              inv_exp_v * (
+                  (1 + eps * exp_eta * exp_eta - 2*eps*v) +
+                  inv_exp_v * (-2. - eps - eps*exp_eta * exp_eta - v * v))) :
+
+           // Taylor expansion arround v = 0
+           std::min(1/eps, 1 / eps - v * pow((v / eps) / exp_eta, 2) * (1/3 - (v / eps) * (3 + 4 * eps) / 12)));
+}
+
+inline double ridge_inv_var_fac_cross(const double v, const double inv_exp_v,
+                                      const double exp_eta, const double a,
+                                      const double eps){
+  return((v >= 1e-5) ?
+           ((-exp_eta + a*exp_eta * exp_eta)*inv_exp_v + exp_eta*inv_exp_v*inv_exp_v)/
+             (eps + eps*eps*exp_eta*exp_eta + inv_exp_v*inv_exp_v*inv_exp_v +
+               inv_exp_v*(
+                   (1 + eps*exp_eta*exp_eta - 2*eps*v) +
+                    inv_exp_v*(-2 - eps - eps*exp_eta*exp_eta - v*v))) :
+
+           // Taylor expansion arround v = 0 and eps = 0.1
+           std::max(0., 10000*(0.060000000000000005*a - 0.8*a*eps + 3.*a*eps*eps +
+             (-1.06*a + 15.799999999999997*a*eps - 62.99999999999999*a*eps*eps -
+             0.060000000000000005/exp_eta + (0.8*eps)/exp_eta - (3.*eps*eps)/exp_eta)*v +
+             (17.529999999999994*a - 277.8999999999999*a*eps + 1151.4999999999995*a*eps*eps +
+             1.0899999999999996/exp_eta - (16.199999999999996*eps)/exp_eta +
+             (64.49999999999997*eps*eps)/exp_eta)*v*v)));
+}
+
+
+
+
 inline double dh_fac_die(const double v, const double inv_exp_v){
-  return(v * inv_exp_v);
+  return((v >= 1e-2) ?
+           v * inv_exp_v :
+           // Taylor series from http://www.wolframalpha.com/input/?i=v+*+exp(-v)
+           v * (1 - v * (1. - v * (1/2 - v * (1/6 -v /24)))));
 }
 
 inline double dh_fac_time(const double v, const double inv_exp_v, const double inv_exp_eta){
-  return((inv_exp_v - 1 + inv_exp_v * v) * inv_exp_eta);
+  return((v >= 1e-2) ?
+           (inv_exp_v - 1 + inv_exp_v * v) * inv_exp_eta :
+           // Taylor series from http://www.wolframalpha.com/input/?i=(exp(-v)+-+1+%2B+exp(-v)+*+v)+*+exp(-v)
+           -v * v *(1/2 - v * (5/6 - v * (17/24 - v * (49/120 - v * 43 /240)))));
 }
 
 inline double var_wait_time(const double v, const double a,  const double exp_eta, const double inv_exp_v){
@@ -492,11 +552,23 @@ class EKF_helper{
       double die_term_inv;
 
       if(dat.inv_Cov_method == "org"){
-        cross_term_inv = exp_model_funcs::inv_var_fac_cross(v, exp_v, exp_eta);
-        t_term_inv = exp_model_funcs::inv_var_fac_wait_time(v, exp_v, exp_eta);
-        die_term_inv = exp_model_funcs::inv_var_fac_chance_to_die(v, exp_v);
+        cross_term_inv = exp_model_funcs::ridge_inv_var_fac_cross(
+          v, inv_exp_v, exp_eta, at_risk_length, dat.ridge_eps);
+
+        t_term_inv = exp_model_funcs::ridge_inv_var_fac_wait_time(
+          v, exp_eta, inv_exp_v, dat.ridge_eps);
+
+        die_term_inv = exp_model_funcs::ridge_inv_var_fac_chance_to_die(
+          v, exp_eta, inv_exp_v, dat.ridge_eps);
+
+        Rcpp::Rcout << "v: " << v << " a: " << at_risk_length << " eta: " << eta
+                    << " K12: "<< cross_term_inv
+                    << " K22: " << t_term_inv
+                    << " K11: " << die_term_inv;
+
 
       } else{
+        // TODO: Delete or keep?
         cross_term_inv = exp_model_funcs::suggest_inv_cov_cross_term(
            v, exp_eta, inv_exp_v, exp_v);
         t_term_inv = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
@@ -506,6 +578,8 @@ class EKF_helper{
 
       const double dh_fac_die = exp_model_funcs::dh_fac_die(v, inv_exp_v);
       const double dh_fac_time = exp_model_funcs::dh_fac_time(v, inv_exp_v, inv_exp_eta);
+
+      Rcpp::Rcout << " d die: " << dh_fac_die << " d time: " << dh_fac_time << std::endl;
 
       u_ += x_ * (
         dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time)
