@@ -34,7 +34,7 @@
 #' \code{est_Q_0}\verb{  }\tab\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}\cr
 #' \code{save_risk_set}\verb{  }\tab \code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory\cr
 #' \code{save_data}\verb{  }\tab \code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory \cr
-#' \code{EKF_inv_Cov_method}\verb{ }\tab Which form of the inverse covariance matrix should used in EKF with the exponential model. \code{"org"} gives the orginal covariance matrix and \code{"not org"} the covariance matrix where each observation is scaled by 1 minus the squared correlation \cr
+#' \code{ridge_eps}\verb{ }\tab Penalty term added to the diagonal of the covariance matrix of the observational equation in either the EKF or UKF \cr
 #' \code{eps_fixed_parems}\verb{ }\tab Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects
 #'}
 #'
@@ -116,7 +116,7 @@ ddhazard = function(formula, data,
                           save_data = T, eps_fixed_parems = 1e-3,
                           max_it_fixed_parems = 10, fixed_effect_chunk_size = 1e4,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
-                          LR_decrease_fac = 1.5, EKF_inv_Cov_method = "org",
+                          LR_decrease_fac = 1.5,
                           n_threads = getOption("ddhazard_max_threads"),
                           ridge_eps = if((is.null(control$method) ||
                                           control$method == "EKF") &&
@@ -128,6 +128,9 @@ ddhazard = function(formula, data,
 
   control_default[control_match] <- control
   control <- control_default
+
+  if(control$ridge_eps <= 0)
+    stop("Method not implemented with penalty term (control$ridge_eps) equal to ", control$ridge_eps)
 
   if(verbose)
     message("Finding Risk set")
@@ -239,7 +242,6 @@ ddhazard = function(formula, data,
                                  max_it_fixed_parems = control$max_it_fixed_parems,
                                  fixed_effect_chunk_size = control$fixed_effect_chunk_size,
                                  debug = control$debug,
-                                 EKF_inv_Cov_method = control$EKF_inv_Cov_method,
                                  n_threads = control$n_threads,
                                  ridge_eps = control$ridge_eps)
     }, error = function(e)

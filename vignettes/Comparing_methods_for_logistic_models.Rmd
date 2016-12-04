@@ -307,8 +307,9 @@ Next, we plot the coefficient. Notice that the coefficient are close the estimat
 # Then we refit the model
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                         log(albumin) + log(protime) + log(bili), pbc2,
-                   id = pbc2$id, by = 50, max_T = 3600, # <-- by is changed!
-                   Q_0 = diag(rep(10, 6)), Q = diag(rep(0.001, 6)))
+                   id = pbc2$id, by = 50, max_T = 3600,   # <-- by is changed!
+                   Q_0 = diag(rep(10, 6)), Q = diag(rep(0.001, 6)),
+                   control = list(ridge_eps = .0001 / 2)) # <-- we decrease the penalty term by a similar factor
 
 # We compute the relative difference
 diag((old_mat - dd_fit$Q) / old_mat)
