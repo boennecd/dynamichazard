@@ -17,7 +17,7 @@ vignette: >
 
 ```{r setup, include=FALSE}
 options(digist = 4)
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, dpi = 36)
 knitr::opts_knit$set(warning = F, message = F)
 ```
 
@@ -472,8 +472,8 @@ plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = F)
 
 abline(v = c(0.5, 1.5, 2.5), lty = 2)
 
-text(1, 0.01, "1st bin", ajd = .5)
-text(2, 0.01, "2nd bin", ajd = .5)
+text(1, 0.01, "1st bin", adj = .5)
+text(2, 0.01, "2nd bin", adj = .5)
 
 n_series = 7
 y_pos = seq(0, 1, length.out = n_series + 2)[-c(1, n_series +2)]
@@ -819,8 +819,8 @@ $$\vec{\alpha}_t = \vec{\mu} + \mat{F} \vec{\alpha}_{t - 1} + \mat{R}\vec{\eta}_
 
 where we require $\mat{F}$ is such that the process is stable. $\mat{F}$ and $\vec{\mu}$ can be estimated in the M-step with closed form solutions when the noise is Gaussian. Another idea is to generalize to ARMA models. Further, we can change the distribution of $\vec{\eta}$ or change make a non-linear dependence between  $\vec{\alpha}_t$ and $\vec{\alpha}_{t - 1}$
 
-## Online learning / Recursive estimation
-The methods and models could be used for online learning as in [@lee10]. Though, this do require an update formula for data set to quickly update estimates once a new set of observations is observed. This update could easily be implemented if we do not update the estimates $\mat{Q}$ and $\vec{\alpha}_0$
+## Active learning
+The methods and models could be used for active learning setting as in [@lee10]. Though, this do require an update formula for data set to quickly update estimates once a new set of observations is observed. This update could easily be implemented if we do not update the estimates $\mat{Q}$ and $\vec{\alpha}_0$
 
 # References
 
