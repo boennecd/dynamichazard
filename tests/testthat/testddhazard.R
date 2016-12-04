@@ -76,6 +76,24 @@ test_that("Testing names of output from ddhazard on head and neck cancer dataset
   expect_equal(unlist(dimnames(result$Q_0)), rep(c("(Intercept)", "group1"), 2))
 })
 
+test_that("Invalid penalty terms throw error", {
+  expect_error(
+    ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1, # Use by month intervals
+      control = list(ridge_eps = 0)),
+    regexp = "Method not implemented with penalty term \\(control\\$ridge_eps\\) equal to 0")
+
+  expect_error(
+    ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1, # Use by month intervals
+      control = list(ridge_eps = -1)),
+    regexp = "Method not implemented with penalty term \\(control\\$ridge_eps\\) equal to -1")
+})
+
 # tmp <- file("tmp.txt")
 # sink(tmp)
 suppressMessages(

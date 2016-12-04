@@ -67,7 +67,6 @@ public:
 
   const bool debug;
   const double LR;
-  const std::string inv_Cov_method;
 
   // Declare non constants. Some are intialize
   arma::vec fixed_parems;
@@ -101,7 +100,6 @@ public:
                const int order_ = 1, const bool est_Q_0 = true,
                const bool debug_ = false,
                Rcpp::Nullable<Rcpp::NumericVector> LR_ = R_NilValue,
-               const std::string inv_Cov_method_ = "org",
                const int n_threads_ = -1,
                const double ridge_eps_ = .0001):
     d(Rcpp::as<int>(risk_obj["d"])),
@@ -132,7 +130,6 @@ public:
 
     debug(debug_),
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
-    inv_Cov_method(inv_Cov_method_),
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
@@ -147,9 +144,6 @@ public:
       a_t_t_s.col(0) = a_0;
 
       lag_one_cov = arma::cube(n_parems * order_, n_parems * order_, d);
-
-      if(!(inv_Cov_method_ == "org" || inv_Cov_method_ == "not org"))
-        Rcpp::stop("'inv_Cov_method_' is not implemented with value '" +  inv_Cov_method_ + "'");
     }
 
   problem_data & operator=(const problem_data&) = delete;
@@ -198,7 +192,6 @@ public:
                    const bool is_cont_time = false,
                    const unsigned int NR_it_max_ = 1000,
                    const bool debug_ = false,
-                   const std::string inv_Cov_method_ = "org",
                    const int n_threads_ = -1,
                    const double ridge_eps_ = .0001):
     problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
@@ -207,7 +200,6 @@ public:
                  n_max, eps, verbose,
                  order_, est_Q_0, debug_,
                  LR_,
-                 inv_Cov_method_,
                  n_threads_, ridge_eps_),
 
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
@@ -284,108 +276,6 @@ inline double inv_var_chance_die(const double v, const double inv_exp_v){
 
 }
 
-// TODO: Name better
-inline double suggest_inv_cov_cross_term(const double v, const double exp_eta,
-                                         const double inv_exp_v, const double exp_v){
-  return((v >= 1e-4) ?
-           // Set v = a exp(eta)
-           // Then: exp(-a exp(eta)) exp(eta) (1 + exp(a exp(eta)) (a exp(eta) - 1)) /
-           //             (1 - exp(-a exp(eta))) (1 - exp(-2a exp(eta)) - 2exp(-a exp(eta)) a exp(eta)) =
-           //       exp(-v) exp(eta) (1 + exp(v) (v - 1)) / ((1 - exp(-v)) (1 - exp(-2v) - 2exp(-v) v))
-
-           exp_eta * inv_exp_v * (1 + exp_v * (v - 1)) /
-             ((1 - inv_exp_v) * (1 - inv_exp_v * inv_exp_v - 2 * inv_exp_v * v)) :
-           // Laurent series from https://www.wolframalpha.com/input/?i=exp(-v)+(1+%2B+exp(v)+(v+-+1))+%2F+((1+-+exp(-v))+(1+-+exp(-2v)+-+2exp(-v)+v))
-           exp_eta * 1 / (v * v) * (3 / 2 + v * (7/4 + v * (37/40 + v * (17/60 + v * 291/5600))))
-  );
-}
-
-inline double inv_var_fac_chance_to_die(const double v, const double exp_v){
-  // Taylor series from: https://www.wolframalpha.com/input/?i=exp(x)(exp(2x)+-+1+-+2+exp(x)x)%2F(1%2Bexp(2x)+-+exp(x)(2%2Bx%5E2))
-  if(v < 1e-2){
-    return(1 / v * (4 + v * (4 + v * (31/15 + v * (11/15 + v * 1261/6300)))));
-  } else {
-    return(exp_v * (exp_v * exp_v - 1 - 2 * exp_v * v) /
-           (1 + exp_v * exp_v - exp_v * (2 + v * v)));
-  }
-}
-
-inline double inv_var_fac_wait_time(const double v, const double exp_v, const double exp_eta){
-  // Taylor series from: https://www.wolframalpha.com/input/?i=exp(x)(exp(x)+-+1)%2F(1%2Bexp(2x)+-+exp(x)(2%2Bx%5E2))
-  double res;
-  if(v < 1e-2){
-    res = 1 / (v * v * v) * (12 + v *(6 + v * (8/5 + v * (3/10 + v * 83/2100))));
-  } else {
-    res = exp_v * (exp_v - 1) / (1 + exp_v * exp_v - exp_v * (2 + v * v));
-  }
-
-  return(res * exp_eta * exp_eta);
-}
-
-inline double inv_var_fac_cross(const double v, const double exp_v, const double exp_eta){
-  // Taylor series from: https://www.wolframalpha.com/input/?i=exp(x)(1%2Bexp(x)(x-1))%2F(1%2Bexp(2x)-exp(x)(2%2Bx%5E2))
-  double res;
-  if(v < 1e-2){
-    res = 1/(v * v) * (6 + v * (4 + v * (13/10 + v * (4/15 + v * 51/1400))));
-  } else {
-    res = exp_v * (1 + exp_v * (v - 1)) / (1 + exp_v * exp_v - exp_v * (2 + v * v));
-  }
-
-  return(res * exp_eta);
-}
-
-
-
-
-
-inline double ridge_inv_var_fac_chance_to_die(const double v, const double exp_eta,
-                                              const double inv_exp_v, const double eps){
-  return((v >= 1e-5) ?
-           (1 + eps * exp_eta * exp_eta - inv_exp_v * inv_exp_v - 2*inv_exp_v*v)/
-             (eps + eps * eps *exp_eta * exp_eta + inv_exp_v * inv_exp_v * inv_exp_v +
-               inv_exp_v * (
-                   (1 + eps*exp_eta * exp_eta - 2*eps*v) +
-                   inv_exp_v * (-2 - eps - eps*exp_eta * exp_eta - v * v))) :
-
-           // Second order taylor expansion around v = 0
-           std::min(1/eps, 1 / eps - (v / eps) / eps + pow(v / eps, 2) * (1/eps + 3./2.))
-  );
-}
-
-inline double ridge_inv_var_fac_wait_time(const double v, const double exp_eta,
-                                          const double inv_exp_v, const double eps){
-  return((v >= 1e-5) ?
-           (eps * exp_eta * exp_eta + exp_eta * exp_eta * inv_exp_v - exp_eta * exp_eta * inv_exp_v * inv_exp_v)/
-             (eps + eps * eps * exp_eta * exp_eta + inv_exp_v * inv_exp_v * inv_exp_v +
-              inv_exp_v * (
-                  (1 + eps * exp_eta * exp_eta - 2*eps*v) +
-                  inv_exp_v * (-2. - eps - eps*exp_eta * exp_eta - v * v))) :
-
-           // Taylor expansion arround v = 0
-           std::min(1/eps, 1 / eps - v * pow((v / eps) / exp_eta, 2) * (1/3 - (v / eps) * (3 + 4 * eps) / 12)));
-}
-
-inline double ridge_inv_var_fac_cross(const double v, const double inv_exp_v,
-                                      const double exp_eta, const double a,
-                                      const double eps){
-  return((v >= 1e-5) ?
-           ((-exp_eta + a*exp_eta * exp_eta)*inv_exp_v + exp_eta*inv_exp_v*inv_exp_v)/
-             (eps + eps*eps*exp_eta*exp_eta + inv_exp_v*inv_exp_v*inv_exp_v +
-               inv_exp_v*(
-                   (1 + eps*exp_eta*exp_eta - 2*eps*v) +
-                    inv_exp_v*(-2 - eps - eps*exp_eta*exp_eta - v*v))) :
-
-           // Taylor expansion arround v = 0 and eps = 0.1
-           std::max(0., 10000*(0.060000000000000005*a - 0.8*a*eps + 3.*a*eps*eps +
-             (-1.06*a + 15.799999999999997*a*eps - 62.99999999999999*a*eps*eps -
-             0.060000000000000005/exp_eta + (0.8*eps)/exp_eta - (3.*eps*eps)/exp_eta)*v +
-             (17.529999999999994*a - 277.8999999999999*a*eps + 1151.4999999999995*a*eps*eps +
-             1.0899999999999996/exp_eta - (16.199999999999996*eps)/exp_eta +
-             (64.49999999999997*eps*eps)/exp_eta)*v*v)));
-}
-
-
-
 inline double EKF_fac_score_die(const double exp_eta, const double v,
                                 const double exp_v, const double a,
                                 const double eps){
@@ -432,22 +322,6 @@ inline double EKF_fac_var(const double exp_eta, const double v,
   } else{
     return((4*pow(a,2) + pow(a,4))*exp_eta * (exp_eta / (4 * eps)));
   }
-}
-
-
-
-inline double dh_fac_die(const double v, const double inv_exp_v){
-  return((v >= 1e-2) ?
-           v * inv_exp_v :
-           // Taylor series from http://www.wolframalpha.com/input/?i=v+*+exp(-v)
-           v * (1 - v * (1. - v * (1/2 - v * (1/6 -v /24)))));
-}
-
-inline double dh_fac_time(const double v, const double inv_exp_v, const double inv_exp_eta){
-  return((v >= 1e-2) ?
-           (inv_exp_v - 1 + inv_exp_v * v) * inv_exp_eta :
-           // Taylor series from http://www.wolframalpha.com/input/?i=(exp(-v)+-+1+%2B+exp(-v)+*+v)+*+exp(-v)
-           -v * v *(1/2 - v * (5/6 - v * (17/24 - v * (49/120 - v * 43 /240)))));
 }
 
 inline double var_wait_time(const double v, const double a,  const double exp_eta, const double inv_exp_v){
@@ -584,10 +458,9 @@ class EKF_helper{
       const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
       const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
 
-      const double exp_eta = exp(eta); // exp(x^T * beta)
+      const double exp_eta = exp(eta);
       const double inv_exp_eta = pow(exp_eta, -1);
 
-      //TODO: remove intermediates when done debugging
       const double v = at_risk_length * exp_eta;
       const double exp_v = exp(v);
       const double inv_exp_v = pow(exp_v, -1.0);
@@ -1491,7 +1364,6 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const int fixed_effect_chunk_size = 2e4,
                             const bool debug = false,
                             const unsigned int NR_it_max = 100,
-                            const std::string EKF_inv_Cov_method = "org",
                             const int n_threads = -1,
                             const double ridge_eps = .0001){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
@@ -1526,8 +1398,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       NR_eps, LR,
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
-      order_, est_Q_0, model == "exponential", NR_it_max, debug,
-      EKF_inv_Cov_method, n_threads,
+      order_, est_Q_0, model == "exponential", NR_it_max, debug, n_threads,
       ridge_eps);
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
 
@@ -1540,8 +1411,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       risk_obj, F_,
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
-      order_, est_Q_0, debug, LR,
-      EKF_inv_Cov_method, n_threads, ridge_eps);
+      order_, est_Q_0, debug, LR, n_threads, ridge_eps);
 
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
