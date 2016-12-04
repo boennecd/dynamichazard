@@ -175,11 +175,15 @@ test_that("Cases in residuals match cases in data", {
 
 ##################
 # Exponential model
+pbc2_l <- pbc2
+pbc2_l$tstart <- pbc2_l$tstart / 100
+pbc2_l$tstop <- pbc2_l$tstop / 100
+
 suppressMessages(fit <- ddhazard(
   formula = survival::Surv(tstart, tstop, status == 2) ~
     age + log(bili) + log(protime),
-  data = pbc2, Q_0 = diag(rep(1e3, 4)), by = 100,
-  Q = diag(rep(1e-2, 4)), max_T = 3600,
+  data = pbc2_l, Q_0 = diag(rep(1e3, 4)), by = 1,
+  Q = diag(rep(1e-2, 4)), max_T = 36,
   model = "exponential", control = list(est_Q_0 = F, LR = .1)))
 
 test_that("Calls to residuals should fail for exponential model and state space error",{
@@ -188,8 +192,8 @@ test_that("Calls to residuals should fail for exponential model and state space 
 })
 
 test_that("pearson and raw residuals for exponential corresponds", {
-  res_pearson <- residuals(fit, type = "pearson", data = pbc2)
-  res_raw <- residuals(fit, type = "raw", data = pbc2)
+  res_pearson <- residuals(fit, type = "pearson", data = pbc2_l)
+  res_raw <- residuals(fit, type = "raw", data = pbc2_l)
 
   for(i in seq_along(res_pearson$residuals))
     expect_equal(res_pearson$residuals[[i]][, "residuals"],

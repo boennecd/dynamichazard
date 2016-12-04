@@ -21,7 +21,7 @@ test_that("Verbose on ddhazard prints a log likelihood", {
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1,
-      control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
+      control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F, ridge_eps = 5e-2),
       a_0 = rep(0, 2), Q_0 = diag(1, 2),
       max_T = 45,
       id = head_neck_cancer$id, order = 1,
@@ -35,8 +35,8 @@ test_that("Verbose on ddhazard prints a log likelihood", {
       formula = survival::Surv(start, stop, event) ~ ddFixed(group),
       data = head_neck_cancer,
       by = 1,
-      control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
-      a_0 = 0, Q_0 = as.matrix(1),
+      control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F, ridge_eps = .1e-2),
+      Q_0 = as.matrix(10), Q = matrix(1e-2),
       max_T = 45,
       id = head_neck_cancer$id, order = 1,
       verbose = 5,
@@ -62,7 +62,9 @@ test_that("logLik for head_neck_cancer data set match previous results", {
   result$risk_set <- NULL
   logLik(object = result, data = head_neck_cancer, id = head_neck_cancer$id)
 
-  old <- structure(-340.3145190696090,
+  # print(log_like, digits = 16)
+
+  old <- structure(-340.3191651842091,
                    class = "logLik",
                    df = 2 + 3)
 
@@ -104,7 +106,7 @@ test_that("logLik for head_neck_cancer data set with second order model", {
     by = 1,
     a_0 = rep(0, 4), Q_0 = diag(c(1, 1, 1, 1)),
     Q = diag(c(1e-4, 1e-4, 0, 0)),
-    control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4),
+    control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-2),
     max_T = 45,
     id = head_neck_cancer$id, order = 2,
     verbose = F
@@ -112,7 +114,9 @@ test_that("logLik for head_neck_cancer data set with second order model", {
 
   log_like <- logLik(object = result, data_ = head_neck_cancer, id =  head_neck_cancer$id)
 
-  old <- structure(-345.6825641752276,
+  # print(log_like, digits = 16)
+
+  old <- structure(-351.5502644785921,
                    class = "logLik",
                    df = 2 * 2 + 3)
 
@@ -120,18 +124,20 @@ test_that("logLik for head_neck_cancer data set with second order model", {
 })
 
 test_that("logLik for head_neck_cancer data set match previous results with fixed effects", {
-  result = ddhazard(
+  suppressWarnings(result <- ddhazard(
     formula = survival::Surv(start, stop, event) ~ ddFixed(group),
     data = head_neck_cancer,
     by = 1,
     control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
-    a_0 = 0, Q_0 = as.matrix(1),
+    a_0 = 0, Q_0 = as.matrix(1), Q = as.matrix(1e-3),
     max_T = 45,
-    id = head_neck_cancer$id, order = 1)
+    id = head_neck_cancer$id, order = 1))
 
   log_like <- logLik(result, data = head_neck_cancer)
 
-  old <- structure(-302.8370356489254,
+  # print(log_like, digits = 16)
+
+  old <- structure(-304.7612420327254,
                    class = "logLik",
                    df = 1 + 1 + 1)
 
@@ -184,7 +190,10 @@ test_that("logLik for simulated data versus old results", {
   )
 
   log_like <- logLik(object = result)
-  old <- structure(-2653.945043767617,
+
+  # print(log_like, digits = 16)
+
+  old <- structure(-2653.317034272308,
                    class = "logLik",
                    df = 5 + 5 * (1 + 5) / 2)
   expect_equal(log_like, old)
@@ -207,7 +216,10 @@ test_that("logLik for simulated data versus old results", {
   ))
 
   log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
-  old <- structure(-1611.331941036346,
+
+  # print(log_like, digits = 16)
+
+  old <- structure(-1631.610338216405,
                    class = "logLik",
                    df = 6 + 6 * (1 + 6) / 2)
   expect_equal(log_like, old, tolerance = 1e-6)
@@ -231,7 +243,10 @@ test_that("logLik for simulated data versus old results", {
     verbose = F)
 
   log_like <- logLik(result)
-  old <- structure(-3011.231969352533,
+
+  # print(log_like, digits = 16)
+
+  old <- structure(-3011.235794336625,
                    class = "logLik",
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)
@@ -245,14 +260,21 @@ test_that("logLik for simulated data versus old results", {
     survival::Surv(tstart, tstop, event) ~ ddFixed(x1) + ddFixed(x2) + x3 + x4 + x5,
     sims$res,
     by = 1,
-    control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F),
+    control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F,
+                   ridge_eps = 1e-1),
     a_0 = rep(0, 4), Q_0 = diag(1, 4),
+    Q = diag(1e-2, 4),
     max_T = 10, model = "exponential",
     id = sims$res$id, order = 1,
     verbose = F))
 
   log_like <- logLik(result)
-  old <- structure(-3813.086098998085,
+
+  # print(log_like, digits = 16)
+  # matplot(result$state_vecs, type = "l")
+  # matplot(sims$betas, type = "l", lty = 1, add = T)
+
+  old <- structure(-3570.22768532026,
                    class = "logLik",
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)

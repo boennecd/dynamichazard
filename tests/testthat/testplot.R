@@ -26,11 +26,11 @@ test_that("Expecting plot calls to succed with first order model", {
   }
 
   suppressMessages(pbc_fit <- ddhazard(
-    formula = survival::Surv(tstart, tstop, status == 2) ~ log(bili) + log(protime),
-    data = pbc2, model = "exponential", by = 100, max_T = 3600,
+    formula = survival::Surv(tstart/100, tstop/100, status == 2) ~ log(bili) + log(protime),
+    data = pbc2, model = "exponential", by = 1, max_T = 36,
     Q_0 = diag(2, 3), Q = diag(1e-3, 3), verbose = F,
     id = pbc2$id,
-    control = list(LR = .1, eps = 1e-2, save_risk_set = F)))
+    control = list(LR = 1, eps = 1e-3, save_risk_set = F)))
 
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 1))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 2))
@@ -53,8 +53,8 @@ test_that("Expecting plot calls to succed with second order model", {
   expect_no_error(plot(result, type = "cov", cov_index = 2))
 
   suppressMessages(pbc_fit <- ddhazard(
-    formula = survival::Surv(tstart, tstop, status == 2) ~ log(bili) + log(protime),
-    data = pbc2, model = "exponential", by = 100, max_T = 3600,
+    formula = survival::Surv(tstart/100, tstop/100, status == 2) ~ log(bili) + log(protime),
+    data = pbc2, model = "exponential", by = 1, max_T = 36,
     Q_0 = diag(5, 6), Q = diag(c(rep(1e-3, 3), rep(0, 3))),
     id = pbc2$id, order = 2,
     control = list(LR = .01, eps = 1e-2, save_risk_set = F)))
