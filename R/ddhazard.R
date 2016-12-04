@@ -117,7 +117,10 @@ ddhazard = function(formula, data,
                           max_it_fixed_parems = 10, fixed_effect_chunk_size = 1e4,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
                           LR_decrease_fac = 1.5, EKF_inv_Cov_method = "org",
-                          n_threads = getOption("ddhazard_max_threads"))
+                          n_threads = getOption("ddhazard_max_threads"),
+                          ridge_eps = if(!is.null(control$method) &&
+                                         control$method == "EKF" &&
+                                         model == "exponential") .02 else 1e-3)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -237,7 +240,8 @@ ddhazard = function(formula, data,
                                  fixed_effect_chunk_size = control$fixed_effect_chunk_size,
                                  debug = control$debug,
                                  EKF_inv_Cov_method = control$EKF_inv_Cov_method,
-                                 n_threads = control$n_threads)
+                                 n_threads = control$n_threads,
+                                 ridge_eps = control$ridge_eps)
     }, error = function(e)
       if(length(k_vals) == 1 ||
           !grepl("^ddhazard_fit_cpp estimation error:", e$message))

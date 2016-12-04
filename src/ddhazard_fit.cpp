@@ -199,7 +199,8 @@ public:
                    const unsigned int NR_it_max_ = 1000,
                    const bool debug_ = false,
                    const std::string inv_Cov_method_ = "org",
-                   const int n_threads_ = -1):
+                   const int n_threads_ = -1,
+                   const double ridge_eps_ = .0001):
     problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
                  Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_parems_,
@@ -207,7 +208,7 @@ public:
                  order_, est_Q_0, debug_,
                  LR_,
                  inv_Cov_method_,
-                 n_threads_),
+                 n_threads_, ridge_eps_),
 
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),
@@ -385,6 +386,66 @@ inline double ridge_inv_var_fac_cross(const double v, const double inv_exp_v,
 
 
 
+inline double EKF_fac_score_die(const double exp_eta, const double v,
+                                const double exp_v, const double a,
+                                const double eps){
+  if(exp_eta >= 1e-4){
+    return(-(((-1 + exp_eta + exp_v*(-1 + a*(-2 + exp_eta))*exp_eta +
+           pow(exp_v,2)*(1 + eps*pow(exp_eta,2)))*v)/
+             (-1 + pow(exp_v,2)*(-1 + 2*eps*v - eps*pow(exp_eta,2)) -
+               pow(exp_v,3)*eps*(1 + eps*pow(exp_eta,2)) + exp_v*(2 + eps + pow(v,2) +
+               eps*pow(exp_eta,2)))));
+  } else {
+    // Taylor expansion around exp_eta = 0
+    const double v_eps_ratio = v / eps;
+
+    Rcpp::Rcout << v_eps_ratio << " "<<  - v_eps_ratio *
+      (-12 + 6*a - 3*pow(a,2) + 2*pow(a,3) - 30*eps + 14*a*eps - 6*pow(eps,2)) / 12
+
+    << " " <<
+    (-2 + a - 2*eps) / 2 - v_eps_ratio *
+    (-12 + 6*a - 3*pow(a,2) + 2*pow(a,3) - 30*eps + 14*a*eps - 6*pow(eps,2)) / 12
+
+    << " " << 1 + v_eps_ratio * (
+      (-2 + a - 2*eps) / 2 - v_eps_ratio *
+      (-12 + 6*a - 3*pow(a,2) + 2*pow(a,3) - 30*eps + 14*a*eps - 6*pow(eps,2)) / 12) << std::endl;
+
+    return(v_eps_ratio * (
+        1 + v_eps_ratio * (
+            (-2 + a - 2*eps) / 2 - v_eps_ratio *
+              (-12 + 6*a - 3*pow(a,2) + 2*pow(a,3) - 30*eps + 14*a*eps - 6*pow(eps,2)) / 12)));
+  }
+}
+
+inline double EKF_fac_score_time(const double exp_eta, const double v,
+                                 const double exp_v, const double a,
+                                 const double eps){
+  if(exp_eta >= 1e-3){
+    return(-(((-1 + exp_v - v)*(1 - exp_eta + eps*exp_eta*pow(exp_v,2) + exp_v*(-1 + exp_eta + v)))/
+           (1 - (2 + eps + pow(v,2) + eps*pow(exp_eta,2))*exp_v + eps*(1 + eps*pow(exp_eta,2))*pow(exp_v,3) +
+             pow(exp_v,2)*(1 + eps*pow(exp_eta,2) - 2*eps*v))));
+  } else{
+    const double exp_eta_eps_ratio = exp_eta / eps;
+
+    return(exp_eta_eps_ratio * (-pow(a,2)/2 + exp_eta_eps_ratio *
+               (-3*pow(a,4) + 2*pow(a,5) + 4*pow(a,3)*eps)/12));
+  }
+}
+
+inline double EKF_fac_var(const double exp_eta, const double v,
+                          const double exp_v, const double a,
+                          const double eps){
+  if(exp_eta >= 1e-3){
+    return((-1 + exp_v*(3 + pow(v,2) + eps*pow(exp_v,3) + exp_v*(-3 + eps + pow(v,2)*(-1 + eps) +
+           pow(v,2)*eps*pow(exp_eta,2)+ 2*eps*v) + pow(exp_v,2)*(1 - 2*eps*(1 + v))))/
+             (exp_v - (2 + eps + (pow(a,2) + eps)*pow(exp_eta,2))*pow(exp_v,2) + (1 + eps*exp_eta*(-2*a + exp_eta))*
+               pow(exp_v,3) + eps*(1 + eps*pow(exp_eta,2))*pow(exp_v,4)));
+  } else{
+    return((4*pow(a,2) + pow(a,4))*exp_eta * (exp_eta / (4 * eps)));
+  }
+}
+
+
 
 inline double dh_fac_die(const double v, const double inv_exp_v){
   return((v >= 1e-2) ?
@@ -547,48 +608,23 @@ class EKF_helper{
 
       const double expect_chance_die = exp_model_funcs::expect_chance_die(v, inv_exp_v);
 
-      double cross_term_inv;
-      double t_term_inv;
-      double die_term_inv;
+      const double fac_score_die = exp_model_funcs::EKF_fac_score_die(
+        exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
+      const double fac_score_time = exp_model_funcs::EKF_fac_score_time(
+        exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
+      const double var_fac = exp_model_funcs::EKF_fac_var(
+        exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
 
-      if(dat.inv_Cov_method == "org"){
-        cross_term_inv = exp_model_funcs::ridge_inv_var_fac_cross(
-          v, inv_exp_v, exp_eta, at_risk_length, dat.ridge_eps);
-
-        t_term_inv = exp_model_funcs::ridge_inv_var_fac_wait_time(
-          v, exp_eta, inv_exp_v, dat.ridge_eps);
-
-        die_term_inv = exp_model_funcs::ridge_inv_var_fac_chance_to_die(
-          v, exp_eta, inv_exp_v, dat.ridge_eps);
-
-        Rcpp::Rcout << "v: " << v << " a: " << at_risk_length << " eta: " << eta
-                    << " K12: "<< cross_term_inv
-                    << " K22: " << t_term_inv
-                    << " K11: " << die_term_inv;
-
-
-      } else{
-        // TODO: Delete or keep?
-        cross_term_inv = exp_model_funcs::suggest_inv_cov_cross_term(
-           v, exp_eta, inv_exp_v, exp_v);
-        t_term_inv = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
-        die_term_inv = exp_model_funcs::inv_var_chance_die(v, inv_exp_v);
-
-      }
-
-      const double dh_fac_die = exp_model_funcs::dh_fac_die(v, inv_exp_v);
-      const double dh_fac_time = exp_model_funcs::dh_fac_time(v, inv_exp_v, inv_exp_eta);
-
-      Rcpp::Rcout << " d die: " << dh_fac_die << " d time: " << dh_fac_time << std::endl;
+      Rcpp::Rcout << "v: " << v << " exp_eta: " << exp_eta
+                  << " fac_score_die: " << fac_score_die
+                  << " fac_score_time: " << fac_score_time
+                  << " var_fac: " << var_fac << std::endl;
 
       u_ += x_ * (
-        dh_fac_time * (cross_term_inv + t_term_inv) * (time_outcome - expect_time)
-        + dh_fac_die * (cross_term_inv + die_term_inv) * (do_die - expect_chance_die));
+        fac_score_time * (time_outcome - expect_time) +
+        fac_score_die * (do_die - expect_chance_die));
 
-      U_ += x_ * (x_.t() *
-      (dh_fac_die * dh_fac_die * die_term_inv +
-      dh_fac_time * dh_fac_time * t_term_inv +
-      2 * dh_fac_die * dh_fac_time * cross_term_inv));
+      U_ += x_ * (x_.t() * var_fac);
 
       if(compute_z_and_H){
         // Compute terms from waiting time
@@ -1472,7 +1508,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const bool debug = false,
                             const unsigned int NR_it_max = 100,
                             const std::string EKF_inv_Cov_method = "org",
-                            const int n_threads = -1){
+                            const int n_threads = -1,
+                            const double ridge_eps = .0001){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -1506,7 +1543,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
       order_, est_Q_0, model == "exponential", NR_it_max, debug,
-      EKF_inv_Cov_method, n_threads);
+      EKF_inv_Cov_method, n_threads,
+      ridge_eps);
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
 
   } else if (method == "UKF"){
@@ -1519,7 +1557,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_parems,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR,
-      EKF_inv_Cov_method, n_threads);
+      EKF_inv_Cov_method, n_threads, ridge_eps);
 
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
