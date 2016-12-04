@@ -399,17 +399,6 @@ inline double EKF_fac_score_die(const double exp_eta, const double v,
     // Taylor expansion around exp_eta = 0
     const double v_eps_ratio = v / eps;
 
-    Rcpp::Rcout << v_eps_ratio << " "<<  - v_eps_ratio *
-      (-12 + 6*a - 3*pow(a,2) + 2*pow(a,3) - 30*eps + 14*a*eps - 6*pow(eps,2)) / 12
-
-    << " " <<
-    (-2 + a - 2*eps) / 2 - v_eps_ratio *
-    (-12 + 6*a - 3*pow(a,2) + 2*pow(a,3) - 30*eps + 14*a*eps - 6*pow(eps,2)) / 12
-
-    << " " << 1 + v_eps_ratio * (
-      (-2 + a - 2*eps) / 2 - v_eps_ratio *
-      (-12 + 6*a - 3*pow(a,2) + 2*pow(a,3) - 30*eps + 14*a*eps - 6*pow(eps,2)) / 12) << std::endl;
-
     return(v_eps_ratio * (
         1 + v_eps_ratio * (
             (-2 + a - 2*eps) / 2 - v_eps_ratio *
@@ -614,11 +603,6 @@ class EKF_helper{
         exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
       const double var_fac = exp_model_funcs::EKF_fac_var(
         exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
-
-      Rcpp::Rcout << "v: " << v << " exp_eta: " << exp_eta
-                  << " fac_score_die: " << fac_score_die
-                  << " fac_score_time: " << fac_score_time
-                  << " var_fac: " << var_fac << std::endl;
 
       u_ += x_ * (
         fac_score_time * (time_outcome - expect_time) +

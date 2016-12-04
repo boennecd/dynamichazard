@@ -118,9 +118,9 @@ ddhazard = function(formula, data,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
                           LR_decrease_fac = 1.5, EKF_inv_Cov_method = "org",
                           n_threads = getOption("ddhazard_max_threads"),
-                          ridge_eps = if(!is.null(control$method) &&
-                                         control$method == "EKF" &&
-                                         model == "exponential") .02 else 1e-3)
+                          ridge_eps = if((is.null(control$method) ||
+                                          control$method == "EKF") &&
+                                         model == "exponential") .025 else .0001)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -256,7 +256,7 @@ ddhazard = function(formula, data,
   if(!did_fit)
     stop("Failed to estimate model. The following learning rates was tried: ",
          paste0(control$LR / control$LR_decrease_fac^k_vals, collapse = ", "),
-         ". Try decreasing the learning rate")
+         ". Try decreasing the learning rate or change the penalty term ridge_eps")
 
   if(k != 0)
     message("Did not succed to fit the model wit a learning rate of ", control$LR,

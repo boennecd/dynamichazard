@@ -250,39 +250,43 @@ predict(fit, new_data = pbc[1:5, ], type = "term")
 
 ######
 # Exponential model
+pbc2_l <- pbc2
+pbc2_l$tstart <- pbc2_l$tstart / 100
+pbc2_l$tstop <- pbc2_l$tstop / 100
+
 suppressMessages(fit <- ddhazard(
   formula = survival::Surv(tstart, tstop, status == 2) ~
     age + log(bili) + log(protime),
-  data = pbc2, Q_0 = diag(rep(1, 4)), by = 100,
-  id = pbc2$id,
-  Q = diag(rep(1e-2, 4)), max_T = 3600,
-  model = "exponential", control = list(est_Q_0 = F, LR = .1)))
+  data = pbc2_l, Q_0 = diag(rep(1, 4)), by = 1,
+  id = pbc2_l$id,
+  Q = diag(rep(1e-2, 4)), max_T = 36,
+  model = "exponential", control = list(est_Q_0 = F)))
 
 # plot(fit, cov_index = 4)
 
 test_that("Terms from predict with exponential outcome are correct", {
-  pred <- predict(fit, new_data = pbc2, type = "term", tstart = "tstart", tstop = "tstop")
+  pred <- predict(fit, new_data = pbc2_l, type = "term", tstart = "tstart", tstop = "tstop")
 
-  expect_equal(dim(pred$terms), c(1 + 3600/100, nrow(pbc2), 4))
-  tmp_mat <- t(cbind(rep(1, nrow(pbc2)), pbc2$age, log(pbc2$bili), log(pbc2$protime)))
+  expect_equal(dim(pred$terms), c(1 + 3600/100, nrow(pbc2_l), 4))
+  tmp_mat <- t(cbind(rep(1, nrow(pbc2_l)), pbc2_l$age, log(pbc2_l$bili), log(pbc2_l$protime)))
 
   for(i in 1:ncol(fit$state_vecs))
     expect_equal(pred$terms[, , i], fit$state_vecs[, i] %o% tmp_mat[i,])
 
   expect_message(
-    respone_pred <- predict(fit, new_data = pbc2, type = "response", tstart = "tstart", tstop = "tstop"),
+    respone_pred <- predict(fit, new_data = pbc2_l, type = "response", tstart = "tstart", tstop = "tstop"),
     "start and stop times \\('tstart' and 'tstop'\\) are in data. Prediction will match these periods")
 
   set.seed(192301258)
-  rand_indicies <- sample.int(nrow(pbc2), 1000)
-  test_rows <- pbc2[rand_indicies, ]
+  rand_indicies <- sample.int(nrow(pbc2_l), 100)
+  test_rows <- pbc2_l[rand_indicies, ]
   test_rows <- cbind(rep(1, nrow(test_rows)),
                      test_rows$age, log(test_rows$bili), log(test_rows$protime),
                      test_rows)
 
   for(j in seq_along(test_rows)){
     tmp <- test_rows[j, ]
-    bins_breaks <- seq(0, 3600, by = 100)
+    bins_breaks <- seq(0, 36, by = 1)
     start <- findInterval(tmp$tstart, bins_breaks)
     stop  <- findInterval(tmp$tstop, bins_breaks, left.open = T)
     p_survival <- 1
