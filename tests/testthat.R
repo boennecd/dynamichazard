@@ -8,7 +8,7 @@ is_build_win = T
 if(is_build_win)
   options(ddhazard_max_threads = 1)
 
-cat("Running tests on:")
+cat("Running tests on:\n")
 print(R.version)
 
 test_check("dynamichazard")
