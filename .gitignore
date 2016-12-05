@@ -14,3 +14,5 @@ get_expect_equal.txt
 dunsurv.txt
 dynsurv.txt
 tmp.txt
+src-i386
+src-x64

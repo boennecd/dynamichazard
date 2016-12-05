@@ -15,6 +15,9 @@ testtest_utils.R$
 ^\.travis\.yml$
 pbc_data.Rmd$
 Sim_study_with_logit.Rmd$
+Prebuild
 release_questions.R$
 cran-comments.md$
 Prebuild/
+src-i386
+src-x64
