@@ -123,7 +123,7 @@ The code above uses the `Surv` function on the left hand side of the formula. Th
 pbc2_big_frame[pbc2_big_frame$id == 282, ]
 ```
 
-Notice that three new columns have been added. `Y` which is the outcome, `t` which is the stop time in the bin and `weights` which is the weight to be used in a regression. We see that the first row in the initial data frame for individual `282` has three rows now since the row is in three bins (the bins at times $(0,100],(100,200]$ and $(200,300]$). We could just use weights instead. This is what we get if we set `use_weights = T`:
+Notice that three new columns have been added: `Y` which is the outcome, `t` which is the stop time in the bin and `weights` which is the weight to be used in a regression. We see that the first row in the initial data frame for individual `282` has three rows now since the row is in three bins (the bins at times $(0,100],(100,200]$ and $(200,300]$). We could just use weights instead. This is what we get if we set `use_weights = T`:
 
 ```{r}
 pbc2_small_frame <- get_survival_case_weigths_and_data(
@@ -205,7 +205,7 @@ spline_fit <- gam(
                   
 ```    
 
-The above estimates the GAM model where the likelihood is penalized by a quadratical penalty for each of the spline functions. The tuning parameters are chosen by generalized cross validation.<!-- As suggested in the help menu in regard to  the number of knots `k`, *"... [the] exact choice of k is not generally critical: it should be chosen to be large enough that you are reasonably sure of having enough degrees of freedom to represent the underlying ‘truth’ reasonably well, but small enough to maintain reasonable computational efficiency"*. See `?gam` or `?choose.k` for details --> Below are plots of the estimates
+The above estimates the GAM model where the likelihood is penalized by a L2 norm for each of the spline functions. The tuning parameters are chosen by generalized cross validation.<!-- As suggested in the help menu in regard to  the number of knots `k`, *"... [the] exact choice of k is not generally critical: it should be chosen to be large enough that you are reasonably sure of having enough degrees of freedom to represent the underlying ‘truth’ reasonably well, but small enough to maintain reasonable computational efficiency"*. See `?gam` or `?choose.k` for details --> Below are plots of the estimates
 
 ```{r, fig.height = 4.5, mySettings=FALSE, fig.cap="Plots of estimated effects in the GAM model. The effective degree of freedom is noted in the parentheses on the y axis and is computed given the number knots and final tuning parameter for spline function. For instance, `s(t,2.43):age` means that the effective degrees of freedom for `age` is `2.43`"}
 plot(spline_fit, scale = 0, page = 1, rug = F)
@@ -272,18 +272,18 @@ for(c_name in colnames(diffs))
 <!-- which seems to be of minor use. Question: Include this or just make draw conclusions based on the previous plot? What they do in the book is only to infer on the cumulative regression functions -->
   
 # Dynamic hazard model
-In this section, we will cover the dynamic hazard model with the logistic link function that is implemented in this package. The model which is estimated with EM algorithm and the EKF in the E-step are from [@fahrmeir94] and [@fahrmeir92]. Firstly, we will briefly cover the model. See the ddhazard vignette for a more detailed explanation of the models. Secondly, we will turn to different ways of designing the model and fitting the model 
+In this section, we will cover the dynamic hazard model with the logistic link function that is implemented in this package. The model which is estimated with EM algorithm which are from [@fahrmeir94] and [@fahrmeir92] when an Extended Kalman Filter is used in the E-step are. Firstly, we will briefly cover the model. See the ddhazard vignette for a more detailed explanation of the models. Secondly, we will turn to different ways of designing the model and fitting the model 
 
 The idea is that we discretize the outcomes into $1,2,\dots,d$ bins. In each bin, we observe whether the individual dies or survives. The state space model we are applying is of the form: 
 $$\begin{array}{ll}
     	\vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad & 
-         	\vec{\epsilon}_t \sim (\vec{0}, \mathbf{H}_t(\vec{\alpha}_t))  \\
+         	\vec{\epsilon}_t \sim (\vec{0}, \text{Var}(\vec{y}_t | \vec{\alpha}_t))  \\
     	\vec{\alpha}_{t + 1} = \mathbf{F}\vec{\alpha}_t + \mathbf{R}\vec{\eta}_t \qquad & 
-         	\vec{\eta}_t \sim N(\vec{0}, \mathbf{Q}) \\
+         	\vec{\eta}_t \sim N(\vec{0}, \psi_t \mathbf{Q}) \\
 	\end{array}
 	, \qquad t = 1,\dots, d$$
 	
-where $y_{it} \in \{0,1\}$ is an indicator for whether the $i$'th individual dies in interval $t$. $\cdots \sim (a, b)$ denotes a random variable with mean (or mean vector) $a$ and variance (or co-variance matrix) $b$. It needs not to be normally distributed. $z_{it}(\vec{\alpha}_t) = h(\vec{\alpha}_t\vec{x}_{it})$ is the non-linear map from state space variables to mean outcomes where $h$ is the inverse link function. We use the logit model in this note. Thus, $h(x) = \text{logit}^{-1}(x)$. The current implementation supports first and second order random walk for the state equation
+where $y_{it} \in \{0,1\}$ is an indicator for whether the $i$'th individual dies in interval $t$. $\cdots \sim (a, b)$ denotes a random variable with mean (or mean vector) $a$ and variance (or co-variance matrix) $b$. It needs not to be normally distributed. $z_{it}(\vec{\alpha}_t) = h(\vec{\alpha}_t\vec{x}_{it})$ is the non-linear map from state space variables to mean outcomes where $h$ is the inverse link function. We use the logit model in this note. Thus, $h(x) = \text{logit}^{-1}(x)$. The current implementation supports first and second order random walk for the state equation. Further, we define the conditional covariance matrix in the observational equation as $\mathbf{H}_t(\vec{\alpha}_t) = \text{Var}(\vec{y}_t | \vec{\alpha}_t)$. $\psi_t$ is the length of the bin and is assumed equal for values of $t$ since we use equidistant bins
 
 The unknown parameters are the starting value $\vec{\alpha}_0$ and co-variance matrix $\mathbf{Q}$. These are estimated with an EM-algorithm. The E-step is calculated using a Extended Kalman filter (EKF) or Unscented Kalman filter (UKF). Both are followed by a smoothing step. The result is smoothed estimates of $\vec{\alpha}_1,\dots, \vec{\alpha}_d$, smoothed co-variance matrix and smoothed correlation matrices that we need for the M-step to update $\vec{\alpha}_0$ and $\mathbf{Q}$. Further, we assume that $\mathbf{Q}_0 = \kappa \mathbf{I}$ is fixed to a large value $\kappa$ in the examples. For more details see the ddhazard vignette
 
@@ -302,31 +302,10 @@ plot(dd_fit)
 
 We start by estimating the model. The arguments `Q_0` and `Q` corresponds to the co-variance matrix at time zero and the co-variance matrix in the state equation. `Q_0` will remain fixed while `Q` is the starting value in the first iteration of the EM algorithm after which we update $\mathbf{Q}$
 
-Next, we plot the coefficient. Notice that the coefficient are close to the estimates we saw previously for the GAM model. A key thing to notice is that `Q_0` is not scaled by the length of the bins while `Q` is. Hence, `Q` should not change much if we alter the length of the interval. We can illustrate this by fitting a model with a shorter bin lengths:
-
-```{r, warning=FALSE}
-# First diagonal of the the current co-variance matrix estimate
-(old_mat <- dd_fit$Q) * 1e4 # scale for a neater print
-
-# Then we refit the model
-dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
-                        log(albumin) + log(protime) + log(bili), pbc2,
-                   id = pbc2$id, by = 50, max_T = 3600,   # <-- by is changed!
-                   Q_0 = diag(rep(10, 6)), Q = diag(rep(0.001, 6)),
-                   control = list(ridge_eps = .0001 / 2)) # <-- we decrease the penalty term by a similar factor
-
-# We compute the relative difference
-diag((old_mat - dd_fit$Q) / old_mat)
-```
-
-Apart from the age variable, the rest are fairly comparable. Plot of the estimated coefficient match the previous plots
-
-```{r, fig.height = 4.5, mySettings=FALSE}
-plot(dd_fit)
-```
+Next, we plot the coefficient. Notice that the coefficient are close to the estimates we saw previously for the GAM model
 
 ## Extra iteration in the correction step
-Another idea is to take extra iterations in the correction step of the EKF. The motivation is that this step has the form of a Newton Rapshon algorithm as pointed out in [@fahrmeir92] and [@fahrmeir94]. For more details see the ddhazard vignette. One of the motivation to use extra iterations is that experimental simulation have shown decrease predicted mean square error for the state vector (see the vignette 'Simulation study with logit model'). Below, we estimate the model with potentially extra steps in the correction step. 
+Another idea is to take extra iterations in the correction step of the EKF. The motivation is that this step has the form of a Newton Rapshon algorithm as pointed out in [@fahrmeir92] and [@fahrmeir94]. For more details see the ddhazard vignette. One of the motivation to use extra iterations is that experimental simulation have shown decrease predicted mean square error for one step ahead forecasts (see the vignette 'Simulation study with logit model'). Below, we estimate the model with potentially extra steps in the correction step. 
 
 ```{r, fig.height = 4.5, mySettings=FALSE}
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
@@ -334,7 +313,7 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                    id = pbc2$id, by = 100, max_T = 3600,
                    a_0 = glm_fit_big$coefficients,
                    control = list(NR_eps = 0.1), # <-- tolerance in correction step
-                   Q_0 = diag(rep(1, 6)), # <-- decreased Q_0
+                   Q_0 = diag(rep(1, 6)),        # <-- decreased Q_0
                    Q = diag(rep(0.001, 6)))
 
 # Plot result
