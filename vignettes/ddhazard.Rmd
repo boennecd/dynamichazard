@@ -16,9 +16,14 @@ vignette: >
 ---
 
 ```{r setup, include=FALSE}
+knitr::knit_hooks$set(default_opts = function(before, options, envir) {
+    if (before){
+      options(digist = 4)
+    }
+})
 options(digist = 4)
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, dpi = 36)
-knitr::opts_knit$set(warning = F, message = F)
+knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
 ```
 
 \renewcommand{\vec}[1]{\bm{#1}}
@@ -111,10 +116,10 @@ $$\begin{array}{ll}
   \vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad & 
   \vec{\epsilon}_t \sim (\vec{0}, \varpCond{\vec{y}_t}{\vec{\alpha}_t})  \\
   \vec{\alpha}_{t + 1} = \mat{F}\vec{\alpha}_t + \mat{R}\vec{\eta}_t \qquad & 
-  \vec{\eta}_t \sim N(\vec{0}, \mat{Q}) \\
+  \vec{\eta}_t \sim N(\vec{0}, \psi_t \mat{Q}) \\
 \end{array} , \qquad t = 1,\dots, d$$
 
-$\vec{y}_t$ is vector of the binary outcomes and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. It needs not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding *state equation*. Further, we define the observational equations covariance matrix as $\mat{H}_t(\vec{\alpha}_t) = \varpCond{\vec{y}_t}{\vec{\alpha}_t}$
+$\vec{y}_t$ is vector of the binary outcomes and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. It needs not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding *state equation*. $\psi_t$ is the length of the bin interval number $t$. Thus, $\psi_i = \psi$ when we use equidistance bins which is the only option at this point. Further, we define the observational equations covariance matrix as $\mat{H}_t(\vec{\alpha}_t) = \varpCond{\vec{y}_t}{\vec{\alpha}_t}$
 
 The mean $\vec{z}_t(\vec{\alpha}_t)$ and variance $\mat{H}(\vec{\alpha}_t)$ are state dependent with:
 $$\begin{aligned}
@@ -151,13 +156,85 @@ $$\begin{aligned}
 $$l_{it}(\vec{\alpha}_t) = y_{it} \log h(\vec{x}_{it}^T \vec{\alpha}_t) + (1 - y_{it}) 
 	\log \Lparen{1 - h(\vec{x}_{it}^T \vec{\alpha}_t)}$$
 
-The unkown parameters above are the state space vectors $\vec{\alpha}_0, \dots, \vec{\alpha}_d$ and the covariance matricies $\mat{Q}$ and $\mat{Q}_0$. We estimate these with with an EM-algorithm. The E-step of the EM-algorithm estimate the state vectors $\vec{\alpha}_1, \dots, \vec{\alpha}_d$ where $\mat{Q}$, $\mat{Q}_0$ and $\vec{\alpha}_0$ are assumed fixed. The E-step is carried out by an Extended Kalman filter (EKF) or an Unscented Kalman filter (UKF). The method is chosen by passing a list to the `control` argument of `ddhazard` with `list(method = "EKF", ...)` or `list(method = "UKF", ...)` respectively. Both the UKF and EKF require an initial state vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and initial co-variance matrix $\mat{Q}_0$ to start
+The unkown parameters are the initial state vector $\vec{\alpha}_0$ and the covariance matrix $\mat{Q}$ . We estimate these with with an EM-algorithm. The E-step of the EM-algorithm predict the state vectors $\vec{\alpha}_1, \dots, \vec{\alpha}_d$ and smoothed covaraince matrixies where $\mat{Q}$, $\mat{Q}_0$ and $\vec{\alpha}_0$ are assumed fixed. The E-step is carried out by an Extended Kalman filter (EKF) or an Unscented Kalman filter (UKF). The method is chosen by passing a list to the `control` argument of `ddhazard` with `list(method = "EKF", ...)` or `list(method = "UKF", ...)` respectively. Both the UKF and EKF require an initial state vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and initial co-variance matrix $\mat{Q}_0$ to start
 
-We estimates $\mat{Q}$, $\vec{\alpha}_0$ and optionally $\mat{Q}_0$ conditional on the estimates $\vec{\alpha}_1, \dots, \vec{\alpha}_d$ in the M-step. [@fahrmeir94] states that $\mat{Q}_0$ can be estimated to. Though, it does not seem possible to the best of my knowledge. To see this, let $q$ denote the dimension of the state equation. Then the conditional log likelihood in the M-step has $q$ terms where $\mat{Q}_0$ and $\vec{\alpha}_0$ are in. Thus, we have $q$ equations to determine $q + q(q-1)/2$ parameters when we both estimate $\vec{\alpha}_0$ and $\mat{Q}_0$. Moreover, doing as [@fahrmeir94] will make all the elements tend towards zero with data sets I have been using. Hence, the default is not to estimate the co-variance matrix $\mat{Q}_0$ and only estimate the state vector $\vec{\alpha}_0$ and co-variance matrix $\mat{Q}$. You can estimate $\mat{Q}_0$ in the way [@fahrmeir94] describes by setting the `est_Q_0` element of the `control` to `TRUE` (`list(est_Q_0 = T, ...)`)
+A key thing to notice (and a likely source of errors if forgotten) is that the `Q` argument for $\mat{Q}$ is scaled by the length of the bins, $\psi_t$. The motivation for this behavior is that you can alter $\psi_t$ and get comparable estimates of `Q`. Further, it will also be useful if unequal bin length are implemented later. As a last comment in this context, `Q_0` is not scaled and thus will exactly match $\mat{Q}_0$ in the estimation. The logic here is that $\mat{Q}_0$ is independent of our binning length and reflects our uncertainty of $\vec{\alpha}_0$
 
-A key thing to notice (and a likely source of errors if forgotten) is that the `Q` argument for $\mat{Q}$ is scaled by the length of the bins. That is, say that we call `ddhazard` with `by = 10` and pass `Q = diag(rep(1, 4))` if we have four co-variates. Setting the `by` argument to `10` yields a model where each bin has length 10 on the time scale. The result is $\mat{Q} = 10 \cdot I_4$. The motivation for this behavior is that you can alter the `by` argument and get comparable estimates of `Q`. That is, a model with `by = 1` will yield a `Q` on the same scale as a model with `by = 10`. Further, it will also be useful if unequal bin length are implemented later. As a last comment in this context, `Q_0` is not scaled and thus will exactly match $\mat{Q}_0$ in the estimation. The logic here is that $\mat{Q}_0$ is independent of our binning length and can be infered as our lag of knowledge of $\vec{\alpha}_0$
+We will use a small example to illustrate how to fit a model and illustrate that the lengths of the bins does not have a big effect on $\mat{Q}$. The data frame we use is in the usual start and stop time format:
 
-The rest of this vignette is structured as follows. The section 'EM algorithm' will cover the EM algorithm. This is followed by the sections 'Extended Kalman Filter' and 'Unscented Kalman Filter' which respectively covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Continous time model' which cover the models
+```{r, echo=FALSE}
+source("../R/test_utils.R")
+
+start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
+
+# set.seed(print(round(runif(1, max = 1e6))))
+set.seed(126259)
+simple_ex <- test_sim_func_logit(
+    n_series = 2e3, 
+    beta_start = c(2, 1),
+    intercept_start = - 5, 
+    sds = rep(1, 3),
+    t_max = 28,
+    n_vars = 2,
+    lambda = 1/5,
+    x_range = 1,
+    x_mean = .5,
+    tstart_sampl_func = start_fun)$res
+# sum(simple_ex$event)
+# max(simple_ex$event[simple_ex$id == 1])
+
+stopifnot(any(simple_ex$event[simple_ex$id == 1] == 1) && 
+            all(simple_ex$event[simple_ex$id == 2] == 0))
+```
+
+```{r}
+knitr::kable(head(simple_ex, 10), digits = 4)
+```
+
+The column `id` shows which individual the row belongs to, `tstart` is point at which the row is valid from and `tstop` is when the row is valid to. `event` is one if the individual dies at `tstop` and `x1` and `x2` are two covariates. Thus, individual with id `1` does at time `r simple_ex$tstop[1]` while id `2` survives all the period we observe. Next, we can fit a model as follows:
+
+```{r}
+library(dynamichazard)
+library(survival)
+dd_fit_short_bins <- ddhazard(
+  Surv(tstart, tstop, event) ~ x1 + x2, # Formula like for cox.ph from survival
+       data = simple_ex,
+       by = 1,                          # Length of bin intervals
+       Q = diag(0.1, 3),                # Covariance matrix in state eqn 
+       Q_0 = diag(10, 3),               # Covariance matrix for initial state
+                                        # vector
+       max_T = 28,                      # Last time we observe
+       id = simple_ex$id,               # id of individuals
+       control = 
+        list(ridge_eps = 0.0001)        # Penalty term explained later
+  )                      
+
+# Print diagonal of covariance matrix
+diag(dd_fit_short_bins$Q) 
+```
+
+Above, we estimate the model with a binning length of `by = 1`. It is not important in this scope but the model is the logistic model we introduced later and we will return to the `ridge_eps` shortly. For now, let us see what happens if we increase the binning interval length by changing the `by` argument: 
+
+```{r}
+library(dynamichazard)
+library(survival)
+dd_fit_wide_bins <- ddhazard(
+  Surv(tstart, tstop, event) ~ x1 + x2, 
+       data = simple_ex,
+       by = 2,                          # increased
+       Q = diag(0.1, 3),               
+       Q_0 = diag(10, 3), 
+       max_T = 28,                      
+       id = simple_ex$id,               
+       control = 
+        list(ridge_eps = 0.0002))       # increased               
+
+# Print relative differences between diagonal of covariance matrices
+Q_short <- dd_fit_short_bins$Q
+Q_wide <- dd_fit_wide_bins$Q
+diag((Q_wide - Q_short) / abs(Q_short))   
+```
+We see that the diagonal entries are not far from each other with the two fits. The rest of this vignette is structured as follows. The section 'EM algorithm' will cover the EM algorithm. This is followed by the sections 'Extended Kalman Filter' and 'Unscented Kalman Filter' which respectively covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Continous time model' which cover the models
 
 # EM algorithm
 An EM algorithm is used to estimate the initial state space vector $\vec{\alpha}_0$ and the co-variance matrix $\mat{Q}$. Optionally $\mat{Q}_0$ is also estimated if `control = list(est_Q_0 = T, ...)`. Define

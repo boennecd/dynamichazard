@@ -134,7 +134,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
                                 re_draw = T, beta_start = 3, intercept_start,
                                 sds = rep(1, n_vars + !missing(intercept_start)),
                                 is_fixed = c(), lambda = 1,
-                                tstart_sampl_func = function(t_0 = t_0, t_max = t_max, by = by)
+                                tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
                                   t_0){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
@@ -166,7 +166,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
 
   # Simulate
   for(id in 1:n_series){
-    tstart <- tstop <- ceiler(tstart_sampl_func(t_0, t_max, by))
+    tstart <- tstop <- ceiler(tstart_sampl_func(t_0, t_max))
     repeat{
       tstop <- ceiler(tstart + 1 / lambda * get_exp_draw(1) + 1)
       if(ceiling(tstop) >= t_max)
