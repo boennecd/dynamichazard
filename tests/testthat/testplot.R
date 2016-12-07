@@ -1,5 +1,5 @@
 if(interactive()){
-  library(testthat)
+  library(testthat); source("./R/test_utils.R")
 }
 
 # Test first order
@@ -23,6 +23,7 @@ test_that("Expecting plot calls to succed with first order model", {
 
     expect_no_error(plot(result, type = "cov", cov_index = 1))
     expect_no_error(plot(result, type = "cov", cov_index = 2))
+    expect_no_error(plot(result, type = "cov"))
   }
 
   suppressMessages(pbc_fit <- ddhazard(
@@ -35,6 +36,7 @@ test_that("Expecting plot calls to succed with first order model", {
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 1))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 2))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 3))
+  expect_no_error(plot(pbc_fit, type = "cov"))
 })
 
 # Test second order
@@ -51,6 +53,7 @@ test_that("Expecting plot calls to succed with second order model", {
 
   expect_no_error(plot(result, type = "cov", cov_index = 1))
   expect_no_error(plot(result, type = "cov", cov_index = 2))
+  expect_no_error(plot(result, type = "cov"))
 
   suppressMessages(pbc_fit <- ddhazard(
     formula = survival::Surv(tstart/100, tstop/100, status == 2) ~ log(bili) + log(protime),
@@ -62,4 +65,30 @@ test_that("Expecting plot calls to succed with second order model", {
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 1))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 2))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 3))
+  expect_no_error(plot(pbc_fit, type = "cov"))
+})
+
+test_that("Alters mfcol and sets it back", {
+  set.seed(747)
+  sims <- test_sim_func_exp(n_series = 2e2, n_vars = 10, t_0 = 0, t_max = 10,
+                    x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+                    intercept_start = -5, sds = c(.1, rep(1, 10)))
+
+  suppressMessages(result_exp <- ddhazard(
+    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    data = sims$res,
+    by = (by_ <- 1),
+    Q_0 = diag(10, 11),
+    Q = diag(1e-2, 11),
+    control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3,
+                   save_data = F, save_risk_set = F, ridge_eps = 1e-2),
+    max_T = 10,
+    id = sims$res$id, order = 1,
+    verbose = F,
+    model = "exponential"))
+
+  for(i in 1:10){
+    expect_no_error(plot(result_exp, type = "cov", cov_index = 1:i))
+    expect_equal(getOption("mfcol"), NULL)
+  }
 })

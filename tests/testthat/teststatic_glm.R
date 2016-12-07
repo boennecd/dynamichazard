@@ -45,14 +45,22 @@ test_that("static glm gives results with exponential that match previous computa
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "exponential", model = T)
 
-  expect_equal(unname(res$coefficients), c(-3.3734428161003782,  0.6854894359705571,  1.3591615410115157, -0.8936444236277131))
+  tmp <- res["coefficients"]
+  # get_expect_equal(tmp, file = "tmp.txt")
+
+  expect_equal(unname(c(tmp$coefficients)),
+               c(-3.2995553492491152, 0.5601471676957662, 1.3456006304511172, -0.8888937783727533  ))
 
   # test with lower max_T
   res_lower <- dynamichazard::static_glm(
     form = form, data = sims$res, by = 1, max_T = 6, id = sims$res$id,
     family = "exponential", model = T)
 
-  expect_equal(unname(res_lower$coefficients), c(-3.04404847708056359, -0.01960283768708104,  0.09531074598781726, -1.53279736136739375))
+  tmp <- res_lower["coefficients"]
+  # get_expect_equal(tmp)
+
+  expect_equal(unname(c(tmp$coefficients)),
+               c(-2.98973053733078498, -0.21626321275614255, 0.02785842252341138, -1.39295562622901259))
 })
 
 test_that("design_matrix yields equal result with different values of use_weights", {
@@ -61,7 +69,7 @@ test_that("design_matrix yields equal result with different values of use_weight
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "logit", model = T)
 
-  expect_equal(unname(res$coefficients), c(-3.0034120780114382, 0.4201450126532649, 0.7693816806898961, -0.5438611125188229))
+  expect_equal(unname(res$coefficients), c(-2.93840401792663775, 0.30150117426768974,  0.80625660765174056, -0.59413513020434738))
 
 
   data_f <- get_survival_case_weigths_and_data(formula = form, data = sims$res, by = 1,

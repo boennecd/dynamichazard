@@ -1,5 +1,3 @@
-Sys.setenv("R_TESTS" = "")
-
 library(testthat)
 library(biglm)
 library(dynamichazard)
@@ -11,4 +9,11 @@ if(is_build_win)
 cat("Running tests on:\n")
 print(R.version)
 
-test_check("dynamichazard")
+tryCatch(
+  test_check("dynamichazard"),
+  error = function(e){
+    print(e$call)
+    print(e$message)
+    print(.Traceback)
+    stop(e)
+  })

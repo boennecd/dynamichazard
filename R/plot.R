@@ -7,6 +7,7 @@
 #' @param cov_index The index (indices) of the state space parameter(s) to plot
 #' @param add \code{FALSE} if you want to make a new plot
 #' @param xlab,ylab,ylim,col Arguments to overide defaults set in the function
+#' @param do_alter_mfcol \code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element
 #' @param ... Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}
 #'
 #' @details
@@ -16,34 +17,50 @@
 plot.fahrmeier_94 = function(x, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
-                             col = "black", add = F, ...){
+                             col = "black", add = F, do_alter_mfcol = T, ...){
   if(!x$model %in% c("logit", "exponential"))
     stop("Functions for model '", x$model, "' is not implemented")
 
   if(type == "cov"){
-    if(missing(cov_index))
-      stop("Need cov index when type is equal to ", type)
-
-    if(missing(ylab))
-      ylab = colnames(x$state_vecs)[cov_index]
-
-    lb = x$state_vecs[, cov_index] - 1.96 * sqrt(x$state_vars[cov_index, cov_index, ])
-    ub = x$state_vecs[, cov_index] + 1.96 * sqrt(x$state_vars[cov_index, cov_index, ])
-
-    if(missing(ylim))
-      ylim = range(lb, ub)
-
-    if(!add){
-      plot(x$times, x$state_vecs[, cov_index], type = plot_type,
-           ylim = ylim, xlab = xlab, ylab = ylab, col = col, ...)
-
-    } else {
-      lines(x$times, x$state_vecs[, cov_index], col = col, ...)
-
+    if(missing(cov_index)){
+      n_cov <- dim(x$state_vecs)[2] / x$order
+      if(n_cov > 0){
+        cov_index <- 1:min(9, n_cov)
+      } else
+        stop("plot.fahrmeier_94 called with no time varying effects")
     }
 
-    lines(x$times, lb, lty = 2, col = col)
-    lines(x$times, ub, lty = 2, col = col)
+    n_plots <- length(cov_index)
+    if(!add && do_alter_mfcol && n_plots > 1){
+      par_org <- par(no.readonly = TRUE)
+      on.exit(par(par_org))
+      par(mfcol =
+            if(n_plots <= 2) c(1,2) else
+              if(n_plots <= 4) c(2,2) else
+                if(n_plots <= 6) c(2,3) else
+                  c(3,3))
+    }
+
+    for(i in cov_index){
+      ylab_to_use <- if(missing(ylab)) colnames(x$state_vecs)[i] else ylab
+
+      lb = x$state_vecs[, i] - 1.96 * sqrt(x$state_vars[i, i, ])
+      ub = x$state_vecs[, i] + 1.96 * sqrt(x$state_vars[i, i, ])
+
+      ylim_to_use <- if(missing(ylim)) range(lb, ub) else ylim
+
+      if(!add){
+        plot(x$times, x$state_vecs[, i], type = plot_type,
+             ylim = ylim_to_use, xlab = xlab, ylab = ylab_to_use, col = col, ...)
+
+      } else {
+        lines(x$times, x$state_vecs[, i], col = col, ...)
+
+      }
+
+      lines(x$times, lb, lty = 2, col = col)
+      lines(x$times, ub, lty = 2, col = col)
+    }
 
     return(invisible())
   }

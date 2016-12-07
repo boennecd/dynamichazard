@@ -193,7 +193,7 @@ test_that("logLik for simulated data versus old results", {
 
   # print(log_like, digits = 16)
 
-  old <- structure(-2653.317034272308,
+  old <- structure(-2586.031605171297,
                    class = "logLik",
                    df = 5 + 5 * (1 + 5) / 2)
   expect_equal(log_like, old)
@@ -219,7 +219,7 @@ test_that("logLik for simulated data versus old results", {
 
   # print(log_like, digits = 16)
 
-  old <- structure(-1631.610338216405,
+  old <- structure(-1656.026546617798,
                    class = "logLik",
                    df = 6 + 6 * (1 + 6) / 2)
   expect_equal(log_like, old, tolerance = 1e-6)
@@ -246,7 +246,7 @@ test_that("logLik for simulated data versus old results", {
 
   # print(log_like, digits = 16)
 
-  old <- structure(-3011.235794336625,
+  old <- structure(-2931.212358451255,
                    class = "logLik",
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)
@@ -274,7 +274,7 @@ test_that("logLik for simulated data versus old results", {
   # matplot(result$state_vecs, type = "l")
   # matplot(sims$betas, type = "l", lty = 1, add = T)
 
-  old <- structure(-3570.22768532026,
+  old <- structure(-3508.790614731202 ,
                    class = "logLik",
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)

@@ -133,7 +133,9 @@ get_norm_draw = compiler::cmpfun(get_norm_draw, options = list(
 test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = .1, x_mean = -.1,
                                 re_draw = T, beta_start = 3, intercept_start,
                                 sds = rep(1, n_vars + !missing(intercept_start)),
-                                is_fixed = c(), lambda = 1){
+                                is_fixed = c(), lambda = 1,
+                                tstart_sampl_func = function(t_0 = t_0, t_max = t_max, by = by)
+                                  t_0){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
@@ -160,11 +162,13 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
   betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
                               nrow = nrow(betas))
 
+  ceiler <- function(x) ceiling(x * 100) / 100
+
   # Simulate
   for(id in 1:n_series){
-    tstart <- tstop <- t_0
+    tstart <- tstop <- ceiler(tstart_sampl_func(t_0, t_max, by))
     repeat{
-      tstop <- tstart + 1 / lambda * get_exp_draw(1) + 1
+      tstop <- ceiler(tstart + 1 / lambda * get_exp_draw(1) + 1)
       if(ceiling(tstop) >= t_max)
         tstop <- t_max
 
@@ -214,7 +218,9 @@ test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
 test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = 0,
                               re_draw = T, beta_start = 1, intercept_start,
                               sds = rep(1, n_vars + !missing(intercept_start)),
-                              is_fixed = c()){
+                              is_fixed = c(),
+                              tstart_sampl_func = function(t_0 = t_0, t_max = t_max, by = by)
+                                t_0){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
@@ -241,11 +247,13 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
   betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
                               nrow = nrow(betas))
 
+  ceiler <- function(x) ceiling(x * 100) / 100
+
   # Simulate
   for(id in 1:n_series){
-    tstart <- tstop <- t_0
+    tstart <- tstop <-  ceiler(tstart_sampl_func(t_0, t_max, by))
     repeat{
-      tstop <- tstart + get_exp_draw(1)
+      tstop <- ceiler(tstart + get_exp_draw(1))
 
       x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
@@ -257,7 +265,7 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
           exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1]) * delta_max))
         event <- hazzard > get_unif_draw(1)
         if(event){
-          tstop <- get_unif_draw(1) * delta_max + tmp_t # Arrival time is uniform conditional on event
+          tstop <- ceiler(get_unif_draw(1) * delta_max + tmp_t) # Arrival time is uniform conditional on event
           break
         }
 
@@ -302,6 +310,10 @@ str_func <- function(x, n_digist = 16){
 }
 
 get_expect_equal <- function(x, eps, file = ""){
+  op_old <- options()
+  on.exit(options(op_old))
+  options(max.print = 1e7)
+
   arg_name <- deparse(substitute(x))
   expects <- unlist(lapply(x, str_func))
   tol_string = if(!missing(eps)) paste0("\n, tolerance = " , eval(bquote(.(eps)))) else ""
