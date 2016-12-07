@@ -36,6 +36,11 @@ get_survival_case_weigths_and_data = function(
   if(missing(init_weights))
     init_weights = rep(1, nrow(data))
 
+  if(any(colnames(data) == "Y")){
+    warning("Column called Y will be replaced")
+    data = data[, colnames(data) != "Y"]
+  }
+	
   if(any(colnames(data) == "weights")){
     warning("Column called weights will be replaced")
     data = data[, colnames(data) != "weights"]

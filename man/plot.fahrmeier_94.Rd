@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{fahrmeier_94}(x, xlab = "Time", ylab = "Hazard",
   type = "cov", plot_type = "l", cov_index, ylim, col = "black",
-  add = F, ...)
+  add = F, do_alter_mfcol = T, ...)
 }
 \arguments{
 \item{x}{Result of \code{\link{ddhazard}} call}
@@ -20,6 +20,8 @@
 \item{cov_index}{The index (indices) of the state space parameter(s) to plot}
 
 \item{add}{\code{FALSE} if you want to make a new plot}
+
+\item{do_alter_mfcol}{\code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element}
 
 \item{...}{Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}}
 }
