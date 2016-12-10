@@ -13,6 +13,10 @@ library(dynamichazard)
 test_sim_func_exp <- with(environment(ddhazard), test_sim_func_exp)
 test_sim_func_logit <- with(environment(ddhazard), test_sim_func_logit)
 
+# Global params
+t_max <- 30
+start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
@@ -35,10 +39,15 @@ ui <- fluidPage(
                      step = .001,
                      value = .01),
 
-         selectInput("est_with",
+         selectInput("est_with_model",
                      h3("Choose model to estimate with"),
                      choices = c("logit", "exponential", "exponential_binary_only"),
                      selected = "exponential"),
+
+         selectInput("est_with_method",
+                     h3("Choose method to use in the E-step"),
+                     choices = c("UKF", "EKF"),
+                     selected = "EKF"),
 
          selectInput("sim_with",
                      h3("Choose model to simulate from"),
@@ -66,9 +75,10 @@ server <- function(input, output) {
       test_sim_func_exp else test_sim_func_logit
     f_choice(
       n_series = input$n_series, n_vars = 5,
-      t_max = 10, re_draw = T, beta_start = runif(5),
+      t_max = t_max, re_draw = T, beta_start = runif(5, min = -1.5, max = 1.5),
       intercept_start = -4, sds = c(.25, rep(1, 5)),
-      x_range = 1, x_mean = 0)
+      x_range = 1, x_mean = 0,
+      tstart_sampl_func = start_fun)
   })
 
   fit_input <- reactive({
@@ -81,11 +91,13 @@ server <- function(input, output) {
       Q = diag(1e-2, 6),
       control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^2,
                      save_data = F, save_risk_set = F,
-                     ridge_eps = input$ridge_eps),
-      max_T = 10,
+                     ridge_eps = input$ridge_eps,
+                     method = input$est_with_method,
+                     beta = 0),
+      max_T = t_max,
       id = sims$res$id, order = 1,
       verbose = F,
-      model = input$est_with)
+      model = input$est_with_model)
   })
 
   output$n_deaths <- renderText({
