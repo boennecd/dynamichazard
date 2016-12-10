@@ -143,7 +143,7 @@ std::vector<double>
   if(model == "logit"){
     helper = new logLike_link_term_helper_logit(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets);
 
-  } else if (model == "exponential"){
+  } else if (model == "exponential" || model == "exponential_binary_only"){
     helper = new logLike_link_term_helper_cloglog(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets);
 
   } else{
