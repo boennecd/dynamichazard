@@ -218,7 +218,7 @@ test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
 test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = 0,
                               re_draw = T, beta_start = 1, intercept_start,
                               sds = rep(1, n_vars + !missing(intercept_start)),
-                              is_fixed = c(),
+                              is_fixed = c(), lambda = 1,
                               tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
                                 t_0){
   # Make output matrix
@@ -253,7 +253,7 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
   for(id in 1:n_series){
     tstart <- tstop <-  ceiler(tstart_sampl_func(t_0, t_max))
     repeat{
-      tstop <- ceiler(tstart + get_exp_draw(1))
+      tstop <- ceiler(tstart + 1 / lambda * get_exp_draw(1))
 
       x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
