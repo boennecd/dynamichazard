@@ -1619,7 +1619,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         bigglm_updateQR_logit  updater;
         estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
 
-      } else if(model == "exponential"){
+      } else if(model == "exponential" || model == "exponential_binary_only"){
         bigglm_updateQR_poisson updater;
         estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
 

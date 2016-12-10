@@ -18,6 +18,9 @@ t_max <- 30
 max_rugs <- 1e3
 start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
 
+# params for UI
+col_w <- 3
+
 # Thanks to this guy http://stackoverflow.com/a/31066997
 n_series_stuff <- list(base = 2, exp_min = 8, exp_max = 12)
 JScode <- with(n_series_stuff, paste0(
@@ -39,66 +42,89 @@ ui <- fluidPage(
 
   tags$head(tags$script(HTML(JScode))),
 
-   # Application title
-   titlePanel("Old Faithful Geyser Data"),
+ titlePanel("What to put here?"),
 
-   sidebarLayout(
-      sidebarPanel(
-         # sliderInput("n_series",
-         #             h3("Number of series to simulate"),
-         #             min = 100,
-         #             max = 1e4,
-         #             step = 100,
-         #             value = 5e2),
+ plotOutput("coef_plot"),
+
+ textOutput("n_deaths"),
+
+ hr(),
+
+ fluidRow(
+   column(col_w,
           sliderInput("n_series",
-                      h3("Number of series to simulate"),
+                      "Number of series to simulate",
                       min = 0,
                       max = n_series_stuff$exp_max - n_series_stuff$exp_min - 1,
                       value = 1),
 
-         sliderInput("obs_time",
-                     h3("Observed time"),
-                     min = 1,
-                     max = t_max,
-                     step = 1,
-                     value = ceiling(t_max / 3 * 2)),
+          sliderInput("obs_time",
+                      "Observed time",
+                      min = 1,
+                      max = t_max,
+                      step = 1,
+                      value = ceiling(t_max / 3 * 2)),
 
-         sliderInput("ridge_eps",
-                     h3("Ridge regresion like penalty factor"),
-                     min = 0.001,
-                     max = .05,
-                     step = .001,
-                     value = .001),
+          selectInput("sim_with",
+                      "Choose model to simulate from",
+                      choices = c("logit", "exponential"),
+                      selected = "exponential"),
 
-         selectInput("est_with_model",
-                     h3("Choose model to estimate with"),
-                     choices = c("logit", "exponential", "exponential_binary_only"),
-                     selected = "exponential"),
+          numericInput("seed",
+                       label = "RNG seed",
+                       value = 65848)),
 
-         selectInput("est_with_method",
-                     h3("Choose method to use in the E-step"),
-                     choices = c("UKF", "EKF"),
-                     selected = "EKF"),
+   column(col_w,  offset = .5,
+          sliderInput("ridge_eps",
+                      "Ridge regresion like penalty factor",
+                      min = 0.001,
+                      max = .05,
+                      step = .001,
+                      value = .001),
 
-         selectInput("sim_with",
-                     h3("Choose model to simulate from"),
-                     choices = c("logit", "exponential"),
-                     selected = "exponential"),
+          selectInput("est_with_model",
+                      "Choose model to estimate with",
+                      choices = c("logit", "exponential", "exponential_binary_only"),
+                      selected = "exponential"),
 
-         numericInput("seed",
-                      label = h3("RNG seed"),
-                      value = 625409)
-      ),
+          selectInput("est_with_method",
+                      "Choose method to use in the E-step",
+                      choices = c("UKF", "EKF"),
+                      selected = "EKF")),
 
-      mainPanel({
-        textOutput("n_deaths")
-        plotOutput("coef_plot")
-      })
-   )
+   column(col_w, offset = .5,
+          h4("EKF settings"),
+
+          checkboxInput("use_extra_correction",
+                        "Extra correction steps",
+                        value = FALSE)),
+
+   column(col_w, offset = .5,
+
+          h4("UKF settings"),
+
+          sliderInput("beta",
+                      "Beta",
+                      min = 0,
+                      max = 2,
+                      step = .5,
+                      value = 2),
+
+          sliderInput("alpha",
+                      "Alpha",
+                      min = 1e-2,
+                      max = 1,
+                      step = 1e-2,
+                      value = 1e-1))
+  )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+
+  n_series_input <- reactive({
+    n_series_stuff$base^(n_series_stuff$exp_min + input$n_series)
+  })
 
   sim_input <- reactive({
     print(n_series_stuff$base^(n_series_stuff$exp_min + input$n_series))
@@ -107,10 +133,10 @@ server <- function(input, output) {
     f_choice <- if(input$sim_with == "exponential")
       test_sim_func_exp else test_sim_func_logit
     f_choice(
-      n_series = n_series_stuff$base^(n_series_stuff$exp_min + input$n_series),
+      n_series = n_series_input(),
       n_vars = 5,
       t_max = t_max, re_draw = T, beta_start = runif(5, min = -1.5, max = 1.5),
-      intercept_start = -4, sds = c(.25, rep(1, 5)),
+      intercept_start = -3.5, sds = c(.25, rep(.5, 5)),
       x_range = 1, x_mean = 0, lambda = t_max / 10,
       tstart_sampl_func = start_fun)
   })
@@ -123,19 +149,20 @@ server <- function(input, output) {
       by = 1,
       Q_0 = diag(10, 6),
       Q = diag(1e-2, 6),
-      control = list(est_Q_0 = F, eps = 10^-1, n_max = 10^2,
+      control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^2,
                      save_data = F, save_risk_set = F,
                      ridge_eps = input$ridge_eps,
                      method = input$est_with_method,
-                     beta = 0),
+                     beta = input$beta, alpha = input$alpha,
+                     NR_eps = if(input$use_extra_correction) 1e-1 else NULL),
       max_T = input$obs_time,
       id = sims$res$id, order = 1,
-      verbose = F,
+      verbose = 5,
       model = input$est_with_model)
   })
 
   output$n_deaths <- renderText({
-    sprintf("%d of %d dies", sum(sim_input()$res$event), input$n_series)
+    sprintf("%d of %d dies", sum(sim_input()$res$event), n_series_input())
   })
 
   output$coef_plot <- renderPlot({
