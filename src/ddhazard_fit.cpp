@@ -1145,6 +1145,93 @@ public:
 };
 
 
+class UKF_solver_New_exponential_binary_only : public UKF_solver_New{
+  void Compute_intermediates(const arma::uvec &r_set,
+                             const arma::vec offsets,
+                             const int t,
+                             const double bin_tstart, const double bin_tstop,
+                             arma::vec &c_vec, arma::mat &O){
+    // ** 1-3: compute outcome given sigma points, means and variances **
+    const arma::uword n_risk = r_set.n_elem;
+    O.set_size(n_risk, sigma_points.n_cols);
+    arma::vec vars(n_risk, arma::fill::zeros);
+
+    arma::vec y_bar(n_risk, arma::fill::zeros);
+
+    arma::mat etas = (sigma_points.t() * p_dat.X.cols(r_set)).t(); // linear predictors
+
+    // Armadillo do not have a bool vector so we use an integer vector instead
+    arma::ivec do_die = arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
+
+    // We need two times: the length at risk length
+    arma::vec at_risk_length(n_risk);
+
+    auto it = r_set.begin();
+    for(arma::uword i = 0; i < n_risk; ++i, ++it){
+      at_risk_length(i) = std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
+    }
+
+    // Compute variance and mean
+    for(arma::uword i = 0; i < sigma_points.n_cols; ++i){
+      double w = (i == 0) ? w_0 : w_i;
+      double w_c = (i == 0) ? w_0_c : w_i;
+
+      const arma::vec exp_etas = arma::trunc_exp(
+        offsets + p_dat.X.cols(r_set).t() * sigma_points.col(i));
+
+      for(arma::uword j = 0; j < n_risk; ++j){
+        const double exp_eta = exp_etas(j);
+        const double v = at_risk_length(j) * exp_eta;
+
+        const double inv_exp_v = exp(-1 * v);
+
+        O(j, i) = exp_model_funcs::expect_chance_die(v, inv_exp_v);
+        vars(j) += w_c * exp_model_funcs::var_chance_die(v, inv_exp_v);
+      }
+
+      y_bar += w * O.col(i);
+    }
+
+    vars += p_dat.ridge_eps;
+
+    // ** 4: Compute c **
+    // Substract y_bar to get deviations
+    O.each_col() -= y_bar;
+
+    c_vec = (O.each_col() / vars).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
+    O = O.t() * (O.each_col() / vars);
+
+    // Compute intermediate matrix
+    arma::mat tmp_mat;
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
+    }
+    tmp_mat = O * tmp_mat;
+
+    // Compute vector for state space vector
+    c_vec = c_vec -  tmp_mat * c_vec;
+
+    // ** 5: Compute L using the notation in vignette **
+    // Re-compute intermediate matrix using the other weight vector
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
+    }
+    tmp_mat = O * tmp_mat;
+
+    // compute matrix for co-variance
+    O = O - tmp_mat * O;
+  }
+
+public:
+  UKF_solver_New_exponential_binary_only(
+    problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
+    Rcpp::Nullable<Rcpp::NumericVector> &alpha,
+    Rcpp::Nullable<Rcpp::NumericVector> &beta):
+  UKF_solver_New(p_, kappa, alpha, beta)
+  {}
+};
+
+
 class UKF_solver_New_exponential : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set,
                              const arma::vec offsets,
@@ -1202,18 +1289,6 @@ class UKF_solver_New_exponential : public UKF_solver_New{
           v, at_risk_length(j), inv_exp_v, exp_eta);
         vars(j + n_risk) += w_c * exp_model_funcs::var_wait_time(
           v, at_risk_length(j), exp_eta, inv_exp_v);
-
-        //TODO: Delete
-        if(std::isnan(O(j, i)))
-          Rcpp::Rcout << "expec die is the bugger" << std::endl;
-        if(std::isnan(vars(j)))
-          Rcpp::Rcout << "var die is the bugger" << std::endl;
-        if(std::isnan(covars(j)))
-          Rcpp::Rcout << "covar is the bugger" << std::endl;
-        if(std::isnan(O(j + n_risk, i)))
-          Rcpp::Rcout << "expec time is the bugger" << std::endl;
-        if(std::isnan(vars(j + n_risk)))
-          Rcpp::Rcout << "var time is the bugger" << std::endl;
       }
 
       y_bar += w * O.col(i);
@@ -1286,6 +1361,14 @@ public:
   {
   }
 };
+
+
+
+
+
+
+
+
 
 
 
@@ -1461,7 +1544,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
 
   } else if (method == "UKF"){
-    if(model != "logit" && model != "exponential")
+    if(model != "logit" && model != "exponential" && model != "exponential_binary_only")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
     p_data = new problem_data(
       X, fixed_terms, tstart, tstop, is_event_in_bin,
@@ -1477,6 +1560,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     } else if (model == "exponential"){
       solver = new UKF_solver_New_exponential(*p_data, kappa, alpha, beta);
 
+    } else if (model == "exponential_binary_only"){
+      solver = new UKF_solver_New_exponential_binary_only(*p_data, kappa, alpha, beta);
     }
 
   } else if (method == "UKF_org"){

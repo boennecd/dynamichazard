@@ -42,11 +42,15 @@ ui <- fluidPage(
 
   tags$head(tags$script(HTML(JScode))),
 
- titlePanel("What to put here?"),
+ titlePanel("ddhazard demo"),
 
  plotOutput("coef_plot"),
 
  textOutput("n_deaths"),
+
+ br(),
+
+ actionButton("compute", "Compute"),
 
  hr(),
 
@@ -122,11 +126,11 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-  n_series_input <- reactive({
+  n_series_input <- eventReactive(input$compute, {
     n_series_stuff$base^(n_series_stuff$exp_min + input$n_series)
   })
 
-  sim_input <- reactive({
+  sim_input <- eventReactive(input$compute, {
     print(n_series_stuff$base^(n_series_stuff$exp_min + input$n_series))
 
     set.seed(input$seed)
@@ -141,14 +145,14 @@ server <- function(input, output) {
       tstart_sampl_func = start_fun)
   })
 
-  fit_input <- reactive({
+  fit_input <- eventReactive(input$compute, {
     sims <- sim_input()
     ddhazard(
       formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
       data = sims$res,
       by = 1,
-      Q_0 = diag(10, 6),
-      Q = diag(1e-2, 6),
+      Q_0 = if(input$est_with_method == "UKF") diag(1, 6) else diag(10, 6),
+      Q = diag(1e-1, 6),
       control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^2,
                      save_data = F, save_risk_set = F,
                      ridge_eps = input$ridge_eps,
