@@ -297,8 +297,8 @@ suppressMessages(result_exp <- ddhazard(
 # sink()
 # close(tmp_file)
 
-# matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
-# matplot(result_exp$times, result_exp$state_vecs, result_exp$state_vecs, type = "l", lty = 2, add = T)
+matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
+matplot(result_exp$times, result_exp$state_vecs, result_exp$state_vecs, type = "l", lty = 2, add = T)
 # get_expect_equal(result_exp, eps = 1e-2, file = "tmp.txt")
 
 test_that("Result of exponential model on simulated data match previous results", {
