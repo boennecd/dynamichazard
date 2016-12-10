@@ -37,7 +37,7 @@ ui <- fluidPage(
 
          selectInput("est_with",
                      h3("Choose model to estimate with"),
-                     choices = c("logit", "exponential"),
+                     choices = c("logit", "exponential", "exponential_binary_only"),
                      selected = "exponential"),
 
          selectInput("sim_with",
@@ -63,7 +63,7 @@ server <- function(input, output) {
   sim_input <- reactive({
     set.seed(input$seed)
     f_choice <- if(input$sim_with == "exponential")
-      test_sim_func_logit else test_sim_func_logit
+      test_sim_func_exp else test_sim_func_logit
     f_choice(
       n_series = input$n_series, n_vars = 5,
       t_max = 10, re_draw = T, beta_start = runif(5),
@@ -96,8 +96,23 @@ server <- function(input, output) {
     sims <- sim_input()
     fit <- fit_input()
 
-    matplot(sims$beta[-1, ], lty = 1, type = "l", ylim = range(sims$beta, fit$state_vecs))
-    matplot(fit$state_vecs[-1, ], lty = 2, type = "l", add = T)
+    matplot(seq_len(dim(sims$beta)[1]) - 1, sims$beta[, ], lty = 1, type = "l",
+            ylim = range(sims$beta, fit$state_vecs), xaxt='n',
+            ylab = expression(beta), xlab = "Time")
+    matplot(seq_len(dim(sims$beta)[1]) - 1, fit$state_vecs[, ], lty = 2, type = "l", add = T)
+
+    axis(side = 1,at = seq_len(dim(sims$beta)[1]) - 1,tick = FALSE)
+
+    # Add rug plots to illustrate survivers and deaths
+    rug(sims$res$tstop[sims$res$event==1], line = -.25, col = rgb(0,0,0,.02))
+
+    surv_times <- sims$res$tstop[sims$res$event==0]
+    max_surv_times <- 3e3
+    if(length(sims$res$tstop[sims$res$event==0]) > max_surv_times){
+      surv_times <- sample(surv_times, size = max_surv_times, replace = F)
+    }
+    rug(surv_times, line = .75, col = rgb(0,0,0,.02))
+
   })
 }
 
