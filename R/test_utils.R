@@ -180,7 +180,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
         exp_eta <- exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1])
         event <- exp_eta / (1 + exp_eta) > get_unif_draw(1)
         if(event){
-          tstop <- min(tmp_t + 1, t_max) # tstop can at most be t_max
+          tstop <- ceiling(min(tmp_t + 1, t_max)) # tstop can at most be t_max
           break
         }
 
@@ -219,7 +219,7 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
                               re_draw = T, beta_start = 1, intercept_start,
                               sds = rep(1, n_vars + !missing(intercept_start)),
                               is_fixed = c(),
-                              tstart_sampl_func = function(t_0 = t_0, t_max = t_max, by = by)
+                              tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
                                 t_0){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
@@ -251,7 +251,7 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
 
   # Simulate
   for(id in 1:n_series){
-    tstart <- tstop <-  ceiler(tstart_sampl_func(t_0, t_max, by))
+    tstart <- tstop <-  ceiler(tstart_sampl_func(t_0, t_max))
     repeat{
       tstop <- ceiler(tstart + get_exp_draw(1))
 
