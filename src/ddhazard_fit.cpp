@@ -430,11 +430,14 @@ class EKF_helper{
       double tmp_denom = pow(1.0 + exp_eta, 2.0);
       const double var = std::isinf(tmp_denom) ?
         pow(exp_eta, -1) : (exp_eta / pow(exp_eta + 1.0, 2.0));
-      const double dh_divded_by_var = var / (var + dat.ridge_eps); // deriative of link function divided by variance + ridge term
 
-      u_ += x_ * (dh_divded_by_var *
+      double score_fac = exp_eta/(dat.ridge_eps + exp_eta +
+                                  2*dat.ridge_eps*exp_eta + dat.ridge_eps*pow(exp_eta,2));
+      double var_fac = pow(exp_eta,2)/(pow(1 + exp_eta,4)*(dat.ridge_eps + exp_eta/pow(1 + exp_eta, 2)));
+
+      u_ += x_ * (score_fac *
         ((dat.is_event_in_bin(*it) == bin_number) - exp_eta / (1.0 + exp_eta)));
-      U_ += x_ *  (x_.t() * (var * dh_divded_by_var));
+      U_ += x_ *  (x_.t() * var_fac);
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = pow(var, -1);
