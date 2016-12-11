@@ -2,6 +2,12 @@ if(interactive()){
   library(dynamichazard); library(testthat); library(survival); source("R/test_utils.R")
 }
 
+
+# Had issues with win builder. Thus, these lines
+test_name <- "UKF"
+cat("\nRunning", test_name, "\n")
+
+
 test_that("UKF on head_neck works with logit model", {
   # tmp <- file("tmp.txt")
   # sink(tmp)
@@ -436,3 +442,8 @@ test_that("UKF on simulated data works with exponential model", {
   expect_equal(c(result_exp$LR),
                c(1 ))
 })
+
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")

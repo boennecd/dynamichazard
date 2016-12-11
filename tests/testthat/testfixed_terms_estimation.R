@@ -5,6 +5,10 @@ if(interactive()){
   source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
 }
 
+# Had issues with win builder. Thus, these lines
+test_name <- "fixed_term"
+cat("\nRunning", test_name, "\n")
+
 set.seed(548237)
 sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
@@ -318,3 +322,11 @@ test_that("UKF with fixed effects works", {
   # matplot(fit$state_vecs, type = "l", col = 3:4, add = T, lty = 1)
   # abline(h = fit$fixed_effects, col = 1:2)
 })
+
+
+
+
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")

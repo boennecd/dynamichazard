@@ -2,6 +2,13 @@ if(interactive()){
   library(testthat); source("./R/test_utils.R")
 }
 
+
+
+# Had issues with win builder. Thus, these lines
+test_name <- "plot"
+cat("\nRunning", test_name, "\n")
+
+
 # Test first order
 test_that("Expecting plot calls to succed with first order model", {
   arg_list <- list(
@@ -46,7 +53,7 @@ test_that("Expecting plot calls to succed with second order model", {
     data = head_neck_cancer,
     by = 1, control = list(eps = 1e-2, est_Q_0 = F),
     a_0 = rep(0, 4), Q_0 = diag(1, 4),
-    Q = diag(c(5e-3, 5e-3, 0, 0)),
+    Q = diag(c(5e-3, 5e-3)),
     order = 2,
     max_T = 40
   )
@@ -58,7 +65,7 @@ test_that("Expecting plot calls to succed with second order model", {
   suppressMessages(pbc_fit <- ddhazard(
     formula = survival::Surv(tstart/100, tstop/100, status == 2) ~ log(bili) + log(protime),
     data = pbc2, model = "exponential", by = 1, max_T = 36,
-    Q_0 = diag(5, 6), Q = diag(c(rep(1e-3, 3), rep(0, 3))),
+    Q_0 = diag(5, 6), Q = diag(c(rep(1e-3, 3))),
     id = pbc2$id, order = 2,
     control = list(LR = .01, eps = 1e-2, save_risk_set = F)))
 
@@ -92,3 +99,11 @@ test_that("Alters mfcol and sets it back", {
     expect_equal(getOption("mfcol"), NULL)
   }
 })
+
+
+
+
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")

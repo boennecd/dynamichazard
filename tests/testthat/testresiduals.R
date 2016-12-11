@@ -3,6 +3,10 @@ if(interactive()){
   source("R/test_utils.R")
 }
 
+# Had issues with win builder. Thus, these lines
+test_name <- "residuals"
+cat("\nRunning", test_name, "\n")
+
 ###############
 # Simple test that methods calls succeds
 arg_list <- list(
@@ -205,3 +209,9 @@ test_that("pearson and raw residuals for exponential corresponds", {
 # matplot(resids$residuals)
 # resids <- residuals(fit, "space_error")
 # matplot(resids$residuals)
+
+
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")

@@ -2,6 +2,12 @@ if(interactive()){
   library(testthat); library(survival); library(parallel); source("R/test_utils.R")
 }
 
+
+# Had issues with win builder. Thus, these lines
+test_name <- "loglike"
+cat("\nRunning", test_name, "\n")
+
+
 test_that("Verbose on ddhazard prints a log likelihood", {
   expect_output({
     result = ddhazard(
@@ -105,7 +111,7 @@ test_that("logLik for head_neck_cancer data set with second order model", {
     data = head_neck_cancer,
     by = 1,
     a_0 = rep(0, 4), Q_0 = diag(c(1, 1, 1, 1)),
-    Q = diag(c(1e-4, 1e-4, 0, 0)),
+    Q = diag(c(1e-4, 1e-4)),
     control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-2),
     max_T = 45,
     id = head_neck_cancer$id, order = 2,
@@ -279,5 +285,9 @@ test_that("logLik for simulated data versus old results", {
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)
 })
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")
 
 

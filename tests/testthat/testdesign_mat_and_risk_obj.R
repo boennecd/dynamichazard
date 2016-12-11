@@ -2,6 +2,10 @@ if(interactive()){
   library(survival); library(testthat); source("R/test_utils.R"); library(dynamichazard)
 }
 
+# Had issues with cran buil. Thus, these lines
+test_name <- "design_mat_..."
+cat("\nRunning", test_name, "\n")
+
 get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 
 # Simulate data
@@ -343,3 +347,9 @@ test_that("is_for_discrete_model logic work",{
   expect_true(setequal(get_risk_obj_cont$risk_sets[[2]], c(5:6, 8, 9, 11, 12, 13, 14, 15, 16, 17)))
   expect_true(setequal(get_risk_obj_cont$risk_sets[[3]], c(5:6, 12, 14, 17)))
 })
+
+
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")

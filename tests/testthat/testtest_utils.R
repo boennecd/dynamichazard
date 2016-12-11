@@ -4,6 +4,12 @@ if(interactive()){
   library(testthat)
 }
 
+
+# Had issues with win builder. Thus, these lines
+test_name <- "test_utils"
+cat("\nRunning", test_name, "\n")
+
+
 set.seed(101010)
 
 test_that("Testing util functions to sim for test", {
@@ -83,3 +89,9 @@ test_that("Covs are fixed or not depends on is fixed argument", {
                  !seq_len(11) %in% c(1, 4))
   }
 })
+
+
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")
