@@ -360,6 +360,26 @@ inline double binary_only_score_fac(const double v, const double  inv_exp_v, dou
 
 inline double binary_only_var_fac(const double v, const double  inv_exp_v, double eps){
   return(pow(inv_exp_v*v, 2)/(eps + (1 - inv_exp_v)*inv_exp_v));
+}
+
+
+inline double trunc_time_only_score_fac(const double exp_eta, const double inv_exp_eta,
+                                        const double inv_exp_v, const double a,
+                                        const double eps){
+  return((exp_eta >= 1e-4) ?
+           (-1 + inv_exp_v + a*exp_eta*inv_exp_v)/(eps*exp_eta + inv_exp_eta - 2*a*inv_exp_v -
+                                                    inv_exp_eta*pow(inv_exp_v,2)) :
+           (exp_eta / eps *(-3*pow(a,2)*eps + (pow(a,5) + 2*pow(a,3)*eps)*exp_eta))/(6*eps));
+}
+
+inline double trunc_time_only_var_fac(const double exp_eta, const double inv_exp_eta,
+                                      const double inv_exp_v, const double a,
+                                      const double eps){
+  return((exp_eta >= 1e-5) ?
+           (1 - 2*inv_exp_v - 2*a*exp_eta*inv_exp_v + pow(inv_exp_v,2) + 2*a*exp_eta*pow(inv_exp_v,2) +
+              pow(a*exp_eta*inv_exp_v, 2))/
+                (1 + eps*pow(exp_eta,2) - 2*a*exp_eta*inv_exp_v - pow(inv_exp_v,2)) :
+           (pow(exp_eta/eps,2)*(3*pow(a,4)*eps + (-pow(a,7) - 4*pow(a,5)*eps)*exp_eta))/12);
 }}
 
 class EKF_helper{
@@ -522,7 +542,8 @@ class EKF_helper{
       {}
   };
 
-  // worker for the continous model with exponential distribution
+  // worker for the continous model with exponential distribution where only the
+  // binary variable is used
   class filter_worker_exponential_binary_only : public filter_worker {
   private:
     void do_comps(const arma::uvec::const_iterator it, int &i,
@@ -554,7 +575,7 @@ class EKF_helper{
 
       if(compute_z_and_H){
         // Compute terms from waiting time
-        dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
+        dat.H_diag_inv(i) = exp_model_funcs::inv_var_chance_die(v, expect_chance_die);
 
         dat.z_dot.rows(0, dat.n_parems - 1).col(i) =  x_ * (inv_exp_v * v);
         ++i;
@@ -562,6 +583,55 @@ class EKF_helper{
     }
   public:
     filter_worker_exponential_binary_only(problem_data_EKF &p_data):
+    filter_worker(p_data)
+    {}
+  };
+
+  // worker for the continous model with exponential distribution where only the
+  // right truncated variable is used
+  class filter_worker_exponential_trunc_time_only : public filter_worker {
+  private:
+    void do_comps(const arma::uvec::const_iterator it, int &i,
+                  const arma::vec &i_a_t, const bool &compute_z_and_H,
+                  const int &bin_number,
+                  const double &bin_tstart, const double &bin_tstop){
+      // Compute intermediates
+      const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
+
+      double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
+      const double eta = arma::dot(i_a_t, x_) + offset;
+
+      const double do_die = (dat.is_event_in_bin(*it) == bin_number);
+      const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
+      const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
+
+      const double exp_eta = exp(eta);
+      const double inv_exp_eta = pow(exp_eta, -1);
+      const double v = at_risk_length * exp_eta;
+      const double exp_v = exp(v);
+      const double inv_exp_v = pow(exp_v, -1.0);
+
+      const double expect_time = exp_model_funcs::expect_time(v, at_risk_length, inv_exp_v, exp_eta);
+
+      const double score_fac = exp_model_funcs::trunc_time_only_score_fac(
+        exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
+      const double var_fac = exp_model_funcs::trunc_time_only_var_fac(
+        exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
+
+      u_ += x_ * (score_fac * (time_outcome - expect_time));
+
+      U_ += x_ * (x_.t() * var_fac);
+
+      if(compute_z_and_H){
+        // Compute terms from waiting time
+        dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
+
+        dat.z_dot.rows(0, dat.n_parems - 1).col(i) =  x_ * (inv_exp_eta*inv_exp_v*(1 - exp_v + v));
+        ++i;
+      }
+    }
+  public:
+    filter_worker_exponential_trunc_time_only(problem_data_EKF &p_data):
     filter_worker(p_data)
     {}
   };
@@ -613,6 +683,9 @@ public:
 
       } else if (model == "exponential_binary_only"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_exponential_binary_only(p_data));
+        workers.push_back(std::move(new_p));
+      } else if(model == "exponential_trunc_time_only"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exponential_trunc_time_only(p_data));
         workers.push_back(std::move(new_p));
       }else
         Rcpp::stop("EKF is not implemented for model '" + model  +"'");

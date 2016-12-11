@@ -202,6 +202,19 @@ suppressMessages(result_exp <- ddhazard(
   model = "exponential"
 ))
 
+suppressMessages(result_exp <- ddhazard(
+  formula = survival::Surv(start, stop, event) ~ group,
+  data = head_neck_cancer,
+  by = 2, Q_0 = diag(1, 2),
+  Q = diag(1e-1, 2),
+  control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-3,
+                 save_data = F, save_risk_set = F),
+  max_T = 30,
+  id = head_neck_cancer$id, order = 1,
+  verbose = F,
+  model = "exponential"
+))
+
 # matplot(result_exp$state_vecs, type = "l")
 # plot(result_exp, cov_index = 1)
 # get_expect_equal(result_exp, file = "tmp.txt")
@@ -301,8 +314,8 @@ suppressMessages(result_exp <- ddhazard(
 # sink()
 # close(tmp_file)
 
-matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
-matplot(result_exp$times, result_exp$state_vecs, result_exp$state_vecs, type = "l", lty = 2, add = T)
+# matplot(seq_len(nrow(sims$betas)) - 1, sims$betas, type = "l", lty = 1)
+# matplot(result_exp$times, result_exp$state_vecs, result_exp$state_vecs, type = "l", lty = 2, add = T)
 # get_expect_equal(result_exp, eps = 1e-2, file = "tmp.txt")
 
 test_that("Result of exponential model on simulated data match previous results", {
