@@ -2,9 +2,11 @@ library(dynamichazard); library(testthat); library(survival); source("C://Users/
 
 set.seed(599479)
 
-sims <- test_sim_func_exp(n_series = 1e6, n_vars = 10, t_0 = 0, t_max = 10,
+sims <- test_sim_func_exp(n_series = 1e5, n_vars = 10, t_0 = 0, t_max = 10,
                           x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
                           intercept_start = -5, sds = c(.1, rep(1, 10)))
+
+getOption("ddhazard_max_threads")
 
 suppressMessages(result_exp <- ddhazard(
   formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
