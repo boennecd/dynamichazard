@@ -12,6 +12,9 @@ knitr::knit_hooks$set(default_options = function(before, options, envir) {
       options(digits = 4)
 })
 
+options(ddhazard_max_threads = parallel::detectCores())
+
+options(digits = 4)
 knitr::opts_chunk$set(echo = TRUE, cache = TRUE, message = FALSE, warning = FALSE, default_options = T)
 ```
 
@@ -23,13 +26,13 @@ This note has four objectives. The first objective is to test how the `ddhazard`
 * Mixture of fixed and time varying effects with the EKF estimation method
 * Fits using the Unscented Kalman filter (UKF)
 
-The second objective is to show how to estimate various models with the function `ddhazard`. For this reason, the note contains intermediate `R` code which is not needed to understand the simulation results. Thus, we will use \* in the headers of section to distinguish the content. The headers marked with no \* are showing results of simulation or contains important comments. Headers with an \* and \*\* shows increasingly less important code to understand the simulation. Consequently, you can skip to the headers with no \* if you are only interested in the results
+The second objective is to show how to estimate various models with the function `ddhazard`. For this reason, the note contains intermediate `R` code which is not needed to understand the simulation results. Thus, we will use \* in the headers of section to distinguish the content. The headers marked with no \* indicates sections with results of simulation or contains important comments. Headers with an \* and \*\* shows increasingly less important code to understand the simulation. Consequently, you can skip to the headers with no \* if you are only interested in the results
 
-The third objective is to illustrate how the various methods performs for out-of-time prediction. By out-of-time we mean that we only observe outcomes up to given time, $d$, and then predict the outcome for future observations at time $d+1$. Notice the distinction between out-sample and out-of-time. The former, out-of-time, is where we estimate the model up to time $d$ using one set and then apply the estimates to predict the outcomes of the other set up to time $d$. The latter is where we observe all series to time $d$ and then perform prediction for those who are still alive at time $d$ for whether they die at e.g. $d+1$
+The third objective is to illustrate how the various methods performs for out-of-time prediction (forecasting). By out-of-time we mean that we only observe outcomes up to given time, $d$, and then predict the outcome for future observations at time $d+1$
 
 The final fourth objective is to show that both the EKF and UKF scales linearly with the number individuals (series)
 
-All method with use the logistic link function. We will do three runs of experiments in the following order:
+All method use the logistic link function. We will do three runs of experiments in the following order:
 
 1. A Model where all effects are time varying and we use the correct binning intervals
 2. A model where only one parameter is time varying and  we use the correct binning intervals
@@ -50,7 +53,7 @@ current_version <- paste0("boennecd/dynamichazard@", current_sha)
 ```
 
 ```{r}
-current_version
+current_version # The string to pass devtools::install_github
 ```
 
 ```{r eval=FALSE}
@@ -76,7 +79,7 @@ The findings are:
 * Miss specifying a fixed effect as time varying or setting the binning number incorrectly has little effect on the results
 * The UKF and/or the EKF method with extra iteration in the correction step perform close to a Generalized Additive model in terms of out-sample Brier score
 
-You will see that the the estimation sometimes fails. It is worth stressing that it is my experience that you can always do "trail-and-error" with the initial covariance matrix in the state equation, the covariance matrix at time zero and tuning parameters in order to get a model to fit a given dataset. Of course, it is disadvantages that any given data set may require some tuning by the user. Although as will be shown, tuning by the user is not often needed with data sets like those presented here
+You will see that the the estimation sometimes fails. It is worth stressing that it is my experience that you can always do "trail-and-error" with the initial covariance matrix in the state equation, the covariance matrix at time zero and tuning parameters in order to get a model to fit a given dataset. Of course, it is a disadvantage that any given data set may require some tuning by the user. Although as will be shown, tuning by the user is not often needed with data sets like those presented here
 
 ## Setup
 The following values will be used in the simulation:
@@ -87,13 +90,41 @@ T_max <- 10             # The last time we observe
 n_sims <- 3           # Number of simulation in each run
 
 gsub("(^.+)(/dynamichazard.+$)", "...\\2", getwd())
-source("../R/test_utils.R")
+source("../../R/test_utils.R")
 ```
 
-`ns` is the number of series (individuals) we will estimate in each of the simulation in each of the runs. Thus, we will perform simulations with a total of `r paste(ns[-length(ns)], collapse = ", ")` and `r tail(ns, 1)` series in each. Each simulation will have `n_beta =` `r n_beta` covariates plus an intercept. Each run will simulate `n_sims =` `r n_sims` times. Finally, we source the `test.utils.R` file to define the simulation function. You can find this on the github site. `T_max` is the number of bins/intervals we will observe. Thus, we have 1, 2, ..., `T_max` + 1 covariate vectors (+1 for the time zero coefficient vector) 
+`ns` is the number of series (individuals) we will estimate in each of the simulation in each of the runs. Thus, we will perform simulations with a total of `r paste(ns[-length(ns)], collapse = ", ")` and `r tail(ns, 1)` series in each. Each simulation will have `n_beta =` `r n_beta` covariates plus an intercept. Each run will simulate `n_sims =` `r n_sims` times. Finally, we source the `test.utils.R` file to define the simulation function. You can find this on the github site. `T_max` is the number of bins/intervals we observe. Thus, we have 1, 2, ..., `T_max` + 1 covariate vectors (+1 for the time zero coefficient vector) 
 
 # Fitting true model
-We will make runs for various number of individuals in this section where we estimate a model where all effects are time varying and we use the correct binning intervals. Thus, the only  models that are miss specified are the model with one time varying effect (which will be `x2`) and the model where we fit are second order random walk
+We will make runs for various number of individuals in this section where we estimate a model where all effects are time varying and we use the correct binning intervals. Thus, the only  models that are miss specified are the model with one time varying effect (which will be `x2`) and the model were we use a second order random walk
+
+## `do.call`
+We will use `do.call` in this vignette. To my knowledge, `do.call` is not standard so this section is included to give a brief introduction to `do.call` for users who are not familiar with `do.call`
+
+We can take an example with the `mean` function. We will make the following call where we set `na.rm` to `TRUE`:  
+```{r}
+mean(x = c(1, 2, NA, 6), na.rm = T)
+```
+
+This call can also be made as follows `do.call`:
+```{r}
+arg_ex <- list(x = c(1, 2, NA, 6), na.rm = T)
+do.call(mean, arg_ex)
+```
+
+Hence, `do.call` is usefull in situation where we make call with where almost all the arguments are the same. For example, in the setting where we have arguments `a1`, `a2`, `...`, up to `a1000` and we only want to change argument `a101` say. This can then be done as follows:
+```{r, eval=FALSE}
+# Not runable
+arg_ex <- list(a1 = x, 
+               a2 = y,
+               ..., # enter all the other values 
+               a1000 = z)
+do.call(some_func, arg_ex)
+
+# change only a101 argument and keep the rest as the arguments as is
+arg_ex$a101 <- some_specific_value
+do.call(some_func, arg_ex)
+```
 
 ## Definition of simulation function
 Below, we define a list of `default_args` (default arguments) to our simulation function which we can later use using `do.call`. 
@@ -101,20 +132,19 @@ Below, we define a list of `default_args` (default arguments) to our simulation 
 # Default arguments for simulation
 default_args <- list(
   n_vars = n_beta, # Number of betas not including intercept
-  beta_start = c(-1, -.5, 0, 1.5, 2), # start value of coeffecients
-  intercept_start = -4, # start value of intercept
-  sds = c(.1, rep(1, n_beta)), # std. deviations in state equation
+  beta_start = c(0, .5, 1, 1.5, 2), # start value of coeffecients
+  intercept_start = -5, # start value of intercept
+  sds = c(.1, rep(.5, n_beta)), # std. deviations in state equation
   t_max = T_max, # Largest time we observe
   x_range = 1, # range of covariates
   x_mean = .5) # mean of covariates
-
 ```
 
 Let $\vec{\beta}_t$ denote the time varying covariates at time $t$. Then the `beta_start` is the time 0 values of the coefficients and `intercept_start` is the starting value of the intercept. The `sds` are the standard deviations, $\sigma_i$, in the state equation. Hence, 
 $$\beta_{j,t} = \beta_{j,t - 1} + \epsilon_{j,t},\qquad \epsilon_{j,t} \sim N(0,\sigma_j)$$
 
 where each margin is independent of the others. The `x_mean` and `x_range` defines how the covariate values are simulated. The above setting implies that $x_{itj} = \text{Unif}(0.5 - 1/2, 0.5 + 1/2)$ where $x_{itj}$ is the $i$'th individuals covariate $j$ at time $t$. The covariates vector $\vec{x}_{it}$ is updated at time differences of $1+\eta$ 
- where $\eta \sim \text{Pois}(1)$ and $\eta$s are drawn separately for each individual. The motivation for this behavior is that we can have different covariate update times than our binning time in a given study. For instance, say we are looking at a medical study and the covariates are laboratory values. The time of laboratory values from an individual's visit the doctor can differ from whatever binning periods we use in the state-space model. Further, the time when laboratory values are updated can differ between patients. One might see his doctor every week or so while another only sees his doctor every year
+ where $\eta \sim \text{Exp}(1)$ and $\eta$s are drawn separately for each individual. The motivation for this behavior is that we can have different covariate update times than our binning time in a given study. For instance, say we are looking at a medical study and the covariates are laboratory values. The time of laboratory values from an individual's visit the doctor can differ from whatever binning periods we use in the state-space model. Further, the time when laboratory values are updated can differ between patients. One might see his doctor every week or so while another only sees his doctor every year
  
 Below we illustrate how the coefficients vectors from a simulation can look:
 ```{r}
@@ -123,18 +153,24 @@ sims <- do.call(test_sim_func_logit, c(list(n_series = max(ns)), default_args))
 
 # This is how the state vectors look
 # We define a function so we can re-use it later
-(plot_func <- function(ylim = c()) # we define a function here so we can use it later
-  matplot(sims$betas, type = "l", lty = 1, ylab = "time", xlab = "beta",
-          ylim = range(sims$betas, ylim), col = 1:(n_beta + 1)))()
+plot_func <- function(ylim = c()){ # we define a function here so we can use it later
+  matplot(sims$betas, type = "l", lty = 1, ylab = expression(beta), xlab = "t",
+          ylim = range(sims$betas, ylim), col = 1:(n_beta + 1))
+  
+  # Add rug plot to illustrate when people die
+  rug(jitter(sims$res$tstop[sims$res$event==1], amount = .25) + 1, 
+      col = rgb(0, 0, 0, .05))
+}
+
+plot_func()
 
 ```
 
-The black line is the intercept while the colored lines are the coefficients for the covariates. Next, we can look at the number of failures in each simulation:
+The black line is the intercept while the colored lines are the coefficients for the covariates. The lines on the x-axis illustrate when we observe that individuals die. There is one line for each death. Next, we can look at the number of failures in each simulation:
 ```{r}
 # We get a decent amount of failures and survivers in some of the simulations
 # We use do.call to avoid repeating the above argument list
-# See ?do.call
-set.seed(9654731)
+set.seed(468249)
 n_fails_in_sim <- rep(NA_real_, 15)
 for(i in seq_along(n_fails_in_sim)){
   sims <- do.call(test_sim_func_logit, c(
@@ -145,7 +181,7 @@ n_fails_in_sim # number of failures in each simulation
 ```
 
 ## \* Defintion of fit functions
-We will define functions to estimate the different with a data frame as the first argument where the data frame is from a `test_sim_func_logit` call. This will reduce the amount of code later
+We will define functions to estimate the different models with a data frame as the first argument where the data frame is from a `test_sim_func_logit` call. This will reduce the amount of code later
 
 ### \*\* Defintion of static fit
 Below, we define function to fit a model where the coefficients are fixed ($\vec{\beta}_t = \vec{\beta}$). It is estimated using `glm` 
@@ -167,20 +203,20 @@ abline(h = fit$coefficients, col = 1:(n_beta + 1), lty = 2)
 ```
 
 ### \* Defintion of `ddhazard` fit functions
-Below, we define a function to simulate a first order random walk with a given learning rate and potential extra iterations in the scoring step (see the ddhazard vignette for details):
+Below, we define a function to fit a first order random walk model with a given learning rate and potential extra iterations in the scoring step (see the ddhazard vignette for details):
 ```{r est_true_fit_ddhazrd_out_of_box}
 library(survival); library(dynamichazard)
 
 # Set up function ddhazard fit function for convenience
 # LR:       learning rate in correction step
-# NR_eps:   tolerance in correction step. NULL yields no extra loops
+# NR_eps:   tolerance in correction step. NULL yields no extra iterations
 fit_funcs$dd <- function(s = sims$res, LR = 1, NR_eps = NULL)
   tryCatch({
     ddhazard(
       formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
       data = s, max_T = T_max, by = 1, id = s$id, 
-      Q_0 = diag(1, n_beta + 1), Q = diag(.01, n_beta + 1),
-      control = list(LR = LR, NR_eps = NR_eps, eps = 0.1))
+      Q_0 = diag(10, n_beta + 1), Q = diag(.01, n_beta + 1),
+      control = list(LR = LR, NR_eps = NR_eps, eps = 0.01))
   }, error = function(...) NA) # Return NA if fails
 
 fit <- fit_funcs$dd()
@@ -199,7 +235,7 @@ matplot(fit$state_vecs, col = 1:(n_beta + 1), lty = 2,
         type = "l", add = T)
 ```
 
-Below, we define a function to simulate a first order random walk with the UKF method:
+Below, we define a function to fit a first order random walk model with the UKF method:
 ```{r}
 # Fitting with UKF
 fit_funcs$dd_UKF <- function(s = sims$res, alpha = 1, beta = 0){
@@ -224,7 +260,7 @@ matplot(fit$state_vecs, col = 1:(n_beta + 1), lty = 2,
         type = "l", add = T)
 ```
 
-Below, we define a function to simulate a first order random walk where only one parameter (`x2`) is time varying:
+Below, we define a function to estimate a first order random walk model where only one parameter (`x2`) is time varying:
 ```{r}
 # Fitting with fixed effects
 fit_funcs$dd_fixed <- function(s = sims$res, LR = 1, NR_eps = NULL){
@@ -286,7 +322,7 @@ fit_funcs$gam <- function(s = sims$res){
   # fit model
   bam(
     formula = Y ~ 
-      # cr is cubic basis with dim of k
+      # cr is cubic basis with k knots
       s(t, bs = "cr", k = 10, by = x1) + 
       s(t, bs = "cr", k = 10, by = x2) + 
       s(t, bs = "cr", k = 10, by = x3) + 
@@ -304,7 +340,8 @@ fit <- fit_funcs$gam()
 # Compare plot
 layout(matrix(1:6, nrow = 2))
 for(i in 1:n_beta){
-  plot(fit, pages = 0, rug = F, col = i + 1, select = i, lty = 2)
+  plot(fit, pages = 0, rug = F, col = i + 1, select = i, lty = 2, 
+       main = paste0("(", i, ")"))
   lines(sims$betas[-1, i + 1], col = i + 1)
 }
 ```
@@ -330,7 +367,7 @@ length(intersect(tmp$test_dat$id, tmp$fit_dat$id))
 length(union(tmp$test_dat$id, tmp$fit_dat$id))
 ```
 
-Having defined the splitting method, we turn the prediction functions. The idea is to define the `brier_funcs$general` function which takes in a prediction function, a fit and a data frame. Next, we then define individual prediction functions for each of the models which will be passed to `brier_funcs$general`:
+Having defined the splitting method, we turn to the prediction functions. The idea is to define the `brier_funcs$general` function which takes in a prediction function, a fit and a data frame. Next, we then define individual prediction functions for each of the models which will be passed to `brier_funcs$general`:
 
 ```{r}
 # Define general prediction function
@@ -349,13 +386,9 @@ brier_funcs$general <- function(brier_func, fit, eval_data_frame){
   resids <- brier_func(fit, d_frame)
 
   # Return estimates
-  list(brier = mean.default(resids^2),
+  list(brier = mean(resids^2),
        median_abs_res = median(abs(resids)),
-       sd_res = sd(resids),
-       # Info is added to debug
-       info = cbind(resids = resids,
-                    tstop = d_frame$tstop, 
-                    id = d_frame$id))
+       sd_res = sd(resids))
 }
 
 # Prediction method for static model
@@ -408,7 +441,7 @@ unlist(
 ```
 
 ## \*\* Definition of multiple simulations function
-To make things easier, we define a function that takes in a function to simulate from. Given a function to simulate, then the new function perform `n_sims =` `r n_sims` simulations for each of values `ns` (`r ns`): 
+To make things easier, we define a function that takes in a function to simulate from. Given a function to simulate with, the new function perform `n_sims =` `r n_sims` simulations for each of values `ns` (`r ns[-length(ns)]` and `r ns[length(ns)]`): 
 ```{r simulations_def, warning=FALSE, results='asis'}
 simulate_n_print_res <- function(
   sim_func, # Function that takes one argment which is number of series
@@ -438,13 +471,13 @@ simulate_n_print_res <- function(
       tcltk::setTkProgressBar(pb, i - 1, paste("Estimating with n =", n), info)
       #*******
       
-      # Sample until we get an outcome have suffecient amount of deaths and 
+      # Sample until we get an outcome have sufficient amount of deaths and 
       # survivers
       repeat{
         sims <- sim_func(n)
         
         # We want some survivers and some deaths
-        if(sum(sims$res$event) > 40 && n - sum(sims$res$event) > 40)
+        if(sum(sims$res$event) > 25 && n - sum(sims$res$event) > 25)
           break
       }
       
@@ -487,7 +520,7 @@ simulate_n_print_res <- function(
                      
       for(j in seq_along(models)){
         if(length(models[[j]]) == 1 && is.na(models[[j]]))
-          next # We have to skip models fits that failed
+          next # We have to skip model fits that failed
         
         metrics <- brier_funcs$general(
           eval_funcs[[j]], models[[j]], sim_split$test_dat)
@@ -502,25 +535,27 @@ simulate_n_print_res <- function(
     #*******  
     
     # Print results
-    print(knitr::kable(t(apply(out[, , 1], 2, function(x) n_sims - sum(is.na(x)))), caption = paste(
-      "Number of successful fits with", n/2, "series in test and fit data.")))
-    cat("\n")
-    
+    did_fit <- apply(out[, , 1], 2, function(x) n_sims - sum(is.na(x)))    
     n_cases_all_success <- sum(complete.cases(out[, , 1]))
+    metric_where_all_fit <- 
+      t(apply(out[complete.cases(out[, , 1]), , , drop = F], 3, colMeans))
     
-    if(n_cases_all_success > 0){
-      print(knitr::kable(t(apply(out[complete.cases(out[, , 1]), , , drop = F], 
-                                 3, colMeans)),
-            digits = 3, caption = paste(
-      "Mean of metrics with", n/2, "series in test and fit data. Only simulations that succeeds for all setups are included. There are", n_cases_all_success, "of these simulations")))
-      cat("\n")
-    }
+    metric_where_all_fit <- formatC(metric_where_all_fit ,format="f", digits=3)
+    n_cases_all_success <- formatC(n_cases_all_success, format="d")
     
-    print(knitr::kable(t(apply(out, 3, colMeans, na.rm = T)), digits = 3, 
-                       caption = paste(
-      "Mean of metrics with", n/2, "series in test and fit data. All simulations for each setup where the fit succeeds for the given setup are included in each cell estimate")))
-    
+    print(knitr::kable(rbind(
+      metric_where_all_fit, "# succesful fits" = did_fit),
+          caption = paste(
+    "Mean of metrics with", n/2, "series in test and fit data. Only simulations that succeeds for all setups are included. There are", n_cases_all_success, "of these simulations. The last line shows the number of successful fits for each setup")))
     cat("\n")
+    
+    # # Prints the metrics for all the simulation that succeeds for given setup
+    # # Out commented as the metrics are comparable. Download the code and 
+    # # comment back if you are interested 
+    # print(knitr::kable(t(apply(out, 3, colMeans, na.rm = T)), digits = 3, 
+    #                    caption = paste(
+    #   "Mean of metrics with", n/2, "series in test and fit data. All simulations for each setup where the fit succeeds for the given setup are included in each cell estimate")))
+    # cat("\n")
   }
 }
 ```
@@ -536,26 +571,26 @@ simulate_n_print_res(
     do.call(test_sim_func_logit, c(default_args, c(list(n_series = n)))))
 ```
 
-We should only compare across methods with mean metrics `where all succeeded to fit`. The logic being that those where the `ddhazard` method fail may be have different errors than those where all succeed to fit
+We should only compare across methods with mean metrics `where all succeeded to fit`. The logic being that those where the `ddhazard` method fail may be have different errors than those where all succeed to fit.
 
 ## Conclussion on run
 All models perform better than the static model apart from the case where the number of individuals in the training data is only `r min(ns)/2`. The miss specified models (`2 order EKF` and `Fixed effect`) tend to perform worse than the others models. Though, they still perform better than the static model labeled `static`
 
 The UKF performs close to the gam model when the training data has less than `r max(ns)/2` observations while taking extra iterations in the EKF seems to be worth it in terms of out-sample Brier score when the training data has `r max(ns)/2` observations. This may suggest that the UKF method is better for smaller data sets while the EKF with extra iterations in the scoring step is better suited for larger data sets. In all cases, at least one of models is close to the `gam` model in terms of out-sample Brier score 
 
-# Single time variying parameter
-In this part, we will look at the performs when only a single covariate (`x2`) varies. Thus, we can see if the model where only (`x2`) is modeled as varying performs performs better. Or in other words how the miss specified models behaves
+# Single time varying parameter
+In this part, we will look at the performs when only singe coefficient (`x2`) varies. Thus, we can see if the model where only (`x2`) is modeled as varying performs performs better. Or in other words how the miss specified models behaves
 
 ## \*\* Definition of simulation function
 We start by defining the simulation function. The main change here is that we only set a single standard deviation and that we set it larger than before:
 ```{r , warning=FALSE}
 # Use simulation function
 set.seed(9999)
-sim_one_variying <- function(n){
+sim_one_varying <- function(n){
   test_sim_func_logit(
     n_series = n, 
     sds = c(sqrt(3)), # Large variance
-    is_fixed = c(1:2, 4:6), # All but parem three is fixed
+    is_fixed = c(1:2, 4:6), # All but param three is fixed
     
     # Same values as before
     n_vars = n_beta, 
@@ -571,10 +606,10 @@ sim_one_variying <- function(n){
 ```{r}
 # We get a more variable number of failures and survivers (we simulate 200 
 # series)
-replicate(10, sum(sim_one_variying(200)$res$event)) # print # of failures
+replicate(10, sum(sim_one_varying(200)$res$event)) # print number of failures
 
 # Here is an example of a series
-tmp <- sim_one_variying(200)
+tmp <- sim_one_varying(200)
 matplot(tmp$betas, type = "l", lty = 1, ylab = "Beta", xlab = "Time")
 ```
 
@@ -583,14 +618,14 @@ We can simulate with the following call:
 ```{r simulations_one_variying, warning=FALSE, cache=TRUE, results='asis'}
 # Use simulation function
 set.seed(8080)
-simulate_n_print_res(sim_func = sim_one_variying)
+simulate_n_print_res(sim_func = sim_one_varying)
 ```
 
 ## Conclussion on run
-The main interest here is how the correctly specified model labeled `Fixed effect` roughly as good as the other fits. It seems to make a minor difference in terms of out-sample Brier score for all the settings for miss specifying the coefficients as time varying. This may suggest that incorrectly specifying an effects as time varying does not affect the result
+The main interest here is how the model labeled `Fixed effect` roughly as good as the other fits. It seems to make a minor difference in terms of out-sample Brier score for all the settings for specify the coefficients as time varying. This may suggest that specifying an effects as time varying does not affect the result
 
 # Incorrect binning time
-Now, what happens if we get the binning wrong? This is the next experiment we will perform. Specifically, we will set the binning length to `0.1` instead `1` when we simulate. Thus, coefficients are updated at time $0, 0.1, 0.2, \dots$ and whether and individual dies is evaluated at the same times when we simulate. However, the model will still use bins of length $1$
+Now, what happens if we get the binning wrong? This is the next experiment we will perform. Specifically, we will set the binning length to `0.1` instead `1` when we simulate. Thus, coefficients are updated at time $0, 0.1, 0.2, \dots$ and whether an individual dies is evaluated at the same times when we simulate. However, the fitted model will still be based on bins of length $1$
 
 ## \*\* Definition of simulation function
 ```{r}
@@ -644,7 +679,7 @@ simulate_n_print_res(sim_func = sim_finer_binning)
 The UKF seems to perform well in all settings. Moreover, the extra iteration seems to be worth it when there are a moderate amount of observations. The miss specified `Fixed effect` seems to perform worse than the other fit/estimates. Finally, the mean Brier score is again not too far off from the `gam` fit for the model/method with the best result. In fact, the EKF model with the extra iteration has almost equal performs with the largest number of series
 
 # Out-of-time prediction
-We will investigate how the different estimation method performs when the following period have to be predicted in the following paragraphs. Thus, we cannot use the GAM model because it uses in-sample splines. Though, we can still use the state-space models and as we can predict the following state vector given the previous. Further, we can use the static model to compare with
+We will investigate how the different estimation method performs when the following period have to be predicted in the following paragraphs. Thus, we cannot use the GAM model because it uses in-sample splines. Though, we can still use the state-space models   as we can predict the following state vector given the previous. Further, we can use the static model to compare with
 
 ## \*\* Define simulation and data splitting function
 We start by defining a simulation function and a function to split the data into the first time period which we will use for estimation and the later time period which we will use for the test
@@ -680,32 +715,34 @@ tmp <- sim_func()
 
 library(testthat)
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$id),
-c(185, 185, 185, 185, 185 ))
+# get_expect_equal(tmp$res[tmp$res$id == 161, ])
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$tstart),
-c(0.000000000000000, 1.353427133057266, 5.239086882344578, 7.633656822298430, 8.986424568728321 ))
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$id),
+c(161, 161, 161, 161, 161, 161 ))
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$tstop),
-c( 1.353427133057266, 5.239086882344578, 7.633656822298430, 8.986424568728321, 10.986424568728321 ))
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$tstart),
+c(0.00, 1.46, 2.95, 5.59, 7.28, 9.18 ))
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$event),
-c(0, 0, 0, 0, 1 ))
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$tstop),
+c( 1.46, 2.95, 5.59, 7.28, 9.18, 11.00 ))
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$x1),
-c(0.91531767020933330, 0.87565174698829651, 0.05045597674325109, 0.01638129679486156, 0.93038790253922343 ))
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$event),
+c(0, 0, 0, 0, 0, 1 ))
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$x2),
-c(0.1073432762641460, 0.3303454751148820, 0.8661973390262574, 0.9365278563927859, 0.7395429660100490 ))
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$x1),
+c(0.01755570666864514, 0.34809279046021402, 0.11150950612500310, 0.98113449150696397, 0.05127047444693744, 0.21680281823500991 ))
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$x3),
-c(0.88193402206525207, 0.92365312250331044, 0.97055797511711717, 0.94012412591837347, 0.09007954294793308 ))
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$x2),
+c(0.86762211634777486, 0.50912602571770549, 0.03011142229661345, 0.61775663611479104, 0.32121086306869984, 0.12679242156445980 ))
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$x4),
-c(0.3860164727084339, 0.2077193199656904, 0.3900056469719857, 0.6748349219560623, 0.9169830461032689 ))
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$x3),
+c(0.7901910166256130, 0.8808606066741049, 0.3497681468725204, 0.9657267662696540, 0.1012446165550500, 0.7146298501174897 ))
 
-expect_equal(c(tmp$res[tmp$res$id == 185, ]$x5),
-c(0.47889582999050617, 0.01187892514280975, 0.69178351364098489, 0.08837329549714923, 0.67734154919162393 ))
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$x4),
+c(0.1102066729217768, 0.6747691796626896, 0.5372997559607029, 0.2308624177239835, 0.2054644143208861, 0.5188600849360228 ))
+
+expect_equal(c(tmp$res[tmp$res$id == 161, ]$x5),
+c(0.2007617829367518, 0.1936038509011269, 0.4025285448879004, 0.8753446345217526, 0.3962356650736183, 0.6089953004848212 ))
 ```
 
 ```{r}
@@ -713,18 +750,18 @@ c(0.47889582999050617, 0.01187892514280975, 0.69178351364098489, 0.0883732954971
 set.seed(1117)
 tmp <- sim_func()
 
-# Illustrate for individual 185
-tmp$res[tmp$res$id == 185, ]
+# Illustrate for individual 161
+tmp$res[tmp$res$id == 161, ]
 
 # Split data 
 d_split <- split_data_func(tmp$res)
 
 # In sample data (notice event flag is changed and last tstop)
-d_split$in_sample[d_split$in_sample$id == 185, ]
+d_split$in_sample[d_split$in_sample$id == 161, ]
 
 
 # Out sample data (notice tstart is changed)
-d_split$out_sample[d_split$out_sample$id == 185, ]
+d_split$out_sample[d_split$out_sample$id == 161, ]
 ```
 
 ## Simulation 
@@ -816,7 +853,7 @@ res_2 <- test_sim_func_logit(1000) # different number of series
 all.equal(res_1$betas, res_2$betas) # Coeffecients are equal
 ```
 
-Next, we plot the computation time versus the number of simulation for the EKF and UKF method. Further, we print the linear regression slope for the log-log regression. The slope is close to one implying the linear time complexity
+Next, we plot the computation time versus the number of simulation for the EKF and UKF method. Further, we print the linear regression slope for the log-log regression. The slope is close to one implying that the linear time complexity is linear in the number of observations
 
 ```{r}
 # Define function to record run time for a given number of series

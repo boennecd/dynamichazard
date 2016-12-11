@@ -144,6 +144,9 @@ public:
       a_t_t_s.col(0) = a_0;
 
       lag_one_cov = arma::cube(n_parems * order_, n_parems * order_, d);
+
+      if(debug)
+        Rcpp::Rcout << "Using " << n_threads << " threads" << std::endl;
     }
 
   problem_data & operator=(const problem_data&) = delete;
@@ -572,7 +575,10 @@ public:
   EKF_helper(problem_data_EKF &p_data_, const std::string model_):
   max_threads((p_data_.n_threads > 1) ? p_data_.n_threads - 1 : 1),
   p_data(p_data_), workers(), model(model_)
-  {}
+  {
+    if(p_data.debug)
+      Rcpp::Rcout << "EKF solver will use at most " << max_threads << " threads" << std::endl;
+  }
 
   void parallel_filter_step(arma::uvec::const_iterator first, arma::uvec::const_iterator last,
                             const arma::vec &i_a_t,
@@ -593,7 +599,7 @@ public:
     unsigned long const block_size = 250;
     unsigned long const num_blocks=(length+block_size-1)/block_size;
     std::vector<std::future<void> > futures(num_blocks-1);
-    thread_pool pool(num_blocks - 1);
+    thread_pool pool(num_blocks - 1, max_threads);
 
     // Create workers if needed
     for(auto i = workers.size(); i < num_blocks; i++){
@@ -613,7 +619,7 @@ public:
     }
 
     // start workers
-    // declare outsite for loop to ref after loop
+    // declare outsite of loop to ref after loop
     arma::uvec::const_iterator block_start = first;
     auto it = workers.begin();
     int i_start = 0;

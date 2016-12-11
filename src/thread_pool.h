@@ -238,10 +238,10 @@ class thread_pool
   }
 
 public:
-  thread_pool(unsigned int n_jobs):
+  thread_pool(unsigned int n_jobs, unsigned int max_threads = 1):
   done(false), start(false), joiner(threads)
   {
-    unsigned const thread_count = std::min(n_jobs, std::thread::hardware_concurrency());
+    unsigned const thread_count = std::min(n_jobs, max_threads);
 
     try
     {
