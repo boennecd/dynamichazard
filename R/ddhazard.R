@@ -73,7 +73,7 @@ ddhazard = function(formula, data,
                     order = 1, control = list(),
                     verbose = F){
   X_Y = get_design_matrix(formula, data)
-  n_parems = ncol(X_Y$X)
+  n_params = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
 
   if(missing(id)){
@@ -83,21 +83,21 @@ ddhazard = function(formula, data,
   }
 
   if(missing(Q_0)){
-    Q_0 = diag(10, n_parems * order) # something large. Though depends on model, estimation method and data
+    Q_0 = diag(10, n_params * order) # something large. Though depends on model, estimation method and data
 
     if(missing(Q))
-      Q = diag(c(rep(1, n_parems), rep(0, n_parems * (order - 1)))) # (Very) arbitrary default
+      Q = diag(c(rep(1, n_params))) # (Very) arbitrary default
   }
 
   if(order == 1){
-    F_ = diag(1, n_parems)
+    F_ = diag(1, n_params)
   }
   else if(order == 2){
-    F_ = matrix(NA_real_, nrow = 2 * n_parems, ncol = 2 * n_parems)
-    F_[1:n_parems, 1:n_parems] = diag(2, n_parems)
-    F_[n_parems + 1:n_parems, 1:n_parems] = diag(1, n_parems)
-    F_[1:n_parems, n_parems + 1:n_parems] = diag(-1, n_parems)
-    F_[n_parems + 1:n_parems, n_parems + 1:n_parems] = 0
+    F_ = matrix(NA_real_, nrow = 2 * n_params, ncol = 2 * n_params)
+    F_[1:n_params, 1:n_params] = diag(2, n_params)
+    F_[n_params + 1:n_params, 1:n_params] = diag(1, n_params)
+    F_[1:n_params, n_params + 1:n_params] = diag(-1, n_params)
+    F_[n_params + 1:n_params, n_params + 1:n_params] = 0
 
   } else stop("Method not implemented for order ", order)
 
@@ -138,7 +138,7 @@ ddhazard = function(formula, data,
     get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
                  id = id, is_for_discrete_model = is_for_discrete_model)
 
-  if(n_parems == 0){
+  if(n_params == 0){
     # Model is fitted using ddhazard_fit_cpp for testing
     warning("The model can be estimated more effeciently by using get_survival_case_Weigths_and_data and static_glm when there is no time varying parameters")
     a_0 = vector()
@@ -175,11 +175,17 @@ ddhazard = function(formula, data,
     rm(tmp_mod)
   }
 
-  if(ncol(F_) != n_parems * order ||
-     ncol(Q) != n_parems * order ||
-     ncol(Q_0) != n_parems * order ||
-     length(a_0) != n_parems * order)
+  if(ncol(F_) != n_params * order ||
+     ncol(Q) != n_params ||
+     ncol(Q_0) != n_params * order ||
+     length(a_0) != n_params * order)
     stop("One of the input vector or matrices do not match with the order and number of parameters")
+
+  if(order > 1){
+    tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)
+    tmp[1:n_params, 1:n_params] <- Q
+    Q <- tmp
+  }
 
   # Report pre-liminary stats
   if(verbose){

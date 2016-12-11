@@ -295,7 +295,7 @@ fit_funcs$dd_2_order <- function(s = sims$res, LR = 1, NR_eps = NULL){
       data = s, max_T = T_max, by = 1, id = s$id, 
       # Q_0 and Q needs more elements 
       Q_0 = diag(c(rep(1, n_beta + 1), rep(0.5, n_beta + 1))), 
-      Q = diag(c(rep(.01, n_beta + 1), rep(0, n_beta + 1))),
+      Q = diag(c(rep(.01, n_beta + 1))),
       order = 2, # specify the order
       control = list(LR = LR, NR_eps = NR_eps, eps = 0.1))
   }, error = function(...) NA) # Return NA if fails
@@ -546,7 +546,8 @@ simulate_n_print_res <- function(
     print(knitr::kable(rbind(
       metric_where_all_fit, "# succesful fits" = did_fit),
           caption = paste(
-    "Mean of metrics with", n/2, "series in test and fit data. Only simulations that succeeds for all setups are included. There are", n_cases_all_success, "of these simulations. The last line shows the number of successful fits for each setup")))
+    "Mean of metrics with", n/2, "series in test and fit data. Only simulations that succeeds for all setups are included. There are", n_cases_all_success, "of these simulations. The last line shows the number of successful fits for each setup"),
+    align = "r"))
     cat("\n")
     
     # # Prints the metrics for all the simulation that succeeds for given setup

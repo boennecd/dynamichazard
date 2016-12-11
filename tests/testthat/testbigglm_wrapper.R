@@ -1,4 +1,9 @@
 library(biglm)
+
+# Had issues with win builder. Thus, these lines
+test_name <- "bigglm_wrapper"
+cat("\nRunning", test_name, "\n")
+
 bigqr.init <- with(environment(bigglm), bigqr.init)
 
 bigglm_updateQR_rcpp <- with(environment(ddhazard), bigglm_updateQR_rcpp)
@@ -299,3 +304,14 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
     expect_equal(unname(coef(bigglm_res)), c(b))
   }
 })
+
+
+
+
+
+
+
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")

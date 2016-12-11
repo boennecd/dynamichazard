@@ -3,6 +3,10 @@ if(interactive()){
   source("./R/test_utils.R")
 }
 
+# Had issues with win builder. Thus, these lines
+test_name <- "ddhazard"
+cat("\nRunning", test_name, "\n")
+
 # Test on data set that is one of Farhmiers papers
 result = ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
@@ -558,5 +562,8 @@ test_that("UKF and exp models give previous computed results with exponential es
                c(1 )
                , tolerance = 1e-06)
 })
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")
 
 

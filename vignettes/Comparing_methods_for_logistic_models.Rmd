@@ -428,7 +428,7 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ -1 +
                    id = pbc2$id, by = 100, max_T = 3600,
                    order = 2,             # <-- second order
                    Q_0 = diag(c(10, 10)), # <-- needs more elements
-                   Q = diag(c(0.001, 0))) # <-- same
+                   Q = matrix(0.001))
 
 plot(dd_fit)
 

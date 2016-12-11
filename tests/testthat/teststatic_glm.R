@@ -2,6 +2,14 @@ if(interactive()){
   get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 }
 
+
+# Had issues with win builder. Thus, these lines
+test_name <- "static_glm"
+cat("\nRunning", test_name, "\n")
+
+
+
+
 sims <- test_sim_func_logit(n_series = 1e4, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = 1, x_mean = .5, re_draw = T, beta_start = 0,
                             intercept_start = -3, sds = c(.1, rep(1, 3)))
@@ -88,3 +96,7 @@ test_that("design_matrix yields equal result with different values of use_weight
 # abline(h = res$coefficients, lty = 2, col = cols)
 # sum(sims$res$event)
 
+
+
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")
