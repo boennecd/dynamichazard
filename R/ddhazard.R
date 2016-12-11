@@ -104,7 +104,8 @@ ddhazard = function(formula, data,
   if(model == "logit"){
     is_for_discrete_model <- TRUE
 
-  } else if (model %in% c("exponential", "exponential_binary_only")){
+  } else if (model %in% c("exponential", "exponential_binary_only",
+                          "exponential_trunc_time_only")){
     is_for_discrete_model <- FALSE
 
   } else
@@ -153,7 +154,8 @@ ddhazard = function(formula, data,
       tmp_mod = static_glm(formula = formula, data = data, risk_obj = risk_set,
                            control = stats::glm.control(epsilon = Inf), family = "binomial")
 
-    } else if(model %in% c("exponential", "exponential_binary_only")){
+    } else if(model %in% c("exponential", "exponential_binary_only",
+                           "exponential_trunc_time_only")){
       tmp_mod = static_glm(formula = formula, data = data, max_T = max_T,
                            control = stats::glm.control(epsilon = Inf), family = "exponential")
 
@@ -293,7 +295,8 @@ ddhazard = function(formula, data,
         x_ * exp_ / (exp_ + 1)^2
       })
 
-  }else if(model %in% c("exponential", "exponential_binary_only")){
+  }else if(model %in% c("exponential", "exponential_binary_only",
+                        "exponential_trunc_time_only")){
     res <- list(
     hazard_func =  function(eta, tstart, tstop, ...){
       1 - exp( - exp(eta) * (tstop - tstart))

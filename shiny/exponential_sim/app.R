@@ -81,14 +81,15 @@ ui <- fluidPage(
    column(col_w,  offset = .5,
           sliderInput("ridge_eps",
                       "Ridge regresion like penalty factor",
-                      min = 0.001,
+                      min = 0.00001,
                       max = .05,
-                      step = .001,
+                      step = 0.00001,
                       value = .001),
 
           selectInput("est_with_model",
                       "Choose model to estimate with",
-                      choices = c("logit", "exponential", "exponential_binary_only"),
+                      choices = c("logit", "exponential", "exponential_binary_only",
+                                  "exponential_trunc_time_only"),
                       selected = "exponential"),
 
           selectInput("est_with_method",
@@ -161,7 +162,7 @@ server <- function(input, output) {
                      NR_eps = if(input$use_extra_correction) 1e-1 else NULL),
       max_T = input$obs_time,
       id = sims$res$id, order = 1,
-      verbose = 5,
+      verbose = F,
       model = input$est_with_model)
   })
 
