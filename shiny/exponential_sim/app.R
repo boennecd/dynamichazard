@@ -20,6 +20,9 @@ start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_m
 
 # params for UI
 col_w <- 3
+col_w_out <- 6
+
+get_em <- function(n_lines) paste0("height:",n_lines * 1.5,"em;")
 
 # Thanks to this guy http://stackoverflow.com/a/31066997
 n_series_stuff <- list(base = 2, exp_min = 8, exp_max = 12)
@@ -44,9 +47,23 @@ ui <- fluidPage(
 
  titlePanel("ddhazard demo"),
 
- plotOutput("coef_plot"),
+ div(plotOutput("coef_plot"), style = "max-width:1000px;min-width=200px"),
 
- textOutput("n_deaths"),
+ br(),
+
+ fluidRow(
+   column(col_w_out,
+          h3("Intro"),
+          div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
+          div(textOutput("rug_explanation"), style = get_em(3)),
+          div("See the ddhazard vignette for further details", style = get_em(1))
+          ),
+   column(col_w_out,
+          h3("Output"),
+          div(textOutput("n_deaths"), style = get_em(1)),
+          div(htmlOutput ("LR_out"), style = get_em(1)),
+          div(textOutput("MSE"), style = get_em(1))
+          )),
 
  br(),
 
@@ -78,7 +95,7 @@ ui <- fluidPage(
                        label = "RNG seed",
                        value = 65848)),
 
-   column(col_w,  offset = .5,
+   column(col_w,
           sliderInput("ridge_eps",
                       "Ridge regresion like penalty factor",
                       min = 0.00001,
@@ -97,14 +114,14 @@ ui <- fluidPage(
                       choices = c("UKF", "EKF"),
                       selected = "EKF")),
 
-   column(col_w, offset = .5,
+   column(col_w,
           h4("EKF settings"),
 
           checkboxInput("use_extra_correction",
                         "Extra correction steps",
                         value = FALSE)),
 
-   column(col_w, offset = .5,
+   column(col_w,
 
           h4("UKF settings"),
 
@@ -132,8 +149,6 @@ server <- function(input, output) {
   })
 
   sim_input <- eventReactive(input$compute, {
-    print(n_series_stuff$base^(n_series_stuff$exp_min + input$n_series))
-
     set.seed(input$seed)
     f_choice <- if(input$sim_with == "exponential")
       test_sim_func_exp else test_sim_func_logit
@@ -170,6 +185,29 @@ server <- function(input, output) {
     sprintf("%d of %d dies", sum(sim_input()$res$event), n_series_input())
   })
 
+  output$LR_out <- renderText({
+    LR <- fit_input()$LR
+    out <- sprintf(paste0("The used learning rate is ", ifelse(LR == 1, "%d", "%.3f")), LR)
+
+    if(LR < 1)
+      out <- paste0("<font color=\"#FF0000\"><b>", out, "</b></font>")
+
+    out
+  })
+
+  output$MSE <- renderText({
+    sprintf("MSE for coeffecients is %.3f",
+      mean.default((sim_input()$beta[1:input$obs_time + 1 ,] - fit_input()$state_vecs[1:input$obs_time + 1, ])^2))
+  })
+
+  output$rug_explanation <- renderText({
+    text_out <- if(input$sim_with == "exponential")
+      "The lines above x-axis indicates when a death is observed. " else
+        "The lines above x-axis indicates when a death is observed. A small jitter is added to distinguish them (this is only when we simulate from the logit model). "
+
+    paste0(text_out, "The lines below the x-axis is when a stop time is observed that is not a death.")
+  })
+
   output$coef_plot <- renderPlot({
     sims <- sim_input()
     fit <- fit_input()
@@ -186,7 +224,11 @@ server <- function(input, output) {
     if(length(death_times) > max_rugs){
       death_times <- sample(death_times, max_rugs, replace = F)
     }
-    rug(sims$res$tstop[sims$res$event==1], line = -.25, col = rgb(0,0,0,.05))
+
+    if(input$sim_with == "logit")
+      death_times <- jitter(death_times, amount = .2)
+
+    rug(death_times, line = -.25, col = rgb(0,0,0,.05))
 
     surv_times <- sims$res$tstop[sims$res$event==0]
     if(length(sims$res$tstop[sims$res$event==0]) > max_rugs){
