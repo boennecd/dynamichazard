@@ -324,7 +324,8 @@ ddhazard = function(formula, data,
     order = order, F_ = F_,
     method = control$method,
     model = model,
-    est_Q_0 = control$est_Q_0),
+    est_Q_0 = control$est_Q_0,
+    control = control),
     LR = LR),
     "class" = "fahrmeier_94")
 }
