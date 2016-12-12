@@ -15,7 +15,7 @@ test_sim_func_logit <- with(environment(ddhazard), test_sim_func_logit)
 
 # Global params
 t_max <- 30
-max_rugs <- 1e3
+max_rugs <- 5e2
 start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
 
 # params for UI
@@ -51,19 +51,21 @@ ui <- fluidPage(
 
  br(),
 
- fluidRow(
-   column(col_w_out,
-          h3("Intro"),
-          div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
-          div(textOutput("rug_explanation"), style = get_em(3)),
-          div("See the ddhazard vignette for further details", style = get_em(1))
-          ),
-   column(col_w_out,
-          h3("Output"),
-          div(textOutput("n_deaths"), style = get_em(1)),
-          div(htmlOutput ("LR_out"), style = get_em(1)),
-          div(textOutput("MSE"), style = get_em(1))
+ div(fluidRow(
+     column(col_w_out,
+            h3("Intro"),
+            div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
+            div(textOutput("rug_explanation"), style = get_em(4)),
+            div("See the ddhazard vignette for further details", style = get_em(1))
+            ),
+     column(col_w_out,
+            h3("Output"),
+            div(textOutput("n_deaths"), style = get_em(1)),
+            div(htmlOutput ("LR_out"), style = get_em(1)),
+            div(textOutput("MSE"), style = get_em(1)),
+            div(textOutput("model_text"), style = get_em(3))
           )),
+     style = "max-width:60em;min-width: 45em;"),
 
  br(),
 
@@ -112,7 +114,14 @@ ui <- fluidPage(
           selectInput("est_with_method",
                       "Choose method to use in the E-step",
                       choices = c("UKF", "EKF"),
-                      selected = "EKF")),
+                      selected = "EKF"),
+
+          sliderInput("order",
+                      "Randowm walk order in estimation",
+                      min = 1,
+                      max = 2,
+                      step = 1,
+                      value = 1)),
 
    column(col_w,
           h4("EKF settings"),
@@ -130,14 +139,14 @@ ui <- fluidPage(
                       min = 0,
                       max = 2,
                       step = .5,
-                      value = 2),
+                      value = 0),
 
           sliderInput("alpha",
                       "Alpha",
                       min = 1e-2,
                       max = 1,
                       step = 1e-2,
-                      value = 1e-1))
+                      value = 1))
   )
 )
 
@@ -163,11 +172,17 @@ server <- function(input, output) {
 
   fit_input <- eventReactive(input$compute, {
     sims <- sim_input()
+
+    Q_0 <- if(input$est_with_method == "UKF") rep(1, 6) else rep(10, 6)
+    if(input$order == 2)
+      Q_0 <- c(Q_0, rep(.1, 6))
+    Q_0 <- diag(Q_0)
+
     ddhazard(
       formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
       data = sims$res,
       by = 1,
-      Q_0 = if(input$est_with_method == "UKF") diag(1, 6) else diag(10, 6),
+      Q_0 = Q_0,
       Q = diag(1e-1, 6),
       control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^2,
                      save_data = F, save_risk_set = F,
@@ -176,8 +191,9 @@ server <- function(input, output) {
                      beta = input$beta, alpha = input$alpha,
                      NR_eps = if(input$use_extra_correction) 1e-1 else NULL),
       max_T = input$obs_time,
-      id = sims$res$id, order = 1,
+      id = sims$res$id,
       verbose = F,
+      order = input$order,
       model = input$est_with_model)
   })
 
@@ -197,7 +213,7 @@ server <- function(input, output) {
 
   output$MSE <- renderText({
     sprintf("MSE for coeffecients is %.3f",
-      mean.default((sim_input()$beta[1:input$obs_time + 1 ,] - fit_input()$state_vecs[1:input$obs_time + 1, ])^2))
+      mean.default((sim_input()$beta[1:input$obs_time + 1, ] - fit_input()$state_vecs[1:input$obs_time + 1, 1:6])^2))
   })
 
   output$rug_explanation <- renderText({
@@ -215,9 +231,9 @@ server <- function(input, output) {
     matplot(seq_len(dim(sims$beta)[1]) - 1, sims$beta, lty = 1, type = "l",
             ylim = range(sims$beta, fit$state_vecs), xaxt='n',
             ylab = expression(beta), xlab = "Time")
-    matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs, lty = 2, type = "l", add = T)
+    matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs[, 1:6], lty = 2, type = "l", add = T)
 
-    axis(side = 1,at = seq_len(dim(sims$beta)[1]) - 1,tick = FALSE)
+    axis(side = 1, at = seq_len(dim(sims$beta)[1]) - 1,tick = FALSE)
 
     # Add rug plots to illustrate survivers and deaths
     death_times <- sims$res$tstop[sims$res$event==1]
@@ -228,14 +244,31 @@ server <- function(input, output) {
     if(input$sim_with == "logit")
       death_times <- jitter(death_times, amount = .2)
 
-    rug(death_times, line = -.25, col = rgb(0,0,0,.05))
+    rug(death_times, line = -.25, col = rgb(0,0,0,.1), lwd = 1)
 
     surv_times <- sims$res$tstop[sims$res$event==0]
     if(length(sims$res$tstop[sims$res$event==0]) > max_rugs){
       surv_times <- sample(surv_times, size = max_rugs, replace = F)
     }
-    rug(surv_times, line = .75, col = rgb(0,0,0,.05))
+    rug(surv_times, line = .75, col = rgb(0,0,0,.1), lwd = 1)
 
+  })
+
+  output$model_text <- renderText({
+    result <- fit_input()
+
+    out <- paste0("Model is estimated with order ", result$order, " and with the ", result$method, " in the E-step.",
+                  " ", result$n_iter, " iteration was used in the E-step.")
+
+    if(result$method == "EKF"){
+      out <- paste0(out, ifelse(is.null(result$control$NR_eps), " No extra", " Extra"),
+                    " iterations are used in correction step")
+    } else{
+      out <- paste0(out, " Alpha and beta are ", result$control$alpha, " and ",
+                    result$control$beta)
+    }
+
+    return(out)
   })
 }
 
