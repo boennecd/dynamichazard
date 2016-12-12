@@ -449,24 +449,47 @@ test_that("UKF on simulated data works with exponential model", {
 
 
 test_that("UKF second order model works", {
-  # tmp <- file("tmp.txt")
-  # sink(tmp)
-  # suppressMessages(result <- ddhazard(
-  #   formula = survival::Surv(start, stop, event) ~ group,
-  #   data = head_neck_cancer,
-  #   by = 1, Q_0 = diag(1, 4),
-  #   Q = diag(1e-1, 2),
-  #   control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-3,
-  #                  method = "UKF", save_data = F, save_risk_set = F,
-  #                  beta = 0),
-  #   max_T = 30,
-  #   id = head_neck_cancer$id, order = 2,
-  #   verbose = F,
-  #   model = "logit"
-  # ))
-  # sink()
-  # close(tmp)
-  # matplot(result$state_vecs, type = "l")
+  for(m in c("logit", "exponential")){
+    expect_no_error(result <- ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1, Q_0 = diag(1, 4),
+      Q = diag(1e-1, 2),
+      control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-3,
+                     method = "UKF", save_data = F, save_risk_set = F,
+                     beta = 0),
+      max_T = 30,
+      id = head_neck_cancer$id, order = 2,
+      verbose = F,
+      model = m
+    ))
+
+    set.seed(9997)
+    sim_f <- if(m == "logit") test_sim_func_logit else test_sim_func_exp
+    sims <- sim_f(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 20,
+                  x_range = 1, x_mean = 0.5, re_draw = T, beta_start = c(0, 1, 1),
+                  intercept_start = -5, sds = c(.1, rep(1, 3)),
+                  tstart_sampl_func = function(...) max(0, runif(1, min = -10, max = 20 - 1)))
+
+    expect_no_error(result_sim <-
+                      ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+                               by = 1,
+                               data = sims$res,
+                               Q_0 = diag(c(rep(1, ncol(sims$res) + 1 - 4), rep(.01, ncol(sims$res) + 1 - 4))),
+                               Q = diag(rep(1e-3, ncol(sims$res) + 1 - 4)),
+                               control = list(est_Q_0 = F, method = "UKF", eps = 1e-2),
+                               id = sims$res$id,
+                               verbose = F, model = m,
+                               order = 2,
+                               max_T = 20))
+  }
+
+  # matplot(result$state_vecs[, 1:2], type = "l")
+  #
+  # matplot(result_sim$state_vecs[, 1:4], type = "l", lty = 2, ylim = range(
+  #   result_sim$state_vecs[, 1:4], sims$betas))
+  # matplot(sims$betas, type = "l", lty = 1, add = T)
+
   # get_expect_equal(result, file = "tmp.txt")
 })
 
