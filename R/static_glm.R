@@ -32,6 +32,7 @@ get_survival_case_weigths_and_data = function(
   formula, data, by, max_T, id, init_weights, risk_obj,
   use_weights = T, is_for_discrete_model = T){
   X_Y = get_design_matrix(formula, data)
+  formula <- X_Y$formula
 
   if(missing(init_weights))
     init_weights = rep(1, nrow(data))
@@ -40,7 +41,7 @@ get_survival_case_weigths_and_data = function(
     warning("Column called Y will be replaced")
     data = data[, colnames(data) != "Y"]
   }
-	
+
   if(any(colnames(data) == "weights")){
     warning("Column called weights will be replaced")
     data = data[, colnames(data) != "weights"]
@@ -110,7 +111,7 @@ get_survival_case_weigths_and_data = function(
 
   }
 
-  data.frame(X)
+  list(X = data.frame(X), formula = formula)
 }
 
 
@@ -132,17 +133,25 @@ static_glm = function(formula, data, by, max_T, id, family = "logit", model = F,
   if(family %in% c("binomial", "logit")){
     family <- binomial()
 
-    X = get_survival_case_weigths_and_data(
+    tmp = get_survival_case_weigths_and_data(
       formula = formula, data = data, by = by, max_T = max_T, id = id,
       init_weights = weights, risk_obj = risk_obj)
 
+    formula <- tmp$formula
+    X <- tmp$X
+    rm(tmp)
+
     formula <- stats::formula(terms(formula, data = data))
-    formula = update(formula, Y ~ ., data = X)
+
+    data <- X
+    formula = update(formula, Y ~ ., data = data)
 
   } else if(family == "exponential"){
     family <- poisson()
     X_Y = get_design_matrix(formula, data)
     X_Y$X <- X_Y$X[, -1] # remove the intercept
+
+    formula <- X_Y$formula
 
     is_before_max_T <- X_Y$Y[, 1] < max_T
     data <- data[is_before_max_T, ]
@@ -154,10 +163,14 @@ static_glm = function(formula, data, by, max_T, id, family = "logit", model = F,
                weights = rep(1, nrow(data)))
 
     formula <- stats::formula(terms(formula, data = data))
-    formula = update(formula, Y ~ . + offset(log_delta_time), data = X)
+
+    data <- X
+    formula = update(formula, Y ~ . + offset(log_delta_time), data = data)
 
   } else
     stop("family '", family, "' not implemented in static_glm")
 
-  glm(formula = formula, data = X, family = family, model = model, weights = weights, ...)
+
+  environment(formula) <- environment() # Needed in case we have a fixed intercept
+  glm(formula = formula, data = data, family = family, model = model, weights = weights, ...)
 }

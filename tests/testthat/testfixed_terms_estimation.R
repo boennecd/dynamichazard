@@ -13,6 +13,7 @@ set.seed(548237)
 sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
                             intercept_start = -4, sds = c(.1, rep(1, 3)))
+
 # sum(sims$res$event)
 
 test_that("Only fixed effects yields same results as bigglm with logit model", {
@@ -26,7 +27,7 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
   tmp_design <- get_survival_case_weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10)
 
-  suppressWarnings(res2 <- bigglm(update(form, Y ~ .), data = tmp_design, family = binomial(), chunksize = 1e3))
+  suppressWarnings(res2 <- bigglm(update(form, Y ~ .), data = tmp_design$X, family = binomial(), chunksize = 1e3))
 
   expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects)))
 })
@@ -121,7 +122,7 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
                                                    use_weights = F, max_T = 10, is_for_discrete_model = F)
 
   suppressWarnings(res2 <- bigglm(update(form, Y ~ . + offset(log(pmin(tstop, t) - pmax(tstart, t - 1)))),
-                                  data = tmp_design, family = poisson(), chunksize = 1e3,
+                                  data = tmp_design$X, family = poisson(), chunksize = 1e3,
                                   tolerance = 1e-4))
 
   expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects))

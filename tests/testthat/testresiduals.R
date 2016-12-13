@@ -134,7 +134,7 @@ pbc <- pbc[, c("id", "time", "status", "age", "edema", "bili", "protime")]
 pbc <- pbc[complete.cases(pbc), ]
 max(pbc$time[pbc$status == 2])
 suppressMessages(fit <- ddhazard(
-  formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~
+  formula = survival::Surv(rep(0, length(status)), time, status == 2) ~
     age + edema + log(bili) + log(protime),
   data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
   Q = diag(rep(1e-2, 5)), max_T = 3600,

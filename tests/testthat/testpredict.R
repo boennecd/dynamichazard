@@ -176,7 +176,7 @@ test_that("get_survival_case_weigths_and_data and predict yields consistent resu
   other_s <- get_survival_case_weigths_and_data(
     formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
     data = s$res, max_T = 10, by = 1, id = s$res$id,
-    use_weights = F)
+    use_weights = F)$X
 
   other_s$tstart <- other_s$t - 1
   other_s$tstop <- other_s$t
@@ -245,7 +245,7 @@ head(pbc)
 pbc <- pbc[complete.cases(pbc[, c("time", "status", "age", "edema", "bili", "protime")]), ]
 max(pbc$time[pbc$status == 2])
 suppressMessages(fit <- ddhazard(
-  formula = survival::Surv(rep(0, nrow(pbc)), time, status == 2) ~ splines::ns(log(bili),df = 4),
+  formula = survival::Surv(rep(0, length(status)), time, status == 2) ~ splines::ns(log(bili),df = 4),
   data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
   Q = diag(rep(1e-2, 5)), max_T = 3600,
   control = list(est_Q_0 = F, eps = .01)))
