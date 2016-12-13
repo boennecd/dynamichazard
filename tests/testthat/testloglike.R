@@ -165,7 +165,7 @@ test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
     formula = form, data = head_neck_cancer, by = 1, max_T = 45, id = head_neck_cancer$id,
     use_weights = F)
 
-  glm_fit <- glm(Y ~ as.factor(group), binomial(), tmp_design)
+  glm_fit <- glm(Y ~ as.factor(group), binomial(), tmp_design$X)
 
   tmp <- logLik(glm_fit)
   attributes(tmp)

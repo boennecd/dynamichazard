@@ -3,15 +3,39 @@
 get_design_matrix = function(formula, data, response = T){
   Call <- match.call()
   indx <- match(c("formula", "data"),  names(Call), nomatch = 0)
+
   temp <- Call[c(1, indx)]
   temp[[1]] <- as.name("model.frame")
 
   specials <- "ddFixed"
-  temp$formula <- if(response)
-    temp$formula = terms(formula, data = data, specials = specials) else
-      temp$formula <- eval(bquote(terms(update(formula, rep(1, .(nrow(data))) ~ .), data = data,
-                                  specials = specials))) # remove right hand site of formula
 
+  # We may call this expression twice. Thus, we save it unevaluted
+  get_form_exp <- quote(
+    if(response)
+      terms(formula, data = data, specials = specials) else
+        eval(bquote(terms(update(formula, rep(1, .(nrow(data))) ~ .), data = data,
+                    specials = specials))) # remove right hand site of formula
+  )
+
+  temp$formula <- eval(get_form_exp)
+
+  # Check if we have a fixed intercept
+  is_fixed <- attr(temp$formula, "specials")$ddFixed
+  if(length(is_fixed) > 0){
+    fixed_label <- attr(temp$formula, "term.labels")[is_fixed - response]
+    is_fixed_intercept <- which(grepl("^ddFixed\\(\\ *1\\ *\\)$", fixed_label, perl = T))
+
+    if(length(is_fixed_intercept) == 1){
+      formula <- eval(parse(text = paste0(
+        "update(formula, .~ ",
+        " + ddFixed(rep(1,  nrow(",  deparse(substitute(data)),
+        "))) + . -1 - ", fixed_label[is_fixed_intercept], ")")))
+
+      # have to do this again
+      temp$formula <- eval(get_form_exp)
+    }}
+
+  environment(temp$formula) <- parent.frame() # Needed if we use fixed intercept
   mf <- eval(temp, parent.frame())
 
   Y <- if(response) model.extract(mf, "response") else NULL

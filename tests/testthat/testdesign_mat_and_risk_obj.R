@@ -10,8 +10,8 @@ get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 
 # Simulate data
 set.seed(11111)
-sims = as.data.frame(test_sim_func_logit(n_series = 2e3, n_vars = 10, beta_start = 1,
-                                         intercept_start = - 16, sds = c(sqrt(.1), rep(1, 10)),
+sims = as.data.frame(test_sim_func_logit(n_series = 5e2, n_vars = 3, beta_start = 1,
+                                         intercept_start = - 5, sds = c(sqrt(.1), rep(1, 3)),
                                          x_range = 1, x_mean = .5)$res)
 
 
@@ -30,6 +30,39 @@ test_that("Testing get design marix", {
 
 ########
 # Test fixed terms
+
+dum <- function(x) cbind(x, -x)
+test_that("Fixed terms works as expected",{
+  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(dum(x2)) + x3), sims)
+
+  expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
+               check.attributes = F)
+  expect_equal(as.matrix(design_with_fixed$fixed_terms), dum(sims$x2),
+               check.attributes = F)
+})
+
+test_that("Different forms of fixing the intercept gives same results",{
+  for(m in c("logit", "exponential")){
+    m1 <- suppressMessages(
+      ddhazard(survival::Surv(tstart, tstop, event) ~ ddFixed(1) + x1 + x2,
+               model = m, by = 2, data = sims, max_T = 10,
+               Q_0 = diag(1, 2), Q = diag(.1, 2)))
+    m2 <- suppressMessages(
+      ddhazard(survival::Surv(tstart, tstop, event) ~ -1 + ddFixed(1) + x1 + x2,
+               model = m, by = 2, data = sims, max_T = 10,
+               Q_0 = diag(1, 2), Q = diag(.1, 2)))
+    m3 <- suppressMessages(
+      ddhazard(survival::Surv(tstart, tstop, event) ~ -1 + ddFixed(rep(1, length(x1))) + x1 + x2,
+               model = m, by = 2, data = sims, max_T = 10,
+               Q_0 = diag(1, 2), Q = diag(.1, 2)))
+
+    expect_equal(m1$state_vecs, m2$state_vecs, tolerance = 1e-5)
+    expect_equal(m1$fixed_effects, m2$fixed_effects, tolerance = 1e-5)
+
+    expect_equal(m1$state_vecs, m3$state_vecs, 1e-5)
+    expect_equal(m1$fixed_effects, m3$fixed_effects, 1e-5, check.attributes = F)
+  }
+})
 
 test_that("Fixed terms works as expected",{
   design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), sims)
@@ -50,13 +83,6 @@ test_that("Fixed terms works as expected",{
   expect_equal(design_with_fixed$X[, c("x1"), drop = F], as.matrix(sims[, c("x1")]),
                check.attributes = F)
   expect_equal(as.matrix(design_with_fixed$fixed_terms), as.matrix(sims[, c("x2", "x3")]),
-               check.attributes = F)
-
-  dum <- function(x) cbind(x, -x)
-  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(dum(x2)) + x3), sims)
-  expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
-               check.attributes = F)
-  expect_equal(as.matrix(design_with_fixed$fixed_terms), dum(sims$x2),
                check.attributes = F)
 })
 

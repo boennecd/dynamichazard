@@ -1,4 +1,7 @@
 if(interactive()){
+  library(dynamichazard)
+  library(testthat)
+  source("R/test_utils.R")
   get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 }
 
@@ -81,7 +84,7 @@ test_that("design_matrix yields equal result with different values of use_weight
 
 
   data_f <- get_survival_case_weigths_and_data(formula = form, data = sims$res, by = 1,
-                                               max_T = 10, id = sims$res$id, use_weights = F)
+                                               max_T = 10, id = sims$res$id, use_weights = F)$X
 
   expect_true(all(data_f$weigths == 1))
 
