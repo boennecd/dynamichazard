@@ -97,7 +97,7 @@ ddhazard = function(formula, data,
                           ridge_eps = if((is.null(control$method) ||
                                           control$method == "EKF") &&
                                          model == "exponential") .025 else .0001,
-                          fixed_terms_method = "Est_M_step")
+                          fixed_terms_method = "M_step")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -106,7 +106,7 @@ ddhazard = function(formula, data,
   control_default[control_match] <- control
   control <- control_default
 
-  if(!control$fixed_terms_method %in% c("Est_M_step", "Est_E_step"))
+  if(!control$fixed_terms_method %in% c("M_step", "E_step"))
     stop("fixed_terms_method method '", control$fixed_terms_method,"' is not implemented")
 
   if(control$ridge_eps <= 0)
@@ -125,14 +125,13 @@ ddhazard = function(formula, data,
                  id = id, is_for_discrete_model = is_for_discrete_model)
 
   n_fixed <- ncol(X_Y$fixed_terms)
-  est_fixed_in_E <- control$fixed_terms_method == "Est_E_step"
+  est_fixed_in_E <- control$fixed_terms_method == "E_step"
 
   if(missing(Q_0)){
-    Q_0 = diag(c(rep(10, n_params), rep(1e5, n_fixed * est_fixed_in_E),
-                 rep(10, n_params * (order - 1)))) # something large. Though depends on model, estimation method and data
+    Q_0 = diag(10, n_params * order) # something large. Though depends on model, estimation method and data
 
     if(missing(Q))
-      Q = diag(c(rep(1, n_params), rep(0, n_fixed * est_fixed_in_E))) # (Very) arbitrary default
+      Q = diag(1, n_params) # (Very) arbitrary default
   }
 
   if(order == 1){
@@ -195,7 +194,7 @@ ddhazard = function(formula, data,
     rm(tmp_mod)
   }
 
-  if(ncol(F_) != n_params * order ||
+  if(ncol(F_) != n_params * order + n_fixed * est_fixed_in_E ||
      ncol(Q) != n_params ||
      ncol(Q_0) != n_params * order ||
      length(a_0) != n_params * order)
@@ -205,6 +204,25 @@ ddhazard = function(formula, data,
     tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)
     tmp[1:n_params, 1:n_params] <- Q
     Q <- tmp
+  }
+
+  if(est_fixed_in_E){
+    # We need to add entries to the various matrices and vectors
+    indicies_fix <- 1:n_fixed + n_params
+
+    Q_new <- F_ # F_ already has the right dimensions
+    Q_new[,] <- 0
+    Q_new[-indicies_fix, -indicies_fix] <- Q
+    Q <- Q_new
+
+    Q_0_new <- F_
+    Q_0_new[,] <- 0
+    Q_0_new[-indicies_fix, -indicies_fix] <- Q_0
+    diag(Q_0_new[indicies_fix, indicies_fix]) <- 1e5 # something large
+    Q_0 <- Q_0_new
+
+    a_0 <- c(a_0, control$fixed_parems_start)
+    control$fixed_parems_start <- vector()
   }
 
   # Report pre-liminary stats
@@ -243,10 +261,16 @@ ddhazard = function(formula, data,
     message("Running EM")
   }
 
-  X_Y$X <- t(X_Y$X) # we transpose for performance due to the column-major
-                    # ordering. The logic is that we primary look up indviduals
-                    # (i.e. columns in the tranpose)
-  X_Y$fixed_terms <- t(X_Y$fixed_terms) # same
+  if(!est_fixed_in_E){
+    X_Y$X <- t(X_Y$X) # we transpose for performance due to the column-major
+                      # ordering. The logic is that we primary look up indviduals
+                      # (i.e. columns in the tranpose)
+    X_Y$fixed_terms <- t(X_Y$fixed_terms) # same
+  } else {
+    # We add the firm covariates to the design matrix. Later, we recover the fixed covariates
+    X_Y$X <- t(cbind(X_Y$X, X_Y$fixed_terms))
+    X_Y$fixed_terms <- matrix(nrow = 0, ncol = ncol(X_Y$X))
+  }
 
   result <- NA
   k_vals <- if(control$method == "EKF") seq_len(control$LR_max_try) - 1 else 0
@@ -269,7 +293,8 @@ ddhazard = function(formula, data,
                                  fixed_effect_chunk_size = control$fixed_effect_chunk_size,
                                  debug = control$debug,
                                  n_threads = control$n_threads,
-                                 ridge_eps = control$ridge_eps)
+                                 ridge_eps = control$ridge_eps,
+                                 n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0))
     }, error = function(e)
       if(length(k_vals) == 1 ||
           !grepl("^ddhazard_fit_cpp estimation error:", e$message))
@@ -291,16 +316,44 @@ ddhazard = function(formula, data,
             ". The learning rate was decrease by a factor ", control$LR_decrease_fac^k, " to yield a fit")
 
   if(model != "logit" || control$method != "EKF")
-    result$lag_one_cov = NULL
+    result$lag_one_cov = NULL # only checked the value for the logit model with EKF
+
+  if(est_fixed_in_E){
+    # Recover the X and fixed term design matricies
+    X_Y$fixed_terms <- X_Y$X[n_params + 1:n_fixed, , drop = F]
+    X_Y$X <- X_Y$X[1:n_params, , drop = F]
+
+    # We need to change the dimension of various arrays
+    result$V_t_d_s <- result$V_t_d_s[-indicies_fix, , , drop = F]
+    result$V_t_d_s <- result$V_t_d_s[, -indicies_fix, , drop = F]
+
+    result$fixed_effects <- result$a_t_d_s[1, indicies_fix]
+    result$a_t_d_s <- result$a_t_d_s[, -indicies_fix, drop = F]
+
+    result$B_s <- result$B_s[-indicies_fix, , , drop = F]
+    result$B_s <- result$B_s[, -indicies_fix, , drop = F]
+
+    result$lag_one_cov <- result$lag_one_cov[-indicies_fix, , , drop = F]
+    result$lag_one_cov <- result$lag_one_cov[, -indicies_fix, , drop = F]
+
+    result$Q  <- result$Q[-indicies_fix, , drop = F]
+    result$Q <- result$Q[, -indicies_fix, drop = F]
+  }
 
   # Set names
   tmp_names = rep(rownames(X_Y$X), order)
   colnames(result$a_t_d_s) = tmp_names
   dimnames(result$V_t_d_s) = list(tmp_names, tmp_names, NULL)
-  dimnames(result$Q) = dimnames(result$Q_0) = list(tmp_names, tmp_names)
+  dimnames(result$Q) = list(tmp_names, tmp_names)
 
   result$fixed_effects <- c(result$fixed_effects)
-  names(result$fixed_effects) <-gsub("(^ddFixed\\()(.+)(\\)$)","\\2", rownames(X_Y$fixed_terms))
+  names(result$fixed_effects) <- fixed_names <- gsub(
+    "(^ddFixed\\()(.+)(\\)$)","\\2", rownames(X_Y$fixed_terms))
+
+  if(est_fixed_in_E){
+    dimnames(result$Q_0) = list(c(tmp_names, fixed_names), c(tmp_names, fixed_names))
+  } else
+    dimnames(result$Q_0) = dimnames(result$Q)
 
   if(model == "logit") {
     res <- list(

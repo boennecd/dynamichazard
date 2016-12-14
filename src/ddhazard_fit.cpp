@@ -44,7 +44,7 @@ public:
   const arma::mat T_F_;
 
   const bool any_dynamic;
-  const bool any_fixed;
+  const bool any_fixed_in_M_step;
 
   arma::mat X;
   arma::mat fixed_terms; // used if fixed terms are estimated in the M-step
@@ -69,6 +69,8 @@ public:
   const double LR;
 
   const arma::span current_cov_indicies;
+  const int index_fixed_params_start;
+  const int index_fixed_params_end;
   const arma::span fixed_params_indicies; // indicies of fixed terms in state vector
   const bool any_fixed_terms_in_state_vec;
 
@@ -114,7 +116,7 @@ public:
     T_F_(F_.t()),
 
     any_dynamic(X_.n_elem > 0),
-    any_fixed(fixed_terms_.n_elem > 0),
+    any_fixed_in_M_step(fixed_terms_.n_elem > 0),
 
     X(X_.begin(), X_.n_rows, X_.n_cols, false),
     fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols, false),
@@ -137,7 +139,10 @@ public:
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
 
     current_cov_indicies(0, n_parems - 1),
-    fixed_params_indicies(n_parems - n_fixed_terms_in_state_vec, n_parems - 1),
+
+    index_fixed_params_start(n_parems - n_fixed_terms_in_state_vec),
+    index_fixed_params_end(n_parems - 1),
+    fixed_params_indicies(index_fixed_params_start, index_fixed_params_end),
     any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec > 0),
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
@@ -455,7 +460,7 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
-      double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
+      double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double exp_eta = exp(arma::dot(i_a_t, x_) + offset);
 
       // Can be issue here with overflow in denominator
@@ -494,7 +499,7 @@ class EKF_helper{
       // Compute intermediates
       const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
 
-      double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
+      double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
 
       const double do_die = (dat.is_event_in_bin(*it) == bin_number);
@@ -562,7 +567,7 @@ class EKF_helper{
       // Compute intermediates
       const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
 
-      double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
+      double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
 
       const double do_die = (dat.is_event_in_bin(*it) == bin_number);
@@ -607,7 +612,7 @@ class EKF_helper{
       // Compute intermediates
       const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
 
-      double offset = (dat.any_fixed) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
+      double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
 
       const double do_die = (dat.is_event_in_bin(*it) == bin_number);
@@ -1106,7 +1111,7 @@ public:
     //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
 #endif
 
-    const arma::vec offsets = p_dat.any_fixed ?
+    const arma::vec offsets = p_dat.any_fixed_in_M_step ?
       p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat.X.n_cols, arma::fill::zeros);
     double bin_stop = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
@@ -1670,7 +1675,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       n_max, eps, verbose,
       order_, est_Q_0, debug);
 
-    if(p_data->any_fixed)
+    if(p_data->any_fixed_in_M_step)
       Rcpp::stop("Fixed effects is not implemented with UKF");
 
     solver = new UKF_solver_Org(*p_data, kappa);
@@ -1765,8 +1770,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Q /= p_data->d;
 
       if(p_data->any_fixed_terms_in_state_vec){
-        Q.rows(p_data->fixed_params_indicies) = .0;
-        Q.cols(p_data->fixed_params_indicies) = .0;
+        Q.rows(p_data->fixed_params_indicies).zeros();
+        Q.cols(p_data->fixed_params_indicies).zeros();
       }
 
       if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > Q_warn_eps){
@@ -1796,7 +1801,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s));
 
-    if(p_data->any_fixed){
+    if(p_data->any_fixed_in_M_step){
       arma::vec old = p_data->fixed_parems;
 
       if(model == "logit"){
@@ -1819,7 +1824,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(verbose && it % 5 < verbose){
       auto rcout_width = Rcpp::Rcout.width();
 
-      arma::vec fixed_effects_offsets = p_data->any_fixed ?
+      arma::vec fixed_effects_offsets = p_data->any_fixed_in_M_step ?
       p_data->fixed_terms.t() * p_data->fixed_parems : arma::vec(p_data->X.n_cols, arma::fill::zeros);
 
       double log_like =
