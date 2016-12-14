@@ -47,7 +47,7 @@ public:
   const bool any_fixed;
 
   arma::mat X;
-  arma::mat fixed_terms;
+  arma::mat fixed_terms; // used if fixed terms are estimated in the M-step
 
   const std::vector<double> I_len;
   const double event_eps; // something small
@@ -68,6 +68,10 @@ public:
   const bool debug;
   const double LR;
 
+  const arma::span current_cov_indicies;
+  const arma::span fixed_params_indicies; // indicies of fixed terms in state vector
+  const bool any_fixed_terms_in_state_vec;
+
   // Declare non constants. Some are intialize
   arma::vec fixed_parems;
 
@@ -83,7 +87,8 @@ public:
 
   arma::cube lag_one_cov;
 
-  problem_data(arma::mat &X_,
+  problem_data(const int n_fixed_terms_in_state_vec,
+               arma::mat &X_,
                arma::mat &fixed_terms_,
                const arma::vec &tstart_,
                const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
@@ -131,6 +136,10 @@ public:
     debug(debug_),
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
 
+    current_cov_indicies(0, n_parems - 1),
+    fixed_params_indicies(n_parems - 1 - n_fixed_terms_in_state_vec, n_parems - 1),
+    any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec == 0),
+
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
     Q_0(Q_0_)
@@ -176,7 +185,8 @@ public:
   arma::vec H_diag_inv;
   arma::mat K_d;
 
-  problem_data_EKF(arma::mat &X, arma::mat &fixed_terms,
+  problem_data_EKF(const int n_fixed_terms_in_state_vec,
+                   arma::mat &X, arma::mat &fixed_terms,
                    const arma::vec &tstart_,
                    const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
                    const arma::colvec &a_0,
@@ -197,8 +207,8 @@ public:
                    const bool debug_ = false,
                    const int n_threads_ = -1,
                    const double ridge_eps_ = .0001):
-    problem_data(X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0, fixed_parems_start,
-                 Q_0_, Q_, risk_obj, F__,
+    problem_data(n_fixed_terms_in_state_vec, X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0,
+                 fixed_parems_start, Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_params_,
                  n_max, eps, verbose,
                  order_, est_Q_0, debug_,
@@ -227,7 +237,6 @@ class Solver {
 public:
   virtual void solve() = 0;
 };
-
 
 
 
@@ -755,7 +764,7 @@ public:
 #if defined(USE_OPEN_BLAS)
         openblas_set_num_threads(1);
 #endif
-        filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t.head(p_dat.n_parems), t == p_dat.d, t - 1,
+        filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t(p_dat.current_cov_indicies), t == p_dat.d, t - 1,
                                            bin_tstart, bin_tstop);
 
         if(p_dat.u.has_inf() || p_dat.u.has_nan()){
@@ -1587,7 +1596,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const bool debug = false,
                             const unsigned int NR_it_max = 100,
                             const int n_threads = -1,
-                            const double ridge_eps = .0001){
+                            const double ridge_eps = .0001,
+                            const int n_fixed_terms_in_state_vec = 0){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
@@ -1614,6 +1624,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
   if(method == "EKF"){
     p_data = new problem_data_EKF(
+      n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
@@ -1628,6 +1639,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(model != "logit" && model != "exponential" && model != "exponential_binary_only")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
     p_data = new problem_data(
+      n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
@@ -1650,6 +1662,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
 
     p_data = new problem_data(
+      n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
