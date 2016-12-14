@@ -199,7 +199,7 @@ server <- function(input, output) {
       intercept_start = -3.5,
       sds = c(.25, rep(.5, 5)),
       x_range = 1, x_mean = 0, lambda = t_max / 10,
-      is_fixed = if(n_varying == 0) vector() else 1:n_fixed,
+      is_fixed = if(n_fixed == 0) c() else 1:n_fixed,
 
       tstart_sampl_func = start_fun)
   })
@@ -242,8 +242,6 @@ server <- function(input, output) {
       Q_0 <- c(Q_0, rep(.1, 6 - n_fixed))
 
     Q_0 <- diag(Q_0, length(Q_0))
-
-    print(Q_0)
 
     ddhazard(
       formula = form,
@@ -306,7 +304,7 @@ server <- function(input, output) {
     n_fixed <- n_fixed_when_est()
 
     matplot(seq_len(dim(sims$beta)[1]) - 1, sims$beta, lty = 1, type = "l",
-            ylim = range(sims$beta, fit$state_vecs, result$fixed_effects), xaxt='n',
+            ylim = range(sims$beta, fit$state_vecs, fit$fixed_effects), xaxt='n',
             ylab = expression(beta), xlab = "Time")
     matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs[, 1:(6 - n_fixed)],
             lty = 2, type = "l", add = T,
