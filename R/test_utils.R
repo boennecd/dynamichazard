@@ -296,7 +296,7 @@ test_sim_func_exp = compiler::cmpfun(test_sim_func_exp)
 # as search for '(?<=\d)\s+(?=\d)' and replace with ','
 # or be lazy and use this function
 str_func <- function(x, n_digist = 16){
-  tmp <- capture.output(print(c(x), digits = n_digist))
+  tmp <- capture.output(print(unname(c(x)), digits = n_digist))
   tmp <- sapply(tmp, gsub, pattern = "\\s*\\[1\\]\\s", replacement = "", USE.NAMES = F)
   tmp <- sapply(tmp, gsub, pattern = "\\s*\\[\\d+\\]\\s", replacement = ",\\ ", USE.NAMES = F)
   tmp <- sapply(tmp, gsub, pattern = "(?<=\\d)\\s+(?=\\d|-)", replacement = ",\\ ", perl = T, USE.NAMES = F)

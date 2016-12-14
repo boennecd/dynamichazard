@@ -94,8 +94,7 @@ ddhazard = function(formula, data,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
                           LR_decrease_fac = 1.5,
                           n_threads = getOption("ddhazard_max_threads"),
-                          ridge_eps = if((is.null(control$method) || control$method == "EKF") &&
-                                         model == "exponential") .025 else .0001,
+                          ridge_eps = .0001,
                           fixed_terms_method = "M_step")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
