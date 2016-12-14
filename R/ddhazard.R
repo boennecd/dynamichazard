@@ -94,8 +94,7 @@ ddhazard = function(formula, data,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
                           LR_decrease_fac = 1.5,
                           n_threads = getOption("ddhazard_max_threads"),
-                          ridge_eps = if((is.null(control$method) ||
-                                          control$method == "EKF") &&
+                          ridge_eps = if((is.null(control$method) || control$method == "EKF") &&
                                          model == "exponential") .025 else .0001,
                           fixed_terms_method = "M_step")
 
@@ -150,10 +149,13 @@ ddhazard = function(formula, data,
     F_[indicies_cur, indicies_lag] = diag(-1, n_params)
     F_[indicies_lag, indicies_lag] = 0
 
-    F_[indicies_fix, ] <- 0
-    F_[, indicies_fix] <- 0
-    diag(F_[indicies_fix, indicies_fix]) <- 1
-
+    if(length(indicies_fix) > 0){
+      F_[indicies_fix, ] <- 0
+      F_[, indicies_fix] <- 0
+      if(length(indicies_fix) > 1)
+        diag(F_[indicies_fix, indicies_fix, drop = F]) <- 1 else
+          F_[indicies_fix, indicies_fix, drop = F] <- 1
+    }
   } else stop("Method not implemented for order ", order)
 
   if(n_params == 0){
@@ -211,14 +213,16 @@ ddhazard = function(formula, data,
     indicies_fix <- 1:n_fixed + n_params
 
     Q_new <- F_ # F_ already has the right dimensions
-    Q_new[,] <- 0
+    Q_new[, ] <- 0
     Q_new[-indicies_fix, -indicies_fix] <- Q
     Q <- Q_new
 
     Q_0_new <- F_
-    Q_0_new[,] <- 0
+    Q_0_new[, ] <- 0
     Q_0_new[-indicies_fix, -indicies_fix] <- Q_0
-    diag(Q_0_new[indicies_fix, indicies_fix]) <- 1e5 # something large
+    if(length(indicies_fix) == 1)
+      Q_0_new[indicies_fix, indicies_fix] <- 1e5 else # something large
+        diag(Q_0_new[indicies_fix, indicies_fix]) <- 1e5
     Q_0 <- Q_0_new
 
     a_0 <- c(a_0, control$fixed_parems_start)
