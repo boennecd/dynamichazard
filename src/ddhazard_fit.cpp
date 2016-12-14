@@ -1808,7 +1808,12 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       }
     }
 
-    conv_values.push_back(conv_criteria(a_prev, p_data->a_t_t_s));
+    if(p_data->any_fixed_terms_in_state_vec ||
+       p_data->any_dynamic){
+      conv_values.push_back(conv_criteria(a_prev.rows(0, p_data->n_params_state_vec - 1),
+                                          p_data->a_t_t_s.rows(0, p_data->n_params_state_vec - 1)));
+    } else
+      conv_values.push_back(0.0);
 
     if(p_data->any_fixed_in_M_step){
       arma::vec old = p_data->fixed_parems;
@@ -1837,7 +1842,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       p_data->fixed_terms.t() * p_data->fixed_parems : arma::vec(p_data->X.n_cols, arma::fill::zeros);
 
       double log_like =
-        logLike_cpp(p_data->X, risk_obj, p_data->F_, Q_0, Q,
+        logLike_cpp(p_data->X, risk_obj, p_data->F_,
+                    Q_0, Q,
                     p_data->a_t_t_s, p_data->tstart, p_data->tstop,
                     fixed_effects_offsets, order_, model)[0];
       Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
