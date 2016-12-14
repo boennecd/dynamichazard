@@ -267,7 +267,7 @@ fit_funcs$dd_fixed <- function(s = sims$res, LR = 1, NR_eps = NULL){
   tryCatch({
     ddhazard(
       formula = Surv(tstart, tstop, event) ~ 
-        -1 + ddFixed(rep(1, length(x1))) +       # Fix intercept
+        ddFixed(1) +                             # Fix intercept
         ddFixed(x1) + x2 +                       # Note x2 is time varying
         ddFixed(x3) + ddFixed(x4) + ddFixed(x5),
       data = s, max_T = T_max, by = 1, id = s$id, 
