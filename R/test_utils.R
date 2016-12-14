@@ -318,7 +318,7 @@ get_expect_equal <- function(x, eps, file = ""){
   expects <- unlist(lapply(x, str_func))
   tol_string = if(!missing(eps)) paste0("\n, tolerance = " , eval(bquote(.(eps)))) else ""
   expects <- mapply(function(e, index_name)
-    paste0("expect_equal(c(", arg_name, "$", index_name, "),\n", e,
+    paste0("expect_equal(unname(c(", arg_name, "$", index_name, ")),\n", e,
            tol_string, ")", collapse = ""),
     e = expects, index_name = names(expects))
 
