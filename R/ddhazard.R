@@ -95,7 +95,8 @@ ddhazard = function(formula, data,
                           LR_decrease_fac = 1.5,
                           n_threads = getOption("ddhazard_max_threads"),
                           ridge_eps = .0001,
-                          fixed_terms_method = "M_step")
+                          fixed_terms_method = "M_step",
+                          Q_0_term_for_fixed_E_step = NULL)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -103,6 +104,11 @@ ddhazard = function(formula, data,
 
   control_default[control_match] <- control
   control <- control_default
+
+  if(is.null(control$Q_0_term_for_fixed_E_step)){
+    control$Q_0_term_for_fixed_E_step <- ifelse(
+      control$method == "UKF", 1, 1e5) # quite abritary values (especially the former - the latter is not too important)
+  }
 
   if(!control$fixed_terms_method %in% c("M_step", "E_step"))
     stop("fixed_terms_method method '", control$fixed_terms_method,"' is not implemented")
@@ -152,8 +158,8 @@ ddhazard = function(formula, data,
       F_[indicies_fix, ] <- 0
       F_[, indicies_fix] <- 0
       if(length(indicies_fix) > 1)
-        diag(F_[indicies_fix, indicies_fix, drop = F]) <- 1 else
-          F_[indicies_fix, indicies_fix, drop = F] <- 1
+        diag(F_[indicies_fix, indicies_fix]) <- 1 else
+          F_[indicies_fix, indicies_fix] <- 1
     }
   } else stop("Method not implemented for order ", order)
 
@@ -220,11 +226,17 @@ ddhazard = function(formula, data,
     Q_0_new[, ] <- 0
     Q_0_new[-indicies_fix, -indicies_fix] <- Q_0
     if(length(indicies_fix) == 1)
-      Q_0_new[indicies_fix, indicies_fix] <- 1e5 else # something large
-        diag(Q_0_new[indicies_fix, indicies_fix]) <- 1e5
+      Q_0_new[indicies_fix, indicies_fix] <- control$Q_0_term_for_fixed_E_step else
+        diag(Q_0_new[indicies_fix, indicies_fix]) <- control$Q_0_term_for_fixed_E_step
     Q_0 <- Q_0_new
 
-    a_0 <- c(a_0, control$fixed_parems_start)
+    if(order == 1){
+      a_0 <- c(a_0, control$fixed_parems_start)
+    } else if(order == 2){
+      first_half <- 1:(length(a_0)/2)
+      a_0 <- c(a_0[first_half], control$fixed_parems_start, a_0[-first_half])
+    } else
+      stop("Order of '", order, "' not supported here")
     control$fixed_parems_start <- vector()
   }
 
