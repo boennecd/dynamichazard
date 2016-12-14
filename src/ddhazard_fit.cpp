@@ -137,8 +137,8 @@ public:
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
 
     current_cov_indicies(0, n_parems - 1),
-    fixed_params_indicies(n_parems - 1 - n_fixed_terms_in_state_vec, n_parems - 1),
-    any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec == 0),
+    fixed_params_indicies(n_parems - n_fixed_terms_in_state_vec, n_parems - 1),
+    any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec > 0),
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
@@ -1763,6 +1763,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
       }
       Q /= p_data->d;
+
+      if(p_data->any_fixed_terms_in_state_vec){
+        Q.rows(p_data->fixed_params_indicies) = .0;
+        Q.cols(p_data->fixed_params_indicies) = .0;
+      }
 
       if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > Q_warn_eps){
         std::ostringstream warning;
