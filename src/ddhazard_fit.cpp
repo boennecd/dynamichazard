@@ -44,6 +44,10 @@ public:
   const int n_params_state_vec;         // NB: not including order
   const int space_dim_in_arrays;
 
+  const arma::span span_current_cov;         // indicies for dot product for linear predictor
+  const arma::span span_current_cov_varying; // indicies for varying parameters in dot product
+  const arma::span span_fixed_params;        // indicies of fixed terms in state vector
+
   const arma::mat &F_;
   const arma::mat T_F_;
 
@@ -72,10 +76,6 @@ public:
   const bool debug;
   const double LR;
 
-  const arma::span current_cov_indicies;
-  const int index_fixed_params_start;
-  const int index_fixed_params_end;
-  const arma::span fixed_params_indicies; // indicies of fixed terms in state vector
   const bool any_fixed_terms_in_state_vec;
 
   // Declare non constants. Some are intialize
@@ -121,6 +121,10 @@ public:
     n_params_state_vec(n_params_state_vec_fixed + n_params_state_vec_varying),
     space_dim_in_arrays(n_params_state_vec_varying * order_ + n_params_state_vec_fixed),
 
+    span_current_cov(0, n_params_state_vec - 1),
+    span_current_cov_varying(0, n_params_state_vec_varying - 1),
+    span_fixed_params(n_params_state_vec_varying, n_params_state_vec - 1),
+
     F_(F__),
     T_F_(F_.t()),
 
@@ -147,11 +151,6 @@ public:
     debug(debug_),
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
 
-    current_cov_indicies(0, n_params_state_vec - 1),
-
-    index_fixed_params_start(n_params_state_vec - n_fixed_terms_in_state_vec_),
-    index_fixed_params_end(n_params_state_vec - 1),
-    fixed_params_indicies(index_fixed_params_start, index_fixed_params_end),
     any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec_ > 0),
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
@@ -451,12 +450,12 @@ class EKF_helper{
       // Update shared variable
       {
         std::lock_guard<std::mutex> lk(dat.m_U);
-        dat.U(dat.current_cov_indicies, dat.current_cov_indicies) +=  U_;
+        dat.U(dat.span_current_cov, dat.span_current_cov) +=  U_;
       }
 
       {
         std::lock_guard<std::mutex> lk(dat.m_u);
-        dat.u(dat.current_cov_indicies) += u_;
+        dat.u(dat.span_current_cov) += u_;
       }
     }
   };
@@ -487,7 +486,7 @@ class EKF_helper{
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = pow(var, -1);
-        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i) = x_ *  var;
+        dat.z_dot(dat.span_current_cov, i) = x_ *  var;
         ++i;
       }
     }
@@ -544,16 +543,16 @@ class EKF_helper{
         // Compute terms from waiting time
         dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
 
-        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i) =  x_ * ((v >= 1e-6) ?
-                                                              inv_exp_v * (inv_exp_eta + at_risk_length) - inv_exp_eta :
-                                                              // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)%2Bv*exp(-v)-1
-                                                              inv_exp_eta * (- v * v) * (1/2 - v * (1/3 - v * (1/8 - v * (1/30 - v/144)))));
+        dat.z_dot(dat.span_current_cov, i) =  x_ * ((v >= 1e-6) ?
+                                                inv_exp_v * (inv_exp_eta + at_risk_length) - inv_exp_eta :
+                                                // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)%2Bv*exp(-v)-1
+                                                inv_exp_eta * (- v * v) * (1/2 - v * (1/3 - v * (1/8 - v * (1/30 - v/144)))));
 
         // Compute terms from binary out come
         dat.H_diag_inv(i + dat.n_in_last_set) = exp_model_funcs::inv_var_chance_die(
           v, expect_chance_die);
 
-        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i + dat.n_in_last_set) =
+        dat.z_dot(dat.span_current_cov, i + dat.n_in_last_set) =
           x_ * (at_risk_length * exp_eta * inv_exp_v);
         ++i;
       }
@@ -600,7 +599,7 @@ class EKF_helper{
         // Compute terms from waiting time
         dat.H_diag_inv(i) = exp_model_funcs::inv_var_chance_die(v, expect_chance_die);
 
-        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i) =  x_ * (inv_exp_v * v);
+        dat.z_dot(dat.span_current_cov, i) =  x_ * (inv_exp_v * v);
         ++i;
       }
     }
@@ -649,7 +648,7 @@ class EKF_helper{
         // Compute terms from waiting time
         dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
 
-        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i) =  x_ * (inv_exp_eta*inv_exp_v*(1 - exp_v + v));
+        dat.z_dot(dat.span_current_cov, i) =  x_ * (inv_exp_eta*inv_exp_v*(1 - exp_v + v));
         ++i;
       }
     }
@@ -778,7 +777,7 @@ public:
 #if defined(USE_OPEN_BLAS)
         openblas_set_num_threads(1);
 #endif
-        filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t(p_dat.current_cov_indicies), t == p_dat.d, t - 1,
+        filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t(p_dat.span_current_cov), t == p_dat.d, t - 1,
                                            bin_tstart, bin_tstop);
 
         if(p_dat.u.has_inf() || p_dat.u.has_nan()){
@@ -1779,8 +1778,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Q /= p_data->d;
 
       if(p_data->any_fixed_terms_in_state_vec){
-        Q.rows(p_data->fixed_params_indicies).zeros();
-        Q.cols(p_data->fixed_params_indicies).zeros();
+        Q.rows(p_data->span_fixed_params).zeros();
+        Q.cols(p_data->span_fixed_params).zeros();
       }
 
       if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > Q_warn_eps){
@@ -1802,16 +1801,16 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
       if(order_ > 1){
-        arma::mat tmp_Q = Q.submat(0, 0, p_data->n_params_state_vec - 1, p_data->n_params_state_vec - 1);
+        arma::mat tmp_Q = Q(p_data->span_current_cov, p_data->span_current_cov);
         Q.zeros();
-        Q.submat(0, 0, p_data->n_params_state_vec - 1, p_data->n_params_state_vec - 1) = tmp_Q;
+        Q(p_data->span_current_cov , p_data->span_current_cov) = tmp_Q;
       }
     }
 
     if(p_data->any_fixed_terms_in_state_vec ||
        p_data->any_dynamic){
-      conv_values.push_back(conv_criteria(a_prev.rows(0, p_data->n_params_state_vec - 1),
-                                          p_data->a_t_t_s.rows(0, p_data->n_params_state_vec - 1)));
+      conv_values.push_back(conv_criteria(a_prev(p_data->span_current_cov, arma::span::all),
+                                          p_data->a_t_t_s(p_data->span_current_cov, arma::span::all)));
     } else
       conv_values.push_back(0.0);
 
@@ -1838,13 +1837,36 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(verbose && it % 5 < verbose){
       auto rcout_width = Rcpp::Rcout.width();
 
-      arma::vec fixed_effects_offsets = p_data->any_fixed_in_M_step ?
-      p_data->fixed_terms.t() * p_data->fixed_parems : arma::vec(p_data->X.n_cols, arma::fill::zeros);
+      arma::mat varying_only_F = p_data->F_; // take copy
+      arma::mat varying_only_a = p_data->a_t_t_s; // take copy
+      arma::vec fixed_effects_offsets;
+
+      if(p_data->any_fixed_in_M_step){
+        fixed_effects_offsets = p_data->fixed_terms.t() * p_data->fixed_parems;
+
+      } else if(p_data->any_fixed_terms_in_state_vec){
+        fixed_effects_offsets =
+          p_data->X(p_data->span_fixed_params, arma::span::all).t() *
+            p_data->a_t_t_s(p_data->span_fixed_params, arma::span::all).col(0);
+
+        varying_only_a.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
+        varying_only_F.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
+        varying_only_F.shed_cols(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
+
+
+      } else{
+        fixed_effects_offsets = arma::vec(p_data->X.n_cols, arma::fill::zeros);
+
+      }
 
       double log_like =
-        logLike_cpp(p_data->X, risk_obj, p_data->F_,
-                    Q_0, Q,
-                    p_data->a_t_t_s, p_data->tstart, p_data->tstop,
+        logLike_cpp(p_data->X(p_data->span_current_cov_varying, arma::span::all),
+                    risk_obj,
+                    varying_only_F,
+                    Q_0(p_data->span_current_cov_varying, p_data->span_current_cov_varying),
+                    Q(p_data->span_current_cov_varying, p_data->span_current_cov_varying),
+                    varying_only_a,
+                    p_data->tstart, p_data->tstop,
                     fixed_effects_offsets, order_, model)[0];
       Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
         " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<

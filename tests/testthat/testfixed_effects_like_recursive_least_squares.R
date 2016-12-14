@@ -3,7 +3,7 @@ test_name <- "fixed_effects_like_recursive_least_squares"
 cat("\nRunning", test_name, "\n")
 
 if(interactive()){
-  # library(testthat); library(survival); source("R/test_utils.R")
+  library(testthat); library(survival); source("R/test_utils.R")
 }
 
 
@@ -289,7 +289,8 @@ test_that("Works with UKF and continous time model", {
                                  save_risk_set = F, save_data = F,
                                  method = "UKF",
                                  alpha = .01, ridge_eps = 1e-2,
-                                 Q_0_term_for_fixed_E_step =.1)))
+                                 Q_0_term_for_fixed_E_step =.1),
+                  verbose = T))
 
   # matplot(sims_exp$betas, lty = 1, type = "l")
   # matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:4)
