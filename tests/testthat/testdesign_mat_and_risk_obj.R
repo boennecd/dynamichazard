@@ -46,15 +46,18 @@ test_that("Different forms of fixing the intercept gives same results",{
     m1 <- suppressMessages(
       ddhazard(survival::Surv(tstart, tstop, event) ~ ddFixed(1) + x1 + x2,
                model = m, by = 2, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.1, 2)))
+               Q_0 = diag(1, 2), Q = diag(.1, 2),
+               control = list(ridge_eps = .01)))
     m2 <- suppressMessages(
       ddhazard(survival::Surv(tstart, tstop, event) ~ -1 + ddFixed(1) + x1 + x2,
                model = m, by = 2, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.1, 2)))
+               Q_0 = diag(1, 2), Q = diag(.1, 2),
+               control = list(ridge_eps = .01)))
     m3 <- suppressMessages(
       ddhazard(survival::Surv(tstart, tstop, event) ~ -1 + ddFixed(rep(1, length(x1))) + x1 + x2,
                model = m, by = 2, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.1, 2)))
+               Q_0 = diag(1, 2), Q = diag(.1, 2),
+               control = list(ridge_eps = .01)))
 
     expect_equal(m1$state_vecs, m2$state_vecs, tolerance = 1e-5)
     expect_equal(m1$fixed_effects, m2$fixed_effects, tolerance = 1e-5)
