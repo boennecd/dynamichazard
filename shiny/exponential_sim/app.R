@@ -75,6 +75,8 @@ ui <- fluidPage(
 
  fluidRow(
    column(col_w,
+          h4("Simulation settings"),
+
           sliderInput("n_series",
                       "Number of series to simulate",
                       min = 0,
@@ -95,9 +97,18 @@ ui <- fluidPage(
 
           numericInput("seed",
                        label = "RNG seed",
-                       value = 65848)),
+                       value = 65848),
+
+          radioButtons("sim_fix_options",
+                       label = "Number of fixed covariates",
+                       choices = list("Zero" = 1,
+                                      "Intercept and two coef" = 2,
+                                      "All but one coef" = 3),
+                       selected = 1)),
 
    column(col_w,
+          h4("Estimation settings"),
+
           sliderInput("ridge_eps",
                       "Ridge regresion like penalty factor",
                       min = 0.00001,
@@ -121,7 +132,19 @@ ui <- fluidPage(
                       min = 1,
                       max = 2,
                       step = 1,
-                      value = 1)),
+                      value = 1),
+
+          selectInput("fixed_terms_method",
+                      "Estimate fixed effect in",
+                      choices = c("E_step", "M_step"),
+                      selected = "M_step"),
+
+          radioButtons("est_fix_options",
+                       label = "Number of fixed covariates",
+                       choices = list("Zero" = 1,
+                                      "Intercept and two coef" = 2,
+                                      "All but one coef" = 3),
+                       selected = 1)),
 
    column(col_w,
           h4("EKF settings"),
@@ -161,35 +184,80 @@ server <- function(input, output) {
     set.seed(input$seed)
     f_choice <- if(input$sim_with == "exponential")
       test_sim_func_exp else test_sim_func_logit
+
+    n_fixed <- if(input$sim_fix_options == 1)
+      0 else if(input$sim_fix_options == 2)
+        3 else if(input$sim_fix_options == 3)
+          5
+
+    n_varying <- 5 - n_fixed + (n_fixed > 0)
+
     f_choice(
       n_series = n_series_input(),
       n_vars = 5,
       t_max = t_max, re_draw = T, beta_start = runif(5, min = -1.5, max = 1.5),
-      intercept_start = -3.5, sds = c(.25, rep(.5, 5)),
+      intercept_start = -3.5,
+      sds = c(.25, rep(.5, 5)),
       x_range = 1, x_mean = 0, lambda = t_max / 10,
+      is_fixed = if(n_varying == 0) vector() else 1:n_fixed,
+
       tstart_sampl_func = start_fun)
+  })
+
+  n_fixed_when_est <- eventReactive(input$compute, {
+    est_fix_options <- input$est_fix_options
+
+    if(est_fix_options == 1){
+      return(0)
+    } else if(est_fix_options == 2){
+      return(3)
+    } else if(est_fix_options == 3){
+      return(5)
+    } else
+      stop("est_fix_options option not implemented")
   })
 
   fit_input <- eventReactive(input$compute, {
     sims <- sim_input()
 
-    Q_0 <- if(input$est_with_method == "UKF") rep(1, 6) else rep(10, 6)
+    n_fixed <- n_fixed_when_est()
+
+    if(n_fixed == 0){
+      form <- formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5)
+
+    } else if(n_fixed == 3){
+      form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed(1) +
+        ddFixed(x1) + ddFixed(x2) + x3 + x4 + x5)
+
+    } else if(n_fixed == 5){
+      form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed(1) +
+        ddFixed(x1) + ddFixed(x2) + ddFixed(x3) + ddFixed(x4) + x5)
+
+    } else
+      stop("n_fixed is not implemented")
+
+    Q_0 <- if(input$est_with_method == "UKF")
+      rep(1, 6 - n_fixed) else rep(10, 6 - n_fixed)
     if(input$order == 2)
-      Q_0 <- c(Q_0, rep(.1, 6))
-    Q_0 <- diag(Q_0)
+      Q_0 <- c(Q_0, rep(.1, 6 - n_fixed))
+
+    Q_0 <- diag(Q_0, length(Q_0))
+
+    print(Q_0)
 
     ddhazard(
-      formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+      formula = form,
       data = sims$res,
       by = 1,
       Q_0 = Q_0,
-      Q = diag(1e-1, 6),
+      Q = diag(c(rep(1e-1, 6 - n_fixed)), 6 - n_fixed),
       control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^2,
                      save_data = F, save_risk_set = F,
                      ridge_eps = input$ridge_eps,
                      method = input$est_with_method,
                      beta = input$beta, alpha = input$alpha,
-                     NR_eps = if(input$use_extra_correction) 1e-1 else NULL),
+                     NR_eps = if(input$use_extra_correction) 1e-1 else NULL,
+                     fixed_terms_method  = input$fixed_terms_method),
       max_T = input$obs_time,
       id = sims$res$id,
       verbose = F,
@@ -212,8 +280,16 @@ server <- function(input, output) {
   })
 
   output$MSE <- renderText({
+    n_fixed <- n_fixed_when_est()
+    fit <- fit_input()
+
+    state_vecs <- if(n_fixed == 0)
+      fit$state_vecs[1:input$obs_time + 1, 1:6] else
+        cbind(sapply(fit$fixed_effects, rep, times = input$obs_time),
+              fit$state_vecs[1:input$obs_time + 1, 1:(6 - n_fixed)])
+
     sprintf("MSE for coeffecients is %.3f",
-      mean.default((sim_input()$beta[1:input$obs_time + 1, ] - fit_input()$state_vecs[1:input$obs_time + 1, 1:6])^2))
+      mean.default((sim_input()$beta[1:input$obs_time + 1, ] - state_vecs)^2))
   })
 
   output$rug_explanation <- renderText({
@@ -227,11 +303,17 @@ server <- function(input, output) {
   output$coef_plot <- renderPlot({
     sims <- sim_input()
     fit <- fit_input()
+    n_fixed <- n_fixed_when_est()
 
     matplot(seq_len(dim(sims$beta)[1]) - 1, sims$beta, lty = 1, type = "l",
-            ylim = range(sims$beta, fit$state_vecs), xaxt='n',
+            ylim = range(sims$beta, fit$state_vecs, result$fixed_effects), xaxt='n',
             ylab = expression(beta), xlab = "Time")
-    matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs[, 1:6], lty = 2, type = "l", add = T)
+    matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs[, 1:(6 - n_fixed)],
+            lty = 2, type = "l", add = T,
+            col = (1+n_fixed):6)
+
+    if(n_fixed > 0)
+      abline(h = fit$fixed_effects, col = 1:n_fixed, lty = 2)
 
     axis(side = 1, at = seq_len(dim(sims$beta)[1]) - 1,tick = FALSE)
 
