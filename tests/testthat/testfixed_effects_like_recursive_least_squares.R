@@ -211,22 +211,24 @@ test_that("Works with UKF and logit model", {
 })
 
 test_that("Works with second order random walk and logit model", {
-  tmp <- file("tmp.txt")
-  sink(tmp)
+  # tmp <- file("tmp.txt")
+  # sink(tmp)
 
-  fit <- ddhazard(form, Q_0 = diag(c(rep(1, 2), rep(.1, 2))), Q = diag(.1, 2),
-                  data = sims_logit$res, id = sims_logit$res$id,
-                  by = 1, order = 2,
-                  control = list(fixed_terms_method = "E_step",
-                                 save_risk_set = F, save_data = F,
-                                 debug = T))
-  sink()
-  close(tmp)
-
-  matplot(sims_logit$betas, lty = 1, type = "l")
-  matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:4)
+  # fit <- ddhazard(form, Q_0 = diag(c(rep(1, 2), rep(.1, 2))), Q = diag(.1, 2),
+  #                 data = sims_logit$res, id = sims_logit$res$id,
+  #                 by = 1, order = 2,
+  #                 control = list(fixed_terms_method = "E_step",
+  #                                save_risk_set = F, save_data = F,
+  #                                debug = T))
+  # # sink()
+  # # close(tmp)
+  #
+  # matplot(sims_logit$betas, lty = 1, type = "l")
+  # matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:4)
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
   # get_expect_equal(fit)
+
+  expect_true(FALSE)
 
 })
 
