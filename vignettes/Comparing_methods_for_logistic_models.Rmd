@@ -384,7 +384,7 @@ This is comparable to the fits from the EKF and GAM model. The main point here i
 We may want to fit a model where we assume that some of the co-variates are fixed. For instance, we may want to fit a model where `age`, the intercept, `log(protime)` and `log(albumin)` are fixed. We fix these based on the previous plots where the effects seems no to be time-varying. The model can be fitted as by the following call:
 ```{r, warning=FALSE}
 dd_fit <- ddhazard(
-  Surv(tstart, tstop, death == 2) ~ -1 + ddFixed(rep(1, length(age))) + 
+  Surv(tstart, tstop, death == 2) ~ ddFixed(1) + 
     ddFixed(age) + ddFixed(log(albumin)) + edema +ddFixed(log(protime)) + log(bili), 
   pbc2, id = pbc2$id, by = 100, max_T = 3600, 
   Q_0 = diag(rep(1, 2)), Q = diag(rep(0.0001, 2)), control = list(eps = 0.02))
@@ -405,7 +405,7 @@ We can also try to both fix some of terms and potentially take extra iterations 
 
 ```{r, fig.height = 3.5, mySettings=FALSE}
 dd_fit <- ddhazard(
-  Surv(tstart, tstop, death == 2) ~ -1 + ddFixed(rep(1, length(age))) + 
+  Surv(tstart, tstop, death == 2) ~ ddFixed(1) + 
     ddFixed(age) + ddFixed(log(albumin)) + edema +ddFixed(log(protime)) + log(bili), 
   pbc2, id = pbc2$id, by = 100, max_T = 3600, 
   Q_0 = diag(rep(1, 2)), Q = diag(rep(0.0001, 2)), 
@@ -421,8 +421,8 @@ We see that the curve is less smooth similar to what we saw previously
 We will end by fitting a second order random walk to model where only `log(bili)` effect is time varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have a time varying coefficient. We fit the model below:
 
 ```{r}
-dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ -1 + 
-                     ddFixed(rep(1, length(age))) + ddFixed(age) + 
+dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ 
+                     ddFixed(1) + ddFixed(age) + 
                      ddFixed(edema) + ddFixed(log(albumin)) + 
                      ddFixed(log(protime)) + log(bili), pbc2,
                    id = pbc2$id, by = 100, max_T = 3600,
