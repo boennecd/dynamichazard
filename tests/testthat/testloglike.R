@@ -7,49 +7,20 @@ if(interactive()){
 test_name <- "loglike"
 cat("\nRunning", test_name, "\n")
 
-
-test_that("Verbose on ddhazard prints a log likelihood", {
-  expect_output({
-    result = ddhazard(
-      formula = survival::Surv(start, stop, event) ~ group,
-      data = head_neck_cancer,
-      by = 1,
-      control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F),
-      a_0 = rep(0, 2), Q_0 = diag(1, 2),
-      max_T = 45,
-      id = head_neck_cancer$id, order = 1,
-      verbose = 5
-    )
-  }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
-
-  expect_output({
-    result = ddhazard(
-      formula = survival::Surv(start, stop, event) ~ group,
-      data = head_neck_cancer,
-      by = 1,
-      control = list(n_max = 10^4, eps = 10^-4, est_Q_0 = F, ridge_eps = 5e-2),
-      a_0 = rep(0, 2), Q_0 = diag(1, 2),
-      max_T = 45,
-      id = head_neck_cancer$id, order = 1,
-      verbose = 5,
-      model = "exponential"
-    )
-  }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
-
-  expect_output({
-    result = ddhazard(
-      formula = survival::Surv(start, stop, event) ~ ddFixed(group),
-      data = head_neck_cancer,
-      by = 1,
-      control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F, ridge_eps = .1e-2),
-      Q_0 = as.matrix(10), Q = matrix(1e-2),
-      max_T = 45,
-      id = head_neck_cancer$id, order = 1,
-      verbose = 5,
-      model = "exponential"
-    )
-  }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
-})
+test_that("verbose prints log likelihood",{
+  for(method in c("EKF", "UKF")){
+    for(o in c(1, 2)){
+      Q_0_arg <- if(o == 1) diag(1, 2) else diag(c(1, 1, .1, .1))
+      for(m in c("exponential", "logit")){
+        expect_output({
+          ddhazard(survival::Surv(start, stop, event) ~ group,
+                   data = head_neck_cancer, id = head_neck_cancer$id,
+                   by = 1, max_T = 30, Q = diag(.01, 2),
+                   Q_0 = Q_0_arg, model = m, order = o,
+                   verbose = 5,
+                   control = list (eps = .1, method = method))
+        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
+}}}})
 
 test_that("logLik for head_neck_cancer data set match previous results", {
   result = ddhazard(

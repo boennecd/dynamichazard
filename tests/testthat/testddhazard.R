@@ -272,11 +272,11 @@ test_that("Result of exponential model on head_neck_data match previous results 
                c(0.1316872427983539 ))
 })
 
-# for(s in sample.int(1e6, 100, replace = F)){
-# print(s)
-# set.seed(s)
-set.seed(599479)
 
+
+########
+# Test on simulated data
+set.seed(599479)
 sims <- test_sim_func_exp(n_series = 1e3, n_vars = 10, t_0 = 0, t_max = 10,
                           x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
                           intercept_start = -5, sds = c(.1, rep(1, 10)))
