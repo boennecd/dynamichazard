@@ -71,8 +71,6 @@ test_that("Works with EKF and logit model and that it work with one fixed and on
 
           expect_equal(c(fit$LR),
                        c(1 ))
-
-          expect_true(F)
 })
 
 test_that("Works with EKF and continous time model and that it work with one fixed and one non-fixed", {
@@ -140,46 +138,171 @@ test_that("Works with EKF and continous time model and that it work with one fix
                c(0.1316872427983539 ))
 })
 
-set.seed(8492741)
+set.seed(849239)
 sims_logit <- test_sim_func_logit(n_series = 4e2, n_vars = 3, x_range = 1, t_max = 10, x_mean = 0.5,
                                   beta_start = 1, intercept_start = -4)
 # sum(sims_logit$res$event)
 form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed(1) + ddFixed(x1) + x2 + x3)
 
 test_that("Works with UKF and logit model", {
+  fit <- ddhazard(form, Q_0 = diag(1, 2), Q = diag(.1, 2),
+                  data = sims_logit$res, id = sims_logit$res$id,
+                  by = 1,
+                  control = list(fixed_terms_method = "E_step",
+                                 save_risk_set = F, save_data = F,
+                                 method = "UKF",
+                                 alpha = .01))
 
-  # tmp <- file("tmp.txt")
-  # sink(tmp)
-  # fit <- ddhazard(form, Q_0 = diag(1, 2), Q = diag(.1, 2),
-  #                 data = sims_logit$res, id = sims_logit$res$id,
-  #                 by = 1,
-  #                 control = list(fixed_terms_method = "E_step",
-  #                                save_risk_set = F, save_data = F,
-  #                                method = "UKF", debug = T))
-  # sink()
-  # close(tmp)
-  #
   # matplot(sims_logit$betas, lty = 1, type = "l")
   # matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:4)
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
-  # # get_expect_equal(fit)
+  # get_expect_equal(fit)
 
-  expect_true(F)
+  expect_equal(unname(c(fit$state_vecs)),
+               c( 2.204142170144191, 2.201659467228804, 2.835854570733872, 2.395779062367009, 2.397812209810755, 2.225347797164639,  2.430074368451281, 3.032461717773980, 3.413040406593200, 3.454642508443022, 4.355820597298862, -4.486288791379789, -4.493655579644042, -2.766604104085253, -4.052323852178006, -4.088954993042360, -4.579158831378076, -4.010499883567714, -2.311835236547662, -1.228674926140861, -1.084463641518693, 1.480869330184758 ))
+
+  expect_equal(unname(c(fit$state_vars)),
+               c(0.2546575275467979, 0.1868525185214180, 0.1868525185214167, 0.7707635721923629, 0.2702800339857233, 0.3048486972795817, 0.3048486972795766, 1.2235564301783350, 0.2638285393303403, 0.3098788729213180, 0.3098788729213112, 1.2431752328177330, 0.1934410923465167, 0.1163195366414338, 0.1163195366414295, 0.6725913203885583, 0.2224471509609436, 0.2042424902347802, 0.2042424902347752, 0.9403879247670568, 0.2263457784500662, 0.2175801901985109, 0.2175801901985044, 1.0179240039417075, 0.2398081149781144, 0.2545309199181456, 0.2545309199181393, 1.1722318573639496, 0.2459163230232402, 0.2572659428747597, 0.2572659428747528, 1.2029812530863588, 0.2433049580666524, 0.1876145377722057, 0.1876145377721989, 0.9068642488159087, 0.2449741191033035, 0.1008654433536405, 0.1008654433536392, 0.4990786121351367, 0.2650249840923777, 0.1251477537309833, 0.1251477537309814, 0.5995914719579085 ))
+
+  expect_equal(unname(c(fit$lag_one_cov)),
+               c(NULL ))
+
+  expect_equal(unname(c(fit$fixed_effects)),
+               c(-2.978883486670685, 0.870630297963691 ))
+
+  expect_equal(unname(c(fit$n_iter)),
+               c(54 ))
+
+  expect_equal(unname(c(fit$Q)),
+               c(0.3361949438985762, 0.9169614297869177, 0.9169614297869177, 2.6438758103126032 ))
+
+  expect_equal(unname(c(fit$Q_0)),
+               c(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ))
+
+  expect_equal(unname(c(fit$n_risk)),
+               c(400, 383, 346, 319, 293, 278, 261, 226, 161, 115 ))
+
+  expect_equal(unname(c(fit$times)),
+               c( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ))
+
+  expect_equal(unname(c(fit$risk_set)),
+               c(NULL ))
+
+  expect_equal(unname(c(fit$data)),
+               c(NULL ))
+
+  expect_equal(unname(c(fit$order)),
+               c(1 ))
+
+  expect_equal(unname(c(fit$F_)),
+               c(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ))
+
+  expect_equal(unname(c(fit$method)),
+               c("UKF" ))
+
+  expect_equal(unname(c(fit$model)),
+               c("logit" ))
+
+  expect_equal(unname(c(fit$est_Q_0)),
+               c(FALSE ))
+
+  expect_equal(unname(c(fit$LR)),
+               c(1 ))
 })
 
-test_that("Works with UKF and continous time model",
-          expect_true(F))
+test_that("Works with second order random walk and logit model", {
+  tmp <- file("tmp.txt")
+  sink(tmp)
 
-test_that("Works with second order random walk and logit model",
-          expect_true(F))
+  fit <- ddhazard(form, Q_0 = diag(c(rep(1, 2), rep(.1, 2))), Q = diag(.1, 2),
+                  data = sims_logit$res, id = sims_logit$res$id,
+                  by = 1, order = 2,
+                  control = list(fixed_terms_method = "E_step",
+                                 save_risk_set = F, save_data = F,
+                                 debug = T))
+  sink()
+  close(tmp)
+
+  matplot(sims_logit$betas, lty = 1, type = "l")
+  matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:4)
+  # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
+  # get_expect_equal(fit)
+
+})
+
+
+
+set.seed(849239)
+sims_exp <- test_sim_func_exp(n_series = 4e2, n_vars = 3, x_range = 1, t_max = 10, x_mean = 0.5,
+                              beta_start = 1, intercept_start = -4)
+
+test_that("Works with UKF and continous time model", {
+  fit <- suppressWarnings(ddhazard(form, Q_0 = diag(1, 2), Q = diag(.1, 2),
+                  data = sims_exp$res, id = sims_exp$res$id,
+                  by = 1, model = "exponential", max_T = 10,
+                  control = list(fixed_terms_method = "E_step",
+                                 save_risk_set = F, save_data = F,
+                                 method = "UKF",
+                                 alpha = .01, ridge_eps = 5e-3)))
+
+  # matplot(sims_exp$betas, lty = 1, type = "l")
+  # matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:4)
+  # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
+  # get_expect_equal(fit)
+
+  expect_equal(unname(c(fit$state_vecs)),
+               c( 2.204142170144191, 2.201659467228804, 2.835854570733872, 2.395779062367009, 2.397812209810755, 2.225347797164639,  2.430074368451281, 3.032461717773980, 3.413040406593200, 3.454642508443022, 4.355820597298862, -4.486288791379789, -4.493655579644042, -2.766604104085253, -4.052323852178006, -4.088954993042360, -4.579158831378076, -4.010499883567714, -2.311835236547662, -1.228674926140861, -1.084463641518693, 1.480869330184758 ))
+
+  expect_equal(unname(c(fit$state_vars)),
+               c(0.2546575275467979, 0.1868525185214180, 0.1868525185214167, 0.7707635721923629, 0.2702800339857233, 0.3048486972795817, 0.3048486972795766, 1.2235564301783350, 0.2638285393303403, 0.3098788729213180, 0.3098788729213112, 1.2431752328177330, 0.1934410923465167, 0.1163195366414338, 0.1163195366414295, 0.6725913203885583, 0.2224471509609436, 0.2042424902347802, 0.2042424902347752, 0.9403879247670568, 0.2263457784500662, 0.2175801901985109, 0.2175801901985044, 1.0179240039417075, 0.2398081149781144, 0.2545309199181456, 0.2545309199181393, 1.1722318573639496, 0.2459163230232402, 0.2572659428747597, 0.2572659428747528, 1.2029812530863588, 0.2433049580666524, 0.1876145377722057, 0.1876145377721989, 0.9068642488159087, 0.2449741191033035, 0.1008654433536405, 0.1008654433536392, 0.4990786121351367, 0.2650249840923777, 0.1251477537309833, 0.1251477537309814, 0.5995914719579085 ))
+
+  expect_equal(unname(c(fit$lag_one_cov)),
+               c(NULL ))
+
+  expect_equal(unname(c(fit$fixed_effects)),
+               c(-2.978883486670685, 0.870630297963691 ))
+
+  expect_equal(unname(c(fit$n_iter)),
+               c(54 ))
+
+  expect_equal(unname(c(fit$Q)),
+               c(0.3361949438985762, 0.9169614297869177, 0.9169614297869177, 2.6438758103126032 ))
+
+  expect_equal(unname(c(fit$Q_0)),
+               c(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ))
+
+  expect_equal(unname(c(fit$n_risk)),
+               c(400, 383, 346, 319, 293, 278, 261, 226, 161, 115 ))
+
+  expect_equal(unname(c(fit$times)),
+               c( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ))
+
+  expect_equal(unname(c(fit$risk_set)),
+               c(NULL ))
+
+  expect_equal(unname(c(fit$data)),
+               c(NULL ))
+
+  expect_equal(unname(c(fit$order)),
+               c(1 ))
+
+  expect_equal(unname(c(fit$F_)),
+               c(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ))
+
+  expect_equal(unname(c(fit$method)),
+               c("UKF" ))
+
+  expect_equal(unname(c(fit$model)),
+               c("logit" ))
+
+  expect_equal(unname(c(fit$est_Q_0)),
+               c(FALSE ))
+
+  expect_equal(unname(c(fit$LR)),
+               c(1 ))
+})
 
 test_that("Works with second order random walk and continous time model",
-          expect_true(F))
-
-test_that("Works when only one is time varying",
-          expect_true(F))
-
-test_that("Works when one is fixed",
           expect_true(F))
 
 # Had issues with win builder. Thus, these lines
