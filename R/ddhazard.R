@@ -76,31 +76,6 @@ ddhazard = function(formula, data,
   n_params = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
 
-  if(missing(id)){
-    if(verbose)
-      warning("You did not parse and ID argument. I do not hink this is what you want ...")
-    id = 1:nrow(data)
-  }
-
-  if(missing(Q_0)){
-    Q_0 = diag(10, n_params * order) # something large. Though depends on model, estimation method and data
-
-    if(missing(Q))
-      Q = diag(c(rep(1, n_params))) # (Very) arbitrary default
-  }
-
-  if(order == 1){
-    F_ = diag(1, n_params)
-  }
-  else if(order == 2){
-    F_ = matrix(NA_real_, nrow = 2 * n_params, ncol = 2 * n_params)
-    F_[1:n_params, 1:n_params] = diag(2, n_params)
-    F_[n_params + 1:n_params, 1:n_params] = diag(1, n_params)
-    F_[1:n_params, n_params + 1:n_params] = diag(-1, n_params)
-    F_[n_params + 1:n_params, n_params + 1:n_params] = 0
-
-  } else stop("Method not implemented for order ", order)
-
   if(model == "logit"){
     is_for_discrete_model <- TRUE
 
@@ -121,7 +96,8 @@ ddhazard = function(formula, data,
                           n_threads = getOption("ddhazard_max_threads"),
                           ridge_eps = if((is.null(control$method) ||
                                           control$method == "EKF") &&
-                                         model == "exponential") .025 else .0001)
+                                         model == "exponential") .025 else .0001,
+                          fixed_terms_method = "Est_M_step")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -130,14 +106,56 @@ ddhazard = function(formula, data,
   control_default[control_match] <- control
   control <- control_default
 
+  if(!control$fixed_terms_method %in% c("Est_M_step", "Est_E_step"))
+    stop("fixed_terms_method method '", control$fixed_terms_method,"' is not implemented")
+
   if(control$ridge_eps <= 0)
     stop("Method not implemented with penalty term (control$ridge_eps) equal to ", control$ridge_eps)
+
+  if(missing(id)){
+    if(verbose)
+      warning("You did not parse and Id argument")
+    id = 1:nrow(data)
+  }
 
   if(verbose)
     message("Finding Risk set")
   risk_set <-
     get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
                  id = id, is_for_discrete_model = is_for_discrete_model)
+
+  n_fixed <- ncol(X_Y$fixed_terms)
+  est_fixed_in_E <- control$fixed_terms_method == "Est_E_step"
+
+  if(missing(Q_0)){
+    Q_0 = diag(c(rep(10, n_params), rep(1e5, n_fixed * est_fixed_in_E),
+                 rep(10, n_params * (order - 1)))) # something large. Though depends on model, estimation method and data
+
+    if(missing(Q))
+      Q = diag(c(rep(1, n_params), rep(0, n_fixed * est_fixed_in_E))) # (Very) arbitrary default
+  }
+
+  if(order == 1){
+    F_ = diag(rep(1, n_params + n_fixed * est_fixed_in_E))
+  }
+  else if(order == 2){
+    indicies_cur <- 1:n_params
+    indicies_lag <- n_params + 1:n_params + ifelse(est_fixed_in_E, n_fixed, 0)
+    indicies_fix <- if(est_fixed_in_E) 1:n_fixed + n_params else vector()
+
+    F_ = matrix(NA_real_,
+                nrow = 2 * n_params + n_fixed * est_fixed_in_E,
+                ncol = 2 * n_params + n_fixed * est_fixed_in_E)
+    F_[indicies_cur, indicies_cur] = diag(2, n_params)
+    F_[indicies_lag, indicies_cur] = diag(1, n_params)
+    F_[indicies_cur, indicies_lag] = diag(-1, n_params)
+    F_[indicies_lag, indicies_lag] = 0
+
+    F_[indicies_fix, ] <- 0
+    F_[, indicies_fix] <- 0
+    diag(F_[indicies_fix, indicies_fix]) <- 1
+
+  } else stop("Method not implemented for order ", order)
 
   if(n_params == 0){
     # Model is fitted using ddhazard_fit_cpp for testing

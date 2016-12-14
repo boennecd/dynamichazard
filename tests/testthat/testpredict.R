@@ -237,7 +237,7 @@ test_that("predict functions throws error when model it is exponential",{
 })
 
 # PBC dataset described in Fleming & Harrington (1991)
-library(timereg)
+library(timereg, quietly = T)
 data(pbc)
 head(pbc)
 # status at endpoint, 0/1/2 for censored, transplant, dead
