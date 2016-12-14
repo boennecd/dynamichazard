@@ -38,7 +38,11 @@ public:
   // Initalize constants
   const int d;
   const Rcpp::List risk_sets;
-  const int n_parems;
+
+  const int n_params_state_vec_fixed;
+  const int n_params_state_vec_varying; // NB: not including order
+  const int n_params_state_vec;         // NB: not including order
+  const int space_dim_in_arrays;
 
   const arma::mat &F_;
   const arma::mat T_F_;
@@ -89,7 +93,7 @@ public:
 
   arma::cube lag_one_cov;
 
-  problem_data(const int n_fixed_terms_in_state_vec,
+  problem_data(const int n_fixed_terms_in_state_vec_,
                arma::mat &X_,
                arma::mat &fixed_terms_,
                const arma::vec &tstart_,
@@ -111,7 +115,12 @@ public:
                const double ridge_eps_ = .0001):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
-    n_parems(a_0.size() / order_),
+
+    n_params_state_vec_fixed(n_fixed_terms_in_state_vec_),
+    n_params_state_vec_varying((a_0.size() - n_fixed_terms_in_state_vec_) / order_),
+    n_params_state_vec(n_params_state_vec_fixed + n_params_state_vec_varying),
+    space_dim_in_arrays(n_params_state_vec_varying * order_ + n_params_state_vec_fixed),
+
     F_(F__),
     T_F_(F_.t()),
 
@@ -138,26 +147,26 @@ public:
     debug(debug_),
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
 
-    current_cov_indicies(0, n_parems - 1),
+    current_cov_indicies(0, n_params_state_vec - 1),
 
-    index_fixed_params_start(n_parems - n_fixed_terms_in_state_vec),
-    index_fixed_params_end(n_parems - 1),
+    index_fixed_params_start(n_params_state_vec - n_fixed_terms_in_state_vec_),
+    index_fixed_params_end(n_params_state_vec - 1),
     fixed_params_indicies(index_fixed_params_start, index_fixed_params_end),
-    any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec > 0),
+    any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec_ > 0),
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
     Q_0(Q_0_)
     {
-      a_t_t_s = arma::mat(n_parems * order_, d + 1);
-      a_t_less_s = arma::mat(n_parems * order_, d);
-      V_t_t_s = arma::cube(n_parems * order_, n_parems * order_, d + 1);
-      V_t_less_s = arma::cube(n_parems * order_, n_parems * order_, d);
-      B_s = arma::cube(n_parems * order_, n_parems * order_, d);
+      a_t_t_s = arma::mat(space_dim_in_arrays, d + 1);
+      a_t_less_s = arma::mat(space_dim_in_arrays, d);
+      V_t_t_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d + 1);
+      V_t_less_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
+      B_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
 
       a_t_t_s.col(0) = a_0;
 
-      lag_one_cov = arma::cube(n_parems * order_, n_parems * order_, d);
+      lag_one_cov = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
 
       if(debug)
         Rcpp::Rcout << "Using " << n_threads << " threads" << std::endl;
@@ -190,7 +199,7 @@ public:
   arma::vec H_diag_inv;
   arma::mat K_d;
 
-  problem_data_EKF(const int n_fixed_terms_in_state_vec,
+  problem_data_EKF(const int n_fixed_terms_in_state_vec_,
                    arma::mat &X, arma::mat &fixed_terms,
                    const arma::vec &tstart_,
                    const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
@@ -212,7 +221,7 @@ public:
                    const bool debug_ = false,
                    const int n_threads_ = -1,
                    const double ridge_eps_ = .0001):
-    problem_data(n_fixed_terms_in_state_vec, X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0,
+    problem_data(n_fixed_terms_in_state_vec_, X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0,
                  fixed_parems_start, Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_params_,
                  n_max, eps, verbose,
@@ -225,10 +234,10 @@ public:
                  NR_eps(is_mult_NR ? Rcpp::as< Rcpp::NumericVector >(NR_eps_)[0] : 0.0),
                  NR_it_max(NR_it_max_)
   {
-    u = arma::colvec(n_parems * order_);
-    U = arma::mat(n_parems * order_, n_parems * order_);
+    u = arma::colvec(space_dim_in_arrays);
+    U = arma::mat(space_dim_in_arrays, space_dim_in_arrays);
 
-    z_dot = arma::mat(n_parems * order_, n_in_last_set * (is_cont_time + 1));
+    z_dot = arma::mat(space_dim_in_arrays, n_in_last_set * (is_cont_time + 1));
     H_diag_inv = arma::vec(n_in_last_set * (is_cont_time + 1));
   }
 
@@ -425,8 +434,8 @@ class EKF_helper{
                   const double &bin_tstart, const double &bin_tstop){
       // potentially intialize variables and set entries to zeroes in any case
       if(is_first_call){
-        u_ = arma::vec(dat.n_parems);
-        U_ = arma::mat(dat.n_parems, dat.n_parems);
+        u_ = arma::vec(dat.n_params_state_vec);
+        U_ = arma::mat(dat.n_params_state_vec, dat.n_params_state_vec);
         is_first_call = false;
       }
       u_.zeros();
@@ -442,12 +451,12 @@ class EKF_helper{
       // Update shared variable
       {
         std::lock_guard<std::mutex> lk(dat.m_U);
-        dat.U.submat(0, 0, dat.n_parems - 1, dat.n_parems - 1) +=  U_;
+        dat.U(dat.current_cov_indicies, dat.current_cov_indicies) +=  U_;
       }
 
       {
         std::lock_guard<std::mutex> lk(dat.m_u);
-        dat.u.head(dat.n_parems) += u_;
+        dat.u(dat.current_cov_indicies) += u_;
       }
     }
   };
@@ -459,7 +468,7 @@ class EKF_helper{
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
-      const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
+      const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double exp_eta = exp(arma::dot(i_a_t, x_) + offset);
 
@@ -478,7 +487,7 @@ class EKF_helper{
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = pow(var, -1);
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) = x_ *  var;
+        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i) = x_ *  var;
         ++i;
       }
     }
@@ -497,7 +506,7 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
-      const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
+      const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
 
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
@@ -535,7 +544,7 @@ class EKF_helper{
         // Compute terms from waiting time
         dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
 
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) =  x_ * ((v >= 1e-6) ?
+        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i) =  x_ * ((v >= 1e-6) ?
                                                               inv_exp_v * (inv_exp_eta + at_risk_length) - inv_exp_eta :
                                                               // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)%2Bv*exp(-v)-1
                                                               inv_exp_eta * (- v * v) * (1/2 - v * (1/3 - v * (1/8 - v * (1/30 - v/144)))));
@@ -544,7 +553,7 @@ class EKF_helper{
         dat.H_diag_inv(i + dat.n_in_last_set) = exp_model_funcs::inv_var_chance_die(
           v, expect_chance_die);
 
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i + dat.n_in_last_set) =
+        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i + dat.n_in_last_set) =
           x_ * (at_risk_length * exp_eta * inv_exp_v);
         ++i;
       }
@@ -565,7 +574,7 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
-      const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
+      const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
 
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
@@ -591,7 +600,7 @@ class EKF_helper{
         // Compute terms from waiting time
         dat.H_diag_inv(i) = exp_model_funcs::inv_var_chance_die(v, expect_chance_die);
 
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) =  x_ * (inv_exp_v * v);
+        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i) =  x_ * (inv_exp_v * v);
         ++i;
       }
     }
@@ -610,7 +619,7 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
-      const arma::vec x_(dat.X.colptr(*it), dat.n_parems, false);
+      const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
 
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
@@ -640,7 +649,7 @@ class EKF_helper{
         // Compute terms from waiting time
         dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
 
-        dat.z_dot.rows(0, dat.n_parems - 1).col(i) =  x_ * (inv_exp_eta*inv_exp_v*(1 - exp_v + v));
+        dat.z_dot.rows(0, dat.n_params_state_vec - 1).col(i) =  x_ * (inv_exp_eta*inv_exp_v*(1 - exp_v + v));
         ++i;
       }
     }
@@ -1137,7 +1146,7 @@ public:
       arma::vec c_vec;
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
-      Compute_intermediates(r_set, offsets(r_set), t, bin_start, bin_stop, c_vec, O, p_dat.n_parems);
+      Compute_intermediates(r_set, offsets(r_set), t, bin_start, bin_stop, c_vec, O, p_dat.n_params_state_vec);
 
       // Substract mean to get delta sigma points
       arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
@@ -1521,7 +1530,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
 
       if(p_data->any_dynamic){
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
-          p_data->X.cols(r_set).t() * p_data->a_t_t_s.col(t).head(p_data->n_parems);
+          p_data->X.cols(r_set).t() * p_data->a_t_t_s.col(t).head(p_data->n_params_state_vec);
       } else {
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1).fill(0.);
       }
@@ -1793,9 +1802,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
       if(order_ > 1){
-        arma::mat tmp_Q = Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1);
+        arma::mat tmp_Q = Q.submat(0, 0, p_data->n_params_state_vec - 1, p_data->n_params_state_vec - 1);
         Q.zeros();
-        Q.submat(0, 0, p_data->n_parems - 1, p_data->n_parems - 1) = tmp_Q;
+        Q.submat(0, 0, p_data->n_params_state_vec - 1, p_data->n_params_state_vec - 1) = tmp_Q;
       }
     }
 
