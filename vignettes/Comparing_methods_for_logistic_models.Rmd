@@ -47,9 +47,11 @@ The note is structured as follows: First, we cover the `pbc2` data set. Then we 
 You can install the version of the library used to make this vignettes from github with the `devtools` library as follows:
 
 ```{r echo=FALSE}
-current_sha <- httr::content(
-  httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
-  )$object$sha
+tryCatch({
+  current_sha <- paste0("@", httr::content(
+    httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
+    )$object$sha)
+}, error = function(...){ current_sha <<- "" })
 
 stopifnot(length(current_sha) > 0 && class(current_sha) == "character")
 
@@ -115,6 +117,7 @@ pbc2_big_frame <- get_survival_case_weigths_and_data(
   Surv(tstart, tstop, death == 2) ~ age + edema + log(albumin) + log(protime) +
     log(bili), data = pbc2, id = pbc2$id, by = 100, max_T = 3600, 
   use_weights = F)
+pbc2_big_frame <- pbc2_big_frame$X
 ```
 
 The code above uses the `Surv` function on the left hand side of the formula. The `Surv` function needs a start time, a stop time and a outcome. The right hand side is as before. The `by` argument specifies the interval length (here 100 days) and the `max_T` specify the last time we want to include. We will comment on `use_weights` argument shortly. As an example, we can look at individual `282` in the new data frame:
@@ -130,6 +133,7 @@ pbc2_small_frame <- get_survival_case_weigths_and_data(
   Surv(tstart, tstop, death == 2) ~ age + edema + log(albumin) + log(protime) +
     log(bili), data = pbc2, id = pbc2$id, by = 100, max_T = 3600, 
   use_weights = T)
+pbc2_small_frame <- pbc2_small_frame$X
 ```
 
 The new data rows for individual `282` looks as follows:
