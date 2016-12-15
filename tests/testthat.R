@@ -12,11 +12,5 @@ if(is_build_win)
 cat("Running tests on:\n")
 print(R.version)
 
-tryCatch(
-  test_check("dynamichazard"),
-  error = function(e){
-    print(e$call)
-    print(e$message)
-    print(.Traceback)
-    stop(e)
-  })
+
+test_check("dynamichazard")
