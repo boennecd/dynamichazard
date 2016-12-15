@@ -23,3 +23,17 @@ test_that("This work when get_design_matrix when function is defined not in glob
   design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(dum(x2)) + x3), sims)
 
 })
+
+
+test_that("Figure out why Q gets big in this example", {
+  set.seed(849239)
+  sims_exp <- test_sim_func_exp(n_series = 4e2, n_vars = 3, x_range = 1, t_max = 10, x_mean = 0.5,
+                                beta_start = 1, intercept_start = -4)
+
+  fit <- suppressWarnings(ddhazard(form, Q_0 = diag(10, 2), Q = diag(1, 2),
+                                   data = sims_exp$res, id = sims_exp$res$id,
+                                   by = 1, model = "exponential_binary_only", max_T = 10,
+                                   control = list(fixed_terms_method = "E_step",
+                                                  save_risk_set = F, save_data = F,
+                                                  method = "UKF", debug = T), verbose = 5))
+})

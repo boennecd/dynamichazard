@@ -69,13 +69,15 @@ knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
 This note will cover the `ddhazard` function used for estimation in the `dynamichazard` library. You can install the version of the library used to make this vignette from github with the `devtools` library as follows:
 
 ```{r echo=FALSE}
-current_sha <- httr::content(
-  httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
-  )$object$sha
+tryCatch({
+  current_sha <- paste0("@", httr::content(
+    httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
+    )$object$sha)
+}, error = function(...){ current_sha <<- "" })
 
 stopifnot(length(current_sha) > 0 && class(current_sha) == "character")
 
-current_version <- paste0("boennecd/dynamichazard@", current_sha)
+current_version <- paste0("boennecd/dynamichazard", current_sha)
 ```
 
 ```{r}

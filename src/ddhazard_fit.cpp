@@ -1049,8 +1049,7 @@ protected:
                                      const arma::vec offsets,
                                      const int t,
                                      const double bin_tstart, const double bin_tstop,
-                                     arma::vec &c_vec, arma::mat &O,
-                                     const int n_params) = 0;
+                                     arma::vec &c_vec, arma::mat &O) = 0;
 
   void compute_sigma_points(const arma::vec &a_t,
                             arma::mat &s_points,
@@ -1099,10 +1098,11 @@ public:
     weights_vec_cc[0] = w_0_cc;
 
     if(p_dat.debug){
-      Rcpp::Rcout << "alpha, beta, kappa = "
+      Rcpp::Rcout << "alpha, beta, kappa, n_dim = "
                   << a << ", "
                   << b << ", "
-                  << k << std::endl;
+                  << k << ", "
+                  << m << std::endl;
       Rcpp::Rcout << "w_0, w_0_c, w_0_cc, w_i, lambda = "
                   << w_0 << ", "
                   << w_0_c << ", "
@@ -1145,7 +1145,7 @@ public:
       arma::vec c_vec;
       arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
-      Compute_intermediates(r_set, offsets(r_set), t, bin_start, bin_stop, c_vec, O, p_dat.n_params_state_vec);
+      Compute_intermediates(r_set, offsets(r_set), t, bin_start, bin_stop, c_vec, O);
 
       // Substract mean to get delta sigma points
       arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
@@ -1188,10 +1188,9 @@ class UKF_solver_New_logit : public UKF_solver_New{
                              const arma::vec offsets,
                              const int t,
                              const double bin_tstart, const double bin_tstop,
-                             arma::vec &c_vec, arma::mat &O,
-                             const int n_params){
+                             arma::vec &c_vec, arma::mat &O){
     // ** 1: Compute expected outcomes given sigma points **
-    O = (sigma_points.rows(0, n_params - 1).t() * p_dat.X.cols(r_set)).t(); // we transpose due to the column-major
+    O = (sigma_points.rows(p_dat.span_current_cov).t() * p_dat.X.cols(r_set)).t(); // we transpose due to the column-major
 
     O.each_col() += offsets;
 
@@ -1253,8 +1252,7 @@ class UKF_solver_New_exponential_binary_only : public UKF_solver_New{
                              const arma::vec offsets,
                              const int t,
                              const double bin_tstart, const double bin_tstop,
-                             arma::vec &c_vec, arma::mat &O,
-                             const int n_params){
+                             arma::vec &c_vec, arma::mat &O){
     // ** 1-3: compute outcome given sigma points, means and variances **
     const arma::uword n_risk = r_set.n_elem;
     O.set_size(n_risk, sigma_points.n_cols);
@@ -1262,7 +1260,7 @@ class UKF_solver_New_exponential_binary_only : public UKF_solver_New{
 
     arma::vec y_bar(n_risk, arma::fill::zeros);
 
-    arma::mat etas = (sigma_points.rows(0, n_params - 1).t() * p_dat.X.cols(r_set)).t(); // linear predictors
+    arma::mat etas = (sigma_points.rows(p_dat.span_current_cov).t() * p_dat.X.cols(r_set)).t(); // linear predictors
 
     // Armadillo do not have a bool vector so we use an integer vector instead
     arma::ivec do_die = arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
@@ -1301,7 +1299,7 @@ class UKF_solver_New_exponential_binary_only : public UKF_solver_New{
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
 
-    c_vec = (O.each_col() / vars).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
+    c_vec = (O.each_col() / vars).t() * (do_die - y_bar);
     O = O.t() * (O.each_col() / vars);
 
     // Compute intermediate matrix
@@ -1340,8 +1338,7 @@ class UKF_solver_New_exponential : public UKF_solver_New{
                              const arma::vec offsets,
                              const int t,
                              const double bin_tstart, const double bin_tstop,
-                             arma::vec &c_vec, arma::mat &O,
-                             const int n_params)
+                             arma::vec &c_vec, arma::mat &O)
   {
     // See comments in UKF_solver_New_logit. The main difference here is that
     // we have tuples as outcomes. Thus, we have to deal with covariance terms
@@ -1354,7 +1351,7 @@ class UKF_solver_New_exponential : public UKF_solver_New{
 
     arma::vec y_bar(n_risk * 2, arma::fill::zeros);
 
-    arma::mat etas = (sigma_points.rows(0, n_params - 1).t() * p_dat.X.cols(r_set)).t(); // linear predictors
+    arma::mat etas = (sigma_points.rows(p_dat.span_current_cov).t() * p_dat.X.cols(r_set)).t(); // linear predictors
 
     // Armadillo do not have a bool vector so we use an integer vector instead
     arma::ivec do_die = arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
@@ -1777,6 +1774,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       }
       Q /= p_data->d;
 
+      if(p_data->debug){
+        my_print(p_data->Q.diag(), "Diag(Q) before changes in M-step");
+      }
+
+
       if(p_data->any_fixed_terms_in_state_vec){
         Q.rows(p_data->span_fixed_params).zeros();
         Q.cols(p_data->span_fixed_params).zeros();
@@ -1805,6 +1807,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         Q.zeros();
         Q(p_data->span_current_cov , p_data->span_current_cov) = tmp_Q;
       }
+    }
+
+    if(p_data->debug){
+      my_print(p_data->Q.diag(), "Diag(Q) after changes in M-step");
     }
 
     if(p_data->any_fixed_terms_in_state_vec ||
