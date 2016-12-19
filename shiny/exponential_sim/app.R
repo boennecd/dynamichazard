@@ -13,6 +13,13 @@ library(dynamichazard)
 test_sim_func_exp <- with(environment(ddhazard), test_sim_func_exp)
 test_sim_func_logit <- with(environment(ddhazard), test_sim_func_logit)
 
+# Save memory on server
+ddhazard <- function(..., control){
+  control$save_data = F
+  control$save_risk_set = F
+  dynamichazard::ddhazard(..., control = control)
+}
+
 # Global params
 t_max <- 30
 max_rugs <- 5e2
@@ -20,7 +27,7 @@ start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_m
 
 # params for UI
 col_w <- 3
-col_w_out <- 6
+col_w_out <- 4
 
 get_em <- function(n_lines) paste0("height:",n_lines * 1.5,"em;")
 
@@ -51,21 +58,29 @@ ui <- fluidPage(
 
  br(),
 
- div(fluidRow(
-     column(col_w_out,
+ div(fixedRow(
+     column(3,
             h3("Intro"),
             div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
-            div(textOutput("rug_explanation"), style = get_em(4)),
+            div(textOutput("rug_explanation"), style = get_em(5)),
             div("See the ddhazard vignette for further details", style = get_em(1))
             ),
-     column(col_w_out,
+     column(3,
             h3("Output"),
             div(textOutput("n_deaths"), style = get_em(1)),
             div(htmlOutput ("LR_out"), style = get_em(1)),
             div(textOutput("MSE"), style = get_em(1)),
-            div(textOutput("model_text"), style = get_em(3))
-          )),
-     style = "max-width:60em;min-width: 45em;"),
+            div(textOutput("model_text"), style = get_em(3)),
+            tags$textarea(
+              id = 'demo', style = 'display: none;',
+              verbatimTextOutput("fit_call_txt")
+            )
+          ),
+      column(5,
+             h3("Fit call"),
+             div(verbatimTextOutput("fit_call_txt"), style = "height:20em;")
+             )
+     ), style = "max-width:110em;min-width: 100em;"),
 
  br(),
 
@@ -175,6 +190,7 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  data <- NA
 
   n_series_input <- eventReactive(input$compute, {
     n_series_stuff$base^(n_series_stuff$exp_min + input$n_series)
@@ -217,8 +233,9 @@ server <- function(input, output) {
       stop("est_fix_options option not implemented")
   })
 
-  fit_input <- eventReactive(input$compute, {
+  fit_quote_input <- eventReactive(input$compute, {
     sims <- sim_input()
+    data <<- sims$res
 
     n_fixed <- n_fixed_when_est()
 
@@ -236,31 +253,67 @@ server <- function(input, output) {
     } else
       stop("n_fixed is not implemented")
 
-    Q_0 <- if(input$est_with_method == "UKF")
-      rep(1, 6 - n_fixed) else rep(10, 6 - n_fixed)
-    if(input$order == 2)
-      Q_0 <- c(Q_0, rep(.1, 6 - n_fixed))
+    q_0_len <- 6 - n_fixed
+    q_0_term <- ifelse(input$est_with_method == "UKF", 1, 10)
 
-    Q_0 <- diag(Q_0, length(Q_0))
+    if(input$order == 2){
+      if(q_0_len > 1){
+        Q_0 <- bquote(diag(c(rep(.(q_0_term), .(q_0_len)),
+                             rep(.1, .(q_0_len)))))
+      } else
+        Q_0 <- bquote(diag(c(.(q_0_term), .1)))
 
-    ddhazard(
-      formula = form,
-      data = sims$res,
-      by = 1,
-      Q_0 = Q_0,
-      Q = diag(c(rep(1e-1, 6 - n_fixed)), 6 - n_fixed),
-      control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^2,
-                     save_data = F, save_risk_set = F,
-                     ridge_eps = input$ridge_eps,
-                     method = input$est_with_method,
-                     beta = input$beta, alpha = input$alpha,
-                     NR_eps = if(input$use_extra_correction) 1e-1 else NULL,
-                     fixed_terms_method  = input$fixed_terms_method),
-      max_T = input$obs_time,
-      id = sims$res$id,
-      verbose = F,
-      order = input$order,
-      model = input$est_with_model)
+    } else{
+      if(q_0_len > 1){
+        Q_0 <- bquote(diag(.(q_0_term), .(q_0_len)))
+      } else
+        Q_0 <- q_0_term
+
+    }
+
+    control_list <- list(eps = 10^-2,
+                         ridge_eps = input$ridge_eps,
+                         method = input$est_with_method,
+                         fixed_terms_method  = input$fixed_terms_method)
+
+    if(input$est_with_method == "UKF"){
+      control_list <- c(control_list,
+                        list(beta = input$beta, alpha = input$alpha))
+    } else if (input$est_with_method == "EKF"){
+      if(input$use_extra_correction)
+        control_list <- c(control_list,
+                          list(NR_eps = .1))
+    }
+
+    Q <- if(6 - n_fixed > 1)
+      bquote(diag(.1, .(6 - n_fixed))) else 0.1
+
+    list(quote = bquote(ddhazard(
+        formula = .(form),
+        data = data,
+        by = 1,
+        Q_0 = .(Q_0),
+        Q = .(Q),
+        max_T = .(input$obs_time),
+        id = data$id,
+        order = .(input$order),
+        model = .(input$est_with_model),
+        control = .(control_list))),
+      data = data)
+  })
+
+  output$fit_call_txt <- renderText({
+    eval_quote <- fit_quote_input()$quote
+    out <- formatR::tidy_source(text = capture.output(eval_quote), width.cutoff = 40)
+    out <- out$text.tidy
+    out <- paste0(out, "\n\n# data is the simulated data set")
+  })
+
+  fit_input <- eventReactive(input$compute, {
+    tmp <- fit_quote_input()
+    eval_quote <- tmp$quote
+    data <- tmp$data
+    eval(eval_quote)
   })
 
   output$n_deaths <- renderText({
@@ -338,7 +391,7 @@ server <- function(input, output) {
     result <- fit_input()
 
     out <- paste0("Model is estimated with order ", result$order, " and with the ", result$method, " in the E-step.",
-                  " ", result$n_iter, " iteration was used in the E-step.")
+                  " ", result$n_iter, " iteration was used in the EM algorithm.")
 
     if(result$method == "EKF"){
       out <- paste0(out, ifelse(is.null(result$control$NR_eps), " No extra", " Extra"),
