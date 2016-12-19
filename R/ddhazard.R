@@ -201,11 +201,27 @@ ddhazard = function(formula, data,
     rm(tmp_mod)
   }
 
-  if(ncol(F_) != n_params * order + n_fixed * est_fixed_in_E ||
-     ncol(Q) != n_params ||
-     ncol(Q_0) != n_params * order ||
-     length(a_0) != n_params * order)
-    stop("One of the input vector or matrices do not match with the order and number of parameters")
+  if(is.vector(Q) && length(Q) == 1)
+    Q <- matrix(Q)
+
+  if(is.vector(Q_0) && length(Q_0) == 1)
+    Q_0 <- matrix(Q_0)
+
+  if(ncol(F_) != n_params * order + n_fixed * est_fixed_in_E)
+    stop("F_ does not have the correct dimension. Its dimension should be ", n_params * order + n_fixed * est_fixed_in_E,
+         " but it has ", ncol(F_), " columns")
+
+  if(ncol(Q) != n_params)
+    stop("Q does not have the correct dimension. Its dimension should be ", n_params,
+         " but it has ", ncol(Q), " columns")
+
+  if(ncol(Q_0) != n_params * order)
+    stop("Q_0 does not have the correct dimension. Its dimension should be ", n_params * order,
+         " but it has ", ncol(Q_0), " columns")
+
+  if(length(a_0) != n_params * order)
+    stop("a_0 does not have the correct length. Its length should be", n_params * order,
+         " but it has length", length(a_0), " ")
 
   if(order > 1){
     tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)
