@@ -571,6 +571,8 @@ The estimation will stop if the criteria given by $\epsilon$ is not meet within 
 The  logistic model uses the inverse logit function as the inverse link function $h$. That is $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The logistic model is fitted by setting `model = "logit"` in the call to `ddhazard`. The UKF and EKF are implemented as mentioned above without any complications. The following paragrahs will cover the loss of information due to binning which motivates the continous time model. It is important to stress that the logistic model yields good estimates compared to Generalized Additive model as shown in the vignette *Comparing methods for time-varying logistic models* and *Simulation study with logit model*.
 
 ## Binning
+This section will illustrate how binning is performed for the logistic model and how this can lead to loss of information. It is elementary but included to stress this point and motivate the continous time model. We will use `r tolower(captioner::captioner()("binning_fig", display = "cite"))` as the illustration. Each horizontal line represent an individual. A cross represents when the co-variate values change for the individual and a filled circle represents the death of an individual. Lines that ends with an open cirlce are right censored
+
 ```{r binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of binning. Each horizontal line represents an individual. A cross indicates that new covariates are observed while a filled circle indicates that the individual have died. Open circles indicates that the individual is right censored. Vertical dashed lines are bin borders", fig.height=3}
 par(cex = .8, mar = c(1, 4, 1, 2))
 plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = F)
@@ -627,8 +629,6 @@ for(i in seq_along(x_vals_and_point_codes)){
 text(rep(0, n_series), rev(y_pos), letters[1:n_series], cex = par()$cex * 1.5)
 ```
 
-This section will illustrate how binning is performed for the logistic model and how this can lead to loss of information. It is elementary but included to stress this point and motivate the continous time model. We will use `r tolower(captioner::captioner()("binning_fig", display = "cite"))` as the illustration. Each horizontal line represent an individual. A cross represents when the co-variate values change for the individual and a filled circle represents the death of an individual. Lines that ends with an open cirlce are right censored
-
 We will return to the vertical lines shortly. First, we notice that the example is where we assume that the covariates are step functions. An example hereof is a medical trial where patients get tests taken at different point in time (when they have a time at their doctor, visit the hospital or similar). Ideally we would like to model that we know that for example individual a has the covariates from 0 to 1 and survives, the covariates from 1 to 2 and survives etc. That is, we would like to model the stop times
 
 However, we do not model stop times in the logistic model. Rather, we model binary outcomes in each bin. The vertical dashed lines represents the bin borders. The first vertical line from the left is where we start our model, the second vertical line is where the first bin ends and the second bin starts and the third vertical line is where the second bin ends. Thus, we only have two bins in this example
@@ -652,8 +652,7 @@ The example illustrates that:
 The above motivates the continous time model that will be covered in the next sections where binning is not an issue
 
 # Continous time model
-The following section introduce the continous time model. The continous time model has a tuple for each observation. The tuples contains an indicator for whether the individual dies and a right truncated time variable for the observed survival time. We start by describing the assumption of the continous time model. Then we turn to the indicator followed by the right truncated time variable. Finally, a few comments is added to the EKF implementation and the UKF implementaion.
-
+The following section introduce the continous time model. Three different method will be introduced to estimate the model. We start by describing the assumption of the continous time model. Then we turn to each of the three estimation methods in turn
 
 ## Assumptions
 We make the following assumption in the continous time model: 
@@ -664,88 +663,93 @@ We make the following assumption in the continous time model:
 
 These assumption means that we have piecewise constant hazards given by $\exp(\vec{x}_{it}^T\vec{\alpha})$. The instantaneous hazard change when either the individuals co-variates change or the coeffecients change when we change bin. We make the following definitions to formalize the assumptions above. Let $\vec{x}_{ij}$ denote the $i$'th individuals $j$'th co-variate vector. For each individual we observe $j = 1, 2, \dots , l_i$ values of the co-variate vector. Each co-variate vector is valid in a period $(t_{i,j-1}, t_{i,j}]$. This definition differs from the previous definition of $\vec{x}_{ij}$ where the subscript $j$ referred to the bin number. The new notation is used to cover the cases where update of co-variate values do not coincide with end or start time of bin intervals. For instance, this is the case for the examples in the figure in the 'Binning' section before
 
-Let $T_i$ denote the random event time of the $i$'th individual and let $y_{ij} = 1_{\{T_i \in (t_{i,j - 1}, t_{i,j}]\}}$ be the indicator for whether the $i$'th individual dies in period $(t_{i,j - 1}, t_{i,j}]$. The likelihood of observing a death for the $i$'th individual in the last period $(t_{i,l_i - 1}, t_{i,l_i}]$ is: 
-
+Let $T_i$ denote the random event time of the $i$'th individual and let $y_{ij} = 1_{\{T_i \in (t_{i,j - 1}, t_{i,j}]\}}$ be the indicator for whether the $i$'th individual dies in period $(t_{i,j - 1}, t_{i,j}]$. Further, define the indicator $\tilde y_{i,j,s} = y_{i,j} 1_{\Lbrace{s-1<t_{i,j}\leq s}}$ which is one if individual $i$ dies in bin $s$ with covariates $j$. The log likelihood up to a normalization constant is:
 $$\begin{aligned}
-  \proppCond{Y_{il_i} = 1}{\vec{\alpha}_0,\vec{\alpha}_1,\dots} =& \proppCond{Y_{il_i} = 1}{Y_{i, l_i -1} = 0 \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots} \\
-  &\hspace{5pt} \cdot \proppCond{Y_{i, l_i -1} = 0}{Y_{i, l_i -2} = 0 \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots} \\
-  &\hspace{75pt} \vdots \\
-  &\hspace{5pt} \cdot \proppCond{Y_{i, 2} = 0}{Y_{i, 1} = 0 \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots}
-    \proppCond{Y_{i, 1} = 0}{\vec{\alpha}_0,\vec{\alpha}_1,\dots}
+\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =&
+  - \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^T \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
+	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^T \mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
+	&  - \frac{1}{2} \deter{\mat{Q}_0} - \frac{1}{2d} \deter{\mat{Q}} \\
+  &+ \sum_{s=1}^n\sum_{(i,j) \in \Lbrace{(i,j) \left\vert\begin{smallmatrix} t_{i,j-1} < s \\ t_{i,j} > s-1 \end{smallmatrix} \right.}}
+  l_{i,j,s}(\vec{\alpha}_s) \\
+%
+  l_{i,j,s}(\vec{\alpha}_s) =& (\vec{x}_{i,j}^T\vec{\alpha}_s)}^{y_{i,j,s}}{\Lparen{-\exp\Lparen{\vec{x}_{i,j}^T\vec{\alpha}_s}
+  \Lparen{\min\{ s, t_{i,j} \} - \max\{ s - 1, t_{i,j-1} \} }}
 \end{aligned}$$
 
-We can use the memory less property of the exponential distribution to conclude that each of factor and the right hand site have:
+The following section will introduce three ways to model the above. They are:
 
-$$\begin{aligned}
-\proppCond{Y_{i,s} = 1}{Y_{i, s - 1} = 0\wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots} &= 1 - \prod_{z = \Lfloor{t_{i,s-1}} + 1 }^{\Lceil{t_{i,s}} } \exp\Lparen{ - \exp(\vec{x}_{is}^T \vec{\alpha}_{z})
-    \Lparen{\min\{ z, t_{i,s} \} - \max\{ z - 1, t_{i,s-1} \} }}
-\end{aligned}$$
-    
-where $\Lfloor{\cdot }$ is the floor function and $\Lceil{\cdot}$ is the ceiling function. In order to get this into the state space model notation we further have to separate $Y_{i,s}$ if $(t_{i,s-1}, t_{i,s}]$ crosses one or more bins. Take for example $(0.5, 2.5]$. Here we add three binary observations: one with time period of $(0.5,1]$, one with $(1, 2]$ and one with $(2, 2.5]$. Notice that this also implies that an individual who has different co-variate vectors within a bin will have more than one observation in that bin. For example, an individual with a co-variate vector for $(0, 0.5]$ and a co-variate vector for $(0.5, 1]$ will yield two observation to the observation equation in the first bin
+ 1. Using a right truncated time variable
+ 2. Using a binary variable
+ 3. Using the above two at the same time
+ 
+The model with the binary outcome and the right truncated time variable seems to do well on simulated data. Hence, you may want to focus on these section and breifly read or skip the section on the combined model where we use both variables at the same time
 
-Computing the conditional mean, $h$, can done as follows. Assume for simplicity of notation that the observation $Y_{i,s}$ has time length one and is only in one bin such that $\Lceil{t_{i,s}} - 1 = \Lfloor{t_{i,s-1}}$. The conditional mean is then:
-
-$$\begin{aligned}
-  \tilde{z}(\vec{\alpha}) &= \expecpCond{Y_{i, s}}{Y_{i, s - 1} = 0 \wedge \vec{\alpha}_{\Lceil{t_{i,s}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,s}} - 1}, \dots , \vec{\alpha}_0 } \\
-   &= \left. h(\eta) \right|_{\eta = \vec{x}_{is}^T\vec{\alpha} } \\
-   &= \left. 1 - \exp\Lparen{ - \exp(\eta) \Lparen{t_{i,s} - t_{i,s-1} }}\right|_{\eta = \vec{x}_{is}^T\vec{\alpha} }
-\end{aligned}$$
-
-where the tilde is added to stress that $\tilde{z}(\vec{\alpha}_{\Lceil{t_{i,s}}})$ is a element in the mean in the observational equation $\vec{z}_{\Lceil{t_{i,s}}}$ where we do not provide a subscript for the elements index. The variance for the diagonal in $\mat{H}_{\Lceil{t_{i,s}}}(\vec{\alpha}_{\Lceil{t_{i,s}}})$ is given by $h(\eta)(1 - h(\eta))$ as $Y_{is}$ is binary. 
-
-Right censoring is easily handled if we assume independent censoring. In this case the '$\min$' condition in $\proppCond{Y_{i,s} = 1}{Y_{i, s - 1} = 0 \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots}$ is valid for the last $t_{il_i}$ even if $t_{il_i} < \Lceil{t_{il_i}}$. We only know that the individual survives up to $t_{il_i}$ after which he was censored by an independent mechanism which we can condition on. However, the same logic does not apply when $t_{il_i} < \Lceil{t_{il_i}}$ and it is due to a death ($T_i = t_{il_i}$). We cannot condition on $T_i = t_{il_i}$ as we did with independent censoring because then $\proppCond{Y_{i,l_i} = 1}{T_i = t_{il_i}} = 1$
-
-What we do instead is that we round $t_{il_i}$ up when we compute $h$ (the conditional mean) and when we compute the conditional variance in the case of a death. This means that we loose the information of the time of the event. However, we incorporate this information with the addition described in the next section
-
-## Truncated observations time
+## Right truncated observations time
 We start by defining the truncated observation time $\Delta_{is}$:
-$$\Delta_{is} = (T_i - t_{i,s-1}) + \Lparen{t_{i,s} - T_i}1_{\{T_i \geq t_{i,s}\}} 
-  = \left\{\begin{matrix}T_i - t_{i,s-1} & T_i \leq t_{i,s} \\ t_{i,s} - t_{i,s-1} & T_i > t_{i,s}\end{matrix} \right.$$
+$$\Delta_{ij} = (T_i - t_{i,j-1}) + \Lparen{t_{i,j} - T_i}1_{\{T_i \geq t_{i,j}\}} 
+  = \left\{\begin{matrix}T_i - t_{i,j-1} & T_i \leq t_{i,j} \\ t_{i,j} - t_{i,j-1} & T_i > t_{i,j}\end{matrix} \right.$$
 
-The proposed and implemented model is to let every observation yield a tuple $(Y_{i,s}, \Delta_{i,s})$. The reason to include the tuple will be given and the end of this section. First, we will need to find the conditional mean and variance of $\Delta_{i,s}$ in order to use $\Delta_{i,s}$ in the observational equation. We start by recursively conditioning to get:
-$$\begin{aligned}
-  \proppCond{T_i = t_{i,l_i}}{\vec{\alpha}_0,\vec{\alpha}_1,\dots} =&
-    \proppCond{\Delta_{i,l_i} = t_{i,l_i} - t_{i,l_i -1}}{\Delta_{i,l_i - 1} = t_{i,l_i - 1} - t_{i,l_i - 2} \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots} \\
-  &\hspace{5pt} \cdot \proppCond{\Delta_{i,l_i - 1} = t_{i,l_i - 1} - t_{i,l_i - 2} }
-    {\Delta_{i,l_i - 2} = t_{i,l_i - 2} - t_{i,l_i - 3} \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots} \\
-  &\hspace{140pt} \vdots \\
-  &\hspace{5pt} \cdot \proppCond{\Delta_{i,2} = t_{i,2} - t_{i,1} }
-    {\Delta_{i,1} = t_{i,1} \wedge \vec{\alpha}_0,\vec{\alpha}_1,\dots}
-    \proppCond{\Delta_{i,1} = t_{i,1} }{\vec{\alpha}_0,\vec{\alpha}_1,\dots}
-\end{aligned}$$
-
-The conditional probabilities simplifies in a similar manner as for the binary $Y_{i,s}$ due to the memoryless property of the exponential distribution. Thus, computing the conditional mean, $h$, can done as follows. Again, assume for simplicity of notation that the observation $(t_{i, s-1}, t_{i,s}]$ has length one and is inside a bin (see the previous section). Then:
+The conditional probabilities simplifies into seperate terms on the log likelihood scale due to the memoryless property of the exponential distribution. Thus, computing the conditional mean, $h$, can done as follows. Assume for simplicity of notation that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a bin such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then:
 
 $$\begin{aligned}
-  \tilde{z}(\vec{\alpha}) &= \expecpCond{\Delta_{i,s}}
-    {\Delta_{i,s - 1} = t_{i,s - 1} - t_{i,s - 2} \wedge \vec{\alpha}_{\Lceil{t_{i,s}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,s}} - 1}, \dots , \vec{\alpha}_0  } \\
-  &= \left. h(\eta) \right|_{\eta = \vec{x}_{is}^T\vec{\alpha} } \\
-  &= (t_{i,s} - t_{i,s - 1}) P(\tilde{T} \geq t_{i,s} - t_{i,s - 1}) + \int_0^{t_{i,s} - t_{i,s - 1}} r f_{\tilde{T}}(r) \mathrm{d} r
+  \tilde{z}(\vec{\alpha}) &= \expecpCond{\Delta_{i,j}}
+    {\Delta_{i,j - 1} = t_{i,j - 1} - t_{i,j - 2} \wedge \vec{\alpha}_{\Lceil{t_{i,j}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,j}} - 1}, \dots , \vec{\alpha}_0  } \\
+  &= \left. h^{\Delta}_{i,j}(\eta) \right|_{\eta = \vec{x}_{is}^T\vec{\alpha} } \\
+  &= (\bar t_{i,j} - t_{i,j - 1}) P(\tilde{T} \geq \bar t_{i,j} - t_{i,j - 1}) + \int_0^{\bar t_{i,j} - t_{i,j - 1}} r f_{\tilde{T}}(r) \mathrm{d} r, 
+  \qquad \bar t_{i,j} = \Lceil{t_{i,j}}y_{i,j,s} + (1 - y_{i,j,s})t_{i,j}
 \end{aligned}$$
 
-where $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{is}^T\vec{\alpha})}$ and $f_{\tilde{T}}$ is the density function of $\tilde{T}$. Set $\lambda = \exp(\vec{x}_{is}^T\vec{\alpha})$ and $\delta =t_{i,s} - t_{i,s - 1}$ . The resulting conditional mean is:
+where $s$ is the number bin that the observation is in, $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{ij}^T\vec{\alpha})}$, $f_{\tilde{T}}$ is the density function of $\tilde{T}$ and $h^{\Delta}_{i,j}$ is the inverse link function for the right truncated time variables for individual $i$'s $j$th observation. Set $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$ . The resulting conditional mean is:
 
 $$\tilde{z}(\vec{\alpha}) = \frac{1 - \exp \Lparen{- \lambda \delta} }{\lambda}$$
 
 Moreover, we can show that the variance is:
 $$\begin{aligned}
   \hspace{50pt}&\hspace{-50pt}\varpCond{\Delta_{i,s}}
-    {\Delta_{i,s - 1} = t_{i,s - 1} - t_{i,s - 2} \wedge \vec{\alpha}_{\Lceil{t_{i,s}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,s}} - 1}, \dots , \vec{\alpha}_0  } \\
+    {\Delta_{i,j - 1} = t_{i,j - 1} - t_{i,j - 2} \wedge \vec{\alpha}_{\Lceil{t_{i,s}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,s}} - 1}, \dots , \vec{\alpha}_0  } \\
   &= \frac{1 - \exp\Lparen{-2\delta\lambda} - 2 \lambda \delta \exp \Lparen{-\delta\lambda}}{\lambda^2}
 \end{aligned}$$
 
-Right censoring is treated the same way as for $Y_{i,s}$. That is, we can have $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case of censoring. Further, we still round up in the case where $T_i = t_{i,l_i}$ (in the case of a death) when we compute the mean in the prediction step of the filter (EKF or UKF). The individual could have survived $\Lceil{t_{i,l_i}}$ but only survived $t_{i,l_i}$
+Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case of censoring. We only know that the individual survived up to time $t_{i,l_i}$ and do not know if he survived the entire bin. Further, we round up in the case where $T_i = t_{i,l_i}$ (in the case of a death) when we compute the inverse link function in the prediction step of the filter (EKF or UKF). The logic is that the individual could have survived the entire bin ($\Lceil{t_{i,l_i}}$) but only survived $t_{i,l_i}$. Thus, we use $\bar t_{i,j}$. Notice if we do not make the above adjustment then there is no difference in the model between a death, a right censoring, new covaraites or change of bins
 
-## Why not use $\Delta_{i,s}$ solely
-The reason also to use the binary $Y_{i,t}$ is that we cannot distinguish between deaths when times are rounded. For example, say that the observed times are rounded up to multiplies of $0.5$ (i.e. $0$, $0.5$, $1$, $1.5$ etc.). We cannot distinguish between the death of an individual, change in co-variate vector or change of parameters if $t_{i,s}$ is a whole number. That is, $\Delta_{i,s} = 1$ either because $T_i = 1$ or because $t_{i,s} = 1$ since we have new co-variate vector $\vec{x}_{i,s+1}$ or(/and) because the parameters changed from $\vec{\alpha}_1$ to $\vec{\alpha}_2$
+A draw back to this model is that it will not work if the reported time scale is coarse as we cannot distingish between a change of bin, new covariates vector, right censoring or death when the times coincides. As an extreme example, we cannot use this method if all times are reported on the grid of integer $1,2,\dots$ and we use bins of length $1$. 
 
-## Covariance 
-$Y_{i,t}$ and $\Delta_{i,s}$ are correlated and we have to account for that. This will affect the score vector and information matrix ($\vec{u}_t(\emNotee{\vec{a}}{t}{t-1})$ and $\mat{U}_t(\emNotee{\vec{a}}{t}{t-1})$) in the EKF. Further, it will affect the covariance matrix $\widehat{\mat{H}}$ in the UKF. First though, we have to derive the covariance. We start by defining the following variables to ease the notation:
-$$\delta = t_{i,s}-t_{i,s-1}, \qquad \lambda = \exp \Lparen{\vec{x}_{is}^T \vec{\alpha}_{\lceil t_{i,s} \rceil}}, \qquad
+You can estimate with the right truncated time method by [TODO: insert method you need to parse]
+
+## Binary outcome
+The next method is to replace the likelihood with binary variables $y_{i,j,s}$ as the outcome. Then the likelihood given data has:
+$$l_{i,j,s}(\vec{\alpha}_s) = y_{i,j,s} \log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s) + (1 - y_{i,j,s}) 
+	\log \Lparen{1 - h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)}$$
+	
+where the inverse link function is the inverse cloglog function. That is,
+$$\begin{aligned} 
+h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_{i,j}^T \vec{\alpha}_{s}) 
+    \Lparen{\min\{s, t_{i,j} \} - \max\{ s - 1, t_{i,j-1} \} }}
+\end{aligned}$$
+
+if we assume that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a bin such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. This is assumed to in the following paragrahs
+
+There are two points to be made here. Firstly, we do not round up by using $\bar t_{i,j}$ in place of $t_{i,j}$ when we have a death. Thus, we do take into account the moment the person dies at in that $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is the likehood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. Moreover, an individual can have multiple observation in the same bin. Thus, we do not have the binning issue as with the logistic model 
+
+Secondly, the cons is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,s-1}$. Contrary, we do prevail this information with the right truncated observation time. It is worth stressing that this may be minor drawback in settings where we have interval censoring. Here the exact time of death may be unkown an the given time is right border for the death time 
+
+You can estimate with the binary outcome method by [TODO: insert method you need to parse]
+
+## Combining the two
+An idea is to combine the two model as: the binary model has the drawback that we do not prevail the exact time of death and the right truncated time model cannot distinguish some deaths with a coarse time scale. Thus, we can use tuples $(y_{i,j,s}, \Delta_{i,j})$ for each observation. Further, we change the inverse link function for the binary outcome to:
+$$\begin{aligned} 
+h^{\tilde Y}_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_{i,j}^T \vec{\alpha}_{s}) 
+    \Lparen{\bar t_{i,j} - \max\{ s - 1, t_{i,j-1} \} }}
+\end{aligned}$$
+
+such that we round the stop time for the binary in case of death (we use $\bar t_{i,j}$ instead of the $\min$ term). The motivation is to ease derivation and as we can compute the mean without knowing the actual outcome time.
+
+The use of tuples means that we get covariance terms in the observational equation. This will affect the score vector and information matrix ($\vec{u}_t(\emNotee{\vec{a}}{t}{t-1})$ and $\mat{U}_t(\emNotee{\vec{a}}{t}{t-1})$) in the EKF. Further, it will affect the covariance matrix $\widehat{\mat{H}}$ in the UKF. First though, we have to derive the covariance. Assume that all observations in the bin $s$ that focus on have $(t_{i, j-1}, t_{i,j}]$ with at most length one and are inside a bin such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then, we can drop the third subscrip on the binary outcomes. Further we define the following variables to ease the notation:
+$$\delta = \bar t_{i,s}-t_{i,s-1}, \qquad \lambda = \exp \Lparen{\vec{x}_{i,j}^T \vec{\alpha}_s}, \qquad
   Z \sim \text{Exp}\Lparen{\lambda}$$
 
 Thus, we have the following relation (conditional on having survived up to this point):
-$$Y_{i,s} \sim 1_{\Lbrace{Z\in[0,\delta\}}}, \qquad \Delta_{i,s} \sim Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}}$$
+$$Y_{i,j} \sim 1_{\Lbrace{Z\in[0,\delta\}}}, \qquad \Delta_{i,j} \sim Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}}$$
 
 where $\sim$ denotes "similarly distributed" and $1_{\Lbrace{\cdot}}$ is one if the condition in the braces are satisfied and zero otherwise. Hence, we can find the covariance by: 
 $$\begin{aligned}
@@ -760,115 +764,72 @@ $$\begin{aligned}
   &= - \frac{\exp (-2\lambda\delta)\Lparen{1 + \lambda\delta\exp(\lambda\delta)-\exp(\lambda\delta)}}{\lambda}
 \end{aligned}$$
 
-## EKF
-Next, we turn to the EKF. Define:
-$$\varp{Y_{i,s}} = \sigma_{Y_{i,s}}^2, \qquad \varp{\Delta_{i,s}} = \sigma_{\Delta_{i,s}}^2,  \qquad
-  \covp{Y_{i,s}, \Delta_{i,s}} = \rho_{i,s} \sigma_{Y_{i,s}} \sigma_{\Delta_{i,s}} = \xi_{i,s}$$
+Next, define,
+$$\varp{Y_{i,j}} = \sigma_{Y_{i,j}}^2, \qquad \varp{\Delta_{i,j}} = \sigma_{\Delta_{i,j}}^2,  \qquad
+  \covp{Y_{i,j}, \Delta_{i,j}} = \xi_{i,j}$$
+
+where we suppress the dependents on $\vec{\alpha}_s$. Furhter, order the observational equation such that
+$$\vec{y}_t = \Lparen{y_{1,i_{1,1}}, \Delta_{1,i_{1,1}},
+  y_{1,i_{1,2}}, \Delta_{1,i_{1,2}} \dots y_{m,i_{m,k}}, \Delta_{m,i_{m,k}}}^T$$
   
-Say that we are in looking at a given bin and order the observation equation such that:
-$$\vec{y}_t = \Lparen{y_{1,i_{1,1}}, y_{1,i_{1,2}}, \dots y_{m,i_{m,k}}, \Delta_{1,i_{1,1}}, \Delta_{1,i_{1,2}}, \dots, \Delta_{m,i_{m,k}}}^T$$
+where $i_{j,i}$ is an index that correspond to the index of the $j$'th individuals $i$'th observation in this bin. Although this notation is tedious, it is included to stress that any given individual could have none, one or multiple entries in this bin $s$. Further, notice that $\vec{y}_t$ refers to the whole observation vector (including truncated stop times) while $y_{l,j}$ refers to the indicator for whether individual $l$ dies at his $j$'th observations. The co-variance matrix $\mat{H}_s(\vec{\alpha}_s)$ is then a block diagonal matrix with the form:
 
-where $i_{j,i}$ is an index that correspond to the index of the $j$'th individuals $i$'th observation in this bin. Although this is tedious, it is included to stress that any given individual could have none, one or multiple entries in this bin. Further, notice that $\vec{y}_t$ refers to the whole observation vector (including truncated stop times) while $y_{i,j}$ refers to the indicator for whether individual $i$ dies at his $j$'th observations. The co-variance matrix $\mat{H}(\vec{\alpha})$ is then of the following structure due to the ordering of the elements of observation vector $\vec{y}_t$:
+$$\mat{H}_s(\vec{\alpha}_s) = \begin{pmatrix}
+  \mat{H}_{1,i_{1,1}}(\vec{\alpha}_s) & \mat{0} & \cdots & \mat{0} \\
+  \mat{0} & \mat{H}_{1,i_{1,2}}(\vec{\alpha}_s) & \ddots & \vdots \\
+  \vdots & \ddots & \ddots & \mat{0} \\
+  \mat{0} & \cdots & \mat{0} & \mat{H}_{m,i_{m,k}}(\vec{\alpha}_s)
+\end{pmatrix}, \qquad 
+  \mat{H}_{l,j}(\vec{\alpha}_s) = \begin{pmatrix}
+    \sigma_{Y_{l,j}}^2 & \xi_{l,j} \\
+    \xi_{l,j} & \sigma_{\Delta_{l,j}}^2
+  \end{pmatrix}$$
+  
+You can estimate a with the tuplets method by [TODO: insert method you need to parse]
 
-$$\mat{H}(\vec{\alpha}_t) =\begin{pmatrix}
-  \diag{\sigma_{Y_{1,i_{1,1}}}^2, \sigma_{Y_{1,i_{1,2}}}^2,\dots, \sigma_{Y_{m,i_{m,k}}}^2}
-    & \diag{\xi_{1,i_{1,1}}, \xi_{1,i_{1,2}},\dots, \xi_{m,i_{m,k}}} \\
-  \diag{\xi_{1,i_{1,1}}, \xi_{1,i_{1,2}},\dots, \xi_{m,i_{m,k}}} 
-    & \diag{\sigma_{\Delta_{1,i_{1,1}}}^2, \sigma_{\Delta_{1,i_{1,2}}}^2,\dots, \sigma_{\Delta_{m,i_{m,k}}}^2}
-\end{pmatrix}$$
-
-where all the entries implicitly depends on the state vector $\vec{\alpha}_t$. In order to update the EKF we have to go back to the formulas for the score vector and information matrix. They are:
+### EKF
+Next, we turn to the EKF. In order to update the EKF we have to go back to the formulas for the score vector and information matrix. They are:
 $$\begin{array}{c}
-  \dot{\vec{z}}_t(\alpha_t) = \left. \frac{\partial\vec{z}_t(\vec{\eta})}{\partial \vec{\eta}} \right\vert_{\vec{\eta}= \vec{\alpha}_t}\vspace{10pt} \\
-  \vec{u}_t(\vec{\alpha}_t) = \dot{\vec{z}}_t(\alpha_t) \mat{H}(\vec{\alpha}_t)^{-1}\Lparen{\vec{y}_t - \vec{z}_t(\vec{\alpha}_t)}, \qquad
-\mat{U}_t(\vec{\alpha}_t) = \dot{\vec{z}}_t(\alpha_t) \mat{H}(\vec{\alpha}_t)^{-1} \dot{\vec{z}}_t(\alpha_t)^T
+  \dot{\vec{z}}_s(\alpha_s) = \left. \frac{\partial\vec{z}_s(\vec{\eta})}{\partial \vec{\eta}} \right\vert_{\vec{\eta}= \vec{\alpha}_s}\vspace{10pt} \\
+  \vec{u}_s(\vec{\alpha}_s) = \dot{\vec{z}}_s(\alpha_t) \mat{H}_s(\vec{\alpha}_s)^{-1}\Lparen{\vec{y}_s - \vec{z}_s(\vec{\alpha}_s)}, \qquad
+\mat{U}_s(\vec{\alpha}_s) = \dot{\vec{z}}_s(\alpha_s) \mat{H}_s(\vec{\alpha}_s)^{-1} \dot{\vec{z}}_s(\alpha_s)^T
 \end{array}$$
 
-where we get the simpler expression we saw previously when $\mat{H}(\vec{\alpha}_t)$ is a diagonal matrix. In the present case with off-diagonal terms we can use the identity: 
-$$\begin{bmatrix} \mathbf{A} & \mathbf{C}^T \\ \mathbf{C} & \mathbf{D} \end{bmatrix}^{-1} = \begin{bmatrix} (\mathbf{A}-\mathbf{C}^T\mathbf{D}^{-1}\mathbf{C})^{-1} & -\mathbf{A}^{-1}\mathbf{C}^T(\mathbf{D}-\mathbf{C}\mathbf{A}^{-1}\mathbf{C}^T)^{-1} \\ -(\mathbf{D}-\mathbf{CA}^{-1}\mathbf{C}^T)^{-1}\mathbf{CA}^{-1} & (\mathbf{D}-\mathbf{CA}^{-1}\mathbf{C}^T)^{-1} \end{bmatrix}$$
-We can find a closed form solution since the three matrices are diagonal matrices. Define:
-$$\mat{K}(\vec{\alpha}_t) = \mat{H}(\vec{\alpha}_t)^{-1} = \begin{pmatrix}
-  \mat{K}_{11} & \mat{K}_{12} \\
-  \mat{K}_{12} & \mat{K}_{22}
+where we get the simpler expression we saw previously when $\mat{H}_s(\vec{\alpha}_s)$ is a diagonal matrix. In the present case the inverse covariance matrix is block diagonal matrix given by: 
+$$\mat{H}_s(\vec{\alpha}_s)^{-1} = \begin{pmatrix}
+  \mat{H}_{1,i_{1,1}}(\vec{\alpha}_s)^{-1} & \mat{0} & \cdots & \mat{0} \\
+  \mat{0} & \mat{H}_{1,i_{1,2}}(\vec{\alpha}_s)^{-1} & \ddots & \vdots \\
+  \vdots & \ddots & \ddots & \mat{0} \\
+  \mat{0} & \cdots & \mat{0} & \mat{H}_{m,i_{m,k}}(\vec{\alpha}_s)^{-1}
 \end{pmatrix}$$
 
-Then:
-$$\begin{aligned}
-&\mat{K}_{11} = \diag{\frac{\exp\Lparen{\delta _{s,j} \lambda _{s,j}} \left(-2 \delta _{s,j} \lambda _{s,j} \exp\Lparen{\delta
-   _{s,j} \lambda _{s,j}}+\exp\Lparen{2 \delta _{s,j} \lambda _{s,j}}-1\right)}{-\exp\Lparen{\delta _{s,j}
-   \lambda _{s,j}} \left(\delta _{s,j}^2 \lambda _{s,j}^2+2\right)+\exp\Lparen{2 \delta _{s,j}
-   \lambda _{s,j}}+1}} \\
-&\mat{K}_{22} = \diag{\frac{\lambda _{s,j}^2 \exp\Lparen{\delta _{s,j} \lambda _{s,j}} \left(\exp\Lparen{\delta _{s,j} \lambda
-   _{s,j}}-1\right)}{-\exp\Lparen{\delta _{s,j} \lambda _{s,j}} \left(\delta _{s,j}^2 \lambda
-   _{s,j}^2+2\right)+\exp\Lparen{2 \delta _{s,j} \lambda _{s,j}}+1}} \\
-&\mat{K}_{12} = \diag{\frac{\lambda _{s,j} \exp\Lparen{\delta _{s,j} \lambda _{s,j}} \left(\exp\Lparen{\delta _{s,j} \lambda _{s,j}}
-   \left(\delta _{s,j} \lambda _{s,j}-1\right)+1\right)}{-\exp\Lparen{\delta _{s,j} \lambda _{s,j}}
-   \left(\delta _{s,j}^2 \lambda _{s,j}^2+2\right)+\exp\Lparen{2 \delta _{s,j} \lambda _{s,j}}+1}}
+Setting $\mat{K}_{l,j} = \mat{H}_{l,j}(\vec{\alpha}_s)^{-1}$ gives us the following score matrix:
+$$\small\begin{aligned}
+\vec{u}_s(\vec{\alpha}_s) = \sum_{l,j} 
+  &\vec{x}_{l,j}\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\Lparen{\MyInd{\mat{K}_{l,j}}{1,1} + \MyInd{\mat{K}_{l,j}}{1,2}}(y_{l,j} - h^{\tilde Y}_{l,j}(\vec{x}_{l,j}^T\vec{\alpha}_s)) \\
+  &\hspace{4pt}+\vec{x}_{l,j}\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\Lparen{\MyInd{\mat{K}_{l,j}}{2,2} + \MyInd{\mat{K}_{l,j}}{1,2}}(\Delta_{l,j} - h^\Delta_{l,j}(\vec{x}_{l,j}^T\vec{\alpha}_s))
 \end{aligned}$$
 
-where we have omitted the exact entries of the subscript. The subscripts follow such that the pair match the order for the observation vector ($(1,i_{1,1}),(1,i_{1,2}),\dots,(m,i_{m,k})$). The score and information matrix can then be computed as follows. Suppose we have $r$ observations such that the observation equation has dimension $2r$. Next, denote the binaries of $\vec{y}_t$ by $y_1,y_2,\dots,y_r$ and denote the truncated times by $\Delta_1,\Delta_2,\dots,\Delta_r$. The score vector is:
+where $\Lparen{h^\Delta_{l,j}}'$ and $\Lparen{h^{\tilde Y}_{l,j}}'$ are the first derivatives of the inverse link functions w.r.t. the linear predictor for the truncated waiting time and the binary outcome. Similarly, $h^\Delta_{l,j}$ and $h^{\tilde Y}_{l,j}$ are the inverse link functions the truncated waiting time and the binary outcome. We need the subscript because each observation can be at risk for different amount of time in the bin we are focusing on. Lastly, $(\cdot)_{ij}$ is the $(i,j)$'th entry of the matrix in the parenthesis. Finally, the information matrix can be computed by:
 
-$$\begin{aligned}
-\vec{u}_t(\vec{\alpha}_t) = \sum_{i=1}^r 
-  &\vec{x}_i\Lparen{h^y_i}'(\eta_i)\Lparen{\MyInd{\mat{K}_{11}}{ii} + \MyInd{\mat{K}_{12}}{ii}}(y_i - h^y_i(\eta_i)) \\
-  &\hspace{4pt}+\vec{x}_i\Lparen{h^\Delta_i}'(\eta_i)\Lparen{\MyInd{\mat{K}_{22}}{ii} + \MyInd{\mat{K}_{12}}{ii}}(\Delta_i - h^\Delta_i(\eta_i))
+$$\small\begin{aligned}
+\mat{U}_s(\vec{\alpha}_s) = \sum_{i=1}^r 
+  &\vec{x}_{l,j}\Lparen{\Lparen{\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)}^2\MyInd{\mat{K}_{l,j}}{1,1} +
+    \Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\cdot\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\MyInd{\mat{K}_{l,j}}{1,2}}\vec{x}_{l,j}^T\\
+  & \hspace{4pt}+\vec{x}_{l,j}\Lparen{\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\cdot\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\MyInd{\mat{K}_{l,j}}{1,2} +
+    \Lparen{\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)}^2\MyInd{\mat{K}_{l,j}}{2,2}}\vec{x}_{l,j}^T
 \end{aligned}$$
 
-where $\vec{x}_i$ is the $i$'th observation's covariate vector, $\eta_i = \vec{x}_i^T\vec{\alpha}_t$ is the linear predictor and $\Lparen{h^\Delta_i}'$ and $\Lparen{h^y_i}'$ are the first derivatives of the inverse link functions w.r.t. the linear predictor for the truncated waiting time and the binary outcome. Similarly, $h^\Delta_i$ and $h^y_i$ are the inverse link functions the truncated waiting time and the binary outcome. We need the subscript because each observation can be at risk for different amount of time in the bin we are focusing on. Lastly, $(\cdot)_{ij}$ is the $(i,j)$'th entry of the matrix in the parenthesis. Finally, the information matrix can be computed by:
+The method with the tuplets is more prone to divergece due to the correlation between the tuplets. Thus, a ridge regression like solution is used where $\mat{H}_s(\vec{\alpha}_t)$ is replaced by:
+$$\widetilde{\mat{H}}_s(\vec{\alpha}_s) = \mat{H}_s(\vec{\alpha}_s) + \xi\mat{I}$$
+The formulas for the inverse covariance matrix in the block diagonal are given in the appendix
 
-$$\begin{aligned}
-\mat{U}_t(\vec{\alpha}_t) = \sum_{i=1}^r 
-  &\vec{x}_i\Lparen{\Lparen{\Lparen{h^y_i}'(\eta_i)}^2\MyInd{\mat{K}_{11}}{ii} +
-    \Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii}}\vec{x}_i^T\\
-  & \hspace{4pt}+\vec{x}_i\Lparen{\Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\mat{K}_{12}}{ii} +
-    \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\mat{K}_{22}}{ii}}\vec{x}_i^T
-\end{aligned}$$
-
-Using the inverse covariance diagonal matricies $\mat{K}_{11}$, $\mat{K}_{12}$ and $\mat{K}_{22}$ does often lead to divergence due to the correlation between the tuplets. Thus, a ridge regression like solution is used where $\mat{H}(\vec{\alpha}_t)$ is replaced by:
-$\mat{\vec{\alpha}_t}$:
-$$\widetilde{\mat{H}}(\vec{\alpha}_t) = \mat{H}(\vec{\alpha}_t) + \xi\mat{I}$$
-
-such that we use $\widetilde{\mat{K}}(\vec{\alpha}_t) = \widetilde{\mat{H}}(\vec{\alpha}_t)^{-1}$. The new the formulas the inverse covariance matrix are:
-
-$$\tiny\begin{aligned} 
-&\widetilde{\mat{K}}_{11} =
-  \diag{\frac{-2 \delta _{s,j} \lambda _{s,j} \exp\Lparen{-\delta _{s,j} \lambda _{s,j}}-\exp\Lparen{-2 \delta
-   _{s,j} \lambda _{s,j}}+\xi  \lambda _{s,j}^2+1}{\exp\Lparen{-\delta _{s,j} \lambda _{s,j}} \left(-2
-   \xi  \delta _{s,j} \lambda _{s,j}+\xi  \lambda _{s,j}^2+1\right)+\exp\Lparen{-2 \delta _{s,j}
-   \lambda _{s,j}} \left(-\delta _{s,j}^2 \lambda _{s,j}^2-\xi  \lambda _{s,j}^2-\xi
-   -2\right)+\exp\Lparen{-3 \delta _{s,j} \lambda _{s,j}}+\xi ^2 \lambda _{s,j}^2+\xi }}\\
-%
-&\widetilde{\mat{K}}_{22} =
-  \diag{\frac{\lambda _{s,j}^2 \left(-\exp\Lparen{-2 \delta _{s,j} \lambda _{s,j}}\right)+\lambda _{s,j}^2
-     \exp\Lparen{-\delta _{s,j} \lambda _{s,j}}+\xi  \lambda _{s,j}^2}{\exp\Lparen{-\delta _{s,j} \lambda _{s,j}}
-     \left(-2 \xi  \delta _{s,j} \lambda _{s,j}+\xi  \lambda _{s,j}^2+1\right)+\exp\Lparen{-2 \delta
-     _{s,j} \lambda _{s,j}} \left(-\delta _{s,j}^2 \lambda _{s,j}^2-\xi  \lambda _{s,j}^2-\xi
-     -2\right)+\exp\Lparen{-3 \delta _{s,j} \lambda _{s,j}}+\xi ^2 \lambda _{s,j}^2+\xi }} \\
-%
-&\widetilde{\mat{K}}_{12} =
-  \diag{\frac{\lambda _{s,j} \exp\Lparen{-2 \delta _{s,j} \lambda _{s,j}}+\exp\Lparen{-\delta _{s,j} \lambda _{s,j}}
-     \left(\delta _{s,j} \lambda _{s,j}^2-\lambda _{s,j}\right)}{\exp\Lparen{-\delta _{s,j} \lambda
-     _{s,j}} \left(-2 \xi  \delta _{s,j} \lambda _{s,j}+\xi  \lambda _{s,j}^2+1\right)+\exp\Lparen{-2
-     \delta _{s,j} \lambda _{s,j}} \left(-\delta _{s,j}^2 \lambda _{s,j}^2-\xi  \lambda
-     _{s,j}^2-\xi -2\right)+\exp\Lparen{-3 \delta _{s,j} \lambda _{s,j}}+\xi ^2 \lambda _{s,j}^2+\xi }}
-\end{aligned}$$
-
-Though, it is numerically more stable to reduce the following three factors where the two first are used for the score vector and the last factor is used for the information matrix 
-$$\begin{aligned}
-&\Lparen{h^y_i}'(\eta_i)\Lparen{\MyInd{\widetilde{{K}}_{11}}{ii} + \MyInd{\widetilde{\mat{K}}_{12}}{ii}} \\
-&\Lparen{h^\Delta_i}'(\eta_i)\Lparen{\MyInd{\widetilde{\mat{K}}_{22}}{ii} + \MyInd{\widetilde{\mat{K}}_{12}}{ii}}\\
-&\Lparen{\Lparen{h^y_i}'(\eta_i)}^2\MyInd{\widetilde{\mat{K}}_{11}}{ii} +
-    2\Lparen{h^y_i}'(\eta_i)\cdot\Lparen{h^\Delta_i}'(\eta_i)\MyInd{\widetilde{\mat{K}}_{12}}{ii} + 
-    \Lparen{\Lparen{h^\Delta_i}'(\eta_i)}^2\MyInd{\widetilde{\mat{K}}_{22}}{ii}
-\end{aligned}$$
-
-## UKF
+### UKF
 As with the UKF for the logit model, the multiplication by the inversion $\widehat{\mat{H}}$. More so, the covariance terms does not help in this regard as the matrix can become (even) closer to singular. Hence, we replace the $\widehat{\mat{H}}$ by:
 $$\widetilde{\widehat{\mat{H}}} = \widehat{\mat{H}} + \xi \mat{I}$$
-The matrix inversion is easily caried out with the matrix identity below once $\widetilde{\widehat{\mat{H}}}$ is computed:
-$$\begin{bmatrix} \mathbf{A} & \mathbf{C}^T \\ \mathbf{C} & \mathbf{D} \end{bmatrix}^{-1} = \begin{bmatrix} (\mathbf{A}-\mathbf{C}^T\mathbf{D}^{-1}\mathbf{C})^{-1} & -\mathbf{A}^{-1}\mathbf{C}^T(\mathbf{D}-\mathbf{C}\mathbf{A}^{-1}\mathbf{C}^T)^{-1} \\ -(\mathbf{D}-\mathbf{CA}^{-1}\mathbf{C}^T)^{-1}\mathbf{CA}^{-1} & (\mathbf{D}-\mathbf{CA}^{-1}\mathbf{C}^T)^{-1} \end{bmatrix}$$
+The matrix inversion is easily caried out with the matrix since it only invovles inversions of $2\times 2$ matricies
 
-## Fix1ed effects
+## Fixed effects
 Fixed effects in the M-step are estimated using a Poisson model with an offset equal to the logarithm of the time observed in each bin plus the estimated offset from time-varying effects. That is, we use that if an arrival time $T$ is exponential distributed with rate $\lambda$ then having an outcome at at time $t$ is Poisson distributed $Y\sim\text{Poisson}(\lambda t)$. For example, say that we fit the following model:
 
 ```{r, echo=FALSE}
@@ -907,6 +868,7 @@ head(data_frame_new)
 Then individual 1 will yield five observations. The first row would only has an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[1]`. The second row will yield two observations: one with an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[2]` and the other with an offset of $\log 1$ plus $\emNotee{\vec{a}}{2}{d}$ times `r data_frame_new$x1[2]`. Note that this is not the case with the logistic model as we have the same binning issue as described in the Binning section
 
 # Further tasks and ideas
+[TODO: review this section]
 The last section will cover further task and ideas. Please, let me know what you think. Is it relevant, got ideas to the question I pose and how would you priorities?
 
 ## Confidence bounds
@@ -925,6 +887,44 @@ where we require $\mat{F}$ is such that the process is stationary. $\mat{F}$ and
 
 ## Active learning
 The methods and models could be used for active learning setting as in [@lee10]. Though, this do require an update formula for data set to quickly update estimates once a new set of observations is observed. This update could easily be implemented if we do not update the estimates $\mat{Q}$ and $\vec{\alpha}_0$
+
+# Appendix
+## Inverse covariance matrix for tuplets
+In this section, we will make the same assumption and use the same notation as in EKF method for the continous time model with tuplets. The formulas are given for each of elements of the block diagonal matricies of the inverse covariance matrix with the ridge regression like term. That is, the block matricies of the inverse of $\widetilde{\mat{H}}_s(\vec{\alpha}_s) = \mat{H}_s(\vec{\alpha}_s) + \xi\mat{I}$
+$$\tiny\begin{aligned} 
+\MyInd{\widetilde{\mat{K}}_{l,j}}{11} &=
+  \frac{-2 \delta _{l,j} \lambda _{l,j} \exp\Lparen{-\delta _{l,j} \lambda _{l,j}}-\exp\Lparen{-2 \delta
+   _{l,j} \lambda _{l,j}}+\xi  \lambda _{l,j}^2+1}{\exp\Lparen{-\delta _{l,j} \lambda _{l,j}} \left(-2
+   \xi  \delta _{l,j} \lambda _{l,j}+\xi  \lambda _{l,j}^2+1\right)+\exp\Lparen{-2 \delta _{l,j}
+   \lambda _{l,j}} \left(-\delta _{l,j}^2 \lambda _{l,j}^2-\xi  \lambda _{l,j}^2-\xi
+   -2\right)+\exp\Lparen{-3 \delta _{l,j} \lambda _{l,j}}+\xi ^2 \lambda _{l,j}^2+\xi }\\
+%
+\MyInd{\widetilde{\mat{K}}_{l,j}}{2,2} &=
+  \frac{\lambda _{l,j}^2 \left(-\exp\Lparen{-2 \delta _{l,j} \lambda _{l,j}}\right)+\lambda _{l,j}^2
+     \exp\Lparen{-\delta _{l,j} \lambda _{l,j}}+\xi  \lambda _{l,j}^2}{\exp\Lparen{-\delta _{l,j} \lambda _{l,j}}
+     \left(-2 \xi  \delta _{l,j} \lambda _{l,j}+\xi  \lambda _{l,j}^2+1\right)+\exp\Lparen{-2 \delta
+     _{l,j} \lambda _{l,j}} \left(-\delta _{l,j}^2 \lambda _{l,j}^2-\xi  \lambda _{l,j}^2-\xi
+     -2\right)+\exp\Lparen{-3 \delta _{l,j} \lambda _{l,j}}+\xi ^2 \lambda _{l,j}^2+\xi } \\
+%
+\MyInd{\widetilde{\mat{K}}_{l,j}}{1,2} &=
+  \frac{\lambda _{l,j} \exp\Lparen{-2 \delta _{l,j} \lambda _{l,j}}+\exp\Lparen{-\delta _{l,j} \lambda _{l,j}}
+     \left(\delta _{l,j} \lambda _{l,j}^2-\lambda _{l,j}\right)}{\exp\Lparen{-\delta _{l,j} \lambda
+     _{l,j}} \left(-2 \xi  \delta _{l,j} \lambda _{l,j}+\xi  \lambda _{l,j}^2+1\right)+\exp\Lparen{-2
+     \delta _{l,j} \lambda _{l,j}} \left(-\delta _{l,j}^2 \lambda _{l,j}^2-\xi  \lambda
+     _{l,j}^2-\xi -2\right)+\exp\Lparen{-3 \delta _{l,j} \lambda _{l,j}}+\xi ^2 \lambda _{l,j}^2+\xi }
+\end{aligned}$$
+
+where $\lambda_{l,j} = \exp(\vec{x}_{l,j}^T\vec{\alpha}_s)$. Though, it is numerically more stable to reduce the following three factors where the two first are used for the score vector and the last factor is used for the information matrix
+
+$$\begin{aligned}
+&\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\Lparen{\MyInd{\MyInd{\widetilde{\mat{K}}_{l,j}}{11}}{ii} + \MyInd{\widetilde{\mat{K}}_{l,j}}{1,2}} \\
+&\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\Lparen{\MyInd{\widetilde{\mat{K}}_{l,j}}{2,2} + \MyInd{\widetilde{\mat{K}}_{l,j}}{1,2}}\\
+&\Lparen{\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)}^2\MyInd{\MyInd{\widetilde{\mat{K}}_{l,j}}{11}}{ii} +
+    2\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\cdot\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\MyInd{\widetilde{\mat{K}}_{l,j}}{1,2} + 
+    \Lparen{\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)}^2\MyInd{\widetilde{\mat{K}}_{l,j}}{2,2}
+\end{aligned}$$
+
+
 
 # References
 
