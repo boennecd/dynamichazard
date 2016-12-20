@@ -54,37 +54,39 @@ ui <- fluidPage(
 
  titlePanel("ddhazard demo"),
 
+ div(fixedRow(
+   column(3,
+          h3("Intro"),
+          div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
+          div(textOutput("rug_explanation"), style = get_em(5)),
+          div("See the ddhazard vignette for further details", style = get_em(1))
+   ),
+   column(3,
+          h3("Output"),
+          div(textOutput("n_deaths"), style = get_em(1)),
+          div(htmlOutput ("LR_out"), style = get_em(1)),
+          div(textOutput("MSE"), style = get_em(1)),
+          div(textOutput("model_text"), style = get_em(3)),
+          tags$textarea(
+            id = 'demo', style = 'display: none;',
+            verbatimTextOutput("fit_call_txt")
+          )
+   ),
+   column(5,
+          h3("Fit call"),
+          div(verbatimTextOutput("fit_call_txt"), style = "height:20em;")
+   )
+ ), style = "max-width:110em;min-width: 100em;"),
+
+ br(),
+ hr(),
+ br(),
+
  div(plotOutput("coef_plot"), style = "max-width:1000px;min-width=200px"),
 
  br(),
-
- div(fixedRow(
-     column(3,
-            h3("Intro"),
-            div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
-            div(textOutput("rug_explanation"), style = get_em(5)),
-            div("See the ddhazard vignette for further details", style = get_em(1))
-            ),
-     column(3,
-            h3("Output"),
-            div(textOutput("n_deaths"), style = get_em(1)),
-            div(htmlOutput ("LR_out"), style = get_em(1)),
-            div(textOutput("MSE"), style = get_em(1)),
-            div(textOutput("model_text"), style = get_em(3)),
-            tags$textarea(
-              id = 'demo', style = 'display: none;',
-              verbatimTextOutput("fit_call_txt")
-            )
-          ),
-      column(5,
-             h3("Fit call"),
-             div(verbatimTextOutput("fit_call_txt"), style = "height:20em;")
-             )
-     ), style = "max-width:110em;min-width: 100em;"),
-
- br(),
-
  hr(),
+ br(),
 
  div(style = "width: 60em;",
    fluidRow(
