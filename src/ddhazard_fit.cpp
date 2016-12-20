@@ -699,7 +699,7 @@ public:
         std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
         workers.push_back(std::move(new_p));
 
-      } else if (model == "exponential"){
+      } else if (model == "exponential_combined"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_exponential(p_data));
         workers.push_back(std::move(new_p));
 
@@ -1608,7 +1608,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const int n_threads = -1,
                             const double ridge_eps = .0001,
                             const int n_fixed_terms_in_state_vec = 0){
-  if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "exponential"){
+  if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) &&
+     (model == "exponential_combined" ||
+      model == "exponential_binary_only" ||
+      model == "exponential_trunc_time_only")){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = false which should be true for model '" + model  +"'");
@@ -1646,7 +1649,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
 
   } else if (method == "UKF"){
-    if(model != "logit" && model != "exponential" && model != "exponential_binary_only")
+    if(model != "logit" &&
+       model != "exponential_combined" &&
+       model != "exponential_binary_only" &&
+       model != "exponential_trunc_time_only")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
     p_data = new problem_data(
       n_fixed_terms_in_state_vec,
@@ -1660,7 +1666,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
 
-    } else if (model == "exponential"){
+    } else if (model == "exponential_combined"){
       solver = new UKF_solver_New_exponential(*p_data, kappa, alpha, beta);
 
     } else if (model == "exponential_binary_only"){
@@ -1827,7 +1833,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         bigglm_updateQR_logit  updater;
         estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
 
-      } else if(model == "exponential" || model == "exponential_binary_only"){
+      } else if(model == "exponential_combined" ||
+                model == "exponential_binary_only" ||
+                model == "exponential_trunc_time_only"){
         bigglm_updateQR_poisson updater;
         estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
 

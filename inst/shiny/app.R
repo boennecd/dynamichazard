@@ -129,9 +129,9 @@ ui <- fluidPage(
 
           selectInput("est_with_model",
                       "Choose model to estimate with",
-                      choices = c("logit", "exponential", "exponential_binary_only",
+                      choices = c("logit", "exponential_combined", "exponential_binary_only",
                                   "exponential_trunc_time_only"),
-                      selected = "exponential"),
+                      selected = "exponential_trunc_time_only"),
 
           selectInput("est_with_method",
                       "Choose method to use in the E-step",

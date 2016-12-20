@@ -2,7 +2,7 @@
 #' @description  Function to fit dynamic discrete hazard models using state space models
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
 #' @param data Data frame or enviroment containing the outcome and co-variates
-#' @param model \code{"logit"} or \code{"exponential"} for the discrete time function using the logistic link function or for the continous time model with exponential arrival times
+#' @param model \code{"logit"}, \code{"exponential_trunc_time_only"}, \code{"exponential_binary_only"} or \code{"exponential_combined"} for the discrete time function using the logistic link function in the first case or for the continous time model with different estimation method in the three latter cases (see the ddhazard for details on the methods)
 #' @param by Interval length of the bins in which parameters are fixed
 #' @param max_T End of the last interval. The last stop time with an event is selected if the parameter is omitted
 #' @param id Vector of ids for each row of the in the design matrix
@@ -79,8 +79,7 @@ ddhazard = function(formula, data,
   if(model == "logit"){
     is_for_discrete_model <- TRUE
 
-  } else if (model %in% c("exponential", "exponential_binary_only",
-                          "exponential_trunc_time_only")){
+  } else if (model %in% exp_model_names){
     is_for_discrete_model <- FALSE
 
   } else
@@ -178,8 +177,7 @@ ddhazard = function(formula, data,
       tmp_mod = static_glm(formula = formula, data = data, risk_obj = risk_set,
                            control = stats::glm.control(epsilon = Inf), family = "binomial")
 
-    } else if(model %in% c("exponential", "exponential_binary_only",
-                           "exponential_trunc_time_only")){
+    } else if(model %in% exp_model_names){
       tmp_mod = static_glm(formula = formula, data = data, max_T = max_T,
                            control = stats::glm.control(epsilon = Inf), family = "exponential")
 
@@ -397,8 +395,7 @@ ddhazard = function(formula, data,
         x_ * exp_ / (exp_ + 1)^2
       })
 
-  }else if(model %in% c("exponential", "exponential_binary_only",
-                        "exponential_trunc_time_only")){
+  }else if(model %in% exp_model_names){
     res <- list(
     hazard_func =  function(eta, tstart, tstop, ...){
       1 - exp( - exp(eta) * (tstop - tstart))
@@ -431,3 +428,6 @@ ddhazard = function(formula, data,
     LR = LR),
     "class" = "fahrmeier_94")
 }
+
+exp_model_names <- c("exponential_combined", "exponential_binary_only",
+                     "exponential_trunc_time_only")

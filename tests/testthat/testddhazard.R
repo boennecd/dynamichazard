@@ -111,7 +111,7 @@ suppressMessages(
     max_T = 30,
     id = head_neck_cancer$id, order = 1,
     verbose = F,
-    model = "exponential"))
+    model = "exponential_combined"))
 # sink()
 # close(tmp)
 
@@ -163,7 +163,7 @@ test_that("Result of exponential model on head_neck_data match previous results"
                c("EKF" ))
 
   expect_equal(c(result_exp$model),
-               c("exponential" ))
+               c("exponential_combined" ))
 
   expect_equal(c(result_exp$est_Q_0),
                c(FALSE ))
@@ -199,7 +199,7 @@ suppressMessages(result_exp <- ddhazard(
   max_T = 30,
   id = head_neck_cancer$id, order = 1,
   verbose = F,
-  model = "exponential"
+  model = "exponential_combined"
 ))
 
 suppressMessages(result_exp <- ddhazard(
@@ -212,7 +212,7 @@ suppressMessages(result_exp <- ddhazard(
   max_T = 30,
   id = head_neck_cancer$id, order = 1,
   verbose = F,
-  model = "exponential"
+  model = "exponential_combined"
 ))
 
 # matplot(result_exp$state_vecs, type = "l")
@@ -277,7 +277,7 @@ test_that("Result of exponential model on head_neck_data match previous results 
                , tolerance = 0.001)
 
   expect_equal(unname(c(result_exp$model)),
-               c("exponential" )
+               c("exponential_combined" )
                , tolerance = 0.001)
 
   expect_equal(unname(c(result_exp$est_Q_0)),
@@ -310,7 +310,7 @@ suppressMessages(result_exp <- ddhazard(
   max_T = 10,
   id = sims$res$id, order = 1,
   verbose = F,
-  model = "exponential"))
+  model = "exponential_combined"))
 # sink()
 # close(tmp_file)
 
@@ -380,7 +380,7 @@ test_that("Result of exponential model on simulated data match previous results"
                , tolerance = 0.01)
 
   expect_equal(c(result_exp$model),
-               c("exponential" )
+               c("exponential_combined" )
                , tolerance = 0.01)
 
   expect_equal(c(result_exp$est_Q_0),
@@ -419,7 +419,7 @@ test_that("UKF and exp models give previous computed results with exponential es
     max_T = 30,
     id = head_neck_cancer$id, order = 1,
     verbose = F,
-    model = "exponential"))
+    model = "exponential_combined"))
 
   # plot(result_exp, cov_index = 1)
   # get_expect_equal(result_exp, file = "tmp.txt")
@@ -467,7 +467,7 @@ test_that("UKF and exp models give previous computed results with exponential es
                c("UKF" ))
 
   expect_equal(c(result_exp$model),
-               c("exponential" ))
+               c("exponential_combined" ))
 
   expect_equal(c(result_exp$est_Q_0),
                c(FALSE ))
@@ -495,7 +495,7 @@ test_that("UKF and exp models give previous computed results with exponential es
                    save_data = F, alpha = 1),
     max_T = 10,
     id = sims$res$id, order = 1,
-    model = "exponential")
+    model = "exponential_combined")
 
   suppressWarnings(suppressMessages(fit <- do.call(ddhazard, arg_list)))
 
@@ -564,7 +564,7 @@ test_that("UKF and exp models give previous computed results with exponential es
                , tolerance = 1e-06)
 
   expect_equal(c(fit$model),
-               c("exponential" )
+               c("exponential_combined" )
                , tolerance = 1e-06)
 
   expect_equal(c(fit$est_Q_0),

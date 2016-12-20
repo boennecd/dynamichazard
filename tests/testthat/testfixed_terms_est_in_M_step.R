@@ -115,7 +115,7 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
   form <- formula(survival::Surv(tstart, tstop, event) ~
                     -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
 
-  suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+  suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exponential_combined", by = 1, id = sims$res$id, max_T = 10,
                                     control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3)))
 
   tmp_design <- get_survival_case_weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
@@ -134,7 +134,7 @@ test_that("Changing fixed effect control parems changes the result", {
   arg_list <- list(
     formula(survival::Surv(tstart, tstop, event) ~
               -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3)),
-    data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+    data = sims$res, model = "exponential_combined", by = 1, id = sims$res$id, max_T = 10,
     control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
 
   suppressWarnings(res1 <- do.call(ddhazard, arg_list))
@@ -163,7 +163,7 @@ test_that("Get previous results with exponential model with some fixed terms", {
                     -1 + ddFixed(rep(1, length(x1))) + x1 + x2 + x3)
 
   suppressMessages(
-    res1 <- ddhazard(form, data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+    res1 <- ddhazard(form, data = sims$res, model = "exponential_combined", by = 1, id = sims$res$id, max_T = 10,
                     control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3,
                                    save_risk_set = F, save_data = F, n_max = 1e2,
                                    ridge_eps = .005),
@@ -231,7 +231,7 @@ test_that("Get previous results with exponential model with some fixed terms", {
                , tolerance = 0.001)
 
   expect_equal(unname(c(res1$model)),
-               c("exponential" )
+               c("exponential_combined" )
                , tolerance = 0.001)
 
   expect_equal(unname(c(res1$est_Q_0)),
@@ -316,7 +316,7 @@ test_that("UKF with fixed effects works", {
   expect_no_error(
     fit <- ddhazard(formula(survival::Surv(tstart, tstop, event) ~
                               -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + x2 + x3),
-                    data = sims$res, model = "exponential", by = 1, id = sims$res$id, max_T = 10,
+                    data = sims$res, model = "exponential_combined", by = 1, id = sims$res$id, max_T = 10,
                     control = list(method = "UKF")))
 
 
