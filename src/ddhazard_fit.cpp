@@ -388,16 +388,17 @@ inline double binary_only_var_fac(const double v, const double  inv_exp_v, doubl
 inline double trunc_time_only_score_fac(const double exp_eta, const double inv_exp_eta,
                                         const double inv_exp_v, const double a,
                                         const double eps){
+
   return((exp_eta >= 1e-4) ?
            (-1 + inv_exp_v + a*exp_eta*inv_exp_v)/(eps*exp_eta + inv_exp_eta - 2*a*inv_exp_v -
                                                     inv_exp_eta*pow(inv_exp_v,2)) :
-           (exp_eta / eps *(-3*pow(a,2)*eps + (pow(a,5) + 2*pow(a,3)*eps)*exp_eta))/(6*eps));
+           ((exp_eta / eps) *(-3*pow(a,2)*eps + (pow(a,5) + 2*pow(a,3)*eps)*exp_eta))/(6*eps));
 }
 
 inline double trunc_time_only_var_fac(const double exp_eta, const double inv_exp_eta,
                                       const double inv_exp_v, const double a,
                                       const double eps){
-  return((exp_eta >= 1e-5) ?
+  return((exp_eta >= 1e-4) ?
            (1 - 2*inv_exp_v - 2*a*exp_eta*inv_exp_v + pow(inv_exp_v,2) + 2*a*exp_eta*pow(inv_exp_v,2) +
               pow(a*exp_eta*inv_exp_v, 2))/
                 (1 + eps*pow(exp_eta,2) - 2*a*exp_eta*inv_exp_v - pow(inv_exp_v,2)) :
