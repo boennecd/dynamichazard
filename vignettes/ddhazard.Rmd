@@ -732,7 +732,7 @@ Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case
 
 A draw back to this model is that it will not work if the reported time scale is coarse as we cannot distinguish between a change of bin, new covariates vector, right censoring or death when the times coincides. As an extreme example, we cannot use this method if all times are reported on the grid of integers $1,2,\dots$ and we use bins of length $1$. 
 
-You can estimate with the right truncated time method by [TODO: insert method you need to parse]
+You can estimate with the right truncated time method by setting the argument `model = "exponential_trunc_time_only"` in the call to `ddhazard`
 
 ## Binary outcome
 The next method is to replace the likelihood with binary variables $y_{i,j,s}$ as the outcome. Then the likelihood given data has:
@@ -751,7 +751,7 @@ There are two points to be made here. Firstly, we do not round up by using $\bar
 
 Secondly, the cons is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,s-1}$. Contrary, we do prevail this information with the right truncated observation time. It is worth stressing that this may be minor drawback in settings where we have interval censoring. Here the exact time of death may be unknown an the given time is an upper bound for the death time 
 
-You can estimate with the binary outcome method by [TODO: insert method you need to parse]
+You can estimate with the binary outcome method by setting the argument `model = "exponential_binary_only"` in the call to `ddhazard`
 
 ## Combining the two
 An idea is to combine the two methods as: the binary method has the drawback that we do not prevail the exact time of death and the right truncated time method cannot distinguish some deaths with a coarse time scale. Thus, we can use tuples $(y_{i,j,s}, \Delta_{i,j})$ for each observation. Further, we change the inverse link function for the binary outcome to:
@@ -803,7 +803,7 @@ $$\mat{H}_s(\vec{\alpha}_s) = \begin{pmatrix}
     \xi_{l,j} & \sigma_{\Delta_{l,j}}^2
   \end{pmatrix}$$
   
-You can estimate with the tuples method by [TODO: insert method you need to parse]
+You can estimate with the tuples method by setting the argument `model = "exponential_combined"` in the call to `ddhazard`
 
 ### EKF
 Next, we turn to the EKF. In order to update the EKF we have to go back to the formulas for the score vector and information matrix. They are:
