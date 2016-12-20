@@ -5,7 +5,8 @@
 \title{Static GLM fit for survival models}
 \usage{
 get_survival_case_weigths_and_data(formula, data, by, max_T, id, init_weights,
-  risk_obj, use_weights = T, is_for_discrete_model = T)
+  risk_obj, use_weights = T, is_for_discrete_model = T, c_outcome = "Y",
+  c_weights = "weights", c_end_t = "t")
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
@@ -25,9 +26,11 @@ get_survival_case_weigths_and_data(formula, data, by, max_T, id, init_weights,
 \item{use_weights}{\code{TRUE} if weights should be used. See details}
 
 \item{is_for_discrete_model}{\code{TRUE} if the model is for a discrete hazard model like the logistic model. Affects how deaths are included when individuals have time varying coefficients}
+
+\item{c_outcome, c_weights, c_end_t}{Alternative names to use for the added columns described in the return section. Useful if you already have a column named \code{Y}, \code{t} or \code{weights}}
 }
 \value{
-Returns a data frame with the design matrix from the formula where the following is added: column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}
+Returns a data frame with the design matrix from the formula where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}
 }
 \description{
 Function used to get design matrix and weights for a static fit for survivals models where observations are binned into intervals

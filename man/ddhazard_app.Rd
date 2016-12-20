@@ -11,7 +11,7 @@ Runs a shiny app where you try different model specification on simulated data
 }
 \examples{
 \dontrun{
-dynamichazard::ddhazard_app
+dynamichazard::ddhazard_app()
 }
 }
 

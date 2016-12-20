@@ -10,7 +10,7 @@
 #' @param risk_obj A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations
 #' @param use_weights \code{TRUE} if weights should be used. See details
 #' @param is_for_discrete_model \code{TRUE} if the model is for a discrete hazard model like the logistic model. Affects how deaths are included when individuals have time varying coefficients
-#'
+#' @param c_outcome,c_weights,c_end_t Alternative names to use for the added columns described in the return section. Useful if you already have a column named \code{Y}, \code{t} or \code{weights}
 #' @details
 #' This function is used to get the data frame for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For example, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Next, consider an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the co-variates and \code{weights} is the weights for the regression. Consider another individual who does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 3)}
 #'
@@ -19,7 +19,7 @@
 #' If \code{use_weights = FALSE} then the two individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. al (2016) (see reference)
 #'
 #' @return
-#' Returns a data frame with the design matrix from the formula where the following is added: column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}
+#' Returns a data frame with the design matrix from the formula where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}
 #'
 #' @seealso
 #' \code{\link{ddhazard}}, \code{\link{static_glm}}
@@ -30,26 +30,29 @@
 #' @export
 get_survival_case_weigths_and_data = function(
   formula, data, by, max_T, id, init_weights, risk_obj,
-  use_weights = T, is_for_discrete_model = T){
+  use_weights = T, is_for_discrete_model = T,
+  c_outcome = "Y",
+  c_weights = "weights",
+  c_end_t = "t"){
   X_Y = get_design_matrix(formula, data)
   formula <- X_Y$formula
 
   if(missing(init_weights))
     init_weights = rep(1, nrow(data))
 
-  if(any(colnames(data) == "Y")){
-    warning("Column called Y will be replaced")
-    data = data[, colnames(data) != "Y"]
+  if(any(colnames(data) == c_outcome)){
+    warning("Column called '", c_outcome, "' will be replaced")
+    data = data[, colnames(data) != c_outcome]
   }
 
-  if(any(colnames(data) == "weights")){
-    warning("Column called weights will be replaced")
-    data = data[, colnames(data) != "weights"]
+  if(any(colnames(data) == c_weights)){
+    warning("Column called '", c_weights, "' will be replaced")
+    data = data[, colnames(data) != c_weights]
   }
 
-  if(!use_weights && any(colnames(data) == "t")){
-    warning("Column called t will be replaced")
-    data = data[, colnames(data) != "t"]
+  if(!use_weights && any(colnames(data) == c_end_t)){
+    warning("Column called '", c_end_t, "' will be replaced")
+    data = data[, colnames(data) != c_end_t]
   }
 
   compute_risk_obj <- missing(risk_obj) || is.null(risk_obj)
@@ -86,13 +89,15 @@ get_survival_case_weigths_and_data = function(
       new_weights[r_set[!is_case]] = new_weights[r_set[!is_case]] + init_weights[r_set[!is_case]]
     }
 
-    X = cbind(Y = rep(0, nrow(data)), data, weights = new_weights)[new_weights > 0, ]
+    X = cbind(rep(0, nrow(data)), data, new_weights)[new_weights > 0, ]
+    colnames(X)[c(1, ncol(X))] <- c(c_outcome, c_weights)
     X = rbind(X, new_case_rows)
 
   }else {
     n_rows_final <- sum(unlist(lapply(risk_obj$risk_sets, length)))
     X <- data.frame(matrix(NA, nrow = n_rows_final, ncol = 3 + ncol(data),
-                           dimnames = list(NULL, c(colnames(data), "Y", "t", "weigths"))))
+                           dimnames = list(NULL, c(colnames(data),
+                                                   c_outcome, c_end_t, c_weights))))
 
     j <- 1
     for(i in seq_along(risk_obj$risk_sets)){

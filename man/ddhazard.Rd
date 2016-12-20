@@ -12,7 +12,7 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 
 \item{data}{Data frame or enviroment containing the outcome and co-variates}
 
-\item{model}{\code{"logit"} or \code{"exponential"} for the discrete time function using the logistic link function or for the continous time model with exponential arrival times}
+\item{model}{\code{"logit"}, \code{"exponential_trunc_time_only"}, \code{"exponential_binary_only"} or \code{"exponential_combined"} for the discrete time function using the logistic link function in the first case or for the continous time model with different estimation method in the three latter cases (see the ddhazard for details on the methods)}
 
 \item{by}{Interval length of the bins in which parameters are fixed}
 
