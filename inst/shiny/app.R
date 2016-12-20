@@ -158,7 +158,7 @@ ui <- fluidPage(
                         min = 0.00001,
                         max = .05,
                         step = 0.00001,
-                        value = .001),
+                        value = 0.00001),
             selectInput("fixed_terms_method",
                         "Estimate fixed effect in",
                         choices = c("E_step", "M_step"),
@@ -286,8 +286,7 @@ server <- function(input, output) {
 
     control_list <- list(eps = 10^-2,
                          ridge_eps = input$ridge_eps,
-                         method = input$est_with_method,
-                         fixed_terms_method  = input$fixed_terms_method)
+                         method = input$est_with_method)
 
     if(input$est_with_method == "UKF"){
       control_list <- c(control_list,
@@ -296,6 +295,10 @@ server <- function(input, output) {
       if(input$use_extra_correction)
         control_list <- c(control_list,
                           list(NR_eps = .1))
+    }
+
+    if(n_fixed > 0){
+      control_list <- c(control_list, list(fixed_terms_method  = input$fixed_terms_method))
     }
 
     Q <- if(6 - n_fixed > 1)
@@ -319,7 +322,7 @@ server <- function(input, output) {
     eval_quote <- fit_quote_input()$quote
     out <- formatR::tidy_source(text = capture.output(eval_quote), width.cutoff = 40)
     out <- out$text.tidy
-    out <- paste0(out, "\n\n# data is the simulated data set")
+    paste0(out, "\n\n# data is the simulated data set")
   })
 
   fit_input <- eventReactive(input$compute, {
