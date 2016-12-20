@@ -45,6 +45,11 @@ get_exp_draw <- with(new.env(), {
       return(NULL)
     }
 
+    if(n == 1 && n_max > n_cur){
+      n_cur <<- n_cur + 1
+      return(draws[n_cur - 1])
+    }
+
     # Draw if needed
     if(n > n_max - n_cur){ # we forget about the - 1
       n_max <<- n + n_draws
@@ -73,6 +78,11 @@ get_norm_draw <- with(new.env(), {
       return(NULL)
     }
 
+    if(n == 1 && n_max > n_cur){
+      n_cur <<- n_cur + 1
+      return(draws[n_cur - 1])
+    }
+
     # Draw if needed
     if(n > n_max - n_cur){ # we forget about the - 1
       n_max <<- n + n_draws
@@ -85,6 +95,8 @@ get_norm_draw <- with(new.env(), {
     draws[tmp:(tmp + (n - 1))]
   }
 })
+
+
 get_unif_draw <- with(new.env(), {
   n_max <- n_draws <- 10^5
   n_cur <- 1
@@ -98,6 +110,11 @@ get_unif_draw <- with(new.env(), {
       draws <<- runif(n = n_draws)
 
       return(NULL)
+    }
+
+    if(n == 1 && n_max > n_cur){
+      n_cur <<- n_cur + 1
+      return(draws[n_cur - 1])
     }
 
     # Draw if needed
@@ -163,6 +180,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
                               nrow = nrow(betas))
 
   ceiler <- function(x) ceiling(x * 100) / 100
+  x_adj <- - x_range / 2 + x_mean
 
   # Simulate
   for(id in 1:n_series){
@@ -172,7 +190,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
       if(ceiling(tstop) >= t_max)
         tstop <- t_max
 
-      x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
+      x_vars <- x_range * get_unif_draw(n_vars) + x_adj
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
 
       tmp_t <- tstart
@@ -250,12 +268,14 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
   ceiler <- function(x) ceiling(x * 100) / 100
 
   # Simulate
+  mean_term <- - x_range / 2 + x_mean
+
   for(id in 1:n_series){
     tstart <- tstop <-  ceiler(tstart_sampl_func(t_0, t_max))
     repeat{
-      tstop <- ceiler(tstart + 1 / lambda * get_exp_draw(1))
+      tstop <- ceiler(tstart + get_exp_draw(1)/lambda)
 
-      x_vars <- x_range * get_unif_draw(n_vars) - x_range / 2 + x_mean
+      x_vars <- x_range * get_unif_draw(n_vars) + mean_term
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
 
       tmp_t <- tstart
