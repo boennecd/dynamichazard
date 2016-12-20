@@ -89,7 +89,7 @@ as described in the vignette *Using Time Dependent Covariates and Time Dependent
 head(pbc2)
 ```
 
-The data set is in the usual start and stop time format used in survival analysis. Each individual in the trial has one or more observations. The `id` column identifies the individual. The `tstart` column indicates when the row is valid from and the `tstop` column indicates when the row is valid to. The `death` column is the outcome which is 2 when the individual dies at `tstop`. The `sex`, `edema` and `age` are baseline variables while `albumin`, `protime` and `bili` are laboratory values updated at follow ups with the patient. As an example, we can look individual `282`:
+The data set is in the usual start and stop time format used in survival analysis. Each individual in the trial has one or more observations. The `id` column identifies the individual. The `tstart` column indicates when the row is valid from and the `tstop` column indicates when the row is valid to. The `death` column is the outcome which is 2 when the individual dies at `tstop` (1 indicates that the individual gets a transplant). The `sex`, `edema` and `age` are baseline variables while `albumin`, `protime` and `bili` are laboratory values updated at follow ups with the patient. As an example, we can look individual `282`:
 
 ```{r}
 (ex <- pbc2[pbc2$id == 282, ])
@@ -177,7 +177,17 @@ knitr::kable(
   row.names = T)
 ```
 
-To end this section, you can skip making data frame with `get_survival_case_weigths_and_data` by calling the `static_glm` function from `dynamichazard` package. For details, see the help file by calling `?static_glm`
+To end this section, you can skip making data frame with `get_survival_case_weigths_and_data` by calling the `static_glm` function from `dynamichazard` package. The call below yields the same results as shown:
+
+```{r}
+static_glm_fit <- static_glm(
+  Surv(tstart, tstop, death == 2) ~ age + edema + log(albumin) + log(protime) +
+    log(bili), data = pbc2, id = pbc2$id, by = 100, max_T = 3600)
+
+all.equal(static_glm_fit$coefficients, glm_fit_big$coefficients)
+```
+
+For details, see the help file by typing `?static_glm`
 
 # Generalized Additive Models using mgvc
 The first method we will compare with is Generalized Additive Models (GAM) by using the `gam` function in the `mgcv` package. The model we fit is of the form: 
@@ -191,7 +201,7 @@ $$\begin{aligned}
     + \vec{\gamma}_{\text{biil}}\vec{f}_{\text{bili}}(t_i)\log b_{it}
 \end{aligned}$$
     
-where $\pi_{it}$ is the probability that the $i$'th individual dies of cancer, $t$ is the stop time of the bin and $a_i$, $e_i$, $al_{it}$, $p_{it}$ and $b_{it}$ are respectively the $i$'th individual's age, edema, albumin, protime and bilirunbin. The extra subscript $t$ is added to refer to the level of the covariate in the bin at time $t$. $\vec{f}_{\cdot}$ is a smooth function. We will use cubic regression splines with knots spread evenly through the covariate values. We fit the model with the following call:
+where $\pi_{it}$ is the probability that the $i$'th individual dies of cancer, $t$ is the stop time of the bin and $a_i$, $e_i$, $al_{it}$, $p_{it}$ and $b_{it}$ are respectively the $i$'th individual's age, edema, albumin, protime and bilirunbin. The extra subscript $t$ is added to refer to the level of the covariate in the bin at time $t$. It is important to notice that we will use the same bins as in later fits. In particular, we will use the `pbc2_big_frame` data frame from before. $\vec{f}_{\cdot}$ is a smooth function. We will use cubic regression splines with knots spread evenly through the covariate values. We fit the model with the following call:
 
 ```{r message=FALSE}
 library(mgcv, quietly = T)
@@ -234,7 +244,9 @@ Another method we can try is a time varying effects Cox model. We will use the C
 
 $$\lambda(t) = \lambda_0(t) \exp \left( \vec{x}\vec{\beta}(t) \right)$$
 
-where each element of $\vec{\beta}(t)$ is estimated recursively with an update equation. The update equation is simplified through a first order Taylor expansion on the score function and by adding a smoothness by using weighting depending on time changes with a uniform continuous kernel. For details see [@martinussen07] in chapter 6. The estimation method differs from other alternatives in `R` that use splines for the time varying effects (like the `cox.ph` in the `mgcv` package). The baseline is $\lambda_0(t)=\exp(\alpha_0(t))$ where $\alpha_0(t)$ is estimated in a similar to way to $\vec{\beta}(t)$. Below we estimate a model similar to the previously fitted models:
+where each element of $\vec{\beta}(t)$ is estimated recursively with an update equation. The update equation is simplified through a first order Taylor expansion on the score function and by adding a smoothness by using weighting depending on time changes with a uniform continuous kernel. For details see [@martinussen07] in chapter 6. The estimation method differs from other alternatives in `R` that use splines for the time varying effects (like the `cox.ph` in the `mgcv` package). The baseline is $\lambda_0(t)=\exp(\alpha_0(t))$ where $\alpha_0(t)$ is estimated in a similar to way to $\vec{\beta}(t)$. Below we estimate a model similar to the previously fitted models
+
+We set the last observation time (`max.time`) lower than in the previous model as there are issues with converge if we do not. For the same reason we specify the effect of `log(protime)` to be constant (non-time varying). To inspect the fitted model, the cumulated coefficients $B(t) = \int_0^t \beta(t) dt$ are plotted. Thus, a constant effect should be roughly linear
 
 ```{r, message=FALSE, fig.height = 7, mySettings=FALSE}
 library(timereg)
@@ -248,7 +260,7 @@ par(mfcol = c(3, 2))
 plot(cox_fit)
 ```
 
-We set the last observation time (`max.time`) lower than in the previous model as there are issues with converge if we do not. For the same reason we specify the effect of `log(protime)` to be constant (non-time varying). We end the above code by plotting the cumulative coefficients given by $B(t) = \int_0^t \beta(t) dt$. Thus, a constant effect should be roughly linear. The `timecox` packages provides two test for whether the coefficient is time invariant or not:
+The `timecox` packages provides two test for whether the coefficient is time invariant or not:
 
 ```{r, message=FALSE, fig.height = 6, mySettings=FALSE}
 summary(cox_fit)
@@ -289,7 +301,7 @@ $$\begin{array}{ll}
 	
 where $y_{it} \in \{0,1\}$ is an indicator for whether the $i$'th individual dies in interval $t$. $\cdots \sim (a, b)$ denotes a random variable with mean (or mean vector) $a$ and variance (or co-variance matrix) $b$. It needs not to be normally distributed. $z_{it}(\vec{\alpha}_t) = h(\vec{\alpha}_t\vec{x}_{it})$ is the non-linear map from state space variables to mean outcomes where $h$ is the inverse link function. We use the logit model in this note. Thus, $h(x) = \text{logit}^{-1}(x)$. The current implementation supports first and second order random walk for the state equation. Further, we define the conditional covariance matrix in the observational equation as $\mathbf{H}_t(\vec{\alpha}_t) = \text{Var}(\vec{y}_t | \vec{\alpha}_t)$. $\psi_t$ is the length of the bin and is assumed equal for values of $t$ since we use equidistant bins
 
-The unknown parameters are the starting value $\vec{\alpha}_0$ and co-variance matrix $\mathbf{Q}$. These are estimated with an EM-algorithm. The E-step is calculated using a Extended Kalman filter (EKF) or Unscented Kalman filter (UKF). Both are followed by a smoothing step. The result is smoothed estimates of $\vec{\alpha}_1,\dots, \vec{\alpha}_d$, smoothed co-variance matrix and smoothed correlation matrices that we need for the M-step to update $\vec{\alpha}_0$ and $\mathbf{Q}$. Further, we assume that $\mathbf{Q}_0 = \kappa \mathbf{I}$ is fixed to a large value $\kappa$ in the examples. For more details see the ddhazard vignette
+The unknown parameters are the starting value $\vec{\alpha}_0$ and co-variance matrix $\mathbf{Q}$. These are estimated with an EM-algorithm. The E-step is calculated using a Extended Kalman filter (EKF) or Unscented Kalman filter (UKF). Both are followed by a smoothing step. The result is smoothed predictions of $\vec{\alpha}_1,\dots, \vec{\alpha}_d$, smoothed co-variance matrix and smoothed correlation matrices that we need for the M-step to update $\vec{\alpha}_0$ and $\mathbf{Q}$. Further, we assume that $\mathbf{Q}_0 = \kappa \mathbf{I}$ is fixed to a large value $\kappa$ in the examples. For more details see the ddhazard vignette
 
 ## Estimation with Extended Kalman Filter
 We start by estimating the model using the EKF where we let all coefficients follow a first order random walk:
@@ -306,7 +318,7 @@ plot(dd_fit)
 
 We start by estimating the model. The arguments `Q_0` and `Q` corresponds to the co-variance matrix at time zero and the co-variance matrix in the state equation. `Q_0` will remain fixed while `Q` is the starting value in the first iteration of the EM algorithm after which we update $\mathbf{Q}$
 
-Next, we plot the coefficient. Notice that the coefficient are close to the estimates we saw previously for the GAM model
+Next, we plot the coefficient. That is, we plot the predicted latent variables $\vec{\alpha}_0,\dots,\vec{\alpha}_d$. Notice that the predicted coefficient are close to the estimates we saw previously for the GAM model
 
 ## Extra iteration in the correction step
 Another idea is to take extra iterations in the correction step of the EKF. The motivation is that this step has the form of a Newton Rapshon algorithm as pointed out in [@fahrmeir92] and [@fahrmeir94]. For more details see the ddhazard vignette. One of the motivation to use extra iterations is that experimental simulation have shown decrease predicted mean square error for one step ahead forecasts (see the vignette 'Simulation study with logit model'). Below, we estimate the model with potentially extra steps in the correction step. 
