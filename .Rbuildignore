@@ -19,5 +19,4 @@ Prebuild
 release_questions\.R$
 cran-comments\.md$
 Prebuild/
-shiny/
 
