@@ -26,7 +26,7 @@ max_rugs <- 5e2
 start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
 
 # params for UI
-col_w <- 3
+col_w <- 4
 col_w_out <- 4
 
 get_em <- function(n_lines) paste0("height:",n_lines * 1.5,"em;")
@@ -84,11 +84,10 @@ ui <- fluidPage(
 
  br(),
 
- actionButton("compute", "Compute"),
-
  hr(),
 
- fluidRow(
+ div(style = "width: 60em;",
+   fluidRow(
    column(col_w,
           h4("Simulation settings"),
 
@@ -98,38 +97,33 @@ ui <- fluidPage(
                       max = n_series_stuff$exp_max - n_series_stuff$exp_min - 1,
                       value = 1),
 
-          sliderInput("obs_time",
-                      "Observed time",
-                      min = 1,
-                      max = t_max,
-                      step = 1,
-                      value = ceiling(t_max / 3 * 2)),
-
           selectInput("sim_with",
                       "Choose model to simulate from",
                       choices = c("logit", "exponential"),
                       selected = "exponential"),
-
-          numericInput("seed",
-                       label = "RNG seed",
-                       value = 65848),
 
           radioButtons("sim_fix_options",
                        label = "Number of fixed covariates",
                        choices = list("Zero" = 1,
                                       "Intercept and two coef" = 2,
                                       "All but one coef" = 3),
-                       selected = 1)),
+                       selected = 1),
+
+          conditionalPanel(
+            "input.more_options",
+            sliderInput("obs_time",
+                        "Observed time",
+                        min = 1,
+                        max = t_max,
+                        step = 1,
+                        value = t_max),
+
+            numericInput("seed",
+                         label = "RNG seed",
+                         value = 65848))),
 
    column(col_w,
           h4("Estimation settings"),
-
-          sliderInput("ridge_eps",
-                      "Ridge regresion like penalty factor",
-                      min = 0.00001,
-                      max = .05,
-                      step = 0.00001,
-                      value = .001),
 
           selectInput("est_with_model",
                       "Choose model to estimate with",
@@ -142,49 +136,66 @@ ui <- fluidPage(
                       choices = c("UKF", "EKF"),
                       selected = "EKF"),
 
-          sliderInput("order",
-                      "Randowm walk order in estimation",
-                      min = 1,
-                      max = 2,
-                      step = 1,
-                      value = 1),
-
-          selectInput("fixed_terms_method",
-                      "Estimate fixed effect in",
-                      choices = c("E_step", "M_step"),
-                      selected = "M_step"),
-
           radioButtons("est_fix_options",
                        label = "Number of fixed covariates",
                        choices = list("Zero" = 1,
                                       "Intercept and two coef" = 2,
                                       "All but one coef" = 3),
-                       selected = 1)),
+                       selected = 1),
 
-   column(col_w,
-          h4("EKF settings"),
+          conditionalPanel(
+            "input.more_options",
+            sliderInput("order",
+                        "Randowm walk order in estimation",
+                        min = 1,
+                        max = 2,
+                        step = 1,
+                        value = 1),
+            sliderInput("ridge_eps",
+                        "Ridge regresion like penalty factor",
+                        min = 0.00001,
+                        max = .05,
+                        step = 0.00001,
+                        value = .001),
+            selectInput("fixed_terms_method",
+                        "Estimate fixed effect in",
+                        choices = c("E_step", "M_step"),
+                        selected = "M_step"))),
 
-          checkboxInput("use_extra_correction",
-                        "Extra correction steps",
-                        value = FALSE)),
+   conditionalPanel(
+     "input.est_with_method == 'EKF'",
+     column(col_w,
+            h4("EKF settings"),
 
-   column(col_w,
+            checkboxInput("use_extra_correction",
+                          "Extra correction steps",
+                          value = FALSE))),
 
-          h4("UKF settings"),
+   conditionalPanel(
+     "input.est_with_method == 'UKF'",
+     column(col_w,
+            h4("UKF settings"),
 
-          sliderInput("beta",
-                      "Beta",
-                      min = 0,
-                      max = 2,
-                      step = .5,
-                      value = 0),
+            sliderInput("beta",
+                        "Beta",
+                        min = 0,
+                        max = 2,
+                        step = .5,
+                        value = 0),
 
-          sliderInput("alpha",
-                      "Alpha",
-                      min = 1e-2,
-                      max = 1,
-                      step = 1e-2,
-                      value = 1))
+            sliderInput("alpha",
+                        "Alpha",
+                        min = 1e-2,
+                        max = 1,
+                        step = 1e-2,
+                        value = 1)))
+  ),
+
+
+  div(style="float:right;",
+      flowLayout(
+        checkboxInput("more_options", label = "Show more options", value = FALSE, width = "12em"),
+        actionButton("compute", "Compute", width = "8em")))
   )
 )
 
