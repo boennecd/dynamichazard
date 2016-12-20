@@ -230,7 +230,7 @@ test_that("Calls with second order models do not throw errors", {
                 use_parallel = .(use_parallel))))
 })
 
-dum <- structure(list(model = "exponential"), "class" = class(result))
+dum <- structure(list(model = "exponential_combined"), "class" = class(result))
 
 test_that("predict functions throws error when model it is exponential",{
   expect_error(predict(dum))
@@ -264,7 +264,7 @@ suppressMessages(fit <- ddhazard(
   data = pbc2_l, Q_0 = diag(rep(1, 4)), by = 1,
   id = pbc2_l$id,
   Q = diag(rep(1e-2, 4)), max_T = 36,
-  model = "exponential", control = list(est_Q_0 = F)))
+  model = "exponential_combined", control = list(est_Q_0 = F)))
 
 # plot(fit, cov_index = 4)
 

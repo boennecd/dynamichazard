@@ -30,7 +30,7 @@ predict.fahrmeier_94 = function(object, new_data,
                                 tstart = "start", tstop = "stop",
                                 use_parallel = F, sds = F, max_threads = getOption("ddhazard_max_threads"), ...)
 {
-  if(!object$model %in% c("logit", "exponential"))
+  if(!object$model %in% c("logit", exp_model_names))
     stop("Functions for model '", object$model, "' is not implemented")
 
   type = type[1]
@@ -142,11 +142,11 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
 
   # Round if needed. Throw error if so
   int_start = findInterval(start, times)
-  if(any(start - times[int_start] > 0) && object$model != "exponential")
+  if(any(start - times[int_start] > 0) && !object$model %in% exp_model_names)
     warning("Some start times are rounded down")
 
   int_stop_ = findInterval(stop_, times, left.open = T) # TODO: better way to deal with equality in the stop time?
-  if(any(times[int_stop_] - stop_ > 0) && object$model != "exponential")
+  if(any(times[int_stop_] - stop_ > 0) && !object$model %in% exp_model_names)
     warning("Some stop times are rounded up")
 
   # Make function to predict for each observations

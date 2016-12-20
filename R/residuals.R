@@ -25,7 +25,7 @@
 residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data = NULL, ...){
   type = type[1]
 
-  if(!object$model %in% c("logit", "exponential"))
+  if(!object$model %in% c("logit", exp_model_names))
     stop("Functions for model '",  object$model, "' is not implemented")
 
   if(type %in% c("std_space_error", "space_error")){

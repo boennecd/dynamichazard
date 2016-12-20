@@ -188,7 +188,7 @@ suppressMessages(fit <- ddhazard(
     age + log(bili) + log(protime),
   data = pbc2_l, Q_0 = diag(rep(1e3, 4)), by = 1,
   Q = diag(rep(1e-2, 4)), max_T = 36,
-  model = "exponential", control = list(est_Q_0 = F, LR = .1)))
+  model = "exponential_trunc_time_only", control = list(est_Q_0 = F, LR = .1)))
 
 test_that("Calls to residuals should fail for exponential model and state space error",{
   expect_error(residuals(fit, "std_space_error", regexp = "Functions for with model 'exponential' is not implemented"))

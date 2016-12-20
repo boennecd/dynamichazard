@@ -18,7 +18,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
                              col = "black", add = F, do_alter_mfcol = T, ...){
-  if(!x$model %in% c("logit", "exponential"))
+  if(!x$model %in% c("logit", exp_model_names))
     stop("Functions for model '", x$model, "' is not implemented")
 
   if(type == "cov"){

@@ -272,7 +272,7 @@ test_that("I did not mess up with get_data_func", {
 test_that("bigglm and my c++ version yields similar results", {
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
 
-  for(model in c("logit", "exponential")){
+  for(model in c("logit", "exponential_combined", "exponential_binary_only", "exponential_trunc_time_only")){
     suppressWarnings(bigglm_res <- bigglm(
       form, get_data_func,
       family = if(model == "logit") binomial() else poisson()))
@@ -291,7 +291,7 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
   sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
-  for(model in c("logit", "exponential")){
+  for(model in c("logit", "exponential_combined")){
     suppressWarnings(bigglm_res <- bigglm(
       form, get_data_func,
       family = if(model == "logit") binomial() else poisson()))
