@@ -1,6 +1,6 @@
 #' A Shiny app to illustrates model and method
 #'
-#' Runs a shiny app where you try different model specification on simulated data
+#' Runs a shiny app where you try different model specifications on simulated data
 #' @export
 #' @examples
 #'\dontrun{
