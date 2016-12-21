@@ -50,166 +50,165 @@ JScode <- with(n_series_stuff, paste0(
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
-  tags$head(tags$script(HTML(JScode))),
+ tags$head(tags$script(HTML(JScode))),
 
  titlePanel("ddhazard demo"),
 
- div(fixedRow(
-   column(3,
-          h3("Intro"),
-          div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
-          div(textOutput("rug_explanation"), style = get_em(5)),
-          div("See the ddhazard vignette for further details", style = get_em(1))
+ fluidRow(
+   style = "width: 1280px;",
+   column(
+     3,
+     wellPanel(
+       checkboxInput("more_options", label = "Show more options", value = FALSE, width = "12em")),
+
+     wellPanel(
+       h4("Simulation settings"),
+
+       sliderInput("n_series",
+                   "Number of series to simulate",
+                   min = 0,
+                   max = n_series_stuff$exp_max - n_series_stuff$exp_min - 1,
+                   value = 1),
+
+       selectInput("sim_with",
+                   "Choose model to simulate from",
+                   choices = c("logit", "exponential"),
+                   selected = "exponential"),
+
+       radioButtons("sim_fix_options",
+                    label = "Number of fixed covariates",
+                    choices = list("Zero" = 1,
+                                   "Intercept and two coef" = 2,
+                                   "All but one coef" = 3),
+                    selected = 1),
+
+       conditionalPanel(
+         "input.more_options",
+         sliderInput("obs_time",
+                     "Observed time",
+                     min = 1,
+                     max = t_max,
+                     step = 1,
+                     value = t_max),
+
+         numericInput("seed",
+                      label = "RNG seed",
+                      value = 65848))
+     ),
+
+     wellPanel(
+       h4("Estimation settings"),
+
+       selectInput("est_with_model",
+                   "Choose model to estimate with",
+                   choices = c("logit", "exponential_combined", "exponential_binary_only",
+                               "exponential_trunc_time_only"),
+                   selected = "exponential_trunc_time_only"),
+
+       selectInput("est_with_method",
+                   "Choose method to use in the E-step",
+                   choices = c("UKF", "EKF"),
+                   selected = "EKF"),
+
+       radioButtons("est_fix_options",
+                    label = "Number of fixed covariates",
+                    choices = list("Zero" = 1,
+                                   "Intercept and two coef" = 2,
+                                   "All but one coef" = 3),
+                    selected = 1),
+
+       conditionalPanel(
+         "input.more_options",
+         sliderInput("order",
+                     "Randowm walk order in estimation",
+                     min = 1,
+                     max = 2,
+                     step = 1,
+                     value = 1),
+
+         sliderInput("ridge_eps",
+                     "Ridge regresion like penalty factor",
+                     min = 0.00001,
+                     max = .05,
+                     step = 0.00001,
+                     value = 0.00001),
+
+         selectInput("fixed_terms_method",
+                     "Estimate fixed effect in",
+                     choices = c("E_step", "M_step"),
+                     selected = "M_step"))
+     ),
+
+     wellPanel(
+       conditionalPanel(
+         "input.est_with_method == 'EKF'",
+         h4("EKF settings"),
+
+         checkboxInput("use_extra_correction",
+                       "Extra correction steps",
+                       value = FALSE)),
+
+       conditionalPanel(
+         "input.est_with_method == 'UKF'",
+         h4("UKF settings"),
+
+         sliderInput("beta",
+                     "Beta",
+                     min = 0,
+                     max = 2,
+                     step = .5,
+                     value = 0),
+
+         sliderInput("alpha",
+                     "Alpha",
+                     min = 1e-2,
+                     max = 1,
+                     step = 1e-2,
+                     value = 1))
+     )
    ),
-   column(3,
-          h3("Output"),
-          div(textOutput("n_deaths"), style = get_em(1)),
-          div(htmlOutput ("LR_out"), style = get_em(1)),
-          div(textOutput("MSE"), style = get_em(1)),
-          div(textOutput("model_text"), style = get_em(3)),
-          tags$textarea(
-            id = 'demo', style = 'display: none;',
-            verbatimTextOutput("fit_call_txt")
-          )
-   ),
-   column(5,
-          h3("Fit call"),
-          div(verbatimTextOutput("fit_call_txt"), style = "height:20em;")
+
+   column(
+     12 - 3,
+     plotOutput("coef_plot"),
+
+
+     fluidRow(
+       column(
+         6,
+         h3("Intro"),
+         div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(2)),
+         div(textOutput("rug_explanation"), style = get_em(4)),
+         div("See the ddhazard vignette for further details", style = get_em(1))
+       ),
+
+       column(
+         6,
+         h3("Output"),
+         div(textOutput("n_deaths"), style = get_em(1)),
+         div(htmlOutput ("LR_out"), style = get_em(1)),
+         div(textOutput("MSE"), style = get_em(1)),
+         div(textOutput("model_text"), style = get_em(3))
+       )
+     ),
+
+     h3("Fit call"),
+     div(verbatimTextOutput("fit_call_txt"), style = "height:20em;")
    )
- ), style = "max-width:110em;min-width: 100em;"),
-
- br(),
- hr(),
- br(),
-
- div(plotOutput("coef_plot"), style = "max-width:1000px;min-width=200px"),
-
- br(),
- hr(),
- br(),
-
- div(style = "width: 60em;",
-   fluidRow(
-   column(col_w,
-          h4("Simulation settings"),
-
-          sliderInput("n_series",
-                      "Number of series to simulate",
-                      min = 0,
-                      max = n_series_stuff$exp_max - n_series_stuff$exp_min - 1,
-                      value = 1),
-
-          selectInput("sim_with",
-                      "Choose model to simulate from",
-                      choices = c("logit", "exponential"),
-                      selected = "exponential"),
-
-          radioButtons("sim_fix_options",
-                       label = "Number of fixed covariates",
-                       choices = list("Zero" = 1,
-                                      "Intercept and two coef" = 2,
-                                      "All but one coef" = 3),
-                       selected = 1),
-
-          conditionalPanel(
-            "input.more_options",
-            sliderInput("obs_time",
-                        "Observed time",
-                        min = 1,
-                        max = t_max,
-                        step = 1,
-                        value = t_max),
-
-            numericInput("seed",
-                         label = "RNG seed",
-                         value = 65848))),
-
-   column(col_w,
-          h4("Estimation settings"),
-
-          selectInput("est_with_model",
-                      "Choose model to estimate with",
-                      choices = c("logit", "exponential_combined", "exponential_binary_only",
-                                  "exponential_trunc_time_only"),
-                      selected = "exponential_trunc_time_only"),
-
-          selectInput("est_with_method",
-                      "Choose method to use in the E-step",
-                      choices = c("UKF", "EKF"),
-                      selected = "EKF"),
-
-          radioButtons("est_fix_options",
-                       label = "Number of fixed covariates",
-                       choices = list("Zero" = 1,
-                                      "Intercept and two coef" = 2,
-                                      "All but one coef" = 3),
-                       selected = 1),
-
-          conditionalPanel(
-            "input.more_options",
-            sliderInput("order",
-                        "Randowm walk order in estimation",
-                        min = 1,
-                        max = 2,
-                        step = 1,
-                        value = 1),
-            sliderInput("ridge_eps",
-                        "Ridge regresion like penalty factor",
-                        min = 0.00001,
-                        max = .05,
-                        step = 0.00001,
-                        value = 0.00001),
-            selectInput("fixed_terms_method",
-                        "Estimate fixed effect in",
-                        choices = c("E_step", "M_step"),
-                        selected = "M_step"))),
-
-   conditionalPanel(
-     "input.est_with_method == 'EKF'",
-     column(col_w,
-            h4("EKF settings"),
-
-            checkboxInput("use_extra_correction",
-                          "Extra correction steps",
-                          value = FALSE))),
-
-   conditionalPanel(
-     "input.est_with_method == 'UKF'",
-     column(col_w,
-            h4("UKF settings"),
-
-            sliderInput("beta",
-                        "Beta",
-                        min = 0,
-                        max = 2,
-                        step = .5,
-                        value = 0),
-
-            sliderInput("alpha",
-                        "Alpha",
-                        min = 1e-2,
-                        max = 1,
-                        step = 1e-2,
-                        value = 1)))
-  ),
-
-
-  div(style="float:right;",
-      flowLayout(
-        checkboxInput("more_options", label = "Show more options", value = FALSE, width = "12em"),
-        actionButton("compute", "Compute", width = "8em")))
-  )
+ )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  data <- NA
+  n_series_input <- reactive({
+    print("boh")
 
-  n_series_input <- eventReactive(input$compute, {
     n_series_stuff$base^(n_series_stuff$exp_min + input$n_series)
   })
 
-  sim_input <- eventReactive(input$compute, {
+  sim_input <- reactive({
+    print("boh")
+
     set.seed(input$seed)
     f_choice <- if(input$sim_with == "exponential")
       test_sim_func_exp else test_sim_func_logit
@@ -233,7 +232,9 @@ server <- function(input, output) {
       tstart_sampl_func = start_fun)
   })
 
-  n_fixed_when_est <- eventReactive(input$compute, {
+  n_fixed_when_est <- reactive({
+    print("boh")
+
     est_fix_options <- input$est_fix_options
 
     if(est_fix_options == 1){
@@ -246,9 +247,9 @@ server <- function(input, output) {
       stop("est_fix_options option not implemented")
   })
 
-  fit_quote_input <- eventReactive(input$compute, {
+  fit_quote_input <- reactive({
     sims <- sim_input()
-    data <<- sims$res
+    data <- sims$res
 
     n_fixed <- n_fixed_when_est()
 
@@ -325,7 +326,7 @@ server <- function(input, output) {
     paste0(out, "\n\n# data is the simulated data set")
   })
 
-  fit_input <- eventReactive(input$compute, {
+  fit_input <- reactive({
     tmp <- fit_quote_input()
     eval_quote <- tmp$quote
     data <- tmp$data
@@ -372,9 +373,10 @@ server <- function(input, output) {
     fit <- fit_input()
     n_fixed <- n_fixed_when_est()
 
+    par(mai = rep(1, 4))
     matplot(seq_len(dim(sims$beta)[1]) - 1, sims$beta, lty = 1, type = "l",
             ylim = range(sims$beta, fit$state_vecs, fit$fixed_effects), xaxt='n',
-            ylab = expression(beta), xlab = "Time")
+            ylab = "Coefficients", xlab = "Time", cex.lab = 1.4)
     matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs[, 1:(6 - n_fixed)],
             lty = 2, type = "l", add = T,
             col = (1+n_fixed):6)
@@ -423,4 +425,3 @@ server <- function(input, output) {
 
 # Run the application
 shinyApp(ui = ui, server = server)
-
