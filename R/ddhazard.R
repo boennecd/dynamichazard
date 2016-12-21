@@ -1,12 +1,12 @@
 #' @title Function to fit dynamic discrete hazard models
 #' @description  Function to fit dynamic discrete hazard models using state space models
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
-#' @param data Data frame or enviroment containing the outcome and co-variates
-#' @param model \code{"logit"}, \code{"exponential_trunc_time_only"}, \code{"exponential_binary_only"} or \code{"exponential_combined"} for the discrete time function using the logistic link function in the first case or for the continous time model with different estimation method in the three latter cases (see the ddhazard for details on the methods)
+#' @param data Data frame or environment containing the outcome and co-variates
+#' @param model \code{"logit"}, \code{"exponential_trunc_time_only"}, \code{"exponential_binary_only"} or \code{"exponential_combined"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the three latter cases (see the ddhazard for details on the methods)
 #' @param by Interval length of the bins in which parameters are fixed
 #' @param max_T End of the last interval. The last stop time with an event is selected if the parameter is omitted
 #' @param id Vector of ids for each row of the in the design matrix
-#' @param a_0 Vector \eqn{a_0} for the initial coeffecient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}})
+#' @param a_0 Vector \eqn{a_0} for the initial coefficient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}})
 #' @param Q_0 Covariance matrix for the prior distribution
 #' @param Q Initial covariance matrix for the state equation
 #' @param order Order of the random walk
@@ -16,7 +16,7 @@
 #' @details
 #' This function can be used to estimate a binary regression where the regression parameters follows a given order random walk. The order is specified by the \code{order} argument. 1. and 2. order random walks is implemented. The regression parameters are updated at time \code{by}, 2\code{by}, ..., \code{max_T}. See the vignette 'ddhazard' for more details
 #'
-#' The Extended Kalman filter or Uncented Kalman filter needs an initial co-variance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
+#' The Extended Kalman filter or Unscented Kalman filter needs an initial co-variance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
 #'
 #' The model is specified through the \code{model} argument. Currently, \code{'logit'} and \code{'exponential'} is available. The former uses an logistic model where outcomes are binned into the intervals. Be aware that there can be loss of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time varying co-variates. The latter model uses an exponential model for the arrival times where there is no loss information due to binning
 #'
