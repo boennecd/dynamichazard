@@ -11,7 +11,7 @@
 \arguments{
 \item{x}{Result of \code{\link{ddhazard}} call}
 
-\item{xlab, ylab, ylim, col}{Arguments to overide defaults set in the function}
+\item{xlab, ylab, ylim, col}{Arguments to override defaults set in the function}
 
 \item{type}{Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters}
 

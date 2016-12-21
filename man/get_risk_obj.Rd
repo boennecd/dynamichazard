@@ -20,11 +20,11 @@ get_risk_obj(Y, by, max_T, id, is_for_discrete_model = T)
 \value{
 A list with the following elements:
 \tabular{ll}{
-\code{risk_sets}\verb{ }\tab List of lists with one for each bin. Each of the sub lists have indicies that coresponds to the entries of \code{Y} that are at risk in the bin \cr
+\code{risk_sets}\verb{ }\tab List of lists with one for each bin. Each of the sub lists have indices that corresponds to the entries of \code{Y} that are at risk in the bin \cr
 \code{min_start}\verb{ }\tab Start time of the first bin \cr
 \code{I_len}\verb{ }\tab Length of each bin \cr
 \code{d}\verb{ }\tab Number of bins \cr
-\code{is_event_in}\verb{ }\tab Indicies for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins \cr
+\code{is_event_in}\verb{ }\tab Indices for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins \cr
 \code{is_for_discrete_model}\verb{ }\tab Value of \code{is_for_discrete_model} argument
 }
 }

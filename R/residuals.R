@@ -14,10 +14,10 @@
 #'}
 #'
 #' @section State space errors:
-#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is notstandardized. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
+#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is non-standardized. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
 #' \tabular{ll}{
-#' \code{residuals}\verb{ }\tab 2D array with either standardised or unstandardised state space errors. The row are bins and the columns are the parameters in the regression \cr
-#' \code{standardize}\verb{ }\tab \code{TRUE} if standardised state space errors \cr
+#' \code{residuals}\verb{ }\tab 2D array with either standardized or non-standardized state space errors. The row are bins and the columns are the parameters in the regression \cr
+#' \code{standardize}\verb{ }\tab \code{TRUE} if standardized state space errors \cr
 #' \code{Covariances}\verb{ }\tab 3D array with the smoothed co-variance matrix for each set of the state space errors \cr
 #'}
 #'

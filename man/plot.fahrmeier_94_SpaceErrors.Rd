@@ -14,7 +14,7 @@
 
 \item{mod}{The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call}
 
-\item{cov_index}{The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standarized}
+\item{cov_index}{The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standardized}
 
 \item{t_index}{The bin indices to plot. Default is to use all bins}
 

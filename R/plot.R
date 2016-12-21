@@ -6,7 +6,7 @@
 #' @param plot_type The \code{type} argument passed to \code{plot}
 #' @param cov_index The index (indices) of the state space parameter(s) to plot
 #' @param add \code{FALSE} if you want to make a new plot
-#' @param xlab,ylab,ylim,col Arguments to overide defaults set in the function
+#' @param xlab,ylab,ylim,col Arguments to override defaults set in the function
 #' @param do_alter_mfcol \code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element
 #' @param ... Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}
 #'
@@ -74,7 +74,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
 #' @param x Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors
 #' @param mod The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call
 #' @param p_cex \code{cex} argument for the points
-#' @param cov_index The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standarized
+#' @param cov_index The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standardized
 #' @param t_index The bin indices to plot. Default is to use all bins
 #' @param pch,ylab,xlab Arguments to override defaults set in the function
 #' @param x_tick_loc,x_tick_mark \code{at} and \code{labels} arguments passed to \code{axis}

@@ -7,7 +7,7 @@
 ddhazard_app()
 }
 \description{
-Runs a shiny app where you try different model specification on simulated data
+Runs a shiny app where you try different model specifications on simulated data
 }
 \examples{
 \dontrun{

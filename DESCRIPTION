@@ -1,6 +1,6 @@
 Package: dynamichazard
 Type: Package
-Title: Dynamic hazard models using state space models
+Title: Dynamic Hazard Models using State Space Models
 Version: 0.1.0
 Author: Benjamin Christoffersen
 Maintainer: Benjamin Christoffersen <boennecd@gmail.com>
@@ -13,5 +13,6 @@ LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 5.0.1
 Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR
 VignetteBuilder: knitr
+BugReports: https://github.com/boennecd/dynamichazard/issues
 SystemRequirements: C++11
 URL: https://github.com/boennecd/dynamichazard
