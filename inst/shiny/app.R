@@ -22,7 +22,7 @@ ddhazard <- function(..., control){
 
 # Global params
 t_max <- 30
-max_rugs <- 5e2
+max_rugs <- 1e3
 start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
 
 # params for UI
@@ -32,9 +32,8 @@ col_w_out <- 4
 get_em <- function(n_lines) paste0("height:",n_lines * 1.5,"em;")
 
 # Thanks to this guy http://stackoverflow.com/a/31066997
-n_series_stuff <- list(base = 2, exp_min = 8, exp_max = 12)
-JScode <- with(n_series_stuff, paste0(
-  "$(function() {
+get_JS_code_for_log_slider <- function(input_name, base, exp_min, exp_max){
+  paste0("$(function() {
   setTimeout(function(){
   var vals = [", base^exp_min, "];
   var powStart = ", exp_min + 1,";
@@ -44,8 +43,22 @@ JScode <- with(n_series_stuff, paste0(
   val = parseFloat(val.toFixed(8));
   vals.push(val);
   }
-  $('#n_series').data('ionRangeSlider').update({'values':vals})
-  }, 5)})"))
+  $('#", input_name,"').data('ionRangeSlider').update({'values':vals})
+  }, 5)})")
+}
+
+n_series_stuff <- list(base = 2, exp_min = 6, exp_max = 12)
+
+JScode <- get_JS_code_for_log_slider(
+  "n_series", n_series_stuff$base, n_series_stuff$exp_min, n_series_stuff$exp_max)
+
+ridge_eps_stuff <- list(base = 10, exp_min = -6, exp_max = -1)
+
+JScode <- paste(
+  JScode,
+  get_JS_code_for_log_slider(
+  "ridge_eps", ridge_eps_stuff$base, ridge_eps_stuff$exp_min, ridge_eps_stuff$exp_max),
+  sep = "\n")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -68,7 +81,7 @@ ui <- fluidPage(
                    "Number of series to simulate",
                    min = 0,
                    max = n_series_stuff$exp_max - n_series_stuff$exp_min - 1,
-                   value = 1),
+                   value = 2),
 
        selectInput("sim_with",
                    "Choose model to simulate from",
@@ -128,10 +141,9 @@ ui <- fluidPage(
 
          sliderInput("ridge_eps",
                      "Ridge regresion like penalty factor",
-                     min = 0.00001,
-                     max = .05,
-                     step = 0.00001,
-                     value = 0.00001),
+                     min = 0,
+                     max = ridge_eps_stuff$exp_max - ridge_eps_stuff$exp_min - 1,
+                     value = 1),
 
          selectInput("fixed_terms_method",
                      "Estimate fixed effect in",
@@ -192,8 +204,21 @@ ui <- fluidPage(
        )
      ),
 
-     h3("Fit call"),
-     div(verbatimTextOutput("fit_call_txt"), style = "height:20em;")
+     fluidRow(
+       column(
+         6,
+         div()
+       ),
+
+       column(
+         6,
+         h3("Fit call"),
+         div(verbatimTextOutput("fit_call_txt"), style = "height:20em;")
+       )
+     ),
+
+     h3("First 250 rows of simulated data"),
+     dataTableOutput("sim_dat")
    )
  )
 )
@@ -201,14 +226,14 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   n_series_input <- reactive({
-    print("boh")
-
     n_series_stuff$base^(n_series_stuff$exp_min + input$n_series)
   })
 
-  sim_input <- reactive({
-    print("boh")
+  ridge_eps <- reactive({
+    ridge_eps_stuff$base^(ridge_eps_stuff$exp_min + input$ridge_eps)
+  })
 
+  sim_input <- reactive({
     set.seed(input$seed)
     f_choice <- if(input$sim_with == "exponential")
       test_sim_func_exp else test_sim_func_logit
@@ -220,21 +245,32 @@ server <- function(input, output) {
 
     n_varying <- 5 - n_fixed + (n_fixed > 0)
 
-    f_choice(
+    dat <- f_choice(
       n_series = n_series_input(),
       n_vars = 5,
       t_max = t_max, re_draw = T, beta_start = runif(5, min = -1.5, max = 1.5),
       intercept_start = -3.5,
       sds = c(.25, rep(.5, 5)),
-      x_range = 1, x_mean = 0, lambda = t_max / 10,
+      x_range = 1, x_mean = 0, lambda = 5 / t_max,
       is_fixed = if(n_fixed == 0) c() else 1:n_fixed,
 
       tstart_sampl_func = start_fun)
+
+    dat$res[dat$res$event == 0 & dat$res$tstop > t_max, "tstop"] <- t_max
+    dat
   })
 
-  n_fixed_when_est <- reactive({
-    print("boh")
+  output$sim_dat <- renderDataTable({
+    dat <- sim_input()$res
+    dat <- dat[seq_len(min(nrow(dat), 250)), ]
+    dat[, c("x1", "x2", "x3", "x4", "x5")] <-
+      round(dat[, c("x1", "x2", "x3", "x4", "x5")], 2)
 
+    dat
+  },
+  options = list(pageLength = 10, searching = FALSE))
+
+  n_fixed_when_est <- reactive({
     est_fix_options <- input$est_fix_options
 
     if(est_fix_options == 1){
@@ -286,7 +322,7 @@ server <- function(input, output) {
     }
 
     control_list <- list(eps = 10^-2,
-                         ridge_eps = input$ridge_eps,
+                         ridge_eps = ridge_eps(),
                          method = input$est_with_method)
 
     if(input$est_with_method == "UKF"){
@@ -321,7 +357,7 @@ server <- function(input, output) {
 
   output$fit_call_txt <- renderText({
     eval_quote <- fit_quote_input()$quote
-    out <- formatR::tidy_source(text = capture.output(eval_quote), width.cutoff = 40)
+    out <- formatR::tidy_source(text = capture.output(eval_quote), width.cutoff = 30)
     out <- out$text.tidy
     paste0(out, "\n\n# data is the simulated data set")
   })
@@ -375,16 +411,19 @@ server <- function(input, output) {
 
     par(mai = rep(1, 4))
     matplot(seq_len(dim(sims$beta)[1]) - 1, sims$beta, lty = 1, type = "l",
-            ylim = range(sims$beta, fit$state_vecs, fit$fixed_effects), xaxt='n',
-            ylab = "Coefficients", xlab = "Time", cex.lab = 1.4)
+            ylim = range(sims$beta, fit$state_vecs, fit$fixed_effects),
+            ylab = "Coefficients", xlab = "Time", cex.lab = 1.4,
+            frame = FALSE, axes=F)
     matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs[, 1:(6 - n_fixed)],
             lty = 2, type = "l", add = T,
             col = (1+n_fixed):6)
 
+
+    axis(1, lwd.ticks = 0, at = c(-10, seq(0, 30, 3), 100))
+    axis(2, at = c(-10, axTicks(2), 10))
+
     if(n_fixed > 0)
       abline(h = fit$fixed_effects, col = 1:n_fixed, lty = 2)
-
-    axis(side = 1, at = seq_len(dim(sims$beta)[1]) - 1,tick = FALSE)
 
     # Add rug plots to illustrate survivers and deaths
     death_times <- sims$res$tstop[sims$res$event==1]
