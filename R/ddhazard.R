@@ -434,4 +434,4 @@ ddhazard = function(formula, data,
 }
 
 exp_model_names <- c("exponential_combined", "exponential_binary_only",
-                     "exponential_trunc_time_only")
+                     "exponential_trunc_time_only", "exponential_trunc_time_w_jump_only")
