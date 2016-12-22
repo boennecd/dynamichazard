@@ -262,11 +262,11 @@ get_data_func <- with(new.env(), {
 
 test_that("I did not mess up with get_data_func", {
   get_data_func(T)
-  test_that("", expect_equal(sims$res[1:300, ], get_data_func()))
-  test_that("", expect_equal(sims$res[301:600, ], get_data_func()))
+  expect_equal(sims$res[1:300, ], get_data_func())
+  expect_equal(sims$res[301:600, ], get_data_func())
   get_data_func(T)
-  test_that("", expect_equal(sims$res[1:300, ], get_data_func()))
-  test_that("", expect_equal(sims$res[301:600, ], get_data_func()))
+  expect_equal(sims$res[1:300, ], get_data_func())
+  expect_equal(sims$res[301:600, ], get_data_func())
 })
 
 test_that("bigglm and my c++ version yields similar results", {

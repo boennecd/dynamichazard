@@ -66,14 +66,16 @@ ui <- fluidPage(
 
  tags$head(tags$script(HTML(JScode))),
 
- titlePanel("ddhazard demo"),
+ fluidRow(
+   style = "width: 1280px;",
+   column(
+     9, offset = 3,
+     titlePanel("ddhazard demo"))),
 
  fluidRow(
    style = "width: 1280px;",
    column(
      3,
-     wellPanel(
-       checkboxInput("more_options", label = "Show more options", value = FALSE, width = "12em")),
 
      wellPanel(
        h4("Simulation settings"),
@@ -151,34 +153,41 @@ ui <- fluidPage(
                      selected = "M_step"))
      ),
 
+
+     conditionalPanel(
+       "input.more_options",
+       wellPanel(
+         conditionalPanel(
+           "input.est_with_method == 'EKF'",
+           h4("EKF settings"),
+
+           checkboxInput("use_extra_correction",
+                         "Extra correction steps",
+                         value = FALSE)),
+
+         conditionalPanel(
+           "input.est_with_method == 'UKF'",
+           h4("UKF settings"),
+
+           sliderInput("beta",
+                       "Beta",
+                       min = 0,
+                       max = 2,
+                       step = .5,
+                       value = 0),
+
+           sliderInput("alpha",
+                       "Alpha",
+                       min = 1e-2,
+                       max = 1,
+                       step = 1e-2,
+                       value = 1))
+       )),
+
      wellPanel(
-       conditionalPanel(
-         "input.est_with_method == 'EKF'",
-         h4("EKF settings"),
+       checkboxInput("more_options", label = "Show more options", value = FALSE, width = "12em"))
 
-         checkboxInput("use_extra_correction",
-                       "Extra correction steps",
-                       value = FALSE)),
-
-       conditionalPanel(
-         "input.est_with_method == 'UKF'",
-         h4("UKF settings"),
-
-         sliderInput("beta",
-                     "Beta",
-                     min = 0,
-                     max = 2,
-                     step = .5,
-                     value = 0),
-
-         sliderInput("alpha",
-                     "Alpha",
-                     min = 1e-2,
-                     max = 1,
-                     step = 1e-2,
-                     value = 1))
-     )
-   ),
+     ),
 
    column(
      12 - 3,
