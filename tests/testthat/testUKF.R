@@ -300,7 +300,7 @@ test_that("UKF on head_neck works with exponential model", {
     max_T = 30,
     id = head_neck_cancer$id, order = 1,
     verbose = F,
-    model = "exponential_combined"
+    model = "exp_combined"
   ))
   # sink()
   # close(tmp)
@@ -350,7 +350,7 @@ test_that("UKF on head_neck works with exponential model", {
                c("UKF" ))
 
   expect_equal(c(result_exp$model),
-               c("exponential_combined" ))
+               c("exp_combined" ))
 
   expect_equal(c(result_exp$est_Q_0),
                c(FALSE ))
@@ -377,7 +377,7 @@ test_that("UKF on simulated data works with exponential model where both variabl
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exponential_combined"))
+    model = "exp_combined"))
   # sink()
   # close(tmp)
 
@@ -435,7 +435,7 @@ test_that("UKF on simulated data works with exponential model where both variabl
                c("UKF" ))
 
   expect_equal(c(result_exp$model),
-               c("exponential_combined" ))
+               c("exp_combined" ))
 
   expect_equal(c(result_exp$est_Q_0),
                c(FALSE ))
@@ -463,7 +463,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exponential_binary_only"))
+    model = "exp_bin"))
   # sink()
   # close(tmp)
 
@@ -535,7 +535,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
                , tolerance = 1e-04)
 
   expect_equal(unname(c(result_exp$model)),
-               c("exponential_binary_only" )
+               c("exp_bin" )
                , tolerance = 1e-04)
 
   expect_equal(unname(c(result_exp$est_Q_0)),
@@ -560,7 +560,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exponential_trunc_time_only"))
+    model = "exp_trunc_time"))
   # sink()
   # close(tmp)
 
@@ -629,7 +629,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
                , tolerance = 1e-04)
 
   expect_equal(unname(c(result_exp$model)),
-               c("exponential_trunc_time_only" )
+               c("exp_trunc_time" )
                , tolerance = 1e-04)
 
   expect_equal(unname(c(result_exp$est_Q_0)),
@@ -647,7 +647,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
 
 test_that("UKF second order model works", {
   for(m in c("logit", exp_model_names)){
-    if(m == "exponential_trunc_time_only")
+    if(m == "exp_trunc_time")
       next
 
     expect_no_error(result <- ddhazard(

@@ -4,10 +4,10 @@
 using uword = arma::uword;
 
 bool is_exponential_model(std::string model){
-  return(model == "exponential_combined" ||
-         model == "exponential_binary_only" ||
-         model == "exponential_trunc_time_only" ||
-         model == "exponential_trunc_time_w_jump_only");
+  return(model == "exp_combined" ||
+         model == "exp_bin" ||
+         model == "exp_trunc_time" ||
+         model == "exp_trunc_time_w_jump");
 }
 
 // Define convergence criteria
@@ -616,7 +616,7 @@ class EKF_helper{
 
   // worker for the continous model with exponential distribution where only the
   // binary variable is used
-  class filter_worker_exponential_binary_only : public filter_worker {
+  class filter_worker_exp_bin : public filter_worker {
   private:
     void do_comps(const arma::uvec::const_iterator it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
@@ -654,14 +654,14 @@ class EKF_helper{
       }
     }
   public:
-    filter_worker_exponential_binary_only(problem_data_EKF &p_data):
+    filter_worker_exp_bin(problem_data_EKF &p_data):
     filter_worker(p_data)
     {}
   };
 
   // worker for the continous model with exponential distribution where only the
   // right truncated variable is used
-  class filter_worker_exponential_trunc_time_only : public filter_worker {
+  class filter_worker_exp_trunc_time : public filter_worker {
   private:
     void do_comps(const arma::uvec::const_iterator it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
@@ -704,14 +704,14 @@ class EKF_helper{
       }
     }
   public:
-    filter_worker_exponential_trunc_time_only(problem_data_EKF &p_data):
+    filter_worker_exp_trunc_time(problem_data_EKF &p_data):
     filter_worker(p_data)
     {}
   };
 
   // worker for the continous model with exponential distribution where only the
   // right truncated variable is used where outcomes are negative
-  class filter_worker_exponential_trunc_time_w_jump_only : public filter_worker {
+  class filter_worker_exp_trunc_time_w_jump : public filter_worker {
   private:
     void do_comps(const arma::uvec::const_iterator it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
@@ -760,7 +760,7 @@ class EKF_helper{
       }
     }
   public:
-    filter_worker_exponential_trunc_time_w_jump_only(problem_data_EKF &p_data):
+    filter_worker_exp_trunc_time_w_jump(problem_data_EKF &p_data):
     filter_worker(p_data)
     {}
   };
@@ -806,18 +806,18 @@ public:
         std::shared_ptr<filter_worker> new_p(new filter_worker_logit(p_data));
         workers.push_back(std::move(new_p));
 
-      } else if (model == "exponential_combined"){
+      } else if (model == "exp_combined"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_exponential(p_data));
         workers.push_back(std::move(new_p));
 
-      } else if (model == "exponential_binary_only"){
-        std::shared_ptr<filter_worker> new_p(new filter_worker_exponential_binary_only(p_data));
+      } else if (model == "exp_bin"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exp_bin(p_data));
         workers.push_back(std::move(new_p));
-      } else if(model == "exponential_trunc_time_only"){
-        std::shared_ptr<filter_worker> new_p(new filter_worker_exponential_trunc_time_only(p_data));
+      } else if(model == "exp_trunc_time"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exp_trunc_time(p_data));
         workers.push_back(std::move(new_p));
-      } else if(model == "exponential_trunc_time_w_jump_only"){
-        std::shared_ptr<filter_worker> new_p(new filter_worker_exponential_trunc_time_w_jump_only(p_data));
+      } else if(model == "exp_trunc_time_w_jump"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exp_trunc_time_w_jump(p_data));
         workers.push_back(std::move(new_p));
       } else
         Rcpp::stop("EKF is not implemented for model '" + model  +"'");
@@ -1357,7 +1357,7 @@ public:
 };
 
 
-class UKF_solver_New_exponential_binary_only : public UKF_solver_New{
+class UKF_solver_New_exp_bin : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set,
                              const arma::vec offsets,
                              const int t,
@@ -1434,7 +1434,7 @@ class UKF_solver_New_exponential_binary_only : public UKF_solver_New{
   }
 
 public:
-  UKF_solver_New_exponential_binary_only(
+  UKF_solver_New_exp_bin(
     problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
     Rcpp::Nullable<Rcpp::NumericVector> &alpha,
     Rcpp::Nullable<Rcpp::NumericVector> &beta):
@@ -1442,7 +1442,7 @@ public:
   {}
 };
 
-class UKF_solver_New_exponential_trunc_time_only : public UKF_solver_New{
+class UKF_solver_New_exp_trunc_time : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set,
                              const arma::vec offsets,
                              const int t,
@@ -1521,7 +1521,7 @@ class UKF_solver_New_exponential_trunc_time_only : public UKF_solver_New{
   }
 
 public:
-  UKF_solver_New_exponential_trunc_time_only(
+  UKF_solver_New_exp_trunc_time(
     problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
     Rcpp::Nullable<Rcpp::NumericVector> &alpha,
     Rcpp::Nullable<Rcpp::NumericVector> &beta):
@@ -1530,7 +1530,7 @@ public:
 };
 
 
-class UKF_solver_New_exponential_trunc_time_w_jump_only : public UKF_solver_New{
+class UKF_solver_New_exp_trunc_time_w_jump : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set,
                              const arma::vec offsets,
                              const int t,
@@ -1615,7 +1615,7 @@ class UKF_solver_New_exponential_trunc_time_w_jump_only : public UKF_solver_New{
   }
 
 public:
-  UKF_solver_New_exponential_trunc_time_w_jump_only(
+  UKF_solver_New_exp_trunc_time_w_jump(
     problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
     Rcpp::Nullable<Rcpp::NumericVector> &alpha,
     Rcpp::Nullable<Rcpp::NumericVector> &beta):
@@ -1953,15 +1953,15 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
 
-    } else if (model == "exponential_combined"){
+    } else if (model == "exp_combined"){
       solver = new UKF_solver_New_exponential(*p_data, kappa, alpha, beta);
 
-    } else if (model == "exponential_binary_only"){
-      solver = new UKF_solver_New_exponential_binary_only(*p_data, kappa, alpha, beta);
-    } else if (model == "exponential_trunc_time_only"){
-      solver = new UKF_solver_New_exponential_trunc_time_only(*p_data, kappa, alpha, beta);
-    } else if (model == "exponential_trunc_time_w_jump_only"){
-      solver = new UKF_solver_New_exponential_trunc_time_w_jump_only(*p_data, kappa, alpha, beta);
+    } else if (model == "exp_bin"){
+      solver = new UKF_solver_New_exp_bin(*p_data, kappa, alpha, beta);
+    } else if (model == "exp_trunc_time"){
+      solver = new UKF_solver_New_exp_trunc_time(*p_data, kappa, alpha, beta);
+    } else if (model == "exp_trunc_time_w_jump"){
+      solver = new UKF_solver_New_exp_trunc_time_w_jump(*p_data, kappa, alpha, beta);
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with UKF");
 

@@ -77,7 +77,7 @@ test_that("Works with EKF and continous time model and that it work with one fix
   fit <- ddhazard(survival::Surv(start, stop, event) ~ ddFixed(group),
                   Q_0 = matrix(1), Q = matrix(.1),
                   data = head_neck_cancer, max_T = 35,
-                  by = 1, model = "exponential_binary_only",
+                  by = 1, model = "exp_bin",
                   control = list(fixed_terms_method = "E_step",
                                  save_risk_set = F, save_data = F))
 
@@ -129,7 +129,7 @@ test_that("Works with EKF and continous time model and that it work with one fix
                c("EKF" ))
 
   expect_equal(unname(c(fit$model)),
-               c("exponential_binary_only" ))
+               c("exp_bin" ))
 
   expect_equal(unname(c(fit$est_Q_0)),
                c(FALSE ))
@@ -303,7 +303,7 @@ sims_exp <- test_sim_func_exp(n_series = 4e2, n_vars = 3, x_range = 1, t_max = 1
 test_that("Works with UKF and continous time model", {
   fit <- suppressWarnings(ddhazard(form, Q_0 = diag(10, 2), Q = diag(1, 2),
                   data = sims_exp$res, id = sims_exp$res$id,
-                  by = 1, model = "exponential_binary_only", max_T = 10,
+                  by = 1, model = "exp_bin", max_T = 10,
                   control = list(fixed_terms_method = "E_step",
                                  save_risk_set = F, save_data = F,
                                  method = "UKF")))
@@ -371,7 +371,7 @@ test_that("Works with UKF and continous time model", {
                , tolerance = 1e-04)
 
   expect_equal(unname(c(fit$model)),
-               c("exponential_binary_only" )
+               c("exp_bin" )
                , tolerance = 1e-04)
 
   expect_equal(unname(c(fit$est_Q_0)),
@@ -386,7 +386,7 @@ test_that("Works with UKF and continous time model", {
 test_that("Works with second order random walk and continous time model",{
   fit <- suppressWarnings(ddhazard(form, Q_0 = diag(c(rep(10, 2), rep(1, 2))), Q = diag(1, 2),
                                    data = sims_exp$res, id = sims_exp$res$id,
-                                   by = 1, model = "exponential_binary_only", max_T = 10,
+                                   by = 1, model = "exp_bin", max_T = 10,
                                    control = list(fixed_terms_method = "E_step",
                                                   save_risk_set = F, save_data = F,
                                                   method = "UKF"),
@@ -455,7 +455,7 @@ test_that("Works with second order random walk and continous time model",{
                , tolerance = 1e-05)
 
   expect_equal(unname(c(fit$model)),
-               c("exponential_binary_only" )
+               c("exp_bin" )
                , tolerance = 1e-05)
 
   expect_equal(unname(c(fit$est_Q_0)),
