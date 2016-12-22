@@ -140,3 +140,5 @@ using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
 using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
 
 arma::vec bigglm_regcf(qr_obj &qr);
+
+bool is_exponential_model(std::string model);

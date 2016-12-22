@@ -3,6 +3,13 @@
 
 using uword = arma::uword;
 
+bool is_exponential_model(std::string model){
+  return(model == "exponential_combined" ||
+         model == "exponential_binary_only" ||
+         model == "exponential_trunc_time_only" ||
+         model == "exponential_trunc_time_w_jump_only");
+}
+
 // Define convergence criteria
 inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &new_est){
   return arma::norm(prev_est - new_est, 2) / (arma::norm(prev_est, 2) + 1.0e-10);
@@ -1523,6 +1530,100 @@ public:
 };
 
 
+class UKF_solver_New_exponential_trunc_time_w_jump_only : public UKF_solver_New{
+  void Compute_intermediates(const arma::uvec &r_set,
+                             const arma::vec offsets,
+                             const int t,
+                             const double bin_tstart, const double bin_tstop,
+                             arma::vec &c_vec, arma::mat &O){
+    // ** 1-3: compute outcome given sigma points, means and variances **
+    const arma::uword n_risk = r_set.n_elem;
+    O.set_size(n_risk, sigma_points.n_cols);
+    arma::vec vars(n_risk, arma::fill::zeros);
+
+    arma::vec y_bar(n_risk, arma::fill::zeros);
+
+    arma::mat etas = (sigma_points.rows(p_dat.span_current_cov).t() * p_dat.X.cols(r_set)).t(); // linear predictors
+
+    // Armadillo do not have a bool vector so we use an integer vector instead
+    arma::ivec do_die = arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
+
+    // We need two times: the length at risk length
+    arma::vec at_risk_length(n_risk), time_outcome(n_risk);
+
+    auto it = r_set.begin();
+    for(arma::uword i = 0; i < n_risk; ++i, ++it){
+      time_outcome(i) = std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
+      at_risk_length(i) = do_die(i) ?
+      bin_tstop - std::max(p_dat.tstart(*it), bin_tstart) : time_outcome(i);
+
+      if(do_die(i)){
+        // we deduct the at risk lenght if the indvidual dies
+        time_outcome(i) = time_outcome(i) - at_risk_length(i);
+      }
+    }
+
+    // Compute variance and mean
+    for(arma::uword i = 0; i < sigma_points.n_cols; ++i){
+      double w = (i == 0) ? w_0 : w_i;
+      double w_c = (i == 0) ? w_0_c : w_i;
+
+      const arma::vec exp_etas = arma::trunc_exp(offsets + etas.col(i));
+
+      for(arma::uword j = 0; j < n_risk; ++j){
+        const double exp_eta = exp_etas(j);
+        const double inv_exp_eta = pow(exp_eta, -1);
+        const double v = at_risk_length(j) * exp_eta;
+
+        const double inv_exp_v = exp(-1 * v);
+
+        O(j, i) = exp_model_funcs::expect_time_w_jump(exp_eta, inv_exp_eta, inv_exp_v, at_risk_length(j));
+        vars(j) += w_c * exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, at_risk_length(j));
+      }
+
+      y_bar += w * O.col(i);
+    }
+
+    vars += p_dat.ridge_eps;
+
+    // ** 4: Compute c **
+    // Substract y_bar to get deviations
+    O.each_col() -= y_bar;
+
+    c_vec = (O.each_col() / vars).t() * (time_outcome - y_bar);
+    O = O.t() * (O.each_col() / vars);
+
+    // Compute intermediate matrix
+    arma::mat tmp_mat;
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
+    }
+    tmp_mat = O * tmp_mat;
+
+    // Compute vector for state space vector
+    c_vec = c_vec -  tmp_mat * c_vec;
+
+    // ** 5: Compute L using the notation in vignette **
+    // Re-compute intermediate matrix using the other weight vector
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
+    }
+    tmp_mat = O * tmp_mat;
+
+    // compute matrix for co-variance
+    O = O - tmp_mat * O;
+  }
+
+public:
+  UKF_solver_New_exponential_trunc_time_w_jump_only(
+    problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
+    Rcpp::Nullable<Rcpp::NumericVector> &alpha,
+    Rcpp::Nullable<Rcpp::NumericVector> &beta):
+  UKF_solver_New(p_, kappa, alpha, beta)
+  {}
+};
+
+
 class UKF_solver_New_exponential : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set,
                              const arma::vec offsets,
@@ -1799,10 +1900,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const double ridge_eps = .0001,
                             const int n_fixed_terms_in_state_vec = 0){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) &&
-     (model == "exponential_combined" ||
-      model == "exponential_binary_only" ||
-      model == "exponential_trunc_time_only" ||
-      model == "exponential_trunc_time_w_jump_only")){
+     is_exponential_model(model)){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = false which should be true for model '" + model  +"'");
@@ -1841,9 +1939,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
   } else if (method == "UKF"){
     if(model != "logit" &&
-       model != "exponential_combined" &&
-       model != "exponential_binary_only" &&
-       model != "exponential_trunc_time_only")
+       !is_exponential_model(model))
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
     p_data = new problem_data(
       n_fixed_terms_in_state_vec,
@@ -1864,7 +1960,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       solver = new UKF_solver_New_exponential_binary_only(*p_data, kappa, alpha, beta);
     } else if (model == "exponential_trunc_time_only"){
       solver = new UKF_solver_New_exponential_trunc_time_only(*p_data, kappa, alpha, beta);
-    }
+    } else if (model == "exponential_trunc_time_w_jump_only"){
+      solver = new UKF_solver_New_exponential_trunc_time_w_jump_only(*p_data, kappa, alpha, beta);
+    } else
+      Rcpp::stop("Model '", model ,"' is not implemented with UKF");
 
   } else if (method == "UKF_org"){
     if(model != "logit")
@@ -2026,9 +2125,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         bigglm_updateQR_logit  updater;
         estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
 
-      } else if(model == "exponential_combined" ||
-                model == "exponential_binary_only" ||
-                model == "exponential_trunc_time_only"){
+      } else if(is_exponential_model(model)){
         bigglm_updateQR_poisson updater;
         estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
 

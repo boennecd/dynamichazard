@@ -149,9 +149,7 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
 
   if(model == "logit"){
     return(bigglm_updateQR_logit().update(qr, X, eta, offset, y));
-  } else if (model == "exponential_combined" ||
-             model == "exponential_binary_only"  ||
-             model == "exponential_trunc_time_only"){
+  } else if (is_exponential_model(model)){
     return(bigglm_updateQR_poisson().update(qr, X, eta, offset, y));
   }
 }
