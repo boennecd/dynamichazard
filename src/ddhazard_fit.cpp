@@ -746,8 +746,9 @@ class EKF_helper{
         dat.H_diag_inv(i) =
           1 / exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, inv_exp_v);
 
-        // TODO: Fill derivative facotr
-        dat.z_dot(dat.span_current_cov, i) =  x_;
+        dat.z_dot(dat.span_current_cov, i) =  x_ * (
+          -inv_exp_eta + at_risk_length*inv_exp_v - pow(at_risk_length,2)*exp_eta*inv_exp_v + inv_exp_eta*inv_exp_v
+        );
         ++i;
       }
     }

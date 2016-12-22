@@ -665,7 +665,7 @@ The example illustrates that:
 The above motivates the continuous time model that will be covered in the next sections where binning is not an issue
 
 # Continous time model
-The following section introduce the continuous time model. Three different methods will be introduced to estimate the model. We start by describing the assumption of the continuous time model. Then we turn to each of the three estimation methods in turn
+The following section introduce the continuous time model. Four different methods will be introduced to estimate the model. We start by describing the assumption of the continuous time model. Then we turn to different estimation methods
 
 ## Assumptions
 We make the following assumption in the continuous time model: 
@@ -694,13 +694,14 @@ $$\log\Lparen{\proppCond{t_i}{\vec{\alpha}_0,\dots,\vec{\alpha}_d}} =
   \vec{x}_i(t_i)^T\vec{\alpha}(t_i)
   + \log\Lparen{\int_0^{t_i} \exp\Lparen{-\exp\Lparen{\vec{x}_i(t_i)^T\vec{\alpha}(t_i)}u} du}$$
   
-which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}_s$ are step functions. Thus, the first sum from $s=1,\dots,n$ is for the change in state space parameters and the inner sum is for the changes in covariate vectors. The following sections will introduce three methods to estimate the above model. They are:
+which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}_s$ are step functions. Thus, the first sum from $s=1,\dots,n$ is for the change in state space parameters and the inner sum is for the changes in covariate vectors. The following sections will introduce four methods to estimate the above model. They are:
 
  1. Using a right truncated time variable
  2. Using a binary variable
- 3. Using the above two at the same time
+ 3. Using a right truncated time variable with a jump term
+ 4. Combining  method 1. and 2.
  
-The methods with the binary outcome and the right truncated time variable seems to do well on simulated data. Hence, you may want to focus on these section and briefly read or skip the section on the combined method
+The methods with the binary outcome and the right truncated time variable with a jump term seems to do best on simulated data
 
 ## Right truncated observations time
 We start by defining the truncated observation time $\Delta_{is}$:
@@ -717,7 +718,7 @@ $$\begin{aligned}
   \qquad \bar t_{i,j} = \Lceil{t_{i,j}}y_{i,j,s} + (1 - y_{i,j,s})t_{i,j}
 \end{aligned}$$
 
-where $s$ is the number bin that the observation is in, $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{ij}^T\vec{\alpha})}$, $f_{\tilde{T}}$ is the density function of $\tilde{T}$ and $h^{\Delta}_{i,j}$ is the inverse link function for the right truncated time variables for individual $i$'s $j$th observation. Set $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$ . The resulting conditional mean is:
+where $s$ is the bin number that the observation is in, $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{ij}^T\vec{\alpha})}$, $f_{\tilde{T}}$ is the density function of $\tilde{T}$ and $h^{\Delta}_{i,j}$ is the inverse link function for the right truncated time variables for individual $i$'s $j$th observation. Set $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$ . The resulting conditional mean is:
 
 $$\tilde{z}(\vec{\alpha}) = \frac{1 - \exp \Lparen{- \lambda \delta} }{\lambda}$$
 
@@ -730,9 +731,7 @@ $$\begin{aligned}
 
 Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case of censoring. We only know that the individual survived up to time $t_{i,l_i}$ and do not know if he survived the entire bin. Further, we round up in the case where $T_i = t_{i,l_i}$ (in the case of a death) when we compute the inverse link function in the prediction step of the filter (EKF or UKF). The logic is that the individual could have survived the entire bin ($\Lceil{t_{i,l_i}}$) but only survived $t_{i,l_i}$. Thus, we use $\bar t_{i,j}$. Notice if we do not make the above adjustment then there is no difference in the model between a death, a right censoring, new covariates or change of bins
 
-A draw back to this model is that it will not work if the reported time scale is coarse as we cannot distinguish between a change of bin, new covariates vector, right censoring or death when the times coincides. As an extreme example, we cannot use this method if all times are reported on the grid of integers $1,2,\dots$ and we use bins of length $1$. 
-
-You can estimate with the right truncated time method by setting the argument `model = "exponential_trunc_time_only"` in the call to `ddhazard`
+A draw back to this model is that it will not work if the reported time scale is coarse as we cannot distinguish between a change of bin, new covariates vector, right censoring or death when the times coincides. As an extreme example, we cannot use this method if all times are reported on the grid of integers $1,2,\dots$ and we use bins of length $1$. You can estimate with the right truncated time method by setting the argument `model = "exponential_trunc_time_only"` in the call to `ddhazard`
 
 ## Binary outcome
 The next method is to replace the likelihood with binary variables $y_{i,j,s}$ as the outcome. Then the likelihood given data has:
@@ -749,12 +748,124 @@ if we assume that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one
 
 There are two points to be made here. Firstly, we do not round up by using $\bar t_{i,j}$ in place of $t_{i,j}$ when we have a death. Thus, we do take into account the moment the person dies at in that $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is the likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. Moreover, an individual can have multiple observation in the same bin. Thus, we do not have the binning issue as with the logistic model 
 
-Secondly, the cons is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,s-1}$. Contrary, we do prevail this information with the right truncated observation time. It is worth stressing that this may be minor drawback in settings where we have interval censoring. Here the exact time of death may be unknown an the given time is an upper bound for the death time 
+Secondly, the cons is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,s-1}$. Contrary, we do prevail this information with the right truncated observation time. It is worth stressing that this may be minor drawback in settings where we have interval censoring. Here the exact time of death may be unknown and the given stop time is an upper bound for the death time 
 
 You can estimate with the binary outcome method by setting the argument `model = "exponential_binary_only"` in the call to `ddhazard`
 
+## Right truncated observations time with jump
+This section will cover the right truncated time with a jump term. The motivation is that the two previous methods are not flawless: the binary method has the drawback that we do not prevail the exact time of death and the right truncated time method cannot distinguish some deaths from censoring with a coarse time scale
+
+A way to deal with the latter is to add a jump term in case of censoring. Particulary we set:
+$$\begin{aligned}
+\delta_{i,j} &= t_{i,j} - t_{i,j-1} \\
+%
+\Lambda_{ij} &= \delta_{i,j}1_{\{T_i > t_{i,j}\}} + (T_i - t_{i,j-1} - \delta_{i,j})1_{\{T_i \leq t_{i,j}\}} \\
+  &= \delta_{i,j}1_{\{T_i > t_{i,j}\}} + (T_i - t_{i,j}) 1_{\{T_i \leq t_{i,j}\}}
+  = \left\{\begin{matrix}T_i - t_{i,j} & T_i \leq t_{i,j} \\ \delta_{i,j} & T_i > t_{i,j}\end{matrix} \right.
+\end{aligned}$$
+
+where we use $\Lambda$ instead of $\Delta$ to distinguish between the two time variables. The above implies that $\Lambda_{i,j}\in [-\delta_{i,j},0]\cup\{\delta_{i,j}\}$. $\Lambda_{i,j}\leq 0$ implies that we have an event and the smaller the value the soner the event happend. $\Lambda_{i,j} = \delta_{i,j}$ implies that the variable is right truncated. The mean is given by:
+$$\tilde{z}(\vec{\alpha}) = \frac{\left(1 - \exp\Lparen{-\delta  \lambda }\right) (\delta  \lambda
+   -1)}{\lambda }$$
+where the definition of $\delta$ and $\lambda$ is the same as in the right truncated time variable section. The mean is plotted below as a function of $\lambda$ with $\delta = 1$
+
+```{r, echo=FALSE, fig.height=2}
+f <- function(l) exp(-l) * (exp(l) - 1) * (1 - l) / l
+
+par(mfcol = c(1,2), 
+    cex = .67, cex.axis = 1, cex.lab = 1,
+    lwd = .67)
+
+tmp_cex <- .33
+plot(f, xlim = c(1e-2, 1e1), 
+     xlab = expression(lambda), ylab = "Mean", cex = tmp_cex)
+abline(h = 0, lty = 2)
+
+plot(f, xlim = c(1e-3, 1e3), log = "x",
+     xlab = expression(lambda), ylab = "Mean", cex = tmp_cex)
+abline(h = 0, lty = 2)
+```
+
+Lastly, the variance is given by:
+$$\tiny\begin{aligned}
+  \hspace{50pt}&\hspace{-50pt}\varpCond{\Lambda_{i,s}}
+    {\Lambda_{i,j - 1} = \delta_{i,j-1} \wedge \vec{\alpha}_{\Lceil{t_{i,s}} } = \vec{\alpha}, \vec{\alpha}_{\Lceil{t_{i,s}} - 1}, \dots , \vec{\alpha}_0  } \\
+  &= \frac{\left(1-\exp\Lparen{-\delta  \lambda }\right) (1 - \delta  \lambda)
+   \left(\delta ^2 \lambda ^2 \left(3 \exp\Lparen{-\delta  \lambda }-\exp\Lparen{-2 \delta  \lambda
+   }\right)+\delta  \lambda  \left(2 \exp\Lparen{-2 \delta  \lambda }-4 \exp\Lparen{-\delta  \lambda
+   }\right)-\exp\Lparen{-2 \delta  \lambda }+1\right)^2}{\lambda ^5}
+\end{aligned}$$
+
+The at risk length is computed in the same way as the right truncated time varialbe. That is, we use $\bar t_{i,j}$ instead of the $\min$ term in case of a death
+
+You can estimate with the right truncated time variable by setting the argument `model = "exponential_trunc_time_w_jump_only"` in the call to `ddhazard`
+
 ## Combining the two
-An idea is to combine the two methods as: the binary method has the drawback that we do not prevail the exact time of death and the right truncated time method cannot distinguish some deaths with a coarse time scale. Thus, we can use tuples $(y_{i,j,s}, \Delta_{i,j})$ for each observation. Further, we change the inverse link function for the binary outcome to:
+Another idea is to use the binary variable and the first mentioned right truncated time at the same time. Though, this method has shown worse performance on simulated data. Thus, the description of the method is left as an appendix
+
+## Fixed effects
+Fixed effects in the M-step are estimated using a Poisson model with an offset equal to the logarithm of the time observed in each bin plus the estimated offset from time-varying effects. That is, we use that if an arrival time $T$ is exponential distributed with rate $\lambda$ then having an outcome at at time $t$ is Poisson distributed $Y\sim\text{Poisson}(\lambda t)$. For example, say that we fit the following model:
+
+```{r, echo=FALSE}
+set.seed(1010101012)
+data_frame <- 
+  data.frame(id = c(1, 1, 1, 2, 2),
+             tstop = c(0, 2, 3, 0, 2), tstart = c(2, 3, 4, 2, 4), y = c(0, 0, 1, 0, 0), 
+             x1 = round(rnorm(5), 2), x2 = round(rnorm(5), 2))
+```
+
+```{r}
+# The data we use
+head(data_frame)
+```
+
+```{r, eval=FALSE}
+# The fit
+fit <- ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), data_frame, 
+                by = 1, # bin lengths are 1
+                id = data_frame$id, model = "exponential")
+```
+
+Take the individual with  `id = 1`. As in the logistic model, he will yield four observations in the M-step. Each will have an offset of $\log (1) = 0$ plus a term form `x1` because the interval length is $1$ plus $\emNotee{\vec{a}}{t}{d}$ times the value of `x1`. Say instead that the data frame was:
+
+```{r, echo=FALSE}
+data_frame_new <- data_frame
+data_frame_new[1, 2:3] <- c(.5, 2)
+data_frame_new <- rbind(c(1, 0, .5, 0, .43, .33),
+                        data_frame_new)
+```
+
+```{r}
+head(data_frame_new)
+```
+
+Then individual 1 will yield five observations. The first row would only has an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[1]`. The second row will yield two observations: one with an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[2]` and the other with an offset of $\log 1$ plus $\emNotee{\vec{a}}{2}{d}$ times `r data_frame_new$x1[2]`. Note that this is not the case with the logistic model as we have the same binning issue as described in the Binning section
+
+# Further tasks and ideas
+The last section will cover further task and ideas. Please, let me know what you think. Is it relevant, got ideas to the question I pose and how would you priorities? What can make the package more useful for you
+
+## Confidence bounds
+How do we construct confidence bounds both for the state vectors and for the predicted values? Bootstrapping data seems to be the way forward given the use of a random walk. An extension would be to make functions that makes this easy
+
+## Diagnostics
+I am thinking of making a another vignettes with diagnostics. It will contain raw residuals, Pearson residuals, non-standardized and standardized state space error. They are all ready implemented with `s3` method for `predict`. See `?predict.fahrmeier_94`
+
+Further, I need to look into tests the effects are time-varying or not. One idea is to test entries in $\mat{Q}$. Though, this involves tests on the boundary of the parameter space. Another idea is to make an F-test. This thread here suggest the idea when make all the parameter time invariant [http://stats.stackexchange.com/a/161917](http://stats.stackexchange.com/a/161917)
+
+## Other state equations
+We can replace the state equation with other models then a given order random walk. For example, we can replace it with a stationary process: 
+$$\vec{\alpha}_t = \vec{\mu} + \mat{F} \vec{\alpha}_{t - 1} + \mat{R}\vec{\eta}_t$$
+
+where we require $\mat{F}$ is such that the process is stationary. $\mat{F}$ and $\vec{\mu}$ can be estimated in the M-step with closed form solutions when the noise is Gaussian. Another idea is to generalize to ARMA models. Further, we can change the distribution of $\vec{\eta}$ or change make a non-linear dependence between $\vec{\alpha}_t$ and $\vec{\alpha}_{t - 1}$
+
+## Active learning
+The methods and models could be used for active learning setting as in [@lee10]. Though, this do require an update formula for data set to quickly update estimates once a new set of observations is observed. This update could easily be implemented if we do not update the estimates $\mat{Q}$ and $\vec{\alpha}_0$. 
+
+A further point in this connection is that computing upper bounds for the predicted outcome given an input variable is straight forward if we the predicted point-wise covariance matrix. Thus, the method could be applied in a bandit setting
+
+# Appendix
+## Combining the two
+An idea is to combine the binary method and the first mentioned time variable for the continous time model. Thus, we can use tuples $(y_{i,j,s}, \Delta_{i,j})$ for each observation. Further, we change the inverse link function for the binary outcome to:
 $$\begin{aligned} 
 h^{\tilde Y}_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_{i,j}^T \vec{\alpha}_{s}) 
     \Lparen{\bar t_{i,j} - \max\{ s - 1, t_{i,j-1} \} }}
@@ -766,7 +877,7 @@ The use of tuples means that we get covariance terms in the observational equati
 $$\delta = \bar t_{i,j}-t_{i,j-1}, \qquad \lambda = \exp \Lparen{\vec{x}_{i,j}^T \vec{\alpha}_s}, \qquad
   Z \sim \text{Exp}\Lparen{\lambda}$$
 
-Thus, we have the following relation (conditional on having survived up to this point):
+Consequently, we have the following relation (conditional on having survived up to time $t_{i,j-1}$):
 $$Y_{i,j} \sim 1_{\Lbrace{Z\in[0,\delta\}}}, \qquad \Delta_{i,j} \sim Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}}$$
 
 where $\sim$ denotes "similarly distributed" and $1_{\Lbrace{\cdot}}$ is one if the condition in the braces are satisfied and zero otherwise. Hence, we can find the covariance by: 
@@ -840,77 +951,8 @@ $$\small\begin{aligned}
 
 The method with the tuples is more prone to diverge due to the correlation between the tuples. Thus, a ridge regression like solution is used where $\mat{H}_s(\vec{\alpha}_t)$ is replaced by:
 $$\widetilde{\mat{H}}_s(\vec{\alpha}_s) = \mat{H}_s(\vec{\alpha}_s) + \xi\mat{I}$$
-The formulas for the inverse covariance matrix in the block diagonal are given in the appendix
 
-### UKF
-As with the UKF for the logit model, the multiplication by the inverse of $\widehat{\mat{H}}$ can be an issue. More so, the covariance terms does not help in this regard as the matrix can become (even) closer to singular. Hence, we replace the $\widehat{\mat{H}}$ by:
-$$\widetilde{\widehat{\mat{H}}} = \widehat{\mat{H}} + \xi \mat{I}$$
-The matrix inversion of the matrix is easily computed since it only involves inversions of $2\times 2$ matrices
-
-## Fixed effects
-Fixed effects in the M-step are estimated using a Poisson model with an offset equal to the logarithm of the time observed in each bin plus the estimated offset from time-varying effects. That is, we use that if an arrival time $T$ is exponential distributed with rate $\lambda$ then having an outcome at at time $t$ is Poisson distributed $Y\sim\text{Poisson}(\lambda t)$. For example, say that we fit the following model:
-
-```{r, echo=FALSE}
-set.seed(1010101012)
-data_frame <- 
-  data.frame(id = c(1, 1, 1, 2, 2),
-             tstop = c(0, 2, 3, 0, 2), tstart = c(2, 3, 4, 2, 4), y = c(0, 0, 1, 0, 0), 
-             x1 = round(rnorm(5), 2), x2 = round(rnorm(5), 2))
-```
-
-```{r}
-# The data we use
-head(data_frame)
-```
-
-```{r, eval=FALSE}
-# The fit
-fit <- ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), data_frame, 
-                by = 1, # bin lengths are 1
-                id = data_frame$id, model = "exponential")
-```
-
-Take the individual with  `id = 1`. As in the logistic model, he will yield four observations in the M-step. Each will have an offset of $\log (1) = 0$ plus a term form `x1` because the interval length is $1$ plus $\emNotee{\vec{a}}{t}{d}$ times the value of `x1`. Say instead that the data frame was:
-
-```{r, echo=FALSE}
-data_frame_new <- data_frame
-data_frame_new[1, 2:3] <- c(.5, 2)
-data_frame_new <- rbind(c(1, 0, .5, 0, .43, .33),
-                        data_frame_new)
-```
-
-```{r}
-head(data_frame_new)
-```
-
-Then individual 1 will yield five observations. The first row would only has an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[1]`. The second row will yield two observations: one with an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[2]` and the other with an offset of $\log 1$ plus $\emNotee{\vec{a}}{2}{d}$ times `r data_frame_new$x1[2]`. Note that this is not the case with the logistic model as we have the same binning issue as described in the Binning section
-
-# Further tasks and ideas
-The last section will cover further task and ideas. Please, let me know what you think. Is it relevant, got ideas to the question I pose and how would you priorities? What can make the package more useful for you
-
-## Confidence bounds
-How do we construct confidence bounds both for the state vectors and for the predicted values? Bootstrapping data seems to be the way forward given the use of a random walk. An extension would be to make functions that makes this easy
-
-## Diagnostics
-I am thinking of making a another vignettes with diagnostics. It will contain raw residuals, Pearson residuals, non-standardized and standardized state space error. They are all ready implemented with `s3` method for `predict`. See `?predict.fahrmeier_94`
-
-Further, I need to look into tests the effects are time-varying or not. One idea is to test entries in $\mat{Q}$. Though, this involves tests on the boundary of the parameter space. Another idea is to make an F-test. This thread here suggest the idea when make all the parameter time invariant [http://stats.stackexchange.com/a/161917](http://stats.stackexchange.com/a/161917)
-
-## Other state equations
-We can replace the state equation with other models then a given order random walk. For example, we can replace it with a stationary process: 
-$$\vec{\alpha}_t = \vec{\mu} + \mat{F} \vec{\alpha}_{t - 1} + \mat{R}\vec{\eta}_t$$
-
-where we require $\mat{F}$ is such that the process is stationary. $\mat{F}$ and $\vec{\mu}$ can be estimated in the M-step with closed form solutions when the noise is Gaussian. Another idea is to generalize to ARMA models. Further, we can change the distribution of $\vec{\eta}$ or change make a non-linear dependence between $\vec{\alpha}_t$ and $\vec{\alpha}_{t - 1}$
-
-## Active learning
-The methods and models could be used for active learning setting as in [@lee10]. Though, this do require an update formula for data set to quickly update estimates once a new set of observations is observed. This update could easily be implemented if we do not update the estimates $\mat{Q}$ and $\vec{\alpha}_0$. 
-
-A further point in this connection is that computing upper bounds for the predicted outcome given an input variable is straight forward if we the predicted point-wise covariance matrix. Thus, the method could be applied in a bandit setting
-
-# Appendix
-## Inverse covariance matrix for tuplets
-In this section, we will make the same assumption and use the same notation as in EKF method for the continuous time model with the tuples method. Below, the formulas are given for each of elements of the block diagonal matrices of the inverse covariance matrix with the ridge regression like term (that is the block matrices of the inverse of $\widetilde{\mat{H}}_s(\vec{\alpha}_s) = \mat{H}_s(\vec{\alpha}_s) + \xi\mat{I}$)
-
+Below, the formulas are given for each of elements of the block diagonal matrices of the inverse covariance matrix with the ridge regression like term:
 
 $$\tiny\begin{aligned} 
 \MyInd{\widetilde{\mat{K}}_{l,j}}{11} &=
@@ -945,7 +987,10 @@ $$\begin{aligned}
     \Lparen{\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)}^2\MyInd{\widetilde{\mat{K}}_{l,j}}{2,2}
 \end{aligned}$$
 
-
+### UKF
+As with the UKF for the logit model, the multiplication by the inverse of $\widehat{\mat{H}}$ can be an issue. More so, the covariance terms does not help in this regard as the matrix can become (even) closer to singular. Hence, we replace the $\widehat{\mat{H}}$ by:
+$$\widetilde{\widehat{\mat{H}}} = \widehat{\mat{H}} + \xi \mat{I}$$
+The matrix inversion of the matrix is easily computed since it only involves inversions of $2\times 2$ matrices
 
 # References
 
