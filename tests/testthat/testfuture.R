@@ -32,7 +32,7 @@ test_that("Figure out why Q gets big in this example", {
 
   fit <- suppressWarnings(ddhazard(form, Q_0 = diag(10, 2), Q = diag(1, 2),
                                    data = sims_exp$res, id = sims_exp$res$id,
-                                   by = 1, model = "exponential_binary_only", max_T = 10,
+                                   by = 1, model = "exp_bin", max_T = 10,
                                    control = list(fixed_terms_method = "E_step",
                                                   save_risk_set = F, save_data = F,
                                                   method = "UKF", debug = T), verbose = 5))

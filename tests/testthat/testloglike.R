@@ -14,7 +14,7 @@ test_that("verbose prints log likelihood",{
     for(o in c(1, 2)){
       Q_0_arg <- if(o == 1) diag(1, 2) else diag(c(1, 1, .1, .1))
       for(m in c(exp_model_names, "logit")){
-        if(m == "exponential_trunc_time_only" && method == "UKF")
+        if(m == "exp_trunc_time" && method == "UKF")
           next
         expect_output({
           ddhazard(survival::Surv(start, stop, event) ~ group,
@@ -193,7 +193,7 @@ test_that("logLik for simulated data versus old results", {
     a_0 = rep(0, 6), Q_0 = diag(10, 6),
     max_T = 10,
     id = sims$res$id, order = 1,
-    verbose = F, model = "exponential_combined"
+    verbose = F, model = "exp_combined"
   ))
 
   log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
@@ -245,7 +245,7 @@ test_that("logLik for simulated data versus old results", {
                    ridge_eps = 1e-1),
     a_0 = rep(0, 4), Q_0 = diag(1, 4),
     Q = diag(1e-2, 4),
-    max_T = 10, model = "exponential_combined",
+    max_T = 10, model = "exp_combined",
     id = sims$res$id, order = 1,
     verbose = F))
 

@@ -2,7 +2,7 @@
 #' @description  Function to fit dynamic discrete hazard models using state space models
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
 #' @param data Data frame or environment containing the outcome and co-variates
-#' @param model \code{"logit"}, \code{"exponential_trunc_time_only"}, \code{"exponential_binary_only"} or \code{"exponential_combined"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the three latter cases (see the ddhazard for details on the methods)
+#' @param model \code{"logit"}, \code{"exp_trunc_time_w_jump"}, \code{"exp_trunc_time"}, \code{"exp_bin"} or \code{"exp_combined"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the four latter cases (see the ddhazard for details on the methods)
 #' @param by Interval length of the bins in which parameters are fixed
 #' @param max_T End of the last interval. The last stop time with an event is selected if the parameter is omitted
 #' @param id Vector of ids for each row of the in the design matrix
@@ -433,5 +433,5 @@ ddhazard = function(formula, data,
     "class" = "fahrmeier_94")
 }
 
-exp_model_names <- c("exponential_combined", "exponential_binary_only",
-                     "exponential_trunc_time_only", "exponential_trunc_time_w_jump_only")
+exp_model_names <- c("exp_combined", "exp_bin",
+                     "exp_trunc_time", "exp_trunc_time_w_jump")
