@@ -273,6 +273,11 @@ inline double expect_time(const double v, const double a,
   );
 }
 
+inline double expect_time_w_jump(const double exp_eta, const double inv_exp_eta,
+                                 const double inv_exp_v, const double a){
+  return(-((-1 + exp(a*exp_eta))*(-1 + a*exp_eta)*inv_exp_eta*inv_exp_v));
+}
+
 inline double expect_chance_die(const double v, const double inv_exp_v){
   return((v >= 1e-5) ? 1.0 - inv_exp_v :
            v * (1.0 - v / 2.0 * (1.0 + v / 6.0 * (1.0 - v / 24 * (1.0 - v /120.0)))));
@@ -360,6 +365,16 @@ inline double var_wait_time(const double v, const double a,  const double exp_et
            a * a * v * (1/3 - v * (1/3 - v * (11/60 - v * (13/180 - v * 19/840)))));
 }
 
+inline double var_wait_time_w_jump(const double exp_eta,
+                                   const double inv_exp_v, const double a){
+  return((exp_eta >= 1e-5) ?
+           (1 - pow(inv_exp_v,2) + pow(a*exp_eta,2)*(3*inv_exp_v - pow(inv_exp_v,2)) +
+              a*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)))/ pow(exp_eta,2) :
+           exp_eta*((7*pow(a,3))/3 + exp_eta*((-19*pow(a,4))/6 + exp_eta*(
+               (34*pow(a,5))/15 - (407*pow(a,6)*exp_eta)/360)))
+  );
+}
+
 inline double var_chance_die(const double v, const double inv_exp_v){
   // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)+*+(1+-+exp(-v))
   return((v >= 1e-4) ?
@@ -403,6 +418,33 @@ inline double trunc_time_only_var_fac(const double exp_eta, const double inv_exp
               pow(a*exp_eta*inv_exp_v, 2))/
                 (1 + eps*pow(exp_eta,2) - 2*a*exp_eta*inv_exp_v - pow(inv_exp_v,2)) :
            (pow(exp_eta/eps,2)*(3*pow(a,4)*eps + (-pow(a,7) - 4*pow(a,5)*eps)*exp_eta))/12);
+}
+
+inline double trunc_time_w_jump_only_score_fac(const double exp_eta,
+                                               const double inv_exp_v, const double a,
+                                               const double eps){
+  if(exp_eta >= 1e-5){
+    return((exp_eta*(-1 + inv_exp_v) + a*pow(exp_eta,2)*inv_exp_v - pow(a*exp_eta,2) *exp_eta*inv_exp_v)/
+           (1 - pow(inv_exp_v,2) + a*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)) +
+             pow(exp_eta,2)*(eps + pow(a,2)*(3*inv_exp_v - pow(inv_exp_v,2)))));
+  } else{
+    return(((exp_eta/eps)*(-108*pow(a*eps,2) + exp_eta*(252*pow(a,5)*eps + 96*a*pow(a*eps,2) +
+           (-588*pow(a,8) - 566*pow(a,6)*eps - 45*pow(a,4)*pow(eps,2))*exp_eta)))/
+             (72*pow(eps,2)));
+  }
+}
+
+inline double trunc_time_w_jump_only_var_fac(const double exp_eta,
+                                             const double inv_exp_v, const double a,
+                                             const double eps){
+  if(exp_eta >= 1e-5){
+    return((1 - 2*inv_exp_v + pow(inv_exp_v,2) + (- 2*pow(a*exp_eta,3) + pow(a*exp_eta,4))*pow(inv_exp_v,2) +
+           pow(a*exp_eta,2)*(2*inv_exp_v - pow(inv_exp_v,2)) + a*exp_eta*(-2*inv_exp_v + 2*pow(inv_exp_v,2)))/
+             (1 - pow(inv_exp_v,2) + a*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)) +
+               pow(exp_eta,2)*(eps + pow(a,2)*(3*inv_exp_v - pow(inv_exp_v,2)))));
+  } else{
+    return((9*pow(a,4)*pow(exp_eta,2))/(4*eps));
+  }
 }}
 
 class EKF_helper{
@@ -641,6 +683,7 @@ class EKF_helper{
       const double var_fac = exp_model_funcs::trunc_time_only_var_fac(
         exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
 
+
       u_ += x_ * (score_fac * (time_outcome - expect_time));
 
       U_ += x_ * (x_.t() * var_fac);
@@ -655,6 +698,61 @@ class EKF_helper{
     }
   public:
     filter_worker_exponential_trunc_time_only(problem_data_EKF &p_data):
+    filter_worker(p_data)
+    {}
+  };
+
+  // worker for the continous model with exponential distribution where only the
+  // right truncated variable is used where outcomes are negative
+  class filter_worker_exponential_trunc_time_w_jump_only : public filter_worker {
+  private:
+    void do_comps(const arma::uvec::const_iterator it, int &i,
+                  const arma::vec &i_a_t, const bool &compute_z_and_H,
+                  const int &bin_number,
+                  const double &bin_tstart, const double &bin_tstop){
+      // Compute intermediates
+      const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
+
+      double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
+      const double eta = arma::dot(i_a_t, x_) + offset;
+
+      const double do_die = (dat.is_event_in_bin(*it) == bin_number);
+      const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
+      const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
+
+      const double exp_eta = exp(eta);
+      const double inv_exp_eta = pow(exp_eta, -1);
+      const double v = at_risk_length * exp_eta;
+      const double exp_v = exp(v);
+      const double inv_exp_v = pow(exp_v, -1.0);
+
+      const double expect_time = exp_model_funcs::expect_time_w_jump(exp_eta, inv_exp_eta, inv_exp_v, at_risk_length);
+
+      const double score_fac = exp_model_funcs::trunc_time_w_jump_only_score_fac(
+        exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
+      const double var_fac = exp_model_funcs::trunc_time_w_jump_only_var_fac(
+        exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
+
+      if(do_die){
+        u_ += x_ * (score_fac * (time_outcome - at_risk_length - expect_time));
+      } else {
+        u_ += x_ * (score_fac * (time_outcome - expect_time));
+      }
+
+      U_ += x_ * (x_.t() * var_fac);
+
+      if(compute_z_and_H){
+        // Compute terms from waiting time
+        dat.H_diag_inv(i) =
+          1 / exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, inv_exp_v);
+
+        // TODO: Fill derivative facotr
+        dat.z_dot(dat.span_current_cov, i) =  x_;
+        ++i;
+      }
+    }
+  public:
+    filter_worker_exponential_trunc_time_w_jump_only(problem_data_EKF &p_data):
     filter_worker(p_data)
     {}
   };
@@ -710,7 +808,10 @@ public:
       } else if(model == "exponential_trunc_time_only"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_exponential_trunc_time_only(p_data));
         workers.push_back(std::move(new_p));
-      }else
+      } else if(model == "exponential_trunc_time_w_jump_only"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exponential_trunc_time_w_jump_only(p_data));
+        workers.push_back(std::move(new_p));
+      } else
         Rcpp::stop("EKF is not implemented for model '" + model  +"'");
     }
 
@@ -1699,7 +1800,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) &&
      (model == "exponential_combined" ||
       model == "exponential_binary_only" ||
-      model == "exponential_trunc_time_only")){
+      model == "exponential_trunc_time_only" ||
+      model == "exponential_trunc_time_w_jump_only")){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
   } else if(!Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) && model == "logit"){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = false which should be true for model '" + model  +"'");

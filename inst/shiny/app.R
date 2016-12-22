@@ -12,6 +12,7 @@ library(dynamichazard)
 
 test_sim_func_exp <- with(environment(ddhazard), test_sim_func_exp)
 test_sim_func_logit <- with(environment(ddhazard), test_sim_func_logit)
+exp_model_names <- with(environment(ddhazard), exp_model_names)
 
 # Save memory on server
 ddhazard <- function(..., control){
@@ -114,8 +115,7 @@ ui <- fluidPage(
 
        selectInput("est_with_model",
                    "Choose model to estimate with",
-                   choices = c("logit", "exponential_combined", "exponential_binary_only",
-                               "exponential_trunc_time_only"),
+                   choices = c("logit", exp_model_names),
                    selected = "exponential_trunc_time_only"),
 
        selectInput("est_with_method",
