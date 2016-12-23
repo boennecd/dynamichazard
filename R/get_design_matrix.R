@@ -40,6 +40,12 @@ get_design_matrix = function(formula, data, response = T){
 
   Y <- if(response) model.extract(mf, "response") else NULL
 
+  if(!is.null(Y) && attr(Y, "type") == "right"){ # Change outcome if formula was Surv(stop, event) ~
+    Y <- cbind(rep(0, nrow(Y)), Y)
+    dimnames(Y)[[2]] <- c("start", "stop", "status")
+    attr(Y, "type") <- "counting"
+  }
+
   Terms <- terms(mf)
   fixed_terms_indicies <- attr(Terms, "specials")$ddFixed
 
