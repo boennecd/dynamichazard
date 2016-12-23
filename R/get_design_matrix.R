@@ -13,8 +13,8 @@ get_design_matrix = function(formula, data, response = T){
   get_form_exp <- quote(
     if(response)
       terms(formula, data = data, specials = specials) else
-        eval(bquote(terms(update(formula, rep(1, .(nrow(data))) ~ .), data = data,
-                    specials = specials))) # remove right hand site of formula
+        eval(bquote(terms(update(formula, rep(1, .(nrow(data))) ~ ., data = data), data = data,
+                          specials = specials))) # remove right hand site of formula
   )
 
   temp$formula <- eval(get_form_exp)
@@ -22,7 +22,7 @@ get_design_matrix = function(formula, data, response = T){
   # Check if we have a fixed intercept
   is_fixed <- attr(temp$formula, "specials")$ddFixed
   if(length(is_fixed) > 0){
-    fixed_label <- attr(temp$formula, "term.labels")[is_fixed - response]
+    fixed_label <- dimnames(attr(temp$formula, "factors"))[[1]][is_fixed]
     is_fixed_intercept <- which(grepl("^ddFixed\\(\\ *1\\ *\\)$", fixed_label, perl = T))
 
     if(length(is_fixed_intercept) == 1){

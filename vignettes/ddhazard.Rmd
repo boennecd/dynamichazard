@@ -474,7 +474,7 @@ $0<\alpha \leq 1$ controls the spread of the sigma points. Notice that $\lambda 
 Lastly, $\beta$ is a correction term to match the fourth-order term in the Taylor series expansion of the covariance of the observational equation. [@julier04] show in the appendix that the optimal value with a Gaussian state equation is $\beta = 2$. Though, initial simulation showed that $\beta = 0$ yielded the best results and is therefore the default. It can be altered through the `beta` element of list passed to the argument `control` of `ddhazard`.
 
 ## Selecting starting values
-Experience with different data sets and the UKF shows that the method is sensitive to the starting values of $\mat{Q}$ and $\mat{Q}_0$ (where the latter may be fixed). The reason for divergence can be illustrated by the effect of $\mat{Q}_0$. We start the filter by setting $\emNotee{\mat{V}}{0}{0} = \mat{Q}_0$. Say that we set $\mat{Q}_0 = k \mat{I}_m$ and $\vec{a}_0 = \vec{0}$. Then the $i$'th column of the Cholesky decomposition $\emNotee{\mat{V}}{0}{0}$ is a vector with $\sqrt{k}$ in the $i$'th entry and zero in the rest of the entries. Suppose that we set $k$ large. Then the linear predictors computed with the $l < q +1$ sigma point is $\sqrt k x_{j1l}$ where $x_{j1l}$ is the $l$'th entry of individuals $j$'s co-variate vector at time $1$. This can be potentially quite large in absolute terms if $x_{kjt}$ is moderately different from zero. This seems to lead to divergence in some cases where all the predicted values becomes either zero or one with variance close to zero. The later is an issue as we divide by the weighted average of the variances in the correction step. 
+Experience with different data sets and the UKF shows that the method is sensitive to the starting values of $\mat{Q}$ and $\mat{Q}_0$ (where the latter may be fixed). The reason for divergence can be illustrated by the effect of $\mat{Q}_0$. We start the filter by setting $\emNotee{\mat{V}}{0}{0} = \mat{Q}_0$. Say that we set $\mat{Q}_0 = k \mat{I}_m$ and $\vec{a}_0 = \vec{0}$. Then the $i$'th column of the Cholesky decomposition $\emNotee{\mat{V}}{0}{0}$ is a vector with $\sqrt{k}$ in the $i$'th entry and zero in the rest of the entries. Suppose that we set $k$ large. Then the linear predictors computed with the $l < q +1$ sigma point is $\sqrt{q+\lambda}\sqrt k x_{j1l}$ where $x_{j1l}$ is the $l$'th entry of individuals $j$'s co-variate vector at time $1$. This can be potentially quite large in absolute terms if $x_{kjt}$ is moderately different from zero. This seems to lead to divergence in some cases where all the predicted values becomes either zero or one with variance close to zero. The later is an issue as we divide by the weighted average of the variances in the correction step. 
 
 $\mat{Q}$ has a similar effect although it is harder to illustrate with a small example as it occurs in an intermediate computations in the UKF. Based on experience, it seems that $\mat{Q}_0$ should be a diagonal matrix with *"somewhat"* large values and $\mat{Q}$ should be a diagonal matrix with small values. Though, what is *"somewhat"* large and what is small dependent on the data set.
 
@@ -484,7 +484,7 @@ This section will cover how fixed effects (non time-varying effects) are estimat
 ## Estimation in the E-step
 The fixed effect can be estimated in the E-step in a similar manner to [@harvey79]. The method in [@harvey79] is similar to Recursive Least Squares where some of the effects are time-varying. The elements with the fixed effects has a large value in the diagonal of $\mat{Q}_0$ (say $10^6$) and zero in the elements of the covariance matrix $\mat{Q}$. Thus, we end with Recursive Least Squares for the linear model if all effects are fixed
 
-In this package, we set the entries of $\mat{Q}_0$ and $\mat{Q}$ in the same manner. Nothing else is changed in the E-step. Further, we set the all rows and columns of the fixed effects in $\mat{Q}$ to zero after the update in the M-step
+In this package, we set the entries of $\mat{Q}_0$ and $\mat{Q}$ in the same way. Nothing else is changed in the E-step. Further, we set the all rows and columns of the fixed effects in $\mat{Q}$ to zero after the update in the M-step
 
 This seems to work with the EKF for a large range of diagonal elements (anything greater than $10^5$ in the diagonal of $\mat{Q}_0$ for the fixed effects). However, the choice of the diagonal entry in $\mat{Q}_0$ for fixed effects do have an impact with the UKF. "*Large*" but not too large values tends to work. Though, what is large depends data set and model. The default for the diagonal elements of $\mat{Q_0}$ for the fixed effects can be altered by setting the `Q_0_term_for_fixed_E_step` of the list passed to the `control` argument of `ddhazard`. Moreover, this method to estimate the fixed effect is used when you set the `fixed_terms_method = E_step` in the list passed to the `control` argument
 
@@ -515,7 +515,7 @@ $$\begin{aligned}
 
 where $f_{\vec{\alpha}_0,\dots,\vec{\alpha}_d}(\cdot;\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)})$ is the conditional density function of the latent variables $\vec{\alpha}_0,\dots,\vec{\alpha}_d$ given $\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)}$. The resulting expected likelihood can be summarized by the conditional means, $\emNote{\vec{a}}{0}{d}{k},\dots,\emNote{\vec{a}}{d}{d}{k}$, covariance matrices $\emNote{\mat{V}}{0}{d}{k},\dots,\emNote{\mat{V}}{d}{d}{k}$ and matrices $\mat{B}_1^{(k)},\dots,\mat{B}_d^{(k)}$ when we update $\mat{Q}^{(k)}$ and $\vec{a}_0^{(k)}$
 	
-Notice that the entries in $\vec{\alpha}_0$, $\mat{Q}$ and $\mat{Q}_0$ only appears in the first three lines of the log likelihood $\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}$. Hence, we only need these three set terms to update $\mat{Q}^{(k)}$ and $\vec{a}_0^{(k)}$. To stress this point, the conditional likelihood in the M-step is:
+Notice that the entries in $\vec{\alpha}_0$, $\mat{Q}$ and $\mat{Q}_0$ only appears in the first three lines of the log likelihood $\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}$. Hence, we only need these three sets of terms to update $\mat{Q}^{(k)}$ and $\vec{a}_0^{(k)}$. To stress this point, the conditional likelihood in the M-step is:
 $$\begin{aligned}
   \xyzp{\widetilde{E}_k}{\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}} = & 
     \widetilde{E}_k \left(- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^T \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \right.\\
@@ -566,7 +566,7 @@ To overcome the potential memory issue this can cause, this package use the same
 
 The M-step recursively updates the $\vec{\gamma}$ starting with the previous estimated value. The estimation stops when $\rVert\vec{\gamma}^{(k)} - \vec{\gamma}^{(k - 1)}\lVert / (\rVert\vec{\gamma}^{(k - 1)}\lVert + \delta) < \epsilon$ where superscripts denote the iteration number, $\epsilon$ is the tolerance and $\delta$ is a small number. $\epsilon$ can be changed by setting  `eps_fixed_params` element of the list passed to the `control` argument of `ddhazard`. 
 
-The estimation will stop if the criteria given by $\epsilon$ is not meet within a given number of iterations. The maximum number of iteration can be set by setting the `max_it_fixed_params` element of the `control` argument to `ddhazard`. The user is warned if the criteria is not meet within `max_it_fixed_params` iterations.
+The estimation will stop if the criteria given by $\epsilon$ is not meet within a given number of iterations. The maximum number of iterations can be set by setting the `max_it_fixed_params` element of the `control` argument to `ddhazard`. The user is warned if the criteria is not meet within `max_it_fixed_params` iterations.
 
 Surely, other methods to solve the QR problem or fit a generalized linear model could be used that does not require us to store the entire design matrix and are faster and/or more stable. An example could be the algorithm described in [@hammarling08]. The current method is used since it has shown to work well in the `bigglm` function and as we assume that few parameters will be fixed. Thus, the $O(\vert\vec{\gamma}\vert^2)$ cost of doing the M-step should not be an issue. Other options are for example stochastic gradient descent methods or methods from Online learning.
 
@@ -574,12 +574,12 @@ Surely, other methods to solve the QR problem or fit a generalized linear model 
 Another option is to use higher order expansions of $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\wtvec{\alpha}_t})}$, approximate $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\wtvec{\alpha}_t})}$ with an MC like method using the conditional means $\emNote{\wtvec{a}}{0}{d}{k},\dots,\emNote{\wtvec{a}}{d}{d}{k}$ and conditional covariance matrices $\emNote{\mat{V}}{0}{d}{k},\dots,\emNote{\mat{V}}{d}{d}{k}$, or any other method to approximate $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\wtvec{\alpha}_t})}$. At this point, the zero order Taylor expansion is the only implemented method to estimate $\vec{\gamma}$ in the M-step
 
 ## Which method to use
-Neither the method that use the Recursive Least Squares like method in the E-step, nor the zero order Taylor expansion in the M-step have performed uniformly better on the data sets seen so far. Hence, both are valid alternatives at this point
+Neither the method that use the Recursive Least Squares like method in the E-step, nor the zero order Taylor expansion in the M-step have performed consistently better on the data sets seen so far. Hence, both are valid alternatives at this point
 
 Fixed terms can be estimated by wrapping the co-variates in the formula of `ddhazard` in the `ddFixed` function. As an example, `ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), ...)` will fit a model where `x1` is time-varying and `x2` is not.
 
 # Logistic model
-The  logistic model uses the inverse logit function as the inverse link function $h$. That is $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The logistic model is fitted by setting `model = "logit"` in the call to `ddhazard`. The UKF and EKF are implemented as mentioned above without any complications. The following paragraphs will cover the loss of information due to binning which motivates the continuous time model. It is important to stress that the logistic model yields similar estimates compared to Generalized Additive model as shown in the vignette *Comparing methods for time-varying logistic models* and *Simulation study with logit model*. Consequently, it is a valid alternative
+The  logistic model uses the inverse logit function as the inverse link function $h$. That is $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The logistic model is fitted by setting `model = "logit"` in the call to `ddhazard`. The UKF and EKF are implemented as mentioned above without any complications. The following paragraphs will cover the loss of information due to binning which motivates the continuous time model. It is important to stress that the logistic model yields similar estimates as a to Generalized Additive model as shown in the vignette *Comparing methods for time-varying logistic models* and *Simulation study with logit model*. Consequently, it is a valid alternative
 
 ## Binning
 This section will illustrate how binning is performed for the logistic model and how this can lead to loss of information. It is elementary but included to stress this point and motivate the continuous time model. We will use `r tolower(captioner::captioner()("binning_fig", display = "cite"))` as the illustration. Each horizontal line represent an individual. A cross represents when the co-variate values change for the individual and a filled circle represents the death of an individual. Lines that ends with an open circle are right censored
@@ -699,7 +699,7 @@ which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x
  3. Using a right truncated time variable with a jump term
  4. Combining  method 1. and 2.
  
-The methods with the binary outcome and the right truncated time variable with a jump term seems to do best on simulated data
+The methods with the binary outcome and the right truncated time variable with a jump term seem to do best on simulated data
 
 ## Right truncated observations time
 We start by defining the truncated observation time $\Delta_{is}$:
@@ -753,7 +753,7 @@ You can estimate with the binary outcome method by setting the argument `model =
 ## Right truncated observations time with jump
 This section will cover the right truncated time with a jump term. The motivation is that the two previous methods are not flawless: the binary method has the drawback that we do not prevail the exact time of death and the right truncated time method cannot distinguish some deaths from censoring with a coarse time scale
 
-A way to deal with the latter is to add a jump term in case of censoring. Particulary we set:
+A way to deal with the latter is to add a jump term in case of censoring. Particulary, we set:
 $$\begin{aligned}
 \delta_{i,j} &= t_{i,j} - t_{i,j-1} \\
 %
@@ -855,6 +855,9 @@ We can replace the state equation with other models then a given order random wa
 $$\vec{\alpha}_t = \vec{\mu} + \mat{F} \vec{\alpha}_{t - 1} + \mat{R}\vec{\eta}_t$$
 
 where we require $\mat{F}$ is such that the process is stationary. $\mat{F}$ and $\vec{\mu}$ can be estimated in the M-step with closed form solutions when the noise is Gaussian. Another idea is to generalize to ARMA models. Further, we can change the distribution of $\vec{\eta}$ or change make a non-linear dependence between $\vec{\alpha}_t$ and $\vec{\alpha}_{t - 1}$
+
+## Other observational models
+The methods here could easily be generalized to other than binary outcome. For example we could use  competing risk models as in [@fahrmeir96] or counting models 
 
 ## Active learning
 The methods and models could be used for active learning setting as in [@lee10]. Though, this do require an update formula for data set to quickly update estimates once a new set of observations is observed. This update could easily be implemented if we do not update the estimates $\mat{Q}$ and $\vec{\alpha}_0$. 

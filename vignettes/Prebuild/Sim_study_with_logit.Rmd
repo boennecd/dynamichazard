@@ -191,7 +191,7 @@ library(survival); library(dynamichazard)
 # Set up function for static fit
 fit_funcs = list()
 fit_funcs$static <- function(s = sims$res)
-  static_glm(formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+  static_glm(formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
              data = s, max_T = T_max, by = 1, id = s$id) 
 
 fit <- fit_funcs$static()
@@ -213,7 +213,7 @@ library(survival); library(dynamichazard)
 fit_funcs$dd <- function(s = sims$res, LR = 1, NR_eps = NULL)
   tryCatch({
     ddhazard(
-      formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+      formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
       data = s, max_T = T_max, by = 1, id = s$id, 
       Q_0 = diag(10, n_beta + 1), Q = diag(.01, n_beta + 1),
       control = list(LR = LR, NR_eps = NR_eps, eps = 0.01))
@@ -241,7 +241,7 @@ Below, we define a function to fit a first order random walk model with the UKF 
 fit_funcs$dd_UKF <- function(s = sims$res, alpha = 1, beta = 0){
   tryCatch({
     ddhazard(
-      formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+      formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
       data = s, max_T = T_max, by = 1, id = s$id, 
       Q_0 = diag(1, n_beta + 1), Q = diag(.01, n_beta + 1),
       control = list(
@@ -263,7 +263,10 @@ matplot(fit$state_vecs, col = 1:(n_beta + 1), lty = 2,
 Below, we define a function to estimate a first order random walk model where only one parameter (`x2`) is time varying:
 ```{r}
 # Fitting with fixed effects
-fit_funcs$dd_fixed <- function(s = sims$res, LR = 1, NR_eps = NULL){
+fit_funcs$dd_fixed <- function(
+  s = sims$res, LR = 1, NR_eps = NULL,
+  fixed_terms_method = "M_step"){ # The method to use to estimate the fixed
+                                  # fixed effects
   tryCatch({
     ddhazard(
       formula = Surv(tstart, tstop, event) ~ 
@@ -272,7 +275,8 @@ fit_funcs$dd_fixed <- function(s = sims$res, LR = 1, NR_eps = NULL){
         ddFixed(x3) + ddFixed(x4) + ddFixed(x5),
       data = s, max_T = T_max, by = 1, id = s$id, 
       Q_0 = diag(1, 1), Q = diag(.01, 1),
-      control = list(LR = LR, NR_eps = NR_eps, eps = 0.1))
+      control = list(LR = LR, NR_eps = NR_eps, eps = 0.1,
+                     fixed_terms_method = fixed_terms_method))
   }, error = function(...) NA) # Return NA if fails
 }
 
@@ -291,7 +295,7 @@ Next, we define a function to fit the model with a second order random walk:
 fit_funcs$dd_2_order <- function(s = sims$res, LR = 1, NR_eps = NULL){
   tryCatch({
     ddhazard(
-      formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+      formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
       data = s, max_T = T_max, by = 1, id = s$id, 
       # Q_0 and Q needs more elements 
       Q_0 = diag(c(rep(1, n_beta + 1), rep(0.5, n_beta + 1))), 
@@ -317,8 +321,8 @@ library(mgcv)
 fit_funcs$gam <- function(s = sims$res){
   # get data frame for fitting
   dat_frame <- get_survival_case_weigths_and_data(
-    formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
-               data = s, max_T = T_max, by = 1, id = s$id, use_weights = F)
+    formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
+               data = s, max_T = T_max, by = 1, id = s$id, use_weights = F)$X
   # fit model
   bam(
     formula = Y ~ 
@@ -374,9 +378,9 @@ Having defined the splitting method, we turn to the prediction functions. The id
 brier_funcs <- list() 
 brier_funcs$general <- function(brier_func, fit, eval_data_frame){
   d_frame <- get_survival_case_weigths_and_data(
-    formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+    formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
     data = eval_data_frame, max_T = T_max, by = 1, id = eval_data_frame$id, 
-    use_weights = F)
+    use_weights = F)$X
   
   # Change start and stop times
   d_frame$tstart <- d_frame$t - 1
@@ -452,7 +456,7 @@ simulate_n_print_res <- function(
                  dimnames = list(
                    NULL,
                    c("static", "Extra correction", "Single correction",
-                     "2 order EKF", "Fixed effect", "UKF", "gam"),
+                     "2 order EKF", "Fixed E-step", "Fixed M-step", "UKF", "gam"),
                    c("Brier", "Median abs res", "sd res")))
     
     n_failures_and_surviers <- array(
@@ -502,7 +506,10 @@ simulate_n_print_res <- function(
       dd_2_order <- fit_funcs$dd_2_order(sim_split$fit_dat)
       
       # Fit fixed effect
-      dd_fixed <- fit_funcs$dd_fixed(sim_split$fit_dat)
+      dd_fixed_E_step <- fit_funcs$dd_fixed(sim_split$fit_dat, 
+                                            fixed_terms_method = "E_step")
+      dd_fixed_M_step <- fit_funcs$dd_fixed(sim_split$fit_dat,
+                                            fixed_terms_method = "M_step")
       
       # UKF fit 
       dd_UKF <- fit_funcs$dd_UKF(sim_split$fit_dat)
@@ -512,10 +519,11 @@ simulate_n_print_res <- function(
       
       # Evalute on test data
       models <- c(list(static_fit), dd_fits, 
-                  list(dd_2_order, dd_fixed, dd_UKF, gam_fit))
+                  list(dd_2_order, dd_fixed_E_step, dd_fixed_M_step, 
+                       dd_UKF, gam_fit))
       
       eval_funcs = c(brier_funcs$static,
-                     replicate(length(dd_fits) + 3, brier_funcs$dd),
+                     replicate(length(dd_fits) + 4, brier_funcs$dd),
                      brier_funcs$gam)
                      
       for(j in seq_along(models)){
@@ -866,7 +874,7 @@ run_time_func <- function(n, sim_args = default_args){
   time_EKF <- system.time(fit_EKF <- fit_funcs$dd(sims$res))
   time_UKF <- system.time(
     fit_UKF <- ddhazard(
-      formula = Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+      formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
       data = sims$res, max_T = T_max, by = 1, id = sims$res$id, 
       Q_0 = diag(.1, n_beta + 1), Q = diag(.1, n_beta + 1),
       control = list(
