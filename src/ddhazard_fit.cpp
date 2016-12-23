@@ -432,7 +432,7 @@ inline double trunc_time_var_fac(const double exp_eta, const double inv_exp_eta,
 inline double trunc_time_w_jump_score_fac(const double exp_eta, const double v,
                                                const double inv_exp_v, const double a,
                                                const double eps){
-  if(a * exp_eta >= 1e-5){
+  if(v >= 1e-4){
     return((exp_eta*(-1 + inv_exp_v) + a*pow(exp_eta,2)*inv_exp_v - pow(a*exp_eta,2) *exp_eta*inv_exp_v)/
            (1 - pow(inv_exp_v,2) + a*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)) +
              pow(exp_eta,2)*(eps + pow(a,2)*(3*inv_exp_v - pow(inv_exp_v,2)))));
@@ -442,16 +442,16 @@ inline double trunc_time_w_jump_score_fac(const double exp_eta, const double v,
   }
 }
 
-inline double trunc_time_w_jump_var_fac(const double exp_eta,
+inline double trunc_time_w_jump_var_fac(const double exp_eta, const double v,
                                              const double inv_exp_v, const double a,
                                              const double eps){
-  if(a * exp_eta >= 1e-4){
+  if(v >= 1e-4){
     return((1 - 2*inv_exp_v + pow(inv_exp_v,2) + (- 2*pow(a*exp_eta,3) + pow(a*exp_eta,4))*pow(inv_exp_v,2) +
            pow(a*exp_eta,2)*(2*inv_exp_v - pow(inv_exp_v,2)) + a*exp_eta*(-2*inv_exp_v + 2*pow(inv_exp_v,2)))/
              (1 - pow(inv_exp_v,2) + a*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)) +
                pow(exp_eta,2)*(eps + pow(a,2)*(3*inv_exp_v - pow(inv_exp_v,2)))));
   } else{
-    return((9*pow(a,4)*pow(exp_eta,2))/(4*eps));
+    return(9*(v/eps)*pow(v/exp_eta, 2) * (v/4));
   }
 }}
 
@@ -739,23 +739,10 @@ class EKF_helper{
       const double score_fac = exp_model_funcs::trunc_time_w_jump_score_fac(
         exp_eta, v, inv_exp_v, at_risk_length, dat.ridge_eps);
       const double var_fac = exp_model_funcs::trunc_time_w_jump_var_fac(
-        exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
+        exp_eta, v, inv_exp_v, at_risk_length, dat.ridge_eps);
 
-      if(abs(score_fac) > 1e1 || var_fac <= 0){
-        {
-          std::lock_guard<std::mutex> lk(dat.m_u);
-          Rcpp::Rcout << "exp_eta " << exp_eta
-                      << "\tscore_fac " << score_fac
-                      << "\tat_risk_length " << at_risk_length
-                      << "\tvar_fac " << var_fac << std::endl;
-        }
-      }
 
-      if(do_die){
-        u_ += x_ * (score_fac * (time_outcome - expect_time - at_risk_length));
-      } else {
-        u_ += x_ * (score_fac * (time_outcome - expect_time));
-      }
+      u_ += x_ * (score_fac * (time_outcome - expect_time - at_risk_length * do_die));
 
       U_ += x_ * (x_.t() * var_fac);
 
