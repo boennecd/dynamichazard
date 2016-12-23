@@ -35,6 +35,7 @@ predict.fahrmeier_94 = function(object, new_data,
 
   type = type[1]
   tmp = get_design_matrix(formula = object$formula, data = new_data, response = F)
+  object$formula <- tmp$formula
 
   if(type %in% c("term"))
     return(predict_terms(object, new_data, tmp$X, sds, tmp$fixed_terms))

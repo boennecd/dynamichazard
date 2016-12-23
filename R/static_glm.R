@@ -175,7 +175,6 @@ static_glm = function(formula, data, by, max_T, id, family = "logit", model = F,
   } else
     stop("family '", family, "' not implemented in static_glm")
 
-
   environment(formula) <- environment() # Needed in case we have a fixed intercept
   glm(formula = formula, data = data, family = family, model = model, weights = weights, ...)
 }

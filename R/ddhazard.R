@@ -412,7 +412,7 @@ ddhazard = function(formula, data,
 
   structure(c(
     res, list(
-    formula = X_Y$formula,
+    formula = formula,
     state_vecs = result$a_t_d_s,
     state_vars = result$V_t_d_s,
     lag_one_cov = result$lag_one_cov,
