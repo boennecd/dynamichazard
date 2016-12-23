@@ -102,7 +102,7 @@ The estimation function `ddhazard` is implemented such that:
 2) The dimension of the observation equation can vary through time
 3) It is fast due to the `C++` implementation which uses `Armadillo` library and use of multithreading through the standard library `thread`
 
-All are important in the analysis of firm failures. Firstly, you can easily have 40-50.000 firms at risk at each point in time. Thus, point 1) is key to be able to fit the models. Moreover, the number of firms at risk will vary as time proceeds. Some firms default, some are opened, some merge, some are acquired etc. This relates to point 2)
+All are important in the analysis of firm failures. Firstly, you can easily have 40-50.000 firms at risk at each point in time. Thus, point 1) is key to be able to fit the models. Moreover, the number of firms at risk will vary as time progress. Some firms default, some are opened, some merge, some are acquired etc. This relates to point 2)
 
 ## Guide to vignettes 
 The vignette here is the primary vignette where the models and estimation methods are explained. The package also contains two supplementary vignettes. *Simulation study with logit model* presents a simulation study where the methods in this package are compared to each other and to Generalized Additive models. *Comparing methods for time-varying logistic models* applies the methods to a real world data set. Both vignettes illustrate how to use the estimation function `ddhazard` and other functions in this package. They only use the logit model.
@@ -114,9 +114,7 @@ $$\begin{aligned}
  &\proppCond{Y_{it} = 1}{\vec{y}_{1},\dots,\vec{y}_{t-1}, \vec{\alpha}_t} = h(\vec{\alpha}_t^T \vec{x}_{it})
 \end{aligned}$$
 
-where $h$ is the inverse link function. For example, this could be the inverse logistic function such that $H(\eta) = \exp(\eta) / (1 + \exp(\eta))$.
-
-The `ddhazard` function estimates models in the state space form:
+where $h$ is the inverse link function. For example, this could be the inverse logistic function such that $H(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The `ddhazard` function estimates models in the state space form:
 $$\begin{array}{ll}
   \vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad & 
   \vec{\epsilon}_t \sim (\vec{0}, \varpCond{\vec{y}_t}{\vec{\alpha}_t})  \\
@@ -124,7 +122,7 @@ $$\begin{array}{ll}
   \vec{\eta}_t \sim N(\vec{0}, \psi_t \mat{Q}) \\
 \end{array} , \qquad t = 1,\dots, d$$
 
-$\vec{y}_t$ is the vector of the binary outcomes and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. It need not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding *state equation*. $\psi_t$ is the length of the bin interval number $t$. Thus, $\psi_i = \psi$ when we use equidistant bins which is the only option at this point. Further, we define the observational equations covariance matrix as $\mat{H}_t(\vec{\alpha}_t) = \varpCond{\vec{y}_t}{\vec{\alpha}_t}$
+$\vec{y}_t$ is the vector of the binary outcomes and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. It needs not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding *state equation*. $\psi_t$ is the length of the bin interval number $t$. Thus, $\psi_i = \psi$ when we use equidistant bins which is the only option at this point. Further, we define the observational equations covariance matrix as $\mat{H}_t(\vec{\alpha}_t) = \varpCond{\vec{y}_t}{\vec{\alpha}_t}$
 
 The mean $\vec{z}_t(\vec{\alpha}_t)$ and variance $\mat{H}(\vec{\alpha}_t)$ are state dependent with:
 $$\begin{aligned}
@@ -137,13 +135,13 @@ $$\begin{aligned}
   \end{matrix}\right.
 \end{aligned}$$
 
-The state equation is implemented with a 1. and 2. order random walk. For the first order random walk $\mat{F} = \mat{R} = \mat{I}_q$ where $q$ is the number of regression parameters and $\mat{I}_m$ is the identity matrix with dimension $q$. As for the second order random walk, we have:
+The state equation is implemented with a 1. and 2. order random walk. For the first order random walk $\mat{F} = \mat{R} = \mat{I}_q$ where $q$ is the number of regression parameters and $\mat{I}_q$ is the identity matrix with dimension $q$. As for the second order random walk, we have:
 $$\mat{F} = \begin{pmatrix} 
   2\mat{I}_q & - \mat{I}_q \\ \mat{0}_q & \mat{I}_q
 \end{pmatrix},  \qquad 
 \mat{R} = \begin{pmatrix} \mat{I}_q \\ \mat{0}_q \end{pmatrix}$$
 
-where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The vector in the state equation is ordered as $\widetilde{\vec{\alpha}}_t = (\vec{\alpha}_t^T, \vec{\alpha}_{t-1}^T)^T$ to match the definition of $\mat{F}$ and $\mat{R}$. The likelihood of the model where $\vec{\alpha}_t$ are observed can be written as follows by application of the markovian property of the model:
+where $\mat{0}_q$ is a $q\times q$ matrix with zeros in all entries. The vector in the state equation is ordered as $\widetilde{\vec{\alpha}}_t = (\vec{\alpha}_t^T, \vec{\alpha}_{t-1}^T)^T$ to match the definition of $\mat{F}$ and $\mat{R}$. The likelihood of the model where $\vec{\alpha}_t$ are observed can be written as follows by application of the markovian property of the model:
 $$\begin{split}
 	\proppCond{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}{\vec{y}_{t},\dots,\vec{y}_T} &\propto 
 		L\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} \\
@@ -199,7 +197,7 @@ stopifnot(any(simple_ex$event[simple_ex$id == 1] == 1) &&
 knitr::kable(head(simple_ex, 10), digits = 4)
 ```
 
-The column `id` shows which individual the row belongs to, `tstart` is point at which the row is valid from and `tstop` is when the row is valid to. `event` is one if the individual dies at `tstop` and `x1` and `x2` are two covariates. Thus, individual with id `1` dies at time `r simple_ex$tstop[1]` while id `2` survives all the period we observe. Next, we can fit a model as follows:
+The column `id` shows which individual the row belongs to, `tstart` is point at which the row is valid from and `tstop` is when the row is valid to. `event` is one if the individual dies at `tstop` and `x1` and `x2` are two covariates. Thus, individual with id `1` dies at time `r simple_ex$tstop[1]` while id `2` survives all the periods we observe. Next, we can fit a model as follows:
 
 ```{r}
 library(dynamichazard)
@@ -221,7 +219,7 @@ dd_fit_short_bins <- ddhazard(
 diag(dd_fit_short_bins$Q) 
 ```
 
-Above, we estimate the model with a binning length of `by = 1`. It is not important in this scope but the model is the logistic model we introduced later and we will return to the `ridge_eps` shortly. For now, let us see what happens if we increase the binning interval length by changing the `by` argument: 
+Above, we estimate the model with a binning length of `by = 1`. It is not important in this scope but the model is the logistic model which we introduced later and we will return to the `ridge_eps` shortly. For now, let us see what happens if we increase the binning interval length by changing the `by` argument: 
 
 ```{r}
 library(dynamichazard)
@@ -271,7 +269,7 @@ $$\emNote{\vec{a}}{i}{d}{k},  \quad
   
 where $d$ is the number of periods we observe. Superscripts $\cdot^{(k)}$ is used to distinguish between the estimates from each iteration of the EM-algorithm. Thus, $\emNote{\vec{a}}{i}{d}{k}$ is the smoothed state space vector for bin $i$ in iteration $k$ of the EM algorithm. 
 
-The required input to start the E-step is an initial mean vector $\widehat{\vec{a}}_0^{(k-1)}$ and co-variance matrices $\widehat{\mat{Q}}_0^{(k - 1)}$ and $\widehat{\mat{Q}}^{(k - 1)}$. Given these input, we compute the following estimates either by using the EKF or UKF:
+The required input to start the E-step is an initial mean vector $\widehat{\vec{a}}_0^{(k-1)}$ and co-variance matrix $\widehat{\mat{Q}}^{(k - 1)}$. Given these input, we compute the following estimates either by using the EKF or UKF:
 $$\emNotee{\vec{a}}{j}{j-1}, \quad 
   \emNotee{\vec{a}}{i}{i}, \quad 
   \emNotee{\mat{V}}{j}{j - 1}, \quad 
@@ -334,7 +332,7 @@ $$\begin{aligned}
 $R_t$ is the set of indices of individuals who are at risk in bin $t$. It is commonly referred to as the risk set. Thus, the dimension the observational equation can vary as individual dies or are right censored
 
 ## Divergence
-Initial testing shows that the EKF has issues with divergence for some data set. The cause of divergence seems to be overstepping in the correction step where we update $\emNotee{\vec{a}}{t}{t}$. In particular, the signs of the elements of $\emNotee{\vec{a}}{t}{t}$ tends to alter between $t-1, t, t+1$ etc. and the absolute values tends to increase in each iteration when the algorithm diverges.  The following section describes a solution to this issue
+Initial testing shows that the EKF has issues with divergence for some data set. The cause of divergence seems to be overstepping in the correction step where we update $\emNotee{\vec{a}}{t}{t}$. In particular, the signs of the elements of $\emNotee{\vec{a}}{t}{t}$ tends to alter between $t-1, t, t+1$ etc. and the absolute values tends to increase in each iteration when the algorithm diverges.  The following section describes solutions to this issue
 
 [@fahrmeir92] mentions that the correction step can be viewed as a single Fisher Scoring step. This motivates:
 
@@ -351,11 +349,11 @@ $$\begin{aligned}
   &\text{else set } \vec{a} = \emNotee{\vec{a}}{t}{t} \text{ and repeat} 
 \end{aligned}$$
 
-where $\delta$ is small like $10^{-9}$. Selecting $l < 1$ in case of divergence can resolve the issue. Thus, the following procedure is used if the algorithm fails with initial learning rate $l$: try a learning of $l\zeta$ in place of $l$  above for given $0<\zeta<1$. if that fails then try a rate of $l\zeta^2$. The process is stopped when we succeed to fit the model or we fail to estimate the model with a learning rate of $l\zeta^w$ for a given integer $w$. 
+where $\delta$ is small like $10^{-9}$. Selecting $l < 1$ in case of divergence can solve the issue. Thus, the following procedure is used if the algorithm fails with initial learning rate $l$: try a learning of $l\zeta$ in place of $l$  above for given $0<\zeta<1$. If that fails then try a rate of $l\zeta^2$. The process is stopped when we succeed to fit the model or we fail to estimate the model with a learning rate of $l\zeta^w$ for a given integer $w$. 
 
 While [@fahrmeir92] does not observe improvements with multiple repetitions, we find improvements in terms of out-of-sample prediction (for example by setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower) with a moderate or large amount of observations. See the vignette "Simulation study with logit model" for details
 
-The value of $l$ and $\epsilon_{\text{NR}}$ are set by respectively setting the elements `LR` and `NR_eps` of the list passed to `control` argument of `ddhazard`. By default, `LR = 1` and `NR_eps = NULL` which yields a learning rate of 1 and a single Fischer scoring step. These arguments can be altered by setting e.g. `control = list(LR = 0.75, NR_eps = 0.001)` for a learning rate of 0.75 and a threshold in the Fisher Scoring of $10^{-3}$
+The value of $l$ and $\epsilon_{\text{NR}}$ are set by respectively setting the elements `LR` and `NR_eps` of the list passed to the `control` argument of `ddhazard`. By default, `LR = 1` and `NR_eps = NULL` which yields a learning rate of 1 and a single Fischer scoring step. These arguments can be altered by setting e.g. `control = list(LR = 0.75, NR_eps = 0.001)` for a learning rate of 0.75 and a threshold in the Fisher Scoring of $10^{-3}$
 
 In addition, a minor term is added covariance matrix as in ridge linear regression. Thus, the score and information matrix are computed with:
 
@@ -444,7 +442,7 @@ $$\begin{aligned}
 \end{aligned}$$
 
 ## Re-writting
-The above formulation has the drawback that we have to invert $\ukfNotee{y}{y}{t}$ which is infeasible when the number observation is large (say greater than 1000). We can re-write the correction step above by using the Woodbury matrix identity to get algorithm $O(\vert R_t \vert)$ instead of $O(\vert R_t \vert^3)$ where $R_t$ is the indices at risk in the $i$'th interval. In other words, the new formulation is linear in time complexity with the dimension of the observational equation
+The above formulation has the drawback that we have to invert $\ukfNotee{y}{y}{t}$ which is infeasible when the number of observations is large (say greater than 1000). We can re-write the correction step above by using the Woodbury matrix identity to get algorithm $O(\vert R_t \vert)$ instead of $O(\vert R_t \vert^3)$ where $R_t$ is the indices at risk in the $i$'th interval. In other words, the new formulation is linear in time complexity with the dimension of the observational equation
 
 The correction step can be computed as:
 $$\begin{aligned}
@@ -468,7 +466,7 @@ The addition makes divergence less common and shrinks the coefficient estimates
 ## Selecting hyperparameters
 We still need to select the hyperparameters $\kappa$, $\alpha$ and $\beta$. We will cover these in the given order. $\kappa$ is usually set to $\kappa = 0$ or $\kappa = 3 - m$. [@julier97] state is that the latter is a "*useful heuristic*" when the state equation is Gaussian and $\alpha = 1$. 
 
-The default in this package is $\kappa = m/\alpha^2 - m$ and can be altered by setting the list element `kappa` in the list passed as the `control` argument to `ddhazard`. For example, `control = list(kappa = 1, ...)` yields $\kappa = 1$. The default makes $W_0^{(m)} = 0$ such that all weights are positive. This ensures that $\emNotee{\mat{V}}{t}{t-1}$ and $\ukfNotee{y}{y}{t}$ are positive semi-definite. This follows since both are sum of outer products with positive weights and as $\widehat{\mat{H}}$ is a diagonal matrix with positive entries. Notice though that this means that $\alpha$ only affect $W_0^{(c)} =  1 - \alpha^2 + \beta$ and $W_0^{(cc)} = 1 - \alpha$
+The default in this package is $\kappa = m/\alpha^2 - m$ and can be altered by setting the list element `kappa` in the list passed as the `control` argument to `ddhazard`. For example, `control = list(kappa = 1, ...)` yields $\kappa = 1$. The default makes $W_0^{(m)} = 0$ such that all weights are positive. This ensures that $\emNotee{\mat{V}}{t}{t-1}$ and $\ukfNotee{y}{y}{t}$ are positive semi-definite. This follows since both are sum of outer products with positive weights and as $\widehat{\mat{H}}$ is a diagonal matrix with positive entries. Notice though that this means that $\alpha$ only affects $W_0^{(c)} =  1 - \alpha^2 + \beta$ and $W_0^{(cc)} = 1 - \alpha$
 
 
 $0<\alpha \leq 1$ controls the spread of the sigma points. Notice that $\lambda + m \rightarrow 0^+$, $w_0^{(c)},w_0^{(m)}\rightarrow -\infty$ and $w_i^{(c)}, w_i^{(m)} \rightarrow \infty$ ($i > 0$) as $\alpha \rightarrow 0^+$. Thus, the lower the value of $\alpha$, the lower the spread but the higher the absolute weights. It is generally suggested to choose $\alpha$ small. See [@gustafsson12] and [@julier04]. However, initial simulation studies showed that $\alpha = 1$ yields the smallest mean square error of estimated coefficients. Thus, this is the default. The parameter can be altered through the `alpha` element of the list passed to the argument `control` of `ddhazard`.
@@ -515,9 +513,9 @@ $$\begin{aligned}
     d\vec{x}_0\cdots d\vec{x}_d
 \end{aligned}$$
 
-where $f_{\vec{\alpha}_0,\dots,\vec{\alpha}_d}(\cdot;\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)})$ is the conditional density function of the latent variables $\vec{\alpha}_0,\dots,\vec{\alpha}_d$ given $\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)}$. The resulting expected likelihood can be summarized by the conditional means, $\emNote{\vec{a}}{0}{d}{k},\dots,\emNote{\vec{a}}{d}{d}{k}$, covariance matrices $\emNote{\mat{V}}{0}{d}{k},\dots,\emNote{\mat{V}}{d}{d}{k}$ and matrices $\mat{B}_1^{(k)},\dots,\mat{B}_d^{(k)}$ when we update $\mat{Q}^{(k-1)}$ and $\vec{a}_0^{(k)}$
+where $f_{\vec{\alpha}_0,\dots,\vec{\alpha}_d}(\cdot;\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)})$ is the conditional density function of the latent variables $\vec{\alpha}_0,\dots,\vec{\alpha}_d$ given $\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)}$. The resulting expected likelihood can be summarized by the conditional means, $\emNote{\vec{a}}{0}{d}{k},\dots,\emNote{\vec{a}}{d}{d}{k}$, covariance matrices $\emNote{\mat{V}}{0}{d}{k},\dots,\emNote{\mat{V}}{d}{d}{k}$ and matrices $\mat{B}_1^{(k)},\dots,\mat{B}_d^{(k)}$ when we update $\mat{Q}^{(k)}$ and $\vec{a}_0^{(k)}$
 	
-Notice that the entries in $\vec{\alpha}_0$, $\mat{Q}$ and $\mat{Q}_0$ only appears in the first three lines of the log likelihood $\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}$. Hence, we only need these three set terms to update $\mat{Q}^{(k-1)}$ and $\vec{a}_0^{(k)}$. To stress this point, the conditional likelihood in the M-step is:
+Notice that the entries in $\vec{\alpha}_0$, $\mat{Q}$ and $\mat{Q}_0$ only appears in the first three lines of the log likelihood $\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}$. Hence, we only need these three set terms to update $\mat{Q}^{(k)}$ and $\vec{a}_0^{(k)}$. To stress this point, the conditional likelihood in the M-step is:
 $$\begin{aligned}
   \xyzp{\widetilde{E}_k}{\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}} = & 
     \widetilde{E}_k \left(- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^T \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \right.\\
@@ -562,11 +560,11 @@ $$\frac{\partial}{\partial\vec{\gamma}}\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \s
 when we use the zero order Taylor expansion for $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\wtvec{\alpha}_t})}$. This is a score equation for a generalized linear model if we use a distribution function from the exponential family. This method will be used to estimate the fixed effects when you set `fixed_terms_method = M_step` in the list passed to the `control` argument
 
 ### Implementation
-Point number 4 above implies that we can use a typical Newton Raphson algorithm to compute an updated estimate of $\vec{\gamma}$ when we are using a distribution from the exponential family. This can be solved by a QR decomposition as done in `glm`. However, point 3 implies that every observation will have a different offset in every bin the observation is in. Thus, we can end with a large design matrix
+Point number 4 above implies that we can use a typical Newton Raphson algorithm to update the estimate of $\vec{\gamma}$ when we are using a distribution from the exponential family. This can be solved by a QR decomposition as done in `glm`. However, point 3 implies that every observation will have a different offset in every bin the observation is in. Thus, we can end with a large design matrix
 
 To overcome the potential memory issue this can cause, this package use the same Fortran function that the `bigglm` function in the `biglm` package uses. The Fortran function recursively performs a QR update for each row in the design matrix. Hence, we do not need to store the entire design matrix at any given point. The Fortran code is described in [@miller1992] and written by Miller. It is an updated version of the algorithm described in [@gentleman1972] which has a time complexity of $O(\vert\vec{\gamma}\vert^2)$ for the QR-update of each row in the design matrix
 
-The M-step recursively updates the $\vec{\gamma}$ starting with the previous estimated value. The estimation stops when $\rVert\vec{\gamma}^{(k)} - \vec{\gamma}^{(k - 1)}\lVert / (\rVert\vec{\gamma}^{(k - 1)}\lVert + \delta) < \epsilon$ where superscript denotes the iteration number, $\epsilon$ is the tolerance and $\delta$ is a small number. $\epsilon$ can be changed by setting  `eps_fixed_params` element of the list passed to the `control` argument of `ddhazard`. 
+The M-step recursively updates the $\vec{\gamma}$ starting with the previous estimated value. The estimation stops when $\rVert\vec{\gamma}^{(k)} - \vec{\gamma}^{(k - 1)}\lVert / (\rVert\vec{\gamma}^{(k - 1)}\lVert + \delta) < \epsilon$ where superscripts denote the iteration number, $\epsilon$ is the tolerance and $\delta$ is a small number. $\epsilon$ can be changed by setting  `eps_fixed_params` element of the list passed to the `control` argument of `ddhazard`. 
 
 The estimation will stop if the criteria given by $\epsilon$ is not meet within a given number of iterations. The maximum number of iteration can be set by setting the `max_it_fixed_params` element of the `control` argument to `ddhazard`. The user is warned if the criteria is not meet within `max_it_fixed_params` iterations.
 

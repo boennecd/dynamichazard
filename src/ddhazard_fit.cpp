@@ -282,7 +282,9 @@ inline double expect_time(const double v, const double a,
 
 inline double expect_time_w_jump(const double exp_eta, const double inv_exp_eta,
                                  const double inv_exp_v, const double a){
-  return(-((-1 + exp(a*exp_eta))*(-1 + a*exp_eta)*inv_exp_eta*inv_exp_v));
+  return((a * exp_eta >= 1e-4) ?
+           (inv_exp_v - 1)*(-1 + a*exp_eta)*inv_exp_eta :
+           a - (3*pow(a,2)*exp_eta)/2);
 }
 
 inline double expect_chance_die(const double v, const double inv_exp_v){
@@ -316,7 +318,7 @@ inline double inv_var_chance_die(const double v, const double inv_exp_v){
 inline double EKF_fac_score_die(const double exp_eta, const double v,
                                 const double exp_v, const double a,
                                 const double eps){
-  if(exp_eta >= 1e-4){
+  if(a * exp_eta >= 1e-4){
     return(-(((-1 + exp_eta + exp_v*(-1 + a*(-2 + exp_eta))*exp_eta +
            pow(exp_v,2)*(1 + eps*pow(exp_eta,2)))*v)/
              (-1 + pow(exp_v,2)*(-1 + 2*eps*v - eps*pow(exp_eta,2)) -
@@ -336,7 +338,7 @@ inline double EKF_fac_score_die(const double exp_eta, const double v,
 inline double EKF_fac_score_time(const double exp_eta, const double v,
                                  const double exp_v, const double a,
                                  const double eps){
-  if(exp_eta >= 1e-3){
+  if(a * exp_eta >= 1e-3){
     return(-(((-1 + exp_v - v)*(1 - exp_eta + eps*exp_eta*pow(exp_v,2) + exp_v*(-1 + exp_eta + v)))/
            (1 - (2 + eps + pow(v,2) + eps*pow(exp_eta,2))*exp_v + eps*(1 + eps*pow(exp_eta,2))*pow(exp_v,3) +
              pow(exp_v,2)*(1 + eps*pow(exp_eta,2) - 2*eps*v))));
@@ -351,7 +353,7 @@ inline double EKF_fac_score_time(const double exp_eta, const double v,
 inline double EKF_fac_var(const double exp_eta, const double v,
                           const double exp_v, const double a,
                           const double eps){
-  if(exp_eta >= 1e-3){
+  if(a * exp_eta >= 1e-3){
     return((-1 + exp_v*(3 + pow(v,2) + eps*pow(exp_v,3) + exp_v*(-3 + eps + pow(v,2)*(-1 + eps) +
            pow(v,2)*eps*pow(exp_eta,2)+ 2*eps*v) + pow(exp_v,2)*(1 - 2*eps*(1 + v))))/
              (exp_v - (2 + eps + (pow(a,2) + eps)*pow(exp_eta,2))*pow(exp_v,2) + (1 + eps*exp_eta*(-2*a + exp_eta))*
@@ -374,7 +376,7 @@ inline double var_wait_time(const double v, const double a,  const double exp_et
 
 inline double var_wait_time_w_jump(const double exp_eta,
                                    const double inv_exp_v, const double a){
-  return((exp_eta >= 1e-5) ?
+  return((a * exp_eta >= 1e-4) ?
            (1 - pow(inv_exp_v,2) + pow(a*exp_eta,2)*(3*inv_exp_v - pow(inv_exp_v,2)) +
               a*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)))/ pow(exp_eta,2) :
            exp_eta*((7*pow(a,3))/3 + exp_eta*((-19*pow(a,4))/6 + exp_eta*(
@@ -398,53 +400,52 @@ inline double covar(const double v,
   -v * v * (1/2 - v * (2/3 - v * (11/24 - v * (13/60 - 19 * v / 240)))) / exp_eta);
 }
 
-inline double binary_only_score_fac(const double v, const double  inv_exp_v, double eps){
+inline double binary_score_fac(const double v, const double  inv_exp_v, double eps){
   return((inv_exp_v*v)/(eps + (1 - inv_exp_v)*inv_exp_v));
 }
 
-inline double binary_only_var_fac(const double v, const double  inv_exp_v, double eps){
+inline double binary_var_fac(const double v, const double  inv_exp_v, double eps){
   return(pow(inv_exp_v*v, 2)/(eps + (1 - inv_exp_v)*inv_exp_v));
 }
 
 
-inline double trunc_time_only_score_fac(const double exp_eta, const double inv_exp_eta,
+inline double trunc_time_score_fac(const double exp_eta, const double inv_exp_eta,
                                         const double inv_exp_v, const double a,
                                         const double eps){
 
-  return((exp_eta >= 1e-4) ?
+  return((a * exp_eta >= 1e-4) ?
            (-1 + inv_exp_v + a*exp_eta*inv_exp_v)/(eps*exp_eta + inv_exp_eta - 2*a*inv_exp_v -
                                                     inv_exp_eta*pow(inv_exp_v,2)) :
            ((exp_eta / eps) *(-3*pow(a,2)*eps + (pow(a,5) + 2*pow(a,3)*eps)*exp_eta))/(6*eps));
 }
 
-inline double trunc_time_only_var_fac(const double exp_eta, const double inv_exp_eta,
+inline double trunc_time_var_fac(const double exp_eta, const double inv_exp_eta,
                                       const double inv_exp_v, const double a,
                                       const double eps){
-  return((exp_eta >= 1e-4) ?
+  return((a * exp_eta >= 1e-4) ?
            (1 - 2*inv_exp_v - 2*a*exp_eta*inv_exp_v + pow(inv_exp_v,2) + 2*a*exp_eta*pow(inv_exp_v,2) +
               pow(a*exp_eta*inv_exp_v, 2))/
                 (1 + eps*pow(exp_eta,2) - 2*a*exp_eta*inv_exp_v - pow(inv_exp_v,2)) :
            (pow(exp_eta/eps,2)*(3*pow(a,4)*eps + (-pow(a,7) - 4*pow(a,5)*eps)*exp_eta))/12);
 }
 
-inline double trunc_time_w_jump_only_score_fac(const double exp_eta,
+inline double trunc_time_w_jump_score_fac(const double exp_eta, const double v,
                                                const double inv_exp_v, const double a,
                                                const double eps){
-  if(exp_eta >= 1e-5){
+  if(a * exp_eta >= 1e-5){
     return((exp_eta*(-1 + inv_exp_v) + a*pow(exp_eta,2)*inv_exp_v - pow(a*exp_eta,2) *exp_eta*inv_exp_v)/
            (1 - pow(inv_exp_v,2) + a*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)) +
              pow(exp_eta,2)*(eps + pow(a,2)*(3*inv_exp_v - pow(inv_exp_v,2)))));
   } else{
-    return(((exp_eta/eps)*(-108*pow(a*eps,2) + exp_eta*(252*pow(a,5)*eps + 96*a*pow(a*eps,2) +
-           (-588*pow(a,8) - 566*pow(a,6)*eps - 45*pow(a,4)*pow(eps,2))*exp_eta)))/
-             (72*pow(eps,2)));
+    return((pow(v,2)*(-18*pow(a,2) - 9*eps + (7*pow(a,2) + 8*eps)*v))/(24*pow(a,4)*exp_eta + 24*pow(a,2)*eps*exp_eta +
+           6*pow(eps,2)*exp_eta));
   }
 }
 
-inline double trunc_time_w_jump_only_var_fac(const double exp_eta,
+inline double trunc_time_w_jump_var_fac(const double exp_eta,
                                              const double inv_exp_v, const double a,
                                              const double eps){
-  if(exp_eta >= 1e-5){
+  if(a * exp_eta >= 1e-4){
     return((1 - 2*inv_exp_v + pow(inv_exp_v,2) + (- 2*pow(a*exp_eta,3) + pow(a*exp_eta,4))*pow(inv_exp_v,2) +
            pow(a*exp_eta,2)*(2*inv_exp_v - pow(inv_exp_v,2)) + a*exp_eta*(-2*inv_exp_v + 2*pow(inv_exp_v,2)))/
              (1 - pow(inv_exp_v,2) + a*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)) +
@@ -638,8 +639,8 @@ class EKF_helper{
 
       const double expect_chance_die = exp_model_funcs::expect_chance_die(v, inv_exp_v);
 
-      const double score_fac = exp_model_funcs::binary_only_score_fac(v, inv_exp_v, dat.ridge_eps);
-      const double var_fac = exp_model_funcs::binary_only_var_fac(v, inv_exp_v, dat.ridge_eps);
+      const double score_fac = exp_model_funcs::binary_score_fac(v, inv_exp_v, dat.ridge_eps);
+      const double var_fac = exp_model_funcs::binary_var_fac(v, inv_exp_v, dat.ridge_eps);
 
       u_ += x_ * (score_fac * (do_die - expect_chance_die));
 
@@ -685,9 +686,9 @@ class EKF_helper{
 
       const double expect_time = exp_model_funcs::expect_time(v, at_risk_length, inv_exp_v, exp_eta);
 
-      const double score_fac = exp_model_funcs::trunc_time_only_score_fac(
+      const double score_fac = exp_model_funcs::trunc_time_score_fac(
         exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
-      const double var_fac = exp_model_funcs::trunc_time_only_var_fac(
+      const double var_fac = exp_model_funcs::trunc_time_var_fac(
         exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
 
 
@@ -731,17 +732,27 @@ class EKF_helper{
       const double inv_exp_eta = pow(exp_eta, -1);
       const double v = at_risk_length * exp_eta;
       const double exp_v = exp(v);
-      const double inv_exp_v = pow(exp_v, -1.0);
+      const double inv_exp_v = pow(exp_v, -1);
 
       const double expect_time = exp_model_funcs::expect_time_w_jump(exp_eta, inv_exp_eta, inv_exp_v, at_risk_length);
 
-      const double score_fac = exp_model_funcs::trunc_time_w_jump_only_score_fac(
-        exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
-      const double var_fac = exp_model_funcs::trunc_time_w_jump_only_var_fac(
+      const double score_fac = exp_model_funcs::trunc_time_w_jump_score_fac(
+        exp_eta, v, inv_exp_v, at_risk_length, dat.ridge_eps);
+      const double var_fac = exp_model_funcs::trunc_time_w_jump_var_fac(
         exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
 
+      if(abs(score_fac) > 1e1 || var_fac <= 0){
+        {
+          std::lock_guard<std::mutex> lk(dat.m_u);
+          Rcpp::Rcout << "exp_eta " << exp_eta
+                      << "\tscore_fac " << score_fac
+                      << "\tat_risk_length " << at_risk_length
+                      << "\tvar_fac " << var_fac << std::endl;
+        }
+      }
+
       if(do_die){
-        u_ += x_ * (score_fac * (time_outcome - at_risk_length - expect_time));
+        u_ += x_ * (score_fac * (time_outcome - expect_time - at_risk_length));
       } else {
         u_ += x_ * (score_fac * (time_outcome - expect_time));
       }
@@ -895,7 +906,7 @@ public:
             std::to_string(t) + ". Try decreasing the learning rate");
 
         } else if(p_dat.U.has_inf() || p_dat.U.has_nan()){
-          Rcpp::stop("ddhazard_fit_cpp estimation error: Score vector in correction step had inf or nan elements in bin " +
+          Rcpp::stop("ddhazard_fit_cpp estimation error: information matrix in correction step had inf or nan elements in bin " +
             std::to_string(t) + ". Try decreasing the learning rate");
 
         }
@@ -1555,11 +1566,11 @@ class UKF_solver_New_exp_trunc_time_w_jump : public UKF_solver_New{
     for(arma::uword i = 0; i < n_risk; ++i, ++it){
       time_outcome(i) = std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
       at_risk_length(i) = do_die(i) ?
-      bin_tstop - std::max(p_dat.tstart(*it), bin_tstart) : time_outcome(i);
+        bin_tstop - std::max(p_dat.tstart(*it), bin_tstart) : time_outcome(i);
 
       if(do_die(i)){
         // we deduct the at risk lenght if the indvidual dies
-        time_outcome(i) = time_outcome(i) - at_risk_length(i);
+        time_outcome(i) -= at_risk_length(i);
       }
     }
 
@@ -1575,7 +1586,7 @@ class UKF_solver_New_exp_trunc_time_w_jump : public UKF_solver_New{
         const double inv_exp_eta = pow(exp_eta, -1);
         const double v = at_risk_length(j) * exp_eta;
 
-        const double inv_exp_v = exp(-1 * v);
+        const double inv_exp_v = exp(- v);
 
         O(j, i) = exp_model_funcs::expect_time_w_jump(exp_eta, inv_exp_eta, inv_exp_v, at_risk_length(j));
         vars(j) += w_c * exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, at_risk_length(j));
