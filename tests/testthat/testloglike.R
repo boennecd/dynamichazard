@@ -189,7 +189,8 @@ test_that("logLik for simulated data versus old results", {
     survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     sims$res,
     by = 1,
-    control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F),
+    control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F,
+                   ridge_eps = 5e-4),
     a_0 = rep(0, 6), Q_0 = diag(10, 6),
     max_T = 10,
     id = sims$res$id, order = 1,
@@ -200,7 +201,7 @@ test_that("logLik for simulated data versus old results", {
 
   # print(log_like, digits = 16)
 
-  old <- structure(-1562.629465515226,
+  old <- structure(-1604.191601330797,
                    class = "logLik",
                    df = 6 + 6 * (1 + 6) / 2)
   expect_equal(log_like, old, tolerance = 1e-3)
