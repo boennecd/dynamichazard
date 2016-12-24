@@ -198,7 +198,7 @@ ui <- fluidPage(
        column(
          6,
          h3("Intro"),
-         div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(2)),
+         div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
          div(textOutput("rug_explanation"), style = get_em(4)),
          div("See the ddhazard vignette for further details", style = get_em(1))
        ),
@@ -457,7 +457,7 @@ server <- function(input, output) {
     result <- fit_input()
 
     out <- paste0("Model is estimated with order ", result$order, " and with the ", result$method, " in the E-step.",
-                  " ", result$n_iter, " iteration was used in the EM algorithm.")
+                  " ", result$n_iter, " iterations was used in the EM algorithm.")
 
     if(result$method == "EKF"){
       out <- paste0(out, ifelse(is.null(result$control$NR_eps), " No extra", " Extra"),

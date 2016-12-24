@@ -12,17 +12,17 @@ I used the build with codename trusty for the GCC 4.8.4. It is needed for the c+
 There were no errors and only one warning which is on travis-ci. 
 
 There are two notes travis-ci:
-checking installed package size ... NOTE
+* checking installed package size ... NOTE
   installed size is 11.4Mb
   sub-directories of 1Mb or more:
     doc    1.0Mb
     libs   8.3Mb
     R      2.0Mb
-checking DESCRIPTION meta-information ... NOTE
+* checking DESCRIPTION meta-information ... NOTE
 Malformed Description field: should contain one or more complete sentences.
 
 The warning on travis-ci is:
-checking sizes of PDF files under ‘inst/doc’ ... WARNING
+* checking sizes of PDF files under ‘inst/doc’ ... WARNING
   ‘gs+qpdf’ made some significant size reductions:
      compacted ‘ddhazard.pdf’ from 509Kb to 207Kb
 
