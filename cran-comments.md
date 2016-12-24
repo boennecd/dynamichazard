@@ -28,11 +28,11 @@ checking sizes of PDF files under ‘inst/doc’ ... WARNING
 
 The notes from win-builder.r-project.org on the devel image are:
 * checking installed package size ... NOTE
-  installed size is  5.8Mb
+  installed size is  5.9Mb
   sub-directories of 1Mb or more:
     R      2.0Mb
     doc    1.0Mb
-    libs   2.7Mb
+    libs   2.8Mb
 * checking DESCRIPTION meta-information ... NOTE
 Malformed Description field: should contain one or more complete sentences.
 
