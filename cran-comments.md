@@ -9,7 +9,7 @@
 I used the build with codename trusty for the GCC 4.8.4. It is needed for the c++11 syntax I use
 
 ## R CMD check results
-There were no ERRORs or and only one warning which is on travis-ci. 
+There were no errors and only one warning which is on travis-ci. 
 
 There are two notes travis-ci:
 checking installed package size ... NOTE
