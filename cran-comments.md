@@ -49,3 +49,10 @@ Malformed Description field: should contain one or more complete sentences.
 I am not sure how to deal with pdf size warning on travis-ci. Would you recommend that a pre-build the vignette and add the pdfs? 
 
 Further, I cannot get rid of the note in regard to the description
+
+## Resubmission
+This is a resubmission. In this version I have:
+
+* Updated the Description such that I got rid of the previous note. Further, I have cited the papers that the package is based on
+
+* Got rid of the compiler warnings. Though, I could not get my compiler on Windows or Travis-ci to yield the warnings. What flags do you use to build with? I figure you should not get the warnings now as I have removed the tab characathers and added END DO statements

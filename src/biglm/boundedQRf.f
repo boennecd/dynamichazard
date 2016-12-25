@@ -104,7 +104,8 @@ C     Set TOL(I) = sum of absolute values in column I of RBAR after
 C     scaling each element by the square root of its row multiplier.
 C
       DO 10 ROW = 1, NP
-   10 WORK(ROW) = SQRT(D(ROW))
+      WORK(ROW) = SQRT(D(ROW))
+  10  END DO
       DO 30 COL = 1, NP
       POS = COL - 1
       IF (COL .LE. NP) THEN
@@ -150,7 +151,8 @@ C
       IF (IER .NE. 0) RETURN
 C
       DO 10 COL = 1, NP
-   10 WORK(COL) = SQRT(D(COL))
+      WORK(COL) = SQRT(D(COL))
+   10 END DO
 C
       DO 40 COL = 1, NP
 C
