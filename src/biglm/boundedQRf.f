@@ -53,10 +53,10 @@ C
       D(I) = DPI
       IF (I .EQ. NP) GO TO 20
       DO 10 K = I+1, NP
-	XK = XROW(K)
-	XROW(K) = XK - XI * RBAR(NEXTR)
-	RBAR(NEXTR) = CBAR * RBAR(NEXTR) + SBAR * XK
-	NEXTR = NEXTR + 1
+      XK = XROW(K)
+      XROW(K) = XK - XI * RBAR(NEXTR)
+      RBAR(NEXTR) = CBAR * RBAR(NEXTR) + SBAR * XK
+      NEXTR = NEXTR + 1
    10   CONTINUE
    20   XK = Y
        Y = XK - XI * THETAB(I)
@@ -174,19 +174,19 @@ C
       LINDEP(COL) = .TRUE.
       IER = IER - 1
       IF (COL .LT. NP) THEN
-	NC2 = NP - COL
-	POS2 = POS + NP - COL + 1
+      NC2 = NP - COL
+      POS2 = POS + NP - COL + 1
         IF (NC2 .GT. 1) THEN
-	 CALL INCLUD(NC2, NC2*(NC2-1)/2, D(COL), RBAR(POS+1),
+       CALL INCLUD(NC2, NC2*(NC2-1)/2, D(COL), RBAR(POS+1),
      +            THETAB(COL), D(COL+1), RBAR(POS2), THETAB(COL+1),
      +            SSERR, IER)
         ELSE
-   	 CALL INCLUD(1, 0, D(COL), RBAR(POS+1),
+          CALL INCLUD(1, 0, D(COL), RBAR(POS+1),
      +            THETAB(COL), D(COL+1), RBAR(1), THETAB(COL+1),
      +            SSERR, IER)
         END IF
       ELSE
-	SSERR = SSERR + D(COL) * THETAB(COL)**2
+      SSERR = SSERR + D(COL) * THETAB(COL)**2
       END IF
       D(COL) = ZERO
       WORK(COL) = ZERO
