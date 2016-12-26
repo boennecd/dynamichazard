@@ -53,6 +53,6 @@ Further, I cannot get rid of the note in regard to the description
 ## Resubmission
 This is a resubmission. In this version I have:
 
-* Updated the Description such that I got rid of the previous note. Further, I have cited the papers that the package is based on
+* Updated the Description such that I got rid of the previous note. Further, I have cited the papers that the package is based on. I added period at the end and corrected typos. Though, the description reads 'coxph()' where it read 'coxph' before. It refers to the survival package function. Is this the right way to do it?   
 
 * Got rid of the compiler warnings. Though, I could not get my compiler on Windows or Travis-ci to yield the warnings. What flags do you use to build with? I figure you should not get the warnings now as I have removed the tab characathers and added END DO statements

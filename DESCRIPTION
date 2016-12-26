@@ -5,11 +5,11 @@ Version: 0.1.0
 Author: Benjamin Christoffersen
 Maintainer: Benjamin Christoffersen <boennecd@gmail.com>
 Description: Contains functions that lets you fit dynamic hazard models with binary 
-  outcomes using state space models. The methods are orginally described in  
+  outcomes using state space models. The methods are originally described in  
   Fahrmeir (1992) <http://bit.ly/2hE6Vwq> and Fahrmeir (1994) 
-  <http://bit.ly/2i54DHO>. The functions also provides extension hereof where the 
+  <http://bit.ly/2i54DHO>. The functions also provide an extension hereof where the 
   Extended Kalman filter is replaced by an Unscented Kalman filter. Models are 
-  fitted with the regular coxph like formula
+  fitted with the regular coxph() like formula.
 License: GPL-2
 LazyData: TRUE
 Imports: Rcpp (>= 0.12.6), survival, stats, graphics, utils, parallel, stringr
