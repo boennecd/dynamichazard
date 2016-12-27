@@ -6,6 +6,38 @@
 
 using namespace Rcpp;
 
+// IWLS_logit
+arma::vec IWLS_logit(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
+RcppExport SEXP dynamichazard_IWLS_logit(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type offsets(offsetsSEXP);
+    Rcpp::traits::input_parameter< const arma::uword >::type it_max(it_maxSEXP);
+    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(IWLS_logit(X, y, beta, offsets, it_max, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
+// IWLS_poisson
+arma::vec IWLS_poisson(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
+RcppExport SEXP dynamichazard_IWLS_poisson(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type offsets(offsetsSEXP);
+    Rcpp::traits::input_parameter< const arma::uword >::type it_max(it_maxSEXP);
+    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(IWLS_poisson(X, y, beta, offsets, it_max, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
 // bigglm_updateQR_rcpp
 void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, arma::vec& y);
 RcppExport SEXP dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP ySEXP) {
@@ -39,38 +71,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool& >::type checked(checkedSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type tol(tolSEXP);
     rcpp_result_gen = Rcpp::wrap(bigglm_regcf_rcpp(D, rbar, thetab, ss, checked, tol));
-    return rcpp_result_gen;
-END_RCPP
-}
-// IWLS_logit
-arma::vec IWLS_logit(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
-RcppExport SEXP dynamichazard_IWLS_logit(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type offsets(offsetsSEXP);
-    Rcpp::traits::input_parameter< const arma::uword >::type it_max(it_maxSEXP);
-    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
-    rcpp_result_gen = Rcpp::wrap(IWLS_logit(X, y, beta, offsets, it_max, eps));
-    return rcpp_result_gen;
-END_RCPP
-}
-// IWLS_poisson
-arma::vec IWLS_poisson(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
-RcppExport SEXP dynamichazard_IWLS_poisson(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type offsets(offsetsSEXP);
-    Rcpp::traits::input_parameter< const arma::uword >::type it_max(it_maxSEXP);
-    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
-    rcpp_result_gen = Rcpp::wrap(IWLS_poisson(X, y, beta, offsets, it_max, eps));
     return rcpp_result_gen;
 END_RCPP
 }
