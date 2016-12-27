@@ -11,6 +11,7 @@ profile\.R$
 benchmarking\.R$
 Rplots\.pdf$
 dynamichazard\.dll$
+useful_scripts$
 testfuture\.R$
 ^\.travis\.yml$
 pbc_data\.Rmd$
