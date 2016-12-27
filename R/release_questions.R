@@ -5,6 +5,7 @@ release_questions <- function() {
     "Have you searched the project through for 'TODO'?",
     "Have you updated cran-comments.md?",
     "Have you run devtools::spell_check()?",
-    "Have you checked reverse dependencies?"
+    "Have you checked reverse dependencies?",
+    "Did you set args = c('--compact-vignettes=gs+qpdf')"
   )
 }
