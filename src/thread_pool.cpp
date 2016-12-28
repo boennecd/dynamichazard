@@ -24,9 +24,6 @@
  DEALINGS IN THE SOFTWARE.
  */
 
-// Code from:
-// Williams, Anthony. C++ concurrency in action. London, 2012
-
 #include "thread_pool.h"
 
 // Just before listing 8.4
