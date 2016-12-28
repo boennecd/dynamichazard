@@ -58,3 +58,9 @@ This is a resubmission. In this version I have:
 * Got rid of the compiler warnings. Though, I could not get my compiler on Windows or Travis-ci to yield the warnings. What flags do you use to build with? I figure you should not get the warnings now as I have removed the tab characathers and added END DO statements
 
 * Build package on my site with --compact-vignettes=gs+qpdf
+
+* Sorry for the issues with the authors pointed out by Dr. Uwe Ligges. I am not sure how to cite the source code I am using by other authors. The code from other authors are: 
+  The code in src/biglm/boundedQRf.f. It was included as in the biglm package. That is, no citation in of it in the DESCRIPTION file. Is it correct that I have added Allan Miller (the author of the Fortran code) with role = c("ctb")?
+  The code in src/thread_pool.cpp is a modified version of the code from the book "Williams, Anthony. C++ concurrency in action. London, 2012." The code is available from: https://manning-content.s3.amazonaws.com/download/0/78f6c43-a41b-4eb0-82f2-44c24eba51ad/CCiA_SourceCode.zip. It requires no login and I have not found any part of the book where Williams states if/how one can use the code. The code is slightly modified. I have copied the License_1_0.txt from the .zip file and included it in top of the code. Is it correct to add Anthony Williams with role = c("ctb")? Further, I have added a "Boost developers" with role = c("ctb", "cph") 
+  src/stats/lm.c and src/stats/statsR.h is from the source code of R. The code is from R-3.3.2/src/library/stats/src/lm.c and R-3.3.2/src/library/stats/src/statsR.h. I have added person("R-core", email = "R-core@R-project.org", role = c("ctb", "cph"))
+  I am sorry for the inconvenience and wasting your time
