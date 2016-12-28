@@ -48,14 +48,14 @@ Malformed Description field: should contain one or more complete sentences.
 
 I am not sure how to deal with pdf size warning on travis-ci. Would you recommend that a pre-build the vignette and add the pdfs? 
 
-Further, I cannot get rid of the note in regard to the description
+Further, I cannot get rid of the note regarding the description
 
 ## Resubmission
-This is a resubmission. In this version I have:
+This is a resubmission. In this version, I have:
 
 * Updated the Description such that I got rid of the previous note. Further, I have cited the papers that the package is based on. I added period at the end and corrected typos. Though, the description reads 'coxph()' where it read 'coxph' before. It refers to the survival package function. Is this the right way to do it?   
 
-* Got rid of the compiler warnings. Though, I could not get my compiler on Windows or Travis-ci to yield the warnings. What flags do you use to build with? I figure you should not get the warnings now as I have removed the tab characathers and added END DO statements
+* Got rid of the compiler warnings that professor Hornik mentioned. Though, I could not get my compiler on Windows or Travis-ci to yield the warnings. What flags do you use to build with? I figure you should not get the warnings now as I have removed the tab characters and added END DO statements
 
 * Build package on my site with --compact-vignettes=gs+qpdf
 
@@ -64,3 +64,5 @@ This is a resubmission. In this version I have:
   The code in src/thread_pool.cpp is a modified version of the code from the book "Williams, Anthony. C++ concurrency in action. London, 2012." The code is available from: https://manning-content.s3.amazonaws.com/download/0/78f6c43-a41b-4eb0-82f2-44c24eba51ad/CCiA_SourceCode.zip. It requires no login and I have not found any part of the book where Williams states if/how one can use the code. The code is slightly modified. I have copied the License_1_0.txt from the .zip file and included it in top of the code. Is it correct to add Anthony Williams with role = c("ctb")? Further, I have added a "Boost developers" with role = c("ctb", "cph") 
   src/stats/lm.c and src/stats/statsR.h is from the source code of R. The code is from R-3.3.2/src/library/stats/src/lm.c and R-3.3.2/src/library/stats/src/statsR.h. I have added person("R-core", email = "R-core@R-project.org", role = c("ctb", "cph"))
   I am sorry for the inconvenience and wasting your time
+  
+* Added DOI in the description
