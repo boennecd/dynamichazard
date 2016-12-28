@@ -15,8 +15,8 @@ Authors@R: c(person("Benjamin", "Christoffersen",
                     role = c("ctb", "cph")))
 Description: Contains functions that lets you fit dynamic hazard models with binary 
   outcomes using state space models. The methods are originally described in  
-  Fahrmeir (1992) <http://bit.ly/2hE6Vwq> and Fahrmeir (1994) 
-  <http://bit.ly/2i54DHO>. The functions also provide an extension hereof where the 
+  Fahrmeir (1992) <doi:10.1080/01621459.1992.10475232> and Fahrmeir (1994) 
+  <doi:10.1093/biomet/81.2.317>. The functions also provide an extension hereof where the 
   Extended Kalman filter is replaced by an Unscented Kalman filter. Models are 
   fitted with the regular coxph() like formula.
 License: GPL-2
@@ -29,3 +29,5 @@ VignetteBuilder: knitr
 BugReports: https://github.com/boennecd/dynamichazard/issues
 SystemRequirements: C++11
 URL: https://github.com/boennecd/dynamichazard
+Encoding: UTF-8
+NeedsCompilation: yes
