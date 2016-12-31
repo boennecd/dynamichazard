@@ -80,5 +80,5 @@ bool work_stealing_queue::try_steal(data_type& res)
 }
 
 // Listing 9.8
-thread_local work_stealing_queue* local_work_queue;
-thread_local unsigned my_index;
+__thread  work_stealing_queue* local_work_queue;
+__thread  unsigned my_index;
