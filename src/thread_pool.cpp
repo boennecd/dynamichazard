@@ -78,7 +78,3 @@ bool work_stealing_queue::try_steal(data_type& res)
   the_queue.pop_back();
   return true;
 }
-
-// Listing 9.8
-__thread  work_stealing_queue* local_work_queue;
-__thread  unsigned my_index;

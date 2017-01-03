@@ -185,8 +185,8 @@ public:
 };
 
 // Listing 9.8:
-extern __thread work_stealing_queue* local_work_queue;
-extern __thread unsigned my_index;
+static __thread work_stealing_queue* local_work_queue;
+static __thread unsigned my_index;
 class thread_pool
 {
   typedef function_wrapper task_type;
