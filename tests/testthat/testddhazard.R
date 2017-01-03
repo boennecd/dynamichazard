@@ -1,6 +1,9 @@
 if(interactive()){
   library(survival); library(dynamichazard); library(testthat)
-  source("./R/test_utils.R")
+
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
 }
 
 # Had issues with win builder. Thus, these lines

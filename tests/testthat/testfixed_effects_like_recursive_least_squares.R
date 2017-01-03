@@ -3,7 +3,11 @@ test_name <- "fixed_effects_like_recursive_least_squares"
 cat("\nRunning", test_name, "\n")
 
 if(interactive()){
-  library(testthat); library(survival); source("R/test_utils.R")
+  library(testthat); library(survival)
+
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
 }
 
 

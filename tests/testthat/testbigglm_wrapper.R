@@ -10,8 +10,10 @@ bigglm_updateQR_rcpp <- with(environment(ddhazard), bigglm_updateQR_rcpp)
 bigglm_regcf_rcpp <- with(environment(ddhazard), bigglm_regcf_rcpp)
 
 if(interactive()){
-  library(survival); library(dynamichazard); library(testthat)
-  source("C:/Users/boennecd/Dropbox/skole_backup/phd/dynamichazard/R/test_utils.R")
+  library(survival); library(dynamichazard); library(testthat); library(biglm)
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
 }
 
 # From bigglm.function()
@@ -273,7 +275,7 @@ test_that("bigglm and my c++ version yields similar results", {
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
 
   for(model in c("logit", "exp_combined", "exp_bin", "exp_trunc_time")){
-    suppressWarnings(bigglm_res <- bigglm(
+    suppressWarnings(bigglm_res <- biglm::bigglm(
       form, get_data_func,
       family = if(model == "logit") binomial() else poisson()))
 
@@ -292,7 +294,7 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
   for(model in c("logit", "exp_combined")){
-    suppressWarnings(bigglm_res <- bigglm(
+    suppressWarnings(bigglm_res <- biglm::bigglm(
       form, get_data_func,
       family = if(model == "logit") binomial() else poisson()))
 

@@ -1,6 +1,8 @@
 if(interactive()){
   rm(list = ls())
-  source("./R/test_utils.R")
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
   library(testthat)
 }
 

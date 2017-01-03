@@ -1,6 +1,10 @@
 if(interactive()){
-  library(survival); library(testthat); source("R/test_utils.R"); library(dynamichazard)
+  library(survival); library(testthat); library(dynamichazard)
   exp_model_names <- with(environment(ddhazard), exp_model_names)
+
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
 }
 
 # Had issues with cran buil. Thus, these lines
