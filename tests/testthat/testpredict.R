@@ -1,6 +1,10 @@
 if(interactive()){
   rm(list = ls())
-  library(testthat); library(survival); library(dynamichazard); library(parallel); source("R/test_utils.R")
+  library(testthat); library(survival); library(dynamichazard); library(parallel)
+
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
 }
 
 # Had issues with win builder. Thus, these lines

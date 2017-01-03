@@ -1,5 +1,8 @@
 if(interactive()){
-  library(testthat); source("./R/test_utils.R")
+  library(testthat);
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
 }
 
 

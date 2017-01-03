@@ -1,5 +1,10 @@
 if(interactive()){
-  library(testthat); library(survival); library(parallel); source("R/test_utils.R")
+  library(testthat); library(survival); library(parallel)
+
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
+
   library(dynamichazard)
   exp_model_names <- with(environment(ddhazard), exp_model_names)
 }

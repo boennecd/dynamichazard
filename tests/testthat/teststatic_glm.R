@@ -1,7 +1,9 @@
 if(interactive()){
   library(dynamichazard)
   library(testthat)
-  source("R/test_utils.R")
+  if(grepl("testthat$", getwd()))
+    source("../../R/test_utils.R") else
+      source("./R/test_utils.R")
   get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 }
 
