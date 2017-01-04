@@ -63,6 +63,7 @@ public:
 
   arma::mat X;
   arma::mat fixed_terms; // used if fixed terms are estimated in the M-step
+  const arma::vec &weights;
 
   const std::vector<double> I_len;
   const double event_eps; // something small
@@ -113,6 +114,7 @@ public:
                const arma::mat &F__,
                const double eps_fixed_parems_,
                const int max_it_fixed_params_,
+               const arma::vec &weights_,
                const int n_max = 100, const double eps = 0.001,
                const bool verbose = false,
                const int order_ = 1, const bool est_Q_0 = true,
@@ -140,6 +142,7 @@ public:
 
     X(X_.begin(), X_.n_rows, X_.n_cols, false),
     fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols, false),
+    weights(weights_),
     I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
 
     event_eps(d * std::numeric_limits<double>::epsilon()),
@@ -219,6 +222,7 @@ public:
                    Rcpp::Nullable<Rcpp::NumericVector> LR_,
                    const double eps_fixed_parems_,
                    const int max_it_fixed_params_,
+                   const arma::vec &weights_,
                    const int n_max = 100, const double eps = 0.001,
                    const bool verbose = false,
                    const int order_ = 1, const bool est_Q_0 = true,
@@ -230,6 +234,7 @@ public:
     problem_data(n_fixed_terms_in_state_vec_, X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0,
                  fixed_parems_start, Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_params_,
+                 weights_,
                  n_max, eps, verbose,
                  order_, est_Q_0, debug_,
                  LR_,
@@ -519,6 +524,8 @@ class EKF_helper{
                   const int &bin_number,
                   const double &bin_tstart, const double &bin_tstop){
       const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
+      const double w = dat.weights(*it);
+
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double exp_eta = exp(arma::dot(i_a_t, x_) + offset);
 
@@ -531,9 +538,9 @@ class EKF_helper{
                                   2*dat.ridge_eps*exp_eta + dat.ridge_eps*pow(exp_eta,2));
       double var_fac = pow(exp_eta,2)/(pow(1 + exp_eta,4)*(dat.ridge_eps + exp_eta/pow(1 + exp_eta, 2)));
 
-      u_ += x_ * (score_fac *
+      u_ += x_ * (w * score_fac *
         ((dat.is_event_in_bin(*it) == bin_number) - exp_eta / (1.0 + exp_eta)));
-      U_ += x_ *  (x_.t() * var_fac);
+      U_ += x_ *  (x_.t() * (w * var_fac));
 
       if(compute_z_and_H){
         dat.H_diag_inv(i) = pow(var, -1);
@@ -557,6 +564,7 @@ class EKF_helper{
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
       const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
+      const double w = dat.weights(*it);
 
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
@@ -585,10 +593,10 @@ class EKF_helper{
         exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
 
       u_ += x_ * (
-        fac_score_time * (time_outcome - expect_time) +
-        fac_score_die * (do_die - expect_chance_die));
+        w * (fac_score_time * (time_outcome - expect_time) +
+             fac_score_die * (do_die - expect_chance_die)));
 
-      U_ += x_ * (x_.t() * var_fac);
+      U_ += x_ * (x_.t() * (w * var_fac));
 
       if(compute_z_and_H){
         // Compute terms from waiting time
@@ -625,6 +633,7 @@ class EKF_helper{
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
       const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
+      const double w = dat.weights(*it);
 
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
@@ -642,9 +651,9 @@ class EKF_helper{
       const double score_fac = exp_model_funcs::binary_score_fac(v, inv_exp_v, dat.ridge_eps);
       const double var_fac = exp_model_funcs::binary_var_fac(v, inv_exp_v, dat.ridge_eps);
 
-      u_ += x_ * (score_fac * (do_die - expect_chance_die));
+      u_ += x_ * (w * score_fac * (do_die - expect_chance_die));
 
-      U_ += x_ * (x_.t() * var_fac);
+      U_ += x_ * (x_.t() * (w * var_fac));
 
       if(compute_z_and_H){
         // Compute terms from waiting time
@@ -670,6 +679,7 @@ class EKF_helper{
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
       const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
+      const double w = dat.weights(*it);
 
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
@@ -692,9 +702,9 @@ class EKF_helper{
         exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
 
 
-      u_ += x_ * (score_fac * (time_outcome - expect_time));
+      u_ += x_ * (w * score_fac * (time_outcome - expect_time));
 
-      U_ += x_ * (x_.t() * var_fac);
+      U_ += x_ * (x_.t() * (w * var_fac));
 
       if(compute_z_and_H){
         // Compute terms from waiting time
@@ -720,6 +730,7 @@ class EKF_helper{
                   const double &bin_tstart, const double &bin_tstop){
       // Compute intermediates
       const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
+      const double w = dat.weights(*it);
 
       double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
       const double eta = arma::dot(i_a_t, x_) + offset;
@@ -742,9 +753,9 @@ class EKF_helper{
         exp_eta, v, inv_exp_v, at_risk_length, dat.ridge_eps);
 
 
-      u_ += x_ * (score_fac * (time_outcome - expect_time - at_risk_length * do_die));
+      u_ += x_ * (w * score_fac * (time_outcome - expect_time - at_risk_length * do_die));
 
-      U_ += x_ * (x_.t() * var_fac);
+      U_ += x_ * (x_.t() * (w * var_fac));
 
       if(compute_z_and_H){
         // Compute terms from waiting time
@@ -967,10 +978,10 @@ public:
           Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate for K_d matrix");
         }
 
-        p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * tmp_inv_mat * p_dat.z_dot * diagmat(p_dat.H_diag_inv);
+        p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * (tmp_inv_mat * p_dat.z_dot * diagmat(p_dat.H_diag_inv));
         // Parenthesis is key here to avoid making a n x n matrix for large n
-        p_dat.K_d = (p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot * diagmat(p_dat.H_diag_inv) * p_dat.z_dot.t()) * p_dat.K_d;
-        p_dat.K_d = p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot * diagmat(p_dat.H_diag_inv) -  p_dat.K_d;
+        p_dat.K_d = (p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot  * diagmat(p_dat.H_diag_inv) * p_dat.z_dot.t()) * p_dat.K_d;
+        p_dat.K_d = p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot  * diagmat(p_dat.H_diag_inv) -  p_dat.K_d;
 
         p_dat.lag_one_cov.slice(t - 1) = (arma::eye<arma::mat>(size(p_dat.U)) - p_dat.K_d * p_dat.z_dot.t()) * p_dat.F_ * p_dat.V_t_t_s.slice(t - 1);
       }
@@ -1327,7 +1338,7 @@ class UKF_solver_New_logit : public UKF_solver_New{
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
@@ -1412,7 +1423,7 @@ class UKF_solver_New_exp_bin : public UKF_solver_New{
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
@@ -1499,7 +1510,7 @@ class UKF_solver_New_exp_trunc_time : public UKF_solver_New{
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
@@ -1593,7 +1604,7 @@ class UKF_solver_New_exp_trunc_time_w_jump : public UKF_solver_New{
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
@@ -1726,7 +1737,7 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     }
 
     O = tmp_mat * O;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weigths in weights_vec_inv
+    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
       Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     }
     tmp_mat = O * tmp_mat;
@@ -1872,6 +1883,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
 
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assumed to have observations in the columns for performance due to column-major storage
+                            const arma::vec &weights,
                             const arma::vec &tstart, const arma::vec &tstop,
                             const arma::colvec &a_0,
                             const arma::vec &fixed_parems_start,
@@ -1929,7 +1941,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
       NR_eps, LR,
-      eps_fixed_parems, max_it_fixed_params,
+      eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, model != "logit", NR_it_max, debug, n_threads,
       ridge_eps);
@@ -1944,7 +1956,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
-      eps_fixed_parems, max_it_fixed_params,
+      eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR, n_threads, ridge_eps);
 
@@ -1973,6 +1985,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       a_0, fixed_parems_start, Q_0, Q,
       risk_obj, F_,
       eps_fixed_parems, max_it_fixed_params,
+      weights,
       n_max, eps, verbose,
       order_, est_Q_0, debug);
 
