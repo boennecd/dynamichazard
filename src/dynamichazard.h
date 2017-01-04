@@ -104,12 +104,12 @@ public:
   {}
   qr_obj() = default;
 
-  arma::vec *D;
-  arma::vec *rbar;
-  arma::vec *thetab;
+  std::shared_ptr<arma::vec> D;
+  std::shared_ptr<arma::vec> rbar;
+  std::shared_ptr<arma::vec> thetab;
   double ss;
   bool checked;
-  arma::vec *tol;
+  std::shared_ptr<arma::vec> tol;
 };
 
 
