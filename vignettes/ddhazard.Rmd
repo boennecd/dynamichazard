@@ -91,24 +91,24 @@ current_version # the string you need to pass to devtools::install_github
 devtools::install_github(current_version)
 ```
 
-The `ddhazard` function estimates a dynamic binary regression model where the parameters are assumed to time-variant and follow a random walk. 
+The `ddhazard` function estimates a dynamic binary regression model where the parameters are assumed to time-varying and follow a random walk. 
 
 ## Why and when to use this package 
-The package is implemented for situation where you have a dynamic binary regression model with time-varying coefficients. The advantage of the state spaces methods used here is that you can extrapolate to time periods beyond the data used in estimation. An example is forecasting firm failures in given the firms present accounting data. The task is to use the present data to estimate a model and forecast the likelihood of default for the firms in the following year. Another use of this package is as an alternative to other methods of modelling time-varying coefficients for binary regression such as Generalized Additive models
+The package is implemented for situation where you have a dynamic binary regression model with time-varying coefficients. The advantage of the state spaces methods used here is that you can extrapolate to time periods beyond the data used in estimation. An example is forecasting firm failures given the firms present accounting data. The task is to use the present data to estimate a model and forecast the likelihood of default for the firms in the following year. Another use of this package is as an alternative to other methods of modelling time-varying coefficients for binary regression such as Generalized Additive models
 
 The estimation function `ddhazard` is implemented such that: 
 
 1) The time complexity of the computation is linear in the number of observations and in time
-2) The dimension of the observation equation can vary through time
+2) The dimension of the observation equation can vary through time allowing for late entry and censoring
 3) It is fast due to the `C++` implementation which uses `Armadillo` library and use of multithreading through the standard library `thread`
 
 All are important in the analysis of firm failures. Firstly, you can easily have 40-50.000 firms at risk at each point in time. Thus, point 1) is key to be able to fit the models. Moreover, the number of firms at risk will vary as time progress. Some firms default, some are opened, some merge, some are acquired etc. This relates to point 2)
 
 ## Guide to vignettes 
-The vignette here is the primary vignette where the models and estimation methods are explained. The package also contains two supplementary vignettes. *Simulation study with logit model* presents a simulation study where the methods in this package are compared to each other and to Generalized Additive models. *Comparing methods for time-varying logistic models* applies the methods to a real world data set. Both vignettes illustrate how to use the estimation function `ddhazard` and other functions in this package. They only use the logit model.
+The vignette here is the primary vignette where the models and estimation methods are explained. The package also contains two supplementary vignettes. *Simulation study with logit model* presents a simulation study where the methods in this package are compared to each other and to Generalized Additive models. *Comparing methods for time-varying logistic models* applies the methods to a real world data set. Both vignettes illustrate how to use the estimation function `ddhazard` and other functions in this package. They only use the discrete time model. This vignette also describes the continuous time model
 
 ## Dynamic binary regression
-We will introduce the model in the following paragraphs. Let $\vec{x}_{it}$ denote the co-variate vector for individual $i$ at time $t$ and let $Y_{it}$ be the random variable for whether the $i$'th individual dies within time $(t-1, t]$. Another way to phrase this is whether the $i$'th individual dies in the $t$'th bin. Next, denote the parameters at time $t$ by $\vec{\alpha}_t$. For given parameters at time $t$ the probability of death is:
+We will introduce the model in the following paragraphs. Let $\vec{x}_{it}$ denote the co-variate vector for individual $i$ at time $t$ and let $Y_{it}$ be the random variable for whether the $i$'th individual dies within time $(t-1, t]$. Next, denote the parameters at time $t$ by $\vec{\alpha}_t$. For given parameters at time $t$ the probability of death is:
 
 $$\begin{aligned}
  &\proppCond{Y_{it} = 1}{\vec{y}_{1},\dots,\vec{y}_{t-1}, \vec{\alpha}_t} = h(\vec{\alpha}_t^T \vec{x}_{it})
@@ -122,7 +122,7 @@ $$\begin{array}{ll}
   \vec{\eta}_t \sim N(\vec{0}, \psi_t \mat{Q}) \\
 \end{array} , \qquad t = 1,\dots, d$$
 
-$\vec{y}_t$ is the vector of the binary outcomes and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. It needs not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding *state equation*. $\psi_t$ is the length of the bin interval number $t$. Thus, $\psi_i = \psi$ when we use equidistant bins which is the only option at this point. Further, we define the observational equations covariance matrix as $\mat{H}_t(\vec{\alpha}_t) = \varpCond{\vec{y}_t}{\vec{\alpha}_t}$
+$\vec{y}_t$ is the vector of the binary outcomes and the associated equation is the *observational equation*. $\sim (a,b)$ denotes a random variable(s) with mean (vector) $a$ and variance (co-variance matrix) b. It needs not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding *state equation*. $\psi_t$ is the length of the interval number $t$. Thus, $\psi_t = \psi$ when we use equidistant time intervals which is the only option at this point. Further, we define the observational equations covariance matrix as $\mat{H}_t(\vec{\alpha}_t) = \varpCond{\vec{y}_t}{\vec{\alpha}_t}$
 
 The mean $\vec{z}_t(\vec{\alpha}_t)$ and variance $\mat{H}(\vec{\alpha}_t)$ are state dependent with:
 $$\begin{aligned}
@@ -154,19 +154,19 @@ $$\begin{aligned}
 	\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =    
 		\log L \Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} = & 
 		- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^T \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
-	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^T \mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  - \frac{1}{2} \deter{\mat{Q}_0} - \frac{1}{2d} \deter{\mat{Q}} \\
+	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^T\psi_t^{-1}\mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
+	&  - \frac{1}{2} \log \deter{\mat{Q}_0} - \frac{1}{2d} \log \deter{\mat{Q}} \\
 	&  + \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\vec{\alpha}_t})
 \end{aligned}$$
 
 $$l_{it}(\vec{\alpha}_t) = y_{it} \log h(\vec{x}_{it}^T \vec{\alpha}_t) + (1 - y_{it}) 
 	\log \Lparen{1 - h(\vec{x}_{it}^T \vec{\alpha}_t)}$$
 
-The unknown parameters are the initial state vector $\vec{\alpha}_0$ and the covariance matrix $\mat{Q}$ . We estimate these with with an EM-algorithm. The E-step is carried out by an Extended Kalman filter (EKF) or an Unscented Kalman filter (UKF). The method is chosen by passing a list to the `control` argument of `ddhazard` with `list(method = "EKF", ...)` or `list(method = "UKF", ...)` respectively. Both the UKF and EKF require an initial state vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and initial co-variance matrix $\mat{Q}_0$ to start
+The unknown parameters are the initial state vector $\vec{\alpha}_0$ and the covariance matrix $\mat{Q}$ . We estimate these using an EM-algorithm. The E-step is carried out by an Extended Kalman filter (EKF) or an Unscented Kalman filter (UKF). The method is chosen by passing a list to the `control` argument of `ddhazard` with `list(method = "EKF", ...)` or `list(method = "UKF", ...)` respectively. Both the UKF and EKF require an initial state vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and initial co-variance matrix $\mat{Q}_0$ to start
 
-A key thing to notice (and a likely source of errors if forgotten) is that the `Q` argument for $\mat{Q}$ is scaled by the length of the bins, $\psi_t$. The motivation for this behavior is that you can alter $\psi_t$ and get comparable estimates of `Q`. Further, it will also be useful if unequal bin length are implemented later. As a last comment in this context, `Q_0` is not scaled and thus will exactly match $\mat{Q}_0$ in the estimation. The logic here is that $\mat{Q}_0$ is independent of our binning length and reflects our uncertainty of $\vec{\alpha}_0$
+A key thing to notice (and a likely source of errors if forgotten) is that the `Q` argument for $\mat{Q}$ is scaled by the length of the time interval, $\psi_t$. The motivation for this behavior is that you can alter $\psi_t$ and get comparable estimates of `Q`. Further, it will also be useful if unequal intervals lengths are implemented later. As a last comment in this context, `Q_0` is not scaled and thus will exactly match $\mat{Q}_0$ in the estimation. The logic here is that $\mat{Q}_0$ is independent of our time interval length and reflects our uncertainty of $\vec{\alpha}_0$
 
-We will use a small example to illustrate how to fit a model and illustrate that the lengths of the bins does not have a big effect on $\mat{Q}$. The data frame we use is in the usual start and stop time format:
+We will use a small example to illustrate how to fit a model and illustrate that the lengths of the time intervals do not have a big effect on $\mat{Q}$. The data frame we use is in the usual start and stop time format:
 
 ```{r, echo=FALSE}
 source("../R/test_utils.R")
@@ -197,15 +197,15 @@ stopifnot(any(simple_ex$event[simple_ex$id == 1] == 1) &&
 knitr::kable(head(simple_ex, 10), digits = 4)
 ```
 
-The column `id` shows which individual the row belongs to, `tstart` is point at which the row is valid from and `tstop` is when the row is valid to. `event` is one if the individual dies at `tstop` and `x1` and `x2` are two covariates. Thus, individual with id `1` dies at time `r simple_ex$tstop[1]` while id `2` survives all the periods we observe. Next, we can fit a model as follows:
+The column `id` shows which individual the row belongs to, `tstart` is point at which the row is valid from and `tstop` is when the row is valid to. `event` is one if the individual dies at `tstop` and `x1` and `x2` are two covariates. Thus, the individual with id `1` dies at time `r simple_ex$tstop[1]` while id `2` survives all the periods we observe. Next, we can fit a model as follows:
 
 ```{r}
 library(dynamichazard)
 library(survival)
-dd_fit_short_bins <- ddhazard(
-  Surv(tstart, tstop, event) ~ x1 + x2, # Formula like for cox.ph from survival
+dd_fit_short <- ddhazard(
+  Surv(tstart, tstop, event) ~ x1 + x2, # Formula like for coxph from survival
        data = simple_ex,
-       by = 1,                          # Length of bin intervals
+       by = 1,                          # Length of time intervals
        Q = diag(0.1, 3),                # Covariance matrix in state eqn 
        Q_0 = diag(10, 3),               # Covariance matrix for initial state
                                         # vector
@@ -216,15 +216,15 @@ dd_fit_short_bins <- ddhazard(
   )                      
 
 # Print diagonal of covariance matrix
-diag(dd_fit_short_bins$Q) 
+diag(dd_fit_short$Q) 
 ```
 
-Above, we estimate the model with a binning length of `by = 1`. It is not important in this scope but the model is the logistic model which we introduced later and we will return to the `ridge_eps` shortly. For now, let us see what happens if we increase the binning interval length by changing the `by` argument: 
+Above, we estimate the model with a time intervals of length `by = 1`. The model is the logistic model which we introduced later and we will return to the `ridge_eps` shortly. For now, let us see what happens if we increase the interval length by changing the `by` argument: 
 
 ```{r}
 library(dynamichazard)
 library(survival)
-dd_fit_wide_bins <- ddhazard(
+dd_fit_wide <- ddhazard(
   Surv(tstart, tstop, event) ~ x1 + x2, 
        data = simple_ex,
        by = 2,                          # increased
@@ -236,13 +236,13 @@ dd_fit_wide_bins <- ddhazard(
         list(ridge_eps = 0.0002))       # increased               
 
 # Print relative differences between diagonal of covariance matrices
-Q_short <- dd_fit_short_bins$Q
-Q_wide <- dd_fit_wide_bins$Q
-diag((Q_wide - Q_short) / abs(Q_short))   
+Q_short <- dd_fit_short$Q
+Q_wide <- dd_fit_wide$Q
+diag((Q_wide - Q_short) / Q_short)   
 ```
-We see that the diagonal entries are not far from each other with the two fits. The rest of this vignette is structured as follows. The section 'EM algorithm' will cover the EM algorithm. This is followed by the sections 'Extended Kalman Filter' and 'Unscented Kalman Filter' which respectively covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Continuous time model' which cover the models implemented in this package
+We see that the diagonal entries are not far from each other with the two fits. To ease the notation, we assume that $\psi_t = 1$ in the rest of the vignette. The rest of this vignette is structured as follows. The section 'EM algorithm' will cover the EM algorithm. This is followed by the sections 'Extended Kalman Filter' and 'Unscented Kalman Filter' which respectively covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Continuous time model' which cover the models implemented in this package
 
-I encourage you to use the shiny app while reading this vignette. You can lunch the shiny app by installing this package and running:
+I encourage you to use the shiny app while reading this vignette. You can launch the shiny app by installing this package and running:
 
 ```{r, eval=FALSE}
 dynamichazard::ddhazard_app()
@@ -256,18 +256,17 @@ An EM algorithm is used to estimate the initial state space vector $\vec{\alpha}
 $$\emNotee{\vec{a}}{t}{s} = \expecpCond{\vec{\alpha}_t}{\vec{y}_1,\dots,\vec{y}_s},  \qquad
 \emNotee{\mat{V}}{t}{s} = \expecpCond{\mat{V}_t}{\vec{y}_1,\dots,\vec{y}_s}$$
 
-for the conditional mean and co-variance matrix. Notice that the letter 'a' is used for mean estimates while 'alpha' is used for the unknown state as is typical in the state space literature. The notation above both covers filter estimates in the case where $s \leq t$ and smoothed estimates when $s > t$. We suppress the dependence of the co-variates ($\vec{x}_{it}$) here to simplify the notation
+for the conditional mean and co-variance matrix. Notice that the letter 'a' is used for mean estimates while 'alpha' is used for the unknown state as is typical in the state space literature. The notation above both covers filter estimates in the case where $s \leq t$ and smoothed estimates when $s \geq t$. We suppress the dependence of the co-variates ($\vec{x}_{it}$) here to simplify the notation
 
 The initial values for $\vec{\alpha}_0$, $\mat{Q}$ and $\mat{Q}_0$ can be set by passing a vector for the `a_0` argument of `ddhazard` for $\vec{\alpha}_0$ and matrices to `Q_0` and `Q` argument of `ddhazard` for respectively $\mat{Q}_0$ and $\mat{Q}$ 
 
 ## E-step
 The outcome of the E-step are the smoothed estimates:
-$$\emNote{\vec{a}}{i}{d}{k},  \quad 
-  \emNote{\mat{V}}{i}{d}{k}, \quad 
-  \mat{B}_j^{(k)} = \emNotee{\mat{V}}{j - 1}{j - 1}\mat{F}\emNotee{\mat{V}}{j}{j - 1}^{-1},  \quad 
-  i=0,1,\dots,d\wedge j = 1,2,\dots,d$$
+$$\emNote{\vec{a}}{t}{d}{k},  \qquad 
+  \emNote{\mat{V}}{t}{d}{k}, \qquad 
+  t=0,1,\dots,d$$
   
-where $d$ is the number of periods we observe. Superscripts $\cdot^{(k)}$ is used to distinguish between the estimates from each iteration of the EM-algorithm. Thus, $\emNote{\vec{a}}{i}{d}{k}$ is the smoothed state space vector for bin $i$ in iteration $k$ of the EM algorithm. 
+where $d$ is the number of periods we observe. Superscripts $\cdot^{(k)}$ is used to distinguish between the estimates from each iteration of the EM-algorithm. Thus, $\emNote{\vec{a}}{i}{d}{k}$ is the smoothed state space vector for interval $i$ in iteration $k$ of the EM algorithm. 
 
 The required input to start the E-step is an initial mean vector $\widehat{\vec{a}}_0^{(k-1)}$ and co-variance matrix $\widehat{\mat{Q}}^{(k - 1)}$. Given these input, we compute the following estimates either by using the EKF or UKF:
 $$\emNotee{\vec{a}}{j}{j-1}, \quad 
@@ -285,7 +284,7 @@ $$\begin{aligned}
 \end{aligned} \qquad t = d,d-1,\dots, 1$$
 
 ### Kalman Filter
-The standard Kalman filter is carried out by recursively doing a filter step and a correction step. This also applies for the EKF and UKF used in the E-step. Thus, this paragraph is included to introduce general notions. The first step in the Kalman Filter is the *filter step* where we estimate $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ based on $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$. Secondly, we carny out the *correction step* where we estimate $\emNotee{\vec{a}}{t}{t}$ and $\emNotee{\mat{V}}{t}{t}$ based on $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ and the observations. We repeat the process until $t=d$
+The standard Kalman filter is carried out by recursively doing a filter step and a correction step. This also applies for the EKF and UKF used in the E-step. Thus, this paragraph is included to introduce general notions. The first step in the Kalman Filter is the *filter step* where we estimate $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ based on $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$. Secondly, we carry out the *correction step* where we estimate $\emNotee{\vec{a}}{t}{t}$ and $\emNotee{\mat{V}}{t}{t}$ based on $\emNotee{\vec{a}}{t}{t - 1}$ and $\emNotee{\mat{V}}{t}{t - 1}$ and the observations. We repeat the process until $t=d$
 
 ## M-step
 The M-step updates the mean $\widehat{\vec{a}}_0^{(k - 1)}$ and co-variance matrices $\widehat{\mat{Q}}^{(k - 1)}$ and $\widehat{\mat{Q}}_0^{(k - 1)}$ (the latter being optional). These are computed by:
@@ -317,8 +316,8 @@ $$\begin{aligned}
 	  
 Secondly, we perform the correction step by:
 $$\begin{aligned}
-  \emNotee{\vec{a}}{t}{t} = \emNotee{\vec{a}}{t}{t - 1} + \emNotee{\mat{V}}{t}{t}\vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})\\
-  \emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}
+  \emNotee{\mat{V}}{t}{t} &= \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1} \\
+  \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \emNotee{\mat{V}}{t}{t}\vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})
 \end{aligned}$$
 
 where $\vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})$ and $\mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})$ are given by:
@@ -329,7 +328,7 @@ $$\begin{aligned}
 		 \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{iit}(\vec{\alpha}_t)} \right\vert_{\eta = \vec{z}_{it}^T \vec{\alpha}_t}
 \end{aligned}$$
 
-$R_t$ is the set of indices of individuals who are at risk in bin $t$. It is commonly referred to as the risk set. Thus, the dimension the observational equation can vary as individual dies or are right censored
+$R_t$ is the set of indices of individuals who are at risk in time interval $t$. It is commonly referred to as the risk set. Thus, the dimension the observational equation can vary as individual dies or are right censored
 
 ## Divergence
 Initial testing shows that the EKF has issues with divergence for some data set. The cause of divergence seems to be overstepping in the correction step where we update $\emNotee{\vec{a}}{t}{t}$. In particular, the signs of the elements of $\emNotee{\vec{a}}{t}{t}$ tends to alter between $t-1, t, t+1$ etc. and the absolute values tends to increase in each iteration when the algorithm diverges.  The following section describes solutions to this issue
@@ -349,9 +348,9 @@ $$\begin{aligned}
   &\text{else set } \vec{a} = \emNotee{\vec{a}}{t}{t} \text{ and repeat} 
 \end{aligned}$$
 
-where $\delta$ is small like $10^{-9}$. Selecting $l < 1$ in case of divergence can solve the issue. Thus, the following procedure is used if the algorithm fails with initial learning rate $l$: try a learning of $l\zeta$ in place of $l$  above for given $0<\zeta<1$. If that fails then try a rate of $l\zeta^2$. The process is stopped when we succeed to fit the model or we fail to estimate the model with a learning rate of $l\zeta^w$ for a given integer $w$. 
+where $\delta$ is small like $10^{-9}$. Selecting $l < 1$ in case of divergence can solve the npn-convergence issue. Thus, the following procedure is used if the algorithm fails with initial learning rate $l$: try a learning of $l\zeta$ in place of $l$  above for given $0<\zeta<1$. If that fails then try a rate of $l\zeta^2$. The process is stopped when we succeed to fit the model or we fail to estimate the model with a learning rate of $l\zeta^w$ for a given integer $w$. 
 
-While [@fahrmeir92] does not observe improvements with multiple repetitions, we find improvements in terms of out-of-sample prediction (for example by setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower) with a moderate or large amount of observations. See the vignette "Simulation study with logit model" for details
+While [@fahrmeir92] does not observe improvements with multiple iterations, we find improvements in terms of out-of-sample prediction (for example by setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower) with a moderate or large amount of observations. See the vignette "Simulation study with logit model" for details
 
 The value of $l$ and $\epsilon_{\text{NR}}$ are set by respectively setting the elements `LR` and `NR_eps` of the list passed to the `control` argument of `ddhazard`. By default, `LR = 1` and `NR_eps = NULL` which yields a learning rate of 1 and a single Fischer scoring step. These arguments can be altered by setting e.g. `control = list(LR = 0.75, NR_eps = 0.001)` for a learning rate of 0.75 and a threshold in the Fisher Scoring of $10^{-3}$
 
@@ -367,7 +366,7 @@ where $\xi>0$ is a small number. The default can be changed by altering the `rid
 
 
 ## Parallel BLAS or LAPACK
-All the computations use objects from the `Armadillo` library. Thus, an optimized version LAPACK and BLAS can speed up the computation. A multithreaded version of LAPACK or BLAS can cause issues with performance. The majority of the computation time is spend in the correction step of the EKF, where we compute $\vec{u}_t (\vec{\alpha}_t)$ and $\mat{U}_t (\vec{\alpha}_t)$, when the number of regression parameter is low and we have a lot of observations. For this reason, this part of the code is computed in parallel with the `C++` standard library `thread`. The reduction in computation time can be offset if a multithreaded version of LAPLACK or BLAS is used as the code already use multithreading
+All the computations use objects from the `Armadillo` library. Thus, an optimized version LAPACK and BLAS can speed up the computation. A multithreaded version of LAPACK or BLAS can cause issues with performance. The majority of the computation time is spent in the correction step of the EKF, where we compute $\vec{u}_t (\vec{\alpha}_t)$ and $\mat{U}_t (\vec{\alpha}_t)$, when the number of regression parameter is low and we have a lot of observations. For this reason, this part of the code is computed in parallel with the `C++` standard library `thread`. The reduction in computation time can be offset if a multithreaded version of LAPLACK or BLAS is used as the code already use multithreading
 
 A specific solution to the issues is implemented for Windows users who compiles with openBLAS. The `src/Makevars.win` checks if there is `C:\OpenBLAS` folder. If so, we assume that the structure is:
 ```
@@ -466,7 +465,7 @@ The addition makes divergence less common and shrinks the coefficient estimates
 ## Selecting hyperparameters
 We still need to select the hyperparameters $\kappa$, $\alpha$ and $\beta$. We will cover these in the given order. $\kappa$ is usually set to $\kappa = 0$ or $\kappa = 3 - m$. [@julier97] state is that the latter is a "*useful heuristic*" when the state equation is Gaussian and $\alpha = 1$. 
 
-The default in this package is $\kappa = m/\alpha^2 - m$ and can be altered by setting the list element `kappa` in the list passed as the `control` argument to `ddhazard`. For example, `control = list(kappa = 1, ...)` yields $\kappa = 1$. The default makes $W_0^{(m)} = 0$ such that all weights are positive. This ensures that $\emNotee{\mat{V}}{t}{t-1}$ and $\ukfNotee{y}{y}{t}$ are positive semi-definite. This follows since both are sum of outer products with positive weights and as $\widehat{\mat{H}}$ is a diagonal matrix with positive entries. Notice though that this means that $\alpha$ only affects $W_0^{(c)} =  1 - \alpha^2 + \beta$ and $W_0^{(cc)} = 1 - \alpha$
+The default in this package is $\kappa = q/\alpha^2 - q$ and can be altered by setting the list element `kappa` in the list passed as the `control` argument to `ddhazard`. For example, `control = list(kappa = 1, ...)` yields $\kappa = 1$. The default makes $W_0^{(m)} = 0$ such that all weights are positive. This ensures that $\emNotee{\mat{V}}{t}{t-1}$ and $\ukfNotee{y}{y}{t}$ are positive semi-definite. This follows since both are sum of outer products with positive weights and as $\widehat{\mat{H}}$ is a diagonal matrix with positive entries. Notice though that this means that $\alpha$ only affects $W_0^{(c)} =  1 - \alpha^2 + \beta$ and $W_0^{(cc)} = 1 - \alpha$
 
 
 $0<\alpha \leq 1$ controls the spread of the sigma points. Notice that $\lambda + m \rightarrow 0^+$, $w_0^{(c)},w_0^{(m)}\rightarrow -\infty$ and $w_i^{(c)}, w_i^{(m)} \rightarrow \infty$ ($i > 0$) as $\alpha \rightarrow 0^+$. Thus, the lower the value of $\alpha$, the lower the spread but the higher the absolute weights. It is generally suggested to choose $\alpha$ small. See [@gustafsson12] and [@julier04]. However, initial simulation studies showed that $\alpha = 1$ yields the smallest mean square error of estimated coefficients. Thus, this is the default. The parameter can be altered through the `alpha` element of the list passed to the argument `control` of `ddhazard`.
@@ -496,7 +495,7 @@ $$\begin{aligned}
 		\log L \Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} = & 
 		- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^T \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
 	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^T \mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  - \frac{1}{2} \deter{\mat{Q}_0} - \frac{1}{2d} \deter{\mat{Q}} \\
+	&  - \frac{1}{2} \log\deter{\mat{Q}_0} - \frac{1}{2d} \log\deter{\mat{Q}} \\
 	&  + \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\vec{\alpha}_t})
 \end{aligned}$$
 
@@ -557,10 +556,10 @@ Point 2., 3. and 4. are apparent by noticing that the conditional log likelihood
 $$\frac{\partial}{\partial\vec{\gamma}}\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\wtvec{\alpha}_t})} \approx
   \sum_{t = 1}^d \sum_{i \in R_t} \frac{\partial}{\partial\vec{\gamma}} l_{it}(\emNote{\wtvec{a}}{t}{d}{k})$$
   
-when we use the zero order Taylor expansion for $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\wtvec{\alpha}_t})}$. This is a score equation for a generalized linear model if we use a distribution function from the exponential family. This method will be used to estimate the fixed effects when you set `fixed_terms_method = M_step` in the list passed to the `control` argument
+when we use the zero order Taylor expansion for $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{i \in R_t} l_{it}({\wtvec{\alpha}_t})}$. This is a score equation for a generalized linear model if we use a distribution from the exponential family. This method will be used to estimate the fixed effects when you set `fixed_terms_method = M_step` in the list passed to the `control` argument
 
 ### Implementation
-Point number 4 above implies that we can use a typical Newton Raphson algorithm to update the estimate of $\vec{\gamma}$ when we are using a distribution from the exponential family. This can be solved by a QR decomposition as done in `glm`. However, point 3 implies that every observation will have a different offset in every bin the observation is in. Thus, we can end with a large design matrix
+Point number 4 above implies that we can use a typical Newton Raphson algorithm to update the estimate of $\vec{\gamma}$ when we are using a distribution from the exponential family. This can be solved by a QR decomposition as done in `glm`. However, point 3 implies that every observation will have a different offset in every time interval the observation is in. Thus, we can end with a large design matrix
 
 To overcome the potential memory issue this can cause, this package use the same Fortran function that the `bigglm` function in the `biglm` package uses. The Fortran function recursively performs a QR update for each row in the design matrix. Hence, we do not need to store the entire design matrix at any given point. The Fortran code is described in [@miller1992] and written by Miller. It is an updated version of the algorithm described in [@gentleman1972] which has a time complexity of $O(\vert\vec{\gamma}\vert^2)$ for the QR-update of each row in the design matrix
 
@@ -579,19 +578,19 @@ Neither the method that use the Recursive Least Squares like method in the E-ste
 Fixed terms can be estimated by wrapping the co-variates in the formula of `ddhazard` in the `ddFixed` function. As an example, `ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), ...)` will fit a model where `x1` is time-varying and `x2` is not.
 
 # Logistic model
-The  logistic model uses the inverse logit function as the inverse link function $h$. That is $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The logistic model is fitted by setting `model = "logit"` in the call to `ddhazard`. The UKF and EKF are implemented as mentioned above without any complications. The following paragraphs will cover the loss of information due to binning which motivates the continuous time model. It is important to stress that the logistic model yields similar estimates as a to Generalized Additive model as shown in the vignette *Comparing methods for time-varying logistic models* and *Simulation study with logit model*. Consequently, it is a valid alternative
+The  logistic model uses the inverse logit function as the inverse link function $h$. That is $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The logistic model is fitted by setting `model = "logit"` in the call to `ddhazard`. The UKF and EKF are implemented as mentioned above without any complications. The following paragraphs will cover the loss of information due to using time intervals instead of event times which motivates the continuous time model. It is important to stress that the logistic model yields similar estimates as a to Generalized Additive model as shown in the vignette *Comparing methods for time-varying logistic models* and *Simulation study with logit model*. Consequently, it is a valid alternative
 
-## Binning
-This section will illustrate how binning is performed for the logistic model and how this can lead to loss of information. It is elementary but included to stress this point and motivate the continuous time model. We will use `r tolower(captioner::captioner()("binning_fig", display = "cite"))` as the illustration. Each horizontal line represent an individual. A cross represents when the co-variate values change for the individual and a filled circle represents the death of an individual. Lines that ends with an open circle are right censored
+## Event times to binary variables
+This section will illustrate how we go from event time to binary variables for the logistic model and how this can lead to loss of information. It is elementary but included to stress this point and motivate the continuous time model. We will use `r tolower(captioner::captioner()("binning_fig", display = "cite"))` as the illustration. Each horizontal line represent an individual. A cross represents when the co-variate values change for the individual and a filled circle represents the death of an individual. Lines that ends with an open circle are right censored
 
-```{r binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of binning. Each horizontal line represents an individual. A cross indicates that new covariates are observed while a filled circle indicates that the individual have died. Open circles indicates that the individual is right censored. Vertical dashed lines are bin borders", fig.height=3}
+```{r binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of of going from event time to binary varibles. Each horizontal line represents an individual. A cross indicates that new covariates are observed while a filled circle indicates that the individual have died. Open circles indicates that the individual is right censored. Vertical dashed lines are time interval borders", fig.height=3}
 par(cex = .8, mar = c(1, 4, 1, 2))
 plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = F)
 
 abline(v = c(0.5, 1.5, 2.5), lty = 2)
 
-text(1, 0.01, "1st bin", adj = .5)
-text(2, 0.01, "2nd bin", adj = .5)
+text(1, 0.01, "1st interval", adj = .5)
+text(2, 0.01, "2nd interval", adj = .5)
 
 n_series = 7
 y_pos = seq(0, 1, length.out = n_series + 2)[-c(1, n_series +2)]
@@ -640,27 +639,27 @@ for(i in seq_along(x_vals_and_point_codes)){
 text(rep(0, n_series), rev(y_pos), letters[1:n_series], cex = par()$cex * 1.5)
 ```
 
-We will return to the vertical lines shortly. First, we notice that the example is where we assume that the covariates are step functions. An example hereof is a medical trial where patients get tests taken at different point in time (when they have a time at their doctor, visit the hospital or similar). Ideally we would like to model that we know that for example individual a has the covariates from 0 to 1 and survives, the covariates from 1 to 2 and survives etc. That is, we would like to model the stop times
+We will return to the vertical lines shortly. First, we notice that the example is where we assume that the covariates are step functions. An example hereof is a medical trial where patients get tests taken at different point in time (when they have a time at their doctor, visit the hospital or similar). Ideally we would like to model that we know that for example individual a has the covariates from 0 to 1 and survives, the covariates from 1 to 2 and survives etc. That is, we would like to model the event times
 
-However, we do not model stop times in the logistic model. Instead, we model binary outcomes in each bin. The vertical dashed lines represents the bin borders. The first vertical line from the left is where we start our model, the second vertical line is where the first bin ends and the second bin starts and the third vertical line is where the second bin ends. Thus, we only have two bins in this example
+However, we do not model event times in the logistic model. Instead, we model binary outcomes in each time interval. The vertical dashed lines represents the time interval borders. The first vertical line from the left is where we start our estimation, the second vertical line is where the first time interval ends and the second time intervals starts and the third vertical line is where the time interval ends. Thus, we only have two time intervals in this example
 
 We can now cover how the individuals (horizontal lines) are used in the estimation:
 
-a. Is a control in both bins. We use the co-variates from 0 in the first bin and the co-variates from 1 in the second bin
-b. Is not included in any of the bins. We do not know the co-variates values at the start of the second bin so we cannot include him
-c. Is a control in the first bin with the co-variates from 0. He will count as a death in the second bin with the co-variates from 1
-d. Acts like a. 
-e. Is a death in the first bin with co-variates from 0
-f. Is a control in the first bin with the co-variates from 0. He is a death in the second bin with the co-variates from 1
-g. Is not included in any bins. We do not know if he survived the entire period of the first bin and thus we cannot include him
+a is a control in both time intervals. We use the co-variates from 0 in the first time interval and the co-variates from 1 in the second time interval
+b is not included in any of the time intervals. We do not know the co-variates values at the start of the second time interval so we cannot include him
+c is a control in the first time interval with the co-variates from 0. He will count as a death in the second time interval with the co-variates from 1
+d acts like a. 
+e is a death in the first time interval with co-variates from 0
+f is a control in the first time interval with the co-variates from 0. He is a death in the second time interval with the co-variates from 1
+g is not included in any time intervals. We do not know if he survived the entire period of the first time interval and thus we cannot include him
 
 The example illustrates that: 
 
-1. We loose  information about co-variates that are updated within bins. For instance, a, c, d and f all use the co-variates from 0 for the entire period of the first bin despite that the co-variates change at 1. Moreover, we never use the information at 2 from a, d and f
-2. We loose information when we have right censoring. For instance, g is not included at all since we only know that survives parts of the first bin
-3. We loose information for observation that only occurs within bins as is the case for b
+1. We loose  information about co-variates that are updated within time intervals. For instance, a, c, d and f all use the co-variates from 0 for the entire period of the first time interval despite that the co-variates change at 1. Moreover, we never use the information at 2 from a, d and f
+2. We loose information when we have right censoring. For instance, g is not included at all since we only know that survives parts of the first time interval
+3. We loose information for observation that only occurs within time intervals as is the case for b
 
-The above motivates the continuous time model that will be covered in the next sections where binning is not an issue
+The above motivates the continuous time model that will be covered in the next sections where going from event times to binary outcomes is not an issue
 
 # Continous time model
 The following section introduce the continuous time model. Four different methods will be introduced to estimate the model. We start by describing the assumption of the continuous time model. Then we turn to different estimation methods
@@ -668,13 +667,13 @@ The following section introduce the continuous time model. Four different method
 ## Assumptions
 We make the following assumption in the continuous time model: 
 
-1. Coefficients (that is state variables $\vec{\alpha}_1,\dots, \vec{\alpha}_d$) change at end of bin $1, 2, \dots , d$
+1. Coefficients (that is state variables $\vec{\alpha}_1,\dots, \vec{\alpha}_d$) change at end of time interval $1, 2, \dots , d$
 2. The individuals co-variates change at discrete times
 3. We have a piecewise constant exponential distributed arrival time for each individual when we condition on the state variables and co-variates
 
-These assumption means that we have piecewise constant hazards given by $\exp(\vec{x}_{it}^T\vec{\alpha})$. The instantaneous hazard change when either the individuals co-variates change or the coefficients change when we change bin. We make the following definitions to formalize the assumptions above. Let $\vec{x}_{ij}$ denote the $i$'th individuals $j$'th co-variate vector. For each individual we observe $j = 1, 2, \dots , l_i$ values of the co-variate vector. Each co-variate vector is valid in a period $(t_{i,j-1}, t_{i,j}]$. This definition differs from the previous definition of $\vec{x}_{ij}$ where the subscript $j$ referred to the bin number. The new notation is used to cover the cases where update of co-variate values do not coincide with end or start time of bin intervals. For instance, this is the case for the examples in the figure in the 'Binning' section before
+These assumption means that we have piecewise constant hazards given by $\exp(\vec{x}_{it}^T\vec{\alpha})$. The instantaneous hazard change when either the individuals co-variates change or the coefficients change when we change time interval. We make the following definitions to formalize the assumptions above. Let $\vec{x}_{ij}$ denote the $i$'th individuals $j$'th co-variate vector. For each individual we observe $j = 1, 2, \dots , l_i$ values of the co-variate vector. Each co-variate vector is valid in a period $(t_{i,j-1}, t_{i,j}]$. This definition differs from the previous definition of $\vec{x}_{ij}$ where the subscript $j$ referred to the time interval number. The new notation is used to cover the cases where update of co-variate values do not coincide with end or start time one of the time intervals. For instance, this is the case for the examples in the figure in the section before
 
-Let $T_i$ denote the random event time of the $i$'th individual and let $y_{ij} = 1_{\{T_i \in (t_{i,j - 1}, t_{i,j}]\}}$ be the indicator for whether the $i$'th individual dies in period $(t_{i,j - 1}, t_{i,j}]$. Further, define the indicator $\tilde y_{i,j,s} = y_{i,j} 1_{\Lbrace{s-1<t_{i,j}\leq s}}$ which is one if individual $i$ dies in bin $s$ with covariates $j$. The log likelihood up to a normalization constant is:
+Let $T_i$ denote the random event time of the $i$'th individual and let $y_{ij} = 1_{\{T_i \in (t_{i,j - 1}, t_{i,j}]\}}$ be the indicator for whether the $i$'th individual dies in period $(t_{i,j - 1}, t_{i,j}]$. Further, define the indicator $\tilde y_{i,j,s} = y_{i,j} 1_{\Lbrace{s-1<t_{i,j}\leq s}}$ which is one if individual $i$ dies in time interval $s$ with covariates $j$. The log likelihood up to a normalization constant is:
 $$\begin{aligned}
 \mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =&
   - \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^T \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
@@ -692,7 +691,7 @@ $$\log\Lparen{\proppCond{t_i}{\vec{\alpha}_0,\dots,\vec{\alpha}_d}} =
   \vec{x}_i(t_i)^T\vec{\alpha}(t_i)
   + \log\Lparen{\int_0^{t_i} \exp\Lparen{-\exp\Lparen{\vec{x}_i(t_i)^T\vec{\alpha}(t_i)}u} du}$$
   
-which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}_s$ are step functions. Thus, the first sum from $s=1,\dots,n$ is for the change in state space parameters and the inner sum is for the changes in covariate vectors. The following sections will introduce four methods to estimate the above model. They are:
+which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}_s$ are step piecewise constant. Thus, the first sum from $s=1,\dots,n$ is for the change in state space parameters and the inner sum is for the changes in covariate vectors. The following sections will introduce four methods to estimate the above model. They are:
 
  1. Using a right truncated time variable
  2. Using a binary variable
@@ -706,7 +705,7 @@ We start by defining the truncated observation time $\Delta_{is}$:
 $$\Delta_{ij} = (T_i - t_{i,j-1}) + \Lparen{t_{i,j} - T_i}1_{\{T_i \geq t_{i,j}\}} 
   = \left\{\begin{matrix}T_i - t_{i,j-1} & T_i \leq t_{i,j} \\ t_{i,j} - t_{i,j-1} & T_i > t_{i,j}\end{matrix} \right.$$
 
-The conditional probabilities simplifies into separate terms on the log likelihood scale due to the memoryless property of the exponential distribution. Thus, computing the conditional mean, $h$, can done as follows. Assume for simplicity of notation that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a bin such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then:
+The conditional probabilities simplifies into separate terms on the log likelihood scale due to the memoryless property of the exponential distribution. Thus, computing the conditional mean, $h$, can be done as follows. Assume for simplicity of notation that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then:
 
 $$\begin{aligned}
   \tilde{z}(\vec{\alpha}) &= \expecpCond{\Delta_{i,j}}
@@ -716,7 +715,7 @@ $$\begin{aligned}
   \qquad \bar t_{i,j} = \Lceil{t_{i,j}}y_{i,j,s} + (1 - y_{i,j,s})t_{i,j}
 \end{aligned}$$
 
-where $s$ is the bin number that the observation is in, $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{ij}^T\vec{\alpha})}$, $f_{\tilde{T}}$ is the density function of $\tilde{T}$ and $h^{\Delta}_{i,j}$ is the inverse link function for the right truncated time variables for individual $i$'s $j$th observation. Set $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$ . The resulting conditional mean is:
+where $s$ is the time interval number that the observation is in, $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{ij}^T\vec{\alpha})}$, $f_{\tilde{T}}$ is the density function of $\tilde{T}$ and $h^{\Delta}_{i,j}$ is the inverse link function for the right truncated time variables for individual $i$'s $j$th observation. Set $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$ . The resulting conditional mean is:
 
 $$\tilde{z}(\vec{\alpha}) = \frac{1 - \exp \Lparen{- \lambda \delta} }{\lambda}$$
 
@@ -727,9 +726,9 @@ $$\begin{aligned}
   &= \frac{1 - \exp\Lparen{-2\delta\lambda} - 2 \lambda \delta \exp \Lparen{-\delta\lambda}}{\lambda^2}
 \end{aligned}$$
 
-Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case of censoring. We only know that the individual survived up to time $t_{i,l_i}$ and do not know if he survived the entire bin. Further, we round up in the case where $T_i = t_{i,l_i}$ (in the case of a death) when we compute the inverse link function in the prediction step of the filter (EKF or UKF). The logic is that the individual could have survived the entire bin ($\Lceil{t_{i,l_i}}$) but only survived $t_{i,l_i}$. Thus, we use $\bar t_{i,j}$. Notice if we do not make the above adjustment then there is no difference in the model between a death, a right censoring, new covariates or change of bins
+Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case of censoring. We only know that the individual survived up to time $t_{i,l_i}$ and do not know if he survived the entire time interval. Further, we round up in the case where $T_i = t_{i,l_i}$ (in the case of a death) when we compute the inverse link function in the prediction step of the filter (EKF or UKF). The logic is that the individual could have survived the entire time interval ($\Lceil{t_{i,l_i}}$) but only survived $t_{i,l_i}$. Thus, we use $\bar t_{i,j}$. Notice if we do not make the above adjustment then there is no difference in the model between a death, a right censoring, new covariates or change of time intervals
 
-A draw back to this model is that it will not work if the reported time scale is coarse as we cannot distinguish between a change of bin, new covariates vector, right censoring or death when the times coincides. As an extreme example, we cannot use this method if all times are reported on the grid of integers $1,2,\dots$ and we use bins of length $1$. You can estimate with the right truncated time method by setting the argument `model = "exp_trunc_time"` in the call to `ddhazard`
+A draw back to this model is that it will not work if the reported time scale is coarse as we cannot distinguish between a change of time interval, new covariates vector, right censoring or death when the times coincides. As an extreme example, we cannot use this method if all times are reported on the grid of integers $1,2,\dots$ and we use time intervals of length $1$. You can estimate with the right truncated time method by setting the argument `model = "exp_trunc_time"` in the call to `ddhazard`
 
 ## Binary outcome
 The next method is to replace the likelihood with binary variables $y_{i,j,s}$ as the outcome. Then the likelihood given data has:
@@ -742,18 +741,18 @@ h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_
     \Lparen{\min\{s, t_{i,j} \} - \max\{ s - 1, t_{i,j-1} \} }}
 \end{aligned}$$
 
-if we assume that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a bin such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. This is assumed to in the following paragraphs
+if we assume that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. This is assumed to in the following paragraphs
 
-There are two points to be made here. Firstly, we do not round up by using $\bar t_{i,j}$ in place of $t_{i,j}$ when we have a death. Thus, we do take into account the moment the person dies at in that $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is the likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. Moreover, an individual can have multiple observation in the same bin. Thus, we do not have the binning issue as with the logistic model 
+There are two points to be made here. Firstly, we do not round up by using $\bar t_{i,j}$ in place of $t_{i,j}$ when we have a death. Thus, we do take into account the moment the person dies at in that $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is the likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. Moreover, an individual can have multiple observation in the same time interval. Thus, we do not have issue with going from event times to binary outcomes as with the logistic model 
 
-Secondly, the cons is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,s-1}$. Contrary, we do prevail this information with the right truncated observation time. It is worth stressing that this may be minor drawback in settings where we have interval censoring. Here the exact time of death may be unknown and the given stop time is an upper bound for the death time 
+Secondly, the cons is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,s-1}$. Contrary, we do not loose this information with the right truncated observation time. It is worth stressing that this may be a minor drawback in settings where we have interval censoring. Here the exact time of death may be unknown and the given stop time is an upper bound for the death time 
 
 You can estimate with the binary outcome method by setting the argument `model = "exp_bin"` in the call to `ddhazard`
 
 ## Right truncated observations time with jump
 This section will cover the right truncated time with a jump term. The motivation is that the two previous methods are not flawless: the binary method has the drawback that we do not prevail the exact time of death and the right truncated time method cannot distinguish some deaths from censoring with a coarse time scale
 
-A way to deal with the latter is to add a jump term in case of censoring. Particulary, we set:
+A way to deal with the latter is to add a jump term in case of censoring. Particularly, we set:
 $$\begin{aligned}
 \delta_{i,j} &= t_{i,j} - t_{i,j-1} \\
 %
@@ -762,7 +761,7 @@ $$\begin{aligned}
   = \left\{\begin{matrix}T_i - t_{i,j} & T_i \leq t_{i,j} \\ \delta_{i,j} & T_i > t_{i,j}\end{matrix} \right.
 \end{aligned}$$
 
-where we use $\Lambda$ instead of $\Delta$ to distinguish between the two time variables. The above implies that $\Lambda_{i,j}\in [-\delta_{i,j},0]\cup\{\delta_{i,j}\}$. $\Lambda_{i,j}\leq 0$ implies that we have an event and the smaller the value the soner the event happend. $\Lambda_{i,j} = \delta_{i,j}$ implies that the variable is right truncated. The mean is given by:
+where we use $\Lambda$ instead of $\Delta$ to distinguish between the two time variables. The above implies that $\Lambda_{i,j}\in [-\delta_{i,j},0]\cup\{\delta_{i,j}\}$. $\Lambda_{i,j}\leq 0$ implies that we have an event and the smaller the value the sooner the event happens. $\Lambda_{i,j} = \delta_{i,j}$ implies that the variable is right truncated. The mean is given by:
 $$\tilde{z}(\vec{\alpha}) = \frac{\left(1 - \exp\Lparen{-\delta  \lambda }\right) (\delta  \lambda
    -1)}{\lambda }$$
 where the definition of $\delta$ and $\lambda$ is the same as in the right truncated time variable section. The mean is plotted below as a function of $\lambda$ with $\delta = 1$
@@ -794,7 +793,7 @@ $$\tiny\begin{aligned}
    }\right)-\exp\Lparen{-2 \delta  \lambda }+1\right)^2}{\lambda ^5}
 \end{aligned}$$
 
-The at risk length is computed in the same way as the right truncated time varialbe. That is, we use $\bar t_{i,j}$ instead of the $\min$ term in case of a death
+The at risk length is computed in the same way as the right truncated time variable. That is, we use $\bar t_{i,j}$ instead of the $\min$ term in case of a death
 
 You can estimate with the right truncated time variable by setting the argument `model = "exp_trunc_time_w_jump"` in the call to `ddhazard`
 
@@ -802,7 +801,7 @@ You can estimate with the right truncated time variable by setting the argument 
 Another idea is to use the binary variable and the first mentioned right truncated time at the same time. Though, this method has shown worse performance on simulated data. Thus, the description of the method is left as an appendix
 
 ## Fixed effects
-Fixed effects in the M-step are estimated using a Poisson model with an offset equal to the logarithm of the time observed in each bin plus the estimated offset from time-varying effects. That is, we use that if an arrival time $T$ is exponential distributed with rate $\lambda$ then having an outcome at at time $t$ is Poisson distributed $Y\sim\text{Poisson}(\lambda t)$. For example, say that we fit the following model:
+Fixed effects in the M-step are estimated using a Poisson model with an offset equal to the logarithm of the time observed in each time interval plus the estimated offset from time-varying effects. That is, we use that if an arrival time $T$ is exponential distributed with rate $\lambda$ then having an outcome at at time $t$ is Poisson distributed $Y\sim\text{Poisson}(\lambda t)$. For example, say that we fit the following model:
 
 ```{r, echo=FALSE}
 set.seed(1010101012)
@@ -820,7 +819,7 @@ head(data_frame)
 ```{r, eval=FALSE}
 # The fit
 fit <- ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), data_frame, 
-                by = 1, # bin lengths are 1
+                by = 1, # time interval lengths are 1
                 id = data_frame$id, model = "exponential")
 ```
 
@@ -837,7 +836,7 @@ data_frame_new <- rbind(c(1, 0, .5, 0, .43, .33),
 head(data_frame_new)
 ```
 
-Then individual 1 will yield five observations. The first row would only has an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[1]`. The second row will yield two observations: one with an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[2]` and the other with an offset of $\log 1$ plus $\emNotee{\vec{a}}{2}{d}$ times `r data_frame_new$x1[2]`. Note that this is not the case with the logistic model as we have the same binning issue as described in the Binning section
+Then individual 1 will yield five observations. The first row would only has an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[1]`. The second row will yield two observations: one with an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[2]` and the other with an offset of $\log 1$ plus $\emNotee{\vec{a}}{2}{d}$ times `r data_frame_new$x1[2]`
 
 # Further tasks and ideas
 The last section will cover further task and ideas. Please, let me know what you think. Is it relevant, got ideas to the question I pose and how would you priorities? What can make the package more useful for you
@@ -866,7 +865,7 @@ A further point in this connection is that computing upper bounds for the predic
 
 # Appendix
 ## Combining the two
-An idea is to combine the binary method and the first mentioned time variable for the continous time model. Thus, we can use tuples $(y_{i,j,s}, \Delta_{i,j})$ for each observation. Further, we change the inverse link function for the binary outcome to:
+An idea is to combine the binary method and the first mentioned time variable for the continuous time model. Thus, we can use tuples $(y_{i,j,s}, \Delta_{i,j})$ for each observation. Further, we change the inverse link function for the binary outcome to:
 $$\begin{aligned} 
 h^{\tilde Y}_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_{i,j}^T \vec{\alpha}_{s}) 
     \Lparen{\bar t_{i,j} - \max\{ s - 1, t_{i,j-1} \} }}
@@ -874,7 +873,7 @@ h^{\tilde Y}_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp
 
 such that we round the stop time for the binary in case of death (we use $\bar t_{i,j}$ instead of the $\min$ term). The motivation is to ease derivation and as we can compute the mean without knowing the actual outcome time.
 
-The use of tuples means that we get covariance terms in the observational equation. This will affect the score vector and information matrix ($\vec{u}_t(\emNotee{\vec{a}}{t}{t-1})$ and $\mat{U}_t(\emNotee{\vec{a}}{t}{t-1})$) in the EKF. Further, it will affect the covariance matrix $\widehat{\mat{H}}$ in the UKF. First though, we have to derive the covariance. Assume that all observations in the bin $s$ that focus on have $(t_{i, j-1}, t_{i,j}]$ with at most length one and are inside a bin such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then, we can drop the third subscript on the binary outcomes. Further we define the following variables to ease the notation:
+The use of tuples means that we get covariance terms in the observational equation. This will affect the score vector and information matrix ($\vec{u}_t(\emNotee{\vec{a}}{t}{t-1})$ and $\mat{U}_t(\emNotee{\vec{a}}{t}{t-1})$) in the EKF. Further, it will affect the covariance matrix $\widehat{\mat{H}}$ in the UKF. First though, we have to derive the covariance. Assume that all observations in the time interval $s$ that focus on have $(t_{i, j-1}, t_{i,j}]$ with at most length one and are inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then, we can drop the third subscript on the binary outcomes. Further we define the following variables to ease the notation:
 $$\delta = \bar t_{i,j}-t_{i,j-1}, \qquad \lambda = \exp \Lparen{\vec{x}_{i,j}^T \vec{\alpha}_s}, \qquad
   Z \sim \text{Exp}\Lparen{\lambda}$$
 
@@ -902,7 +901,7 @@ where we suppress the dependents on $\vec{\alpha}_s$. Further, order the observa
 $$\vec{y}_t = \Lparen{y_{1,i_{1,1}}, \Delta_{1,i_{1,1}},
   y_{1,i_{1,2}}, \Delta_{1,i_{1,2}} \dots y_{m,i_{m,k}}, \Delta_{m,i_{m,k}}}^T$$
   
-where $i_{j,i}$ is an index that correspond to the index of the $j$'th individuals $i$'th observation in this bin. Although this notation is tedious, it is included to stress that any given individual could have none, one or multiple entries in this bin $s$. Further, notice that $\vec{y}_t$ refers to the whole observation vector (including truncated stop times) while $y_{l,j}$ refers to the indicator for whether individual $l$ dies at his $j$'th observations. The co-variance matrix $\mat{H}_s(\vec{\alpha}_s)$ is then a block diagonal matrix with the form:
+where $i_{j,i}$ is an index that correspond to the index of the $j$'th individuals $i$'th observation in this time interval. Although this notation is tedious, it is included to stress that any given individual could have none, one or multiple entries in this time interval $s$. Further, notice that $\vec{y}_t$ refers to the whole observation vector (including truncated stop times) while $y_{l,j}$ refers to the indicator for whether individual $l$ dies at his $j$'th observations. The co-variance matrix $\mat{H}_s(\vec{\alpha}_s)$ is then a block diagonal matrix with the form:
 
 $$\mat{H}_s(\vec{\alpha}_s) = \begin{pmatrix}
   \mat{H}_{1,i_{1,1}}(\vec{\alpha}_s) & \mat{0} & \cdots & \mat{0} \\
@@ -940,7 +939,7 @@ $$\small\begin{aligned}
   &\hspace{4pt}+\vec{x}_{l,j}\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^T\vec{\alpha}_s)\Lparen{\MyInd{\mat{K}_{l,j}}{2,2} + \MyInd{\mat{K}_{l,j}}{1,2}}(\Delta_{l,j} - h^\Delta_{l,j}(\vec{x}_{l,j}^T\vec{\alpha}_s))
 \end{aligned}$$
 
-where $\Lparen{h^\Delta_{l,j}}'$ and $\Lparen{h^{\tilde Y}_{l,j}}'$ are the first derivatives of the inverse link functions w.r.t. the linear predictor for the truncated waiting time and the binary outcome. Similarly, $h^\Delta_{l,j}$ and $h^{\tilde Y}_{l,j}$ are the inverse link functions the truncated waiting time and the binary outcome. We need the subscript because each observation can be at risk for different amount of time in the bin we are focusing on. Lastly, $(\cdot)_{ij}$ is the $(i,j)$'th entry of the matrix in the parenthesis. Finally, the information matrix can be computed by:
+where $\Lparen{h^\Delta_{l,j}}'$ and $\Lparen{h^{\tilde Y}_{l,j}}'$ are the first derivatives of the inverse link functions w.r.t. the linear predictor for the truncated waiting time and the binary outcome. Similarly, $h^\Delta_{l,j}$ and $h^{\tilde Y}_{l,j}$ are the inverse link functions the truncated waiting time and the binary outcome. We need the subscript because each observation can be at risk for different amount of time in the time interval we are focusing on. Lastly, $(\cdot)_{ij}$ is the $(i,j)$'th entry of the matrix in the parenthesis. Finally, the information matrix can be computed by:
 
 $$\small\begin{aligned}
 \mat{U}_s(\vec{\alpha}_s) = \sum_{i=1}^r 
