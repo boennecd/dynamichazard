@@ -9,8 +9,8 @@
 #' @param a_0 Vector \eqn{a_0} for the initial coefficient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}})
 #' @param Q_0 Covariance matrix for the prior distribution
 #' @param Q Initial covariance matrix for the state equation
-#' @param weights Weights to use if e.g. a skewed sample is used
 #' @param order Order of the random walk
+#' @param weights Weights to use if e.g. a skewed sample is used
 #' @param control List of control variables (see details below)
 #' @param verbose \code{TRUE} if you want status messages during execution
 #'
