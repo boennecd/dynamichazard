@@ -5,7 +5,7 @@
 \title{Function to fit dynamic discrete hazard models}
 \usage{
 ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
-  order = 1, control = list(), verbose = F)
+  order = 1, weights, control = list(), verbose = F)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
@@ -27,6 +27,8 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 \item{Q}{Initial covariance matrix for the state equation}
 
 \item{order}{Order of the random walk}
+
+\item{weights}{Weights to use if e.g. a skewed sample is used}
 
 \item{control}{List of control variables (see details below)}
 
