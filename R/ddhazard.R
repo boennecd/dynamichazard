@@ -9,6 +9,7 @@
 #' @param a_0 Vector \eqn{a_0} for the initial coefficient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}})
 #' @param Q_0 Covariance matrix for the prior distribution
 #' @param Q Initial covariance matrix for the state equation
+#' @param weights Weights to use if e.g. a skewed sample is used
 #' @param order Order of the random walk
 #' @param control List of control variables (see details below)
 #' @param verbose \code{TRUE} if you want status messages during execution
@@ -74,8 +75,33 @@ ddhazard = function(formula, data,
                     model = "logit",
                     by, max_T, id,
                     a_0, Q_0, Q = Q_0,
-                    order = 1, control = list(),
+                    order = 1, weights,
+                    control = list(),
                     verbose = F){
+  if(missing(id)){
+    if(verbose)
+      warning("You did not parse and Id argument")
+    id = 1:nrow(data)
+  }
+
+  if(missing(weights)){
+    weights <- rep(1, nrow(data))
+  }
+
+  if(length(weights) != nrow(data)){
+    stop("Length of weights does not match number of rows in data")
+  } else if(!missing(id) && length(weights) != length(id)){
+    stop("Length of weights does not match number of ids")
+  } else{
+    data <- data[weights > 0, ]
+    id <- id[weights > 0]
+    weights <- weights[weights > 0]
+  }
+
+  if(any(weights != 1)){
+    message("lag_one_cov will not be correct when some weights are not 1")
+  }
+
   X_Y = get_design_matrix(formula, data)
   n_params = ncol(X_Y$X)
   tmp_n_failures = sum(X_Y$Y[, 3])
@@ -118,12 +144,6 @@ ddhazard = function(formula, data,
 
   if(control$ridge_eps <= 0)
     stop("Method not implemented with penalty term (control$ridge_eps) equal to ", control$ridge_eps)
-
-  if(missing(id)){
-    if(verbose)
-      warning("You did not parse and Id argument")
-    id = 1:nrow(data)
-  }
 
   if(verbose)
     message("Finding Risk set")
@@ -168,7 +188,7 @@ ddhazard = function(formula, data,
 
   if(n_params == 0){
     # Model is fitted using ddhazard_fit_cpp for testing
-    warning("The model can be estimated more effeciently by using get_survival_case_Weigths_and_data and static_glm when there is no time varying parameters")
+    warning("The model can be estimated more effeciently by using get_survival_case_Weights_and_data and static_glm when there is no time varying parameters")
     a_0 = vector()
 
     if(is.null(control$fixed_parems_start))
@@ -327,7 +347,8 @@ ddhazard = function(formula, data,
                                  debug = control$debug,
                                  n_threads = control$n_threads,
                                  ridge_eps = control$ridge_eps,
-                                 n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0))
+                                 n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
+                                 weights = weights)
     }, error = function(e)
       if(length(k_vals) == 1 ||
           !grepl("^ddhazard_fit_cpp estimation error:", e$message))
