@@ -185,8 +185,6 @@ public:
 };
 
 // Listing 9.8:
-static __thread work_stealing_queue* local_work_queue;
-static __thread unsigned my_index;
 class thread_pool
 {
   typedef function_wrapper task_type;
@@ -198,10 +196,20 @@ class thread_pool
   std::vector<std::thread> threads;
   join_threads joiner;
 
+  // A way to get a static __thread member in a header class. See http://stackoverflow.com/a/11711082
+  static work_stealing_queue*& local_work_queue(){
+    static __thread work_stealing_queue* local_work_queue_;
+    return local_work_queue_;
+  }
+  static unsigned& my_index(){
+    static __thread unsigned my_index_;
+    return my_index_;
+  }
+
   void worker_thread(unsigned my_index_)
   {
-    my_index=my_index_;
-    local_work_queue=queues[my_index].get();
+    my_index()=my_index_;
+    local_work_queue()=queues[my_index()].get();
 
     while(!start){
       std::this_thread::yield();
@@ -211,11 +219,13 @@ class thread_pool
     {
       run_pending_task();
     }
+
+    local_work_queue() = NULL;
   }
 
   bool pop_task_from_local_queue(task_type& task)
   {
-    return local_work_queue && local_work_queue->try_pop(task);
+    return local_work_queue() && local_work_queue()->try_pop(task);
   }
 
   bool pop_task_from_pool_queue(task_type& task)
@@ -227,7 +237,7 @@ class thread_pool
   {
     for(unsigned i=0;i<queues.size();++i)
     {
-      unsigned const index=(my_index+i+1)%queues.size();
+      unsigned const index=(my_index()+i+1)%queues.size();
       if(queues[index]->try_steal(task))
       {
         return true;
@@ -247,8 +257,7 @@ public:
     {
       for(unsigned i=0;i<thread_count;++i)
       {
-        queues.push_back(std::unique_ptr<work_stealing_queue>(
-            new work_stealing_queue));
+        queues.emplace_back(new work_stealing_queue);
         threads.push_back(
           std::thread(&thread_pool::worker_thread,this,i));
       }
@@ -277,9 +286,9 @@ public:
 
     std::packaged_task<result_type()> task(f);
     std::future<result_type> res(task.get_future());
-    if(local_work_queue)
+    if(local_work_queue())
     {
-      local_work_queue->push(std::move(task));
+      local_work_queue()->push(std::move(task));
     }
     else
     {

@@ -35,8 +35,7 @@ join_threads::~join_threads()
 {
   for(unsigned long i=0;i<threads.size();++i)
   {
-    if(threads[i].joinable())
-      threads[i].join();
+    threads[i].join();
   }
 }
 
