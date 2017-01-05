@@ -27,39 +27,6 @@ test_that("Implement lag-one-cov with weights", {
       weights = ws))
 })
 
-test_that("Making large design mat and using weights yield the same",{
-  set.seed(9191)
-  tmp <- sample.int(nrow(head_neck_cancer), 100, replace = T)
-  dum_design <- head_neck_cancer[tmp, ]
-
-  ws <- sapply(1:nrow(head_neck_cancer), function(x) sum(tmp == x))
-
-  meth <- "UKF"
-  for(m in c("logit")){
-    f1 <- ddhazard(
-      formula = survival::Surv(stop, event) ~ group,
-      data = dum_design,
-      by = 5, model = m,
-      a_0 = c(-2,0), Q_0 = diag(1, 2), Q = diag(1e-2, 2),
-      control = list(method = meth, ridge_eps = 1e-3),
-      max_T = 25, order = 1)
-
-    suppressMessages(f2 <- ddhazard(
-      formula = survival::Surv(stop, event) ~ group,
-      data = head_neck_cancer,
-      by = 5, model = m,
-      a_0 = c(-2, 0), Q_0 = diag(1, 2), Q = diag(1e-2, 2),
-      control = list(method = meth, ridge_eps = 1e-3),
-      max_T = 25, order = 1,
-      weights = ws))
-
-    info <- paste("m =", m)
-    expect_equal(f1$state_vecs, f2$state_vecs, info = info, tolerance = 1e-5)
-    # expect_equal(f1$state_vars, f2$state_vars, info = info, tolerance = 1e-5)
-  }
-})
-
-
 test_that("This work when get_design_matrix when function is defined not in global scope", {
   # Simulate data
   set.seed(11111)

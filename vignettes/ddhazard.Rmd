@@ -437,7 +437,7 @@ $$\begin{aligned}
 The correction step is then:
 $$\begin{aligned}
   \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \ukfNotee{x}{y}{t}\ukfNotee{y}{y}{t}^{-1}(\vec{y}_t - \overline{\vec{y}}) \\
-  \emNotee{\mat{V}}{t}{t} &= \emNotee{\mat{V}}{t}{t} - \ukfNotee{x}{y}{t}\ukfNotee{y}{y}{t}^{-1}\ukfNotee{x}{y}{t}^T
+  \emNotee{\mat{V}}{t}{t} &= \emNotee{\mat{V}}{t}{t-1} - \ukfNotee{x}{y}{t}\ukfNotee{y}{y}{t}^{-1}\ukfNotee{x}{y}{t}^T
 \end{aligned}$$
 
 ## Re-writting

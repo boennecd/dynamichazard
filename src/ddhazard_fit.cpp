@@ -1333,8 +1333,8 @@ class UKF_solver_New_logit : public UKF_solver_New{
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
 
-    c_vec = (O.each_col() / vars).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
-    O = O.t() * (O.each_col() / vars);
+    c_vec = (O.each_col() % (p_dat.weights(r_set) / vars)).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
+    O = O.t() * (O.each_col() % (p_dat.weights(r_set) / vars));
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
@@ -1418,8 +1418,8 @@ class UKF_solver_New_exp_bin : public UKF_solver_New{
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
 
-    c_vec = (O.each_col() / vars).t() * (do_die - y_bar);
-    O = O.t() * (O.each_col() / vars);
+    c_vec = (O.each_col() % (p_dat.weights(r_set) / vars)).t() * (do_die - y_bar);
+    O = O.t() * (O.each_col() % (p_dat.weights(r_set) / vars));
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
@@ -1505,8 +1505,8 @@ class UKF_solver_New_exp_trunc_time : public UKF_solver_New{
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
 
-    c_vec = (O.each_col() / vars).t() * (time_outcome - y_bar);
-    O = O.t() * (O.each_col() / vars);
+    c_vec = (O.each_col() % (p_dat.weights(r_set) / vars)).t() * (time_outcome - y_bar);
+    O = O.t() * (O.each_col() % (p_dat.weights(r_set) / vars));
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
@@ -1599,8 +1599,8 @@ class UKF_solver_New_exp_trunc_time_w_jump : public UKF_solver_New{
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
 
-    c_vec = (O.each_col() / vars).t() * (time_outcome - y_bar);
-    O = O.t() * (O.each_col() / vars);
+    c_vec = (O.each_col() % (p_dat.weights(r_set) / vars)).t() * (time_outcome - y_bar);
+    O = O.t() * (O.each_col() % (p_dat.weights(r_set) / vars));
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
@@ -1725,6 +1725,9 @@ class UKF_solver_New_exponential : public UKF_solver_New{
       O.cols(span_time).each_row() %  inv_covmat_off_diag.t();
     tmp_mat.cols(span_time) +=
       O.cols(span_binary).each_row() %  inv_covmat_off_diag.t();
+
+    tmp_mat.cols(span_time).each_row() %= p_dat.weights(r_set).t();
+    tmp_mat.cols(span_binary).each_row() %= p_dat.weights(r_set).t();
 
     O = O.t(); // transpose back
 
