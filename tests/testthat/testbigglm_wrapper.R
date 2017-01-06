@@ -17,7 +17,8 @@ if(interactive()){
 }
 
 # From bigglm.function()
-biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12){
+biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12,
+                       weights = NULL){
   tt<-terms(formula)
   # beta <- start
   # etafun <- function(x) if(is.null(beta)) rep(0,nrow(x)) else x%*%beta
@@ -39,12 +40,11 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
       mf<-model.frame(tt,chunk)
       mm<-model.matrix(tt,mf) # Get the terms
       p<-NCOL(mm)
-      #if (!is.null(weights)){
-      #    if (!inherits(weights, "formula"))
-      #        stop("`weights' must be a formula")
-      #    w<-model.frame(weights, chunk)[[1]]
-      #} else w<-rep(1,nrow(mm))
-      # w <- rep(1,nrow(mm))
+      if (!is.null(weights)){
+         if (!inherits(weights, "formula"))
+             stop("`weights' must be a formula")
+         w<-model.frame(weights, chunk)[[1]]
+      } else w<-rep(1,nrow(mm))
 
       ##########
       ## Init dummy entries if needed
@@ -91,7 +91,7 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12)
       bigglm_updateQR_rcpp(D = D, rbar = rbar, ss = ss, thetab = thetab,
                            checked = checked, tol = tol, model = model,
                            X = t(as.matrix(mm)), # both R and Fotran are column-major so we transpose
-                           eta = eta, offset = off, y = y)
+                           eta = eta, offset = off, y = y, w = w)
 
       # eta<-etafun(mm)+off
       # mu <- family$linkinv(eta)
@@ -243,10 +243,12 @@ sims <- test_sim_func_exp(n_series = 1e3, n_vars = 10, t_0 = 0, t_max = 10,
                           x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
                           intercept_start = -5, sds = c(.1, rep(1, 10)))
 
+
+chunksize <- 3e2
 get_data_func <- with(new.env(), {
   n <- nrow(sims$res)
   cursor <- 0
-  chunksize <- 3e2
+  chunksize <- chunksize
 
   function(reset = F){
     if(reset){
@@ -308,12 +310,29 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
 })
 
 
+set.seed(888572)
+ws <- runif(nrow(sims$res))
+ws <- ws * (nrow(sims$res) / sum(ws))
+sims$res <- cbind(sims$res, ws = ws)
 
+test_that("bigglm and my c++ version yields similar with weights", {
+  sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
+  form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
+  for(model in c("logit", "exp_combined")){
+    suppressWarnings(bigglm_res <- biglm::bigglm(
+      form, get_data_func,
+      family = if(model == "logit") binomial() else poisson(),
+      weights = ~ ws))
 
+    # matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
+    # abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
 
+    suppressWarnings(b <- biglm_func(form, get_data_func, model = model, weights = ~ ws))
 
-
+    expect_equal(unname(coef(bigglm_res)), c(b))
+  }
+})
 
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

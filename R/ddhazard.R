@@ -142,8 +142,10 @@ ddhazard = function(formula, data,
   if(!control$fixed_terms_method %in% c("M_step", "E_step"))
     stop("fixed_terms_method method '", control$fixed_terms_method,"' is not implemented")
 
-  if(control$ridge_eps <= 0)
+  if(control$ridge_eps <= 0){
     stop("Method not implemented with penalty term (control$ridge_eps) equal to ", control$ridge_eps)
+  } else if(control$ridge_eps < 1e-6)
+    warning("Method is no tested with penalty term (control$ridge_eps) less than ", 1e-6)
 
   if(verbose)
     message("Finding Risk set")

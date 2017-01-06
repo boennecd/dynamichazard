@@ -55,7 +55,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
         lb = x$state_vecs[, i] - 1.96 * sqrt(x$state_vars[i, i, ])
         ub = x$state_vecs[, i] + 1.96 * sqrt(x$state_vars[i, i, ])
       } else {
-        boot_ests <- ddhazard_boot$t[, (i -1) * nrow(ddhazard_boot$t0) + 1:nrow(ddhazard_boot$t0)]
+        boot_ests <- ddhazard_boot$t[, (i -1) * nrow(x$state_vecs) + 1:nrow(x$state_vecs)]
         bounds <- apply(boot_ests, 2, quantile, probs = c(.025, .975))
         lb <- bounds[1, ]
         ub <- bounds[2, ]

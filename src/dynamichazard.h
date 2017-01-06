@@ -133,7 +133,8 @@ public:
 
   void update(qr_obj &qr, // Previous/starting value. Will be overwritten
               const arma::mat &X, const arma::vec &eta,
-              const arma::vec &offset, arma::vec &y); // y will not be altered
+              const arma::vec &offset, arma::vec &y, // y will not be altered
+              const arma::vec &w);
 };
 
 using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
