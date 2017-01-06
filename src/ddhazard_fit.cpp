@@ -1804,6 +1804,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
     arma::vec offsets(chunk_size, arma::fill::zeros);
     arma::vec y(chunk_size);
     arma::vec eta;
+    arma::vec w(chunk_size);
     qr_obj qr(p_data->fixed_parems.n_elem);
     auto it = p_data->risk_sets.begin();
     double bin_stop = p_data->min_start;
@@ -1823,6 +1824,9 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
       // Find the outcomes, fixed terms and compute the offsets
       y.subvec(n_elements, n_elements + n_elements_to_take - 1) =
         arma::conv_to<arma::vec>::from(p_data->is_event_in_bin.elem(r_set) == (t - 1));
+
+      w.subvec(n_elements, n_elements + n_elements_to_take - 1) =
+        p_data->weights(r_set);
 
       fixed_terms.cols(n_elements, n_elements + n_elements_to_take - 1) =
         p_data->fixed_terms.cols(r_set);
@@ -1845,17 +1849,18 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
       if(n_elements == chunk_size){ // we have reached the chunk_size
 
         arma::vec eta = fixed_terms.t() * p_data->fixed_parems;
-        updater.update(qr, fixed_terms, eta, offsets, y);
+        updater.update(qr, fixed_terms, eta, offsets, y, w);
 
         n_elements = 0;
       } else if(it == --p_data->risk_sets.end()){ // there is no more bins to process
 
         y = y.subvec(0, n_elements - 1);
+        w = w.subvec(0, n_elements - 1);
         fixed_terms = fixed_terms.cols(0, n_elements - 1);
         offsets = offsets.subvec(0, n_elements - 1);
 
         arma::vec eta =  fixed_terms.t() * p_data->fixed_parems;
-        updater.update(qr, fixed_terms, eta, offsets, y);
+        updater.update(qr, fixed_terms, eta, offsets, y, w);
       }
 
       if(cursor_risk_set + n_elements_to_take < r_set_size){ // there are still elements left in the bin

@@ -132,7 +132,6 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
                , tolerance = 1e-05)
 })
 
-
 test_that("Changing fixed effect control parems changes the result", {
   arg_list <- list(
     formula(survival::Surv(tstart, tstop, event) ~
@@ -327,6 +326,33 @@ test_that("UKF with fixed effects works", {
   # matplot(fit$state_vecs, type = "l", col = 3:4, add = T, lty = 1)
   # abline(h = fit$fixed_effects, col = 1:2)
 })
+
+
+set.seed(2555647)
+ws <- runif(nrow(sims$res))
+ws <- ws * (nrow(sims$res) / sum(ws))
+sims$res <- cbind(sims$res, ws = ws)
+
+test_that("Only fixed effects yields same results as bigglm with exponential model with weights", {
+  form <- formula(survival::Surv(tstart, tstop, event) ~
+                    -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
+
+  suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
+                                    control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3),
+                                    weights = sims$res$ws))
+
+  tmp_design <- get_survival_case_weigths_and_data(form, data = sims$res, by = 1, id = sims$res$id,
+                                                   use_weights = F, max_T = 10, is_for_discrete_model = F)
+
+  suppressWarnings(res2 <- bigglm(
+    update(form, Y ~ . + offset(log(pmin(tstop, t) - pmax(tstart, t - 1)))),
+           data = tmp_design$X, family = poisson(), chunksize = 1e3,
+           tolerance = 1e-4, weights = ~ ws))
+
+  expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects))
+               , tolerance = 1e-05)
+})
+
 
 
 
