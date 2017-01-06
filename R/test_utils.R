@@ -319,7 +319,7 @@ str_func <- function(x, n_digist = 16){
   tmp <- capture.output(print(unname(c(x)), digits = n_digist))
   tmp <- sapply(tmp, gsub, pattern = "\\s*\\[1\\]\\s", replacement = "", USE.NAMES = F)
   tmp <- sapply(tmp, gsub, pattern = "\\s*\\[\\d+\\]\\s", replacement = ",\\ ", USE.NAMES = F)
-  tmp <- sapply(tmp, gsub, pattern = "(?<=\\d)\\s+(?=\\d|-)", replacement = ",\\ ", perl = T, USE.NAMES = F)
+  tmp <- sapply(tmp, gsub, pattern = "(?<=(\\d)|(NA))\\s+(?=(\\d)|-|(NA))", replacement = ",\\ ", perl = T, USE.NAMES = F)
 
   tmp <- paste0(c("c(", tmp, " )"), collapse = "")
 

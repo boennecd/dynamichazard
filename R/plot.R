@@ -17,9 +17,16 @@
 plot.fahrmeier_94 = function(x, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
-                             col = "black", add = F, do_alter_mfcol = T, ...){
+                             col = "black", add = F, do_alter_mfcol = T,
+                             ddhazard_boot, ...){
   if(!x$model %in% c("logit", exp_model_names))
     stop("Functions for model '", x$model, "' is not implemented")
+
+  missing_boot <- missing(ddhazard_boot)
+  if(!missing_boot){
+    # Removed failed estimates
+    ddhazard_boot$t <- ddhazard_boot$t[!apply(ddhazard_boot$t, 1, function(x) any(is.na(x))), ]
+  }
 
   if(type == "cov"){
     if(missing(cov_index)){
@@ -44,8 +51,15 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
     for(i in cov_index){
       ylab_to_use <- if(missing(ylab)) colnames(x$state_vecs)[i] else ylab
 
-      lb = x$state_vecs[, i] - 1.96 * sqrt(x$state_vars[i, i, ])
-      ub = x$state_vecs[, i] + 1.96 * sqrt(x$state_vars[i, i, ])
+      if(missing_boot){
+        lb = x$state_vecs[, i] - 1.96 * sqrt(x$state_vars[i, i, ])
+        ub = x$state_vecs[, i] + 1.96 * sqrt(x$state_vars[i, i, ])
+      } else {
+        boot_ests <- ddhazard_boot$t[, (i -1) * nrow(ddhazard_boot$t0) + 1:nrow(ddhazard_boot$t0)]
+        bounds <- apply(boot_ests, 2, quantile, probs = c(.025, .975))
+        lb <- bounds[1, ]
+        ub <- bounds[2, ]
+      }
 
       ylim_to_use <- if(missing(ylim)) range(lb, ub) else ylim
 
@@ -60,6 +74,20 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
 
       lines(x$times, lb, lty = 2, col = col)
       lines(x$times, ub, lty = 2, col = col)
+
+      if(!missing_boot){
+        if(nrow(boot_ests) > 5e2){
+          if(i == cov_index[1])
+            message("Only plotting ", 5e2, " of the boot sample estimates")
+          boot_ests <- boot_ests[sample.int(nrow(boot_ests), size = 5e2, replace = F), ]
+        }
+
+        new_col <- c(col2rgb(col = col))
+        new_col <- rgb(new_col[1], new_col[2], new_col[3], .05)
+        for(i in 1:nrow(boot_ests)){
+          lines(x$times, boot_ests[i, ], col = new_col)
+        }
+      }
     }
 
     return(invisible())

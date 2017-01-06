@@ -45,6 +45,7 @@ A list with class \code{fahrmeier_94}. The list contains:
 \code{times}\verb{ }\tab The interval borders \cr
 \code{risk_set}\verb{ }\tab The object from \code{\link{get_risk_obj}} if saved \cr
 \code{data}\verb{ }\tab The \code{data} argument if saved \cr
+\code{id}\verb{ }\tab ids used to match rows in \code{data} to individuals \cr
 \code{order}\verb{ }\tab Order of the random walk \cr
 \code{F_}\verb{ }\tab Matrix with that map transition from one state vector to the next \cr
 \code{method}\verb{ }\tab Method used in the E-step \cr

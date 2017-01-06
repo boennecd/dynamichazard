@@ -1,0 +1,145 @@
+---
+title: "Bootstrap illustration"
+author: "Benjamin Christoffersen"
+date: "6 January 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::knit_hooks$set(default_opts = function(before, options, envir) {
+    if (before){
+      options(digist = 4)
+    }
+})
+options(digist = 4)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, dpi = 36)
+knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
+```
+
+# Introduction
+
+This vignette will breifly show how to bootstrap the estimate of a `ddhazard_fit`. You can get the version used to make this vignette by calling:`
+
+```{r echo=FALSE}
+tryCatch({
+  current_sha <- paste0("@", httr::content(
+    httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
+    )$object$sha)
+}, error = function(...){ current_sha <<- "" })
+
+stopifnot(length(current_sha) > 0 && class(current_sha) == "character")
+
+current_version <- paste0("boennecd/dynamichazard", current_sha)
+```
+
+```{r}
+warning("Building ddhazard")
+current_version # the string you need to pass to devtools::install_github
+```
+
+```{r eval=FALSE}
+devtools::install_github(current_version)
+```
+
+# PBC data set
+We start by settings up the data set:
+```{r}
+# PBC data set from survival with time variying covariates
+# Details of tmerge are not important in this scope. The code is included
+# to make you able to reproduce the results
+# See: https://cran.r-project.org/web/packages/survival/vignettes/timedep.pdf
+library(survival)
+temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))
+pbc2 <- tmerge(temp, temp, id=id, death = event(time, status))
+pbc2 <- tmerge(pbc2, pbcseq, id=id, albumin = tdc(day, albumin),
+               protime = tdc(day, protime), bili = tdc(day, bili))
+pbc2 <- pbc2[, c("id", "tstart", "tstop", "death", "sex", "edema", 
+                 "age", "albumin", "protime", "bili")]
+```
+
+Next, we model:
+```{r, fig.height = 4.5, mySettings=FALSE}
+library(dynamichazard)
+dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
+                        log(albumin) + log(protime) + log(bili), pbc2,
+                   id = pbc2$id, by = 100, max_T = 3600, 
+                   Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
+                   control = list(save_risk_set = T, save_data = T))
+
+plot(dd_fit)
+```
+## Sampling individuals
+Next, we bootstrap the estimates:
+```{r}
+set.seed(7451)
+boot_out <- ddhazard_boot(
+  dd_fit, 
+  do_sample_weights = F,      # should re-sampeling be by weights or by
+                              # sampling each individual discreetly
+  do_stratify_with_event = F, # strafy on whether the individual is an event
+                              # or not
+  R = 500                     # Number of bootstrap samples
+  )
+
+# The list has the same structure and class the list returned by boot::boot
+# Though, a few elements are added 
+str(boot_out)
+```
+Above, bootsrap the model by sampeling the individuals discreetly. I.e. some individuals will have a weights $0,1,2,\dots$. We can plot 95% confidence bounds and illustrate the bootstrap estimates as follows:
+
+```{r}
+plot(dd_fit, ddhazard_boot = boot_out)
+```
+
+The completly black line is the estimates, the dashed lines are 95% confidence bounds taken at each point from the bootstrap estimates and the transparent black lines each represent a bootstrap estimate
+
+Further, we can check how stratifying within those individual who are events and those who are not as follows:
+
+```{r}
+set.seed(8524)
+boot_out_stratify_by_events <- ddhazard_boot(
+  dd_fit, 
+  do_sample_weights = F,
+  do_stratify_with_event = T, # changed
+  R = 500)
+
+plot(dd_fit, ddhazard_boot = boot_out_stratify_by_events)
+```
+
+Lastly, we can also sample the weights. This is done as follows: within each strata (e.g. those who dies) let $q$ denote the number of individuals. Then we sample $q$ uniform variables $l_i~\text{Unif}(0,1)$ and normalize such that $\sum_{i=1}^q l_i = q$. If there is no stara then we use the entire sample of individuals. We can do this for our fit as follows:
+```{r}
+set.seed(401)
+boot_out_by_weights <- ddhazard_boot(
+  dd_fit, 
+  do_sample_weights = T,      # changed      
+  do_stratify_with_event = F, # set back to false
+  R = 500)
+
+plot(dd_fit, ddhazard_boot = boot_out_by_weights)
+```
+
+You can also provide your own strata argument by setting the `strata` argument in the call to `ddhazard_boot`. Note that this has to be on an individual level not observation level. Further, you can use the `unique_id` argument to match the individual entries with the entries in `strata`. As an example, we strafy by the age at the start of the study period with the code below:
+```{r}
+# First we show that all the individual has the same age for all periods
+unique(tapply(pbc$age, pbc$id, function(x) length(unique(x))))
+
+# Next, we find the age for each individual 
+unique_id <- unique(pbc$id)
+age <- sapply(unique_id, function(x) pbc$age[pbc$id == x][1])
+summary(age)
+
+# Make strata variable
+is_less_than_50 <- age < 50
+
+# Run bootstrap with strata variable
+set.seed(101)
+boot_out_with_strata <- ddhazard_boot(
+  dd_fit,
+  unique_id = unique_id, 
+  strata = is_less_than_50,
+  R = 500)
+
+plot(dd_fit, ddhazard_boot = boot_out_with_strata)
+```
+
+The above is only for illustration. However, it may be usefull if you have e.g. catagorial variables in your model. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual do die
