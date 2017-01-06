@@ -54,6 +54,7 @@
 #' \code{times}\verb{ }\tab The interval borders \cr
 #' \code{risk_set}\verb{ }\tab The object from \code{\link{get_risk_obj}} if saved \cr
 #' \code{data}\verb{ }\tab The \code{data} argument if saved \cr
+#' \code{id}\verb{ }\tab ids used to match rows in \code{data} to individuals \cr
 #' \code{order}\verb{ }\tab Order of the random walk \cr
 #' \code{F_}\verb{ }\tab Matrix with that map transition from one state vector to the next \cr
 #' \code{method}\verb{ }\tab Method used in the E-step \cr
@@ -104,7 +105,6 @@ ddhazard = function(formula, data,
 
   X_Y = get_design_matrix(formula, data)
   n_params = ncol(X_Y$X)
-  tmp_n_failures = sum(X_Y$Y[, 3])
 
   if(model == "logit"){
     is_for_discrete_model <- TRUE
@@ -300,7 +300,7 @@ ddhazard = function(formula, data,
     tmp_tbl[, "Num events"] <- n_events
     tmp_tbl[, "Risk size"] <- unlist(lapply(risk_set$risk_sets, length))
 
-    message("Total number of included events are ", sum(tmp_tbl[, 2]), " of ", tmp_n_failures)
+    message("Total number of included events are ", sum(tmp_tbl[, 2]), " of ",   sum(X_Y$Y[, 3]))
     message("Size of risk set and number of events in each risk set are ([Risk set size]:[# events]):")
 
     tmp_tbl[, 1] <- sprintf("%8s", tmp_tbl[, 1])
@@ -329,26 +329,12 @@ ddhazard = function(formula, data,
   k_vals <- if(control$method == "EKF") seq_len(control$LR_max_try) - 1 else 0
   for(k in k_vals){
     tryCatch({
-      result <- ddhazard_fit_cpp(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
-                                 Q = Q, n_max = control$n_max,
-                                 risk_obj = risk_set, eps = control$eps,
-                                 X = X_Y$X, fixed_terms = X_Y$fixed_terms,
-                                 fixed_parems_start = control$fixed_parems_start,
-                                 tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
-                                 order_ = order,
-                                 est_Q_0 = control$est_Q_0, method = control$method,
-                                 model = model,
-                                 kappa = control$kappa, alpha = control$alpha, beta = control$beta,
-                                 NR_eps = control$NR_eps,
-                                 LR = control$LR / control$LR_decrease_fac^(k),
-                                 eps_fixed_parems = control$eps_fixed_parems,
-                                 max_it_fixed_params = control$max_it_fixed_params,
-                                 fixed_effect_chunk_size = control$fixed_effect_chunk_size,
-                                 debug = control$debug,
-                                 n_threads = control$n_threads,
-                                 ridge_eps = control$ridge_eps,
-                                 n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
-                                 weights = weights)
+      result <- ddhazard_no_validation(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose, Q = Q,
+                                       risk_set= risk_set, X_Y = X_Y, order = order, model = model,
+                                       LR = control$LR / control$LR_decrease_fac^(k),
+                                       n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
+                                       weights = weights,
+                                       control)
     }, error = function(e)
       if(length(k_vals) == 1 ||
           !grepl("^ddhazard_fit_cpp estimation error:", e$message))
@@ -445,6 +431,7 @@ ddhazard = function(formula, data,
     times = c(min(X_Y$Y[, 1]), risk_set$event_times),
     risk_set = if(control$save_risk_set) risk_set else NULL,
     data = if(control$save_data) data else NULL,
+    id = if(control$save_data) id else NULL,
     order = order, F_ = F_,
     method = control$method,
     model = model,
@@ -452,6 +439,33 @@ ddhazard = function(formula, data,
     control = control),
     LR = LR),
     "class" = "fahrmeier_94")
+}
+
+ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
+                                   risk_set, X_Y, order, model, LR,
+                                   n_fixed_terms_in_state_vec,
+                                   weights = weights,
+                                   control){
+  ddhazard_fit_cpp(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
+                   Q = Q, n_max = control$n_max,
+                   risk_obj = risk_set, eps = control$eps,
+                   X = X_Y$X, fixed_terms = X_Y$fixed_terms,
+                   fixed_parems_start = control$fixed_parems_start,
+                   tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
+                   order_ = order,
+                   est_Q_0 = control$est_Q_0, method = control$method,
+                   model = model,
+                   kappa = control$kappa, alpha = control$alpha, beta = control$beta,
+                   NR_eps = control$NR_eps,
+                   LR = LR,
+                   eps_fixed_parems = control$eps_fixed_parems,
+                   max_it_fixed_params = control$max_it_fixed_params,
+                   fixed_effect_chunk_size = control$fixed_effect_chunk_size,
+                   debug = control$debug,
+                   n_threads = control$n_threads,
+                   ridge_eps = control$ridge_eps,
+                   n_fixed_terms_in_state_vec = n_fixed_terms_in_state_vec,
+                   weights = weights)
 }
 
 exp_model_names <- c("exp_combined", "exp_bin",
