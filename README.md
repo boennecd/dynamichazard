@@ -125,8 +125,8 @@ fit$fixed_effects
 #>        -4.6035970         0.2231969
 
 # Bootstrap the estimates
-boot_out <- ddhazard_boot(fit, R = 1e3) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 273 times
+boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
+#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 262 times
 
 # Plot bootstrapped estimates (transparent lines) and 2.5% and 97.5% quantiles
 # (dashed-lines)
@@ -144,4 +144,4 @@ boxplot(t(tail(t(boot_out$t), 2)))
 
 ![](README-unnamed-chunk-2-3.png)
 
-The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say *t* = 40 is modeled as not having diabetes at *t* = 0, 1, ..., 39 with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time
+The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say *t* = 40 is modeled as not having diabetes at *t* = 0, 1, ..., 39 with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time. For instance, this may explain the effect `times_pregnant`. You would not expect many women at age 21 (*t* = 1) to have say 11 children

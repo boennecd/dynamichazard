@@ -9,7 +9,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "README-",
-  dpi = 36
+  dpi = 124
 )
 ```
 
@@ -98,7 +98,7 @@ plot(fit)
 fit$fixed_effects
 
 # Bootstrap the estimates
-boot_out <- ddhazard_boot(fit, R = 1e3) # R is number of bootstrap samples
+boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
 
 # Plot bootstrapped estimates (transparent lines) and 2.5% and 97.5% quantiles
 # (dashed-lines)
@@ -108,4 +108,4 @@ plot(fit, ddhazard_boot = boot_out)
 boxplot(t(tail(t(boot_out$t), 2)))
 ```
 
-The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say $t = 40$ is modeled as not having diabetes at $t = 0,1,...,39$ with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time
+The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say $t = 40$ is modeled as not having diabetes at $t = 0,1,...,39$ with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time. For instance, this may explain the effect `times_pregnant`. You would not expect many women at age 21 ($t = 1$) to have say 11 children
