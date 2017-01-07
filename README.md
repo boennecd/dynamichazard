@@ -99,16 +99,16 @@ xtabs(~ has_diabetes + t, diabetes)
 # Fit the model
 fit <- ddhazard(
   Surv(t, has_diabetes) ~
-    ddFixed(1) +                        # These effects are time invariant
+    ddFixed(1) +                         # These effects are time invariant
     ddFixed(diabetes_pedigree) +
-    glucose_cocen + blood_pres +        # The rest are time-varying
+    glucose_cocen + blood_pres +         # The rest are time-varying
     skin_fold + BMI + times_pregnant
     ,
   data = diabetes,
-  by = 1,                               # time interval lengths
-  max_T = 42,                           # last period observed while estimating 
-  Q_0 = diag(1e5, 5), Q = diag(1e-4, 5) # Covariances mats for state equation
-  )
+  by = 1,                                # time interval lengths
+  max_T = 42,                            # last period observed while estimating 
+  Q_0 = diag(1e5, 5), Q = diag(1e-4, 5), # Covariances mats for state equation
+  control = list(eps = 0.1))
 #> a_0 not supplied. One iteration IWLS of static glm model is used
 
 # Plot the effects estimates with 95% point-wise confidence bounds
@@ -122,11 +122,11 @@ plot(fit)
 # Print time-invariant estimates
 fit$fixed_effects
 #>       (Intercept) diabetes_pedigree 
-#>        -4.6035970         0.2231969
+#>        -4.7938787         0.2388174
 
 # Bootstrap the estimates
 boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 262 times
+#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 2 times
 
 # Plot bootstrapped estimates (transparent lines) and 2.5% and 97.5% quantiles
 # (dashed-lines)
