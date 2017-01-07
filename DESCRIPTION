@@ -21,9 +21,9 @@ Description: Contains functions that lets you fit dynamic hazard models with bin
   fitted with the regular coxph() like formula.
 License: GPL-2
 LazyData: TRUE
-Imports: Rcpp (>= 0.12.6), stringr
 LinkingTo: Rcpp, RcppArmadillo
-Depends: R (>= 3.3.2), stats, graphics, utils, parallel, survival
+imports: Rcpp (>= 0.12.6), stringr, parallel, boot
+Depends: R (>= 3.3.2), stats, graphics, utils, survival
 RoxygenNote: 5.0.1
 Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR, R.rsp
 VignetteBuilder: knitr, R.rsp

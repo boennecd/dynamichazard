@@ -321,7 +321,7 @@ We define the estimation method for the Generalized additive model in the next c
 library(mgcv)
 fit_funcs$gam <- function(s = sims$res){
   # get data frame for fitting
-  dat_frame <- get_survival_case_weigths_and_data(
+  dat_frame <- get_survival_case_weights_and_data(
     formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
                data = s, max_T = T_max, by = 1, id = s$id, use_weights = F)$X
   # fit model
@@ -378,7 +378,7 @@ Having defined the splitting method, we turn to the prediction functions. The id
 # Define general prediction function
 brier_funcs <- list() 
 brier_funcs$general <- function(brier_func, fit, eval_data_frame){
-  d_frame <- get_survival_case_weigths_and_data(
+  d_frame <- get_survival_case_weights_and_data(
     formula = Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
     data = eval_data_frame, max_T = T_max, by = 1, id = eval_data_frame$id, 
     use_weights = F)$X

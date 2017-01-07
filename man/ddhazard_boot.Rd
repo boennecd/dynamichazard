@@ -25,7 +25,7 @@ ddhazard_boot(ddhazard_fit, strata, unique_id, R = 100,
 \value{
 An object like returned from the \code{\link[boot]{boot}} function
 }
-\details{
+\description{
 See the vignette 'Bootstrap illustration'
 }
 \seealso{

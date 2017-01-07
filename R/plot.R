@@ -8,6 +8,7 @@
 #' @param add \code{FALSE} if you want to make a new plot
 #' @param xlab,ylab,ylim,col Arguments to override defaults set in the function
 #' @param do_alter_mfcol \code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element
+#' @param ddhazard_boot Object from a \code{\link{ddhazard_boot}} call which confidence bounds will be based on and where bootstrap samples will be printed with a transparent color
 #' @param ... Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}
 #'
 #' @details

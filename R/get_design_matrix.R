@@ -72,6 +72,22 @@ get_design_matrix = function(formula, data, response = T){
 
   }
 
+  # Change fixed_terms name if ddFixed(1) or similar was used
+  is_ddFixed_intercept <- grepl("^ddFixed\\(rep\\(\\s*1,\\s*nrow\\(.*\\)\\)\\)$", colnames(fixed_terms))
+  if(any(is_ddFixed_intercept)){
+    old_name <- colnames(fixed_terms)[is_ddFixed_intercept]
+    new_name <- "ddFixed((Intercept))"
+
+    attr(temp$formula, "term.labels")[
+      attr(temp$formula, "term.labels") == old_name] <- new_name
+    colnames(attr(temp$formula, "factors"))[
+      colnames(attr(temp$formula, "factors")) == old_name] <- new_name
+    rownames(attr(temp$formula, "factors"))[
+      rownames(attr(temp$formula, "factors")) == old_name] <- new_name
+
+    colnames(fixed_terms)[is_ddFixed_intercept] <- new_name
+  }
+
   list(X = X, fixed_terms = fixed_terms, Y = Y, formula = temp$formula)
 }
 
