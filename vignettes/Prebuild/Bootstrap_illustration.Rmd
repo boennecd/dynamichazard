@@ -18,7 +18,7 @@ knitr::opts_knit$set(default_opts = T)
 
 # Introduction
 
-This vignette will breifly show how to bootstrap the estimate of a `ddhazard_fit`. It builds on the vignette 'ddhazard' and 'Comparing methods for time varying logistic models'. Thus, it is suggest first to read these. You can get the version used to make this vignette by calling:`
+This vignette will show how to bootstrap the estimate of a `ddhazard_fit`. It builds on the vignettes 'ddhazard' and 'Comparing methods for time varying logistic models'. Thus, it is suggest to read these first. You can get the version used to make this vignette by calling:`
 
 ```{r echo=FALSE}
 tryCatch({
@@ -33,8 +33,7 @@ current_version <- paste0("boennecd/dynamichazard", current_sha)
 ```
 
 ```{r}
-warning("Building ddhazard")
-current_version # the string you need to pass to devtools::install_github
+current_version # The string you need to pass devtools::install_github
 ```
 
 ```{r eval=FALSE}
@@ -42,7 +41,7 @@ devtools::install_github(current_version)
 ```
 
 # PBC data set
-We start by settings up the data set:
+We start by settings up the data set. We will use the pbc2 data set from the `survival` package as in the vignette 'Comparing methods for time varying logistic models':
 ```{r}
 # PBC data set from survival with time variying covariates
 # Details of tmerge are not important in this scope. The code is included
@@ -65,12 +64,16 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                    id = pbc2$id, by = 100, max_T = 3600, 
                    Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
                    control = list(save_risk_set = T, save_data = T, eps = .1))
+```
 
+A plot of the estimates is given below. The dashed line are 95% point-wise confidence intervals using the variances estimates from the extended Kalman filter with smoothing:
+
+```{r}
 plot(dd_fit)
 ```
 
 ## Sampling individuals
-We can bootstrap the estimates in the above model by :
+We can bootstrap the estimates in the model by using `ddhazard_boot` function as done below:
 ```{r}
 set.seed(7451)
 R <- 10000
@@ -85,17 +88,15 @@ boot_out <- ddhazard_boot(
 
 # The list has the same structure and class as the list returned by boot::boot
 # Though, a few elements are added 
-str(boot_out)
+class(boot_out)
 ```
-Above, we bootsrap the model by sampeling the individuals discreetly. I.e. individuals will have weights of $0,1,2,\dots$. We can plot 95% confidence bounds and illustrate the bootstrap estimates as follows:
+Above, we bootstrap the model by sampling the individuals discreetly. I.e. individuals will have weights of $0,1,2,\dots$. We can plot 95% confidence bounds from the bootstrap estimates as follows:
 
 ```{r}
 plot(dd_fit, ddhazard_boot = boot_out)
 ```
 
-The completly black line is the estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap estimates taken at each point and the transparent black lines each represent a bootstrap estimate
-
-We can check if it affects the results if we sample in strata between those individual who had an event and those who are not as follows:
+The completely black line is the estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap estimates taken at each point and the transparent black lines each represent a bootstrap estimate. We can check if it affects the results if we perform stratified sampling between those individuals who has an event and those who does not as follows:
 
 ```{r}
 set.seed(8524)
@@ -109,7 +110,7 @@ plot(dd_fit, ddhazard_boot = boot_out_stratify_by_events)
 ```
 
 ## Sampling weights
-We can also sample the weights. This is done as follows: within each stratum $j$ (e.g. those who have an event and those who do not) let $q_j$ denote the number of individuals. Then we sample $q_j$ uniform variables $l_i~\text{Unif}(0,1)$ for $i = 1,\dots,q_j$ and normalize such that $\sum_{i=1}^q l_i = q$. If there is no stara then we have single stratum with the entire sample of individuals. The code below will sample the weights as described above:
+We can also sample the weights. This is done as follows: within each stratum $j$ (e.g. those who have an event and those who do not) let $q_j$ denote the number of individuals. Then we sample $q_j$ uniform variables $l_i\sim\text{Unif}(0,1)$ for $i = 1,\dots,q_j$ and normalize with a constant $c$ such that $\sum_{i=1}^{q_j} l_i/c = q_j$. The code below will sample the weights as described above:
 ```{r}
 set.seed(401)
 boot_out_by_weights <- ddhazard_boot(
@@ -122,20 +123,24 @@ plot(dd_fit, ddhazard_boot = boot_out_by_weights)
 ```
 
 ## Ohter strata
-You can also provide your own strata by setting the `strata` argument in the call to `ddhazard_boot`. Note that this has to be on an individual level not observation level. Further, you can use the `unique_id` argument to match the individual entries with the entries in `strata`. As an example, we strafy by the age at the start of the study period with the code below:
+You can also provide your own strata to perform stratified sampling with. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the design matrix). Further, you can use the `unique_id` argument to match the individual entries with the entries in `strata`. As an example, we stratify by the `age` at the start of the study period with the code below:
 ```{r}
-# First we show that all the individual has the same age for all periods
+# Individuals have different number of rows in the dataset
+xtabs(~xtabs(~pbc2$id))
+
+# Though all the individual has the same age for all periods
+# This age is the age at the start of the study
 unique(tapply(pbc2$age, pbc2$id, function(x) length(unique(x))))
 
-# Next, we find the age for each individual 
+# Next, we find the age for each individual
 unique_id <- unique(pbc2$id)
 age <- sapply(unique_id, function(x) pbc2$age[pbc$id == x][1])
 summary(age)
 
-# Make strata variable
+# We define a strata variable for those less than age 50
 is_less_than_50 <- age < 50
 
-# Run bootstrap with strata variable
+# We perform stratified sampling over this variable as follows
 set.seed(101)
 boot_out_with_strata <- ddhazard_boot(
   dd_fit,
@@ -146,10 +151,10 @@ boot_out_with_strata <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out_with_strata)
 ```
 
-The above is only for code is only provide for illustrative purposes. There is no reason to stratify accross the age. However, it may be usefull if you have e.g. catagorial variables in your model. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual do die
+The above code is only provide for illustrative purposes. There is no reason to stratify sampling over the age (as far as I can see). However, it may be useful if you have e.g. categorical variables in your model. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual has an event. Stratified sampling will then be performed over this variable
 
 ## Fixed effects
-Fixed effects wil also be sampled. They are added as the last entries of the element `t` returned by `ddhazard_boot`. As an example ...:
+Fixed effects (time invariant effects) can also be bootstrap. The fixed effects bootstrap estimates are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
 
 ```{r}
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ 
@@ -163,19 +168,31 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~
                                                     # esimated in E-step
                    )
 
+```
+
+The time varying effects are plotted below:
+
+```{r}
 plot(dd_fit)
 ```
 
+The fixed effects are estimated to:
+
+```{r,echo=F}
+names(dd_fit$fixed_effects)[1] <- c("(Intercept)") 
+```
+
 ```{r}
-# The fixed effects estimates
 dd_fit$fixed_effects
 ```
+
+We can bootstrap the estimates with a call similar to those we made before:
 
 ```{r}
 set.seed(9001)
 boot_out <- ddhazard_boot(
   dd_fit, 
-  do_sample_weights = T,      # sample using weights      
+  do_sample_weights = T,      # sample weights      
   do_stratify_with_event = F, # dont stratify by event
   R = R)
 
@@ -183,13 +200,15 @@ boot_out <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out)
 ```
 
+We then turn the bootstrap estimates of the fixed effects. Below, we first slice out the fixed effects, print a few of the sample estimates and then make a box plot of the all the sample estimates. Lastly, we add a continuous horizontal line for the initial estimates:
+
 ```{r, fig.height=3.5}
 # Print some of bootstrap estimates of the fixed effects
 fixed_effects_ests <- t(tail(t(boot_out$t), 2))
 head(fixed_effects_ests)
 
 # Make a boxplot of the fixed effects
-par(mfcol = c(1, 2))
+par(mfcol = c(1, 2), cex = .6)
 for(i in 1:ncol(fixed_effects_ests)){
   boxplot(fixed_effects_ests[, i], main = colnames(fixed_effects_ests)[i])
   

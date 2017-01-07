@@ -64,7 +64,7 @@
 #'}
 #'
 #' @seealso
-#' \code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}
+#' \code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}
 #'
 #' @references
 #' Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation for discrete time survival data}. Biometrika 81.2 (1994): 317-330.

@@ -93,6 +93,6 @@ Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation fo
 Durbin, James, and Siem Jan Koopman. \emph{Time series analysis by state space methods}. No. 38. Oxford University Press, 2012.
 }
 \seealso{
-\code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}
+\code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}
 }
 

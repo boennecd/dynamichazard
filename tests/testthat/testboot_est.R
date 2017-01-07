@@ -120,7 +120,7 @@ test_that("Boot gives previously computed values with timevarying covariates",{
                   control = list(save_risk_set = T, save_data = T))
 
   set.seed(999)
-  tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = F, R = 30)
+  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = F, R = 30))
 
   # plot(dd_fit)
   # get_expect_equal(tmp, file = "tmp.txt")
@@ -143,7 +143,7 @@ test_that("Boot gives previously computed values with timevarying covariates",{
                  0.876937952648258134, NA, NA,   0.504024759575150694, NA, NA, 0.853359933056268893, NA,   1.061435076655089516, NA, NA, 0.981602982149452630, NA,                     NA, 0.714792187811584601, 0.179016113660373150, 1.618071551959163301, 0.420798216521904855,                     NA, NA, NA, -4.774779067365225060, NA,                     NA, 1.027686070214723690, 0.980750896681414686, 0.951375214212884734, 0.762740695796394474,   1.587314413110313405, NA, 0.840786297535069727, NA, NA,   0.474570504586541042, NA, NA, 0.866923993115378044, NA ))
 
   set.seed(68245)
-  tmp <- ddhazard_boot(fit, do_sample_weights = T, do_stratify_with_event = F, R = 30)
+  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = T, do_stratify_with_event = F, R = 30))
 
   # plot(dd_fit)
   # get_expect_equal(tmp, file = "tmp.txt")
@@ -181,7 +181,7 @@ test_that("Boot gives previously computed values with timevarying covariates and
                                  fixed_terms_method = "M_step"))
 
   set.seed(747)
-  tmp <- ddhazard_boot(fit, do_sample_weights = T, do_stratify_with_event = F, R = 30)
+  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = T, do_stratify_with_event = F, R = 30))
 
   # plot(fit)
   # get_expect_equal(tmp, file = "tmp.txt")
@@ -209,7 +209,7 @@ test_that("Boot gives previously computed values with timevarying covariates and
                  -1.824692734498160274, -2.034534258994030509, NA, -1.727664469103285860, -1.732777752334838439, -1.743210273198977367, -1.804307572569330720, -1.733505293537862757, -1.793317497233932745, -1.786378339742048516, -1.777480540977414147, -1.725253716325601872, -1.832233398234561328, -1.734569109125067676, -1.768866086757280298, -1.739366138801384354, -1.787510132245943240, -1.767778716788760196, -1.758439905827106964, -1.729045596499570570, -1.748598158167564032, -1.883992289217879756, -1.741735683127336953, -1.800268808710526303 ))
 
   set.seed(66526)
-  tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = F, R = 30)
+  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = F, R = 30))
 
   # plot(fit)
   # get_expect_equal(tmp, file = "tmp.txt")
