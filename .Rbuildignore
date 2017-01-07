@@ -26,3 +26,5 @@ revdep/
 ^NEWS\.md$
 ^README\.Rmd$
 ^README-.*\.png$
+
+Examples/
