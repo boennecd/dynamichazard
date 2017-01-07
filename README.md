@@ -101,13 +101,13 @@ fit <- ddhazard(
   Surv(t, has_diabetes) ~
     ddFixed(1) +                         # These effects are time invariant
     ddFixed(diabetes_pedigree) +
+    ddFixed(times_pregnant) +
     glucose_cocen + blood_pres +         # The rest are time-varying
-    skin_fold + BMI + times_pregnant
-    ,
+    skin_fold + BMI,
   data = diabetes,
   by = 1,                                # time interval lengths
   max_T = 42,                            # last period observed while estimating 
-  Q_0 = diag(1e5, 5), Q = diag(1e-4, 5), # Covariances mats for state equation
+  Q_0 = diag(1e5, 4), Q = diag(1e-4, 4), # Covariances mats for state equation
   control = list(eps = 0.1))
 #> a_0 not supplied. One iteration IWLS of static glm model is used
 
@@ -121,12 +121,12 @@ plot(fit)
 
 # Print time-invariant estimates
 fit$fixed_effects
-#>       (Intercept) diabetes_pedigree 
-#>        -4.7938787         0.2388174
+#>       (Intercept) diabetes_pedigree    times_pregnant 
+#>       -4.84025986        0.25979565       -0.06056675
 
 # Bootstrap the estimates
 boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 2 times
+#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 1 times
 
 # Plot bootstrapped estimates (transparent lines) and 2.5% and 97.5% quantiles
 # (dashed-lines)
@@ -139,9 +139,9 @@ plot(fit, ddhazard_boot = boot_out)
 ``` r
 
 # Make boxplot for the bootstrap estimate of the fixed effect
-boxplot(t(tail(t(boot_out$t), 2)))
+boxplot(t(tail(t(boot_out$t), 3)))
 ```
 
 ![](README-unnamed-chunk-2-3.png)
 
-The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say *t* = 40 is modeled as not having diabetes at *t* = 0, 1, ..., 39 with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time. For instance, this may explain the effect `times_pregnant`. You would not expect many women at age 21 (*t* = 1) to have say 11 children
+The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say *t* = 40 is modeled as not having diabetes at *t* = 0, 1, ..., 39 with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time. This is particularly an issue with `time_pregant`. It is hard of someone aged 21 (*t* = 1) to have been pregant say 11 times
