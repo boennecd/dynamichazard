@@ -23,3 +23,4 @@ README\.md$
 Prebuild/
 revdep/
 
+^NEWS\.md$

@@ -5,4 +5,6 @@
 #' @importFrom utils capture.output tail
 #' @importFrom grDevices col2rgb rgb
 #' @importFrom survival Surv
+#' @importFrom boot boot
+#' @importFrom stringr str_replace_all
 NULL
