@@ -208,12 +208,12 @@ class thread_pool
 
   void worker_thread(unsigned my_index_)
   {
-    my_index()=my_index_;
-    local_work_queue()=queues[my_index()].get();
-
     while(!start){
       std::this_thread::yield();
     }
+
+    my_index()=my_index_;
+    local_work_queue()=queues[my_index()].get();
 
     while(!done)
     {
@@ -266,6 +266,7 @@ public:
     }
     catch(...)
     {
+      start = true;
       done=true;
       throw;
     }
