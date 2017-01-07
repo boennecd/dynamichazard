@@ -18,7 +18,7 @@ knitr::opts_knit$set(default_opts = T)
 
 # Introduction
 
-This vignette will show how to bootstrap the estimate of a `ddhazard_fit`. It builds on the vignettes 'ddhazard' and 'Comparing methods for time varying logistic models'. Thus, it is suggest to read these first. You can get the version used to make this vignette by calling:`
+This vignette will show how to bootstrap the estimate of a `ddhazard` call. this vignette builds on the vignettes 'ddhazard' and 'Comparing methods for time varying logistic models'. Thus, it is suggest to read these first. You can get the version used to make this vignette by calling:`
 
 ```{r echo=FALSE}
 tryCatch({
@@ -66,7 +66,7 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                    control = list(save_risk_set = T, save_data = T, eps = .1))
 ```
 
-A plot of the estimates is given below. The dashed line are 95% point-wise confidence intervals using the variances estimates from the extended Kalman filter with smoothing:
+A plot of the estimates is given below. The dashed lines are 95% point-wise confidence intervals using the variances estimates from the Extended Kalman filter with smoothing:
 
 ```{r}
 plot(dd_fit)
@@ -96,7 +96,7 @@ Above, we bootstrap the model by sampling the individuals discreetly. I.e. indiv
 plot(dd_fit, ddhazard_boot = boot_out)
 ```
 
-The completely black line is the estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap estimates taken at each point and the transparent black lines each represent a bootstrap estimate. We can check if it affects the results if we perform stratified sampling between those individuals who has an event and those who does not as follows:
+The completely black line are the estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap estimates taken at each point and the transparent black lines each represent a bootstrap estimate. We can check if it affects the results if we perform stratified sampling between those individuals who has an event and those who does not as follows:
 
 ```{r}
 set.seed(8524)
@@ -110,7 +110,7 @@ plot(dd_fit, ddhazard_boot = boot_out_stratify_by_events)
 ```
 
 ## Sampling weights
-We can also sample the weights. This is done as follows: within each stratum $j$ (e.g. those who have an event and those who do not) let $q_j$ denote the number of individuals. Then we sample $q_j$ uniform variables $l_i\sim\text{Unif}(0,1)$ for $i = 1,\dots,q_j$ and normalize with a constant $c$ such that $\sum_{i=1}^{q_j} l_i/c = q_j$. The code below will sample the weights as described above:
+We can also sample the weights. This is done as follows: within each stratum $j$ (e.g. those who have an event and those who do not) let $r_j$ denote the number of individuals. Then we sample $r_j$ uniform variables $l_i\sim\text{Unif}(0,1)$ for $i = 1,\dots,r_j$ and normalize with a constant $c$ such that $\sum_{i=1}^{r_j} l_i/c = r_j$. The code below will sample the weights as described above:
 ```{r}
 set.seed(401)
 boot_out_by_weights <- ddhazard_boot(
@@ -128,7 +128,7 @@ You can also provide your own strata to perform stratified sampling with. This i
 # Individuals have different number of rows in the dataset
 xtabs(~xtabs(~pbc2$id))
 
-# Though all the individual has the same age for all periods
+# Though all the individual have the same age for all periods
 # This age is the age at the start of the study
 unique(tapply(pbc2$age, pbc2$id, function(x) length(unique(x))))
 
@@ -151,10 +151,10 @@ boot_out_with_strata <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out_with_strata)
 ```
 
-The above code is only provide for illustrative purposes. There is no reason to stratify sampling over the age (as far as I can see). However, it may be useful if you have e.g. categorical variables in your model. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual has an event. Stratified sampling will then be performed over this variable
+The above code is only provide for illustrative purposes. There is no reason to do stratified sampling over the age (as far as I can see). However, it may be useful if you have e.g. categorical variables in your model and want to ensure that each bootstrap sample has a given amount of observation in each categori. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual has an event. Stratified sampling will then be performed over this variable
 
 ## Fixed effects
-Fixed effects (time invariant effects) can also be bootstrap. The fixed effects bootstrap estimates are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
+Fixed effects (time invariant effects) can also be bootstrap estimated. The fixed effects bootstrap estimates are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
 
 ```{r}
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ 
@@ -196,7 +196,7 @@ boot_out <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out)
 ```
 
-We then turn the bootstrap estimates of the fixed effects. Below, we first slice out the fixed effects, print a few of the sample estimates and then make a box plot of the all the sample estimates. Lastly, we add a continuous horizontal line for the initial estimates:
+We then turn the bootstrap estimates of the fixed effects. Below, we first slice out the fixed effects, print a few of the bootstrap sample estimates and then make a box plot of the all the sample estimates. Lastly, we add a continuous horizontal line for the initial estimates:
 
 ```{r, fig.height=3.5}
 # Print some of bootstrap estimates of the fixed effects
