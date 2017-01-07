@@ -22,8 +22,8 @@ Description: Contains functions that lets you fit dynamic hazard models with bin
 License: GPL-2
 LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo
-imports: parallel
-Depends: R (>= 3.3.2), stats, graphics, utils, survival, Rcpp (>= 0.12.6), boot, stringr
+Imports: parallel, Rcpp (>= 0.12.6), boot, stringr
+Depends: R (>= 3.3.2), stats, graphics, utils, survival
 RoxygenNote: 5.0.1
 Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR, R.rsp
 VignetteBuilder: knitr, R.rsp
