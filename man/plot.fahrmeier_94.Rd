@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{fahrmeier_94}(x, xlab = "Time", ylab = "Hazard",
   type = "cov", plot_type = "l", cov_index, ylim, col = "black",
-  add = F, do_alter_mfcol = T, ...)
+  add = F, do_alter_mfcol = T, ddhazard_boot, ...)
 }
 \arguments{
 \item{x}{Result of \code{\link{ddhazard}} call}

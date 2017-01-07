@@ -1,3 +1,21 @@
+#' @title Bootstrap for \code{\link{ddhazard}}
+#' @param ddhazard_fit Returned object from a \code{\link{ddhazard}} call
+#' @param strata Strata to sample within. These need to be on an individual by individual basis and not rows in the design matrix
+#' @param unique_id Unique ids where entries match entries of \code{strata}
+#' @param R Number of bootstrap estimates
+#' @param do_stratify_with_event \code{TRUE} if sampling should be by strata of whether the individual has an event. An interaction factor will be made if \code{strata} is provided
+#' @param do_sample_weights \code{TRUE} if weights should be sample instead of individuals
+#' @param print_errors \code{TRUE} if errors should be printed when estimations fails
+#'
+#' @details
+#' See the vignette 'Bootstrap illustration'
+#'
+#' @return
+#' An object like returned from the \code{\link[boot]{boot}} function
+#'
+#' @seealso
+#' \code{\link{ddhazard}}, \code{\link[=plot.fahrmeier_94]{plot}}
+#'
 #' @export
 ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
                           do_stratify_with_event = T, do_sample_weights = F,
@@ -42,12 +60,13 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
      n_fixed > 0){
     indicies_fixed_coef_in_state <- 1:n_fixed +  n_varying
 
-    # We need to add indicies to Q to
+    # We need to add indicies to Q
     Q_new <- ddhazard_fit$Q_0 # This has the right dimension
     Q_new[,] <- 0
     Q_new[1:n_varying, 1:n_varying] <- ddhazard_fit$Q
     ddhazard_fit$Q <- Q_new
 
+    # and to a_0
     if(ddhazard_fit$order == 1){
       a_0 <- c(a_0, ddhazard_fit$control$fixed_parems_start)
     } else if(ddhazard_fit$order == 2){
@@ -64,7 +83,7 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
     if(do_sample_weights){
       ws <- data
     } else{
-      ws <- xtabs(~ran.gen)
+      ws <- xtabs(~ ran.gen)
     }
 
     # find which ids are included
@@ -141,7 +160,7 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
   }
 
 
-  # Bootstrap estimate
+  # Bootstrap estimates
   data <- rep(1, length(unique_id))
   names(data) <- unique_id
   boot_est <-
