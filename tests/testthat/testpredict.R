@@ -153,7 +153,7 @@ result = ddhazard(
   order = 2
 )
 
-test_that("get_survival_case_weigths_and_data and predict yields consistent result with ids", {
+test_that("get_survival_case_weights_and_data and predict yields consistent result with ids", {
   set.seed(1992)
 
   s <- test_sim_func_logit(
@@ -177,7 +177,7 @@ test_that("get_survival_case_weigths_and_data and predict yields consistent resu
   suppressMessages(preds <- predict(fit, new_data = s$res, tstart = "tstart_ceil", tstop = "tstop_ceil"))
   preds <- 1 - tapply(preds$fits, s$res$id, function(x) prod(1 - x))
 
-  other_s <- get_survival_case_weigths_and_data(
+  other_s <- get_survival_case_weights_and_data(
     formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
     data = s$res, max_T = 10, by = 1, id = s$res$id,
     use_weights = F)$X

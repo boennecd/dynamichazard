@@ -109,11 +109,11 @@ glm_simple$coefficients
 
 Though, we want to account for the fact that say the second the row of individual 282 has a length of `r (ex$tstop - ex$tstart)[2]` days (`r ex$tstop[2]` minus `r ex$tstart[2]`) while the fourth row has a length `r (ex$tstop - ex$tstart)[4]` days. A way to incorporate this information is to bin the observations into periods of a given length. Example of such binning is found in [@tutz16] and [@shumway01]
 
-Say that we set the bin interval lengths to 100 days. Then the first row for `id = 282`  will yield three observation: one from 0 to 100, one from 100 to 200 and one from 200 to 300 (since we know that she survives beyond time 300). That is, she survives from time 0 to time 100, survives from time 100 to time 200 etc. We can make such a data frame with the `get_survival_case_weigths_and_data` function in this package:
+Say that we set the bin interval lengths to 100 days. Then the first row for `id = 282`  will yield three observation: one from 0 to 100, one from 100 to 200 and one from 200 to 300 (since we know that she survives beyond time 300). That is, she survives from time 0 to time 100, survives from time 100 to time 200 etc. We can make such a data frame with the `get_survival_case_weights_and_data` function in this package:
 
 ```{r}
 library(dynamichazard)
-pbc2_big_frame <- get_survival_case_weigths_and_data(
+pbc2_big_frame <- get_survival_case_weights_and_data(
   Surv(tstart, tstop, death == 2) ~ age + edema + log(albumin) + log(protime) +
     log(bili), data = pbc2, id = pbc2$id, by = 100, max_T = 3600, 
   use_weights = F)
@@ -129,7 +129,7 @@ pbc2_big_frame[pbc2_big_frame$id == 282, ]
 Notice that three new columns have been added: `Y` which is the outcome, `t` which is the stop time in the bin and `weights` which is the weight to be used in a regression. We see that the first row in the initial data frame for individual `282` has three rows now since the row is in three bins (the bins at times $(0,100],(100,200]$ and $(200,300]$). We could just use weights instead. This is what we get if we set `use_weights = T`:
 
 ```{r}
-pbc2_small_frame <- get_survival_case_weigths_and_data(
+pbc2_small_frame <- get_survival_case_weights_and_data(
   Surv(tstart, tstop, death == 2) ~ age + edema + log(albumin) + log(protime) +
     log(bili), data = pbc2, id = pbc2$id, by = 100, max_T = 3600, 
   use_weights = T)
@@ -177,7 +177,7 @@ knitr::kable(
   row.names = T)
 ```
 
-To end this section, you can skip making data frame with `get_survival_case_weigths_and_data` by calling the `static_glm` function from `dynamichazard` package. The call below yields the same results as shown:
+To end this section, you can skip making data frame with `get_survival_case_weights_and_data` by calling the `static_glm` function from `dynamichazard` package. The call below yields the same results as shown:
 
 ```{r}
 static_glm_fit <- static_glm(

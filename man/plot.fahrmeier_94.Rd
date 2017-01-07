@@ -23,6 +23,8 @@
 
 \item{do_alter_mfcol}{\code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element}
 
+\item{ddhazard_boot}{Object from a \code{\link{ddhazard_boot}} call which confidence bounds will be based on and where bootstrap samples will be printed with a transparent color}
+
 \item{...}{Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}}
 }
 \description{

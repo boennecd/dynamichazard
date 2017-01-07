@@ -7,7 +7,7 @@
 #' @param do_sample_weights \code{TRUE} if weights should be sample instead of individuals
 #' @param print_errors \code{TRUE} if errors should be printed when estimations fails
 #'
-#' @details
+#' @description
 #' See the vignette 'Bootstrap illustration'
 #'
 #' @return
@@ -182,8 +182,8 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
                  }
 
                  return(out)
-               },
-               strata = strata)
+                },
+                strata = strata)
 
   n_fails <- sum(apply(boot_est$t, 1, function(x) any(is.na(x))))
   if(n_fails == R){
@@ -194,44 +194,11 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
   class(boot_est) <- c("ddhazard_boot", class(boot_est))
   boot_est$t_names <-
     c(c(sapply(colnames(ddhazard_fit$state_vecs),
-               function(x) paste(x, 1:nrow(ddhazard_fit$state_vecs), sep = ":"))),
+               function(x) paste(x, 1:nrow(ddhazard_fit$state_vecs) - 1, sep = ":t"))),
       names(ddhazard_fit$fixed_effects))
 
   colnames(boot_est$t) <- boot_est$t_names
   names(boot_est$t0) <- boot_est$t_names
 
   boot_est
-}
-
-# from boot.print
-#' @export
-print.ddhazard_boot <-
-  function (x, digits = getOption("digits"), index = 1L:ncol(boot.out$t), ...)
-{
-  boot.out <- x
-  sim <- boot.out$sim
-  cl <- boot.out$call
-  t <- matrix(boot.out$t[, index], nrow = nrow(boot.out$t))
-  allNA <- apply(t, 2L, function(t) all(is.na(t)))
-  ind1 <- index[allNA]
-  index <- index[!allNA]
-  t <- matrix(t[, !allNA], nrow = nrow(t))
-  rn <- boot.out$t_names
-  if (length(index) == 0L)
-    op <- NULL
-  else {
-    t0 <- boot.out$t0[index]
-    op <- cbind(
-      t0,
-      apply(t, 2L, mean, na.rm = TRUE) - t0,
-      apply(t, 2L, mean, na.rm = TRUE, trim = .025) - t0,
-      sqrt(apply(t, 2L, function(t.st) var(t.st[!is.na(t.st)]))))
-    dimnames(op) <-
-      list(rn, c("original", " bias  "," bias (truncated)"," std. error"))
-  }
-
-  cat("Bootstrap Statistics :\n")
-  if (!is.null(op))
-    print(op, digits = digits)
-  invisible(boot.out)
 }

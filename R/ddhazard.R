@@ -363,7 +363,9 @@ ddhazard = function(formula, data,
   if(est_fixed_in_E){
     # Recover the X and fixed term design matricies
     X_Y$fixed_terms <- X_Y$X[n_params + 1:n_fixed, , drop = F]
-    X_Y$X <- X_Y$X[1:n_params, , drop = F]
+    if(n_params > 0)
+      X_Y$X <- X_Y$X[1:n_params, , drop = F] else
+        X_Y$X <- matrix(nrow = 0, ncol = ncol(X_Y$X))
 
     # We need to change the dimension of various arrays
     result$V_t_d_s <- result$V_t_d_s[-indicies_fix, , , drop = F]

@@ -28,7 +28,7 @@
 #' Tutz, Gerhard, and Matthias Schmid. \emph{Nonparametric Modeling and Smooth Effects}. Modeling Discrete Time-to-Event Data. Springer International Publishing, 2016. 105-127.
 #'
 #' @export
-get_survival_case_weigths_and_data = function(
+get_survival_case_weights_and_data = function(
   formula, data, by, max_T, id, init_weights, risk_obj,
   use_weights = T, is_for_discrete_model = T,
   c_outcome = "Y",
@@ -121,14 +121,14 @@ get_survival_case_weigths_and_data = function(
 
 
 #' Function to make a static glm fit
-#' @inheritParams get_survival_case_weigths_and_data
+#' @inheritParams get_survival_case_weights_and_data
 #' @param family \code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
 #' @param weights weights if a skewed sample or similar is used
 #' @param ... arguments passed to \code{\link{glm}}
 #'
 #' @details
-#' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weigths_and_data}} for details on weights
+#' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
 #'
 #' @return
 #' The returned list from the \code{\link{glm}} call
@@ -138,7 +138,7 @@ static_glm = function(formula, data, by, max_T, id, family = "logit", model = F,
   if(family %in% c("binomial", "logit")){
     family <- binomial()
 
-    tmp = get_survival_case_weigths_and_data(
+    tmp = get_survival_case_weights_and_data(
       formula = formula, data = data, by = by, max_T = max_T, id = id,
       init_weights = weights, risk_obj = risk_obj)
 
