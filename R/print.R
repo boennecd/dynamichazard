@@ -51,6 +51,7 @@ print.ddhazard_boot <-
 #' @param var_indices Variable indices to print for time-varying effects
 #' @param time_indices Time intervals to print for time-varying effects
 #' @param digits Number of digits to print
+#' @param ... Not used
 #'
 #' @description
 #' The \code{sd} printed for timevarying effects are point-wise standard deviations from either the filter with smoothing

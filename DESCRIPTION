@@ -1,7 +1,7 @@
 Package: dynamichazard
 Type: Package
 Title: Dynamic Hazard Models using State Space Models
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: c(person("Benjamin", "Christoffersen", 
                     email = "boennecd@gmail.com", 
                     role = c("cre", "aut")),
@@ -22,8 +22,8 @@ Description: Contains functions that lets you fit dynamic hazard models with bin
 License: GPL-2
 LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo
-imports: Rcpp (>= 0.12.6), stringr, parallel, boot
-Depends: R (>= 3.3.2), stats, graphics, utils, survival
+imports: parallel
+Depends: R (>= 3.3.2), stats, graphics, utils, survival, Rcpp (>= 0.12.6), boot, stringr
 RoxygenNote: 5.0.1
 Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR, R.rsp
 VignetteBuilder: knitr, R.rsp
