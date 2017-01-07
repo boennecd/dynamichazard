@@ -25,7 +25,8 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 
   suppressWarnings(
     res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
-                     control = list(eps_fixed_parems = 1e-3, fixed_effect_chunk_size = 1e3, max_it_fixed_params = 10)))
+                     control = list(eps_fixed_parems = 1e-3, fixed_effect_chunk_size = 1e3, max_it_fixed_params = 10,
+                                    fixed_terms_method = "M_step")))
 
   tmp_design <- get_survival_case_weights_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10)
@@ -42,7 +43,8 @@ test_that("Get previous results with logit model with some fixed terms", {
 
   suppressMessages(
     res1 <- ddhazard(form, data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
-                     control = list(save_risk_set = F, save_data = F)))
+                     control = list(save_risk_set = F, save_data = F,
+                                    fixed_terms_method = "M_step")))
 
   # matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
   # matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
@@ -119,7 +121,8 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
                     -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
 
   suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
-                                    control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3)))
+                                    control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3,
+                                                   fixed_terms_method = "M_step")))
 
   tmp_design <- get_survival_case_weights_and_data(form, data = sims$res, by = 1, id = sims$res$id,
                                                    use_weights = F, max_T = 10, is_for_discrete_model = F)
@@ -137,7 +140,8 @@ test_that("Changing fixed effect control parems changes the result", {
     formula(survival::Surv(tstart, tstop, event) ~
               -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3)),
     data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
-    control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3))
+    control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3,
+                   fixed_terms_method = "M_step"))
 
   suppressWarnings(res1 <- do.call(ddhazard, arg_list))
 
@@ -168,7 +172,8 @@ test_that("Get previous results with exponential model with some fixed terms", {
     res1 <- ddhazard(form, data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
                     control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3,
                                    save_risk_set = F, save_data = F, n_max = 1e2,
-                                   ridge_eps = .005),
+                                   ridge_eps = .005,
+                                   fixed_terms_method = "M_step"),
                     Q_0 = diag(rep(10, 3)), Q = diag(.1, 3)))
 
   # matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
@@ -255,7 +260,8 @@ test_that("UKF with fixed effects works", {
                             -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + x2 + x3),
                   data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
                   control = list(method = "UKF", fixed_parems_start = rep(0, 2),
-                                 save_data = F, save_risk_set = F))
+                                 save_data = F, save_risk_set = F,
+                                 fixed_terms_method = "M_step"))
 
 
   # matplot(sims$betas, type = "l", lty = 1)
@@ -319,7 +325,8 @@ test_that("UKF with fixed effects works", {
     fit <- ddhazard(formula(survival::Surv(tstart, tstop, event) ~
                               -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + x2 + x3),
                     data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
-                    control = list(method = "UKF")))
+                    control = list(method = "UKF",
+                                   fixed_terms_method = "M_step")))
 
 
   # matplot(sims$betas, type = "l", ylim = range(fit$state_vecs, sims$betas))
@@ -338,7 +345,8 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
                     -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
 
   suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
-                                    control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3),
+                                    control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3,
+                                                   fixed_terms_method = "M_step"),
                                     weights = sims$res$ws))
 
   tmp_design <- get_survival_case_weights_and_data(form, data = sims$res, by = 1, id = sims$res$id,

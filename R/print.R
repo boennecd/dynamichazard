@@ -28,7 +28,7 @@ print.ddhazard_boot <-
     if (length(index) == 0L)
       op <- NULL
     else {
-      t0 <- boot.out$t0[index]
+      t0 <- boot.out$t0[index, drop = F]
       op <- cbind(
         t0,
         apply(t, 2L, mean, na.rm = TRUE) - t0,

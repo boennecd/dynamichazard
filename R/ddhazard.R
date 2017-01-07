@@ -124,7 +124,7 @@ ddhazard = function(formula, data,
                           LR_decrease_fac = 1.5,
                           n_threads = getOption("ddhazard_max_threads"),
                           ridge_eps = .0001,
-                          fixed_terms_method = "M_step",
+                          fixed_terms_method = "E_step",
                           Q_0_term_for_fixed_E_step = NULL)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
@@ -154,7 +154,7 @@ ddhazard = function(formula, data,
                  id = id, is_for_discrete_model = is_for_discrete_model)
 
   n_fixed <- ncol(X_Y$fixed_terms)
-  est_fixed_in_E <- control$fixed_terms_method == "E_step"
+  est_fixed_in_E <- control$fixed_terms_method == "E_step" && n_fixed > 0
 
   if(missing(Q_0)){
     Q_0 = diag(10, n_params * order) # something large. Though depends on model, estimation method and data
