@@ -1,6 +1,18 @@
-[![Build Status](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard) \# dynamichazard
+[![Build Status](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard)
 
-The goal of dynamichazard is to \[TO BE WRITTEN\]
+dynamichazard
+=============
+
+The goal of dynamichazard is to estimate binary regression models with time-varying effects. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period
+
+The estimation methods are implemented such:
+
+-   They have linear time complexity in both time and the number of observations
+-   Computation is done in `c++` with the `Armadillo` library. Consequently, they are fast and computation time can be reduced further with an optimized BLAS and LAPACK library
+-   Use a `coxph` like formula from the survival package. Therefore, the methods are easily applied to panel datasets
+-   Allows for time-varying covariates
+
+For more details, see the ddhazard vignette at <https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf>
 
 Installation
 ------------
@@ -8,18 +20,22 @@ Installation
 You can install dynamichazard from github with:
 
 ``` r
-# install.packages("devtools")
+install.packages("devtools")
 devtools::install_github("dynamichazard/boennecd")
+```
+
+You can also download the package from CRAN by calling:
+
+``` r
+installed.packages("dynamichazard")
 ```
 
 Example
 -------
 
-This is a basic example which shows you how to solve a common problem: \[TO BE WRITTEN\]
+We will use the Pima Indians Diabetes dataset from <https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/>. The outcome in the data set is whether or not the female is having diabetes. The script and results are given below with comments. The data cleaning is included for completeness
 
 ``` r
-# See https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes
-
 # We download the data
 diabetes <-
   read.table("https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/pima-indians-diabetes.data",
@@ -50,15 +66,9 @@ nrow(diabetes) # Number of samples before cleaning
 diabetes <- diabetes[diabetes$BMI > 0, ]
 diabetes <- diabetes[diabetes$blood_pres > 0, ]
 diabetes <- diabetes[diabetes$skin_fold > 0, ]
-diabetes$has_diabetes[diabetes$insulin >= 200]
-#>  [1] 1 1 1 0 1 1 1 1 0 1 0 0 1 1 1 0 0 0 0 0 1 1 1 1 1 1 0 1 0 0 1 0 0 0 1
-#> [36] 1 0 1 0 0 1 1 0 1 1 1 0 0 1 0 1 1 1 0 1 1 1 0 0 0 0 0 1 1 1 0 1 0 1 0
-#> [71] 1 0 1 0 1 0 1 0 0 0 1 0 0 0 0 1 0 1 1
 
 nrow(diabetes) # Number of samples after cleaning
 #> [1] 537
-
-
 
 # We load the two libraries we will need
 library(survival); library(dynamichazard)
@@ -66,11 +76,10 @@ min(diabetes$age)                             # Youngest person in study
 #> [1] 21
 max(diabetes$age)                             # Oldest person in study
 #> [1] 81
-max(diabetes$age[diabetes$has_diabetes == 1]) # Last person who get diagnosed
+max(diabetes$age[diabetes$has_diabetes == 1]) # Last person with diabetes
 #> [1] 70
-                                              # with diabetes
 
-# Notice that we have few cases and control in the end as illustrated below
+# Notice that we have few cases and controls in the end as illustrated below
 diabetes$t <- diabetes$age - min(diabetes$age) + 1 # Time scale in study
 xtabs(~ has_diabetes + t, diabetes)
 #>             t
@@ -92,12 +101,12 @@ fit <- ddhazard(
   Surv(t, has_diabetes) ~
     ddFixed(1) +                        # These effects are time invariant
     ddFixed(diabetes_pedigree) +
-    glucose_cocen + blood_pres +        # The others are time-varying
+    glucose_cocen + blood_pres +        # The rest are time-varying
     skin_fold + BMI + times_pregnant
     ,
   data = diabetes,
   by = 1,                               # time interval lengths
-  max_T = 42,                           # last period we observe
+  max_T = 42,                           # last period observed while estimating 
   Q_0 = diag(1e5, 5), Q = diag(1e-4, 5) # Covariances mats for state equation
   )
 #> a_0 not supplied. One iteration IWLS of static glm model is used
@@ -110,18 +119,19 @@ plot(fit)
 
 ``` r
 
-# Print time invariant estimates
+# Print time-invariant estimates
 fit$fixed_effects
 #>       (Intercept) diabetes_pedigree 
 #>        -4.6035970         0.2231969
 
 # Bootstrap the estimates
-boot_out <- ddhazard_boot(fit, R = 1e2) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 100): Failed to estimate 27 times
+boot_out <- ddhazard_boot(fit, R = 1e3) # R is number of bootstrap samples
+#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 273 times
 
 # Plot bootstrapped estimates (transparent lines) and 2.5% and 97.5% quantiles
 # (dashed-lines)
 plot(fit, ddhazard_boot = boot_out)
+#> Only plotting 500 of the boot sample estimates
 ```
 
 ![](README-unnamed-chunk-2-2.png)
@@ -133,3 +143,5 @@ boxplot(t(tail(t(boot_out$t), 2)))
 ```
 
 ![](README-unnamed-chunk-2-3.png)
+
+The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say *t* = 40 is modeled as not having diabetes at *t* = 0, 1, ..., 39 with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time
