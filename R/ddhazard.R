@@ -25,42 +25,42 @@
 #'
 #' @section Control:
 #' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
-#' \tabular{ll}{
-#' \code{method}\verb{  }\tab Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter or \code{"UKF"}for the Unscented Kalman Filter. \code{"EKF"} is the default \cr
-#' \code{LR}\verb{  }\tab Learning rate for the Extended Kalman filter \cr
-#' \code{NR_eps}\verb{  }\tab Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step \cr
-#' \code{alpha}\verb{  }\tab Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter \cr
-#' \code{beta}\verb{  }\tab Hyper parameter \eqn{\beta} in the Unscented Kalman Filter  \cr
-#' \code{kappa}\verb{  }\tab Hyper parameter \eqn{\kappa} in the Unscented Kalman Filter \cr
-#' \code{n_max}\verb{  }\tab Maximum number of iteration in the EM-algorithm \cr
-#' \code{eps}\verb{  }\tab Tolerance parameter for the EM-algorithm\cr
-#' \code{est_Q_0}\verb{  }\tab\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}\cr
-#' \code{save_risk_set}\verb{  }\tab \code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory\cr
-#' \code{save_data}\verb{  }\tab \code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory \cr
-#' \code{ridge_eps}\verb{ }\tab Penalty term added to the diagonal of the covariance matrix of the observational equation in either the EKF or UKF \cr
-#' \code{fixed_terms_method}\verb{ }\tab The method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively \cr
-#' \code{Q_0_term_for_fixed_E_step}\verb{ }\tab The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step \cr
-#' \code{eps_fixed_parems}\verb{ }\tab Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects
+#' \describe{
+#' \item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter or \code{"UKF"}for the Unscented Kalman Filter. \code{"EKF"} is the default}
+#' \item{\code{LR}}{Learning rate for the Extended Kalman filter}
+#' \item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
+#' \item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter}
+#' \item{\code{beta}}{Hyper parameter \eqn{\beta} in the Unscented Kalman Filter }
+#' \item{\code{kappa}}{Hyper parameter \eqn{\kappa} in the Unscented Kalman Filter}
+#' \item{\code{n_max}}{Maximum number of iteration in the EM-algorithm}
+#' \item{\code{eps}}{Tolerance parameter for the EM-algorithm}
+#' \item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}}
+#' \item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
+#' \item{\code{save_data}}{\code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
+#' \item{\code{ridge_eps}}{Penalty term added to the diagonal of the covariance matrix of the observational equation in either the EKF or UKF}
+#' \item{\code{fixed_terms_method}}{The method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively}
+#' \item{\code{Q_0_term_for_fixed_E_step}}{The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step}
+#' \item{\code{eps_fixed_parems}}{Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects}
 #'}
 #'
 #' @return
 #' A list with class \code{fahrmeier_94}. The list contains:
-#' \tabular{ll}{
-#' \code{formula}\verb{ }\tab The passed formula \cr
-#' \code{state_vecs}\verb{ }\tab 2D matrix with the estimated state vectors (regression parameters) in each bin \cr
-#' \code{state_vars}\verb{ }\tab 3D array with smoothed variance estimates for each state vector \cr
-#' \code{lag_one_cov}\verb{ }\tab 3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF \cr
-#' \code{n_risk}\verb{ }\tab The number of observations in each interval \cr
-#' \code{times}\verb{ }\tab The interval borders \cr
-#' \code{risk_set}\verb{ }\tab The object from \code{\link{get_risk_obj}} if saved \cr
-#' \code{data}\verb{ }\tab The \code{data} argument if saved \cr
-#' \code{id}\verb{ }\tab ids used to match rows in \code{data} to individuals \cr
-#' \code{order}\verb{ }\tab Order of the random walk \cr
-#' \code{F_}\verb{ }\tab Matrix with that map transition from one state vector to the next \cr
-#' \code{method}\verb{ }\tab Method used in the E-step \cr
-#' \code{est_Q_0}\verb{ }\tab\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm \cr
-#' \code{hazard_func}\verb{ }\tab Hazard function \cr
-#' \code{hazard_first_deriv}\verb{ }\tab First derivative of the hazard function with respect to the linear predictor
+#' \describe{
+#' \item{\code{formula}}{The passed formula }
+#' \item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin }
+#' \item{\code{state_vars}}{3D array with smoothed variance estimates for each state vector }
+#' \item{\code{lag_one_cov}}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF }
+#' \item{\code{n_risk}}{The number of observations in each interval }
+#' \item{\code{times}}{The interval borders }
+#' \item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved }
+#' \item{\code{data}}{The \code{data} argument if saved }
+#' \item{\code{id}}{ids used to match rows in \code{data} to individuals }
+#' \item{\code{order}}{Order of the random walk }
+#' \item{\code{F_}}{Matrix with that map transition from one state vector to the next }
+#' \item{\code{method}}{Method used in the E-step }
+#' \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm }
+#' \item{\code{hazard_func}}{Hazard function }
+#' \item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
 #'}
 #'
 #' @seealso
