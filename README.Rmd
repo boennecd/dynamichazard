@@ -59,14 +59,12 @@ library(dynamichazard)
 library(survival)
 library(JMbayes) # Contain the aids data set
 
-# A look at head of data
-head(aids, 25)
-
 # We remove the data we dont neeed
 aids <- aids[aids$Time == aids$stop, ]
 aids <- aids[, !colnames(aids) %in% c("Time", "death", "obstime", "CD4")]
 
 # A look at head of data
+head(aids)
 max(aids$stop)                  # Last observation time
 max(aids$stop[aids$event == 1]) # Last person with event
 
@@ -97,6 +95,7 @@ plot(fit, ddhazard_boot = boot_out)
 ```
 
 Bootstrapping only slightly changes the confidence bounds. It seems that:
+
 * It is hard to tell the difference between the two drugs. The `ddi` may be more effective in the latter period (the estimates is negative) though the point-wise confidence bounds still contains 0. Further, this comment neglect that the confidence bounds are point-wise 
 * Having aids rather than two CD4 counts of 300 or fewer increase your risk of dying
 * Males seems to be at lower risk in the first period
