@@ -33,20 +33,20 @@ Predict function for the result of \code{\link{ddhazard}}
 \section{Term}{
 
 The result of \code{type = "term"} is a list with the following elements
-\tabular{ll}{
-\code{terms} \verb{  }\tab Is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms\cr
-\code{sds} \verb{  }\tab Similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices\cr
-\code{fixed_terms} \verb{  }\tab Vector of the fixed effect terms for each observation
+\describe{
+\item{\code{terms} }{ Is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms}
+\item{\code{sds} }{ Similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices}
+\item{\code{fixed_terms} }{ Vector of the fixed effect terms for each observation}
 }
 }
 
 \section{Response}{
 
 The result of \code{type = "response"} is a list with the elements below. The function check if there are columns in \code{new_data} which's names match \code{tstart} and \code{tstop}. If not, then each row in new data will get a predicted probability of dying in every bin.
-\tabular{ll}{
-\code{fits} \verb{  }\tab Fitted probability of dying \cr
-\code{istart} \verb{  }\tab Vector with the index of the first bin the elements in \code{fits} is in \cr
-\code{istop} \verb{  }\tab Vector with the index of the last bin the elements in \code{fits} is in
+\describe{
+\item{\code{fits} }{ Fitted probability of dying }
+\item{\code{istart} }{ Vector with the index of the first bin the elements in \code{fits} is in }
+\item{\code{istop} }{ Vector with the index of the last bin the elements in \code{fits} is in}
 }
 }
 
