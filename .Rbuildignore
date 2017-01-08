@@ -19,12 +19,13 @@ Sim_study_with_logit\.Rmd$
 Prebuild
 release_questions\.R$
 cran-comments\.md$
-README\.md$
 Prebuild/
 revdep/
 
 ^NEWS\.md$
 ^README\.Rmd$
+^README\.md$
+^README\.bib$
 ^README-.*\.png$
 
 Examples/
