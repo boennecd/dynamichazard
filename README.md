@@ -52,66 +52,19 @@ library(JMbayes) # Contain the aids data set
 #> Loading required package: nlme
 #> Loading required package: splines
 
-# A look at head of data
-head(aids, 25)
-#>    patient  Time death       CD4 obstime drug gender prevOI         AZT
-#> 1        1 16.97     0 10.677078       0  ddC   male   AIDS intolerance
-#> 2        1 16.97     0  8.426150       6  ddC   male   AIDS intolerance
-#> 3        1 16.97     0  9.433981      12  ddC   male   AIDS intolerance
-#> 4        2 19.00     0  6.324555       0  ddI   male noAIDS intolerance
-#> 5        2 19.00     0  8.124038       6  ddI   male noAIDS intolerance
-#> 6        2 19.00     0  4.582576      12  ddI   male noAIDS intolerance
-#> 7        2 19.00     0  5.000000      18  ddI   male noAIDS intolerance
-#> 8        3 18.53     1  3.464102       0  ddI female   AIDS intolerance
-#> 9        3 18.53     1  3.605551       2  ddI female   AIDS intolerance
-#> 10       3 18.53     1  6.164414       6  ddI female   AIDS intolerance
-#> 11       4 12.70     0  3.872983       0  ddC   male   AIDS     failure
-#> 12       4 12.70     0  4.582576       2  ddC   male   AIDS     failure
-#> 13       4 12.70     0  2.645751       6  ddC   male   AIDS     failure
-#> 14       4 12.70     0  1.732051      12  ddC   male   AIDS     failure
-#> 15       5 15.13     0  7.280110       0  ddI   male   AIDS     failure
-#> 16       5 15.13     0  8.602325       2  ddI   male   AIDS     failure
-#> 17       5 15.13     0  8.602325       6  ddI   male   AIDS     failure
-#> 18       5 15.13     0  6.708204      12  ddI   male   AIDS     failure
-#> 19       6  1.90     1  4.582576       0  ddC female   AIDS     failure
-#> 20       7 14.33     0  6.782330       0  ddC   male   AIDS intolerance
-#> 21       7 14.33     0  5.385165       2  ddC   male   AIDS intolerance
-#> 22       7 14.33     0  4.472136       6  ddC   male   AIDS intolerance
-#> 23       7 14.33     0  3.162278      12  ddC   male   AIDS intolerance
-#> 24       8  9.57     1  3.464102       0  ddI female noAIDS intolerance
-#> 25       8  9.57     1  1.000000       2  ddI female noAIDS intolerance
-#>    start  stop event
-#> 1      0  6.00     0
-#> 2      6 12.00     0
-#> 3     12 16.97     0
-#> 4      0  6.00     0
-#> 5      6 12.00     0
-#> 6     12 18.00     0
-#> 7     18 19.00     0
-#> 8      0  2.00     0
-#> 9      2  6.00     0
-#> 10     6 18.53     1
-#> 11     0  2.00     0
-#> 12     2  6.00     0
-#> 13     6 12.00     0
-#> 14    12 12.70     0
-#> 15     0  2.00     0
-#> 16     2  6.00     0
-#> 17     6 12.00     0
-#> 18    12 15.13     0
-#> 19     0  1.90     1
-#> 20     0  2.00     0
-#> 21     2  6.00     0
-#> 22     6 12.00     0
-#> 23    12 14.33     0
-#> 24     0  2.00     0
-#> 25     2  6.00     0
-
 # We remove the data we dont neeed
 aids <- aids[aids$Time == aids$stop, ]
 aids <- aids[, !colnames(aids) %in% c("Time", "death", "obstime", "CD4")]
 
 # A look at head of data
+head(aids)
+#>    patient drug gender prevOI         AZT start  stop event
+#> 3        1  ddC   male   AIDS intolerance    12 16.97     0
+#> 7        2  ddI   male noAIDS intolerance    18 19.00     0
+#> 10       3  ddI female   AIDS intolerance     6 18.53     1
+#> 14       4  ddC   male   AIDS     failure    12 12.70     0
+#> 18       5  ddI   male   AIDS     failure    12 15.13     0
+#> 19       6  ddC female   AIDS     failure     0  1.90     1
 max(aids$stop)                  # Last observation time
 #> [1] 21.4
 max(aids$stop[aids$event == 1]) # Last person with event
@@ -143,7 +96,7 @@ plot(fit)
 
 # Bootstrap the estimates
 boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 30 times
+#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 27 times
 
 # Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
 # bootstrap estimates. Transparent lines are bootstrap estimates
@@ -153,4 +106,8 @@ plot(fit, ddhazard_boot = boot_out)
 
 ![](README-unnamed-chunk-2-2.png)
 
-Bootstrapping only slightly changes the confidence bounds. It seems that: \* It is hard to tell the difference between the two drugs. The `ddi` may be more effective in the latter period (the estimates is negative) though the point-wise confidence bounds still contains 0. Further, this comment neglect that the confidence bounds are point-wise \* Having aids rather than two CD4 counts of 300 or fewer increase your risk of dying \* Males seems to be at lower risk in the first period
+Bootstrapping only slightly changes the confidence bounds. It seems that:
+
+-   It is hard to tell the difference between the two drugs. The `ddi` may be more effective in the latter period (the estimates is negative) though the point-wise confidence bounds still contains 0. Further, this comment neglect that the confidence bounds are point-wise
+-   Having aids rather than two CD4 counts of 300 or fewer increase your risk of dying
+-   Males seems to be at lower risk in the first period
