@@ -33,85 +33,107 @@ installed.packages("dynamichazard")
 Example
 -------
 
-We will use the Pima Indians Diabetes dataset from <https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/>. The outcome in the data set is whether or not the female is having diabetes. The script and results are given below with comments. The data cleaning is included for completeness
+We will use the `aids` data set from the `JMbayes` package. The data set is from a a randomized clinical trial between two drugs for HIV or aids patients. The event is when the patient die. Patient are right censored at the end of the study. The data set is longitudinal/panel format with rows for patient. Though, the only longitudinal variable is the `CD4` count (T-cells count) which is presumably affected by the drug. Thus, we will not use it in the model. The other the other columns of interest are:
+
+-   `prevOI` is a factor for whether previous opportunistic infection of AIDS is present at study entry
+-   `AZT` is one of the two enrolment criteria. It indicates whether the patient was enrolled due to intolerance to the drug zidovudine or whether the drug failed prior to the study start
+-   `prevOI` is the other enrolment criteria. Patients are enrolled either due AIDS diagnosis or two CD4 counts of 300 or fewer. The variable indicates which is the case
+-   `drug` is either `ddC` or `ddI` depending on which of the two drugs the patient is randomly assigned to
+-   `gender`
+
+The analysis is given below with comments:
 
 ``` r
-# We download the data
-diabetes <-
-  read.table("https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/pima-indians-diabetes.data",
-             sep = ",")
-colnames(diabetes) <-
-  c("times_pregnant", "glucose_cocen", "blood_pres", "skin_fold",
-    "insulin", "BMI", "diabetes_pedigree", "age", "has_diabetes")
+library(dynamichazard)
+#> Loading required package: survival
+library(survival)
+library(JMbayes) # Contain the aids data set
+#> Loading required package: MASS
+#> Loading required package: nlme
+#> Loading required package: splines
 
-head(diabetes)
-#>   times_pregnant glucose_cocen blood_pres skin_fold insulin  BMI
-#> 1              6           148         72        35       0 33.6
-#> 2              1            85         66        29       0 26.6
-#> 3              8           183         64         0       0 23.3
-#> 4              1            89         66        23      94 28.1
-#> 5              0           137         40        35     168 43.1
-#> 6              5           116         74         0       0 25.6
-#>   diabetes_pedigree age has_diabetes
-#> 1             0.627  50            1
-#> 2             0.351  31            0
-#> 3             0.672  32            1
-#> 4             0.167  21            0
-#> 5             2.288  33            1
-#> 6             0.201  30            0
-nrow(diabetes) # Number of samples before cleaning
-#> [1] 768
+# A look at head of data
+head(aids, 25)
+#>    patient  Time death       CD4 obstime drug gender prevOI         AZT
+#> 1        1 16.97     0 10.677078       0  ddC   male   AIDS intolerance
+#> 2        1 16.97     0  8.426150       6  ddC   male   AIDS intolerance
+#> 3        1 16.97     0  9.433981      12  ddC   male   AIDS intolerance
+#> 4        2 19.00     0  6.324555       0  ddI   male noAIDS intolerance
+#> 5        2 19.00     0  8.124038       6  ddI   male noAIDS intolerance
+#> 6        2 19.00     0  4.582576      12  ddI   male noAIDS intolerance
+#> 7        2 19.00     0  5.000000      18  ddI   male noAIDS intolerance
+#> 8        3 18.53     1  3.464102       0  ddI female   AIDS intolerance
+#> 9        3 18.53     1  3.605551       2  ddI female   AIDS intolerance
+#> 10       3 18.53     1  6.164414       6  ddI female   AIDS intolerance
+#> 11       4 12.70     0  3.872983       0  ddC   male   AIDS     failure
+#> 12       4 12.70     0  4.582576       2  ddC   male   AIDS     failure
+#> 13       4 12.70     0  2.645751       6  ddC   male   AIDS     failure
+#> 14       4 12.70     0  1.732051      12  ddC   male   AIDS     failure
+#> 15       5 15.13     0  7.280110       0  ddI   male   AIDS     failure
+#> 16       5 15.13     0  8.602325       2  ddI   male   AIDS     failure
+#> 17       5 15.13     0  8.602325       6  ddI   male   AIDS     failure
+#> 18       5 15.13     0  6.708204      12  ddI   male   AIDS     failure
+#> 19       6  1.90     1  4.582576       0  ddC female   AIDS     failure
+#> 20       7 14.33     0  6.782330       0  ddC   male   AIDS intolerance
+#> 21       7 14.33     0  5.385165       2  ddC   male   AIDS intolerance
+#> 22       7 14.33     0  4.472136       6  ddC   male   AIDS intolerance
+#> 23       7 14.33     0  3.162278      12  ddC   male   AIDS intolerance
+#> 24       8  9.57     1  3.464102       0  ddI female noAIDS intolerance
+#> 25       8  9.57     1  1.000000       2  ddI female noAIDS intolerance
+#>    start  stop event
+#> 1      0  6.00     0
+#> 2      6 12.00     0
+#> 3     12 16.97     0
+#> 4      0  6.00     0
+#> 5      6 12.00     0
+#> 6     12 18.00     0
+#> 7     18 19.00     0
+#> 8      0  2.00     0
+#> 9      2  6.00     0
+#> 10     6 18.53     1
+#> 11     0  2.00     0
+#> 12     2  6.00     0
+#> 13     6 12.00     0
+#> 14    12 12.70     0
+#> 15     0  2.00     0
+#> 16     2  6.00     0
+#> 17     6 12.00     0
+#> 18    12 15.13     0
+#> 19     0  1.90     1
+#> 20     0  2.00     0
+#> 21     2  6.00     0
+#> 22     6 12.00     0
+#> 23    12 14.33     0
+#> 24     0  2.00     0
+#> 25     2  6.00     0
 
-# Remove observations with invalid values
-diabetes <- diabetes[diabetes$BMI > 0, ]
-diabetes <- diabetes[diabetes$blood_pres > 0, ]
-diabetes <- diabetes[diabetes$skin_fold > 0, ]
+# We remove the data we dont neeed
+aids <- aids[aids$Time == aids$stop, ]
+aids <- aids[, !colnames(aids) %in% c("Time", "death", "obstime", "CD4")]
 
-nrow(diabetes) # Number of samples after cleaning
-#> [1] 537
+# A look at head of data
+max(aids$stop)                  # Last observation time
+#> [1] 21.4
+max(aids$stop[aids$event == 1]) # Last person with event
+#> [1] 19.07
 
-# We load the two libraries we will need
-library(survival); library(dynamichazard)
-min(diabetes$age)                             # Youngest person in study
-#> [1] 21
-max(diabetes$age)                             # Oldest person in study
-#> [1] 81
-max(diabetes$age[diabetes$has_diabetes == 1]) # Last person with diabetes
-#> [1] 70
-
-# Notice that we have few cases and controls in the end as illustrated below
-diabetes$t <- diabetes$age - min(diabetes$age) + 1 # Time scale in study
-xtabs(~ has_diabetes + t, diabetes)
-#>             t
-#> has_diabetes  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-#>            0 45 53 28 33 25 20 15 21  8 10  6  5  5  7  3  4  8  4  8  4
-#>            1  4  7  4  7 12  6  5  7 10  4  8  5  7  2  4  7  4  6  1  5
-#>             t
-#> has_diabetes 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40
-#>            0  5  8  2  0  4  4  1  3  2  1  1  0  0  0  1  1  1  1  1  3
-#>            1  7  3  9  1  5  6  2  1  2  3  5  4  3  2  1  2  1  3  1  1
-#>             t
-#> has_diabetes 41 42 43 45 50 61
-#>            0  1  1  3  1  0  1
-#>            1  0  1  0  0  1  0
-
-# Thus, we set the last time (max_T) slighly lower later
-# Fit the model
+# Fit model
 fit <- ddhazard(
-  Surv(t, has_diabetes) ~
-    ddFixed(1) +                         # These effects are time invariant
-    ddFixed(diabetes_pedigree) +
-    ddFixed(times_pregnant) +
-    glucose_cocen + blood_pres +         # The rest are time-varying
-    skin_fold + BMI,
-  data = diabetes,
-  by = 1,                                # time interval lengths
-  max_T = 42,                            # last period observed while estimating 
-  Q_0 = diag(1e5, 4), Q = diag(1e-4, 4), # Covariances mats for state equation
-  control = list(eps = 0.1))
+  Surv(stop, event) ~ AZT + gender + drug + prevOI,
+  aids,
+  model = "exp_trunc_time_w_jump", # The model we use from ddhazard. In short, 
+                                   # this model assumes that event times are 
+                                   # exponentially distributed
+  by = .5,                         # Length of time intervals in state space 
+                                   # model
+  max_T = 19,                      # Last period we observe when modeling
+  Q = diag(.1, 5),                 # Covariance matrix for state equation in 
+                                   # first iteration
+  Q_0 = diag(10000, 5),            # Covariance matrix for the prior
+  control = list(eps = .1))
 #> a_0 not supplied. One iteration IWLS of static glm model is used
 
-# Plot the effects estimates with 95% point-wise confidence bounds
+# Plot the estimates. Dashed lines are 95% confidence bounds
 plot(fit)
 ```
 
@@ -119,29 +141,16 @@ plot(fit)
 
 ``` r
 
-# Print time-invariant estimates
-fit$fixed_effects
-#>       (Intercept) diabetes_pedigree    times_pregnant 
-#>       -4.84025986        0.25979565       -0.06056675
-
 # Bootstrap the estimates
 boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 1 times
+#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 30 times
 
-# Plot bootstrapped estimates (transparent lines) and 2.5% and 97.5% quantiles
-# (dashed-lines)
+# Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
+# bootstrap estimates. Transparent lines are bootstrap estimates
 plot(fit, ddhazard_boot = boot_out)
 #> Only plotting 500 of the boot sample estimates
 ```
 
 ![](README-unnamed-chunk-2-2.png)
 
-``` r
-
-# Make boxplot for the bootstrap estimate of the fixed effect
-boxplot(t(tail(t(boot_out$t), 3)))
-```
-
-![](README-unnamed-chunk-2-3.png)
-
-The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say *t* = 40 is modeled as not having diabetes at *t* = 0, 1, ..., 39 with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time. This is particularly an issue with `time_pregant`. It is hard of someone aged 21 (*t* = 1) to have been pregant say 11 times
+Bootstrapping only slightly changes the confidence bounds. It seems that: \* It is hard to tell the difference between the two drugs. The `ddi` may be more effective in the latter period (the estimates is negative) though the point-wise confidence bounds still contains 0. Further, this comment neglect that the confidence bounds are point-wise \* Having aids rather than two CD4 counts of 300 or fewer increase your risk of dying \* Males seems to be at lower risk in the first period
