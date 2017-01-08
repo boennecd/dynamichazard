@@ -35,7 +35,6 @@ Example
 
 We will use the `aids` data set from the `JMbayes` package. The data set is from a a randomized clinical trial between two drugs for HIV or aids patients. The event is when the patient die. Patient are right censored at the end of the study. The data set is longitudinal/panel format with rows for patient. Though, the only longitudinal variable is the `CD4` count (T-cells count) which is presumably affected by the drug. Thus, we will not use it in the model. The other the other columns of interest are:
 
--   `prevOI` is a factor for whether previous opportunistic infection of AIDS is present at study entry
 -   `AZT` is one of the two enrolment criteria. It indicates whether the patient was enrolled due to intolerance to the drug zidovudine or whether the drug failed prior to the study start
 -   `prevOI` is the other enrolment criteria. Patients are enrolled either due AIDS diagnosis or two CD4 counts of 300 or fewer. The variable indicates which is the case
 -   `drug` is either `ddC` or `ddI` depending on which of the two drugs the patient is randomly assigned to
@@ -95,8 +94,8 @@ plot(fit)
 ``` r
 
 # Bootstrap the estimates
-boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 1000): Failed to estimate 27 times
+boot_out <- ddhazard_boot(fit, R = 10000) # R is number of bootstrap samples
+#> Warning in ddhazard_boot(fit, R = 10000): Failed to estimate 303 times
 
 # Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
 # bootstrap estimates. Transparent lines are bootstrap estimates
