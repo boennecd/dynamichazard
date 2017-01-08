@@ -44,68 +44,60 @@ installed.packages("dynamichazard")
 ```
 
 ## Example
+We will use the `aids` data set from the `JMbayes` package. The data set is from a a randomized clinical trial between two drugs for HIV or aids patients. The event is when the patient die. Patient are right censored at the end of the study. The data set is longitudinal/panel format with rows for patient. Though, the only longitudinal variable is the `CD4` count (T-cells count) which is presumably affected by the drug. Thus, we will not use it in the model. The other the other columns of interest are:
 
-We will use the Pima Indians Diabetes dataset from https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/. The outcome in the data set is whether or not the female is having diabetes. The script and results are given below with comments. The data cleaning is included for completeness
+* `prevOI` is a factor for whether previous opportunistic infection of AIDS is present at study entry
+* `AZT` is one of the two enrolment criteria. It indicates whether the patient was enrolled due to intolerance to the drug zidovudine or whether the drug failed prior to the study start
+* `prevOI` is the other enrolment criteria. Patients are enrolled either due  AIDS diagnosis or two CD4 counts of 300 or fewer. The variable indicates which is the case
+* `drug` is either `ddC` or `ddI` depending on which of the two drugs the patient is randomly assigned to
+* `gender`
+
+The analysis is given below with comments:
 
 ```{r}
-# We download the data
-diabetes <-
-  read.table("https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/pima-indians-diabetes.data",
-             sep = ",")
-colnames(diabetes) <-
-  c("times_pregnant", "glucose_cocen", "blood_pres", "skin_fold",
-    "insulin", "BMI", "diabetes_pedigree", "age", "has_diabetes")
+library(dynamichazard)
+library(survival)
+library(JMbayes) # Contain the aids data set
 
-head(diabetes)
-nrow(diabetes) # Number of samples before cleaning
+# A look at head of data
+head(aids, 25)
 
-# Remove observations with invalid values
-diabetes <- diabetes[diabetes$BMI > 0, ]
-diabetes <- diabetes[diabetes$blood_pres > 0, ]
-diabetes <- diabetes[diabetes$skin_fold > 0, ]
+# We remove the data we dont neeed
+aids <- aids[aids$Time == aids$stop, ]
+aids <- aids[, !colnames(aids) %in% c("Time", "death", "obstime", "CD4")]
 
-nrow(diabetes) # Number of samples after cleaning
+# A look at head of data
+max(aids$stop)                  # Last observation time
+max(aids$stop[aids$event == 1]) # Last person with event
 
-# We load the two libraries we will need
-library(survival); library(dynamichazard)
-min(diabetes$age)                             # Youngest person in study
-max(diabetes$age)                             # Oldest person in study
-max(diabetes$age[diabetes$has_diabetes == 1]) # Last person with diabetes
-
-# Notice that we have few cases and controls in the end as illustrated below
-diabetes$t <- diabetes$age - min(diabetes$age) + 1 # Time scale in study
-xtabs(~ has_diabetes + t, diabetes)
-
-# Thus, we set the last time (max_T) slighly lower later
-# Fit the model
+# Fit model
 fit <- ddhazard(
-  Surv(t, has_diabetes) ~
-    ddFixed(1) +                         # These effects are time invariant
-    ddFixed(diabetes_pedigree) +
-    ddFixed(times_pregnant) +
-    glucose_cocen + blood_pres +         # The rest are time-varying
-    skin_fold + BMI,
-  data = diabetes,
-  by = 1,                                # time interval lengths
-  max_T = 42,                            # last period observed while estimating 
-  Q_0 = diag(1e5, 4), Q = diag(1e-4, 4), # Covariances mats for state equation
-  control = list(eps = 0.1))
+  Surv(stop, event) ~ AZT + gender + drug + prevOI,
+  aids,
+  model = "exp_trunc_time_w_jump", # The model we use from ddhazard. In short, 
+                                   # this model assumes that event times are 
+                                   # exponentially distributed
+  by = .5,                         # Length of time intervals in state space 
+                                   # model
+  max_T = 19,                      # Last period we observe when modeling
+  Q = diag(.1, 5),                 # Covariance matrix for state equation in 
+                                   # first iteration
+  Q_0 = diag(10000, 5),            # Covariance matrix for the prior
+  control = list(eps = .1))
 
-# Plot the effects estimates with 95% point-wise confidence bounds
+# Plot the estimates. Dashed lines are 95% confidence bounds
 plot(fit)
-
-# Print time-invariant estimates
-fit$fixed_effects
 
 # Bootstrap the estimates
 boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
 
-# Plot bootstrapped estimates (transparent lines) and 2.5% and 97.5% quantiles
-# (dashed-lines)
+# Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
+# bootstrap estimates. Transparent lines are bootstrap estimates
 plot(fit, ddhazard_boot = boot_out)
-
-# Make boxplot for the bootstrap estimate of the fixed effect
-boxplot(t(tail(t(boot_out$t), 3)))
 ```
 
-The above is only correct if those who are diagnosed with diabetes did not have the disease shortly prior to diagnosis. This is the case since a person who gets diagnosed at say $t = 40$ is modeled as not having diabetes at $t = 0,1,...,39$ with the same covariates. This further stress that all other covariates are kept fixed such as `BMI` which could change through time. This is particularly an issue with `time_pregant`. It is hard of someone aged 21 ($t=1$) to have been pregant say 11 times
+Bootstrapping only slightly changes the confidence bounds. It seems that:
+* It is hard to tell the difference between the two drugs. The `ddi` may be more effective in the latter period (the estimates is negative) though the point-wise confidence bounds still contains 0. Further, this comment neglect that the confidence bounds are point-wise 
+* Having aids rather than two CD4 counts of 300 or fewer increase your risk of dying
+* Males seems to be at lower risk in the first period
+
