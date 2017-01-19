@@ -60,6 +60,12 @@ current_version # The string to pass devtools::install_github
 devtools::install_github(current_version)
 ```
 
+You can also get the latest version on CRAN by calling:
+
+```{r eval=FALSE}
+install.packages("dynamichazard")
+```
+
 Moreover, you will also find the source code for the vignette at the github page. The note is not meant to be self contained. It is recommend to see ddhazard vignette for an introduction to the models and methods in the `dynamichazard` package
 
 ## Notions

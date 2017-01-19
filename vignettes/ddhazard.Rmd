@@ -91,6 +91,12 @@ current_version # the string you need to pass to devtools::install_github
 devtools::install_github(current_version)
 ```
 
+You can also get the latest version on CRAN by calling:
+
+```{r eval=FALSE}
+install.packages("dynamichazard")
+```
+
 The `ddhazard` function estimates a dynamic binary regression model where the parameters are assumed to time-varying and follow a random walk. 
 
 ## Why and when to use this package 
@@ -661,7 +667,7 @@ The example illustrates that:
 
 The above motivates the continuous time model that will be covered in the next sections where going from event times to binary outcomes is not an issue
 
-# Continous time model
+# Continuous time model
 The following section introduce the continuous time model. Four different methods will be introduced to estimate the model. We start by describing the assumption of the continuous time model. Then we turn to different estimation methods
 
 ## Assumptions
@@ -669,16 +675,16 @@ We make the following assumption in the continuous time model:
 
 1. Coefficients (that is state variables $\vec{\alpha}_1,\dots, \vec{\alpha}_d$) change at end of time interval $1, 2, \dots , d$
 2. The individuals co-variates change at discrete times
-3. We have a piecewise constant exponential distributed arrival time for each individual when we condition on the state variables and co-variates
+3. We have piecewise constant instantaneous hazards given by $\exp(\vec{x}^T\vec{\alpha})$ given an individiauls current co-covariate vector $\vec{x}$ and state variable $\vec{\alpha}$
 
-These assumption means that we have piecewise constant hazards given by $\exp(\vec{x}_{it}^T\vec{\alpha})$. The instantaneous hazard change when either the individuals co-variates change or the coefficients change when we change time interval. We make the following definitions to formalize the assumptions above. Let $\vec{x}_{ij}$ denote the $i$'th individuals $j$'th co-variate vector. For each individual we observe $j = 1, 2, \dots , l_i$ values of the co-variate vector. Each co-variate vector is valid in a period $(t_{i,j-1}, t_{i,j}]$. This definition differs from the previous definition of $\vec{x}_{ij}$ where the subscript $j$ referred to the time interval number. The new notation is used to cover the cases where update of co-variate values do not coincide with end or start time one of the time intervals. For instance, this is the case for the examples in the figure in the section before
+The instantaneous hazard change when either the individuals co-variates change or the coefficients change when we change time interval. We make the following definitions to formalize the assumptions above. Let $\vec{x}_{ij}$ denote the $i$'th individuals $j$'th co-variate vector. For each individual we observe $j = 1, 2, \dots , l_i$ values of the co-variate vector. Each co-variate vector is valid in a period $(t_{i,j-1}, t_{i,j}]$. This definition differs from the previous definition of $\vec{x}_{ij}$ where the subscript $j$ referred to the time interval number. The new notation is used to cover the cases where update of co-variate values do not coincide with the end or start time one of the time intervals. For instance, this is the case for the examples in the figure in the section before
 
 Let $T_i$ denote the random event time of the $i$'th individual and let $y_{ij} = 1_{\{T_i \in (t_{i,j - 1}, t_{i,j}]\}}$ be the indicator for whether the $i$'th individual dies in period $(t_{i,j - 1}, t_{i,j}]$. Further, define the indicator $\tilde y_{i,j,s} = y_{i,j} 1_{\Lbrace{s-1<t_{i,j}\leq s}}$ which is one if individual $i$ dies in time interval $s$ with covariates $j$. The log likelihood up to a normalization constant is:
 $$\begin{aligned}
 \mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =&
   - \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^T \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
 	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^T \mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  - \frac{1}{2} \deter{\mat{Q}_0} - \frac{1}{2d} \deter{\mat{Q}} \\
+	&  - \frac{1}{2} \log\deter{\mat{Q}_0} - \log\frac{1}{2d} \deter{\mat{Q}} \\
   &+ \sum_{s=1}^d\sum_{(i,j) \in \Lbrace{(i,j) \left\vert\begin{smallmatrix} t_{i,j-1} < s \\ t_{i,j} > s-1 \end{smallmatrix} \right.}}
   l_{i,j,s}(\vec{\alpha}_s) \\
 %
@@ -689,9 +695,9 @@ $$\begin{aligned}
 where the $l_{i,j,s}$ terms come from the log likelihood:
 $$\log\Lparen{\proppCond{t_i}{\vec{\alpha}_0,\dots,\vec{\alpha}_d}} = 
   \vec{x}_i(t_i)^T\vec{\alpha}(t_i)
-  + \log\Lparen{\int_0^{t_i} \exp\Lparen{-\exp\Lparen{\vec{x}_i(t_i)^T\vec{\alpha}(t_i)}u} du}$$
+  -\int_0^{t_i}\exp\Lparen{\vec{x}_i(u)^T\vec{\alpha}(u)}u\, du$$
   
-which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}_s$ are step piecewise constant. Thus, the first sum from $s=1,\dots,n$ is for the change in state space parameters and the inner sum is for the changes in covariate vectors. The following sections will introduce four methods to estimate the above model. They are:
+which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}(t)$ are step piecewise constant. Thus, the first sum from $s=1,\dots,n$ in the log likelihood is for the change in state space parameters and the inner sum is for the changes in covariate vectors. The following sections will introduce four methods to estimate the above model. They are:
 
  1. Using a right truncated time variable
  2. Using a binary variable
@@ -702,10 +708,23 @@ The methods with the binary outcome and the right truncated time variable with a
 
 ## Right truncated observations time
 We start by defining the truncated observation time $\Delta_{is}$:
-$$\Delta_{ij} = (T_i - t_{i,j-1}) + \Lparen{t_{i,j} - T_i}1_{\{T_i \geq t_{i,j}\}} 
-  = \left\{\begin{matrix}T_i - t_{i,j-1} & T_i \leq t_{i,j} \\ t_{i,j} - t_{i,j-1} & T_i > t_{i,j}\end{matrix} \right.$$
+$$\Delta_{is} = (T_i - t_{i,s-1}) + \Lparen{t_{i,s} - T_i}1_{\{T_i \geq t_{i,s}\}} 
+  = \left\{\begin{matrix}T_i - t_{i,s-1} & T_i \leq t_{i,s} \\ t_{i,s} - t_{i,s-1} & T_i > t_{i,s}\end{matrix} \right.$$
+  
+These time variables are connected the stop time $T_i$ as follows. Suppose that all the interval has length one such that $t_{i,s} - t_{i,s-1} = 1$ if we do not have an event ($T_i > t_{i,s}$). Then: 
+$$\begin{aligned}
+\propp{T_i = t} &= \propp{T_i > 1} \proppCond{T_i > 2}{T_i > 1} \cdots \proppCond{T_i = t}{T_i > \lceil t \rceil - 1} \\
+%
+               &= \propp{\Delta_{i,1} = 1} \proppCond{\Delta_{i,2} = 1}{\Delta_{i,2} = 1} \cdots  \proppCond{
+	\Delta_{i,\lceil t \rceil} = t - (\lceil t \rceil - 1)}{\Delta_{i,\lceil t \rceil - 1} = 1)} \\
+%
+\propp{T_i > t} &= \propp{T_i > 1} \proppCond{T_i > 2}{T_i > 1} \cdots \proppCond{T_i > t}{T_i > \lceil t \rceil - 1} \\
+%
+               &= \propp{\Delta_{i,1} = 1} \proppCond{\Delta_{i,2} = 1}{\Delta_{i,2} = 1} \cdots  \proppCond{
+	\Delta_{i,\lceil t \rceil} > t - (\lceil t \rceil - 1)}{\Delta_{i,\lceil t \rceil - 1} = 1)} \\
+\end{aligned}$$
 
-The conditional probabilities simplifies into separate terms on the log likelihood scale due to the memoryless property of the exponential distribution. Thus, computing the conditional mean, $h$, can be done as follows. Assume for simplicity of notation that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then:
+The conditional probabilities simplifies into separate terms in the log likelihood due to the memoryless property of the exponential distribution. Thus, computing the conditional mean, $h$, can be done as follows. Assume for simplicity of notation that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then:
 
 $$\begin{aligned}
   \tilde{z}(\vec{\alpha}) &= \expecpCond{\Delta_{i,j}}
@@ -715,7 +734,7 @@ $$\begin{aligned}
   \qquad \bar t_{i,j} = \Lceil{t_{i,j}}y_{i,j,s} + (1 - y_{i,j,s})t_{i,j}
 \end{aligned}$$
 
-where $s$ is the time interval number that the observation is in, $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{ij}^T\vec{\alpha})}$, $f_{\tilde{T}}$ is the density function of $\tilde{T}$ and $h^{\Delta}_{i,j}$ is the inverse link function for the right truncated time variables for individual $i$'s $j$th observation. Set $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$ . The resulting conditional mean is:
+where $s$ is the time interval number that the observation is in, $\tilde{T} \sim \text{Exp}\Lparen{\exp(\vec{x}_{ij}^T\vec{\alpha})}$, $f_{\tilde{T}}$ is the density function of $\tilde{T}$ and $h^{\Delta}_{i,j}$ is the inverse link function for the right truncated time variables for individual $i$'s $j$th observation. Set $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$. The resulting conditional mean is:
 
 $$\tilde{z}(\vec{\alpha}) = \frac{1 - \exp \Lparen{- \lambda \delta} }{\lambda}$$
 
@@ -726,7 +745,15 @@ $$\begin{aligned}
   &= \frac{1 - \exp\Lparen{-2\delta\lambda} - 2 \lambda \delta \exp \Lparen{-\delta\lambda}}{\lambda^2}
 \end{aligned}$$
 
-Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$ in the case of censoring. We only know that the individual survived up to time $t_{i,l_i}$ and do not know if he survived the entire time interval. Further, we round up in the case where $T_i = t_{i,l_i}$ (in the case of a death) when we compute the inverse link function in the prediction step of the filter (EKF or UKF). The logic is that the individual could have survived the entire time interval ($\Lceil{t_{i,l_i}}$) but only survived $t_{i,l_i}$. Thus, we use $\bar t_{i,j}$. Notice if we do not make the above adjustment then there is no difference in the model between a death, a right censoring, new covariates or change of time intervals
+We call these variables right truncated observation times because each $\Delta_{ij}$ is a right truncated exponential variable conditional that individual $i$ has survived up to time $t_{i,j-1}$. A point has to be made about how we compute the mean and the variance in the case of right censoring and in the case of death in the previous equations. Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$. We only know that the individual survived up to time $t_{i,l_i}$ and do not know if he survived the entire time interval (which is $\Lceil{t_{i,l_i}}$) 
+
+Further, we round up in the case of a death, $T_i = t_{i,l_i}$, when we compute the mean and variance in the correction step of the filter (EKF or UKF). If we do not make the this adjustment then there is no difference in the model between a death, right censoring, new covariates or change of time intervals. Consequently, the state vectors will tend towards values such that the linear predictors goes to minus infinity
+
+We will make a the following example to show the state vector will tend towards values such that the linear predictors goes to minuns infinity. Suppose that we use the UKF and we only have an intercept such that $\vec{x}_{is} = \vec{x} = (1)$ for all $i$ and $s$. Further, we use a first order random walk such that $\vec{\alpha}_j=(d_j)$. This implies that all the linear predictors are given by $\vec{x}^T\vec{\alpha}_j=d_j$. The predicted mean for given observation can be $t_{i,s} - t_{i,s - 1}$ at most since we do not round up. Further, the predicted outcome will tend towards $t_{i,s} - t_{i,s - 1}$ as the linear predictor, $d_j$, tend towards minus infinity. 
+Since the predicted mean can at most be $t_{i,s} - t_{i,s - 1}$, all the residuals in the correction step, $\vec{y}_t - \overline{\vec{y}}$, will be positive. Recall that the correction step in the UKF is:
+$$d_j=\emNotee{\vec{a}}{j}{j} = \emNotee{\vec{a}}{j}{j - 1} + \ukfNotee{x}{y}{j}\ukfNotee{y}{y}{j}^{-1}(\vec{y}_j - \overline{\vec{y}}) = d_{j-1} + \ukfNotee{x}{y}{j}\ukfNotee{y}{y}{j}^{-1}(\vec{y}_j - \overline{\vec{y}})$$
+
+where we can show that $\ukfNotee{x}{y}{t}\ukfNotee{y}{y}{t}^{-1}$ (which is a scalar) is negative in the example given here. Hence, $d_1,d_2,\dots$ will decrease in every iterations of the UKF. On the other hand, if we do round up in the case of death then the residuals, $\vec{y}_j - \overline{\vec{y}}$, can be negative in the case of death. Consequently, a death can increase $d_j$ value if the residual is negative. Another way to reason about this is that the individual could have survived the entire time interval, $\Lceil{t_{i,s}}$, but only survived, $t_{i,s}$. Thus, we use $\bar t_{i,j}$
 
 A draw back to this model is that it will not work if the reported time scale is coarse as we cannot distinguish between a change of time interval, new covariates vector, right censoring or death when the times coincides. As an extreme example, we cannot use this method if all times are reported on the grid of integers $1,2,\dots$ and we use time intervals of length $1$. You can estimate with the right truncated time method by setting the argument `model = "exp_trunc_time"` in the call to `ddhazard`
 
@@ -741,16 +768,14 @@ h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_
     \Lparen{\min\{s, t_{i,j} \} - \max\{ s - 1, t_{i,j-1} \} }}
 \end{aligned}$$
 
-if we assume that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. This is assumed to in the following paragraphs
+if we assume that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. This is assumed to be the case in the following paragraphs
 
-There are two points to be made here. Firstly, we do not round up by using $\bar t_{i,j}$ in place of $t_{i,j}$ when we have a death. Thus, we do take into account the moment the person dies at in that $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is the likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. Moreover, an individual can have multiple observation in the same time interval. Thus, we do not have issue with going from event times to binary outcomes as with the logistic model 
+There are two points to be made here. Firstly, we do not round up by using $\bar t_{i,j}$ in place of $t_{i,j}$ when we have a death. Thus, we do take into account the moment the person dies at in that $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is the likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. Moreover, an individual can have multiple observations in the same time interval if he does not die but his co-variate vectors change within the bin. Thus, we do not have issue with going from event times to binary outcomes as with the logistic model 
 
-Secondly, the cons is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,s-1}$. Contrary, we do not loose this information with the right truncated observation time. It is worth stressing that this may be a minor drawback in settings where we have interval censoring. Here the exact time of death may be unknown and the given stop time is an upper bound for the death time 
-
-You can estimate with the binary outcome method by setting the argument `model = "exp_bin"` in the call to `ddhazard`
+The con is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,j-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,j-1}$. We do not loose this information with the right truncated observation time. This may be a minor drawback in settings where we have interval censoring. Here the exact time of death may be unknown and the given stop time is an upper bound for the death time. You can estimate with the binary outcome method by setting the argument `model = "exp_bin"` in the call to `ddhazard`
 
 ## Right truncated observations time with jump
-This section will cover the right truncated time with a jump term. The motivation is that the two previous methods are not flawless: the binary method has the drawback that we do not prevail the exact time of death and the right truncated time method cannot distinguish some deaths from censoring with a coarse time scale
+This section will cover the right truncated time with a jump term. The motivation is that the two previous methods are not flawless: the binary method has the drawback that we do not keep the information about the exact time of death and the right truncated time method cannot distinguish some deaths from censoring with a coarse time scale
 
 A way to deal with the latter is to add a jump term in case of censoring. Particularly, we set:
 $$\begin{aligned}
@@ -761,10 +786,10 @@ $$\begin{aligned}
   = \left\{\begin{matrix}T_i - t_{i,j} & T_i \leq t_{i,j} \\ \delta_{i,j} & T_i > t_{i,j}\end{matrix} \right.
 \end{aligned}$$
 
-where we use $\Lambda$ instead of $\Delta$ to distinguish between the two time variables. The above implies that $\Lambda_{i,j}\in [-\delta_{i,j},0]\cup\{\delta_{i,j}\}$. $\Lambda_{i,j}\leq 0$ implies that we have an event and the smaller the value the sooner the event happens. $\Lambda_{i,j} = \delta_{i,j}$ implies that the variable is right truncated. The mean is given by:
+where we use $\Lambda$ instead of $\Delta$ to distinguish between the two time variables. It is key to notice that we use $T_i - t_{i,j}$  when $T_{i,j}\le t_{i,j}$ instead of $T_i - t_{i,j-1}$. Thus, the value is negative if an individual dies. The above implies that $\Lambda_{i,j}\in [-\delta_{i,j},0]\cup\{\delta_{i,j}\}$. $\Lambda_{i,j}\leq 0$ implies that we have an event and the smaller the value the sooner the event happens. $\Lambda_{i,j} = \delta_{i,j}$ implies that the variable is right truncated. The mean is given by:
 $$\tilde{z}(\vec{\alpha}) = \frac{\left(1 - \exp\Lparen{-\delta  \lambda }\right) (\delta  \lambda
    -1)}{\lambda }$$
-where the definition of $\delta$ and $\lambda$ is the same as in the right truncated time variable section. The mean is plotted below as a function of $\lambda$ with $\delta = 1$
+where the definition of $\delta$ and $\lambda$ is the same as in the right truncated time variable section. I.e. we are looking at a particular observation for individual $i$ and define $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$. The mean is plotted below as a function of $\lambda$ with $\delta = 1$
 
 ```{r, echo=FALSE, fig.height=2}
 f <- function(l) exp(-l) * (exp(l) - 1) * (1 - l) / l
@@ -793,11 +818,9 @@ $$\tiny\begin{aligned}
    }\right)-\exp\Lparen{-2 \delta  \lambda }+1\right)^2}{\lambda ^5}
 \end{aligned}$$
 
-The at risk length is computed in the same way as the right truncated time variable. That is, we use $\bar t_{i,j}$ instead of the $\min$ term in case of a death
+The at risk length is computed in the same way as the right truncated time variable. That is, we use $\bar t_{i,j}$ instead of the $\min$ term in case of a death. You can estimate with the right truncated time variable by setting the argument `model = "exp_trunc_time_w_jump"` in the call to `ddhazard`
 
-You can estimate with the right truncated time variable by setting the argument `model = "exp_trunc_time_w_jump"` in the call to `ddhazard`
-
-## Combining the two
+## Combining the first two
 Another idea is to use the binary variable and the first mentioned right truncated time at the same time. Though, this method has shown worse performance on simulated data. Thus, the description of the method is left as an appendix
 
 ## Fixed effects
@@ -864,7 +887,7 @@ The methods and models could be used for active learning setting as in [@lee10].
 A further point in this connection is that computing upper bounds for the predicted outcome given an input variable is straight forward if we the predicted point-wise covariance matrix. Thus, the method could be applied in a bandit setting
 
 # Appendix
-## Combining the two
+## Combining the first two continuous models 
 An idea is to combine the binary method and the first mentioned time variable for the continuous time model. Thus, we can use tuples $(y_{i,j,s}, \Delta_{i,j})$ for each observation. Further, we change the inverse link function for the binary outcome to:
 $$\begin{aligned} 
 h^{\tilde Y}_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_{i,j}^T \vec{\alpha}_{s}) 
@@ -878,7 +901,7 @@ $$\delta = \bar t_{i,j}-t_{i,j-1}, \qquad \lambda = \exp \Lparen{\vec{x}_{i,j}^T
   Z \sim \text{Exp}\Lparen{\lambda}$$
 
 Consequently, we have the following relation (conditional on having survived up to time $t_{i,j-1}$):
-$$Y_{i,j} \sim 1_{\Lbrace{Z\in[0,\delta\}}}, \qquad \Delta_{i,j} \sim Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}}$$
+$$Y_{i,j} \sim 1_{\Lbrace{Z\in[0,\delta\}}}, \qquad \Delta_{i,j} \sim Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}} = \left\{\begin{matrix}Z & Y_{i,j}=1 \\  \delta & Y_{i,j} = 0\end{matrix}\right.$$
 
 where $\sim$ denotes "similarly distributed" and $1_{\Lbrace{\cdot}}$ is one if the condition in the braces are satisfied and zero otherwise. Hence, we can find the covariance by: 
 $$\begin{aligned}

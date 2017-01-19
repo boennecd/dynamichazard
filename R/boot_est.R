@@ -199,6 +199,7 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
 
   colnames(boot_est$t) <- boot_est$t_names
   names(boot_est$t0) <- boot_est$t_names
+  boot_est$sim <- "ordinary"
 
   boot_est
 }
