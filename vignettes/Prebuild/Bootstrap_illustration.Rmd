@@ -12,7 +12,8 @@ knitr::knit_hooks$set(default_opts = function(before, options, envir) {
     }
 })
 options(digist = 4)
-knitr::opts_chunk$set(echo = TRUE, fig.height = 5, dpi = 36)
+knitr::opts_chunk$set(echo = TRUE, fig.height = 5, dpi = 36, 
+                      cache = T)
 knitr::opts_knit$set(default_opts = T)
 ```
 
@@ -96,13 +97,13 @@ boot_out <- ddhazard_boot(
 # Though, a few elements are added 
 class(boot_out)
 ```
-Above, we bootstrap the model by sampling the individuals. I.e. individuals will have weights of $0,1,2,\dots$ in the estimation. We can plot 95% confidence bounds from the bootstrap coeffecients with the Percentile Bootstrap method as follows:
+Above, we bootstrap the model by sampling the individuals. I.e. individuals will have weights of $0,1,2,\dots$ in the estimation. We can plot 95% confidence bounds from the bootstrap coefficients with the Percentile Bootstrap method as follows:
 
 ```{r}
 plot(dd_fit, ddhazard_boot = boot_out)
 ```
 
-The completely black line are the estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap estimates taken at each point and the transparent black lines each represent a bootstrap estimate
+The completely black line is the original estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap coefficient taken at each point and the transparent black lines each represent a bootstrap estimate
 
 We can check if it affects the results if we perform stratified sampling between those individuals who has an event and those who does not as follows:
 
@@ -116,6 +117,8 @@ boot_out_stratify_by_events <- ddhazard_boot(
 
 plot(dd_fit, ddhazard_boot = boot_out_stratify_by_events)
 ```
+
+A motivation for sampling this way is if we have a small data set with few cases or controls. Thus, we could end with a sample with e.g. no or few cases. It seems to have no impact in this example
 
 ## Sampling weights
 We can also sample the weights. This is done as follows: within each stratum $j$ (e.g. those who have an event and those who do not) let $r_j$ denote the number of individuals. Then we sample $r_j$ uniform variables $l_i\sim\text{Unif}(0,1)$ for $i = 1,\dots,r_j$ and normalize with a constant $c$ such that $\sum_{i=1}^{r_j} l_i/c = r_j$. The code below will sample the weights as described above:
@@ -159,10 +162,10 @@ boot_out_with_strata <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out_with_strata)
 ```
 
-The above code is only provided for illustrative purposes. There is no reason to do stratified sampling over the age (as far as I can see). However, it may be useful if you have e.g. categorical variables in your model and want to ensure that each bootstrap sample has a given amount of observation in each categori. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual has an event. Stratified sampling will then be performed over this variable
+The above code is only provided for illustrative purposes. There is no reason to do stratified sampling over the age variable (as far as I gather). However, it may be useful if you have e.g. categorical variables in your model and want to ensure that each bootstrap sample has a given amount of observation in each category. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual has an event. Stratified sampling will then be performed over this variable
 
 ## Fixed effects
-Fixed effects (time invariant effects) can also be bootstrap estimated. The fixed effects bootstrap estimates are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
+Fixed effects (time invariant effects) can also be bootstrap to get confidence bounds. The fixed effects bootstrap coefficients are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
 
 ```{r}
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ 
@@ -204,7 +207,7 @@ boot_out <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out)
 ```
 
-We then turn the bootstrap confidence intervals of the fixed effects. This can be done with the `boot.ci` function from the `boot` library as shown below. 
+We then turn the bootstrap confidence intervals of the fixed effects. These can be computed with the `boot.ci` function from the `boot` library as shown below:
 
 ```{r, fig.height=3.5}
 library(boot)

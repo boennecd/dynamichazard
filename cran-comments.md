@@ -9,22 +9,15 @@
 I used the build with codename trusty for the GCC 4.8.4. It is needed for the c++11 syntax I use
 
 ## R CMD check results
-There were no errors and only one warning which is on travis-ci. 
+There were no errors or errors 
 
-There are two notes travis-ci:
-* checking installed package size ... NOTE
-  installed size is 11.4Mb
+There is one note on travis-ci:
+checking installed package size ... NOTE
+  installed size is 14.0Mb
   sub-directories of 1Mb or more:
-    doc    1.0Mb
-    libs   8.3Mb
+    doc    3.0Mb
+    libs   8.9Mb
     R      2.0Mb
-* checking DESCRIPTION meta-information ... NOTE
-Malformed Description field: should contain one or more complete sentences.
-
-The warning on travis-ci is:
-* checking sizes of PDF files under ‘inst/doc’ ... WARNING
-  ‘gs+qpdf’ made some significant size reductions:
-     compacted ‘ddhazard.pdf’ from 509Kb to 207Kb
 
 The notes from win-builder.r-project.org on the devel image are:
 * checking installed package size ... NOTE
