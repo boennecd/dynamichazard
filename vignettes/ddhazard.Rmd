@@ -675,7 +675,7 @@ We make the following assumption in the continuous time model:
 
 1. Coefficients (that is state variables $\vec{\alpha}_1,\dots, \vec{\alpha}_d$) change at end of time interval $1, 2, \dots , d$
 2. The individuals co-variates change at discrete times
-3. We have piecewise constant instantaneous hazards given by $\exp(\vec{x}^T\vec{\alpha})$ given an individiauls current co-covariate vector $\vec{x}$ and state variable $\vec{\alpha}$
+3. We have piecewise constant instantaneous hazards given by $\exp(\vec{x}^T\vec{\alpha})$ given an individual's current co-covariate vector $\vec{x}$ and state variable $\vec{\alpha}$
 
 The instantaneous hazard change when either the individuals co-variates change or the coefficients change when we change time interval. We make the following definitions to formalize the assumptions above. Let $\vec{x}_{ij}$ denote the $i$'th individuals $j$'th co-variate vector. For each individual we observe $j = 1, 2, \dots , l_i$ values of the co-variate vector. Each co-variate vector is valid in a period $(t_{i,j-1}, t_{i,j}]$. This definition differs from the previous definition of $\vec{x}_{ij}$ where the subscript $j$ referred to the time interval number. The new notation is used to cover the cases where update of co-variate values do not coincide with the end or start time one of the time intervals. For instance, this is the case for the examples in the figure in the section before
 
@@ -697,21 +697,22 @@ $$\log\Lparen{\proppCond{t_i}{\vec{\alpha}_0,\dots,\vec{\alpha}_d}} =
   \vec{x}_i(t_i)^T\vec{\alpha}(t_i)
   -\int_0^{t_i}\exp\Lparen{\vec{x}_i(u)^T\vec{\alpha}(u)}u\, du$$
   
-which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}(t)$ are step piecewise constant. Thus, the first sum from $s=1,\dots,n$ in the log likelihood is for the change in state space parameters and the inner sum is for the changes in covariate vectors. The following sections will introduce four methods to estimate the above model. They are:
+which simplifies into the terms of $l_{i,j,s}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}(t)$ are piecewise constant. Thus, the first sum from $s=1,\dots,n$ in the log likelihood is for the change in state space parameters and the inner sum is for the changes in covariate vectors. The following sections will introduce four methods to estimate the above model. They are:
 
  1. Using a right clipped time variable
  2. Using a binary variable
  3. Using a right clipped time variable with a jump term
  4. Combining  method 1. and 2.
  
-The methods with the binary outcome and the right clipped time variable with a jump term seem to do best on simulated data
+The methods with the binary outcome and the right clipped time variable with a jump term seem to do best on simulated data. It is needed to define clipping before we proceed since the term clipping is not commonly used as far as I am aware. By right clipping a random variable $X$ at $c$ we mean that the clipped variable $\tilde X$ is:
+$$\tilde X = \left\{ \begin{matrix} X & X \leq c \\ c & X > c \end{matrix}\right.$$
 
 ## Right clipped observations time
 We start by defining the clipped observation time $\Delta_{is}$:
 $$\Delta_{is} = (T_i - t_{i,s-1}) + \Lparen{t_{i,s} - T_i}1_{\{T_i \geq t_{i,s}\}} 
   = \left\{\begin{matrix}T_i - t_{i,s-1} & T_i \leq t_{i,s} \\ t_{i,s} - t_{i,s-1} & T_i > t_{i,s}\end{matrix} \right.$$
   
-These time variables are connected the stop time $T_i$ as follows. Suppose that all the interval has length one such that $t_{i,s} - t_{i,s-1} = 1$ if we do not have an event ($T_i > t_{i,s}$). Then: 
+These time variables are connected to the stop time $T_i$ as follows. Suppose that all the interval has length one such that $t_{i,s} - t_{i,s-1} = 1$ if we do not have an event ($T_i > t_{i,s}$). Then: 
 $$\begin{aligned}
 \propp{T_i = t} &= \propp{T_i > 1} \proppCond{T_i > 2}{T_i > 1} \cdots \proppCond{T_i = t}{T_i > \lceil t \rceil - 1} \\
 %
@@ -745,15 +746,15 @@ $$\begin{aligned}
   &= \frac{1 - \exp\Lparen{-2\delta\lambda} - 2 \lambda \delta \exp \Lparen{-\delta\lambda}}{\lambda^2}
 \end{aligned}$$
 
-We call these variables right clipped observation times because each $\Delta_{ij}$ is a right clipped exponential variable conditional that individual $i$ has survived up to time $t_{i,j-1}$. A point has to be made about how we compute the mean and the variance in the case of right censoring and in the case of death in the previous equations. Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$. We only know that the individual survived up to time $t_{i,l_i}$ and do not know if he survived the entire time interval (which is $\Lceil{t_{i,l_i}}$) 
+We call these variables right clipped observation times because each $\Delta_{ij}$ is a right clipped exponential variable conditional that individual $i$ has survived up to time $t_{i,j-1}$. A point has to be made about how we compute the mean and the variance in the case of right censoring and in the case of death in the previous equations. Right censoring is treated by having $t_{i,l_i} < \Lceil{t_{i,l_i}}$. We only know that the individual survived up to time $t_{i,l_i}$ and do not know if he survived the entire period (which is $\Lceil{t_{i,l_i}}$) 
 
 Further, we round up in the case of a death, $T_i = t_{i,l_i}$, when we compute the mean and variance in the correction step of the filter (EKF or UKF). If we do not make the this adjustment then there is no difference in the model between a death, right censoring, new covariates or change of time intervals. Consequently, the state vectors will tend towards values such that the linear predictors goes to minus infinity
 
-We will make a the following example to show the state vector will tend towards values such that the linear predictors goes to minuns infinity. Suppose that we use the UKF and we only have an intercept such that $\vec{x}_{is} = \vec{x} = (1)$ for all $i$ and $s$. Further, we use a first order random walk such that $\vec{\alpha}_j=(d_j)$. This implies that all the linear predictors are given by $\vec{x}^T\vec{\alpha}_j=d_j$. The predicted mean for given observation can be $t_{i,s} - t_{i,s - 1}$ at most since we do not round up. Further, the predicted outcome will tend towards $t_{i,s} - t_{i,s - 1}$ as the linear predictor, $d_j$, tend towards minus infinity. 
+We will make a the following example to show the state vector will tend towards values such that the linear predictors goes to minus infinity. Suppose that we use the UKF and we only have an intercept such that $\vec{x}_{is} = \vec{x} = (1)$ for all $i$ and $s$. Further, we use a first order random walk such that $\vec{\alpha}_j=(d_j)$. This implies that all the linear predictors are given by $\vec{x}^T\vec{\alpha}_j=d_j$. The predicted mean for given observation $\Delta_{i,j}$ can be $t_{i,s} - t_{i,s - 1}$ at most since we do not round up. Further, the predicted outcome will tend towards $t_{i,s} - t_{i,s - 1}$ as the linear predictor, $d_j$, tend towards minus infinity. 
 Since the predicted mean can at most be $t_{i,s} - t_{i,s - 1}$, all the residuals in the correction step, $\vec{y}_t - \overline{\vec{y}}$, will be positive. Recall that the correction step in the UKF is:
 $$d_j=\emNotee{\vec{a}}{j}{j} = \emNotee{\vec{a}}{j}{j - 1} + \ukfNotee{x}{y}{j}\ukfNotee{y}{y}{j}^{-1}(\vec{y}_j - \overline{\vec{y}}) = d_{j-1} + \ukfNotee{x}{y}{j}\ukfNotee{y}{y}{j}^{-1}(\vec{y}_j - \overline{\vec{y}})$$
 
-where we can show that $\ukfNotee{x}{y}{t}\ukfNotee{y}{y}{t}^{-1}$ (which is a scalar) is negative in the example given here. Hence, $d_1,d_2,\dots$ will decrease in every iterations of the UKF. On the other hand, if we do round up in the case of death then the residuals, $\vec{y}_j - \overline{\vec{y}}$, can be negative in the case of death. Consequently, a death can increase $d_j$ value if the residual is negative. Another way to reason about this is that the individual could have survived the entire time interval, $\Lceil{t_{i,s}}$, but only survived, $t_{i,s}$. Thus, we use $\bar t_{i,j}$
+where we can show that $\ukfNotee{x}{y}{t}\ukfNotee{y}{y}{t}^{-1}$ (which is a scalar) is negative in the example given here. Hence, $d_1,d_2,\dots$ will decrease in every iterations of the UKF. On the other hand, if we do round up in the case of death then the residuals, $\vec{y}_j - \overline{\vec{y}}$, can be negative in the case of death. Consequently, a death can increase $d_j$ value if the residual is negative. Another way to reason about this is that the individual could have survived the entire time period, $\Lceil{t_{i,s}}$, but only survived up to time $t_{i,s}$. Thus, we use $\bar t_{i,j}$
 
 A draw back to this model is that it will not work if the reported time scale is coarse as we cannot distinguish between a change of time interval, new covariates vector, right censoring or death when the times coincides. As an extreme example, we cannot use this method if all times are reported on the grid of integers $1,2,\dots$ and we use time intervals of length $1$. You can estimate with the right clipped time method by setting the argument `model = "exp_clip_time"` in the call to `ddhazard`
 
@@ -770,7 +771,7 @@ h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_
 
 if we assume that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. This is assumed to be the case in the following paragraphs
 
-There are two points to be made here. Firstly, we do not round up by using $\bar t_{i,j}$ in place of $t_{i,j}$ when we have a death. Thus, we do take into account the moment the person dies at in that $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is the likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$. Moreover, an individual can have multiple observations in the same time interval if he does not die but his co-variate vectors change within the bin. Thus, we do not have issue with going from event times to binary outcomes as with the logistic model 
+There are two points to be made here. Firstly, we do not round up by using $\bar t_{i,j}$ in place of $t_{i,j}$ when we have a death. Thus, we do take into account the moment the person dies at in that $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is the likelihood of dying sometime in the period $t_{i,j} - t_{i,s-1}$ given that he survived up to $t_{i,s-1}$. Moreover, an individual can have multiple observations in the same time interval if he does not die but his co-variate vectors change within the interval in the state space model. Thus, we do not have issue with going from event times to binary outcomes as with the logistic model 
 
 The con is that the term $\log h^Y_{i,j}(\vec{x}_{i,j}^T \vec{\alpha}_s)$ is only the log likelihood of dying sometime in the period $t_{i,j} - t_{i,j-1}$. It is not the likelihood of dying after exactly $t_{i,j} - t_{i,j-1}$. We do not loose this information with the right clipped observation time. This may be a minor drawback in settings where we have interval censoring. Here the exact time of death may be unknown and the given stop time is an upper bound for the death time. You can estimate with the binary outcome method by setting the argument `model = "exp_bin"` in the call to `ddhazard`
 
@@ -786,7 +787,7 @@ $$\begin{aligned}
   = \left\{\begin{matrix}T_i - t_{i,j} & T_i \leq t_{i,j} \\ \delta_{i,j} & T_i > t_{i,j}\end{matrix} \right.
 \end{aligned}$$
 
-where we use $\Lambda$ instead of $\Delta$ to distinguish between the two time variables. It is key to notice that we use $T_i - t_{i,j}$  when $T_{i,j}\le t_{i,j}$ instead of $T_i - t_{i,j-1}$. Thus, the value is negative if an individual dies. The above implies that $\Lambda_{i,j}\in [-\delta_{i,j},0]\cup\{\delta_{i,j}\}$. $\Lambda_{i,j}\leq 0$ implies that we have an event and the smaller the value the sooner the event happens. $\Lambda_{i,j} = \delta_{i,j}$ implies that the variable is right clipped. The mean is given by:
+where we use $\Lambda$ instead of $\Delta$ to distinguish between the two time variables. It is key to notice that we use $T_i - t_{i,j}$  when $T_{i,j}\le t_{i,j}$ instead of $T_i - t_{i,j-1}$. Thus, the value is negative if an individual dies. The above implies that $\Lambda_{i,j}\in [-\delta_{i,j},0]\cup\{\delta_{i,j}\}$. $\Lambda_{i,j}\leq 0$ implies that we have an event and the smaller the value the sooner the event happened. $\Lambda_{i,j} = \delta_{i,j}$ implies that the variable is right clipped. The mean is given by:
 $$\tilde{z}(\vec{\alpha}) = \frac{\left(1 - \exp\Lparen{-\delta  \lambda }\right) (\delta  \lambda
    -1)}{\lambda }$$
 where the definition of $\delta$ and $\lambda$ is the same as in the right clipped time variable section. I.e. we are looking at a particular observation for individual $i$ and define $\lambda = \exp(\vec{x}_{ij}^T\vec{\alpha})$ and $\delta =t_{i,j} - t_{i,j - 1}$. The mean is plotted below as a function of $\lambda$ with $\delta = 1$
