@@ -19,7 +19,7 @@ test_that("verbose prints log likelihood",{
     for(o in c(1, 2)){
       Q_0_arg <- if(o == 1) diag(1, 2) else diag(c(1, 1, .1, .1))
       for(m in c(exp_model_names, "logit")){
-        if(m == "exp_trunc_time" && method == "UKF")
+        if(m == "exp_clip_time" && method == "UKF")
           next
         expect_output({
           ddhazard(survival::Surv(start, stop, event) ~ group,

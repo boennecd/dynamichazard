@@ -73,15 +73,15 @@ max(aids$stop[aids$event == 1]) # Last person with event
 fit <- ddhazard(
   Surv(stop, event) ~ AZT + gender + drug + prevOI,
   aids,
-  model = "exp_trunc_time_w_jump", # The model we use from ddhazard. In short, 
-                                   # this model assumes that event times are 
-                                   # exponentially distributed
-  by = .5,                         # Length of time intervals in state space 
-                                   # model
-  max_T = 19,                      # Last period we observe when modeling
-  Q = diag(.1, 5),                 # Covariance matrix for state equation in 
-                                   # first iteration
-  Q_0 = diag(10000, 5),            # Covariance matrix for the prior
+  model = "exp_clip_time_w_jump", # The model we use from ddhazard. In short, 
+                                  # this model assumes that event times are 
+                                  # exponentially distributed
+  by = .5,                        # Length of time intervals in state space 
+                                  # model
+  max_T = 19,                     # Last period we observe when modeling
+  Q = diag(.1, 5),                # Covariance matrix for state equation in 
+                                  # first iteration
+  Q_0 = diag(10000, 5),           # Covariance matrix for the prior
   control = list(eps = .1))
 
 # Plot the estimates. Dashed lines are 95% confidence bounds
