@@ -66,6 +66,12 @@ current_version # The string you need to pass devtools::install_github
 devtools::install_github(current_version)
 ```
 
+You can also get the latest version on CRAN by calling:
+
+```{r eval=FALSE}
+install.packages("dynamichazard")
+```
+
 # The pbc data set
 The `pbc` data set contains data from the Mayo Clinic trial on primary biliary cirrhosis. We use this dataset to compare with results previously found analyzing the data set. We will focus on a the subset of co-variates used in [@martinussen07]. The dataset can be created by: 
 

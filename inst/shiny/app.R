@@ -118,7 +118,7 @@ ui <- fluidPage(
        selectInput("est_with_model",
                    "Choose model to estimate with",
                    choices = c("logit", exp_model_names),
-                   selected = "exp_trunc_time_w_jump"),
+                   selected = "exp_clip_time_w_jump"),
 
        selectInput("est_with_method",
                    "Choose method to use in the E-step",

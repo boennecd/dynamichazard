@@ -18,7 +18,7 @@ knitr::opts_knit$set(default_opts = T)
 
 # Introduction
 
-This vignette will show how to bootstrap the estimate of a `ddhazard` call. this vignette builds on the vignettes 'ddhazard' and 'Comparing methods for time varying logistic models'. Thus, it is suggest to read these first. You can get the version used to make this vignette by calling:`
+This vignette will show how to bootstrap the confidence intervals of a `ddhazard` call. This vignette builds on the vignettes 'ddhazard' and 'Comparing methods for time varying logistic models'. Thus, it is recommended to read these first. You can get the version used to make this vignette by calling:`
 
 ```{r echo=FALSE}
 tryCatch({
@@ -38,6 +38,12 @@ current_version # The string you need to pass devtools::install_github
 
 ```{r eval=FALSE}
 devtools::install_github(current_version)
+```
+
+You can also get the latest version on CRAN by calling:
+
+```{r eval=FALSE}
+install.packages("dynamichazard")
 ```
 
 # PBC data set
@@ -90,13 +96,15 @@ boot_out <- ddhazard_boot(
 # Though, a few elements are added 
 class(boot_out)
 ```
-Above, we bootstrap the model by sampling the individuals discreetly. I.e. individuals will have weights of $0,1,2,\dots$. We can plot 95% confidence bounds from the bootstrap estimates as follows:
+Above, we bootstrap the model by sampling the individuals. I.e. individuals will have weights of $0,1,2,\dots$ in the estimation. We can plot 95% confidence bounds from the bootstrap coeffecients with the Percentile Bootstrap method as follows:
 
 ```{r}
 plot(dd_fit, ddhazard_boot = boot_out)
 ```
 
-The completely black line are the estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap estimates taken at each point and the transparent black lines each represent a bootstrap estimate. We can check if it affects the results if we perform stratified sampling between those individuals who has an event and those who does not as follows:
+The completely black line are the estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap estimates taken at each point and the transparent black lines each represent a bootstrap estimate
+
+We can check if it affects the results if we perform stratified sampling between those individuals who has an event and those who does not as follows:
 
 ```{r}
 set.seed(8524)
@@ -122,8 +130,8 @@ boot_out_by_weights <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out_by_weights)
 ```
 
-## Ohter strata
-You can also provide your own strata to perform stratified sampling with. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the design matrix). Further, you can use the `unique_id` argument to match the individual entries with the entries in `strata`. As an example, we stratify by the `age` at the start of the study period with the code below:
+## Other strata
+You can also provide your own strata to perform stratified sampling with. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the data set). Further, you can use the `unique_id` argument to match the individual entries with the entries in `strata`. As an example, we stratify by the `age` at the start of the study period with the code below:
 ```{r}
 # Individuals have different number of rows in the dataset
 xtabs(~xtabs(~pbc2$id))
@@ -151,7 +159,7 @@ boot_out_with_strata <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out_with_strata)
 ```
 
-The above code is only provide for illustrative purposes. There is no reason to do stratified sampling over the age (as far as I can see). However, it may be useful if you have e.g. categorical variables in your model and want to ensure that each bootstrap sample has a given amount of observation in each categori. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual has an event. Stratified sampling will then be performed over this variable
+The above code is only provided for illustrative purposes. There is no reason to do stratified sampling over the age (as far as I can see). However, it may be useful if you have e.g. categorical variables in your model and want to ensure that each bootstrap sample has a given amount of observation in each categori. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual has an event. Stratified sampling will then be performed over this variable
 
 ## Fixed effects
 Fixed effects (time invariant effects) can also be bootstrap estimated. The fixed effects bootstrap estimates are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
@@ -188,7 +196,7 @@ We can bootstrap the estimates with a call similar to those we made before:
 set.seed(9001)
 boot_out <- ddhazard_boot(
   dd_fit, 
-  do_sample_weights = T,      # sample weights      
+  do_sample_weights = F,      # dont sample weights      
   do_stratify_with_event = F, # dont stratify by event
   R = R)
 
@@ -196,19 +204,28 @@ boot_out <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out)
 ```
 
-We then turn the bootstrap estimates of the fixed effects. Below, we first slice out the fixed effects, print a few of the bootstrap sample estimates and then make a box plot of the all the sample estimates. Lastly, we add a continuous horizontal line for the initial estimates:
+We then turn the bootstrap confidence intervals of the fixed effects. This can be done with the `boot.ci` function from the `boot` library as shown below. 
 
 ```{r, fig.height=3.5}
-# Print some of bootstrap estimates of the fixed effects
-fixed_effects_ests <- t(tail(t(boot_out$t), 2))
-head(fixed_effects_ests)
+library(boot)
 
-# Make a boxplot of the fixed effects
-par(mfcol = c(1, 2), cex = .6)
-for(i in 1:ncol(fixed_effects_ests)){
-  boxplot(fixed_effects_ests[, i], main = colnames(fixed_effects_ests)[i])
-  
-  # Add a horisontal line at the estimates with the whole sample
-  abline(h = dd_fit$fixed_effects[i])
-}
+# We start by printing confidence intervals for 
+colnames(boot_out$t)[ncol(boot_out$t) - 1]
+
+boot.ci(boot_out, index = ncol(boot_out$t) - 1, 
+        # We specify the types of confidence intervals estimates here:
+        type = c(
+          "norm",  # A matrix of intervals calculated using the normal 
+                   # approximation.
+          "basic", # The intervals calculated using the basic bootstrap method.
+          "perc",  # The intervals calculated using the bootstrap percentile 
+                   # method.
+          "bca")   # The intervals calculated using the adjusted bootstrap 
+                   # percentile (BCa) method.
+        )
+
+# Then we print confidence intervals for 
+colnames(boot_out$t)[ncol(boot_out$t)]
+boot.ci(boot_out, index = ncol(boot_out$t) - 0, type = c(
+  "norm", "basic", "perc", "bca"))
 ```
