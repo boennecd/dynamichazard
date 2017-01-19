@@ -38,7 +38,7 @@ test_that("Expecting plot calls to succed with first order model", {
 
   suppressMessages(pbc_fit <- ddhazard(
     formula = survival::Surv(tstart/100, tstop/100, status == 2) ~ log(bili) + log(protime),
-    data = pbc2, model = "exp_trunc_time", by = 1, max_T = 36,
+    data = pbc2, model = "exp_clip_time", by = 1, max_T = 36,
     Q_0 = diag(2, 3), Q = diag(1e-3, 3), verbose = F,
     id = pbc2$id,
     control = list(LR = 1, eps = 1e-3, save_risk_set = F)))
@@ -67,7 +67,7 @@ test_that("Expecting plot calls to succed with second order model", {
 
   suppressMessages(pbc_fit <- ddhazard(
     formula = survival::Surv(tstart/100, tstop/100, status == 2) ~ log(bili) + log(protime),
-    data = pbc2, model = "exp_trunc_time", by = 1, max_T = 36,
+    data = pbc2, model = "exp_clip_time", by = 1, max_T = 36,
     Q_0 = diag(5, 6), Q = diag(c(rep(1e-3, 3))),
     id = pbc2$id, order = 2,
     control = list(LR = .01, eps = 1e-2, save_risk_set = F)))
@@ -95,7 +95,7 @@ test_that("Alters mfcol and sets it back", {
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exp_trunc_time"))
+    model = "exp_clip_time"))
 
   for(i in 1:10){
     expect_no_error(plot(result_exp, type = "cov", cov_index = 1:i))

@@ -276,7 +276,7 @@ test_that("I did not mess up with get_data_func", {
 test_that("bigglm and my c++ version yields similar results", {
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
 
-  for(model in c("logit", "exp_combined", "exp_bin", "exp_trunc_time")){
+  for(model in c("logit", "exp_combined", "exp_bin", "exp_clip_time")){
     suppressWarnings(bigglm_res <- biglm::bigglm(
       form, get_data_func,
       family = if(model == "logit") binomial() else poisson()))

@@ -6,8 +6,8 @@ using uword = arma::uword;
 bool is_exponential_model(std::string model){
   return(model == "exp_combined" ||
          model == "exp_bin" ||
-         model == "exp_trunc_time" ||
-         model == "exp_trunc_time_w_jump");
+         model == "exp_clip_time" ||
+         model == "exp_clip_time_w_jump");
 }
 
 // Define convergence criteria
@@ -414,7 +414,7 @@ inline double binary_var_fac(const double v, const double  inv_exp_v, double eps
 }
 
 
-inline double trunc_time_score_fac(const double exp_eta, const double inv_exp_eta,
+inline double clip_time_score_fac(const double exp_eta, const double inv_exp_eta,
                                         const double inv_exp_v, const double a,
                                         const double eps){
 
@@ -424,7 +424,7 @@ inline double trunc_time_score_fac(const double exp_eta, const double inv_exp_et
            ((exp_eta / eps) *(-3*pow(a,2)*eps + (pow(a,5) + 2*pow(a,3)*eps)*exp_eta))/(6*eps));
 }
 
-inline double trunc_time_var_fac(const double exp_eta, const double inv_exp_eta,
+inline double clip_time_var_fac(const double exp_eta, const double inv_exp_eta,
                                       const double inv_exp_v, const double a,
                                       const double eps){
   return((a * exp_eta >= 1e-4) ?
@@ -434,7 +434,7 @@ inline double trunc_time_var_fac(const double exp_eta, const double inv_exp_eta,
            (pow(exp_eta/eps,2)*(3*pow(a,4)*eps + (-pow(a,7) - 4*pow(a,5)*eps)*exp_eta))/12);
 }
 
-inline double trunc_time_w_jump_score_fac(const double exp_eta, const double v,
+inline double clip_time_w_jump_score_fac(const double exp_eta, const double v,
                                                const double inv_exp_v, const double a,
                                                const double eps){
   if(v >= 1e-4){
@@ -447,7 +447,7 @@ inline double trunc_time_w_jump_score_fac(const double exp_eta, const double v,
   }
 }
 
-inline double trunc_time_w_jump_var_fac(const double exp_eta, const double v,
+inline double clip_time_w_jump_var_fac(const double exp_eta, const double v,
                                              const double inv_exp_v, const double a,
                                              const double eps){
   if(v >= 1e-4){
@@ -670,8 +670,8 @@ class EKF_helper{
   };
 
   // worker for the continous model with exponential distribution where only the
-  // right truncated variable is used
-  class filter_worker_exp_trunc_time : public filter_worker {
+  // right clipped variable is used
+  class filter_worker_exp_clip_time : public filter_worker {
   private:
     void do_comps(const arma::uvec::const_iterator it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
@@ -696,9 +696,9 @@ class EKF_helper{
 
       const double expect_time = exp_model_funcs::expect_time(v, at_risk_length, inv_exp_v, exp_eta);
 
-      const double score_fac = exp_model_funcs::trunc_time_score_fac(
+      const double score_fac = exp_model_funcs::clip_time_score_fac(
         exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
-      const double var_fac = exp_model_funcs::trunc_time_var_fac(
+      const double var_fac = exp_model_funcs::clip_time_var_fac(
         exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
 
 
@@ -715,14 +715,14 @@ class EKF_helper{
       }
     }
   public:
-    filter_worker_exp_trunc_time(problem_data_EKF &p_data):
+    filter_worker_exp_clip_time(problem_data_EKF &p_data):
     filter_worker(p_data)
     {}
   };
 
   // worker for the continous model with exponential distribution where only the
-  // right truncated variable is used where outcomes are negative
-  class filter_worker_exp_trunc_time_w_jump : public filter_worker {
+  // right clipped variable is used where outcomes are negative
+  class filter_worker_exp_clip_time_w_jump : public filter_worker {
   private:
     void do_comps(const arma::uvec::const_iterator it, int &i,
                   const arma::vec &i_a_t, const bool &compute_z_and_H,
@@ -747,9 +747,9 @@ class EKF_helper{
 
       const double expect_time = exp_model_funcs::expect_time_w_jump(exp_eta, inv_exp_eta, inv_exp_v, at_risk_length);
 
-      const double score_fac = exp_model_funcs::trunc_time_w_jump_score_fac(
+      const double score_fac = exp_model_funcs::clip_time_w_jump_score_fac(
         exp_eta, v, inv_exp_v, at_risk_length, dat.ridge_eps);
-      const double var_fac = exp_model_funcs::trunc_time_w_jump_var_fac(
+      const double var_fac = exp_model_funcs::clip_time_w_jump_var_fac(
         exp_eta, v, inv_exp_v, at_risk_length, dat.ridge_eps);
 
 
@@ -769,7 +769,7 @@ class EKF_helper{
       }
     }
   public:
-    filter_worker_exp_trunc_time_w_jump(problem_data_EKF &p_data):
+    filter_worker_exp_clip_time_w_jump(problem_data_EKF &p_data):
     filter_worker(p_data)
     {}
   };
@@ -822,11 +822,11 @@ public:
       } else if (model == "exp_bin"){
         std::shared_ptr<filter_worker> new_p(new filter_worker_exp_bin(p_data));
         workers.push_back(std::move(new_p));
-      } else if(model == "exp_trunc_time"){
-        std::shared_ptr<filter_worker> new_p(new filter_worker_exp_trunc_time(p_data));
+      } else if(model == "exp_clip_time"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exp_clip_time(p_data));
         workers.push_back(std::move(new_p));
-      } else if(model == "exp_trunc_time_w_jump"){
-        std::shared_ptr<filter_worker> new_p(new filter_worker_exp_trunc_time_w_jump(p_data));
+      } else if(model == "exp_clip_time_w_jump"){
+        std::shared_ptr<filter_worker> new_p(new filter_worker_exp_clip_time_w_jump(p_data));
         workers.push_back(std::move(new_p));
       } else
         Rcpp::stop("EKF is not implemented for model '" + model  +"'");
@@ -1451,7 +1451,7 @@ public:
   {}
 };
 
-class UKF_solver_New_exp_trunc_time : public UKF_solver_New{
+class UKF_solver_New_exp_clip_time : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set,
                              const arma::vec offsets,
                              const int t,
@@ -1530,7 +1530,7 @@ class UKF_solver_New_exp_trunc_time : public UKF_solver_New{
   }
 
 public:
-  UKF_solver_New_exp_trunc_time(
+  UKF_solver_New_exp_clip_time(
     problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
     Rcpp::Nullable<Rcpp::NumericVector> &alpha,
     Rcpp::Nullable<Rcpp::NumericVector> &beta):
@@ -1539,7 +1539,7 @@ public:
 };
 
 
-class UKF_solver_New_exp_trunc_time_w_jump : public UKF_solver_New{
+class UKF_solver_New_exp_clip_time_w_jump : public UKF_solver_New{
   void Compute_intermediates(const arma::uvec &r_set,
                              const arma::vec offsets,
                              const int t,
@@ -1624,7 +1624,7 @@ class UKF_solver_New_exp_trunc_time_w_jump : public UKF_solver_New{
   }
 
 public:
-  UKF_solver_New_exp_trunc_time_w_jump(
+  UKF_solver_New_exp_clip_time_w_jump(
     problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
     Rcpp::Nullable<Rcpp::NumericVector> &alpha,
     Rcpp::Nullable<Rcpp::NumericVector> &beta):
@@ -1976,10 +1976,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     } else if (model == "exp_bin"){
       solver = new UKF_solver_New_exp_bin(*p_data, kappa, alpha, beta);
-    } else if (model == "exp_trunc_time"){
-      solver = new UKF_solver_New_exp_trunc_time(*p_data, kappa, alpha, beta);
-    } else if (model == "exp_trunc_time_w_jump"){
-      solver = new UKF_solver_New_exp_trunc_time_w_jump(*p_data, kappa, alpha, beta);
+    } else if (model == "exp_clip_time"){
+      solver = new UKF_solver_New_exp_clip_time(*p_data, kappa, alpha, beta);
+    } else if (model == "exp_clip_time_w_jump"){
+      solver = new UKF_solver_New_exp_clip_time_w_jump(*p_data, kappa, alpha, beta);
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with UKF");
 
