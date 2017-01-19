@@ -95,7 +95,7 @@ plot(fit)
 
 # Bootstrap the estimates
 boot_out <- ddhazard_boot(fit, R = 10000) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 10000): Failed to estimate 322 times
+#> Warning in ddhazard_boot(fit, R = 10000): Failed to estimate 299 times
 
 # Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
 # bootstrap estimates. Transparent lines are bootstrap estimates
