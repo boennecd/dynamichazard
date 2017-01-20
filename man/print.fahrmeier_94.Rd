@@ -19,6 +19,6 @@
 \item{...}{Not used}
 }
 \description{
-The \code{sd} printed for timevarying effects are point-wise standard deviations from either the filter with smoothing
+The \code{sd} printed for time-varying effects are point-wise standard deviations from either the filter with smoothing
 }
 
