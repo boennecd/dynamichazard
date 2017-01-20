@@ -12,7 +12,7 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 
 \item{data}{Data frame or environment containing the outcome and co-variates}
 
-\item{model}{\code{"logit"}, \code{"exp_trunc_time_w_jump"}, \code{"exp_trunc_time"}, \code{"exp_bin"} or \code{"exp_combined"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the four latter cases (see the ddhazard for details on the methods)}
+\item{model}{\code{"logit"}, \code{"exp_clip_time_w_jump"}, \code{"exp_clip_time"}, \code{"exp_bin"} or \code{"exp_combined"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the four latter cases (see the ddhazard for details on the methods)}
 
 \item{by}{Interval length of the bins in which parameters are fixed}
 
