@@ -22,7 +22,6 @@ cran-comments\.md$
 Prebuild/
 revdep/
 
-^NEWS\.md$
 ^README\.Rmd$
 ^README\.md$
 ^README\.bib$
