@@ -79,6 +79,15 @@ ddhazard = function(formula, data,
                     order = 1, weights,
                     control = list(),
                     verbose = F){
+
+  if(model == "exp_trunc_time"){
+    message("Model 'exp_trunc_time' have been renamed to 'exp_clip_time'")
+    model <- "exp_clip_time"
+  } else if(model == "exp_trunc_time_w_jump"){
+    message("Model 'exp_trunc_time_w_jump' have been renamed to 'exp_clip_time_w_jump'")
+    model <- "exp_clip_time_w_jump"
+  }
+
   if(missing(id)){
     if(verbose)
       warning("You did not parse and Id argument")
