@@ -143,7 +143,7 @@ $$\begin{aligned}
 
 The state equation is implemented with a 1. and 2. order random walk. For the first order random walk $\mat{F} = \mat{R} = \mat{I}_q$ where $q$ is the number of regression parameters and $\mat{I}_q$ is the identity matrix with dimension $q$. As for the second order random walk, we have:
 $$\mat{F} = \begin{pmatrix} 
-  2\mat{I}_q & - \mat{I}_q \\ \mat{0}_q & \mat{I}_q
+  2\mat{I}_q & - \mat{I}_q \\ \mat{I}_q & \mat{0}_q
 \end{pmatrix},  \qquad 
 \mat{R} = \begin{pmatrix} \mat{I}_q \\ \mat{0}_q \end{pmatrix}$$
 
@@ -387,7 +387,7 @@ C:/OpenBLAS/
 The code will be compiled with this `openBLAS` instead of the `BLAS` library used to compile `R`. This will allow parts of the matrix operations to be run in parallel by using `openBLAS` for multithreading. The number of threads openBLAS will use is set to 1 before the part that use the `thread` library is run and reset after the this part is completed.
 
 
-# Uncented Kalman Filter
+# Unscented Kalman Filter
 The UKF selects state vectors called *sigma point* with given *sigma weigths* chosen to match the moments of  observation equation. Thus, we approximate the density rather than approximating the observational equation. The idea is similar to a Monte Carlo method for state space models but where the state vectors are chosen deterministically rather than randomly drawn
 
 The motivation to use the UKF in place of the EKF is that we avoid the linerization error in the EKF. [@julier97] introduce a UKF that approximate the first two moments and up to fourth moment in certain settings. [@julier04] further develop the UKF and extended to what is later called *the Scaled Unscented Transformation*. We will cover the the Scaled Unscented Transformation with the parametrizion from [@wan00] and formulas from [@menegaz16]

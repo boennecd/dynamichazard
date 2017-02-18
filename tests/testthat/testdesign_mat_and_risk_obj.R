@@ -238,7 +238,6 @@ for(do_truncate in c(F, T)){
   }
 }
 
-
 #######
 # Further test for design mat
 
@@ -383,6 +382,94 @@ test_that("is_for_discrete_model logic work",{
   expect_true(setequal(get_risk_obj_cont$risk_sets[[1]], c(1:8, 10, 11, 13)))
   expect_true(setequal(get_risk_obj_cont$risk_sets[[2]], c(5:6, 8, 9, 11, 12, 13, 14, 15, 16, 17)))
   expect_true(setequal(get_risk_obj_cont$risk_sets[[3]], c(5:6, 12, 14, 17)))
+})
+
+#####
+# By hand test of risk_obj
+
+# This is a useful illustration (I find)
+plot_exp <- expression({
+  id_unique <- unique(id)
+
+  ylim <- c(1, length(id_unique))
+  xlim <- range(tstart, tstop)
+  plot(xlim, ylim + c(-.5, .5), type = "n", ylab = "", xlab = "time")
+  abline(v = 0:ceiling(xlim[2]), lty = 2)
+
+  for(y in 1:ylim[2]){
+    i <- id_unique[y]
+    is_in <- which(id == i)
+    n <- length(is_in)
+
+    tsta <- tstart[is_in]
+    tsto <- tstop[is_in]
+
+    pch <- ifelse(event[is_in] == 1, rep(16,  n), rep(4, n))
+
+    for(u in 1:n){
+      lines(c(tsta[u], tsto[u]), rep(y, 2))
+    }
+    points(tsto, rep(y, n), pch = pch)
+    text(tsta - .05, rep(y + .5, n), labels = is_in)
+  }
+})
+
+# The test data
+test_dat <- data.frame(matrix(
+  byrow = T, ncol = 4,
+  dimnames = list(NULL, c("tstart", "tstop", "event", "id")), c(
+    0,   1, 0, 1,
+    1,   2, 1, 1, # 2
+    0,   1, 0, 2,
+    1,   2, 0, 2,
+
+    0,   2, 0, 3,
+    0,   2, 1, 4, # 6
+
+    1,   2, 0, 5,
+    1,   2, 1, 6, # 8
+
+    0, 1.5, 1, 7, # 9
+    0, 1.5, 0, 8,
+
+    0,  .5, 0,  9,
+    0,  .5, 1, 10, # 12
+
+    .25, .5, 0, 11,
+    .25, .5, 1, 12,
+
+     .5, 1.3, 0, 13,
+    1.3, 1.5, 0, 13,
+     .5, 1.3, 0, 14, # 17
+    1.3, 1.5, 1, 14,
+
+      0, 1.1, 0, 15,
+    1.3, 1.6, 1, 15,
+      0, 1.1, 0, 16,
+    1.3, 1.6, 0, 16
+  )))
+
+## Comment back to get plot
+# with(test_dat, eval(plot_exp))
+
+risk_obj <- with(test_dat, get_risk_obj(
+  Y = Surv(tstart, tstop, event),
+  by = 1, max_T = 2, id = id, is_for_discrete_model = T))
+
+test_that("Each risk set contain the expect indvidual with the correct rows", {
+  risk_sets_by_ids <- lapply(risk_obj$risk_sets, function(x) test_dat$id[x])
+  expect_true(setequal(risk_sets_by_ids[[1]], c(1:4, 7, 8, 10, 15, 16)))
+  expect_true(setequal(sort(risk_sets_by_ids[[2]]), c(1:7, 14, 15)))
+
+  expect_equal(sort(risk_obj$risk_sets[[1]]), c(1, 3, 5, 6, 9, 10, 12, 19, 21))
+  expect_equal(sort(risk_obj$risk_sets[[2]]), c(2, 4, 5, 6, 7, 8, 9, 17, 19))
+})
+
+test_that("Individuals are markeds as events in the correct bins", {
+  is_ev <- c(2, 6, 8, 9, 12, 17, 19)
+
+  expect_true(all(risk_obj$is_event_in[-is_ev] == -1))
+  expect_equal(risk_obj$is_event_in[is_ev], c(1, 1, 1, 1, 0, 1, 1))
 })
 
 
