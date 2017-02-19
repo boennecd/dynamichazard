@@ -5,6 +5,7 @@
 #' @param R Number of bootstrap estimates
 #' @param do_stratify_with_event \code{TRUE} if sampling should be by strata of whether the individual has an event. An interaction factor will be made if \code{strata} is provided
 #' @param do_sample_weights \code{TRUE} if weights should be sample instead of individuals
+#' @param LRs Learning rates in decreasing order which will be used to estimate the model.
 #' @param print_errors \code{TRUE} if errors should be printed when estimations fails
 #'
 #' @description
@@ -19,7 +20,10 @@
 #' @export
 ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
                           do_stratify_with_event = T, do_sample_weights = F,
-                          print_errors = F){
+                          LRs = ddhazard_fit$control$LR * 2^(0:(-4)), print_errors = F){
+  if(is.unsorted(-LRs, strictly = T) && any(LRs <=0))
+    stop("LRs need to be stricly decreasing postive numbers")
+
   if(is.null(ddhazard_fit$risk_set) || is.null(ddhazard_fit$data))
     stop("Cannot bootstrap estimates when ddhazard has been called with control = list(save_risk_set = F, save_data = F, ...)")
 
@@ -131,30 +135,40 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
 
     # Estimate and return state vectors
     est <- NULL
-    tryCatch({
-      suppressWarnings(est <- ddhazard_no_validation(
-        a_0 = a_0, Q_0 = ddhazard_fit$Q_0,
-        F_ = ddhazard_fit$F_, verbose = F, Q = ddhazard_fit$Q,
-        risk_set= boot_risk_set, X_Y = boot_X_Y,
-        order = ddhazard_fit$order, model = ddhazard_fit$model,
-        LR = ddhazard_fit$LR,
-        n_fixed_terms_in_state_vec =
-          ifelse(ddhazard_fit$control$fixed_terms_method == "E_step", n_fixed, 0),
-        weights = ws,
-        control = ddhazard_fit$control))
+    did_succed <- FALSE
+    for(l in LRs){
+      tryCatch({
+        suppressWarnings(est <- ddhazard_no_validation(
+          a_0 = a_0, Q_0 = ddhazard_fit$Q_0,
+          F_ = ddhazard_fit$F_, verbose = F, Q = ddhazard_fit$Q,
+          risk_set= boot_risk_set, X_Y = boot_X_Y,
+          order = ddhazard_fit$order, model = ddhazard_fit$model,
+          LR = l,
+          n_fixed_terms_in_state_vec =
+            ifelse(ddhazard_fit$control$fixed_terms_method == "E_step", n_fixed, 0),
+          weights = ws,
+          control = ddhazard_fit$control))
 
-      out <- c(est$a_t_d_s[, !seq_len(ncol(est$a_t_d_s)) %in% indicies_fixed_coef_in_state])
-      if(n_fixed > 0){
-        if(ddhazard_fit$control$fixed_terms_method == "E_step")
-          out <- c(out, est$a_t_d_s[1, indicies_fixed_coef_in_state]) else
-            out <- c(out, est$fixed_effects)
-      }
-      est <- out
-      }, error = function(e){
-        if(print_errors)
-          print(e)
-        est <<- rep(NA_real_, n_out)
-      })
+        out <- c(est$a_t_d_s[, !seq_len(ncol(est$a_t_d_s)) %in% indicies_fixed_coef_in_state])
+        if(n_fixed > 0){
+          if(ddhazard_fit$control$fixed_terms_method == "E_step")
+            out <- c(out, est$a_t_d_s[1, indicies_fixed_coef_in_state]) else
+              out <- c(out, est$fixed_effects)
+        }
+        did_succed <- TRUE
+        est <- out
+        }, error = function(e){
+          if(l > min(LRs))
+            return(invisible())
+
+          if(print_errors)
+            print(e)
+          est <<- rep(NA_real_, n_out)
+        })
+
+      if(did_succed)
+        break
+    }
 
     est
   }

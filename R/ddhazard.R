@@ -2,7 +2,7 @@
 #' @description  Function to fit dynamic discrete hazard models using state space models
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
 #' @param data Data frame or environment containing the outcome and co-variates
-#' @param model \code{"logit"}, \code{"exp_clip_time_w_jump"}, \code{"exp_clip_time"}, \code{"exp_bin"} or \code{"exp_combined"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the four latter cases (see the ddhazard for details on the methods)
+#' @param model \code{"logit"}, \code{"exp_clip_time_w_jump"}, \code{"exp_clip_time"}, \code{"exp_bin"} or \code{"exp_combined"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the four latter cases (see the ddhazard vignette for details of the methods)
 #' @param by Interval length of the bins in which parameters are fixed
 #' @param max_T End of the last interval. The last stop time with an event is selected if the parameter is omitted
 #' @param id Vector of ids for each row of the in the design matrix
@@ -19,7 +19,7 @@
 #'
 #' The Extended Kalman filter or Unscented Kalman filter needs an initial co-variance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
 #'
-#' The model is specified through the \code{model} argument. Currently, \code{'logit'} and \code{'exponential'} is available. The former uses an logistic model where outcomes are binned into the intervals. Be aware that there can be loss of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time varying co-variates. The latter model uses an exponential model for the arrival times where there is no loss information due to binning
+#' The model is specified through the \code{model} argument. See the \code{model} in the argument above for details. The logistic model is where outcomes are binned into the intervals. Be aware that there can be loss of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time varying co-variates. The the exponential models use an exponential model for the arrival times where there is no loss information due to binning
 #'
 #' It is recommended to see the Shiny app demo for this function by calling \code{\link{ddhazard_app}()}
 #'
@@ -134,7 +134,8 @@ ddhazard = function(formula, data,
                           n_threads = getOption("ddhazard_max_threads"),
                           ridge_eps = .0001,
                           fixed_terms_method = "E_step",
-                          Q_0_term_for_fixed_E_step = NULL)
+                          Q_0_term_for_fixed_E_step = NULL,
+                          use_pinv = T, criteria = "delta_coef")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -142,6 +143,9 @@ ddhazard = function(formula, data,
 
   control_default[control_match] <- control
   control <- control_default
+
+  if(!control$criteria %in% c("delta_coef", "delta_likeli"))
+    stop("Convergence criteria ", control$criteria, " not implemented")
 
   if(is.null(control$Q_0_term_for_fixed_E_step)){
     control$Q_0_term_for_fixed_E_step <- ifelse(
@@ -478,7 +482,9 @@ ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
                    n_threads = control$n_threads,
                    ridge_eps = control$ridge_eps,
                    n_fixed_terms_in_state_vec = n_fixed_terms_in_state_vec,
-                   weights = weights)
+                   weights = weights,
+                   use_pinv = control$use_pinv,
+                   criteria = control$criteria)
 }
 
 exp_model_names <- c("exp_combined", "exp_bin",

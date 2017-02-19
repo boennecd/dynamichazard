@@ -313,7 +313,7 @@ server <- function(input, output) {
       stop("n_fixed is not implemented")
 
     q_0_len <- 6 - n_fixed
-    q_0_term <- ifelse(input$est_with_method == "UKF", 1, 10)
+    q_0_term <- ifelse(input$est_with_method == "UKF", 1, 1e5)
 
     if(input$order == 2){
       if(q_0_len > 1){

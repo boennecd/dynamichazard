@@ -132,11 +132,8 @@ std::vector<double>
     }
 
     // compute first terms and normalizing constant
-    t_0_logLike = - 1.0 / 2.0 * arma::det(Q_0)
+    t_0_logLike = - 1.0 / 2.0 * log(arma::det(Q_0))
       - n_parems / 2.0 * (log(2.0) + log(M_PI));
-
-    logLike = - d / 2.0 * arma::det(Q)
-      - d * n_parems / 2.0 * (log(2.0) + log(M_PI));
   }
 
   logLike_link_term_helper *helper;
@@ -159,6 +156,9 @@ std::vector<double>
     if(any_dynamic){
       a_t = a_t_d_s.col(t);
       arma::vec delta = a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
+
+      logLike -=  1.0/ 2.0 * log(arma::det(Q) * (bin_stop - bin_Start))
+        + n_parems / 2.0 * (log(2.0) + log(M_PI));
 
       logLike -= 1.0 / 2.0 * pow(bin_stop - bin_Start, -1) * arma::as_scalar(
         delta.t() * (Q_inv  * delta));

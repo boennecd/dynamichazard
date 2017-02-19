@@ -39,6 +39,66 @@ inline
     }
   }
 
+// Inversion methods
+template<typename T1>
+inline
+void inv(arma::Mat<typename T1::elem_type>&    out,
+         const arma::Base<typename T1::elem_type,T1>& X,
+         const bool use_pinv = false,
+         const std::string err_msg = ""){
+  if(use_pinv){
+    // Compute the pseudo inverse using SVD
+    // Tolerance controls the value for which eigenvalues and vectors are
+    // dropped
+    // the default tolerance is max(m,n)*max_sv*datum::eps, where:
+    //   m = number of rows and n = number of columns
+    //   max_sv = maximal singular value
+    //   datum::eps = difference between 1 and the least value greater than 1 that is representable
+
+    // Two method are avialable for the SVD: "dc" and "std" (former is default)
+    // See armadillo-#.###.#\include\armadillo_bits\op_pinv_meat.hpp
+    // "dc" uses auxlib::svd_dc_econ which calls lapack::cx_gesdd
+    // "std" uses auxlib::svd_econ which calls lapack::cx_gesvd
+    // see armadillo-#.###.#\include\armadillo_bits\auxlib_meat.hpp
+    // and armadillo-#.###.#\include\armadillo_bits\wrapper_lapack.hpp
+
+    // For double, former calls zgesdd and latter calls arma_zgesvd
+
+    // Acording to this post: https://groups.google.com/forum/#!topic/julia-dev/mmgO65i6-fA
+    // "The routine dgesdd uses a divide and conquer algorithm for the
+    //   bidiagonal SVD, whereas dgesvd uses a QR algorithm. The former is
+    //   faster in cases where there is significant deflation and should be
+    //   generally preferred for large matrices."
+
+    // A next question is regarding whether the tolerance. Wikipedia suggest
+    // this tolerance is the default in other langagues as well https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_pseudoinverse
+
+    if(!arma::pinv(out, X)){
+      Rcpp::stop(err_msg);
+    }
+  } else{
+    if(!arma::inv(out, X)){
+      Rcpp::stop(err_msg);
+    }
+  }
+}
+
+template<typename T1>
+inline
+void inv_sympd(arma::Mat<typename T1::elem_type>&    out,
+               const arma::Base<typename T1::elem_type,T1>& X,
+               const bool use_pinv = false,
+               const std::string err_msg = ""){
+  if(use_pinv){
+    inv(out, X, true, err_msg);
+  } else{
+    if(!arma::inv_sympd(out, X)){
+      Rcpp::stop(err_msg);
+    }
+  }
+}
+
+
 // Hepler structure to reference data
 class problem_data{
 public:
@@ -85,6 +145,8 @@ public:
   const double LR;
 
   const bool any_fixed_terms_in_state_vec;
+  const bool use_pinv;
+  const std::string criteria;
 
   // Declare non constants. Some are intialize
   arma::vec fixed_parems;
@@ -121,7 +183,9 @@ public:
                const bool debug_ = false,
                Rcpp::Nullable<Rcpp::NumericVector> LR_ = R_NilValue,
                const int n_threads_ = -1,
-               const double ridge_eps_ = .0001):
+               const double ridge_eps_ = .0001,
+               const bool use_pinv_ = false,
+               const std::string criteria_ = "delta_coef"):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
 
@@ -162,6 +226,8 @@ public:
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
 
     any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec_ > 0),
+    use_pinv(use_pinv_),
+    criteria(criteria_),
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
@@ -230,7 +296,9 @@ public:
                    const unsigned int NR_it_max_ = 1000,
                    const bool debug_ = false,
                    const int n_threads_ = -1,
-                   const double ridge_eps_ = .0001):
+                   const double ridge_eps_ = .0001,
+                   const bool use_pinv_ = false,
+                   const std::string criteria_ = "delta_coef"):
     problem_data(n_fixed_terms_in_state_vec_, X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0,
                  fixed_parems_start, Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_params_,
@@ -238,7 +306,8 @@ public:
                  n_max, eps, verbose,
                  order_, est_Q_0, debug_,
                  LR_,
-                 n_threads_, ridge_eps_),
+                 n_threads_, ridge_eps_,
+                 use_pinv_, criteria_),
 
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),
@@ -920,30 +989,13 @@ public:
 #endif
 
         // E-step: scoring step: update values
-        static bool inv_V_t_less_s_inv_have_failed;
-        if(!arma::inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
-          if(!inv_V_t_less_s_inv_have_failed){
-            Rcpp::warning("V_(t|t-1) seems non-positive definite (or even worse non symmetric) at least once. Using general inverse instead");
-            inv_V_t_less_s_inv_have_failed = true;
-          }
+        inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
+                  "ddhazard_fit_cpp estimation error: Failed to invert V_(t|t-1)");
 
-          if(!arma::inv(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1))){
-            Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert V_(t|t-1)");
-          }
-        }
-
-        static bool inv_V_t_t_s_inv_have_failed;
         arma::mat tmp_mat; // defined to avoid unhandled error if the next code throws
-        if(!arma::inv_sympd(tmp_mat, V_t_less_s_inv + p_dat.U)){
-          if(!inv_V_t_t_s_inv_have_failed){
-            Rcpp::warning("V_(t|t) seems non-positive definite (or even worse non symmetric) at least once. Using general inverse instead");
-            inv_V_t_t_s_inv_have_failed = true;
-          }
+        inv_sympd(tmp_mat, V_t_less_s_inv + p_dat.U, p_dat.use_pinv,
+                  "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
 
-          if(!arma::inv(tmp_mat, V_t_less_s_inv + p_dat.U)){
-            Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
-          }
-        }
         p_dat.V_t_t_s.slice(t) = std::move(tmp_mat); // arma objects are moveable
 
         p_dat.a_t_t_s.col(t) = i_a_t + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
@@ -974,9 +1026,8 @@ public:
 
       if(t == p_dat.d){
         arma::mat tmp_inv_mat;
-        if(!arma::inv(tmp_inv_mat, arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U * p_dat.V_t_less_s.slice(t - 1))){
-          Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate for K_d matrix");
-        }
+        inv(tmp_inv_mat, arma::eye<arma::mat>(size(p_dat.U)) + p_dat.U * p_dat.V_t_less_s.slice(t - 1),
+            p_dat.use_pinv, "ddhazard_fit_cpp estimation error: Failed to invert intermediate for K_d matrix");
 
         p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * (tmp_inv_mat * p_dat.z_dot * diagmat(p_dat.H_diag_inv));
         // Parenthesis is key here to avoid making a n x n matrix for large n
@@ -1104,12 +1155,7 @@ public:
       P_v_v.diag() += p_dat.ridge_eps;
 
       // Compute new estimates
-      if(!arma::inv_sympd(P_v_v, P_v_v)){ // NB: Note that we invert the matrix here so P_v_v is inv(P_v_v)
-        Rcpp::warning("Failed to use inversion for symmetric square matrix for P_v_v. Trying with general inversion method");
-        if(!arma::inv_sympd(P_v_v, P_v_v)){
-          Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert P_v_v");
-        }
-      }
+      inv_sympd(P_v_v, P_v_v, p_dat.use_pinv, "ddhazard_fit_cpp estimation error: Failed to invert P_v_v");
 
       p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
         P_a_v * (P_v_v * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar));
@@ -1338,9 +1384,8 @@ class UKF_solver_New_logit : public UKF_solver_New{
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // Compute vector for state space vector
@@ -1348,9 +1393,8 @@ class UKF_solver_New_logit : public UKF_solver_New{
 
     // ** 5: Compute L using the notation in vignette **
     // Re-compute intermediate matrix using the other weight vector
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // compute matrix for co-variance
@@ -1423,9 +1467,8 @@ class UKF_solver_New_exp_bin : public UKF_solver_New{
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // Compute vector for state space vector
@@ -1433,9 +1476,8 @@ class UKF_solver_New_exp_bin : public UKF_solver_New{
 
     // ** 5: Compute L using the notation in vignette **
     // Re-compute intermediate matrix using the other weight vector
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // compute matrix for co-variance
@@ -1510,9 +1552,8 @@ class UKF_solver_New_exp_clip_time : public UKF_solver_New{
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // Compute vector for state space vector
@@ -1520,9 +1561,8 @@ class UKF_solver_New_exp_clip_time : public UKF_solver_New{
 
     // ** 5: Compute L using the notation in vignette **
     // Re-compute intermediate matrix using the other weight vector
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // compute matrix for co-variance
@@ -1604,9 +1644,8 @@ class UKF_solver_New_exp_clip_time_w_jump : public UKF_solver_New{
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symmetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // Compute vector for state space vector
@@ -1614,9 +1653,8 @@ class UKF_solver_New_exp_clip_time_w_jump : public UKF_solver_New{
 
     // ** 5: Compute L using the notation in vignette **
     // Re-compute intermediate matrix using the other weight vector
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // compute matrix for co-variance
@@ -1740,17 +1778,15 @@ class UKF_solver_New_exponential : public UKF_solver_New{
     }
 
     O = tmp_mat * O;
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_inv) + O)){ // this is symetric but not gauranteed to be postive definie due to ponetial negative weights in weights_vec_inv
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     c_vec = c_vec -  tmp_mat * c_vec;
 
     // ** 5: Compute L using the notation in vignette **
-    if(!arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O)){
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    }
+    inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     O = O - tmp_mat * O;
@@ -1916,7 +1952,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const unsigned int NR_it_max = 100,
                             const int n_threads = -1,
                             const double ridge_eps = .0001,
-                            const int n_fixed_terms_in_state_vec = 0){
+                            const int n_fixed_terms_in_state_vec = 0,
+                            const bool use_pinv = false,
+                            const std::string criteria = "delta_coef"){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) &&
      is_exponential_model(model)){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
@@ -1952,7 +1990,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, model != "logit", NR_it_max, debug, n_threads,
-      ridge_eps);
+      ridge_eps, use_pinv, criteria);
     solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
 
   } else if (method == "UKF"){
@@ -1966,7 +2004,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       risk_obj, F_,
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
-      order_, est_Q_0, debug, LR, n_threads, ridge_eps);
+      order_, est_Q_0, debug, LR, n_threads, ridge_eps, use_pinv,
+      criteria);
 
     if(model == "logit"){
       solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
@@ -2006,8 +2045,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   }
 
   arma::mat a_prev;
-  a_prev.copy_size(p_data->a_t_t_s);
-  a_prev.zeros();
+  double old_log_like = 0.0;
+  if(p_data->criteria == "delta_coef"){
+    a_prev.copy_size(p_data->a_t_t_s);
+    a_prev.zeros();
+  }
 
   do
   {
@@ -2130,12 +2172,14 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       my_print(p_data->Q.diag(), "Diag(Q) after changes in M-step");
     }
 
-    if(p_data->any_fixed_terms_in_state_vec ||
-       p_data->any_dynamic){
-      conv_values.push_back(conv_criteria(a_prev(p_data->span_current_cov, arma::span::all),
-                                          p_data->a_t_t_s(p_data->span_current_cov, arma::span::all)));
-    } else
-      conv_values.push_back(0.0);
+    if(p_data->criteria == "delta_coef"){
+      if(p_data->any_fixed_terms_in_state_vec ||
+         p_data->any_dynamic){
+        conv_values.push_back(conv_criteria(a_prev(p_data->span_current_cov, arma::span::all),
+                                            p_data->a_t_t_s(p_data->span_current_cov, arma::span::all)));
+      } else
+        conv_values.push_back(0.0);
+    }
 
     if(p_data->any_fixed_in_M_step){
       arma::vec old = p_data->fixed_parems;
@@ -2151,16 +2195,14 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       } else
         Rcpp::stop("Fixed effects is not implemented for '" + model  +"'");
 
-      *(conv_values.end() -1) += conv_criteria(old, p_data->fixed_parems);
+      if(p_data->criteria == "delta_coef"){
+        *(conv_values.end() -1) += conv_criteria(old, p_data->fixed_parems);
+      }
     }
 
-    if(!p_data->any_dynamic) // No reason to take further iterations
-      break;
-
-    if(verbose && it % 5 < verbose){
-      auto rcout_width = Rcpp::Rcout.width();
-
-      arma::mat varying_only_F = p_data->F_; // take copy
+    double log_like;
+    if(p_data->criteria == "delta_likeli" || (verbose && it % 5 < verbose)){
+      arma::mat varying_only_F = p_data->F_; // take copy. TODO: only do this once
       arma::mat varying_only_a = p_data->a_t_t_s; // take copy
       arma::vec fixed_effects_offsets;
 
@@ -2170,7 +2212,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       } else if(p_data->any_fixed_terms_in_state_vec){
         fixed_effects_offsets =
           p_data->X(p_data->span_fixed_params, arma::span::all).t() *
-            p_data->a_t_t_s(p_data->span_fixed_params, arma::span::all).col(0);
+          p_data->a_t_t_s(p_data->span_fixed_params, arma::span::all).col(0);
 
         varying_only_a.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
         varying_only_F.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
@@ -2182,7 +2224,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
       }
 
-      double log_like =
+      log_like =
         logLike_cpp(p_data->X(p_data->span_current_cov_varying, arma::span::all),
                     risk_obj,
                     varying_only_F,
@@ -2191,6 +2233,23 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                     varying_only_a,
                     p_data->tstart, p_data->tstop,
                     fixed_effects_offsets, order_, model)[0];
+
+      if(p_data->criteria == "delta_likeli"){
+        if(it == 0){
+          conv_values.push_back(1e6); // something large
+        } else{
+          conv_values.push_back(std::abs((log_like - old_log_like) / (old_log_like - 1e-8)));
+        }
+      }
+    }
+
+    if(!p_data->any_dynamic) // No reason to take further iterations
+      break;
+
+    if(verbose && it % 5 < verbose){
+      auto rcout_width = Rcpp::Rcout.width();
+
+
       Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
         " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
           "\t" << "The log likelihood is " << log_like <<
@@ -2200,7 +2259,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(*(conv_values.end() -1) < eps)
       break;
 
-    a_prev = p_data->a_t_t_s;
+    if(p_data->criteria == "delta_coef"){
+      a_prev = p_data->a_t_t_s;
+    } else if(p_data->criteria == "delta_likeli"){
+      old_log_like = log_like;
+    }
   }while(++it < n_max);
 
   if(it == n_max)

@@ -1,16 +1,24 @@
 ---
 title: "Bootstrap illustration"
 author: "Benjamin Christoffersen"
-date: "6 January 2017"
+date: "`r Sys.Date()`"
+bibliography: Bootstrap_illustration.bib
+csl: ../bib_style.csl
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::knit_hooks$set(default_opts = function(before, options, envir) {
+knitr::knit_hooks$set(
+  default_opts = function(before, options, envir) {
     if (before){
       options(digist = 4)
+    }},
+  plot_2x3 = function(before, options, envir){
+    if(before){
+      options$fig.width = options$fig.height * 1.5
+      par(mfcol = c(2, 3))
     }
-})
+  })
 options(digist = 4)
 knitr::opts_chunk$set(echo = TRUE, fig.height = 5, dpi = 36, 
                       cache = T)
@@ -232,3 +240,262 @@ colnames(boot_out$t)[ncol(boot_out$t)]
 boot.ci(boot_out, index = ncol(boot_out$t) - 0, type = c(
   "norm", "basic", "perc", "bca"))
 ```
+
+## Boot envelopes
+
+We may also want to get simultaneous confidence intervals. An easy way to get such confidence intervals is with the `envelope` function with the `boot` library. For instance, we can simultaneous confidence intervals for the `bili` covariate as follows: 
+
+```{r}
+# Find the indices that correspondents to the log(bili) variable 
+is_bili_coef <- grep("^log\\(bili\\):", colnames(boot_out$t))
+
+# Use the envelope
+envelopes <- envelope(boot_out, level = 0.95 ,index = is_bili_coef)
+
+# Plot curves
+plot(dd_fit, cov_index = 4, ylim = c(-1, 2.5))
+lines(dd_fit$times, envelopes$point[1, ], col = "blue")
+lines(dd_fit$times, envelopes$point[2, ], col = "blue")
+
+lines(dd_fit$times, envelopes$overall[1, ], col = "red")
+lines(dd_fit$times, envelopes$overall[2, ], col = "red")
+```
+
+The dashed black lines are from the smoothed covariance matrix. The blue lines are pointwise confidence intervals using the percentile method from the `envelope` function. The red line is the simultaneous confidence bounds using the envelope method in equation (4.17) of [@davison97]
+
+# How good is the coverage
+In this section, we will test the coverage pointwise confidence intervals using the smoothed covariance matrix and the bootstrap percentile method. We will test these in a simulation study where: 
+
+ * The coefficients are drifting deterministically with a some normal noise added to them
+ * Indviduals have time invariant covariates
+
+We setup the parameters for the experiment below and plot the coeffecients without noise:
+
+```{r}
+tmax <- 22                           # Number of periods
+n_start_grps <- 3                    # Number of "start group" - see text
+                                     # Number of multiple of tmax - 1 in each 
+mlt <- 30                             # start group
+n <- (tmax - 1) * mlt * n_start_grps # Total number of individuals
+n
+
+# Define the noise free coeffecients
+beta <- cbind(
+  x1 = rep(-2, (tmax - 1) + 1), 
+  x2 = (0:(tmax - 1) - (tmax - 1)/2) / ((tmax - 1) / 2),
+  x3 = ((tmax - 1):0 - (tmax - 1)/2) / ((tmax - 1) / 2),
+  x4 = - sin(pi / 7 * (0:(tmax - 1))), 
+  x5 = sin(pi / 7 * (0:(tmax - 1))))
+
+# Plot noise free coeffecients
+matplot(beta, type = "l", lty = 1, ylab = "Coeffecient without noise")
+```
+
+There will be a total of `n =` `r n` individuals in groups of three. We start observing each group at time `0`, `7` and `14`. We do so to have a "stable" number of individual through the experimint. The experimint ends after `tmax = ` `r tmax`. 
+
+```{r, include=FALSE, echo=FALSE}
+base_mat <- do.call(
+  rbind, 
+  sapply(1:n, function(i){
+    n_vals <- ceiling(i / ((tmax - 1) * mlt)) * ((tmax - 1) / n_start_grps) + 1
+    data.frame(id = rep(i, n_vals),
+               tstart = tmax - n_vals:1)
+  }, simplify = F))
+base_mat$tstop <- base_mat$tstart + 1
+nrows <- nrow(base_mat)
+
+beta_sd <- .1
+x_range <- 1
+
+base_mat$x1 <- 1
+for(s in c("x2", "x3", "x4", "x5", "eta", "dies"))
+  base_mat[s] <- NA
+
+sim_func <- function(){
+  sim_mat <- base_mat
+  for(i in 1:n)
+    sim_mat[sim_mat$id == i, c("x2", "x3", "x4", "x5")] <- 
+      sapply(runif(4, min = -x_range, max = x_range), rep, times =  sum(sim_mat$id == i))
+  
+  beta_w_err <- beta + rnorm(length(beta), sd = beta_sd)
+  
+  for(i in 1:tmax){
+    is_in <- which(base_mat$tstop == i)
+    sim_mat[is_in, "eta"] <- 
+      as.matrix(sim_mat[is_in, c("x1", "x2", "x3", "x4", "x5")]) %*% 
+      beta_w_err[i, ]
+  }
+  
+  
+  sim_mat$dies <- 1/(1 + exp(-sim_mat$eta)) > runif(nrows)
+  
+  # Remove rows after they have died
+  has_died <- unlist(tapply(
+    sim_mat$dies, sim_mat$id, function(x){
+      is_death <- which(x)
+      if(length(is_death) == 0) rep(F, length(x)) else 1:length(x) > is_death[1]
+    }))
+  sim_mat <- sim_mat[!has_died, ]
+  
+  # Find last time
+  max_time <- tapply(sim_mat$tstop, sim_mat$id, max)
+  
+  # Remove redundant rows
+  do_die <- tapply(sim_mat$dies, sim_mat$id, any)
+  is_first <- unlist(tapply(sim_mat$tstart, sim_mat$id, function(x) x == min(x)))
+  sim_mat <- sim_mat[is_first, ]
+  sim_mat$tstop <- max_time
+  sim_mat$dies <- do_die
+  
+  list(sims = sim_mat, beta_w_err = beta_w_err)
+}
+```
+
+We add a bit of randomly distributed noise to coeffecients with mean zero and standard deviation `r beta_sd`. The indiviuals covariate are simulated from the uniform distribution from the range [`r -x_range`, `r x_range`]. The function `sim_func` is used to make the simulation. The definition of the function can be found in the markdown file for this vignette on the github site. We simulate a series below, illustrate the data matrix and plot the coefficients with noise added to them:
+
+
+```{r}
+# Simulate
+set.seed(122044)
+sim_list <- sim_func()
+
+# Show data matrix
+head(sim_list$sims, 10)
+tail(sim_list$sims, 10)
+
+# Plot coeffecients with noise
+matplot(sim_list$beta_w_err, type = "l", lty = 1, ylab = "Coeffecient with noise")
+```
+
+We are now able to estimate the model as follows:
+
+```{r, plot_2x3 = T}
+# Estimate model
+fit_expression <- expression({
+  fit <- ddhazard(Surv(tstart, tstop, dies) ~ -1 + x1 + x2 + x3 + x4 + x5,
+                data = sim_list$sims, id = sim_list$sims$id, max_T = tmax, 
+                by = 1, Q_0 = diag(1e4, 5), Q = diag(1, 5),
+                a_0 = rep(0, 5), control = list(
+                  ridge_eps = 1e-3, eps = .01, criteria = "delta_likeli"))
+})
+eval(fit_expression)
+
+# Plot estimates with pointwise confidence bounds from smoothed covariance
+# matrix
+for(i in 1:5){
+  plot(fit, cov_index = i)
+  points(sim_list$beta_w_err[, i], pch = 16, col = "red")
+}
+```
+
+The plots shows the estimated coefficient with 95% pointwise confidence intervals from the smoothed covariance matrix. The dots are the actual estimates (i.e. those with noise added to them). A bootstrap estimate of the confidence bounds is made below:
+
+
+```{R, plot_2x3 = T}
+# Bootstrap with resampling individuals
+boot_out <- ddhazard_boot(fit,  
+                          do_sample_weights = F, R = 999, 
+                          do_stratify_with_event = F)
+
+# Plot estimated confidence bounds
+for(i in 1:5){
+  plot(fit, cov_index = i, ddhazard_boot = boot_out)
+  points(sim_list$beta_w_err[, i], pch = 16, col = "red")
+}
+```
+
+
+```{r, echo=FALSE, include=FALSE}
+alpha <- .05
+
+compute_coverage <- function(fit, boot_out, actual){
+  # Compute coverage of error bounds from smoothed covariance matrix
+  bds <- qnorm(1 - alpha / 2) * sqrt(t(apply(fit$state_vars, 3, diag))[-1, ])
+  res_smooth <- colMeans(
+    actual >= fit$state_vecs[-1, ] - bds & actual <= fit$state_vecs[-1, ] + bds)
+  
+  # Compute coverage from bootstrap
+  enve <- sapply(1:ncol(boot_out$t), function(i){
+      bt_ci <- boot.ci(boot_out, index = i, type = c("perc"), conf = 1 - alpha)
+      c(bt_ci$percent[, 4:5])
+    })
+  enve_lb <- enve[1, ]
+  enve_ub <- enve[2, ]
+  dim(enve_lb) <- dim(enve_ub) <- dim(fit$state_vecs)
+  
+  res_boot <- colMeans(
+    actual >= enve_lb[-1, ] & actual <= enve_ub[-1, ])
+  
+  list(smooth = res_smooth, boot = res_boot)
+}
+```
+
+We can now pose the question how the pointwise coverage is for each coefficient. For this reason, we have defined the function `compute_coverage` which is not included but can be found in the markdown for this vignette on the github site:
+
+```{r}
+compute_coverage(fit, boot_out, sim_list$beta_w_err)
+```
+
+It outputs a list of the true coverage of the `r (1 - alpha)*100`% confidence intervals from the smoothed covariance matrix and the percentile method from the bootstrap. The are respectivly the `smooth` and `boot` elements of the list. We can now repeat the above `M` times (defined below) as follows:
+
+```{r, error=FALSE, warning=FALSE}
+set.seed(520920)
+R <- 999  # Number of bootstrap estimates in each trail
+M <- 999  # Number of trails
+
+# Define matrices for output
+coverage_boot <- coverage_smooth <- matrix(
+  NA_real_, nrow = M, ncol = ncol(fit$state_vecs))
+
+# Sometimes estimations fails. We use this counter to keep track of the number
+# of times
+n_fails <- 0
+
+for(i in 1:M){
+  # Simulate data set
+  sim_list <- sim_func()
+  
+  # Fit on whole data set
+  did_succed <- F
+  try({
+    eval(fit_expression)
+    did_succed <- T
+  })
+  if(!did_succed){
+    n_fails <- n_fails + 1
+    next
+  }
+  
+  # Bootstrap fits
+  boot_out <- ddhazard_boot(fit,
+                            strata = as.factor(sim_list$sims$tstart),
+                            do_stratify_with_event = F,
+                            do_sample_weights = F, R = R)
+  
+  # Compute coverage and add to output
+  coverage <- compute_coverage(fit, boot_out, sim_list$beta_w_err)
+  coverage_smooth[i, ] <- coverage$smooth
+  coverage_boot[i, ] <- coverage$boot
+}
+
+n_fails # number of failed estimations 
+```
+
+The mean coverage of the two methods are printed below:
+
+```{r}
+colMeans(coverage_smooth[1:i, , drop = F], na.rm = T)
+colMeans(coverage_boot[1:i, , drop = F], na.rm = T)
+```
+
+Finally, we can make a boxplot of the coverage in each trail as follows:
+
+```{r}
+boxplot(coverage_smooth, ylim = c(.6, 1), main = "Smoothed covariance")
+abline(h = .95, lty = 1)
+
+boxplot(coverage_boot, ylim = c(.6, 1), main = "Bootstrap")
+abline(h = .95, lty = 1)
+```
+
+# References
