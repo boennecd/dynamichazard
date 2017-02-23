@@ -40,10 +40,9 @@ inline
   }
 
 // Inversion methods
-template<typename T1>
+template<typename eT, typename T2>
 inline
-void inv(arma::Mat<typename T1::elem_type>&    out,
-         const arma::Base<typename T1::elem_type,T1>& X,
+void inv(arma::Mat<eT>& out, T2&& X,
          const bool use_pinv = false,
          const std::string err_msg = ""){
   if(use_pinv){
@@ -72,29 +71,26 @@ void inv(arma::Mat<typename T1::elem_type>&    out,
 
     // A next question is regarding whether the tolerance. Wikipedia suggest
     // this tolerance is the default in other langagues as well https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_pseudoinverse
-
-    if(!arma::pinv(out, X)){
+    if(!arma::pinv(out, std::forward<T2>(X))){
       Rcpp::stop(err_msg);
     }
   } else{
-    if(!arma::inv(out, X)){
+    if(!arma::inv(out, std::forward<T2>(X))){
       Rcpp::stop(err_msg);
     }
   }
 }
 
-template<typename T1>
+template<typename eT, typename T2>
 inline
-void inv_sympd(arma::Mat<typename T1::elem_type>&    out,
-               const arma::Base<typename T1::elem_type,T1>& X,
+void inv_sympd(arma::Mat<eT>& out, T2&& X,
                const bool use_pinv = false,
                const std::string err_msg = ""){
+
   if(use_pinv){
-    inv(out, X, true, err_msg);
-  } else{
-    if(!arma::inv_sympd(out, X)){
-      Rcpp::stop(err_msg);
-    }
+    inv(out, std::forward<T2>(X), true, err_msg);
+  } else if(!arma::inv_sympd(out, std::forward<T2>(X))){
+    Rcpp::stop(err_msg);
   }
 }
 
@@ -1084,7 +1080,10 @@ public:
   UKF_solver_Org(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_):
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
-  k(!k_.isNull() ? Rcpp::as< Rcpp::NumericVector >(k_)[0] : 3.0 - m),
+  k(!k_.isNull() ?
+      Rcpp::as< Rcpp::NumericVector >(k_)[0] :
+      m * (1 + 1 * (.1 - 1)) / 1 * (1 - .1)),
+
   w_0(k / (m + k)),
   w_i(1 / (2 * (m + k))),
   sqrt_m_k(std::sqrt(m + k)),
@@ -1239,7 +1238,10 @@ public:
   m(p_.a_t_t_s.n_rows),
 
   a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 1e-1),
-  k(!kappa.isNull() ? Rcpp::as< Rcpp::NumericVector >(kappa)[0] : m / pow(a, 2.0) - m),
+  //k(!kappa.isNull() ? Rcpp::as< Rcpp::NumericVector >(kappa)[0] : m / pow(a, 2.0) - m),
+  k(!kappa.isNull() ?
+      Rcpp::as< Rcpp::NumericVector >(kappa)[0] :
+      m * (1 + pow(a, 2) * (.1 - 1)) / (pow(a, 2) * (1 - .1))),
   b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 2.0),
   lambda(pow(a, 2) * (m + k) - m),
 
@@ -1251,6 +1253,9 @@ public:
 
   sigma_points(arma::mat(m, 2 * m + 1))
   {
+    if(w_0 == 0)
+      Rcpp::stop("UKF not implemented for hyperparameters that yield zero weight on first sigma point");
+
     weights_vec = arma::vec(std::vector<double>(2 * m + 1, w_i));
     weights_vec[0] = w_0;
     weights_vec_inv = arma::pow(weights_vec, -1);
@@ -1297,11 +1302,15 @@ public:
       p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
       // Re-generate
+      if(p_dat.debug){
+        my_print(p_dat.V_t_less_s.slice(t - 1), "Chol decomposing for regenerations:");
+      }
+
+
       compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
                            sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
       if(p_dat.debug){
-        my_print(p_dat.V_t_less_s.slice(t - 1), "Chol decomposing for regenerations:");
         my_print(sigma_points, "new sigma points");
       }
 
@@ -1385,7 +1394,7 @@ class UKF_solver_New_logit : public UKF_solver_New{
     // Compute intermediate matrix
     arma::mat tmp_mat;
     inv(tmp_mat, arma::diagmat(weights_vec_inv) + O, p_dat.use_pinv,
-        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
+       "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // Compute vector for state space vector
@@ -1393,8 +1402,9 @@ class UKF_solver_New_logit : public UKF_solver_New{
 
     // ** 5: Compute L using the notation in vignette **
     // Re-compute intermediate matrix using the other weight vector
+    //arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O);
     inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O, p_dat.use_pinv,
-        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
+       "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
     tmp_mat = O * tmp_mat;
 
     // compute matrix for co-variance
@@ -1977,11 +1987,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   // Intialize the solver for the E-step
-  problem_data *p_data;
-  Solver  *solver = NULL;
+  std::unique_ptr<problem_data> p_data;
+  std::unique_ptr<Solver> solver;
 
   if(method == "EKF"){
-    p_data = new problem_data_EKF(
+    p_data.reset(new problem_data_EKF(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -1990,14 +2000,14 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, model != "logit", NR_it_max, debug, n_threads,
-      ridge_eps, use_pinv, criteria);
-    solver = new EKF_solver(static_cast<problem_data_EKF &>(*p_data), model);
+      ridge_eps, use_pinv, criteria));
+    solver.reset(new EKF_solver(static_cast<problem_data_EKF &>(*p_data.get()), model));
 
   } else if (method == "UKF"){
     if(model != "logit" &&
        !is_exponential_model(model))
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
-    p_data = new problem_data(
+    p_data.reset(new problem_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -2005,20 +2015,20 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR, n_threads, ridge_eps, use_pinv,
-      criteria);
+      criteria));
 
     if(model == "logit"){
-      solver = new UKF_solver_New_logit(*p_data, kappa, alpha, beta);
+      solver.reset(new UKF_solver_New_logit(*p_data.get(), kappa, alpha, beta));
 
     } else if (model == "exp_combined"){
-      solver = new UKF_solver_New_exponential(*p_data, kappa, alpha, beta);
+      solver.reset(new UKF_solver_New_exponential(*p_data.get(), kappa, alpha, beta));
 
     } else if (model == "exp_bin"){
-      solver = new UKF_solver_New_exp_bin(*p_data, kappa, alpha, beta);
+      solver.reset(new UKF_solver_New_exp_bin(*p_data.get(), kappa, alpha, beta));
     } else if (model == "exp_clip_time"){
-      solver = new UKF_solver_New_exp_clip_time(*p_data, kappa, alpha, beta);
+      solver.reset(new UKF_solver_New_exp_clip_time(*p_data.get(), kappa, alpha, beta));
     } else if (model == "exp_clip_time_w_jump"){
-      solver = new UKF_solver_New_exp_clip_time_w_jump(*p_data, kappa, alpha, beta);
+      solver.reset(new UKF_solver_New_exp_clip_time_w_jump(*p_data.get(), kappa, alpha, beta));
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with UKF");
 
@@ -2026,7 +2036,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(model != "logit")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
 
-    p_data = new problem_data(
+    p_data.reset(new problem_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -2034,12 +2044,12 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params,
       weights,
       n_max, eps, verbose,
-      order_, est_Q_0, debug);
+      order_, est_Q_0, debug));
 
     if(p_data->any_fixed_in_M_step)
       Rcpp::stop("Fixed effects is not implemented with UKF");
 
-    solver = new UKF_solver_Org(*p_data, kappa);
+    solver.reset(new UKF_solver_Org(*p_data.get(), kappa));
   }else{
     Rcpp::stop("method '" + method  + "'is not implemented");
   }
@@ -2186,11 +2196,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
       if(model == "logit"){
         bigglm_updateQR_logit  updater;
-        estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
+        estimate_fixed_effects(p_data.get(), fixed_effect_chunk_size, updater);
 
       } else if(is_exponential_model(model)){
         bigglm_updateQR_poisson updater;
-        estimate_fixed_effects(p_data, fixed_effect_chunk_size, updater);
+        estimate_fixed_effects(p_data.get(), fixed_effect_chunk_size, updater);
 
       } else
         Rcpp::stop("Fixed effects is not implemented for '" + model  +"'");
@@ -2200,7 +2210,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       }
     }
 
-    double log_like;
+    double log_like = 0.0;
     if(p_data->criteria == "delta_likeli" || (verbose && it % 5 < verbose)){
       arma::mat varying_only_F = p_data->F_; // take copy. TODO: only do this once
       arma::mat varying_only_a = p_data->a_t_t_s; // take copy

@@ -6,6 +6,9 @@ The following has been changed or added:
 * The `ddhazard_boot` now provides the option of different learning rates to be used rather than one
 * Error in computation of likelihood have been fixed
 * Added the option to use relative change in the likelihood (not including the prior) as a convergence criteria instead of relative change in coefficients. The new option is selected by by calling `ddhazard` with `control = list(criteria = "delta_likeli", ...)`. The relative change in coefficient seems "preferable" as a default since as it tends to not converge when the fit is has large "odd" deviation due to a few observations. The likelihood method though stops earlier for model does not have such deviation
+* The default for kappa in the UKF have been changed to yield a weight on the first sigma point of 0.1 rather than 0
+* Fixed memory leak in `ddhazard`
+* New example have been added to the bootstrap vignette and other minor changes have been made
 
 # dynamichazard 0.2.0
 The following have been added:

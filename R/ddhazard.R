@@ -125,7 +125,7 @@ ddhazard = function(formula, data,
     stop("Model '", model, "' is not implemented")
 
   control_default <- list(kappa = NULL, alpha = 1, beta = 0,
-                          NR_eps = NULL, LR = 1, n_max = 10^2, eps = 10^-3,
+                          NR_eps = NULL, LR = 1, n_max = 10^2, eps = .01,
                           est_Q_0 = F, method = "EKF", save_risk_set = T,
                           save_data = T, eps_fixed_parems = 1e-3,
                           max_it_fixed_params = 10, fixed_effect_chunk_size = 1e4,

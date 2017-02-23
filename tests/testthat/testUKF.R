@@ -13,6 +13,19 @@ if(interactive()){
 test_name <- "UKF"
 cat("\nRunning", test_name, "\n")
 
+test_that("UKF throws error when first sigm points weight is zero", {
+  expect_error({
+    ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1, Q_0 = diag(1, 2), a_0 = c(-3, 0),
+      Q = diag(1e-1, 2),
+      control = list(kappa = 0, method = "UKF"),
+      max_T = 30,
+      id = head_neck_cancer$id, order = 1)
+  }, regexp = "UKF not implemented for hyperparameters that yield zero weight on first sigma point")
+})
+
 
 test_that("UKF on head_neck works with logit model", {
   # tmp <- file("tmp.txt")
@@ -24,7 +37,7 @@ test_that("UKF on head_neck works with logit model", {
     Q = diag(1e-1, 2),
     control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-3,
                    method = "UKF", save_data = F, save_risk_set = F,
-                   beta = 0),
+                   beta = 0, alpha = 1),
     max_T = 30,
     id = head_neck_cancer$id, order = 1,
     verbose = F,

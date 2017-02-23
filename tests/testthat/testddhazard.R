@@ -101,6 +101,22 @@ test_that("Invalid penalty terms throw error", {
     regexp = "Method not implemented with penalty term \\(control\\$ridge_eps\\) equal to -1")
 })
 
+test_that("Changing convergence criteria change output",{
+  arg_list <- list(
+    formula = survival::Surv(stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1, # Use by month intervals
+    id = head_neck_cancer$id,
+    Q_0 = diag(1e5, 2), Q = diag(.1, 2),
+    control = list(criteria = "delta_coef", eps = .002))
+
+  suppressMessages(res1 <- do.call(ddhazard, arg_list))
+  arg_list$control$criteria <- "delta_likeli"
+  suppressMessages(res2 <- do.call(ddhazard, arg_list))
+
+  expect_true(res1$n_iter != res2$n_iter)
+})
+
 # tmp <- file("tmp.txt")
 # sink(tmp)
 suppressMessages(

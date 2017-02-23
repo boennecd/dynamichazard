@@ -9,7 +9,7 @@
 #' @param print_errors \code{TRUE} if errors should be printed when estimations fails
 #'
 #' @description
-#' See the vignette 'Bootstrap illustration'
+#' See the vignette 'Bootstrap illustration'. The \code{do_stratify_with_event} may be useful when either cases or non-cases are very rare to ensure that the model estimation succeds.
 #'
 #' @return
 #' An object like returned from the \code{\link[boot]{boot}} function
@@ -19,7 +19,7 @@
 #'
 #' @export
 ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
-                          do_stratify_with_event = T, do_sample_weights = F,
+                          do_stratify_with_event = F, do_sample_weights = F,
                           LRs = ddhazard_fit$control$LR * 2^(0:(-4)), print_errors = F){
   if(is.unsorted(-LRs, strictly = T) && any(LRs <=0))
     stop("LRs need to be stricly decreasing postive numbers")
@@ -217,3 +217,19 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
 
   boot_est
 }
+
+get_frac_n_weights <- function(R, a){
+  #####
+  # Function to make linear interpolation with weights from normal density
+
+  k <- floor((R + 1) * a)
+  if(k == 0 || k == R)
+    stop("Sample of ", R, " is too small to give ", a, " confidence bounds")
+
+  w <- (qnorm(a) - qnorm(k/(R + 1))) / (qnorm((k + 1) / (R + 1)) - qnorm(k/(R + 1)))
+  w_k <- 1 - w
+  w_k_p_1 <- w
+
+  list(k = k, w_k = w_k, w_k_p_1 = w_k_p_1)
+}
+

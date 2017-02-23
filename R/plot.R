@@ -8,6 +8,7 @@
 #' @param add \code{FALSE} if you want to make a new plot
 #' @param xlab,ylab,ylim,col Arguments to override defaults set in the function
 #' @param do_alter_mfcol \code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element
+#' @param level Level (fraction) for confidence bounds
 #' @param ddhazard_boot Object from a \code{\link{ddhazard_boot}} call which confidence bounds will be based on and where bootstrap samples will be printed with a transparent color
 #' @param ... Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}
 #'
@@ -19,6 +20,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
                              col = "black", add = F, do_alter_mfcol = T,
+                             level = 0.95,
                              ddhazard_boot, ...){
   if(!x$model %in% c("logit", exp_model_names))
     stop("Functions for model '", x$model, "' is not implemented")
@@ -53,14 +55,33 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
       ylab_to_use <- if(missing(ylab)) colnames(x$state_vecs)[i] else ylab
 
       if(missing_boot){
-        lb = x$state_vecs[, i] - 1.96 * sqrt(x$state_vars[i, i, ])
-        ub = x$state_vecs[, i] + 1.96 * sqrt(x$state_vars[i, i, ])
+        fac <- qnorm(.5 - level / 2)
+        lb = x$state_vecs[, i] + fac * sqrt(x$state_vars[i, i, ])
+        ub = x$state_vecs[, i] - fac * sqrt(x$state_vars[i, i, ])
       } else {
-        boot_ests <- ddhazard_boot$t[, (i -1) * nrow(x$state_vecs) + 1:nrow(x$state_vecs)]
-        envs <- boot::envelope(
-          ddhazard_boot, index = (i - 1) * nrow(x$state_vecs) + 1:nrow(x$state_vecs))
-        lb <- envs$point[1, ]
-        ub <- envs$point[2, ]
+        boot_ests <- ddhazard_boot$t[, (i - 1) * nrow(x$state_vecs) + 1:nrow(x$state_vecs)]
+        R <- nrow(boot_ests)
+        rk_mat <- apply(boot_ests, 2, rank)
+
+        # Find lower bound
+        frac_n_weights <- get_frac_n_weights(R = R, a = .5 - level / 2)
+        qs <- apply(rk_mat, 2, function(x){
+          k <- frac_n_weights$k
+          c(which(x == k), which(x == k + 1))})
+
+        lb <- sapply(1:ncol(qs), function(x)
+          frac_n_weights$w_k * boot_ests[qs[1, x], x] +
+            frac_n_weights$w_k_p_1 * boot_ests[qs[2, x], x])
+
+        # Do the same for the upper bound
+        frac_n_weights <- get_frac_n_weights(R = R, a = .5 + level / 2)
+        qs <- apply(rk_mat, 2, function(x){
+          k <- frac_n_weights$k
+          c(which(x == k), which(x == k + 1))})
+
+        ub <- sapply(1:ncol(qs), function(x)
+          frac_n_weights$w_k * boot_ests[qs[1, x], x] +
+            frac_n_weights$w_k_p_1 * boot_ests[qs[2, x], x])
       }
 
       ylim_to_use <- if(missing(ylim)) range(lb, ub) else ylim

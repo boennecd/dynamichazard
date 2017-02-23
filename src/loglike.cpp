@@ -136,12 +136,12 @@ std::vector<double>
       - n_parems / 2.0 * (log(2.0) + log(M_PI));
   }
 
-  logLike_link_term_helper *helper;
+  std::unique_ptr<logLike_link_term_helper> helper;
   if(model == "logit"){
-    helper = new logLike_link_term_helper_logit(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets);
+    helper.reset(new logLike_link_term_helper_logit(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets));
 
   } else if (is_exponential_model(model)){
-    helper = new logLike_link_term_helper_cloglog(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets);
+    helper.reset(new logLike_link_term_helper_cloglog(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets));
 
   } else{
     Rcpp::stop("Model '" + model + "' not implemented for logLike method");

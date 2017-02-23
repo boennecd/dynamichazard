@@ -63,7 +63,7 @@ get_survival_case_weights_and_data = function(
 
   if(compute_risk_obj){
     if(missing(id)){
-      warning("You did not parse and ID argument. I do not hink this is what you want ...")
+      warning("You did not parse and ID argument. This can affact result for discrete models with time-coefficients effects")
       id = 1:nrow(data)
     }
 
