@@ -1,0 +1,757 @@
+---
+title: "ddhazard Diagnostics"
+output: 
+  pdf_document: 
+    fig_caption: yes
+date: "`r Sys.Date()`"
+author: "Benjamin Christoffersen"
+header-includes:
+   - \usepackage{bm}
+bibliography: ddhazard_bibliography.bib
+csl: bib_style.csl
+vignette: >
+  %\VignetteIndexEntry{Diagnostics}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::knit_hooks$set(default_opts = function(before, options, envir) {
+    if (before){
+      options(digist = 4)
+    }
+})
+options(digist = 4)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, dpi = 36)
+knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
+```
+
+\renewcommand{\vec}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+%
+\newcommand{\Lparen}[1]{\left( #1\right)} 
+\newcommand{\Lbrack}[1]{\left[ #1\right]} 
+\newcommand{\Lbrace}[1]{\left \{ #1\right \}} 
+\newcommand{\Lceil}[1]{\left \lceil #1\right \rceil}
+\newcommand{\Lfloor}[1]{\left \lfloor #1\right \rfloor}
+%
+\newcommand{\propp}[1]{P\Lparen{#1}}
+\newcommand{\proppCond}[2]{P\Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\expecp}[1]{E\Lparen{#1}}
+\newcommand{\expecpCond}[2]{E\Lparen{\left. #1  \right\vert  #2}}
+%
+\newcommand{\varp}[1]{\textrm{Var}\Lparen{#1}}
+\newcommand{\varpCond}[2]{\textrm{Var} \Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\corpCond}[2]{\textrm{Cor} \Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\covp}[1]{\textrm{Cov} \Lparen{#1}}
+\newcommand{\covpCond}[2]{\textrm{Cov} \Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\emNotee}[3]{#1_{\left. #2 \right\vert #3}}
+\newcommand{\emNote}[4]{#1_{\left. #2 \right\vert #3}^{(#4)}} 
+%
+\newcommand{\ukfNote}[2]{\mat{P}_{\vec{#1}, \vec{#2}}}
+\newcommand{\ukfNotee}[3]{\mat{P}_{\vec{#1}_{#3}, \vec{#2}_{#3}}}
+%
+\newcommand{\diag}[1]{\text{diag}{\Lparen{#1}}}
+\newcommand{\wvec}[1]{\widehat{\vec{#1}}}
+\newcommand{\wmat}[1]{\widehat{\mat{#1}}}
+\newcommand{\wtvec}[1]{\widetilde{\vec{#1}}}
+\newcommand{\bvec}[1]{\bar{\vec{#1}}}
+%
+\newcommand{\deter}[1]{\left| #1 \right|}
+%
+\newcommand{\MyInd}[2]{\Lparen{#1}_{#2}}
+% 
+\newcommand{\xyzp}[2]{#1\Lparen{#2}}
+\newcommand{\xyzpCond}[3]{#1\Lparen{\left. #2  \right\vert  #3}}
+
+# Introduction
+
+This vignette will show examples of how the `residuals` function can be used for an object returned by `ddhazard`. See the vignette `ddhazard` For details of the computations
+
+# Data set 1: prisoner recidivism
+
+The first data set we will look at an experimental study of recidivism of 432 male prisoners a year after being released from prison [@rossi80]. The study randomly gave financial aid. The variables we will look at are:
+
+- `fin`: 1 if the prisoner got aid and zero otherwise
+- `age`: age at time of release
+- `prio`: number of prior convictions
+- `employed.cumsum`: Cumulative number of weeks employed from the date of release. This will vary through time
+- `event`: 1 if the prisoner is rearrested (from what I gather)
+
+A `.pdf` file called `Appendix-Cox-Regression.pdf` was previously on CRAN where they analyze this data set with the cox regression model. They found: 
+
+- Non very influential observation
+- No sign of proportional-hazards assumption to be violated
+- Minor sign of non-linear effects
+
+Consquently, we could guess to find something similar
+
+## Loading the data set
+
+We load the data set with the next line. The details of how the `.RData` file is made is on the github site in the `vignettes/Diagnostics/` folder
+
+```{r}
+load("Diagnostics/Rossi.RData")
+```
+
+The data is in the typical start-stop forma for Survival analysis. We print the number of individual and show an example of how the data looks for one of the individuals
+
+```{r}
+# Number of unique individauls
+length(unique(Rossi$id)) 
+
+# Show example for a given individual
+cols_of_interest <- 
+  c("id","start","stop","event", "fin", "age", "prio", "employed.cumsum")
+
+Rossi[Rossi$id == 2, cols_of_interest]
+```
+
+Next, we illustrate which of the variables are and which are not time-varying
+
+```{r}
+# See the varying and non-varying covariates
+tmp <- 
+  by(Rossi[, cols_of_interest], Rossi$id, function(dat) 
+    apply(dat, 2, function(x) sum(!duplicated(x))))
+colMeans(do.call(rbind, as.list(tmp)))
+```
+
+```{r, echo = FALSE}
+# Indivuals are observed for at most one year
+stopifnot(setequal(unique(Rossi$stop), 1:52))
+```
+
+The event variabile is happens more less evenly through after the first 8 weeks as the next plot shows. Hence, we may see an increasing intercept later since all individuals start at time zero. Thus, the risk sets only get smaller as time progress
+
+```{r, echo = FALSE}
+# Individuals have event through out the period
+plot(xtabs(~ Rossi$stop[Rossi$event == 1]), xlab = "Week number", 
+     ylab = "Number of recidivism")
+```
+
+```{r, echo = FALSE}
+# All individuals have gabs of one week 
+stopifnot(all(
+  unlist(tapply(Rossi$stop, Rossi$id, diff)) == 1))
+
+# People have at most one event
+is_event <- Rossi[Rossi$id %in% Rossi$id[Rossi$event == 1], ]
+stopifnot(all(tapply(is_event$event, is_event$id, sum) == 1))
+
+# People alwas get arrested on the last record
+stopifnot(all(
+  tapply(1:nrow(is_event), is_event$id, function(is){
+    rows <- is_event[is, ]
+    max(rows$stop) == rows$stop[rows$event == 1]
+  })))
+```
+
+## Estimation
+
+We estimate the model with 5 terms and a intercept as follows:
+
+```{r}
+library(dynamichazard)
+dd_fit <- dd_fit_first <-  ddhazard(
+  Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
+  data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
+  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+```
+
+Then we plot the predicted coefficients:
+
+```{r}
+plot(dd_fit)
+```
+
+The dashed lines are 95% confidence bounds from the smoothed covariance matrices. Both the intercept and the age seems to have time-varying effects while the other variables seems not to have
+
+## Residuals from state space vector
+
+We start by looking at the standardized state space errors as explained in the ddhazard vignette. We may expect these to standard iid normaly destributed. First, we compute the values with the `residuals` by passing `type = "std_space_error"`
+
+```{r}
+stat_res <- residuals(dd_fit, type = "std_space_error")
+
+str(stat_res)
+```
+
+The output is a list with the residuals, smoothed covariance matrices and a binary variable to indicate whether or not the residuals are standardized. Next, we can plot the residuals as follows:
+
+```{r}
+plot(stat_res, mod = dd_fit, p_cex = .75, ylim = c(-2, 2))
+```
+
+The variables appears to be nothing like standard normal (here we have $52 * 6$ residuals with no one outsite $\pm 1.96$). Unfortunately, the plot above is similar to all the other plots I have seen so far on other data sets in the sense that the variance of the residuals appears too small
+
+Another idea is only marginally standardize (that is, not rotate the residuals). This can be done as follows:
+
+```{r}
+stat_res <- residuals(dd_fit, type = "space_error")
+
+for(i in 1:nrow(stat_res$residuals))
+  stat_res$residuals[i, ] <- stat_res$residuals[i, ] /
+    sqrt(diag(stat_res$Covariances[, , i]))
+
+
+par(mfcol = c(2, 3))
+for(i in 1:ncol(stat_res$residuals))
+  plot(stat_res, mod = dd_fit, p_cex = .75, cov_index = i, 
+       ylab = paste("Std. error for", colnames(stat_res$residuals)[i]), 
+       ylim = c(-2, 2))
+```
+
+which I again find hard to draw any conclussion from. It seems like there is structure in the errors for the intercept and `fin`. However, this might be what we expected. For instance, we may expect the intercept to increase through time (i.e. not be ranodm).  Further, assuming that the covariance estimate are conservative then there might be an error for `prio` in interval 20-25 and an error  in `age` in interval 10-12 that seems extreme
+
+## Residuals for observations
+
+Next, we will look at the Pearson residuals. These can be computed by passing `type = "pearson"` to `residuals`:
+
+```{r}
+obs_res <- residuals(dd_fit, type = "pearson")
+```
+
+The returned object is a list with two elements. One element denotes the type and another cotains the residuals. The latter is a list with a matrix for each interval. Each matrix has four columns for the residuals, the computed likelihood of an event, the outcome and the row number in the initial data matrix for those that where at risk in the interval. This is illustrated in the next lines:
+
+```{r}
+length(obs_res$residuals)    # We have matrix for each interval
+str(obs_res$residuals[1:5])  # Shows the structure of the matrices
+
+head(obs_res$residuals[[1]]) # Print the first entries of the first interval
+```
+
+We may want to look at cumulative residuals for each individual. In that case, the list of matricies is un-handy so we define the following function to stack them, at the interval number and the id of that the observations belongs to:
+
+```{r}
+stack_residuals <- function(fit, resids){
+  if(!inherits(resids, "fahrmeier_94_res"))
+    stop("Residuals must have class 'fahrmeier_94_res'")
+  if(!inherits(fit, "fahrmeier_94"))
+    stop("fit must have class 'fahrmeier_94'")
+  
+  # Stack the residuals
+  resids_stacked <- 
+    data.frame(do.call(rbind, resids[[1]]), row.names = NULL)
+  
+  # Add the interval number and id
+  n_rows <- unlist(lapply(resids$residuals, nrow))
+  interval_n <- unlist(sapply(1:length(n_rows), function(i) rep(i, n_rows[i])))
+  
+  resids_stacked <- cbind(
+    resids_stacked, 
+    interval_n = interval_n,
+    id = fit$id[resids_stacked$row_num])
+  
+  # Sort by id and bin number
+  resids_stacked <- 
+    resids_stacked[order(resids_stacked$id, resids_stacked$interval_n), ]
+  
+  resids_stacked
+}
+```
+
+We use the function and print the first few rows as follows:
+
+```{r}
+resids_stacked <- stack_residuals(fit = dd_fit, resids = obs_res)
+
+head(resids_stacked, 10)
+```
+
+Next, we cumulative compute the residuals for each individual and plot them:
+
+```{r}
+# Compute cummulated residuals
+resids_stacked$residuals_cum <- unlist(tapply(
+  resids_stacked$residuals, resids_stacked$id, cumsum))
+
+# Plot the cumulated residuals for each individual
+plot(c(1, 52), range(resids_stacked$residuals_cum), type = "n", 
+     xlab = "Bin number", ylab = "Cumulated Person residuals")
+invisible(
+  tapply(resids_stacked$residuals_cum, resids_stacked$id, lines, 
+         col = gray(0, alpha = .2)))
+```
+
+We may want to take a closer look at the individuals with a high maximum accumlated residual:
+
+```{r}
+max_cum <- tapply(resids_stacked$residuals_cum, resids_stacked$id, max)
+
+is_max <- names(max_cum)[order(max_cum, decreasing = T)[1:5]]
+is_max # Id of the those with the largest values
+```
+
+We print the last record each of these:
+
+```{r}
+Rossi_max_subset <- Rossi[Rossi$id %in% is_max, cols_of_interest]
+Rossi_max_subset <- Rossi_max_subset[nrow(Rossi_max_subset):1, ]
+Rossi_max_subset[!duplicated(Rossi_max_subset$id), ]
+```
+
+What they seem to have in common is that they have younger part of the population:
+
+```{r}
+age <- Rossi$age[!duplicated(Rossi$id)]
+summary(age) # stats for the age of the population
+hist(age, breaks = 20)
+
+# He has the medium of prior convictions
+summary(Rossi$prio[!duplicated(Rossi$id)])
+```
+
+Moreover, they all have a low number of prior convictions:
+
+```{r}
+summary(Rossi$prio[!duplicated(Rossi$id)])
+```
+
+We can repeat the same procedure for the lowest accumlated residual as follows:
+
+```{r}
+min_cum <- tapply(resids_stacked$residuals_cum, resids_stacked$id, min)
+
+is_min <- names(min_cum)[order(min_cum)[1:5]]
+is_min
+
+# We print the last record each of these
+Rossi_min_subset <- Rossi[Rossi$id %in% is_min, cols_of_interest]
+Rossi_min_subset <- Rossi_min_subset[nrow(Rossi_min_subset):1, ]
+Rossi_min_subset[!duplicated(Rossi_min_subset$id), ]
+```
+We note that they are all young part of the population with a high number of prior convictions. Removing these does not make any difference
+
+```{r}
+Rossi_sub <- Rossi[!Rossi$id %in% c(is_max, is_min), ]
+
+dd_fit_tmp <- ddhazard(
+  Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
+  data = Rossi_sub, id = Rossi_sub$id, by = 1, max_T = 52, 
+  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+
+plot(dd_fit_tmp)
+```
+
+## Hat values
+
+Another thing we can look at is the hat-"like" values which are suggested in the ddhazard vignette. These are computed by calling the `hatvalues` function as follows:
+
+```{r}
+hats <- hatvalues(dd_fit)
+```
+
+Similar to the Pearson residuals, the returned object is list with a matrix for each interval. Each matrix have a column for the hat values, the row number in the orginal data set and the id of the individual the hat values belongs to: 
+
+```{r}
+str(hats[1:3])
+head(hats[[1]], 10)
+```
+
+We define a similar function to stack the hat values as we did with the Pearson residuals:
+
+```{r}
+stack_hats <- function(hats){
+  # Stack
+  resids_hats <- data.frame(do.call(rbind, hats), row.names = NULL)
+  
+  # Add the interval number
+  n_rows <- unlist(lapply(hats, nrow))
+  interval_n <- unlist(sapply(1:length(n_rows), function(i) rep(i, n_rows[i])))
+  
+  resids_hats <- cbind(resids_hats, interval_n = interval_n)
+  
+  # Sort by id and interval number
+  resids_hats <- 
+    resids_hats[order(resids_hats$id, resids_hats$interval_n), ]
+  
+  resids_hats
+}
+```
+
+The stacked values looks as follows:
+
+```{r}
+hats_stacked <- stack_hats(hats)
+
+head(hats_stacked)
+```
+
+We cumulate the hat values for each individual and plot them against time:
+
+```{r}
+# Compute cumulated hat values
+hats_stacked$hats_cum <- unlist(tapply(
+  hats_stacked$hat_value, hats_stacked$id, cumsum))
+
+# Plot the cumulated residuals for each individual
+plot(c(1, 52), range(hats_stacked$hats_cum), type = "n", 
+     xlab = "Interval number", ylab = "Cumulated hat values")
+invisible(
+  tapply(hats_stacked$hats_cum, hats_stacked$id, lines, 
+         col = gray(0, alpha = .2)))
+```
+
+Two observations seems to be quite influential. We look further at the values with the next lines of code:
+
+```{r}
+max_cum <- tapply(hats_stacked$hats_cum, hats_stacked$id, max)
+is_max <- names(max_cum)[order(max_cum, decreasing = T)[1:5]]
+is_max
+
+# We print the last record each of these
+Rossi_subset <- Rossi[Rossi$id %in% is_max, cols_of_interest]
+Rossi_subset <- Rossi_subset[nrow(Rossi_subset):1, ]
+Rossi_subset[!duplicated(Rossi_subset$id), ]
+```
+
+They all have a large number of prior prior convictions. We can see by the next histogram that the number of prior convictions is skewed:
+
+```{r}
+tmp <- xtabs(~Rossi$prio[!duplicated(Rossi$id)]) 
+plot(as.numeric(names(tmp)), c(tmp), ylab = "frequency", type = "h", 
+     xlab = "Number of prior convictions")
+```
+
+Transforming the variable by 
+
+```{r}
+tmp <- xtabs(~log(Rossi$prio[!duplicated(Rossi$id)] + 1))
+plot(as.numeric(names(tmp)), c(tmp), ylab = "frequency", type = "h", 
+     xlab = "Log(Number of prior convictions + 1)")
+```
+
+Further, the `employed.cumsum` could be normalized by dividing by `stop` to get the percentage of time the person have been employed. We make these two changes with the following fit:
+
+```{r}
+dd_fit <- ddhazard(
+  Surv(start, stop, event) ~ fin + age + log(prio + 1) + I(employed.cumsum / stop), 
+  data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
+  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+
+plot(dd_fit)
+```
+
+Notice that both coefficient for `prio` `employed.cumsum` is more stable. Further, computing the hat values and making a similar plot to the one before shows that the individuals are much less influential:
+
+```{r, echo = FALSE}
+hats <- hatvalues(dd_fit)
+
+hats_stacked <- stack_hats(hats)
+
+# Compute cumulated hat values
+hats_stacked$hats_cum <- unlist(tapply(
+  hats_stacked$hat_value, hats_stacked$id, cumsum))
+
+# Plot the cumulated residuals for each individual
+plot(c(1, 52), range(hats_stacked$hats_cum), type = "n", 
+     xlab = "Interval number", ylab = "Cumulated hat values")
+invisible(
+  tapply(hats_stacked$hats_cum, hats_stacked$id, lines, 
+         col = gray(0, alpha = .2)))
+```
+
+We may further want to compare the likelihood of the two models. However, the final model seems to convergece towards a degenerated distribution if we keep iterating the EM algorithm. Hence, the liklihood cannot be evaluated precisely as shown next:
+
+```{r}
+dd_fit <- ddhazard(
+  Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
+  data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
+  Q_0 = diag(10000, 5), Q = diag(.1, 5),
+  
+  verbose = 1,                  # Print the likelihood doing estimation
+  
+  control = list(
+    ridge_eps = .000001,        # Make the penatly term small
+    criteria =  "delta_likeli", # Use the relative likelihood as the convergence criteria 
+    eps = .0001,                # Set the tolerance low
+    n_max = 100))               # Take a lot of iterations at most
+
+eigen(dd_fit$Q)$values # Eigen values very close to nothing
+det(dd_fit$Q)
+determinant(dd_fit$Q, logarithm = TRUE)
+```
+
+# Data set 2: Worcester Heart Attack Study
+We will look at the Worcester Heart Attack Study in the following. The dataset contains individual who had a heart attack and is then followed up to check if they have a heart attack in the following days. Below, we load the the data set and plot the date of deaths:
+
+```{r}
+load("Diagnostics/whas500.RData")
+
+hist(whas500$lenfol[whas500$fstat == 1], breaks = 20, 
+     xlab = "Time of death", main = "")
+```
+
+The large peak at the start is due to a lot of individuals who dies doing the hospital stay shortly after their first heart attack. All covariates in the dataset are time-invariant records from the day that the individual had the first heart attack. We will look at gender, age, BMI, binary for whether the individual has a history of cardiovascular disease (`cvd`) and heart rate (`hr`). Summary stats are printed below:
+
+```{r}
+cols_of_interest <- c("lenfol", "fstat", "gender",  "age", "bmi", "hr", "cvd")
+
+head(whas500[, cols_of_interest], 10)
+
+summary(whas500[, c("age", "bmi", "hr", "gender",  "cvd")])
+```
+
+## Estimation
+
+We estimate the model as follows:
+
+```{r}
+dd_fit <- ddhazard(
+  Surv(lenfol, fstat) ~ gender + age + bmi + hr + cvd,
+  data = whas500, by = 100, max_T = 2000, 
+  Q_0 = diag(10000, 6), Q = diag(.1, 6))
+
+plot(dd_fit)
+```
+
+The intercept drops in the first period which plossibly is due to the intial high ratio of deaths right after the first heart attack. We further simply the model the model by removing `gender` variable:
+
+```{r}
+dd_fit <- ddhazard(
+  Surv(lenfol, fstat) ~ age + bmi + hr + cvd,
+  data = whas500, by = 100, max_T = 2000, 
+  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+
+plot(dd_fit)
+```
+
+## Hat values
+
+We start by looking at the hat values. First, we compute them:
+
+```{r}
+hats <- hatvalues(dd_fit)
+hats_stacked <- stack_hats(hats)
+```
+
+Then we compute the cumulated hat values for each individuals and plot against time
+
+```{r}
+# Compute cumulated hat values
+hats_stacked$hats_cum <- unlist(tapply(
+  hats_stacked$hat_value, hats_stacked$id, cumsum))
+
+# Plot the cumulated residuals for each individual
+plot(c(1, 20), range(hats_stacked$hats_cum), type = "n", 
+     xlab = "Interval number", ylab = "Cumulated hat values")
+invisible(
+  tapply(hats_stacked$hats_cum, hats_stacked$id, lines, 
+         col = gray(0, alpha = .2)))
+```
+
+Three values seems to standard. We look at these in the next line:
+
+```{r}
+max_cum <- tapply(hats_stacked$hats_cum, hats_stacked$id, max)
+is_max <- order(max_cum, decreasing = T)[1:3]
+is_max
+
+# The records for these
+whas500[is_max, c("id", cols_of_interest)]
+```
+
+The first one has a high hear rate while the latter two has low BMI as we will see later. Another idea is to look at the running average of the hat values. The motivation is the two lines that end arround the 5'th interval either because they die or are right censored. Hence, we compute the running averages and plot against time
+
+```{r}
+# Running averages of hat values
+hats_stacked$hats_avg <- hats_stacked$hats_cum / hats_stacked$interval_n
+  
+# Plot against time
+plot(c(1, 20), range(hats_stacked$hats_avg), type = "n", 
+     xlab = "Interval number", ylab = "Running avg. hat values")
+invisible(
+  tapply(hats_stacked$hats_avg, hats_stacked$id, lines, 
+         col = gray(0, alpha = .2)))
+```
+
+Indeed the two stands out along with three others. Hence, we look further at the five largest values:
+
+```{r}
+max_avg <- tapply(hats_stacked$hats_avg, hats_stacked$id, max)
+is_max_avg <- order(max_avg, decreasing = T)[1:5]
+is_max_avg
+
+# The records for these
+whas500[is_max_avg, c("id", cols_of_interest)]
+```
+
+The three later are the same as before. The two new ones is on who is old and another with an extreme hear rate (a typical rule rule of thumb is that the maximum heart rate is $220$ less your age!). In order to show this, we make the following plots:
+
+```{r}
+# Setup parameters for the plot
+cols <- rep("Black", 500)
+cols[1:500 %in% is_max_avg] <- "Blue"
+cols[1:500 %in% is_max] <- "Red"
+
+cexs <- ifelse(cols != "Black", par()$cex * 1.25, par()$cex * .75)
+
+pchs <- ifelse(whas500$fstat == 1 & whas500$lenfol <= 2000, 16, 1)
+
+plot(whas500[, c("age", "hr", "bmi")], pch = pchs, cex = cexs, col = cols)
+```
+
+Filled circles are cases and non-filled circles are censored. The blue dots are the ones with a high maximum running average hat value while the red one have both a high maximum running average and a high cumulative hat values
+
+Plotting against time shows the censoring is not random through time as shown in the next two plots: 
+
+```{r}
+plot(whas500$lenfol, whas500$hr, col = cols, pch = pchs, 
+     xlab = "Follow-up time", ylab = "Heart rate")
+plot(whas500$lenfol, whas500$age, col = cols, pch = pchs, 
+     xlab = "Follow-up time", ylab = "Age")
+```
+
+This could motivate us to stop the slightly before the last cluster of censoring of individuals occours. Thus, we set the final time (the `by` argument to `ddhazard`) to 1700 instead of 2000 in the next code block where we re-estimate the model. Further, we make a fit without the "extreme" indivduals: 
+
+```{r}
+dd_fit <- ddhazard(
+  Surv(lenfol, fstat) ~ age + bmi + hr + cvd,
+  data = whas500, by = 100, max_T = 1700, 
+  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+
+dd_fit2 <- ddhazard(
+  Surv(lenfol, fstat) ~ age + bmi + hr + cvd,
+  
+  data = whas500[-c(is_max, is_max_avg), ], # we exclude the "extreme" persons
+  
+  by = 100, max_T = 1700, 
+  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+```
+
+We plot the two sets of predicted coefficients next:
+
+```{r}
+par(mfcol = c(2,3))
+for(i in 1:5){
+  plot(dd_fit, cov_index = i)
+  plot(dd_fit2, cov_index = i, add = T, col = "DarkBlue")
+}
+```
+
+The blue line is the predicted coefficients without the "extreme" individuals. The difference seems minor
+
+## State space erors
+
+We predict the standardized state space error below and plot them
+
+```{r}
+stat_res <- residuals(dd_fit, type = "std_space_error")
+
+plot(stat_res, mod = dd_fit, ylim = c(-4, 4), p_cex = .8)
+```
+
+The errors seems to have to low variance to be standard normal apart from one which is more than three standard deviations away. I am not sure what to conclude from this 
+
+## Pearson residuals
+
+We can look at the Pearson residuals and plot the cumulated Pearson residuals versus time. This is done below:
+
+```{r}
+obs_res <- residuals(dd_fit, type = "pearson")
+
+resids_stacked <- stack_residuals(fit = dd_fit, resids = obs_res)
+```
+
+```{r}
+# Compute cumulated residuals
+resids_stacked$residuals_cum <- unlist(tapply(
+  resids_stacked$residuals, resids_stacked$id, cumsum))
+
+# Plot the cumulated residuals for each individual
+plot(c(1, 17), range(resids_stacked$residuals_cum), type = "n", 
+     xlab = "Interval number", ylab = "Cumulated Person residuals")
+invisible(
+  tapply(resids_stacked$residuals_cum, resids_stacked$id, lines, 
+         col = gray(0, alpha = .2)))
+```
+
+We can try to look at three largest cumulated Pearson residuals:
+
+```{r}
+max_cum <- tapply(resids_stacked$residuals_cum, resids_stacked$id, max)
+
+is_max <- tail(order(max_cum), 3)
+is_max
+
+whas500[is_max, cols_of_interest]
+```
+
+What they seem to have in common is that they are all young. Similarly we can look at the small values:
+
+```{r}
+min_cum <- tapply(resids_stacked$residuals_cum, resids_stacked$id, min)
+
+is_min <- tail(order(min_cum, decreasing = T), 5)
+is_min
+
+# We look at the smallest value
+whas500[is_min, cols_of_interest]
+```
+
+These are in the older part of the sample where the majority of them have a quite high hear rate. Again we have number 12, 89 and 112. Leaving either of the two sets of observation out has little impact on the fit
+
+## Leaving out a covaraite
+
+Suppose that we had not included the age to start with:
+
+```{r}
+dd_fit <- ddhazard(
+  Surv(lenfol, fstat) ~ bmi + hr + cvd, # No age
+  data = whas500, by = 100, max_T = 2000, 
+  Q_0 = diag(10000, 4), Q = diag(.1, 4))
+
+plot(dd_fit)
+```
+
+Then we could think that we would be able to see that the covariate was left out using the Pearson residuals as in a regular logistic regression. We compute the Pearson residuals to see if this would work we:
+
+```{r}
+obs_res <- residuals(dd_fit, type = "pearson")
+resids_stacked <- stack_residuals(fit = dd_fit, resids = obs_res)
+```
+
+Next, we add the age variable to the stacked residuals, stratify the age variable, compute cumulated mean accross each stratum in each interval and plot against time:  
+
+```{r}
+# Add age variable
+resids_stacked$age <- 
+  whas500$age[resids_stacked$row_num]
+
+# Stratify
+age_levels <- quantile(whas500$age, seq(0, 1, by = .2))
+age_levels
+resids_stacked$age_cut <- cut(resids_stacked$age, age_levels)
+
+# Compute the means 
+cut_means <- 
+  tapply(resids_stacked$residuals, 
+         list(resids_stacked$interval_n, resids_stacked$age_cut), 
+         mean)
+
+head(cut_means)
+
+# Plot against time
+colfunc <- colorRampPalette(c("green", "red"))
+cols <- colfunc(ncol(cut_means))
+
+matplot(dd_fit$times[-1], apply(cut_means, 2, cumsum), 
+        type = "l", col = cols, xlab = "Time",
+        lty = 1, ylab = "Cumulated mean Pearson residuals")
+abline(h = 0, lty = 2)
+
+legend("topleft", bty = "n", 
+       lty = rep(1, ncol(cut_means)),
+       legend = colnames(cut_means), 
+       col = cols, 
+       cex = par()$cex * .8)
+```
+
+We see that the older and youngest strata stand out and deviates from zero. Hence, suggesting that the age variable should have been in the model 
+
+# References

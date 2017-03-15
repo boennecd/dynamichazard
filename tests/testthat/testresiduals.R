@@ -11,6 +11,7 @@ cat("\nRunning", test_name, "\n")
 
 ###############
 # Simple test that methods calls succeds
+
 arg_list <- list(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
@@ -60,7 +61,7 @@ test_that("Residuals work when data is saved on the fit",{
   }
 })
 
-test_that("Residuals work when data is saved on the fit and fixed effects are present",{
+test_that("Residuals work when data is saved on the fit and fixed effects are present", {
   arg_list_new <- list(
     formula = formula(survival::Surv(start, stop, event) ~ ddFixed(group)),
     data = head_neck_cancer,

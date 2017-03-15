@@ -100,7 +100,7 @@ install.packages("dynamichazard")
 The `ddhazard` function estimates a dynamic binary regression model where the parameters are assumed to time-varying and follow a random walk. 
 
 ## Why and when to use this package 
-The package is implemented for situation where you have a dynamic binary regression model with time-varying coefficients. The advantage of the state spaces methods used here is that you can extrapolate to time periods beyond the data used in estimation. An example is forecasting firm failures given the firms present accounting data. The task is to use the present data to estimate a model and forecast the likelihood of default for the firms in the following year. Another use of this package is as an alternative to other methods of modelling time-varying coefficients for binary regression such as Generalized Additive models
+The package is intended for situation where you have a dynamic binary regression model with time-varying coefficients. The advantage of the state spaces methods used here is that you can extrapolate to time periods beyond the data used in estimation. An example is forecasting firm failures given the firms present accounting data. The task is to use the present data to estimate a model and forecast the likelihood of default for the firms in the following year. Another use of this package is as an alternative to other methods of modelling time-varying coefficients for binary regression such as Generalized Additive models
 
 The estimation function `ddhazard` is implemented such that: 
 
@@ -111,7 +111,7 @@ The estimation function `ddhazard` is implemented such that:
 All are important in the analysis of firm failures. Firstly, you can easily have 40-50.000 firms at risk at each point in time. Thus, point 1) is key to be able to fit the models. Moreover, the number of firms at risk will vary as time progress. Some firms default, some are opened, some merge, some are acquired etc. This relates to point 2)
 
 ## Guide to vignettes 
-The vignette here is the primary vignette where the models and estimation methods are explained. The package also contains two supplementary vignettes. *Simulation study with logit model* presents a simulation study where the methods in this package are compared to each other and to Generalized Additive models. *Comparing methods for time-varying logistic models* applies the methods to a real world data set. Both vignettes illustrate how to use the estimation function `ddhazard` and other functions in this package. They only use the discrete time model. This vignette also describes the continuous time model
+The vignette here is the primary vignette where the models and estimation methods are explained. The package also contains other supplementary vignettes. *Simulation study with logit model* presents a simulation study where the methods in this package are compared to each other and to Generalized Additive models. *Comparing methods for time-varying logistic models* applies the methods to a real world data set. Both vignettes illustrate how to use the estimation function `ddhazard` and other functions in this package. They only use the discrete time model. This vignette also describes the continuous time model. The *Bootstrap illustration* vignette shows how the wrapper `ddhazard_boot` for the function `boot` in the `boot` library works. *ddhazard Diagnostics* illustrates how the `residuals` and `hatvalues` functions can be used to check the model fit
 
 ## Dynamic binary regression
 We will introduce the model in the following paragraphs. Let $\vec{x}_{it}$ denote the co-variate vector for individual $i$ at time $t$ and let $Y_{it}$ be the random variable for whether the $i$'th individual dies within time $(t-1, t]$. Next, denote the parameters at time $t$ by $\vec{\alpha}_t$. For given parameters at time $t$ the probability of death is:
@@ -246,7 +246,8 @@ Q_short <- dd_fit_short$Q
 Q_wide <- dd_fit_wide$Q
 diag((Q_wide - Q_short) / Q_short)   
 ```
-We see that the diagonal entries are not far from each other with the two fits. To ease the notation, we assume that $\psi_t = 1$ in the rest of the vignette. The rest of this vignette is structured as follows. The section 'EM algorithm' will cover the EM algorithm. This is followed by the sections 'Extended Kalman Filter' and 'Unscented Kalman Filter' which respectively covers the EKF and UKF used in the E-step of the EM algorithm. Finally, we end with the sections 'Logistic model' and 'Continuous time model' which cover the models implemented in this package
+
+We see that the diagonal entries are not far from each other with the two fits. To ease the notation, we assume that $\psi_t = 1$ in the rest of the vignette. The rest of this vignette is structured as follows. The section 'EM algorithm' will cover the EM algorithm. This is followed by the sections 'Extended Kalman Filter' and 'Unscented Kalman Filter' which respectively covers the EKF and UKF used in the E-step of the EM algorithm. Next, the sections 'Logistic model' and 'Continuous time model' covers the models implemented in this package. Finally, we end with a section on diagnostics
 
 I encourage you to use the shiny app while reading this vignette. You can launch the shiny app by installing this package and running:
 
@@ -862,16 +863,109 @@ head(data_frame_new)
 
 Then individual 1 will yield five observations. The first row would only has an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[1]`. The second row will yield two observations: one with an offset of $\log 0.5$ plus $\emNotee{\vec{a}}{1}{d}$ times `r data_frame_new$x1[2]` and the other with an offset of $\log 1$ plus $\emNotee{\vec{a}}{2}{d}$ times `r data_frame_new$x1[2]`
 
+# Diagnostics
+This section will cover diagnostics tools. These includes: 
+
+ - Residuals from the observations
+ - Hat values
+ - Residuals from the state vector
+
+## Residuals from the observations
+For the binary outcomes in the logistic model, one idea is to look at the Pearson residuals which we can denote $r_{it}^P$ which is the $i$'th individual's Pearson residual in interval $t$. That is, 
+
+$$\begin{aligned}
+  & \hat{y}_{it} = \exp \left( \vec{x}_{it}^T\emNotee{\vec{a}}{t}{d})\right) / \left( 1  + \exp\left(\vec{x}_{it}^T\emNotee{\vec{a}}{t}{d})\right) \right) \\
+%
+  & r_{it}^P = \frac{y_{it} - \hat{y}_{it}}{H_{iit}(\emNotee{\vec{a}}{t}{d})^{-1}} =  
+      \frac{y_{it} - \hat{y}_{it}}{\sqrt{\hat{y}_{it}(1 - \hat{y}_{it})}}
+\end{aligned}$$
+
+Then we could:
+
+ * Accumulate residauls for each individual $i$ and plot against $t$. Any individuals with large or small values may worth looking at
+ * Binning covariates values into factors and plot accumulated residuals verus time. Any structural deviations may show a missing covaraite or incorrect transformation of the covariate on the linear predictor scale
+ * Accumulate residauls across intervals $t$ and plot these
+ 
+You can get the Pearson residuals by calling `residuals` with a `ddhazard` fit and `type = "pearson"`
+
+## Hat values
+Finding the influence matrix also known as the hat matrix does not seem to be possible in a computationally effecient way. Thus, we will look at a approximation. We will focus on the logistic model. In the filters in the E-step, each correction step in itself can be viewed as an logistic regression with an L2 penalty. Say we at time $t$ in the filter in the correction step with estimates $\emNotee{\vec{a}}{t}{t-1}$ and $\emNotee{\mat{V}}{t}{t-1}$. Then the penealty could be intepreted as a prior $N(\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1})$. With this view, regular hat values would becomputed by:
+
+$$\begin{aligned}
+  \mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2}\mat{X}_t
+    \Lparen{\mat{X}_t^\top \mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{t-1}^{-1}}
+  \mat{X}_t^\top\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2} \hspace{-150pt}& \\
+%
+    &=\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})\mat{X}_t
+    \Lparen{\mat{X}_t^\top \mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{t-1}^{-1}}\mat{X}_t^\top
+\end{aligned}$$
+
+where $\mat{X}_t$ is the design matrix in interval $t$ and the equality holds when $\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})$ is a diagonal matrix. The above could motivate the following matrix as the hat-"like" matrix in each interval: 
+
+$$\widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d})\mat{X}_t
+    \Lparen{\mat{X}_t^\top \widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d}) \mat{X}_t + \emNotee{\mat{V}}{t}{d}^{-1}}
+  \mat{X}_t^\top, \qquad 
+  \widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d}) = \mat{H}_t(\emNotee{\vec{\alpha}}{t}{d}) + \xi\mat{I}$$
+
+where we have used the final smoothed estimators and adjusted for the $\xi$ factor as done in the algorithm. Plotting cumulative values versus time may show influential observations. You can get these estimates by calling `hatvalues` with a `ddhazard` fit
+
+## Residuals from the state vector
+We may be interested in looking at the predicted state error. The predicted state errors are given by: 
+
+$$\widehat{\vec{\eta}}_t = \mat{R}^T\Lparen{
+    \emNotee{\vec{a}}{t}{d} - \mat{F}\emNotee{\vec{a}}{t - 1}{d}}
+      \sim N \left( \vec{0}, \varpCond{\vec{\eta}_t}{\vec{Y}_d} \right)$$
+    
+This will require that we find the smoothed covariance matrix $\varpCond{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}{\vec{Y}_d}$ in order to standardize the predicted errors. We will explain how this can be estimated in the following paragraphs when the EKF have been used. Standard results yields:
+
+$$\begin{aligned}
+ \varpCond{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}{\vec{Y}_d} 
+   = &\varpCond{\vec{\alpha}_t}{\vec{Y}_d} + \mat{F}\varpCond{\vec{\alpha}_{t-1}}{\vec{Y}_d}\mat{F}^T \\
+   &\hspace{20pt} - \mat{F}\covpCond{\vec{\alpha}_{t}, \vec{\alpha}_{t-1}}{\vec{Y}_d}
+    - \covpCond{\vec{\alpha}_{t}, \vec{\alpha}_{t-1}}{\vec{Y}_d}^T\mat{F}^T
+\end{aligned}$$
+
+Thus, we need smoothed correlation matrixes $\covpCond{\vec{\alpha}_{t}, \vec{\alpha}_{t-1}}{\vec{Y}_d}$. We can estimate these recursively by first setting (see [@Shumway06] for details):
+
+$$\covpCond{\vec{\alpha}_{d}, \vec{\alpha}_{d-1}}{\vec{Y}_d} = 
+    \left(\mat{I} - \mat{K}_d \dot{\vec{z}}_d(\emNotee{\vec{a}}{d}{d})\right)
+    \mat{F}\emNotee{\vec{\mat{V}}}{d - 1}{d - 1}, \qquad 
+%
+    \dot{\vec{z}}_d(\emNotee{\vec{a}}{d}{d}) = 
+      \left.  \frac{\partial \vec{z}_d({\alpha})}{\partial\vec{\alpha}}  \right|_{\vec{\alpha} = \emNotee{\vec{a}}{d}{d}}$$
+      
+where $\mat{K}_d$ is the Kalman gain given by: 
+
+$$\mat{K}_d = \mat{F}\emNotee{\vec{\mat{V}}}{d}{d - 1}\dot{\vec{z}}_d(\emNotee{\vec{a}}{d}{d - 1})^T\mat{C}^{-1}, \qquad 
+	\mat{C} = \varpCond{\vec{Y}_d}{\vec{y}_{d-1}}= \dot{\vec{z}}_d (\emNotee{\vec{a}}{d}{d - 1})^T \emNotee{\mat{V}}{d}{d - 1}\dot{\vec{z}}_d (\emNotee{\vec{a}}{d}{d - 1})+ \mat{H}_d(\emNotee{\vec{a}}{d}{d - 1})$$
+	
+Next, we recursively compute for $t = d, d-1, \dots, 2$:
+
+$$\begin{aligned}
+  \covpCond{\vec{\alpha}_{t - 1}, \vec{\alpha}_{t - 2}}{\vec{Y}_d} & \\
+    &\hspace{-50pt} = 
+    \emNotee{\vec{\mat{V}}}{t - 1}{t - 1}\mat{B}_{t - 1}^T + \mat{B}_t\left(
+    \covpCond{\vec{\alpha}_{t}, \vec{\alpha}_{t - 1}}{\vec{Y}_d} - \mat{T} 
+    \emNotee{\vec{\mat{V}}}{t - 1}{t - 1}\right)\mat{B}_{t-1}^T
+\end{aligned}$$
+
+Though, $\mat{C}$ will be a large square matrix when we have a lot of observation and possibly singular. However, we can apply the Woodbury matrix identity to get:
+
+$$\mat{C} = \mat{H}_d(\emNotee{\vec{a}}{d}{d - 1})^{-1} - \mat{X}_d\emNotee{\mat{V}}{d}{d - 1} 
+		\left(\mat{I} + \vphantom{\emNotee{\mat{V}}{d}{d - 1}^{-1}}
+		\mat{U}_d (\emNotee{\vec{a}}{d}{d - 1})
+		\emNotee{\mat{V}}{d}{d - 1}\right)^{-1} \mat{X}_d^T$$
+		
+where $\mat{X}_d$ is the design matrix in the final interval. This is easy to compute when $\mat{H}_d$ is a diagonal matrix and the dimension of the state equation is low. You can get the standardized predicted state errors by calling `residuals` with a `ddhazard` fit and `type = "std_space_error"` if you have used the EKF
+
 # Further tasks and ideas
 The last section will cover further task and ideas. Please, let me know what you think. Is it relevant, got ideas to the question I pose and how would you priorities? What can make the package more useful for you
 
 ## Confidence bounds
-How do we construct confidence bounds both for the state vectors and for the predicted values? Bootstrapping data seems to be the way forward given the use of a random walk. An extension would be to make functions that makes this easy
+How do we construct confidence bounds both for the state vectors and for the predicted values? Bootstrapping data seems to be the way forward given the use of a random walk
 
-## Diagnostics
-I am thinking of making a another vignettes with diagnostics. It will contain raw residuals, Pearson residuals, non-standardized and standardized state space error. They are all ready implemented with `s3` method for `predict`. See `?predict.fahrmeier_94`
-
-Further, I need to look into tests the effects are time-varying or not. One idea is to test entries in $\mat{Q}$. Though, this involves tests on the boundary of the parameter space. Another idea is to make an F-test. This thread here suggest the idea when make all the parameter time invariant [http://stats.stackexchange.com/a/161917](http://stats.stackexchange.com/a/161917)
+## Tests
+I need to look into tests the effects are time-varying or not. One idea is to test entries in $\mat{Q}$. Though, this involves tests on the boundary of the parameter space. Another idea is to make an F-test. This thread here suggest the idea when make all the parameter time invariant [http://stats.stackexchange.com/a/161917](http://stats.stackexchange.com/a/161917)
 
 ## Other state equations
 We can replace the state equation with other models then a given order random walk. For example, we can replace it with a stationary process: 

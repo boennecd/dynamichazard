@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<!-- saved from url=(0086)http://rstudio-pubs-static.s3.amazonaws.com/5411_d0603a8032954b98ac187bc20ec644e6.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+<title>BIO 223 Applied Survival Analysis Chapter 7: Time-varying covariates</title>
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 12px;
+   margin: 8px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 { 
+   font-size:2.2em; 
+}
+
+h2 { 
+   font-size:1.8em; 
+}
+
+h3 { 
+   font-size:1.4em; 
+}
+
+h4 { 
+   font-size:1.0em; 
+}
+
+h5 { 
+   font-size:0.9em; 
+}
+
+h6 { 
+   font-size:0.8em; 
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre {	
+   margin-top: 0;
+   max-width: 95%;
+   border: 1px solid #ccc;
+   white-space: pre-wrap;
+}
+
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code.r, code.cpp {
+   background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * { 
+      background: transparent !important; 
+      color: black !important; 
+      filter:none !important; 
+      -ms-filter: none !important; 
+   }
+
+   body { 
+      font-size:12pt; 
+      max-width:100%; 
+   }
+       
+   a, a:visited { 
+      text-decoration: underline; 
+   }
+
+   hr { 
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote { 
+      padding-right: 1em; 
+      page-break-inside: avoid; 
+   }
+
+   tr, img { 
+      page-break-inside: avoid; 
+   }
+
+   img { 
+      max-width: 100% !important; 
+   }
+
+   @page :left { 
+      margin: 15mm 20mm 15mm 10mm; 
+   }
+     
+   @page :right { 
+      margin: 15mm 10mm 15mm 20mm; 
+   }
+
+   p, h2, h3 { 
+      orphans: 3; widows: 3; 
+   }
+
+   h2, h3 { 
+      page-break-after: avoid; 
+   }
+}
+
+</style>
+
+<!-- Styles for R syntax highlighter -->
+<style type="text/css">
+   pre .operator,
+   pre .paren {
+     color: rgb(104, 118, 135)
+   }
+
+   pre .literal {
+     color: rgb(88, 72, 246)
+   }
+
+   pre .number {
+     color: rgb(0, 0, 205);
+   }
+
+   pre .comment {
+     color: rgb(76, 136, 107);
+   }
+
+   pre .keyword {
+     color: rgb(0, 0, 255);
+   }
+
+   pre .identifier {
+     color: rgb(0, 0, 0);
+   }
+
+   pre .string {
+     color: rgb(3, 106, 7);
+   }
+</style>
+
+<!-- R syntax highlighter -->
+<script type="text/javascript">
+var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
+hljs.initHighlightingOnLoad();
+</script>
+
+
+
+
+</head>
+
+<body><div id="StayFocusd-infobar" style="display:none;">
+    <img src="chrome-extension://laankejkbhbdhmipfmgcngdelahlfoji/common/img/eye_19x19_red.png">
+    <span id="StayFocusd-infobar-msg"></span>
+    <span id="StayFocusd-infobar-links">
+        <a id="StayFocusd-infobar-never-show">hide forever</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+        <a id="StayFocusd-infobar-hide">hide once</a>
+    </span>
+</div>
+<h1>BIO 223 Applied Survival Analysis Chapter 7: Time-varying covariates</h1>
+
+<!--
+    ```
+-->
+
+<h2>References</h2>
+
+<ul>
+<li><p>Cox Proportional-Hazards Regression for Survival Data: <a href="http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf">http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf</a></p></li>
+<li><p>BIO 223 Applied Survival Analysis note chapter 7.</p></li>
+<li><p>Time-dependent covariates in the Cox proportional-hazards regression model.: <a href="http://www.ncbi.nlm.nih.gov/pubmed/10352854">http://www.ncbi.nlm.nih.gov/pubmed/10352854</a></p></li>
+</ul>
+
+<h2>Recidivism example: Create dataset</h2>
+
+<p>“The file Rossi.txt contains data from an experimental study of recidivism of 432 male prisoners, who were observed for a year after being released from prison (Rossi, Berk, and Lenihan, 1980).”</p>
+
+<p>Use of time-varying variables require a counting process (long format) dataset in R. Thus, wide-to-long transformation is done below.</p>
+
+<pre><code class="r"><span class="comment">## Load survival package</span>
+<span class="keyword">library</span><span class="paren">(</span><span class="identifier">survival</span><span class="paren">)</span>
+
+<span class="comment">## Load data from online</span>
+<span class="identifier">Rossi</span> <span class="operator">&lt;-</span> <span class="identifier">read.table</span><span class="paren">(</span><span class="identifier">file</span> <span class="operator">=</span> <span class="string">"http://cran.r-project.org/doc/contrib/Fox-Companion/Rossi.txt"</span>, <span class="identifier">header</span> <span class="operator">=</span> <span class="literal">TRUE</span><span class="paren">)</span>
+<span class="identifier">head</span><span class="paren">(</span><span class="identifier">Rossi</span><span class="paren">)</span>
+</code></pre>
+
+<pre><code>  week arrest fin age race wexp mar paro prio educ emp1 emp2 emp3 emp4 emp5 emp6 emp7 emp8 emp9 emp10 emp11 emp12
+1   20      1   0  27    1    0   0    1    3    3    0    0    0    0    0    0    0    0    0     0     0     0
+2   17      1   0  18    1    0   0    1    8    4    0    0    0    0    0    0    0    0    0     1     1     1
+3   25      1   0  19    0    1   0    1   13    3    0    0    0    0    0    0    0    0    0     0     0     0
+4   52      0   1  23    1    1   1    1    1    5    0    0    0    0    1    1    1    1    1     1     1     1
+5   52      0   0  19    0    1   0    1    3    3    0    0    0    0    0    0    0    0    0     1     1     1
+6   52      0   0  24    1    1   0    0    2    4    0    0    0    0    1    1    1    1    1     1     0     0
+  emp13 emp14 emp15 emp16 emp17 emp18 emp19 emp20 emp21 emp22 emp23 emp24 emp25 emp26 emp27 emp28 emp29 emp30 emp31
+1     0     0     0     0     0     0     0     0    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA
+2     1     1     0     0     0    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA
+3     0     0     0     0     1     0     0     0     0     0     0     0     0    NA    NA    NA    NA    NA    NA
+4     1     1     1     1     1     1     1     1     1     0     0     0     0     0     0     0     0     0     0
+5     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1
+6     0     0     0     0     0     0     0     0     0     0     1     1     1     1     1     1     1     0     0
+  emp32 emp33 emp34 emp35 emp36 emp37 emp38 emp39 emp40 emp41 emp42 emp43 emp44 emp45 emp46 emp47 emp48 emp49 emp50
+1    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA
+2    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA
+3    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA    NA
+4     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1     1
+5     1     1     1     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0
+6     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0     0
+  emp51 emp52
+1    NA    NA
+2    NA    NA
+3    NA    NA
+4     1     1
+5     0     0
+6     0     0
+</code></pre>
+
+<pre><code class="r">
+<span class="comment">## Change to long format</span>
+<span class="identifier">Rossi.long</span> <span class="operator">&lt;-</span> <span class="identifier">reshape</span><span class="paren">(</span><span class="identifier">data</span>      <span class="operator">=</span> <span class="identifier">Rossi</span>,
+                      <span class="identifier">varying</span>   <span class="operator">=</span> <span class="identifier">paste0</span><span class="paren">(</span><span class="string">"emp"</span>, <span class="number">1</span><span class="operator">:</span><span class="number">52</span><span class="paren">)</span>,
+                      <span class="identifier">v.names</span>   <span class="operator">=</span> <span class="string">"employed"</span>,
+                      <span class="identifier">timevar</span>   <span class="operator">=</span> <span class="string">"time"</span>,
+                      <span class="identifier">idvar</span>     <span class="operator">=</span> <span class="string">"id"</span>,
+                      <span class="identifier">direction</span> <span class="operator">=</span> <span class="string">"long"</span>,
+                      <span class="identifier">sep</span>       <span class="operator">=</span> <span class="string">""</span>
+                      <span class="paren">)</span>
+
+<span class="comment">## Sort by id and time</span>
+<span class="keyword">library</span><span class="paren">(</span><span class="identifier">doBy</span><span class="paren">)</span>
+<span class="identifier">Rossi.long</span> <span class="operator">&lt;-</span> <span class="identifier">orderBy</span><span class="paren">(</span> <span class="operator">~</span>  <span class="operator">+</span> <span class="identifier">id</span> <span class="operator">+</span> <span class="identifier">time</span>, <span class="identifier">data</span> <span class="operator">=</span> <span class="identifier">Rossi.long</span><span class="paren">)</span>
+
+<span class="comment">## Drop rows where emp is NA (time after event/censoring)</span>
+<span class="identifier">Rossi.long</span> <span class="operator">&lt;-</span> <span class="identifier">Rossi.long</span><span class="paren">[</span><span class="operator">!</span><span class="identifier">is.na</span><span class="paren">(</span><span class="identifier">Rossi.long</span><span class="operator">$</span><span class="identifier">emp</span><span class="paren">)</span>,<span class="paren">]</span>
+
+<span class="comment">## Load plyr package</span>
+<span class="keyword">library</span><span class="paren">(</span><span class="identifier">plyr</span><span class="paren">)</span>
+<span class="keyword">library</span><span class="paren">(</span><span class="identifier">doMC</span><span class="paren">)</span>           <span class="comment"># parallel backend to foreach/plyr</span>
+<span class="identifier">registerDoMC</span><span class="paren">(</span><span class="paren">)</span>          <span class="comment"># Turn on multicore processing</span>
+
+<span class="comment">## Create time variables and various forms of exposure variables</span>
+<span class="identifier">Rossi.long</span> <span class="operator">&lt;-</span> <span class="identifier">ddply</span><span class="paren">(</span><span class="identifier">.data</span> <span class="operator">=</span> <span class="identifier">Rossi.long</span>,
+                    <span class="identifier">.variables</span> <span class="operator">=</span> <span class="identifier">c</span><span class="paren">(</span><span class="string">"id"</span><span class="paren">)</span>,                
+                    <span class="identifier">.drop</span> <span class="operator">=</span> <span class="literal">TRUE</span>, <span class="identifier">.parallel</span> <span class="operator">=</span> <span class="literal">TRUE</span>,
+                    <span class="identifier">.fun</span> <span class="operator">=</span> <span class="keyword">function</span><span class="paren">(</span><span class="identifier">DF</span><span class="paren">)</span> <span class="paren">{</span>
+
+                        <span class="comment">## Start time is the start of each interval</span>
+                        <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">start</span> <span class="operator">&lt;-</span> <span class="identifier">c</span><span class="paren">(</span><span class="number">0</span>, <span class="identifier">head</span><span class="paren">(</span><span class="identifier">DF</span><span class="operator">$</span><span class="identifier">time</span>, <span class="operator">-</span><span class="number">1</span><span class="paren">)</span><span class="paren">)</span>
+
+                        <span class="comment">## Stop time is the end of each interval</span>
+                        <span class="identifier">DF</span><span class="operator">$</span><span class="keyword">stop</span> <span class="operator">&lt;-</span> <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">time</span>
+
+                        <span class="comment">## Event indicator for each interval</span>
+                        <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">event</span> <span class="operator">&lt;-</span> <span class="number">0</span>
+                        <span class="comment">## Use arrest value for the last interval</span>
+                        <span class="identifier">DF</span><span class="paren">[</span><span class="identifier">nrow</span><span class="paren">(</span><span class="identifier">DF</span><span class="paren">)</span>,<span class="string">"event"</span><span class="paren">]</span> <span class="operator">&lt;-</span> <span class="identifier">DF</span><span class="paren">[</span><span class="identifier">nrow</span><span class="paren">(</span><span class="identifier">DF</span><span class="paren">)</span>,<span class="string">"arrest"</span><span class="paren">]</span>
+
+                        <span class="comment">## Initial employment status</span>
+                        <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed.initial</span> <span class="operator">&lt;-</span> <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed</span><span class="paren">[</span><span class="number">1</span><span class="paren">]</span>
+
+                        <span class="comment">## Lagged employment status (employment status from last interval matters)</span>
+                        <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed.lag1</span> <span class="operator">&lt;-</span> <span class="identifier">c</span><span class="paren">(</span><span class="identifier">rep</span><span class="paren">(</span><span class="literal">NA</span>, <span class="number">1</span><span class="paren">)</span>, <span class="identifier">head</span><span class="paren">(</span><span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed</span>, <span class="operator">-</span><span class="number">1</span><span class="paren">)</span><span class="paren">)</span>
+
+                        <span class="comment">## Cumulative number of weeks in employment</span>
+                        <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed.cumsum</span> <span class="operator">&lt;-</span> <span class="identifier">cumsum</span><span class="paren">(</span><span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed</span><span class="paren">)</span>
+
+                        <span class="comment">## Ever employed status</span>
+                        <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed.ever</span> <span class="operator">&lt;-</span> <span class="identifier">as.numeric</span><span class="paren">(</span><span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed.cumsum</span> <span class="operator">&gt;</span> <span class="number">0</span><span class="paren">)</span>
+
+                        <span class="comment">## % of time in employment</span>
+                        <span class="identifier">DF</span><span class="operator">$</span><span class="identifier">employed.percent</span> <span class="operator">&lt;-</span> <span class="identifier">with</span><span class="paren">(</span><span class="identifier">DF</span>, <span class="identifier">employed.cumsum</span> <span class="operator">/</span> <span class="keyword">stop</span><span class="paren">)</span><span class="operator">*</span><span class="number">100</span>
+
+                        <span class="comment">## Return DF</span>
+                        <span class="identifier">DF</span>
+                    <span class="paren">}</span><span class="paren">)</span>
+</code></pre>
+
+<h2>Functional forms of exposure</h2>
+
+<pre><code class="r"><span class="comment">## Data for subject 2</span>
+<span class="identifier">Rossi.long</span><span class="paren">[</span><span class="identifier">Rossi.long</span><span class="operator">$</span><span class="identifier">id</span> <span class="operator">==</span> <span class="number">2</span>, <span class="identifier">c</span><span class="paren">(</span><span class="string">"id"</span>,<span class="string">"start"</span>,<span class="string">"stop"</span>,<span class="string">"event"</span>,<span class="string">"employed"</span>,<span class="string">"employed.initial"</span>,<span class="string">"employed.lag1"</span>,<span class="string">"employed.ever"</span>,<span class="string">"employed.cumsum"</span>,<span class="string">"employed.percent"</span><span class="paren">)</span><span class="paren">]</span>
+</code></pre>
+
+<pre><code>   id start stop event employed employed.initial employed.lag1 employed.ever employed.cumsum employed.percent
+21  2     0    1     0        0                0            NA             0               0             0.00
+22  2     1    2     0        0                0             0             0               0             0.00
+23  2     2    3     0        0                0             0             0               0             0.00
+24  2     3    4     0        0                0             0             0               0             0.00
+25  2     4    5     0        0                0             0             0               0             0.00
+26  2     5    6     0        0                0             0             0               0             0.00
+27  2     6    7     0        0                0             0             0               0             0.00
+28  2     7    8     0        0                0             0             0               0             0.00
+29  2     8    9     0        0                0             0             0               0             0.00
+30  2     9   10     0        1                0             0             1               1            10.00
+31  2    10   11     0        1                0             1             1               2            18.18
+32  2    11   12     0        1                0             1             1               3            25.00
+33  2    12   13     0        1                0             1             1               4            30.77
+34  2    13   14     0        1                0             1             1               5            35.71
+35  2    14   15     0        0                0             1             1               5            33.33
+36  2    15   16     0        0                0             0             1               5            31.25
+37  2    16   17     1        0                0             0             1               5            29.41
+</code></pre>
+
+<p>The employment status variable has to be modeled in the “right” functional form to make correct inference about the exposure-outcome relationship. There are many different ways to model the exposure, and choosing the “right” functional form requires scientific understanding of the exposure-outcome relationship, not just statistics.</p>
+
+<p>Here we created the current employment status (employed), the initial employment status (employed.initial), the past-week employment status (employed.lag1), ever-employed status (employed.ever), cumulative sum of weeks in employment (employed.cumsum), and % of time after release spent in employment (employed.percent).</p>
+
+<p>Use cluster(id) to indicate the rows with the same id are from the same individual, thus, clustered. This will give the robust SE. However, the same analysis in SAS appear to return the SE with using robust estimator by default.</p>
+
+<h2>Using initial employment status (time-invariant)</h2>
+
+<p>Employment during the first week is associated with a HR for arrest of 0.7396 (non-significant). This is an equivalent of intention-to-treat (ITT) analysis.</p>
+
+<pre><code class="r"><span class="identifier">res.with.employed.initial</span> <span class="operator">&lt;-</span>
+    <span class="identifier">coxph</span><span class="paren">(</span><span class="identifier">formula</span> <span class="operator">=</span> <span class="identifier">Surv</span><span class="paren">(</span><span class="identifier">start</span>, <span class="keyword">stop</span>, <span class="identifier">event</span><span class="paren">)</span> <span class="operator">~</span> <span class="identifier">fin</span> <span class="operator">+</span> <span class="identifier">age</span> <span class="operator">+</span> <span class="identifier">race</span> <span class="operator">+</span> <span class="identifier">wexp</span> <span class="operator">+</span> <span class="identifier">mar</span> <span class="operator">+</span> <span class="identifier">paro</span> <span class="operator">+</span> <span class="identifier">prio</span> <span class="operator">+</span> <span class="identifier">employed.initial</span> <span class="operator">+</span> <span class="identifier">cluster</span><span class="paren">(</span><span class="identifier">id</span><span class="paren">)</span>,
+         <span class="identifier">data</span>    <span class="operator">=</span> <span class="identifier">Rossi.long</span>,
+         <span class="identifier">ties</span>    <span class="operator">=</span> <span class="identifier">c</span><span class="paren">(</span><span class="string">"efron"</span>,<span class="string">"breslow"</span>,<span class="string">"exact"</span><span class="paren">)</span><span class="paren">[</span><span class="number">1</span><span class="paren">]</span><span class="paren">)</span>
+<span class="identifier">summary</span><span class="paren">(</span><span class="identifier">res.with.employed.initial</span><span class="paren">)</span>
+</code></pre>
+
+<pre><code>Call:
+coxph(formula = Surv(start, stop, event) ~ fin + age + race + 
+    wexp + mar + paro + prio + employed.initial + cluster(id), 
+    data = Rossi.long, ties = c("efron", "breslow", "exact")[1])
+
+  n= 19809, number of events= 114 
+
+                    coef exp(coef) se(coef) robust se     z Pr(&gt;|z|)   
+fin              -0.3801    0.6838   0.1913    0.1955 -1.94   0.0519 . 
+age              -0.0568    0.9448   0.0220    0.0254 -2.23   0.0257 * 
+race              0.2849    1.3296   0.3095    0.2949  0.97   0.3341   
+wexp             -0.1371    0.8719   0.2125    0.2188 -0.63   0.5308   
+mar              -0.4161    0.6596   0.3815    0.3785 -1.10   0.2717   
+paro             -0.0766    0.9263   0.1957    0.1994 -0.38   0.7009   
+prio              0.0905    1.0947   0.0286    0.0290  3.12   0.0018 **
+employed.initial -0.3017    0.7396   0.3211    0.3131 -0.96   0.3352   
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+                 exp(coef) exp(-coef) lower .95 upper .95
+fin                  0.684      1.462     0.466     1.003
+age                  0.945      1.058     0.899     0.993
+race                 1.330      0.752     0.746     2.370
+wexp                 0.872      1.147     0.568     1.339
+mar                  0.660      1.516     0.314     1.385
+paro                 0.926      1.080     0.627     1.369
+prio                 1.095      0.913     1.034     1.159
+employed.initial     0.740      1.352     0.400     1.366
+
+Concordance= 0.643  (se = 0.027 )
+Rsquare= 0.002   (max possible= 0.066 )
+Likelihood ratio test= 34.2  on 8 df,   p=0.0000371
+Wald test            = 31.6  on 8 df,   p=0.000109
+Score (logrank) test = 34.3  on 8 df,   p=0.0000359,   Robust = 27.9  p=0.000488
+
+  (Note: the likelihood ratio and score tests assume independence of
+     observations within a cluster, the Wald and robust score tests do not).
+</code></pre>
+
+<h2>Using time-dependent current employment status</h2>
+
+<p>Employment during a week is associated with a HR for arrest of 0.2649 during that week. The assumption is that only the current employment status matters, not past history of employment.</p>
+
+<pre><code class="r"><span class="identifier">res.with.employed</span> <span class="operator">&lt;-</span>
+    <span class="identifier">coxph</span><span class="paren">(</span><span class="identifier">formula</span> <span class="operator">=</span> <span class="identifier">Surv</span><span class="paren">(</span><span class="identifier">start</span>, <span class="keyword">stop</span>, <span class="identifier">event</span><span class="paren">)</span> <span class="operator">~</span> <span class="identifier">fin</span> <span class="operator">+</span> <span class="identifier">age</span> <span class="operator">+</span> <span class="identifier">race</span> <span class="operator">+</span> <span class="identifier">wexp</span> <span class="operator">+</span> <span class="identifier">mar</span> <span class="operator">+</span> <span class="identifier">paro</span> <span class="operator">+</span> <span class="identifier">prio</span> <span class="operator">+</span> <span class="identifier">employed</span> <span class="operator">+</span> <span class="identifier">cluster</span><span class="paren">(</span><span class="identifier">id</span><span class="paren">)</span>,
+         <span class="identifier">data</span>    <span class="operator">=</span> <span class="identifier">Rossi.long</span>,
+         <span class="identifier">ties</span>    <span class="operator">=</span> <span class="identifier">c</span><span class="paren">(</span><span class="string">"efron"</span>,<span class="string">"breslow"</span>,<span class="string">"exact"</span><span class="paren">)</span><span class="paren">[</span><span class="number">1</span><span class="paren">]</span><span class="paren">)</span>
+<span class="identifier">summary</span><span class="paren">(</span><span class="identifier">res.with.employed</span><span class="paren">)</span>
+</code></pre>
+
+<pre><code>Call:
+coxph(formula = Surv(start, stop, event) ~ fin + age + race + 
+    wexp + mar + paro + prio + employed + cluster(id), data = Rossi.long, 
+    ties = c("efron", "breslow", "exact")[1])
+
+  n= 19809, number of events= 114 
+
+            coef exp(coef) se(coef) robust se     z   Pr(&gt;|z|)    
+fin      -0.3567    0.7000   0.1911    0.1961 -1.82     0.0689 .  
+age      -0.0463    0.9547   0.0217    0.0251 -1.84     0.0653 .  
+race      0.3387    1.4031   0.3096    0.2978  1.14     0.2554    
+wexp     -0.0256    0.9748   0.2114    0.2194 -0.12     0.9073    
+mar      -0.2937    0.7455   0.3830    0.3975 -0.74     0.4599    
+paro     -0.0642    0.9378   0.1947    0.1992 -0.32     0.7472    
+prio      0.0851    1.0889   0.0290    0.0293  2.91     0.0036 ** 
+employed -1.3283    0.2649   0.2507    0.2515 -5.28 0.00000013 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+         exp(coef) exp(-coef) lower .95 upper .95
+fin          0.700      1.429     0.477     1.028
+age          0.955      1.047     0.909     1.003
+race         1.403      0.713     0.783     2.515
+wexp         0.975      1.026     0.634     1.498
+mar          0.745      1.341     0.342     1.625
+paro         0.938      1.066     0.635     1.386
+prio         1.089      0.918     1.028     1.153
+employed     0.265      3.775     0.162     0.434
+
+Concordance= 0.708  (se = 0.027 )
+Rsquare= 0.003   (max possible= 0.066 )
+Likelihood ratio test= 68.7  on 8 df,   p=9.11e-12
+Wald test            = 57.3  on 8 df,   p=0.00000000159
+Score (logrank) test = 64.5  on 8 df,   p=6.1e-11,   Robust = 54.1  p=0.00000000647
+
+  (Note: the likelihood ratio and score tests assume independence of
+     observations within a cluster, the Wald and robust score tests do not).
+</code></pre>
+
+<h2>Using time-dependent past-week employment status (employment status of the previous interval is used)</h2>
+
+<p>Employment during a week is associated with a HR for arrest of 0.4553 during the next week. The assumption is that only the past-week employment status matters, not the current employment status or that of two or more weeks before.</p>
+
+<pre><code class="r"><span class="identifier">res.with.employed.lag1</span> <span class="operator">&lt;-</span>
+    <span class="identifier">coxph</span><span class="paren">(</span><span class="identifier">formula</span> <span class="operator">=</span> <span class="identifier">Surv</span><span class="paren">(</span><span class="identifier">start</span>, <span class="keyword">stop</span>, <span class="identifier">event</span><span class="paren">)</span> <span class="operator">~</span> <span class="identifier">fin</span> <span class="operator">+</span> <span class="identifier">age</span> <span class="operator">+</span> <span class="identifier">race</span> <span class="operator">+</span> <span class="identifier">wexp</span> <span class="operator">+</span> <span class="identifier">mar</span> <span class="operator">+</span> <span class="identifier">paro</span> <span class="operator">+</span> <span class="identifier">prio</span> <span class="operator">+</span> <span class="identifier">employed.lag1</span> <span class="operator">+</span> <span class="identifier">cluster</span><span class="paren">(</span><span class="identifier">id</span><span class="paren">)</span>,
+         <span class="identifier">data</span>    <span class="operator">=</span> <span class="identifier">Rossi.long</span>,
+         <span class="identifier">ties</span>    <span class="operator">=</span> <span class="identifier">c</span><span class="paren">(</span><span class="string">"efron"</span>,<span class="string">"breslow"</span>,<span class="string">"exact"</span><span class="paren">)</span><span class="paren">[</span><span class="number">1</span><span class="paren">]</span><span class="paren">)</span>
+<span class="identifier">summary</span><span class="paren">(</span><span class="identifier">res.with.employed.lag1</span><span class="paren">)</span>
+</code></pre>
+
+<pre><code>Call:
+coxph(formula = Surv(start, stop, event) ~ fin + age + race + 
+    wexp + mar + paro + prio + employed.lag1 + cluster(id), data = Rossi.long, 
+    ties = c("efron", "breslow", "exact")[1])
+
+  n= 19377, number of events= 113 
+   (432 observations deleted due to missingness)
+
+                 coef exp(coef) se(coef) robust se     z Pr(&gt;|z|)    
+fin           -0.3513    0.7038   0.1918    0.1957 -1.80  0.07259 .  
+age           -0.0498    0.9514   0.0219    0.0252 -1.98  0.04802 *  
+race           0.3215    1.3792   0.3091    0.2946  1.09  0.27521    
+wexp          -0.0476    0.9535   0.2132    0.2185 -0.22  0.82741    
+mar           -0.3448    0.7084   0.3832    0.3922 -0.88  0.37941    
+paro          -0.0471    0.9540   0.1963    0.1987 -0.24  0.81260    
+prio           0.0920    1.0964   0.0288    0.0286  3.22  0.00128 ** 
+employed.lag1 -0.7869    0.4553   0.2181    0.2173 -3.62  0.00029 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+              exp(coef) exp(-coef) lower .95 upper .95
+fin               0.704      1.421     0.480     1.033
+age               0.951      1.051     0.906     1.000
+race              1.379      0.725     0.774     2.457
+wexp              0.953      1.049     0.621     1.463
+mar               0.708      1.412     0.328     1.528
+paro              0.954      1.048     0.646     1.408
+prio              1.096      0.912     1.037     1.159
+employed.lag1     0.455      2.197     0.297     0.697
+
+Concordance= 0.67  (se = 0.027 )
+Rsquare= 0.002   (max possible= 0.067 )
+Likelihood ratio test= 47.2  on 8 df,   p=0.000000143
+Wald test            = 41.6  on 8 df,   p=0.00000158
+Score (logrank) test = 46.4  on 8 df,   p=0.000000199,   Robust = 36.8  p=0.0000125
+
+  (Note: the likelihood ratio and score tests assume independence of
+     observations within a cluster, the Wald and robust score tests do not).
+</code></pre>
+
+<h2>Using time-dependent ever-employed status</h2>
+
+<p>Having experienced any duration of employment after release is associated with a HR for arrest of 0.6464. The assumption is that having experienced employment is equal regardless of duration or continuity.</p>
+
+<pre><code class="r"><span class="identifier">res.with.employed.ever</span> <span class="operator">&lt;-</span>
+    <span class="identifier">coxph</span><span class="paren">(</span><span class="identifier">formula</span> <span class="operator">=</span> <span class="identifier">Surv</span><span class="paren">(</span><span class="identifier">start</span>, <span class="keyword">stop</span>, <span class="identifier">event</span><span class="paren">)</span> <span class="operator">~</span> <span class="identifier">fin</span> <span class="operator">+</span> <span class="identifier">age</span> <span class="operator">+</span> <span class="identifier">race</span> <span class="operator">+</span> <span class="identifier">wexp</span> <span class="operator">+</span> <span class="identifier">mar</span> <span class="operator">+</span> <span class="identifier">paro</span> <span class="operator">+</span> <span class="identifier">prio</span> <span class="operator">+</span> <span class="identifier">employed.ever</span> <span class="operator">+</span> <span class="identifier">cluster</span><span class="paren">(</span><span class="identifier">id</span><span class="paren">)</span>,
+         <span class="identifier">data</span>    <span class="operator">=</span> <span class="identifier">Rossi.long</span>,
+         <span class="identifier">ties</span>    <span class="operator">=</span> <span class="identifier">c</span><span class="paren">(</span><span class="string">"efron"</span>,<span class="string">"breslow"</span>,<span class="string">"exact"</span><span class="paren">)</span><span class="paren">[</span><span class="number">1</span><span class="paren">]</span><span class="paren">)</span>
+<span class="identifier">summary</span><span class="paren">(</span><span class="identifier">res.with.employed.ever</span><span class="paren">)</span>
+</code></pre>
+
+<pre><code>Call:
+coxph(formula = Surv(start, stop, event) ~ fin + age + race + 
+    wexp + mar + paro + prio + employed.ever + cluster(id), data = Rossi.long, 
+    ties = c("efron", "breslow", "exact")[1])
+
+  n= 19809, number of events= 114 
+
+                 coef exp(coef) se(coef) robust se     z Pr(&gt;|z|)   
+fin           -0.3773    0.6857   0.1913    0.1950 -1.93   0.0531 . 
+age           -0.0583    0.9434   0.0220    0.0254 -2.30   0.0217 * 
+race           0.3192    1.3761   0.3078    0.2890  1.10   0.2693   
+wexp          -0.0929    0.9113   0.2143    0.2164 -0.43   0.6678   
+mar           -0.3825    0.6821   0.3819    0.3807 -1.00   0.3149   
+paro          -0.0767    0.9261   0.1958    0.1990 -0.39   0.6997   
+prio           0.0878    1.0917   0.0288    0.0287  3.06   0.0022 **
+employed.ever -0.4364    0.6464   0.2168    0.2129 -2.05   0.0404 * 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+              exp(coef) exp(-coef) lower .95 upper .95
+fin               0.686      1.458     0.468     1.005
+age               0.943      1.060     0.898     0.991
+race              1.376      0.727     0.781     2.425
+wexp              0.911      1.097     0.596     1.393
+mar               0.682      1.466     0.323     1.438
+paro              0.926      1.080     0.627     1.368
+prio              1.092      0.916     1.032     1.155
+employed.ever     0.646      1.547     0.426     0.981
+
+Concordance= 0.652  (se = 0.027 )
+Rsquare= 0.002   (max possible= 0.066 )
+Likelihood ratio test= 37.1  on 8 df,   p=0.0000108
+Wald test            = 37.7  on 8 df,   p=0.00000862
+Score (logrank) test = 37.5  on 8 df,   p=0.00000926,   Robust = 31.2  p=0.000127
+
+  (Note: the likelihood ratio and score tests assume independence of
+     observations within a cluster, the Wald and robust score tests do not).
+</code></pre>
+
+<h2>Using cumulative time in employment (total weeks of employment)</h2>
+
+<p>One additional week of employment is associated with a HR for arrest of 0.9825 regardless of when it is from (non-significant). The effect of the cumulative exposure for a given individual can increase (during additional exposure) or stay the same (while unexposed). The assumption is that each additional week of employment is equivalent no matter when it was obtained and that once obtained the benefit of employment will not degrade even if the subject becomes unemployed. </p>
+
+<pre><code class="r"><span class="identifier">res.with.employed.cumsum</span> <span class="operator">&lt;-</span>
+    <span class="identifier">coxph</span><span class="paren">(</span><span class="identifier">formula</span> <span class="operator">=</span> <span class="identifier">Surv</span><span class="paren">(</span><span class="identifier">start</span>, <span class="keyword">stop</span>, <span class="identifier">event</span><span class="paren">)</span> <span class="operator">~</span> <span class="identifier">fin</span> <span class="operator">+</span> <span class="identifier">age</span> <span class="operator">+</span> <span class="identifier">race</span> <span class="operator">+</span> <span class="identifier">wexp</span> <span class="operator">+</span> <span class="identifier">mar</span> <span class="operator">+</span> <span class="identifier">paro</span> <span class="operator">+</span> <span class="identifier">prio</span> <span class="operator">+</span> <span class="identifier">employed.cumsum</span> <span class="operator">+</span> <span class="identifier">cluster</span><span class="paren">(</span><span class="identifier">id</span><span class="paren">)</span>,
+         <span class="identifier">data</span>    <span class="operator">=</span> <span class="identifier">Rossi.long</span>,
+         <span class="identifier">ties</span>    <span class="operator">=</span> <span class="identifier">c</span><span class="paren">(</span><span class="string">"efron"</span>,<span class="string">"breslow"</span>,<span class="string">"exact"</span><span class="paren">)</span><span class="paren">[</span><span class="number">1</span><span class="paren">]</span><span class="paren">)</span>
+<span class="identifier">summary</span><span class="paren">(</span><span class="identifier">res.with.employed.cumsum</span><span class="paren">)</span>
+</code></pre>
+
+<pre><code>Call:
+coxph(formula = Surv(start, stop, event) ~ fin + age + race + 
+    wexp + mar + paro + prio + employed.cumsum + cluster(id), 
+    data = Rossi.long, ties = c("efron", "breslow", "exact")[1])
+
+  n= 19809, number of events= 114 
+
+                    coef exp(coef) se(coef) robust se     z Pr(&gt;|z|)   
+fin             -0.37962   0.68412  0.19121   0.19562 -1.94   0.0523 . 
+age             -0.05294   0.94844  0.02212   0.02565 -2.06   0.0390 * 
+race             0.31168   1.36572  0.30848   0.29445  1.06   0.2898   
+wexp            -0.08529   0.91825  0.21445   0.22215 -0.38   0.7010   
+mar             -0.37944   0.68425  0.38307   0.38253 -0.99   0.3212   
+paro            -0.06339   0.93858  0.19571   0.19997 -0.32   0.7512   
+prio             0.08907   1.09315  0.02887   0.02920  3.05   0.0023 **
+employed.cumsum -0.01766   0.98250  0.00947   0.00964 -1.83   0.0671 . 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+                exp(coef) exp(-coef) lower .95 upper .95
+fin                 0.684      1.462     0.466     1.004
+age                 0.948      1.054     0.902     0.997
+race                1.366      0.732     0.767     2.432
+wexp                0.918      1.089     0.594     1.419
+mar                 0.684      1.461     0.323     1.448
+paro                0.939      1.065     0.634     1.389
+prio                1.093      0.915     1.032     1.158
+employed.cumsum     0.982      1.018     0.964     1.001
+
+Concordance= 0.649  (se = 0.027 )
+Rsquare= 0.002   (max possible= 0.066 )
+Likelihood ratio test= 36.9  on 8 df,   p=0.0000121
+Wald test            = 34  on 8 df,   p=0.0000414
+Score (logrank) test = 36.5  on 8 df,   p=0.000014,   Robust = 30.2  p=0.000195
+
+  (Note: the likelihood ratio and score tests assume independence of
+     observations within a cluster, the Wald and robust score tests do not).
+</code></pre>
+
+<h2>Using cumulative time in employment as percentage of time after release</h2>
+
+<p>One additional percent of time after release in employment is associated with a HR for arrest of 0.9923. The effect of the cumulative exposure for a given individual can increase (during additional exposure) or decrease (while unexposed). The assumption is that more time spent in employment is beneficial, but the benefit will degrade if the subject becomes unemployed.</p>
+
+<pre><code class="r"><span class="identifier">res.with.employed.percent</span> <span class="operator">&lt;-</span>
+    <span class="identifier">coxph</span><span class="paren">(</span><span class="identifier">formula</span> <span class="operator">=</span> <span class="identifier">Surv</span><span class="paren">(</span><span class="identifier">start</span>, <span class="keyword">stop</span>, <span class="identifier">event</span><span class="paren">)</span> <span class="operator">~</span> <span class="identifier">fin</span> <span class="operator">+</span> <span class="identifier">age</span> <span class="operator">+</span> <span class="identifier">race</span> <span class="operator">+</span> <span class="identifier">wexp</span> <span class="operator">+</span> <span class="identifier">mar</span> <span class="operator">+</span> <span class="identifier">paro</span> <span class="operator">+</span> <span class="identifier">prio</span> <span class="operator">+</span> <span class="identifier">employed.percent</span> <span class="operator">+</span> <span class="identifier">cluster</span><span class="paren">(</span><span class="identifier">id</span><span class="paren">)</span>,
+         <span class="identifier">data</span>    <span class="operator">=</span> <span class="identifier">Rossi.long</span>,
+         <span class="identifier">ties</span>    <span class="operator">=</span> <span class="identifier">c</span><span class="paren">(</span><span class="string">"efron"</span>,<span class="string">"breslow"</span>,<span class="string">"exact"</span><span class="paren">)</span><span class="paren">[</span><span class="number">1</span><span class="paren">]</span><span class="paren">)</span>
+<span class="identifier">summary</span><span class="paren">(</span><span class="identifier">res.with.employed.percent</span><span class="paren">)</span>
+</code></pre>
+
+<pre><code>Call:
+coxph(formula = Surv(start, stop, event) ~ fin + age + race + 
+    wexp + mar + paro + prio + employed.percent + cluster(id), 
+    data = Rossi.long, ties = c("efron", "breslow", "exact")[1])
+
+  n= 19809, number of events= 114 
+
+                     coef exp(coef) se(coef) robust se     z Pr(&gt;|z|)   
+fin              -0.38011   0.68379  0.19116   0.19575 -1.94    0.052 . 
+age              -0.05121   0.95008  0.02216   0.02591 -1.98    0.048 * 
+race              0.30876   1.36174  0.30867   0.29419  1.05    0.294   
+wexp             -0.06226   0.93964  0.21415   0.22093 -0.28    0.778   
+mar              -0.34864   0.70565  0.38341   0.38707 -0.90    0.368   
+paro             -0.05265   0.94872  0.19576   0.20052 -0.26    0.793   
+prio              0.08620   1.09002  0.02887   0.02907  2.97    0.003 **
+employed.percent -0.00770   0.99233  0.00311   0.00305 -2.52    0.012 * 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+                 exp(coef) exp(-coef) lower .95 upper .95
+fin                  0.684      1.462     0.466     1.004
+age                  0.950      1.053     0.903     1.000
+race                 1.362      0.734     0.765     2.424
+wexp                 0.940      1.064     0.609     1.449
+mar                  0.706      1.417     0.330     1.507
+paro                 0.949      1.054     0.640     1.405
+prio                 1.090      0.917     1.030     1.154
+employed.percent     0.992      1.008     0.986     0.998
+
+Concordance= 0.658  (se = 0.027 )
+Rsquare= 0.002   (max possible= 0.066 )
+Likelihood ratio test= 39.7  on 8 df,   p=0.0000036
+Wald test            = 38.6  on 8 df,   p=0.00000583
+Score (logrank) test = 38.9  on 8 df,   p=0.00000523,   Robust = 33.7  p=0.0000458
+
+  (Note: the likelihood ratio and score tests assume independence of
+     observations within a cluster, the Wald and robust score tests do not).
+</code></pre>
+
+<h2>Professor Fox’s fold function</h2>
+
+<ul>
+<li><a href="http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf">http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf</a></li>
+</ul>
+
+<p>Professor Fox’s fold function explained in the PDF above is handy in creating the dataset.</p>
+
+<pre><code class="r"><span class="identifier">fold</span> <span class="operator">&lt;-</span> <span class="keyword">function</span><span class="paren">(</span><span class="identifier">data</span>, <span class="identifier">time</span>, <span class="identifier">event</span>, <span class="identifier">cov</span>,
+    <span class="identifier">cov.names</span><span class="operator">=</span><span class="identifier">paste</span><span class="paren">(</span><span class="string">'covariate'</span>, <span class="string">'.'</span>, <span class="number">1</span><span class="operator">:</span><span class="identifier">ncovs</span>, <span class="identifier">sep</span><span class="operator">=</span><span class="string">""</span><span class="paren">)</span>,
+    <span class="identifier">suffix</span><span class="operator">=</span><span class="string">'.time'</span>, <span class="identifier">cov.times</span><span class="operator">=</span><span class="number">0</span><span class="operator">:</span><span class="identifier">ncov</span>, <span class="identifier">common.times</span><span class="operator">=</span><span class="literal">TRUE</span>, <span class="identifier">lag</span><span class="operator">=</span><span class="number">0</span><span class="paren">)</span><span class="paren">{</span>
+<span class="comment">##  Arguments:</span>
+<span class="comment">##  data: A data frame or numeric matrix (with column names) to be `unfolded.'</span>
+<span class="comment">##      For reasons of efficiency, if there are factors in data these will be</span>
+<span class="comment">##      converted to numeric variables in the output data frame.</span>
+<span class="comment">##  time: The quoted name of the event/censoring-time variable in data.</span>
+<span class="comment">##  event: The quoted name of the event/censoring-indicator variable in data.</span>
+<span class="comment">##  cov: A vector giving the column numbers of the time-dependent covariate</span>
+<span class="comment">##      in data, or a list of vectors if there is more than one time-varying</span>
+<span class="comment">##      covariate.</span>
+<span class="comment">##  cov.names: A character string or character vector giving the name or names</span>
+<span class="comment">##      to be assigned to the time-dependent covariate(s) in the output data set.</span>
+<span class="comment">##  suffix: The suffix to be attached to the name of the time-to-event variable</span>
+<span class="comment">##      in the output data setl defaults to '.time'.</span>
+<span class="comment">##  cov.times: The observation times for the covariate values, including the start</span>
+<span class="comment">##      time. This argument can take several forms:</span>
+<span class="comment">##      *   The default is integers from 0 to the number of covariate values (i.e.,</span>
+<span class="comment">##              one more than the length of each vector in cov).</span>
+<span class="comment">##      *   An arbitrary numerical vector with one more entry than the length of each</span>
+<span class="comment">##      *       vector in cov.</span>
+<span class="comment">##      *   The columns in the input data set that give the observations times for each</span>
+<span class="comment">##              individual. There should be one more column than the length of each</span>
+<span class="comment">##              vector in cov.</span>
+<span class="comment">##      *   common.times: A logical value indicating whether the times of observation</span>
+<span class="comment">##              are the same for all individuals; defaults to TRUE.</span>
+<span class="comment">##  lag: Number of observation periods to lag each value of the time-varying</span>
+<span class="comment">##              covariate(s); defaults to 0.</span>
+    <span class="identifier">vlag</span> <span class="operator">&lt;-</span> <span class="keyword">function</span><span class="paren">(</span><span class="identifier">x</span>, <span class="identifier">lag</span><span class="paren">)</span> <span class="identifier">c</span><span class="paren">(</span><span class="identifier">rep</span><span class="paren">(</span><span class="literal">NA</span>, <span class="identifier">lag</span><span class="paren">)</span>, <span class="identifier">x</span><span class="paren">[</span><span class="number">1</span><span class="operator">:</span><span class="paren">(</span><span class="identifier">length</span><span class="paren">(</span><span class="identifier">x</span><span class="paren">)</span><span class="operator">-</span><span class="identifier">lag</span><span class="paren">)</span><span class="paren">]</span><span class="paren">)</span>
+    <span class="identifier">xlag</span> <span class="operator">&lt;-</span> <span class="keyword">function</span><span class="paren">(</span><span class="identifier">x</span>, <span class="identifier">lag</span><span class="paren">)</span> <span class="identifier">apply</span><span class="paren">(</span><span class="identifier">as.matrix</span><span class="paren">(</span><span class="identifier">x</span><span class="paren">)</span>, <span class="number">2</span>, <span class="identifier">vlag</span>, <span class="identifier">lag</span><span class="operator">=</span><span class="identifier">lag</span><span class="paren">)</span>
+    <span class="identifier">all.cov</span> <span class="operator">&lt;-</span> <span class="identifier">unlist</span><span class="paren">(</span><span class="identifier">cov</span><span class="paren">)</span>
+    <span class="keyword">if</span> <span class="paren">(</span><span class="operator">!</span><span class="identifier">is.list</span><span class="paren">(</span><span class="identifier">cov</span><span class="paren">)</span><span class="paren">)</span> <span class="identifier">cov</span> <span class="operator">&lt;-</span> <span class="identifier">list</span><span class="paren">(</span><span class="identifier">cov</span><span class="paren">)</span>
+    <span class="identifier">ncovs</span> <span class="operator">&lt;-</span> <span class="identifier">length</span><span class="paren">(</span><span class="identifier">cov</span><span class="paren">)</span>
+    <span class="identifier">nrow</span> <span class="operator">&lt;-</span> <span class="identifier">nrow</span><span class="paren">(</span><span class="identifier">data</span><span class="paren">)</span>
+    <span class="identifier">ncol</span> <span class="operator">&lt;-</span> <span class="identifier">ncol</span><span class="paren">(</span><span class="identifier">data</span><span class="paren">)</span>
+    <span class="identifier">ncov</span> <span class="operator">&lt;-</span> <span class="identifier">length</span><span class="paren">(</span><span class="identifier">cov</span><span class="paren">[</span><span class="paren">[</span><span class="number">1</span><span class="paren">]</span><span class="paren">]</span><span class="paren">)</span>
+    <span class="identifier">nobs</span> <span class="operator">&lt;-</span> <span class="identifier">nrow</span><span class="operator">*</span><span class="identifier">ncov</span>
+    <span class="keyword">if</span> <span class="paren">(</span><span class="identifier">length</span><span class="paren">(</span><span class="identifier">unique</span><span class="paren">(</span><span class="identifier">c</span><span class="paren">(</span><span class="identifier">sapply</span><span class="paren">(</span><span class="identifier">cov</span>, <span class="identifier">length</span><span class="paren">)</span>, <span class="identifier">length</span><span class="paren">(</span><span class="identifier">cov.times</span><span class="paren">)</span><span class="operator">-</span><span class="number">1</span><span class="paren">)</span><span class="paren">)</span><span class="paren">)</span> <span class="operator">&gt;</span> <span class="number">1</span><span class="paren">)</span>
+        <span class="keyword">stop</span><span class="paren">(</span><span class="identifier">paste</span><span class="paren">(</span>
+            <span class="string">"all elements of cov must be of the same length and \n"</span>,
+            <span class="string">"cov.times must have one more entry than each element of cov."</span><span class="paren">)</span><span class="paren">)</span>
+    <span class="identifier">var.names</span> <span class="operator">&lt;-</span> <span class="identifier">names</span><span class="paren">(</span><span class="identifier">data</span><span class="paren">)</span>
+    <span class="identifier">subjects</span> <span class="operator">&lt;-</span> <span class="identifier">rownames</span><span class="paren">(</span><span class="identifier">data</span><span class="paren">)</span>
+    <span class="identifier">omit.cols</span> <span class="operator">&lt;-</span> <span class="keyword">if</span> <span class="paren">(</span><span class="operator">!</span><span class="identifier">common.times</span><span class="paren">)</span> <span class="identifier">c</span><span class="paren">(</span><span class="identifier">all.cov</span>, <span class="identifier">cov.times</span><span class="paren">)</span> <span class="keyword">else</span> <span class="identifier">all.cov</span>
+    <span class="identifier">keep.cols</span> <span class="operator">&lt;-</span> <span class="paren">(</span><span class="number">1</span><span class="operator">:</span><span class="identifier">ncol</span><span class="paren">)</span><span class="paren">[</span><span class="operator">-</span><span class="identifier">omit.cols</span><span class="paren">]</span>
+    <span class="identifier">nkeep</span> <span class="operator">&lt;-</span> <span class="identifier">length</span><span class="paren">(</span><span class="identifier">keep.cols</span><span class="paren">)</span>
+    <span class="keyword">if</span> <span class="paren">(</span><span class="identifier">is.numeric</span><span class="paren">(</span><span class="identifier">event</span><span class="paren">)</span><span class="paren">)</span> <span class="identifier">event</span> <span class="operator">&lt;-</span> <span class="identifier">var.names</span><span class="paren">[</span><span class="identifier">event</span><span class="paren">]</span>
+    <span class="identifier">times</span> <span class="operator">&lt;-</span> <span class="keyword">if</span> <span class="paren">(</span><span class="identifier">common.times</span><span class="paren">)</span> <span class="identifier">matrix</span><span class="paren">(</span><span class="identifier">cov.times</span>, <span class="identifier">nrow</span>, <span class="identifier">ncov</span><span class="operator">+</span><span class="number">1</span>, <span class="identifier">byrow</span><span class="operator">=</span><span class="literal">T</span><span class="paren">)</span>
+        <span class="keyword">else</span> <span class="identifier">data</span><span class="paren">[</span>, <span class="identifier">cov.times</span><span class="paren">]</span>
+    <span class="identifier">new.data</span> <span class="operator">&lt;-</span> <span class="identifier">matrix</span><span class="paren">(</span><span class="literal">Inf</span>, <span class="identifier">nobs</span>, <span class="number">3</span> <span class="operator">+</span> <span class="identifier">ncovs</span> <span class="operator">+</span> <span class="identifier">nkeep</span><span class="paren">)</span>
+    <span class="identifier">rownames</span> <span class="operator">&lt;-</span> <span class="identifier">rep</span><span class="paren">(</span><span class="string">""</span>, <span class="identifier">nobs</span><span class="paren">)</span>
+    <span class="identifier">colnames</span><span class="paren">(</span><span class="identifier">new.data</span><span class="paren">)</span> <span class="operator">&lt;-</span> <span class="identifier">c</span><span class="paren">(</span><span class="string">'start'</span>, <span class="string">'stop'</span>, <span class="identifier">paste</span><span class="paren">(</span><span class="identifier">event</span>, <span class="identifier">suffix</span>, <span class="identifier">sep</span><span class="operator">=</span><span class="string">""</span><span class="paren">)</span>,
+        <span class="identifier">var.names</span><span class="paren">[</span><span class="operator">-</span><span class="identifier">omit.cols</span><span class="paren">]</span>, <span class="identifier">cov.names</span><span class="paren">)</span>
+    <span class="identifier">end.row</span> <span class="operator">&lt;-</span> <span class="number">0</span>
+    <span class="keyword">for</span> <span class="paren">(</span><span class="identifier">i</span> <span class="keyword">in</span> <span class="number">1</span><span class="operator">:</span><span class="identifier">nrow</span><span class="paren">)</span><span class="paren">{</span>
+        <span class="identifier">start.row</span> <span class="operator">&lt;-</span> <span class="identifier">end.row</span> <span class="operator">+</span> <span class="number">1</span>
+        <span class="identifier">end.row</span> <span class="operator">&lt;-</span> <span class="identifier">end.row</span> <span class="operator">+</span> <span class="identifier">ncov</span>
+        <span class="identifier">start</span> <span class="operator">&lt;-</span> <span class="identifier">times</span><span class="paren">[</span><span class="identifier">i</span>, <span class="number">1</span><span class="operator">:</span><span class="identifier">ncov</span><span class="paren">]</span>
+        <span class="keyword">stop</span> <span class="operator">&lt;-</span> <span class="identifier">times</span><span class="paren">[</span><span class="identifier">i</span>, <span class="number">2</span><span class="operator">:</span><span class="paren">(</span><span class="identifier">ncov</span><span class="operator">+</span><span class="number">1</span><span class="paren">)</span><span class="paren">]</span>
+        <span class="identifier">event.time</span> <span class="operator">&lt;-</span> <span class="identifier">ifelse</span> <span class="paren">(</span><span class="keyword">stop</span> <span class="operator">==</span> <span class="identifier">data</span><span class="paren">[</span><span class="identifier">i</span>, <span class="identifier">time</span><span class="paren">]</span> <span class="operator">&amp;</span> <span class="identifier">data</span><span class="paren">[</span><span class="identifier">i</span>, <span class="identifier">event</span><span class="paren">]</span> <span class="operator">==</span> <span class="number">1</span>, <span class="number">1</span>, <span class="number">0</span><span class="paren">)</span>
+        <span class="identifier">keep</span> <span class="operator">&lt;-</span> <span class="identifier">matrix</span><span class="paren">(</span><span class="identifier">unlist</span><span class="paren">(</span><span class="identifier">data</span><span class="paren">[</span><span class="identifier">i</span>, <span class="operator">-</span><span class="identifier">omit.cols</span><span class="paren">]</span><span class="paren">)</span>, <span class="identifier">ncov</span>, <span class="identifier">nkeep</span>, <span class="identifier">byrow</span><span class="operator">=</span><span class="literal">T</span><span class="paren">)</span>
+        <span class="identifier">select</span> <span class="operator">&lt;-</span> <span class="identifier">apply</span><span class="paren">(</span><span class="identifier">matrix</span><span class="paren">(</span><span class="operator">!</span><span class="identifier">is.na</span><span class="paren">(</span><span class="identifier">data</span><span class="paren">[</span><span class="identifier">i</span>, <span class="identifier">all.cov</span><span class="paren">]</span><span class="paren">)</span>, <span class="identifier">ncol</span><span class="operator">=</span><span class="identifier">ncovs</span><span class="paren">)</span>, <span class="number">1</span>, <span class="identifier">all</span><span class="paren">)</span>
+        <span class="identifier">rows</span> <span class="operator">&lt;-</span> <span class="identifier">start.row</span><span class="operator">:</span><span class="identifier">end.row</span>
+        <span class="identifier">cov.mat</span> <span class="operator">&lt;-</span> <span class="identifier">xlag</span><span class="paren">(</span><span class="identifier">matrix</span><span class="paren">(</span><span class="identifier">unlist</span><span class="paren">(</span><span class="identifier">data</span><span class="paren">[</span><span class="identifier">i</span>, <span class="identifier">all.cov</span><span class="paren">]</span><span class="paren">)</span>, <span class="identifier">nrow</span><span class="operator">=</span><span class="identifier">length</span><span class="paren">(</span><span class="identifier">rows</span><span class="paren">)</span><span class="paren">)</span>, <span class="identifier">lag</span><span class="paren">)</span>
+        <span class="identifier">new.data</span><span class="paren">[</span><span class="identifier">rows</span><span class="paren">[</span><span class="identifier">select</span><span class="paren">]</span>, <span class="paren">]</span> <span class="operator">&lt;-</span>
+            <span class="identifier">cbind</span><span class="paren">(</span><span class="identifier">start</span>, <span class="keyword">stop</span>, <span class="identifier">event.time</span>, <span class="identifier">keep</span>, <span class="identifier">cov.mat</span><span class="paren">)</span><span class="paren">[</span><span class="identifier">select</span>,<span class="paren">]</span>
+        <span class="identifier">rownames</span><span class="paren">[</span><span class="identifier">rows</span><span class="paren">]</span> <span class="operator">&lt;-</span> <span class="identifier">paste</span><span class="paren">(</span><span class="identifier">subjects</span><span class="paren">[</span><span class="identifier">i</span><span class="paren">]</span>, <span class="string">'.'</span>, <span class="identifier">seq</span><span class="paren">(</span><span class="identifier">along</span><span class="operator">=</span><span class="identifier">rows</span><span class="paren">)</span>, <span class="identifier">sep</span><span class="operator">=</span><span class="string">""</span><span class="paren">)</span>
+        <span class="paren">}</span>
+    <span class="identifier">row.names</span><span class="paren">(</span><span class="identifier">new.data</span><span class="paren">)</span> <span class="operator">&lt;-</span> <span class="identifier">rownames</span>
+    <span class="identifier">as.data.frame</span><span class="paren">(</span><span class="identifier">new.data</span><span class="paren">[</span><span class="identifier">new.data</span><span class="paren">[</span>, <span class="number">1</span><span class="paren">]</span> <span class="operator">!=</span> <span class="literal">Inf</span> <span class="operator">&amp;</span>
+        <span class="identifier">apply</span><span class="paren">(</span><span class="identifier">as.matrix</span><span class="paren">(</span><span class="operator">!</span><span class="identifier">is.na</span><span class="paren">(</span><span class="identifier">new.data</span><span class="paren">[</span>, <span class="identifier">cov.names</span><span class="paren">]</span><span class="paren">)</span><span class="paren">)</span>, <span class="number">1</span>, <span class="identifier">all</span><span class="paren">)</span>, <span class="paren">]</span><span class="paren">)</span>
+    <span class="paren">}</span>
+
+<span class="comment">## Use of lag is easy</span>
+<span class="identifier">Rossi.long2</span> <span class="operator">&lt;-</span> <span class="identifier">fold</span><span class="paren">(</span><span class="identifier">Rossi</span>, <span class="identifier">time</span><span class="operator">=</span><span class="string">'week'</span>, <span class="identifier">event</span><span class="operator">=</span><span class="string">'arrest'</span>, <span class="identifier">cov</span><span class="operator">=</span><span class="number">11</span><span class="operator">:</span><span class="number">62</span>, <span class="identifier">cov.names</span><span class="operator">=</span><span class="string">'emp'</span>, <span class="identifier">lag</span> <span class="operator">=</span> <span class="number">1</span><span class="paren">)</span>
+<span class="identifier">Rossi.long2</span>
+</code></pre>
+
+<pre><code>       start stop arrest.time week arrest fin age race wexp mar paro prio educ emp
+1.2        1    2           0   20      1   0  27    1    0   0    1    3    3   0
+1.3        2    3           0   20      1   0  27    1    0   0    1    3    3   0
+1.4        3    4           0   20      1   0  27    1    0   0    1    3    3   0
+1.5        4    5           0   20      1   0  27    1    0   0    1    3    3   0
+1.6        5    6           0   20      1   0  27    1    0   0    1    3    3   0
+1.7        6    7           0   20      1   0  27    1    0   0    1    3    3   0
+1.8        7    8           0   20      1   0  27    1    0   0    1    3    3   0
+1.9        8    9           0   20      1   0  27    1    0   0    1    3    3   0
+1.10       9   10           0   20      1   0  27    1    0   0    1    3    3   0
+1.11      10   11           0   20      1   0  27    1    0   0    1    3    3   0
+1.12      11   12           0   20      1   0  27    1    0   0    1    3    3   0
+1.13      12   13           0   20      1   0  27    1    0   0    1    3    3   0
+1.14      13   14           0   20      1   0  27    1    0   0    1    3    3   0
+1.15      14   15           0   20      1   0  27    1    0   0    1    3    3   0
+1.16      15   16           0   20      1   0  27    1    0   0    1    3    3   0
+1.17      16   17           0   20      1   0  27    1    0   0    1    3    3   0
+1.18      17   18           0   20      1   0  27    1    0   0    1    3    3   0
+1.19      18   19           0   20      1   0  27    1    0   0    1    3    3   0
+1.20      19   20           1   20      1   0  27    1    0   0    1    3    3   0
+2.2        1    2           0   17      1   0  18    1    0   0    1    8    4   0
+2.3        2    3           0   17      1   0  18    1    0   0    1    8    4   0
+2.4        3    4           0   17      1   0  18    1    0   0    1    8    4   0
+2.5        4    5           0   17      1   0  18    1    0   0    1    8    4   0
+2.6        5    6           0   17      1   0  18    1    0   0    1    8    4   0
+2.7        6    7           0   17      1   0  18    1    0   0    1    8    4   0
+2.8        7    8           0   17      1   0  18    1    0   0    1    8    4   0
+2.9        8    9           0   17      1   0  18    1    0   0    1    8    4   0
+2.10       9   10           0   17      1   0  18    1    0   0    1    8    4   0
+2.11      10   11           0   17      1   0  18    1    0   0    1    8    4   1
+2.12      11   12           0   17      1   0  18    1    0   0    1    8    4   1
+2.13      12   13           0   17      1   0  18    1    0   0    1    8    4   1
+2.14      13   14           0   17      1   0  18    1    0   0    1    8    4   1
+2.15      14   15           0   17      1   0  18    1    0   0    1    8    4   1
+2.16      15   16           0   17      1   0  18    1    0   0    1    8    4   0
+2.17      16   17           1   17      1   0  18    1    0   0    1    8    4   0
+3.2        1    2           0   25      1   0  19    0    1   0    1   13    3   0
+3.3        2    3           0   25      1   0  19    0    1   0    1   13    3   0
+3.4        3    4           0   25      1   0  19    0    1   0    1   13    3   0
+3.5        4    5           0   25      1   0  19    0    1   0    1   13    3   0
+3.6        5    6           0   25      1   0  19    0    1   0    1   13    3   0
+3.7        6    7           0   25      1   0  19    0    1   0    1   13    3   0
+3.8        7    8           0   25      1   0  19    0    1   0    1   13    3   0
+3.9        8    9           0   25      1   0  19    0    1   0    1   13    3   0
+3.10       9   10           0   25      1   0  19    0    1   0    1   13    3   0
+3.11      10   11           0   25      1   0  19    0    1   0    1   13    3   0
+3.12      11   12           0   25      1   0  19    0    1   0    1   13    3   0
+3.13      12   13           0   25      1   0  19    0    1   0    1   13    3   0
+3.14      13   14           0   25      1   0  19    0    1   0    1   13    3   0
+3.15      14   15           0   25      1   0  19    0    1   0    1   13    3   0
+3.16      15   16           0   25      1   0  19    0    1   0    1   13    3   0
+3.17      16   17           0   25      1   0  19    0    1   0    1   13    3   0
+3.18      17   18           0   25      1   0  19    0    1   0    1   13    3   1
+3.19      18   19           0   25      1   0  19    0    1   0    1   13    3   0
+3.20      19   20           0   25      1   0  19    0    1   0    1   13    3   0
+3.21      20   21           0   25      1   0  19    0    1   0    1   13    3   0
+3.22      21   22           0   25      1   0  19    0    1   0    1   13    3   0
+3.23      22   23           0   25      1   0  19    0    1   0    1   13    3   0
+3.24      23   24           0   25      1   0  19    0    1   0    1   13    3   0
+3.25      24   25           1   25      1   0  19    0    1   0    1   13    3   0
+4.2        1    2           0   52      0   1  23    1    1   1    1    1    5   0
+4.3        2    3           0   52      0   1  23    1    1   1    1    1    5   0
+4.4        3    4           0   52      0   1  23    1    1   1    1    1    5   0
+4.5        4    5           0   52      0   1  23    1    1   1    1    1    5   0
+4.6        5    6           0   52      0   1  23    1    1   1    1    1    5   1
+4.7        6    7           0   52      0   1  23    1    1   1    1    1    5   1
+4.8        7    8           0   52      0   1  23    1    1   1    1    1    5   1
+4.9        8    9           0   52      0   1  23    1    1   1    1    1    5   1
+4.10       9   10           0   52      0   1  23    1    1   1    1    1    5   1
+4.11      10   11           0   52      0   1  23    1    1   1    1    1    5   1
+4.12      11   12           0   52      0   1  23    1    1   1    1    1    5   1
+4.13      12   13           0   52      0   1  23    1    1   1    1    1    5   1
+4.14      13   14           0   52      0   1  23    1    1   1    1    1    5   1
+4.15      14   15           0   52      0   1  23    1    1   1    1    1    5   1
+4.16      15   16           0   52      0   1  23    1    1   1    1    1    5   1
+4.17      16   17           0   52      0   1  23    1    1   1    1    1    5   1
+4.18      17   18           0   52      0   1  23    1    1   1    1    1    5   1
+4.19      18   19           0   52      0   1  23    1    1   1    1    1    5   1
+4.20      19   20           0   52      0   1  23    1    1   1    1    1    5   1
+4.21      20   21           0   52      0   1  23    1    1   1    1    1    5   1
+4.22      21   22           0   52      0   1  23    1    1   1    1    1    5   1
+4.23      22   23           0   52      0   1  23    1    1   1    1    1    5   0
+4.24      23   24           0   52      0   1  23    1    1   1    1    1    5   0
+4.25      24   25           0   52      0   1  23    1    1   1    1    1    5   0
+4.26      25   26           0   52      0   1  23    1    1   1    1    1    5   0
+4.27      26   27           0   52      0   1  23    1    1   1    1    1    5   0
+4.28      27   28           0   52      0   1  23    1    1   1    1    1    5   0
+4.29      28   29           0   52      0   1  23    1    1   1    1    1    5   0
+4.30      29   30           0   52      0   1  23    1    1   1    1    1    5   0
+4.31      30   31           0   52      0   1  23    1    1   1    1    1    5   0
+4.32      31   32           0   52      0   1  23    1    1   1    1    1    5   0
+4.33      32   33           0   52      0   1  23    1    1   1    1    1    5   1
+4.34      33   34           0   52      0   1  23    1    1   1    1    1    5   1
+4.35      34   35           0   52      0   1  23    1    1   1    1    1    5   1
+4.36      35   36           0   52      0   1  23    1    1   1    1    1    5   1
+4.37      36   37           0   52      0   1  23    1    1   1    1    1    5   1
+4.38      37   38           0   52      0   1  23    1    1   1    1    1    5   1
+4.39      38   39           0   52      0   1  23    1    1   1    1    1    5   1
+4.40      39   40           0   52      0   1  23    1    1   1    1    1    5   1
+4.41      40   41           0   52      0   1  23    1    1   1    1    1    5   1
+4.42      41   42           0   52      0   1  23    1    1   1    1    1    5   1
+4.43      42   43           0   52      0   1  23    1    1   1    1    1    5   1
+4.44      43   44           0   52      0   1  23    1    1   1    1    1    5   1
+4.45      44   45           0   52      0   1  23    1    1   1    1    1    5   1
+4.46      45   46           0   52      0   1  23    1    1   1    1    1    5   1
+4.47      46   47           0   52      0   1  23    1    1   1    1    1    5   1
+4.48      47   48           0   52      0   1  23    1    1   1    1    1    5   1
+4.49      48   49           0   52      0   1  23    1    1   1    1    1    5   1
+4.50      49   50           0   52      0   1  23    1    1   1    1    1    5   1
+4.51      50   51           0   52      0   1  23    1    1   1    1    1    5   1
+4.52      51   52           0   52      0   1  23    1    1   1    1    1    5   1
+5.2        1    2           0   52      0   0  19    0    1   0    1    3    3   0
+5.3        2    3           0   52      0   0  19    0    1   0    1    3    3   0
+5.4        3    4           0   52      0   0  19    0    1   0    1    3    3   0
+5.5        4    5           0   52      0   0  19    0    1   0    1    3    3   0
+5.6        5    6           0   52      0   0  19    0    1   0    1    3    3   0
+5.7        6    7           0   52      0   0  19    0    1   0    1    3    3   0
+5.8        7    8           0   52      0   0  19    0    1   0    1    3    3   0
+5.9        8    9           0   52      0   0  19    0    1   0    1    3    3   0
+5.10       9   10           0   52      0   0  19    0    1   0    1    3    3   0
+5.11      10   11           0   52      0   0  19    0    1   0    1    3    3   1
+5.12      11   12           0   52      0   0  19    0    1   0    1    3    3   1
+5.13      12   13           0   52      0   0  19    0    1   0    1    3    3   1
+5.14      13   14           0   52      0   0  19    0    1   0    1    3    3   1
+5.15      14   15           0   52      0   0  19    0    1   0    1    3    3   1
+5.16      15   16           0   52      0   0  19    0    1   0    1    3    3   1
+5.17      16   17           0   52      0   0  19    0    1   0    1    3    3   1
+5.18      17   18           0   52      0   0  19    0    1   0    1    3    3   1
+5.19      18   19           0   52      0   0  19    0    1   0    1    3    3   1
+5.20      19   20           0   52      0   0  19    0    1   0    1    3    3   1
+5.21      20   21           0   52      0   0  19    0    1   0    1    3    3   1
+5.22      21   22           0   52      0   0  19    0    1   0    1    3    3   1
+5.23      22   23           0   52      0   0  19    0    1   0    1    3    3   1
+5.24      23   24           0   52      0   0  19    0    1   0    1    3    3   1
+5.25      24   25           0   52      0   0  19    0    1   0    1    3    3   1
+5.26      25   26           0   52      0   0  19    0    1   0    1    3    3   1
+5.27      26   27           0   52      0   0  19    0    1   0    1    3    3   1
+5.28      27   28           0   52      0   0  19    0    1   0    1    3    3   1
+5.29      28   29           0   52      0   0  19    0    1   0    1    3    3   1
+5.30      29   30           0   52      0   0  19    0    1   0    1    3    3   1
+5.31      30   31           0   52      0   0  19    0    1   0    1    3    3   1
+5.32      31   32           0   52      0   0  19    0    1   0    1    3    3   1
+5.33      32   33           0   52      0   0  19    0    1   0    1    3    3   1
+ [ reached getOption("max.print") -- omitted 19235 rows ]
+</code></pre>
+
+
+
+
+
+</body></html>
