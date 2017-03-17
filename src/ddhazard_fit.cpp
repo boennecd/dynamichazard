@@ -268,7 +268,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(p_data->any_dynamic){
       p_data->V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
-      // E-step
+      // E-step: filtering
       solver->solve();
 
       // E-step: smoothing
@@ -480,6 +480,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 }
 
 
+// Exported for test only
 // [[Rcpp::export]]
 void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
                           double &ss, bool &checked, arma::vec &tol,

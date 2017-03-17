@@ -30,9 +30,12 @@ test_that("Testing names of output from ddhazard on head and neck cancer dataset
   expect_equal(unlist(dimnames(result$Q_0)), rep(c("(Intercept)", "group1"), 2))
 })
 
+result$control <- NULL
 # save_to_test(result, "ddhazard_head_neck")
 
-expect_equal(result, read_to_test("ddhazard_head_neck"))
+test_that("get previous results with head_neck", {
+  expect_equal(result, read_to_test("ddhazard_head_neck"))
+})
 
 
 

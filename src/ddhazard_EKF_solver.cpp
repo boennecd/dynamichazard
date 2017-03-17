@@ -328,7 +328,7 @@ void EKF_solver::solve(){
     double delta_t = p_dat.I_len[t - 1];
     bin_tstop += delta_t;
 
-    // E-step: Filter step
+    // E-step: Prediction step
     p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
     p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
