@@ -1,6 +1,6 @@
 SOURCES_C = stats/lm.c
 SOURCES_F = biglm/boundedQRf.f
-SOURCES_CPP = Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp dist_families.cpp loglike.cpp risk_obj.cpp thread_pool.cpp
+SOURCES_CPP = Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp dist_families.cpp loglike.cpp risk_obj.cpp thread_pool.cpp ddhazard_EKF_solver.cpp
 CXX_STD = CXX11
 OBJECTS = $(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
 
@@ -13,7 +13,9 @@ all: $(SHLIB)
 
 $(SOURCES_CPP:.cpp=.o): dynamichazard.h
 
-ddhazard_fit.o: ddhazard_fit.cpp thread_pool.h
+ddhazard_fit.o: ddhazard_fit.cpp exp_model_funcs.h
+
+ddhazard_EKF_solver.o: ddhazard_EKF_solver.cpp thread_pool.h
 
 thread_pool.o: thread_pool.cpp thread_pool.h
 
