@@ -1,5 +1,7 @@
 #' @title Hat values for \code{\link{ddhazard}}
 #'
+#' @description Computes hat-"like" values from usual L2 penalized binary regression
+#'
 #' @param model A fit from \code{\link{ddhazard}}
 #' @param ... Not used
 #'

@@ -352,6 +352,9 @@ save_to_test <- function(obj, file_name, tolerance = sqrt(.Machine$double.eps)){
   if(!interactive())
     stop("save_to_test called not in interactive mode. Likely an error")
 
+  if(getOption("ddhazard_max_threads") != 2)
+    warning("getOption('ddhazard_max_threads') is not 2. You like dont want this so call\noptions(ddhazard_max_threads = 2)")
+
   cat("Largest sizes:\n")
   if(is.list(obj))
     print(head(sort(unlist(lapply(obj, object.size)), decreasing = T))) else
@@ -364,9 +367,12 @@ save_to_test <- function(obj, file_name, tolerance = sqrt(.Machine$double.eps)){
       tolerance, ")' to test\n", sep = "")
 }
 
-read_to_test <- function(file_name)
-  readRDS(paste0(
-    stringr::str_match(getwd(), ".+dynamichazard"), "/tests/testthat/previous_results/", file_name, ".RDS"))
+read_to_test <- function(file_name){
+  path <- if(!interactive()) "./previous_results/" else
+    paste0(stringr::str_match(getwd(), ".+dynamichazard"), "/tests/testthat/previous_results/")
+
+  readRDS(paste0(path, file_name, ".RDS"))
+}
 
 ########
 # PBC data set from survival with the timevariying covariates

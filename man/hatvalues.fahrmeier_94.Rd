@@ -14,6 +14,9 @@
 \value{
 A list of matrices. Each matrix has three columns: the hat values, the row number of the orginal data point and the id the row belongs to
 }
+\description{
+Computes hat-"like" values from usual L2 penalized binary regression
+}
 \details{
 Computes hat-"like" values in each interval for each individual at risk in the interval. See the ddhazard vignette for details
 }
