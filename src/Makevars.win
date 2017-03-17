@@ -28,8 +28,12 @@ endif
 
 all: $(SHLIB)
 
-ddhazard_fit.o: ddhazard_fit.cpp ddhazard_EKF_solver.cpp exp_model_funcs.h
+loglike.o: arma_n_rcpp.h
 
-ddhazard_EKF_solver.o: thread_pool.h
+ddhazard.o Cdqrls_wrapper.o bigglm_wrapper.o: bigglm_wrapper.h
 
-thread_pool.o: thread_pool.cpp thread_pool.h
+ddhazard_EKF_solver.o ddhazard.o loglike.o ddhazard_UKF_solver.o: ddhazard.h
+
+ddhazard_EKF_solver.o ddhazard_UKF_solver.o: exp_model_funcs.h
+
+ddhazard_EKF_solver.o thread_pool.o: thread_pool.h

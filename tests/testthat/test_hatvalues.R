@@ -4,7 +4,13 @@ cat("\nRunning", test_name, "\n")
 
 #####
 # Load data
-diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+if(interactive()){
+  diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+} else{
+  print(getwd()) # TODO: Delete
+  diag_data_path <- "./vignettes/Diagnostics"
+}
+
 load(paste0(diag_data_path, "/Rossi.RData"))
 load(paste0(diag_data_path, "/whas500.RData"))
 

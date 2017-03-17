@@ -213,7 +213,12 @@ test_that("Calls to residuals should fail for exponential model and state space 
 #####
 # Test previous result for examples in diagnostics vignette
 
-diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+if(interactive()){
+  diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+} else{
+  print(getwd()) # TODO: Delete
+  diag_data_path <- "./vignettes/Diagnostics"
+}
 
 test_that("Get previous results with Rossi", {
   load(paste0(diag_data_path, "/Rossi.RData"))
