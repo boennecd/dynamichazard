@@ -38,6 +38,7 @@
 #' \item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
 #' \item{\code{save_data}}{\code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
 #' \item{\code{ridge_eps}}{Penalty term added to the diagonal of the covariance matrix of the observational equation in either the EKF or UKF}
+#' \item{\code{fixed_parems_start}}{Starting value for fixed terms}
 #' \item{\code{fixed_terms_method}}{The method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively}
 #' \item{\code{Q_0_term_for_fixed_E_step}}{The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step}
 #' \item{\code{eps_fixed_parems}}{Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects}
@@ -176,30 +177,7 @@ ddhazard = function(formula, data,
       Q = diag(1, n_params) # (Very) arbitrary default
   }
 
-  if(order == 1){
-    F_ = diag(rep(1, n_params + n_fixed * est_fixed_in_E))
-  }
-  else if(order == 2){
-    indicies_cur <- 1:n_params
-    indicies_lag <- n_params + 1:n_params + ifelse(est_fixed_in_E, n_fixed, 0)
-    indicies_fix <- if(est_fixed_in_E) 1:n_fixed + n_params else vector()
-
-    F_ = matrix(NA_real_,
-                nrow = 2 * n_params + n_fixed * est_fixed_in_E,
-                ncol = 2 * n_params + n_fixed * est_fixed_in_E)
-    F_[indicies_cur, indicies_cur] = diag(2, n_params)
-    F_[indicies_lag, indicies_cur] = diag(1, n_params)
-    F_[indicies_cur, indicies_lag] = diag(-1, n_params)
-    F_[indicies_lag, indicies_lag] = 0
-
-    if(length(indicies_fix) > 0){
-      F_[indicies_fix, ] <- 0
-      F_[, indicies_fix] <- 0
-      if(length(indicies_fix) > 1)
-        diag(F_[indicies_fix, indicies_fix]) <- 1 else
-          F_[indicies_fix, indicies_fix] <- 1
-    }
-  } else stop("Method not implemented for order ", order)
+  F_ <- get_F(order, n_params, n_fixed, est_fixed_in_E)
 
   if(n_params == 0){
     # Model is fitted using ddhazard_fit_cpp for testing
@@ -223,13 +201,15 @@ ddhazard = function(formula, data,
     } else
       stop("Method not implemented to find initial values for '", model, "'. Please, provide intial values for a_0")
 
-    is_fixed <- seq_along(tmp_mod$coefficients) %in% (attr(X_Y$formula, "specials")$ddFixed - 1)
+    is_fixed <- seq_along(tmp_mod$coefficients) %in% (
+      attr(X_Y$formula, "specials")$ddFixed -
+        !attr(X_Y$formula, "intercept"))
 
     if(missing_a_0){
       message("a_0 not supplied. One iteration IWLS of static glm model is used")
       a_0 = rep(tmp_mod$coefficients[!is_fixed], order)
-
     }
+
     if(missing_fixed){
       control$fixed_parems_start <- tmp_mod$coefficients[is_fixed]
 
@@ -257,7 +237,7 @@ ddhazard = function(formula, data,
          " but it has ", ncol(Q_0), " columns")
 
   if(length(a_0) != n_params * order)
-    stop("a_0 does not have the correct length. Its length should be", n_params * order,
+    stop("a_0 does not have the correct length. Its length should be ", n_params * order,
          " but it has length", length(a_0), " ")
 
   if(order > 1){
@@ -381,20 +361,18 @@ ddhazard = function(formula, data,
         X_Y$X <- matrix(nrow = 0, ncol = ncol(X_Y$X))
 
     # We need to change the dimension of various arrays
-    result$V_t_d_s <- result$V_t_d_s[-indicies_fix, , , drop = F]
-    result$V_t_d_s <- result$V_t_d_s[, -indicies_fix, , drop = F]
+    result$V_t_d_s <- result$V_t_d_s[-indicies_fix, -indicies_fix, , drop = F]
 
     result$fixed_effects <- result$a_t_d_s[1, indicies_fix]
     result$a_t_d_s <- result$a_t_d_s[, -indicies_fix, drop = F]
 
-    result$B_s <- result$B_s[-indicies_fix, , , drop = F]
-    result$B_s <- result$B_s[, -indicies_fix, , drop = F]
+    result$B_s <- result$B_s[-indicies_fix, -indicies_fix, , drop = F]
 
-    result$lag_one_cov <- result$lag_one_cov[-indicies_fix, , , drop = F]
-    result$lag_one_cov <- result$lag_one_cov[, -indicies_fix, , drop = F]
+    result$lag_one_cov <- result$lag_one_cov[-indicies_fix, -indicies_fix, , drop = F]
 
-    result$Q  <- result$Q[-indicies_fix, , drop = F]
-    result$Q <- result$Q[, -indicies_fix, drop = F]
+    result$Q  <- result$Q[-indicies_fix, -indicies_fix, drop = F]
+
+    F_ <- F_[-indicies_fix, -indicies_fix, drop = F]
   }
 
   # Set names
@@ -414,13 +392,17 @@ ddhazard = function(formula, data,
 
   if(model == "logit") {
     res <- list(
-    hazard_func =  function(eta, ...){
-      exp_ = exp(eta)
-      exp_/(1 + exp_)
+      hazard_func =  function(eta, ...){
+        exp_ = exp(eta)
+        exp_/(1 + exp_)
       },
       hazard_first_deriv = function(beta, x_, ...){
         exp_ = exp(beta %*% x_)
         x_ * exp_ / (exp_ + 1)^2
+      },
+      var_func = function(eta, ...){
+        exp_ = exp(eta)
+        exp_ / (1 + exp_)^2
       })
 
   }else if(model %in% exp_model_names){
@@ -431,7 +413,8 @@ ddhazard = function(formula, data,
     hazard_first_deriv = function(beta, x_, tstart, tstop, ...){
       eta <- beta %*% x_
       x_ * (tstop - tstart) * exp(eta - exp(eta) * (tstop - tstart))
-    })
+    },
+    var_func = NULL)
   }
 
   structure(c(
@@ -485,6 +468,36 @@ ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
                    weights = weights,
                    use_pinv = control$use_pinv,
                    criteria = control$criteria)
+}
+
+
+get_F <- function(order, n_params, n_fixed, est_fixed_in_E){
+  if(order == 1){
+    return(diag(rep(1, n_params + n_fixed * est_fixed_in_E)))
+  }
+  else if(order == 2){
+    indicies_cur <- 1:n_params
+    indicies_lag <- n_params + 1:n_params + ifelse(est_fixed_in_E, n_fixed, 0)
+    indicies_fix <- if(est_fixed_in_E) 1:n_fixed + n_params else vector()
+
+    F_ = matrix(NA_real_,
+                nrow = 2 * n_params + n_fixed * est_fixed_in_E,
+                ncol = 2 * n_params + n_fixed * est_fixed_in_E)
+    F_[indicies_cur, indicies_cur] = diag(2, n_params)
+    F_[indicies_lag, indicies_cur] = diag(1, n_params)
+    F_[indicies_cur, indicies_lag] = diag(-1, n_params)
+    F_[indicies_lag, indicies_lag] = 0
+
+    if(length(indicies_fix) > 0){
+      F_[indicies_fix, ] <- 0
+      F_[, indicies_fix] <- 0
+      if(length(indicies_fix) > 1)
+        diag(F_[indicies_fix, indicies_fix]) <- 1 else
+          F_[indicies_fix, indicies_fix] <- 1
+    }
+
+    return(F_)
+  } else stop("Method not implemented for order ", order)
 }
 
 exp_model_names <- c("exp_combined", "exp_bin",

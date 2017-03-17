@@ -2277,7 +2277,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   }while(++it < n_max);
 
   if(it == n_max)
-    throw std::runtime_error("EM algorithm did not converge within the n_max number of iterations");
+    Rcpp::warning("EM algorithm did not converge within the n_max number of iterations");
 
   return(Rcpp::List::create(Rcpp::Named("V_t_d_s") = Rcpp::wrap(p_data->V_t_t_s),
                             Rcpp::Named("a_t_d_s") = Rcpp::wrap(p_data->a_t_t_s.t()),

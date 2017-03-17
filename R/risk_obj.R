@@ -23,3 +23,22 @@ get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T)
     max_T = ifelse(missing(max_T), max(Y[Y[, 3] == 1, 2]), max_T),
     order_by_id_and_rev_start = order(id, -Y[, 1]) - 1, id = id,
     is_for_discrete_model = is_for_discrete_model)
+
+permu_data <- function(data, risk_obj){
+  permu <- sample(nrow(data), replace = F)
+  data_new <- data[permu, ]
+  risk_obj_new <- risk_obj
+  for(i in seq_along(risk_obj$risk_sets))
+    risk_obj_new$risk_sets[[i]] <- permu[risk_obj$risk_sets[[i]]]
+
+  list(data = data_new, risk_obj = risk_obj_new, permu = permu)
+}
+
+permu_data_rev <- function(data, risk_obj, permu){
+  org_order <- order(permu)
+
+  for(i in seq_along(risk_obj$risk_sets))
+    risk_obj$risk_sets[[i]] <- match(risk_obj$risk_sets[[i]], permu)
+
+  list(data = data[org_order, ], risk_obj = risk_obj)
+}

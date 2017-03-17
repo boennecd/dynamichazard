@@ -37,7 +37,7 @@ test_that("Expecting plot calls to succed with first order model", {
   }
 
   suppressMessages(pbc_fit <- ddhazard(
-    formula = survival::Surv(tstart/100, tstop/100, status == 2) ~ log(bili) + log(protime),
+    formula = survival::Surv(tstart/100, tstop/100, death == 2) ~ log(bili) + log(protime),
     data = pbc2, model = "exp_clip_time", by = 1, max_T = 36,
     Q_0 = diag(2, 3), Q = diag(1e-3, 3), verbose = F,
     id = pbc2$id,
@@ -66,7 +66,7 @@ test_that("Expecting plot calls to succed with second order model", {
   expect_no_error(plot(result, type = "cov"))
 
   suppressMessages(pbc_fit <- ddhazard(
-    formula = survival::Surv(tstart/100, tstop/100, status == 2) ~ log(bili) + log(protime),
+    formula = survival::Surv(tstart/100, tstop/100, death == 2) ~ log(bili) + log(protime),
     data = pbc2, model = "exp_clip_time", by = 1, max_T = 36,
     Q_0 = diag(5, 6), Q = diag(c(rep(1e-3, 3))),
     id = pbc2$id, order = 2,

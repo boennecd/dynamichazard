@@ -347,6 +347,27 @@ get_expect_equal <- function(x, eps, file = ""){
   invisible()
 }
 
+# And we may aswell just save it to a file
+save_to_test <- function(obj, file_name, tolerance = sqrt(.Machine$double.eps)){
+  if(!interactive())
+    stop("save_to_test called not in interactive mode. Likely an error")
+
+  cat("Largest sizes:\n")
+  if(is.list(obj))
+    print(head(sort(unlist(lapply(obj, object.size)), decreasing = T))) else
+      print(object.size(obj))
+
+  saveRDS(obj, compress = T, paste0(
+    stringr::str_match(getwd(), ".+dynamichazard"), "/tests/testthat/previous_results/", file_name, ".RDS"))
+
+  cat("Call 'expect_equal(", deparse(substitute(obj)), ", read_to_test(\"",  file_name, "\"), tolerance = ",
+      tolerance, ")' to test\n", sep = "")
+}
+
+read_to_test <- function(file_name)
+  readRDS(paste0(
+    stringr::str_match(getwd(), ".+dynamichazard"), "/tests/testthat/previous_results/", file_name, ".RDS"))
+
 ########
 # PBC data set from survival with the timevariying covariates
 # See: https://cran.r-project.org/web/packages/survival/vignettes/timedep.pdf
@@ -356,9 +377,12 @@ suppressWarnings(rm(pbc))
 pbc <- survival::pbc
 pbcseq <- survival::pbcseq
 
-temp <- subset(pbc, id <= 312, select=c(id:sex, stage)) # baseline
-pbc2 <- survival::tmerge(temp, temp, id=id, death = event(time, status)) #set range
-pbc2 <- survival::tmerge(pbc2, pbcseq, id=id, ascites = tdc(day, ascites),
-                         bili = tdc(day, bili), albumin = tdc(day, albumin),
-                         protime = tdc(day, protime), alk.phos = tdc(day, alk.phos))
+temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))
+pbc2 <- tmerge(temp, temp, id=id, death = event(time, status))
+pbc2 <- tmerge(pbc2, pbcseq, id=id, albumin = tdc(day, albumin),
+               protime = tdc(day, protime), bili = tdc(day, bili))
+pbc2 <- pbc2[, c("id", "tstart", "tstop", "death", "sex", "edema",
+                 "age", "albumin", "protime", "bili")]
+
+rm(temp)
 

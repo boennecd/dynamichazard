@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{fahrmeier_94}(x, xlab = "Time", ylab = "Hazard",
   type = "cov", plot_type = "l", cov_index, ylim, col = "black",
-  add = F, do_alter_mfcol = T, ddhazard_boot, ...)
+  add = F, do_alter_mfcol = T, level = 0.95, ddhazard_boot, ...)
 }
 \arguments{
 \item{x}{Result of \code{\link{ddhazard}} call}
@@ -22,6 +22,8 @@
 \item{add}{\code{FALSE} if you want to make a new plot}
 
 \item{do_alter_mfcol}{\code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element}
+
+\item{level}{Level (fraction) for confidence bounds}
 
 \item{ddhazard_boot}{Object from a \code{\link{ddhazard_boot}} call which confidence bounds will be based on and where bootstrap samples will be printed with a transparent color}
 

@@ -263,14 +263,14 @@ pbc2_l$tstart <- pbc2_l$tstart / 100
 pbc2_l$tstop <- pbc2_l$tstop / 100
 
 suppressMessages(fit <- ddhazard(
-  formula = survival::Surv(tstart, tstop, status == 2) ~
+  formula = survival::Surv(tstart, tstop, death == 2) ~
     age + log(bili) + log(protime),
-  data = pbc2_l, Q_0 = diag(rep(1, 4)), by = 1,
+  data = pbc2_l, Q_0 = diag(rep(1e5, 4)), by = 1,
   id = pbc2_l$id,
-  Q = diag(rep(1e-2, 4)), max_T = 36,
-  model = "exp_combined", control = list(est_Q_0 = F)))
+  Q = diag(rep(1e-1, 4)), max_T = 36,
+  model = "exp_clip_time_w_jump"))
 
-# plot(fit, cov_index = 4)
+# plot(fit)
 
 test_that("Terms from predict with exponential outcome are correct", {
   pred <- predict(fit, new_data = pbc2_l, type = "term", tstart = "tstart", tstop = "tstop")

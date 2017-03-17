@@ -9,6 +9,9 @@ The following has been changed or added:
 * The default for kappa in the UKF have been changed to yield a weight on the first sigma point of 0.1 rather than 0
 * Fixed memory leak in `ddhazard`
 * New example have been added to the bootstrap vignette and other minor changes have been made
+* Added information about the `residuals` method and a vignette with examples of usage of the `residuals` function
+* Added a `hatvalues` method for `ddhazard`
+* Fixed bug with default starting value with fixed effects
 
 # dynamichazard 0.2.0
 The following have been added:

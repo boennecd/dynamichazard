@@ -5,6 +5,9 @@ if(interactive()){
   if(grepl("testthat$", getwd()))
     source("../../R/test_utils.R") else
       source("./R/test_utils.R")
+
+  permu_data <- with(environment(ddhazard), permu_data)
+  permu_data_rev <- with(environment(ddhazard), permu_data_rev)
 }
 
 # Had issues with cran buil. Thus, these lines
@@ -299,7 +302,7 @@ test_that("is_for_discrete_model logic work",{
       2, 0, 1, 1,
 
       # Id 3:
-      #   same as id 1 but with no event
+      #   same as id 1 but with no event. Hence not in
       3, 0, .5, 0,
 
       # Id 4:
@@ -366,7 +369,7 @@ test_that("is_for_discrete_model logic work",{
                  -1, -1, -1, -1, -1,
                  1, -1))
 
-  expect_true(setequal(get_risk_obj_discrete$risk_sets[[1]], c(1:6, 8)))
+  expect_true(setequal(get_risk_obj_discrete$risk_sets[[1]], c(c(1, 2, 4, 5, 6), 8)))
   expect_true(setequal(get_risk_obj_discrete$risk_sets[[2]], c(5:6, 8, 11, 13, 15, 16, 17)))
   expect_true(setequal(get_risk_obj_discrete$risk_sets[[3]], c(5:6, 12, 14, 17)))
 
@@ -472,8 +475,43 @@ test_that("Individuals are markeds as events in the correct bins", {
   expect_equal(risk_obj$is_event_in[is_ev], c(1, 1, 1, 1, 0, 1, 1))
 })
 
+#####
+# Test randomize
 
+risk_obj <- get_risk_obj(
+  Surv(sims$tstart, sims$tstop, sims$event), 1, max_T = 10, sims$id)
 
+permu <- permu_data(sims, risk_obj)
+got_plyr <- suppressWarnings(require(plyr, quietly = T))
+test_that("Permutating gives the data frame and risk set permutated", {
+  expect_true(any(permu$data != sims))
+  expect_equal(nrow(permu$data), nrow(sims))
+  if(got_plyr){
+    expect_equal(nrow(suppressMessages(match_df(sims, permu$data))), nrow(sims))
+  }
+
+  expect_equal(length(risk_obj$risk_sets), length(permu$risk_obj$risk_sets))
+  for(i in seq_along(risk_obj$risk_sets)){
+    r1 <- permu$risk_obj$risk_sets[[i]]
+    r2 <- risk_obj$risk_sets[[i]]
+
+    expect_true(any(r1 != r2))
+    expect_equal(length(r1), length(r2))
+  }
+})
+
+permu <- permu_data_rev(permu$data, permu$risk_obj, permu$permu)
+
+test_that("Reverse permutating the data frame and the initial values", {
+  expect_true(all(permu$data == sims))
+
+  for(i in seq_along(risk_obj$risk_sets)){
+    r1 <- permu$risk_obj$risk_sets[[i]]
+    r2 <- risk_obj$risk_sets[[i]]
+
+    expect_true(all(r1 == r2))
+  }
+})
 
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

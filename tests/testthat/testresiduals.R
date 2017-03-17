@@ -187,7 +187,7 @@ pbc2_l$tstart <- pbc2_l$tstart / 100
 pbc2_l$tstop <- pbc2_l$tstop / 100
 
 suppressMessages(fit <- ddhazard(
-  formula = survival::Surv(tstart, tstop, status == 2) ~
+  formula = survival::Surv(tstart, tstop, death == 2) ~
     age + log(bili) + log(protime),
   data = pbc2_l, Q_0 = diag(rep(1e3, 4)), by = 1,
   Q = diag(rep(1e-2, 4)), max_T = 36,
@@ -196,24 +196,66 @@ suppressMessages(fit <- ddhazard(
 test_that("Calls to residuals should fail for exponential model and state space error",{
   expect_error(residuals(fit, "std_space_error", regexp = "Functions for with model 'exponential' is not implemented"))
   expect_error(residuals(fit, "space_error", regexp = "Functions for with model 'exponential' is not implemented"))
+  expect_error(residuals(fit, "pearson", regexp = "Pearsons residuals is not implemented for model 'exp_clip_time'"))
 })
 
-test_that("pearson and raw residuals for exponential corresponds", {
-  res_pearson <- residuals(fit, type = "pearson", data = pbc2_l)
-  res_raw <- residuals(fit, type = "raw", data = pbc2_l)
+# test_that("pearson and raw residuals for exponential corresponds", {
+#   res_pearson <- residuals(fit, type = "pearson", data = pbc2_l)
+#   res_raw <- residuals(fit, type = "raw", data = pbc2_l)
+#
+#   for(i in seq_along(res_pearson$residuals))
+#     expect_equal(res_pearson$residuals[[i]][, "residuals"],
+#                  res_raw$residuals[[i]][, "residuals"]/
+#                    sqrt(res_raw$residuals[[i]][, "p_est"] * (1 - res_raw$residuals[[i]][, "p_est"])))
+# })
 
-  for(i in seq_along(res_pearson$residuals))
-    expect_equal(res_pearson$residuals[[i]][, "residuals"],
-                 res_raw$residuals[[i]][, "residuals"]/
-                   sqrt(res_raw$residuals[[i]][, "p_est"] * (1 - res_raw$residuals[[i]][, "p_est"])))
+
+#####
+# Test previous result for examples in diagnostics vignette
+
+diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+
+test_that("Get previous results with Rossi", {
+  load(paste0(diag_data_path, "/Rossi.RData"))
+
+  suppressMessages(
+    dd_fit <- dd_fit_first <-  ddhazard(
+      Surv(start, stop, event) ~ fin + age + prio + employed.cumsum,
+      data = Rossi, id = Rossi$id, by = 1, max_T = 52,
+      Q_0 = diag(10000, 5), Q = diag(.1, 5)))
+
+  state <- residuals(dd_fit, type = "std_space_error")
+
+  # save_to_test(state, "Rossi_state")
+  expect_equal(state, read_to_test("Rossi_state"))
+
+  pearson <- residuals(dd_fit, type = "pearson")
+  pearson <- pearson[[1]][1:2]
+
+  # save_to_test(pearson, "Rossi_pearson")
+  expect_equal(pearson, read_to_test("Rossi_pearson"))
 })
 
-# resids <- residuals(fit, "std_space_error")
-# matplot(resids$residuals)
-# resids <- residuals(fit, "space_error")
-# matplot(resids$residuals)
+test_that("Get prevoius residuals with whas500", {
+  load(paste0(diag_data_path, "/whas500.RData"))
 
+  suppressMessages(
+    dd_fit <- ddhazard(
+      Surv(lenfol, fstat) ~ gender + age + bmi + hr + cvd,
+      data = whas500, by = 100, max_T = 2000,
+      Q_0 = diag(10000, 6), Q = diag(.1, 6)))
 
+  state <- residuals(dd_fit, type = "std_space_error")
+
+  # save_to_test(state, "whas_state")
+  expect_equal(state, read_to_test("whas_state"))
+
+  pearson <- residuals(dd_fit, type = "pearson")
+  pearson <- pearson[[1]][1:2]
+
+  # save_to_test(pearson, "whas_pearson")
+  expect_equal(pearson, read_to_test("whas_pearson"))
+})
 
 
 # Had issues with win builder. Thus, these lines

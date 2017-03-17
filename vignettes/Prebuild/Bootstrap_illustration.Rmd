@@ -7,7 +7,7 @@ csl: ../bib_style.csl
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, cache=F}
 knitr::knit_hooks$set(
   default_opts = function(before, options, envir) {
     if (before){
@@ -21,11 +21,20 @@ knitr::knit_hooks$set(
   })
 options(digist = 4)
 knitr::opts_chunk$set(echo = TRUE, fig.height = 5, dpi = 36, 
-                      cache = F)
+                      cache = T, 
+                      cache.path = "cache/bootstrap/",
+                      fig.path = "figure/bootstrap/")
 knitr::opts_knit$set(default_opts = T)
 
 options(ddhazard_max_threads = max(parallel::detectCores() - 2, 1))
 ```
+
+```{r, include=FALSE, cache=FALSE}
+library(survival)
+library(dynamichazard)
+library(boot)
+```
+
 
 # Introduction
 
@@ -92,7 +101,7 @@ plot(dd_fit)
 
 ## Sampling individuals
 
-We can bootstrap the estimates in the model by using `ddhazard_boot` function as done below:
+We can bootstrap the estimates in the model by using the `ddhazard_boot` function as done below:
 
 ```{r}
 set.seed(7451)
@@ -115,16 +124,18 @@ Above, we bootstrap the model by sampling the individuals. I.e. individuals will
 plot(dd_fit, ddhazard_boot = boot_out, level = 0.95)
 ```
 
-The completely black line is the original estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap coefficient taken at each point and the transparent black lines each represent a bootstrap estimate. Linear interpolation on the normal quantile scale is used if we do not have a quantile that match exactly. E.g. say we want a quantile $\alpha = .975$ as above but $(R + 1)\alpha$ is not an integer where $R$ is the number of bootstraps. Then we compute the quantile, $t^*_{(R+1)\alpha}$ by:
+The completely black line is the original estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap coefficient taken at each point and the transparent black lines each represent a bootstrap estimate. Linear interpolation on the normal quantile scale is used if we do not have a quantile that match exactly. 
+
+<!-- E.g. say we want a quantile $\alpha = .975$ as above but $(R + 1)\alpha$ is not an integer where $R$ is the number of bootstraps. Then we compute the quantile, $t^*_{(R+1)\alpha}$ by:
 
 $$t^*_{((R+1)\alpha)} = t^*_{(k)}+\frac{\Phi^{-1}(\alpha)-\Phi^{-1}(\frac{k}{R+1})}{
   \Phi^{-1}(\frac{k+1}{R+1}) - \Phi^{-1}(\frac{k}{R+1})}(t^*_{(k+1)} - t^*_{(k)}), 
     \qquad k=\lfloor (R+1)\alpha \rfloor$$
     
-where $\Phi^{-1}$ is the inverse cumulative distribution function and $\lfloor \cdot \rfloor$ is the floor operator and $t_(j)^*$ is the $j$'th ordered value
+where $\Phi^{-1}$ is the inverse cumulative distribution function of the standard normal distribution, $\lfloor \cdot \rfloor$ is the floor operator and $t_{(j)}^*$ is the $j$'th ordered value of the estimate at a given point in time -->
 
 ## Strata
-You can provide a strata to perform stratified sampling with. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the data set). Further, you can use the `unique_id` argument to match the individual entries with the entries in `strata`. As an example, we stratify by the `age` at the start of the study period with the code below:
+You can provide a strata variable to perform stratified sampling with. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the data set). Further, you can use the `unique_id` argument to match the individual entries with the entries in `strata`. As an example, we stratify by the `age` at the start of the study period with the code below:
 
 ```{r}
 # Individuals have different number of rows in the dataset
@@ -153,7 +164,7 @@ boot_out_with_strata <- ddhazard_boot(
 plot(dd_fit, ddhazard_boot = boot_out_with_strata)
 ```
 
-The above code is only provided for illustrative purposes. There is no reason to do stratified sampling over the age variable (as far as I gather). However, it may be useful if you have e.g. categorical variables in your model and want to ensure that each bootstrap sample has a given amount of observation in each category. Lastly, setting `do_stratify_with_event = T` will yield an interaction factor between the passed `strata` and whether or not the given individual has an event. Stratified sampling will then be performed over this variable
+The above code is only provided for illustrative purposes. There is no reason to do stratified sampling over the age variable (as far as I gather). However, it may be useful if you have e.g. categorical variables in your model and want to ensure that each bootstrap sample has a given amount of observation in each category
 
 ## Sampling weights
 We can also sample the weights. This is done as follows: within each stratum $j$ (e.g. males or females) let $r_j$ denote the number of individuals. Then we sample $r_j$ uniform variables $l_i\sim\text{Unif}(0,1)$ for $i = 1,\dots,r_j$ and normalize with a constant $c$ such that $\sum_{i=1}^{r_j} l_i/c = r_j$. The code below will sample the weights as described above:
@@ -166,8 +177,6 @@ boot_out_by_weights <- ddhazard_boot(
 
 plot(dd_fit, ddhazard_boot = boot_out_by_weights)
 ```
-
-There is only on stratum in the above which is the entire sample
 
 ## Fixed effects
 Fixed effects (time invariant effects) can also be bootstrap to get confidence bounds. The fixed effects bootstrap coefficients are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
@@ -237,9 +246,9 @@ boot.ci(boot_out, index = ncol(boot_out$t) - 0, type = c(
   "norm", "basic", "perc", "bca"))
 ```
 
-## Boot envelopes
+## Boot envelope
 
-We may also want to get simultaneous confidence intervals. An easy way to get such confidence intervals is with the `envelope` function with the `boot` library. For instance, we can simultaneous confidence intervals for the `bili` covariate as follows: 
+We may also want to get simultaneous confidence intervals. An easy way to get such confidence intervals is with the `envelope` function in the `boot` library. For instance, we can simultaneous confidence intervals for the `bili` covariate as follows: 
 
 ```{r}
 # Find the indices that correspondents to the log(bili) variable 
@@ -273,15 +282,33 @@ In this section, we will test the coverage of the pointwise confidence intervals
 
 The simulation is to mimic a situation where we assume that the coefficients are not random (as the model implies) but we do not know the shape of the coefficient curves across time. We setup the parameters for the experiment below and plot the coefficients without noise:
 
+```{r, echo=FALSE, eval=FALSE}
+library(colorspace)
+library(dichromat)
+cols <- colorschemes$Categorical.12[(1:5)*2]
+
+cols1 <- readhex(file = textConnection(paste(cols, collapse = "\n")),
+                 class = "RGB")
+
+#transform to hue/lightness/saturation colorspace
+cols1 <- as(cols1, "HLS")
+#multiplicative decrease of lightness
+cols1@coords[, "L"] <- cols1@coords[, "L"] * 0.5
+#going via rgb seems to work better  
+cols1 <- as(cols1, "RGB")
+cols <- hex(cols1)
+```
+
+
 ```{r}
 tmax <- 22                           # Number of periods
 n_start_grps <- 3                    # Number of "start group" - see text
                                      # Number of multiple of tmax - 1 in each 
-mlt <- 30                             # start group
+mlt <- 30                            # start group
 n <- (tmax - 1) * mlt * n_start_grps # Total number of individuals
 n
 
-# Define the noise free coeffecients
+# Define the noise free coefficients
 beta <- cbind(
   x1 = rep(-2, (tmax - 1) + 1), 
   x2 = (0:(tmax - 1) - (tmax - 1)/2) / ((tmax - 1) / 2),
@@ -289,8 +316,10 @@ beta <- cbind(
   x4 = - sin(pi / 7 * (0:(tmax - 1))), 
   x5 = sin(pi / 7 * (0:(tmax - 1))))
 
-# Plot noise free coeffecients
-matplot(beta, type = "l", lty = 1, ylab = "Coeffecient without noise")
+# Plot noise free coefficients
+cols <- c("#BC5C00", "#BEBE00", "#23BC00", "#0082BC", "#3500C1")
+matplot(beta, type = "l", lty = 1, ylab = "coefficient without noise", 
+        col = cols)
 ```
 
 There will be a total of `n =` `r n` individuals in groups of three. We start observing each group at time `0`, `7` and `14`. We do so to have a "stable" number of individual through the experiment. The experiment ends after `tmax = ` `r tmax`. 
@@ -350,11 +379,19 @@ sim_func <- function(){
   sim_mat$tstop <- max_time
   sim_mat$dies <- do_die
   
+  rownames(sim_mat) <- NULL
+  
   list(sims = sim_mat, beta_w_err = beta_w_err)
 }
 ```
 
 We add a bit of normally distributed noise to the coefficients with mean zero and standard deviation `r beta_sd`. The individuals' covariates are simulated from the uniform distribution from the range [`r -x_range`, `r x_range`]. The function `sim_func` is used to make the simulation. The definition of the function can be found in the markdown file for this vignette on the github site. We simulate a series below, illustrate the data matrix and plot the coefficients with noise added to them:
+
+```{r, include=FALSE}
+old_digits <- getOption("digits")
+options(digits = 2)
+```
+
 
 ```{r}
 # Simulate
@@ -362,11 +399,16 @@ set.seed(122044)
 sim_list <- sim_func()
 
 # Show data matrix
-head(sim_list$sims, 10)
+head(sim_list$sims, 10) 
 tail(sim_list$sims, 10)
 
-# Plot coeffecients with noise
-matplot(sim_list$beta_w_err, type = "l", lty = 1, ylab = "Coeffecient with noise")
+# Plot coefficients with noise
+matplot(sim_list$beta_w_err, type = "l", lty = 1, ylab = "coefficient with noise", 
+        col = cols)
+```
+
+```{r, include=FALSE}
+options(digits = old_digits)
 ```
 
 We are now able to estimate the model as follows:
@@ -390,7 +432,7 @@ for(i in 1:5){
 }
 ```
 
-The plots shows the estimated coefficient with 95% pointwise confidence intervals from the smoothed covariance matrix. The dots are the actual estimates (i.e. those with noise added to them). A bootstrap estimate of the confidence bounds is made below:
+The plots shows the estimated coefficient with 95% pointwise confidence intervals from the smoothed covariance matrix. The dots are the actual values (i.e. those with noise added to them). A bootstrap estimate of the confidence bounds is made below:
 
 ```{R, plot_2x3=TRUE}
 # Bootstrap with resampling individuals
@@ -436,62 +478,88 @@ We can now pose the question how the pointwise coverage is for each coefficient.
 compute_coverage(fit, boot_out, sim_list$beta_w_err)
 ```
 
-`compute_coverage` outputs a list of the true coverage of the `r (1 - alpha)*100`% confidence intervals from the smoothed covariance matrix and the percentile method from the bootstrap. These two are respectively the `smooth` and `boot` elements of the list. We can now repeat the above `M` times (defined below) as follows:
+`compute_coverage` outputs a list of the true coverage of the `r (1 - alpha)*100`% confidence intervals from the smoothed covariance matrix and the percentile method from the bootstrap. That is, the fractions of red dots from the previous plot that are within the 95% confidence interval. The two elements of the list is for the the percentile method from the bootstrap. These are respectively the `smooth` and `boot` elements of the list. We can now repeat the above `M` times (defined below) as follows:
 
 ```{r, error=FALSE, warning=FALSE}
 set.seed(520920)
-R <- 999  # Number of bootstrap estimates in each trail
-M <- 19  # Number of trails
+R <- 999  # Number of bootstrap estimates in each trials 
+M <- 200  # Number of trials
 
-# Define matrices for output
+# Define matrix for output
 coverage_boot <- coverage_smooth <- matrix(
   NA_real_, nrow = M, ncol = ncol(fit$state_vecs))
 
 # Sometimes estimations fails. We use this counter to keep track of the number
 # of times
 n_fails <- 0
+LRs <- 1.25^(0:(-6)) # Learning rates to try in order to get a fit
 
-for(i in 1:M){
-  # Simulate data set
-  sim_list <- sim_func()
-  
-  # Fit on whole data set
-  did_succed <- F
-  try({
-    eval(fit_expression)
-    did_succed <- T
+# We save this as an epxression as we will re-run it later
+boot_exp <- expression(
+  for(i in 1:M){
+    # Simulate data set
+    sim_list <- sim_func()
+    
+    # Fit on whole data set
+    did_succed <- F
+    try({
+      eval(fit_expression)
+      did_succed <- T
+    })
+    if(!did_succed){
+      n_fails <- n_fails + 1
+      next
+    }
+    
+    # Bootstrap fits
+    boot_out <- ddhazard_boot(fit,
+                              strata = as.factor(sim_list$sims$tstart),
+                              do_stratify_with_event = F,
+                              do_sample_weights = F, R = R, 
+                              LRs = LRs)
+    
+    # Compute coverage and add to output
+    coverage <- compute_coverage(fit, boot_out, sim_list$beta_w_err)
+    coverage_smooth[i, ] <- coverage$smooth
+    coverage_boot[i, ] <- coverage$boot
   })
-  if(!did_succed){
-    n_fails <- n_fails + 1
-    next
-  }
-  
-  # Bootstrap fits
-  boot_out <- ddhazard_boot(fit,
-                            strata = as.factor(sim_list$sims$tstart),
-                            do_stratify_with_event = F,
-                            do_sample_weights = F, R = R)
-  
-  # Compute coverage and add to output
-  coverage <- compute_coverage(fit, boot_out, sim_list$beta_w_err)
-  coverage_smooth[i, ] <- coverage$smooth
-  coverage_boot[i, ] <- coverage$boot
-  
-  # Clear memory
-  rm(boot_out, fit, sim_list); gc()
-}
+eval(boot_exp)
 
 n_fails # number of failed estimations 
 ```
 
-The mean coverage of the two methods are printed below:
+The mean of the fraction of the coverages for the two methods are printed below:
 
 ```{r}
 colMeans(coverage_smooth, na.rm = T)
 colMeans(coverage_boot, na.rm = T)
 ```
 
-Finally, we can make a boxplot of the coverage in each trail as follows:
+Finally, we can make a boxplot of the fraction of coverage in each trail as follows:
+
+```{r}
+boxplot(coverage_smooth, ylim = c(.6, 1), main = "Smoothed covariance")
+abline(h = .95, lty = 1)
+
+boxplot(coverage_boot, ylim = c(.6, 1), main = "Bootstrap")
+abline(h = .95, lty = 1)
+```
+
+The downwards skew in the bootstrap plot is due to because the learning rate have been decreased for some of the bootstrap estimates in order to estimate the model. An alternative could be to allow for this as done below:
+
+```{r}
+n_fails <- 0
+LRs <- 1     # Changed to one value only
+
+eval(boot_exp)
+
+n_fails # number of failed estimations 
+```
+
+```{r}
+colMeans(coverage_smooth, na.rm = T)
+colMeans(coverage_boot, na.rm = T)
+```
 
 ```{r}
 boxplot(coverage_smooth, ylim = c(.6, 1), main = "Smoothed covariance")

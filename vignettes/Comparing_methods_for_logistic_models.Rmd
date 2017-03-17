@@ -409,7 +409,7 @@ dd_fit <- ddhazard(
   Surv(tstart, tstop, death == 2) ~ ddFixed(1) + 
     ddFixed(age) + ddFixed(log(albumin)) + edema +ddFixed(log(protime)) + log(bili), 
   pbc2, id = pbc2$id, by = 100, max_T = 3600, 
-  Q_0 = diag(rep(1, 2)), Q = diag(rep(0.0001, 2)), control = list(eps = 0.02))
+  Q_0 = diag(rep(100000, 2)), Q = diag(rep(0.001, 2)))
 ```
 
 

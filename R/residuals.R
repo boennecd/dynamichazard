@@ -33,6 +33,9 @@ residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_err
   }
 
   if(type == "pearson" || type == "raw"){
+    if(type == "pearson" & !object$model %in% c("logit"))
+      stop("Pearsons residuals is not implemented for model '", object$model, "'")
+
     return(obs_res(object, if(is.null(object$data)) data else object$data, type))
   }
 
@@ -75,10 +78,19 @@ obs_res <- function(object, data, type){
   if(is.null(data) || is.null(object$risk_set))
     stop("Missing risk set or data to compute residuals")
 
-  # Wee need these to check if there is an event in the bin
+  # We need these to check if there is an event in the bin
   new_stop = object$risk_set$stop_new
   new_event = object$risk_set$new_events_flags
   res = list()
+
+  # Get the reponse object
+  response <- model.frame(update(object$formula, .~-1), data)[[1]]
+  if(attr(response, "type") == "right")
+    response <- cbind(rep(0, nrow(response)), response)
+
+  # Find the rows tstart and tstop
+  tstart <- response[, 1]
+  tstop <- response[, 2]
 
   for(i in seq_along(object$risk_set$risk_sets)){
     start_ = object$times[i]
@@ -86,8 +98,8 @@ obs_res <- function(object, data, type){
     r_set = object$risk_set[[1]][[i]]
 
     tmp_dat = data[r_set, ]
-    tmp_dat$tstart = rep(start_, length(r_set))
-    tmp_dat$tstop = rep(stop_, length(r_set))
+    tmp_dat$tstart = pmax(tstart[r_set], start_)
+    tmp_dat$tstop = pmin(tstop[r_set], stop_)
 
     suppressMessages(p_est <- predict(object, tmp_dat, type = "response", tstart = "tstart", tstop = "tstop")$fits)
 

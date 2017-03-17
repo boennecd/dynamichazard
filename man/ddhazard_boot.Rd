@@ -5,7 +5,8 @@
 \title{Bootstrap for \code{\link{ddhazard}}}
 \usage{
 ddhazard_boot(ddhazard_fit, strata, unique_id, R = 100,
-  do_stratify_with_event = T, do_sample_weights = F, print_errors = F)
+  do_stratify_with_event = F, do_sample_weights = F,
+  LRs = ddhazard_fit$control$LR * 2^(0:(-4)), print_errors = F)
 }
 \arguments{
 \item{ddhazard_fit}{Returned object from a \code{\link{ddhazard}} call}
@@ -20,13 +21,15 @@ ddhazard_boot(ddhazard_fit, strata, unique_id, R = 100,
 
 \item{do_sample_weights}{\code{TRUE} if weights should be sample instead of individuals}
 
+\item{LRs}{Learning rates in decreasing order which will be used to estimate the model.}
+
 \item{print_errors}{\code{TRUE} if errors should be printed when estimations fails}
 }
 \value{
 An object like returned from the \code{\link[boot]{boot}} function
 }
 \description{
-See the vignette 'Bootstrap illustration'
+See the vignette 'Bootstrap illustration'. The \code{do_stratify_with_event} may be useful when either cases or non-cases are very rare to ensure that the model estimation succeds.
 }
 \seealso{
 \code{\link{ddhazard}}, \code{\link[=plot.fahrmeier_94]{plot}}

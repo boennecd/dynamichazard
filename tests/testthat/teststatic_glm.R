@@ -14,8 +14,8 @@ cat("\nRunning", test_name, "\n")
 
 
 
-
-sims <- test_sim_func_logit(n_series = 1e4, n_vars = 3, t_0 = 0, t_max = 10,
+set.seed(615015)
+sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
                             x_range = 1, x_mean = .5, re_draw = T, beta_start = 0,
                             intercept_start = -3, sds = c(.1, rep(1, 3)))
 
@@ -42,27 +42,21 @@ test_that("Static glm yields expected number of events, correct rows and same re
   expect_equal(res_own_risk_obj$coefficients, res$coefficients)
 })
 
-# matplot(sims$betas, type = "l", ylim = range(sims$betas, res$coefficients),
-#         col = 1:4)
-# sum(sims$res$event)
-# abline(h = res$coefficients, col  = 1:4)
-
-set.seed(33587)
-sims <- test_sim_func_exp(n_series = 1e4, n_vars = 3, t_0 = 0, t_max = 10,
-                          x_range = 1, x_mean = .5, re_draw = T, beta_start = 0,
-                          intercept_start = -3, sds = c(.1, rep(1, 3)))
-
 test_that("static glm gives results with exponential that match previous computations", {
+  set.seed(33587)
+  sims <- test_sim_func_exp(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
+                            x_range = 1, x_mean = .5, re_draw = T, beta_start = 0,
+                            intercept_start = -3, sds = c(.1, rep(1, 3)))
+
   form <- survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event
   res <- dynamichazard::static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "exponential", model = T)
 
   tmp <- res["coefficients"]
-  # get_expect_equal(tmp, file = "tmp.txt")
 
   expect_equal(unname(c(tmp$coefficients)),
-               c(-3.2995553492491152, 0.5601471676957662, 1.3456006304511172, -0.8888937783727533  ))
+               c(-3.0654969893646609, 0.4515918710312326, 1.0892116143756236, -0.7820465199455019 ))
 
   # test with lower max_T
   res_lower <- dynamichazard::static_glm(
@@ -73,7 +67,7 @@ test_that("static glm gives results with exponential that match previous computa
   # get_expect_equal(tmp)
 
   expect_equal(unname(c(tmp$coefficients)),
-               c(-2.98973053733078498, -0.21626321275614255, 0.02785842252341138, -1.39295562622901259))
+               c(-2.7659195344671597, -0.6083779316590273, -0.1280512349287461, -1.0481131739738363 ))
 })
 
 test_that("design_matrix yields equal result with different values of use_weights", {
@@ -82,8 +76,10 @@ test_that("design_matrix yields equal result with different values of use_weight
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "logit", model = T)
 
-  expect_equal(unname(res$coefficients), c(-2.93840401792663775, 0.30150117426768974,  0.80625660765174056, -0.59413513020434738))
+  res <- res[c("coefficients")]
+  # save_to_test(res, "static1")
 
+  expect_equal(res, read_to_test("static1"))
 
   data_f <- get_survival_case_weights_and_data(formula = form, data = sims$res, by = 1,
                                                max_T = 10, id = sims$res$id, use_weights = F)$X
@@ -95,11 +91,6 @@ test_that("design_matrix yields equal result with different values of use_weight
 
   expect_equal(glm_res$coefficients, res$coefficients)
 })
-
-# cols <- rainbow(4)
-# matplot(sims$betas, type = "l", lty = 1, col = cols)
-# abline(h = res$coefficients, lty = 2, col = cols)
-# sum(sims$res$event)
 
 
 

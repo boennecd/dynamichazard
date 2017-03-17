@@ -132,7 +132,9 @@ std::vector<double>
     }
 
     // compute first terms and normalizing constant
-    t_0_logLike = - 1.0 / 2.0 * log(arma::det(Q_0))
+    double log_det_Q, dum;
+    arma::log_det(log_det_Q, dum, Q_0);
+    t_0_logLike = - 1.0 / 2.0 * log_det_Q
       - n_parems / 2.0 * (log(2.0) + log(M_PI));
   }
 
@@ -147,6 +149,9 @@ std::vector<double>
     Rcpp::stop("Model '" + model + "' not implemented for logLike method");
   }
 
+
+  double log_det_Q, dum;
+  arma::log_det(log_det_Q, dum, Q);
   double bin_stop = Rcpp::as<double>(risk_obj["min_start"]);
   for(int t = 1; t <= d; ++t){
     double bin_Start = bin_stop;
@@ -157,7 +162,7 @@ std::vector<double>
       a_t = a_t_d_s.col(t);
       arma::vec delta = a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
 
-      logLike -=  1.0/ 2.0 * log(arma::det(Q) * (bin_stop - bin_Start))
+      logLike -=  1.0/ 2.0 * (log_det_Q + log(bin_stop - bin_Start))
         + n_parems / 2.0 * (log(2.0) + log(M_PI));
 
       logLike -= 1.0 / 2.0 * pow(bin_stop - bin_Start, -1) * arma::as_scalar(

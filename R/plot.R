@@ -152,7 +152,7 @@ plot.fahrmeier_94_SpaceErrors = function(x, mod, cov_index = NA, t_index = NA,
   t_index = if(length(t_index) == 1 && is.na(t_index)) seq_along(bin_times) else t_index
   plot(range(res_std) ~ c(min(bin_times[t_index]) + min(delta_points),
                           max(bin_times[t_index]) + max(delta_points)),
-       type = "n", ylab = "Std. state space error", xlab = xlab,
+       type = "n", ylab = ylab, xlab = xlab,
        xaxt = ifelse(use_custom_x_axis, "n", "something"),
        ...)
 

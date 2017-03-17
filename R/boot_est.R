@@ -70,6 +70,10 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
     Q_new[1:n_varying, 1:n_varying] <- ddhazard_fit$Q
     ddhazard_fit$Q <- Q_new
 
+    # We need the right F matrix
+    ddhazard_fit$F_ <-  get_F(
+      ddhazard_fit$order, n_varying, n_fixed, T)
+
     # and to a_0
     if(ddhazard_fit$order == 1){
       a_0 <- c(a_0, ddhazard_fit$control$fixed_parems_start)
