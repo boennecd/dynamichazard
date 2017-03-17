@@ -1,4 +1,4 @@
-#include "dynamichazard.h"
+#include "arma_n_rcpp.h"
 
 using namespace std;
 using namespace Rcpp;

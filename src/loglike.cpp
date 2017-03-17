@@ -1,4 +1,4 @@
-#include "dynamichazard.h"
+#include "ddhazard.h"
 
 class logLike_link_term_helper{
 private:

@@ -1,10 +1,6 @@
-#include "dynamichazard.h"
+#include "ddhazard.h"
 #include "exp_model_funcs.h"
 #include "thread_pool.h"
-
-
-
-
 
 // worker class for parallel computation
 // This class is abstact as the method do_computation will differ between

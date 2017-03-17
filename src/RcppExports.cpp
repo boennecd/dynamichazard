@@ -6,27 +6,6 @@
 
 using namespace Rcpp;
 
-// bigglm_updateQR_rcpp
-void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, arma::vec& y, const arma::vec& w);
-RcppExport SEXP dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP ySEXP, SEXP wSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec& >::type D(DSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type rbar(rbarSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type thetab(thetabSEXP);
-    Rcpp::traits::input_parameter< double& >::type ss(ssSEXP);
-    Rcpp::traits::input_parameter< bool& >::type checked(checkedSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type tol(tolSEXP);
-    Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type eta(etaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type offset(offsetSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type w(wSEXP);
-    bigglm_updateQR_rcpp(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w);
-    return R_NilValue;
-END_RCPP
-}
 // bigglm_regcf_rcpp
 arma::vec bigglm_regcf_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol);
 RcppExport SEXP dynamichazard_bigglm_regcf_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP) {
@@ -117,6 +96,27 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::string >::type criteria(criteriaSEXP);
     rcpp_result_gen = Rcpp::wrap(ddhazard_fit_cpp(X, fixed_terms, weights, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_params, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation, fixed_effect_chunk_size, debug, NR_it_max, n_threads, ridge_eps, n_fixed_terms_in_state_vec, use_pinv, criteria));
     return rcpp_result_gen;
+END_RCPP
+}
+// bigglm_updateQR_rcpp
+void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, arma::vec& y, const arma::vec& w);
+RcppExport SEXP dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP ySEXP, SEXP wSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type rbar(rbarSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type thetab(thetabSEXP);
+    Rcpp::traits::input_parameter< double& >::type ss(ssSEXP);
+    Rcpp::traits::input_parameter< bool& >::type checked(checkedSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type offset(offsetSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type w(wSEXP);
+    bigglm_updateQR_rcpp(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w);
+    return R_NilValue;
 END_RCPP
 }
 // logLike_cpp

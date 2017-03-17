@@ -10,7 +10,7 @@ BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
 SOURCES_C = stats/lm.c
-SOURCES_CPP = Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp dist_families.cpp loglike.cpp risk_obj.cpp thread_pool.cpp ddhazard_EKF_solver.cpp
+SOURCES_CPP = Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp thread_pool.cpp ddhazard_EKF_solver.cpp
 SOURCES_F = biglm/boundedQRf.f
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
@@ -28,12 +28,8 @@ endif
 
 all: $(SHLIB)
 
-$(SOURCES_CPP:.cpp=.o): dynamichazard.h
-
 ddhazard_fit.o: ddhazard_fit.cpp ddhazard_EKF_solver.cpp exp_model_funcs.h
 
 ddhazard_EKF_solver.o: thread_pool.h
 
 thread_pool.o: thread_pool.cpp thread_pool.h
-
-bigglm_wrapper.o Cdqrls_wrapper.o: dist_families.cpp

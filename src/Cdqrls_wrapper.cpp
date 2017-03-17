@@ -1,4 +1,4 @@
-#include "dynamichazard.h"
+#include "bigglm_wrapper.h"
 
 extern "C" {
   #include <R_ext/Constants.h> // for DOUBLE_EPS

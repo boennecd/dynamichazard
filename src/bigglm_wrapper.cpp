@@ -1,4 +1,4 @@
-#include "dynamichazard.h"
+#include "bigglm_wrapper.h"
 
 extern "C"
 {
@@ -131,43 +131,21 @@ arma::vec bigglm_regcf(qr_obj &qr){
   return beta;
 }
 
-void null_deleter(arma::vec *) {}
-
-// Only exported for tests
-// [[Rcpp::export]]
-void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
-                          double &ss, bool &checked, arma::vec &tol,
-                          std::string model,
-
-                          const arma::mat &X, const arma::vec &eta,
-                          const arma::vec &offset, arma::vec &y,
-                          const arma::vec &w){
-  qr_obj qr;
-  qr.D = std::shared_ptr<arma::vec>(&D, &null_deleter);
-  qr.rbar = std::shared_ptr<arma::vec>(&rbar, &null_deleter);
-  qr.thetab = std::shared_ptr<arma::vec>(&thetab, &null_deleter);
-  qr.ss = ss;
-  qr.checked = checked;
-  qr.tol = std::shared_ptr<arma::vec>(&tol, &null_deleter);
-
-  if(model == "logit"){
-    return(bigglm_updateQR_logit().update(qr, X, eta, offset, y, w));
-  } else if (is_exponential_model(model)){
-    return(bigglm_updateQR_poisson().update(qr, X, eta, offset, y, w));
-  }
-}
-
 // Only exported for tests
 // [[Rcpp::export]]
 arma::vec bigglm_regcf_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
                             double &ss, bool &checked, arma::vec &tol){
   qr_obj qr;
-  qr.D = std::shared_ptr<arma::vec>(&D, &null_deleter);
-  qr.rbar = std::shared_ptr<arma::vec>(&rbar, &null_deleter);
-  qr.thetab = std::shared_ptr<arma::vec>(&thetab, &null_deleter);
+  qr.D = std::shared_ptr<arma::vec>(&D, [](arma::vec*x) -> void { });
+  qr.rbar = std::shared_ptr<arma::vec>(&rbar, [](arma::vec*x) -> void { });
+  qr.thetab = std::shared_ptr<arma::vec>(&thetab, [](arma::vec*x) -> void { });
   qr.ss = ss;
   qr.checked = checked;
-  qr.tol = std::shared_ptr<arma::vec>(&tol, &null_deleter);
+  qr.tol = std::shared_ptr<arma::vec>(&tol, [](arma::vec*x) -> void { });
 
   return(bigglm_regcf(qr));
 }
+
+// Define the concrete templates
+template class bigglm_updateQR<logit_fam>;
+template class bigglm_updateQR<poisson_fam>;
