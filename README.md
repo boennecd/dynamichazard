@@ -95,7 +95,6 @@ plot(fit)
 
 # Bootstrap the estimates
 boot_out <- ddhazard_boot(fit, R = 10000) # R is number of bootstrap samples
-#> Warning in ddhazard_boot(fit, R = 10000): Failed to estimate 299 times
 
 # Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
 # bootstrap estimates. Transparent lines are bootstrap estimates
@@ -108,7 +107,7 @@ plot(fit, ddhazard_boot = boot_out)
 Bootstrapping only slightly changes the confidence bounds. It seems that:
 
 -   It is hard to tell the difference between the two drugs. The `ddi` may be more effective in the latter period (the estimates is negative) though the point-wise confidence bounds still contains 0. Further, this comment neglect that the confidence bounds are point-wise
--   Having aids rather than being enrolled (only) due to two CD4 counts of 300 or fewer increase your risk of dying
+-   Having aids rather than being enrolled (only) due to two CD4 counts of 300 or fewer is associated with an increased risk of dying
 -   Males seems to be at lower risk in the first period
 
 An example of a paper analyzing the CD4 count can be found in Guo & Carlin (2004). They also fit a static model (time-invariant coefficients) of the survival times with an exponential model. The estimates are comparable with those above as expected
