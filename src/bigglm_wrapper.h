@@ -129,9 +129,4 @@ public:
   };
 };
 
-
-// Define the concrete templates
-template class bigglm_updateQR<logit_fam>;
-template class bigglm_updateQR<poisson_fam>;
-
 #endif

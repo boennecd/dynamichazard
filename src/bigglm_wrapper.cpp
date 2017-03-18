@@ -145,3 +145,7 @@ arma::vec bigglm_regcf_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
 
   return(bigglm_regcf(qr));
 }
+
+// Define the concrete templates
+template class bigglm_updateQR<logit_fam>;
+template class bigglm_updateQR<poisson_fam>;
