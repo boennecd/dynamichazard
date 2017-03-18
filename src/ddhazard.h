@@ -1,11 +1,11 @@
+#ifndef DDHAZARD_H
+#define DDHAZARD_H
+
 // [[Rcpp::plugins(cpp11)]]
-#include <iostream>
-#include <algorithm>
 #include "ddhazard_problem_data.h"
 #include "arma_n_rcpp.h"
 
-#ifndef DDHAZARD_MISC
-#define DDHAZARD_MISC
+
 
 inline bool is_exponential_model(std::string model){
   return(model == "exp_combined" ||
@@ -13,7 +13,6 @@ inline bool is_exponential_model(std::string model){
          model == "exp_clip_time" ||
          model == "exp_clip_time_w_jump");
 }
-#endif
 
 // Abstact solver class
 class Solver {
@@ -222,3 +221,5 @@ class UKF_solver_New_exponential : public UKF_solver_New{
 public:
   using UKF_solver_New::UKF_solver_New;
 };
+
+#endif

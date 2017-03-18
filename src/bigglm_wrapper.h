@@ -1,3 +1,6 @@
+#ifndef BIGGLM_WRAPPER
+#define BIGGLM_WRAPPER
+
 #include <memory>
 #include "arma_n_rcpp.h"
 
@@ -57,9 +60,6 @@ public:
 };
 
 arma::vec bigglm_regcf(qr_obj &qr);
-
-#ifndef BIGGLM_WRAPPER
-#define BIGGLM_WRAPPER
 
 //logit_fam
 class logit_fam : public dist_family {
@@ -128,5 +128,10 @@ public:
     return log(delta_t);
   };
 };
+
+
+// Define the concrete templates
+template class bigglm_updateQR<logit_fam>;
+template class bigglm_updateQR<poisson_fam>;
 
 #endif

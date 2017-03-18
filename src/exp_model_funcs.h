@@ -1,7 +1,7 @@
-#include <cmath>
-
 #ifndef EXP_MODEL_FUNCS
 #define EXP_MODEL_FUNCS
+
+#include <cmath>
 
 namespace exp_model_funcs {
 // Namespace to avoid namespace pollution and avoid error-40 for Taylor/Laruens series

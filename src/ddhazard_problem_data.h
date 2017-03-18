@@ -1,9 +1,8 @@
-#include "arma_n_rcpp.h"
-#include <thread>
-#include <future>
-
 #ifndef DDHAZARD_PROBLEM_DATA
 #define DDHAZARD_PROBLEM_DATA
+
+#include "arma_n_rcpp.h"
+#include <future>
 
 class problem_data{
 public:

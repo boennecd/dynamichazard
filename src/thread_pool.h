@@ -27,6 +27,9 @@
 // Code from:
 // Williams, Anthony. C++ concurrency in action. London, 2012
 
+#ifndef THREAD_POOL_H
+#define THREAD_POOL_H
+
 #include <deque>
 #include <future>
 #include <memory>
@@ -313,3 +316,5 @@ public:
     }
   }
 };
+
+#endif

@@ -17,7 +17,6 @@ extern int openblas_get_num_threads();
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
-
 #define ARMA_HAVE_STD_ISFINITE
 #define ARMA_HAVE_STD_ISINF
 #define ARMA_HAVE_STD_ISNAN
