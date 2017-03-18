@@ -127,7 +127,7 @@ test_that("logLik for head_neck_cancer data set with second order model", {
                    class = "logLik",
                    df = 2 * 2 + 3)
 
-  expect_equal(log_like, old)
+  expect_equal(log_like, old, tolerance = 1e-4)
 })
 
 test_that("logLik for head_neck_cancer data set match previous results with fixed effects", {
