@@ -112,5 +112,8 @@ test_that("Weights are as expected", {
   }
 })
 
+test_that("Boot works with posterior_approx",
+          expect_true(FALSE))
+
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

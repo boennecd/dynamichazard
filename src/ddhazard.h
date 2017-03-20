@@ -67,7 +67,6 @@ class EKF_solver : public Solver{
   problem_data_EKF &p_dat;
   EKF_helper filter_helper;
 
-
 public:
   EKF_solver(problem_data_EKF &p_, const std::string model);
 
@@ -220,6 +219,46 @@ class UKF_solver_New_exponential : public UKF_solver_New{
 
 public:
   using UKF_solver_New::UKF_solver_New;
+};
+
+
+
+
+
+// Solver with approximation at the posterior
+
+class Posterior_approx_hepler_logit{
+private:
+  static double NR_delta(
+      const double offset, const double coef1, const double coef2,
+      const bool is_event, const double c0);
+
+  constexpr static double double_one = 1.;
+
+public:
+  static double get_outcome(
+      const bool is_event,
+      const double tstart, const double bin_tstart,
+      const double tstop, const double bin_tstop);
+
+  static double compute_length(
+      const double, const double, const double, const double);
+
+  static double second_d(const double, const double);
+};
+
+
+template<class T>
+class Posterior_approx : public Solver
+{
+  problem_data &p_dat;
+
+public:
+  Posterior_approx(problem_data &p_):
+  p_dat(p_)
+  {};
+
+  void solve();
 };
 
 #endif

@@ -136,7 +136,8 @@ ddhazard = function(formula, data,
                           ridge_eps = .0001,
                           fixed_terms_method = "E_step",
                           Q_0_term_for_fixed_E_step = NULL,
-                          use_pinv = T, criteria = "delta_coef")
+                          use_pinv = T, criteria = "delta_coef",
+                          permu = model == "posterior_approx")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -309,10 +310,13 @@ ddhazard = function(formula, data,
     message("Running EM")
   }
 
+  if(control$permu)
+    eval(get_permu_data_exp(X_Y[1:3], risk_set, weights))
+
   if(!est_fixed_in_E){
     X_Y$X <- t(X_Y$X) # we transpose for performance due to the column-major
-                      # ordering. The logic is that we primary look up indviduals
-                      # (i.e. columns in the tranpose)
+    # ordering. The logic is that we primary look up indviduals
+    # (i.e. columns in the tranpose)
     X_Y$fixed_terms <- t(X_Y$fixed_terms) # same
   } else {
     # We add the firm covariates to the design matrix. Later, we recover the fixed covariates
@@ -374,6 +378,9 @@ ddhazard = function(formula, data,
 
     F_ <- F_[-indicies_fix, -indicies_fix, drop = F]
   }
+
+  if(control$permu)
+    eval(get_permu_data_rev_exp(list(), risk_set, weights))
 
   # Set names
   tmp_names = rep(rownames(X_Y$X), order)

@@ -6,7 +6,7 @@
 // to nonlinear systems." AeroSense'97. International Society for Optics and
 // Photonics, 1997
 
-// Sigma points are though re-generated as suggested in:
+// Sigma points are re-generated as suggested in:
 // Menegaz, Henrique Marra Taira. "Unscented kalman filtering on euclidean and
 // riemannian manifolds." (2016).
 

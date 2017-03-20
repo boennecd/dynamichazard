@@ -90,6 +90,7 @@ suppressMessages(
 
 test_that("Result of exponential model on head_neck_data match previous results", {
   # plot(result_exp)
+  result_exp$control <- NULL
   # save_to_test(result_exp, "head_neck_exp")
 
   expect_equal(result_exp, read_to_test("head_neck_exp"))
@@ -139,23 +140,26 @@ test_that("You can ommit the first entry when covariates are not time-varying",{
 
 
 # Change by argument
-suppressMessages(result_exp <- ddhazard(
-  formula = survival::Surv(start, stop, event) ~ group,
-  data = head_neck_cancer,
-  by = 5, Q_0 = diag(1, 2),
-  Q = diag(1e-1, 2),
-  control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-3,
-                 save_data = F, save_risk_set = F),
-  max_T = 30,
-  id = head_neck_cancer$id, order = 1,
-  verbose = F,
-  model = "exp_clip_time_w_jump"
-))
+test_that("Chaning by argument gives previous results for the exp_clp_w_jump method", {
+  suppressMessages(result_exp <- ddhazard(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 5, Q_0 = diag(1, 2),
+    Q = diag(1e-1, 2),
+    control = list(est_Q_0 = F,
+                   save_data = F, save_risk_set = F),
+    max_T = 30,
+    id = head_neck_cancer$id, order = 1,
+    verbose = F,
+    model = "exp_clip_time_w_jump"
+  ))
 
-# plot(result_exp)
-# save_to_test(result_exp, "ddhazard_changed_by")
+  # plot(result_exp)
+  result_exp$control <- NULL
+  # save_to_test(result_exp, "ddhazard_changed_by")
 
-expect_equal(result_exp, read_to_test("ddhazard_changed_by"))
+  expect_equal(result_exp, read_to_test("ddhazard_changed_by"))
+})
 
 ########
 # Test on simulated data
@@ -259,6 +263,73 @@ test_that("Result of exponential model with only binary or right clipped time yi
   result_exp <- result_exp[c("state_vecs", "state_vars", "Q")]
   # save_to_test(result_exp, file_name = "ddhazard_exp_clip_w_jump", 1e-4)
   expect_equal(result_exp, read_to_test("ddhazard_exp_clip_w_jump"), tolerance = 1e-04)
+})
+
+
+test_that("Permutating data does not makes a big difference", {
+  args <- list(
+    Surv(stop, event) ~ group, head_neck_cancer,
+    by = 1, max_T = 40,
+    Q_0 = diag(rep(10000, 2)), Q = diag(rep(0.1, 2)),
+    control = list(n_threads = 1))
+
+  r1 <- do.call(ddhazard, args)
+
+  args$control <- c(args$control, list(permu = T))
+
+  r2 <- do.call(ddhazard, args)
+
+  # plot(r1)
+  # plot(r2)
+
+  expect_equal(r1$state_vecs, r2$state_vecs)
+  expect_true(is.character(
+    all.equal(r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
+
+  #####
+  # With fixed effects
+  args <- list(
+    Surv(tstart, tstop, death == 2) ~ age + ddFixed(edema) +
+      log(albumin) + log(protime) + log(bili), pbc2,
+    id = pbc2$id, by = 100, max_T = 3600,
+    Q_0 = diag(rep(10000, 5)), Q = diag(rep(0.001, 5)),
+    control = list(n_threads = 1))
+
+  r1 <- do.call(ddhazard, args)
+  args$control <- c(args$control, list(permu = T))
+  r2 <- do.call(ddhazard, args)
+
+  # plot(r1)
+  # plot(r2)
+
+  expect_equal(r1$state_vecs, r2$state_vecs)
+  expect_true(is.character(
+    all.equal(r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
+
+
+  #####
+  # With weigths
+  w <- sample(1:3, nrow(pbc2), replace = T)
+
+  args <- list(
+    Surv(tstart, tstop, death == 2) ~ age + edema +
+      log(albumin) + log(protime) + log(bili), pbc2,
+    id = pbc2$id, by = 100, max_T = 3000,
+    weights = w,
+    Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
+    control = list(n_threads = 1, LR = .8))
+
+  r1 <- do.call(ddhazard, args)
+  args$control <- c(args$control, list(permu = T))
+  r2 <- do.call(ddhazard, args)
+
+  # plot(r1)
+  # plot(r2)
+
+  expect_equal(r1$state_vecs, r2$state_vecs)
+  expect_true(is.character(
+    all.equal(r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
+
 })
 
 # Had issues with win builder. Thus, these lines

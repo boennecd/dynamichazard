@@ -24,21 +24,57 @@ get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T)
     order_by_id_and_rev_start = order(id, -Y[, 1]) - 1, id = id,
     is_for_discrete_model = is_for_discrete_model)
 
-permu_data <- function(data, risk_obj){
-  permu <- sample(nrow(data), replace = F)
-  data_new <- data[permu, ]
-  risk_obj_new <- risk_obj
-  for(i in seq_along(risk_obj$risk_sets))
-    risk_obj_new$risk_sets[[i]] <- permu[risk_obj$risk_sets[[i]]]
+get_permu_data_exp <- function(data, risk_obj, weights){
+  data <- deparse(substitute(data))
+  risk_obj <- deparse(substitute(risk_obj))
+  weights <- deparse(substitute(weights))
 
-  list(data = data_new, risk_obj = risk_obj_new, permu = permu)
+  txt_exp <-
+    "permu <- sample(nrow(data[[1]]), replace = F)
+
+    for(i in seq_along(data))
+      data[[i]] <- data[[i]][permu, , drop = F]
+
+    for(i in seq_along(risk_obj$risk_sets))
+      risk_obj$risk_sets[[i]] <-
+        structure(sort(match(risk_obj$risk_sets[[i]], permu)), org = risk_obj$risk_sets[[i]])
+
+    risk_obj$is_event_in <- risk_obj$is_event_in[permu]
+
+    weights <- weights[permu]
+
+    rm(i)"
+
+  txt_exp <- gsub("data", data, txt_exp)
+  txt_exp <- gsub("risk_obj", risk_obj, txt_exp)
+  txt_exp <- gsub("weights", weights, txt_exp)
+
+  parse(text = txt_exp)
 }
 
-permu_data_rev <- function(data, risk_obj, permu){
-  org_order <- order(permu)
+get_permu_data_rev_exp <- function(data, risk_obj, weights){
+  data <- deparse(substitute(data))
+  risk_obj <- deparse(substitute(risk_obj))
+  weights <- deparse(substitute(weights))
 
-  for(i in seq_along(risk_obj$risk_sets))
-    risk_obj$risk_sets[[i]] <- match(risk_obj$risk_sets[[i]], permu)
+  txt_exp <-
+    "org_order <- order(permu)
 
-  list(data = data[org_order, ], risk_obj = risk_obj)
+    for(i in seq_along(data))
+      data[[i]] <- data[[i]][org_order, , drop = F]
+
+    for(i in seq_along(risk_obj$risk_sets))
+      risk_obj$risk_sets[[i]] <- attr(risk_obj$risk_sets[[i]], 'org')
+
+    risk_obj$is_event_in <- risk_obj$is_event_in[org_order]
+
+    weights <- weights[org_order]
+
+    rm(permu, org_order, i)"
+
+  txt_exp <- gsub("data", data, txt_exp)
+  txt_exp <- gsub("risk_obj", risk_obj, txt_exp)
+  txt_exp <- gsub("weights", weights, txt_exp)
+
+  parse(text = txt_exp)
 }

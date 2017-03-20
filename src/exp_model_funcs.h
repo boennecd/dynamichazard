@@ -4,9 +4,9 @@
 #include <cmath>
 
 namespace exp_model_funcs {
-// Namespace to avoid namespace pollution and avoid error-40 for Taylor/Laruens series
+// Namespace to avoid namespace pollution
 // By definition:
-//  eps                 epsilon in ridge regression like solution
+//  eps                 epsilon in ridge regression like
 //  a                   at risk length
 //  eta                 linear predictor x^T * beta
 //  v                   a * exp(eta)

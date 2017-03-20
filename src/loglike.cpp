@@ -4,7 +4,7 @@ class logLike_link_term_helper{
 private:
   using uvec_iter = arma::uvec::const_iterator;
 
-  // function that takes in a linear predictor and delta time
+  // function that takes the inear predictor and delta time
   virtual double link_term_if_death(const double &, const double &) = 0;
   virtual double link_term_if_control(const double &, const double &) = 0;
 

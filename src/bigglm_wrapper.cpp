@@ -5,7 +5,7 @@ extern "C"
   /*
   *
   * The Fortran code is:
-  *       SUBROUTINE INCLUD(NP, NRBAR, WEIGHT, XROW, YELEM, D,
+  *      SUBROUTINE INCLUD(NP, NRBAR, WEIGHT, XROW, YELEM, D,
                             *+      RBAR, THETAB, SSERR, IER)
                             * ...
                             *

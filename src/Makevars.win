@@ -10,7 +10,7 @@ BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
 SOURCES_C = stats/lm.c
-SOURCES_CPP = Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp thread_pool.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp
+SOURCES_CPP = Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp thread_pool.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp ddhazard_posterior_approx_solver.cpp
 SOURCES_F = biglm/boundedQRf.f
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
@@ -26,14 +26,23 @@ else
 PKG_LIBS = $(FLIBS) $(BLAS_LIBS_USE) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS)
 endif
 
+DD_DEPS = arma_n_rcpp.h ddhazard_problem_data.h ddhazard.h
+BIGGLM_DEPS = arma_n_rcpp.h bigglm_wrapper.h
+
 all: $(SHLIB)
 
-loglike.o: arma_n_rcpp.h
+$(SHLIB): $(OBJECTS)
 
-ddhazard.o Cdqrls_wrapper.o bigglm_wrapper.o: bigglm_wrapper.h
+loglike.o: arma_n_rcpp.h loglike.cpp
 
-ddhazard_EKF_solver.o ddhazard.o loglike.o ddhazard_UKF_solver.o: ddhazard.h
+Cdqrls_wrapper.o: $(BIGGLM_DEPS) Cdqrls_wrapper.cpp
 
-ddhazard_EKF_solver.o ddhazard_UKF_solver.o: exp_model_funcs.h
+bigglm_wrapper.o: $(BIGGLM_DEPS) bigglm_wrapper.cpp
 
-ddhazard_EKF_solver.o thread_pool.o: thread_pool.h
+ddhazard.o: $(DD_DEPS) $(BIGGLM_DEPS) thread_pool.h ddhazard.cpp
+
+ddhazard_EKF_solver.o: $(DD_DEPS) exp_model_funcs.h thread_pool.h ddhazard_EKF_solver.cpp
+
+ddhazard_UKF_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_UKF_solver.cpp
+
+ddhazard_posterior_approx_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_posterior_approx_solver.cpp

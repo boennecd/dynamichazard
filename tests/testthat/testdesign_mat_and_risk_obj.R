@@ -6,8 +6,8 @@ if(interactive()){
     source("../../R/test_utils.R") else
       source("./R/test_utils.R")
 
-  permu_data <- with(environment(ddhazard), permu_data)
-  permu_data_rev <- with(environment(ddhazard), permu_data_rev)
+  get_permu_data_exp <-  with(environment(ddhazard), get_permu_data_exp)
+  get_permu_data_rev_exp <- with(environment(ddhazard), get_permu_data_rev_exp)
 }
 
 # Had issues with cran buil. Thus, these lines
@@ -478,40 +478,68 @@ test_that("Individuals are markeds as events in the correct bins", {
 #####
 # Test randomize
 
-risk_obj <- get_risk_obj(
-  Surv(sims$tstart, sims$tstop, sims$event), 1, max_T = 10, sims$id)
+set.seed(875080)
+X_Y <-  get_design_matrix(
+  Surv(tstart, tstop, death == 2) ~ ddFixed(age) + albumin, pbc2)
+risk_obj_org <- risk_obj <- get_risk_obj(X_Y$Y, 100, max_T = 3600, pbc2$id)
+X_Y[1:3] <- lapply(X_Y[1:3], data.frame)
+X_Y_org <- X_Y
 
-permu <- permu_data(sims, risk_obj)
+w_org <- w <- sample(1:3, replace = T, nrow(pbc2))
+
+eval(get_permu_data_exp(X_Y[1:3], risk_obj, w))
+
+
 got_plyr <- suppressWarnings(require(plyr, quietly = T))
 test_that("Permutating gives the data frame and risk set permutated", {
-  expect_true(any(permu$data != sims))
-  expect_equal(nrow(permu$data), nrow(sims))
-  if(got_plyr){
-    expect_equal(nrow(suppressMessages(match_df(sims, permu$data))), nrow(sims))
+  for(i in 1:3){
+    expect_true(any(as.matrix(X_Y[[i]]) != as.matrix(X_Y_org[[i]])))
+    expect_equal(nrow(X_Y[[i]]), nrow(X_Y_org[[i]]))
+    if(got_plyr){
+      expect_equal(nrow(suppressMessages(match_df(X_Y_org[[i]], X_Y[[i]]))), nrow(X_Y_org[[i]]))
+    }
   }
 
-  expect_equal(length(risk_obj$risk_sets), length(permu$risk_obj$risk_sets))
-  for(i in seq_along(risk_obj$risk_sets)){
-    r1 <- permu$risk_obj$risk_sets[[i]]
-    r2 <- risk_obj$risk_sets[[i]]
+  expect_true(setequal(w_org, w))
+  expect_true(any(w_org != w))
 
+  expect_equal(length(risk_obj$risk_sets), length(risk_obj_org$risk_sets))
+  for(i in seq_along(risk_obj$risk_sets)){
+    r1 <- risk_obj$risk_sets[[i]]
+    r2 <- risk_obj_org$risk_sets[[i]]
+
+    expect_true(!is.unsorted(risk_obj$risk_sets[[i]]))
     expect_true(any(r1 != r2))
     expect_equal(length(r1), length(r2))
   }
+
+  expect_true(any(risk_obj$is_event_in != risk_obj_org$is_event_in))
+  expect_true(setequal(risk_obj$is_event_in, risk_obj_org$is_event_in))
 })
 
-permu <- permu_data_rev(permu$data, permu$risk_obj, permu$permu)
+eval(get_permu_data_rev_exp(X_Y[1:3], risk_obj, w))
 
 test_that("Reverse permutating the data frame and the initial values", {
-  expect_true(all(permu$data == sims))
+  for(i in 1:3)
+    expect_equal(as.matrix(X_Y[[i]]), as.matrix(X_Y_org[[i]]))
 
   for(i in seq_along(risk_obj$risk_sets)){
-    r1 <- permu$risk_obj$risk_sets[[i]]
-    r2 <- risk_obj$risk_sets[[i]]
+    r1 <- risk_obj$risk_sets[[i]]
+    r2 <- risk_obj_org$risk_sets[[i]]
 
-    expect_true(all(r1 == r2))
+    expect_equal(r1, r2)
   }
+
+  expect_equal(w, w_org)
+
+  expect_equal(risk_obj$is_event_in, risk_obj_org$is_event_in)
 })
+
+test_that("Change boot to handle permutation of weights and data",
+          expect_true(FALSE))
+
+test_that("Permutate the weights",
+          expect_true(FALSE))
 
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

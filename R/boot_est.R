@@ -109,6 +109,15 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
       boot_X_Y[[el_name]] <- boot_X_Y[[el_name]][which_rows_are_included, , drop = F]
     }
 
+    # Adjust risk set
+    boot_risk_set <- ddhazard_fit$risk_set
+    boot_risk_set$is_event_in <-
+      boot_risk_set$is_event_in[which_rows_are_included]
+
+    # Permutate if needed
+    if(control$permu)
+      eval(get_permu_data_exp(boot_X_Y[1:3], boot_risk_set, ws))
+
     # Add fixed terms to design matrix if fixed terms are estimated in the
     # E-step
     if(ddhazard_fit$control$fixed_terms_method == "E_step" &&
@@ -120,11 +129,6 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
     # Transpose due to column-major ordering in c++
     boot_X_Y$X <- t(boot_X_Y$X)
     boot_X_Y$fixed_terms <- t(boot_X_Y$fixed_terms)
-
-    # Adjust risk set
-    boot_risk_set <- ddhazard_fit$risk_set
-    boot_risk_set$is_event_in <-
-      boot_risk_set$is_event_in[which_rows_are_included]
 
     index_map <- cbind(old_index = which_rows_are_included,
                        new_index = 1:length(which_rows_are_included))
