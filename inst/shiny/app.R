@@ -122,7 +122,7 @@ ui <- fluidPage(
 
        selectInput("est_with_method",
                    "Choose method to use in the E-step",
-                   choices = c("UKF", "EKF"),
+                   choices = c("UKF", "EKF", "post_approx"),
                    selected = "EKF"),
 
        radioButtons("est_fix_options",
@@ -462,7 +462,7 @@ server <- function(input, output) {
     if(result$method == "EKF"){
       out <- paste0(out, ifelse(is.null(result$control$NR_eps), " No extra", " Extra"),
                     " iterations are used in correction step")
-    } else{
+    } else if (result$method == "UKF"){
       out <- paste0(out, " Alpha and beta are ", result$control$alpha, " and ",
                     result$control$beta)
     }

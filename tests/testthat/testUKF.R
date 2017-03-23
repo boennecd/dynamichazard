@@ -43,6 +43,7 @@ test_that("UKF on head_neck works with logit model", {
   ))
 
   # plot(result)
+  result <- result[c("state_vecs", "state_vars", "lag_one_cov")]
   # save_to_test(result, "UKF1")
 
   expect_equal(result, read_to_test("UKF1"))

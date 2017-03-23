@@ -332,6 +332,14 @@ void EKF_solver::solve(){
     p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
     p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
+    if(p_dat.debug){
+      std::stringstream str;
+      str << t << "|" << t - 1;
+
+      my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
+      my_print(p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
+    }
+
     // E-step: scoring step: information matrix and scoring vector
     arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
     arma::vec i_a_t = p_dat.a_t_less_s.col(t - 1);

@@ -61,8 +61,8 @@ test_that("Logit model for posterior_approx gives previous found values", {
   set.seed(950466)
   f1 <- do.call(ddhazard, args)
 
-  f1$control <- NULL
   # plot(f1)
+  f1 <- f1[c("state_vecs", "state_vecs")]
   # save_to_test(f1, "posterior_approx_logit_pbc")
 
   expect_equal(f1, read_to_test("posterior_approx_logit_pbc"), tolerance = 1.490116e-08)
@@ -135,27 +135,38 @@ test_that("Chaning the learning changes the result for the posterior approx meth
 })
 
 test_that("Second order model gives previous found result for posterior approx", {
-  tmp <- file("tmp.txt")
-  sink(tmp)
+  set.seed(1495821)
   f1 <-  ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
     control = list(est_Q_0 = F,
                    save_data = F, save_risk_set = F,
-                   debug = T, LR = 1, method = "post_approx"),
+                   method = "post_approx"),
     Q_0 = diag(1e5, 4), Q = diag(0.01, 2),
     max_T = 30, order = 2)
-  sink()
-  close(tmp)
+
+  # plot(f1)
+  f1 <- f1[c("state_vecs", "state_vecs")]
+  # save_to_test(f1, "posterior_approx_logit_2_order")
+
+  expect_equal(f1, read_to_test("posterior_approx_logit_2_order"), tolerance = 1.490116e-08)
 })
 
+test_that("Posterior gives previous found results with large by length for pbc data with logit", {
+  set.seed(536705)
+  f1 <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
+                  log(albumin) + log(protime) + log(bili), pbc2,
+                 id = pbc2$id, by = 300, max_T = 3600,
+                 control = list(method = "post_approx"),
+                 Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
 
-test_that("Works for second order",
-          expect_true(FALSE))
+  # plot(f1)
+  f1 <- f1[c("state_vecs", "state_vecs")]
+  # save_to_test(f1, "posterior_approx_logit_pbc_large_by")
 
-test_that("Works with different by lengths",
-          expect_true(FALSE))
+  expect_equal(f1, read_to_test("posterior_approx_logit_pbc_large_by"), tolerance = 1.490116e-08)
+})
 
 test_that("Works with exponential model",
           expect_true(FALSE))

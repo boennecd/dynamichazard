@@ -52,7 +52,7 @@ inline double Posterior_approx_hepler_logit::compute_length(
 inline double Posterior_approx_hepler_logit::second_d(
   const double c, const double offset){
     const double e = exp(c + offset);
-    return -e / pow(1. + e, 2);
+    return - e / pow(1. + e, 2);
 };
 
 // Export for tests
@@ -89,6 +89,14 @@ void Posterior_approx<T>::solve(){
     p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
     p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
+    if(p_dat.debug){
+      std::stringstream str;
+      str << t << "|" << t - 1;
+
+      my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
+      my_print(p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
+    }
+
     // E-step: scoring step
     arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
 
@@ -99,7 +107,6 @@ void Posterior_approx<T>::solve(){
     V = p_dat.V_t_less_s.slice(t - 1);
 
     for(auto it = r_set.begin(); it != r_set.end(); it++){
-      my_print(V);
 
       const arma::vec x_(p_dat.X.colptr(*it), p_dat.n_params_state_vec, false);
       const double w = p_dat.weights(*it);
@@ -108,10 +115,10 @@ void Posterior_approx<T>::solve(){
         arma::dot(p_dat.fixed_parems, p_dat.fixed_terms.col(*it)) : 0.;
 
       const arma::vec inter_vec =
-        V(p_dat.span_current_cov, p_dat.span_current_cov) * x_;
+        V(arma::span::all, p_dat.span_current_cov) * x_;
 
       const double f1 =
-        std::max(1./arma::dot(x_, inter_vec), 1e-8);
+        std::max(1./arma::dot(x_, inter_vec(p_dat.span_current_cov)), 1e-10);
       const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
 
       const double y = T::get_outcome(
@@ -119,21 +126,24 @@ void Posterior_approx<T>::solve(){
         p_dat.tstart(*it), bin_tstart, p_dat.tstop(*it), bin_tstop);
 
       const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, y);
-      const double second_d = w * T::second_d(c, offset);
+      const double neg_second_d = - w * T::second_d(c, offset);
 
-      Rcpp::Rcout << -(1. - second_d * arma::dot(inter_vec, x_)) << std::endl;
+      a -= p_dat.LR * ((f2 - c) * f1) * inter_vec;
+      V -= inter_vec *  (inter_vec.t() * (neg_second_d  / (1. + neg_second_d / f1)));
 
-      Rcpp::Rcout << c << "\t" << w << "\t" << f1 / 2.<< "\t" << -f2 * f1
-                  << "\t" << second_d << "\t"<< y <<  std::endl;
+      // TODO: clean-up code from debugging
+      // Rcpp::Rcout << "c: "<< c
+      //             << "\tw: " << w
+      //             << "\t f1/2.: " << f1 / 2.
+      //             << "\t -f2 * f1: " << -f2 * f1
+      //             << "\t f1: " << f1
+      //             << "\t f2: " << f2
+      //             << "\tneg 2. deriv: " << neg_second_d
+      //             << "\ty: "<< y <<  std::endl;
 
-      a(p_dat.span_current_cov) -= p_dat.LR * ((f2 - c) * f1) * inter_vec;
-      V(p_dat.span_current_cov, p_dat.span_current_cov) +=
-        inter_vec *  (inter_vec.t() * (second_d  /
-          (1. - second_d * arma::dot(inter_vec, x_))));
-
-      my_print(x_);
-      my_print(a);
-      my_print(V);
+      // my_print(x_, "x_");
+      // my_print(a, "a_");
+      // my_print(V, "V");
     }
 
     if(a.has_inf() || a.has_nan()){
@@ -150,9 +160,12 @@ void Posterior_approx<T>::solve(){
       std::stringstream str;
       str << t << "|" << t;
 
+      Rcpp::Rcout << "\n\n_____________________________" << std::endl;
+
       my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
       my_print(p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")\n");
     }
+
     arma::mat V_t_less_s_inv;
     inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
               "ddhazard_fit_cpp estimation error: Failed to invert V_(t|t-1)");
