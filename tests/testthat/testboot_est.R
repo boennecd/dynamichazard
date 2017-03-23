@@ -84,6 +84,51 @@ test_that("boot yields previously computed values with pbc", {
   expect_equal(tmp, read_to_test("boot4"))
 })
 
+test_that("Boot works with posterior_approx and gives previous found results", {
+  set.seed(5903445)
+  fit <-  ddhazard(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    control = list(method = "post_approx"),
+    Q_0 = diag(1e5, 2), Q = diag(0.01, 2),
+    max_T = 45)
+
+  suppressWarnings(tmp <- ddhazard_boot(fit, R = 99))
+
+  expect_no_error(plot(fit, ddhazard_boot = tmp))
+
+  tmp <- tmp[c("t0", "t")]
+  tmp$t <- tmp$t[1:5, ]
+  # save_to_test(tmp, "boot_posterior_approx")
+
+  expect_equal(tmp, read_to_test("boot_posterior_approx"), tolerance = 1.490116e-08)
+})
+
+test_that("Boot do result differs when control$permu = T",{
+  set.seed(5705870)
+  f1 <-  ddhazard(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    control = list(est_Q_0 = F, permu = T,
+                   method = "post_approx"),
+    Q_0 = diag(1e5, 2), Q = diag(0.01, 2),
+    max_T = 45)
+
+  set.seed(seed <- 2249489)
+  suppressWarnings(boot1 <- ddhazard_boot(f1, R = 5))
+  f1$control$permu <- F
+
+  set.seed(seed)
+  suppressWarnings(boot2 <- ddhazard_boot(f1, R = 5))
+  set.seed(seed)
+  suppressWarnings(boot3 <- ddhazard_boot(f1, R = 5))
+
+  expect_true(is.character(all.equal(boot1$t, boot2$t)))
+  expect_equal(boot2$t, boot3$t)
+})
+
 ######
 # Test get_frac_n_weights function
 
@@ -111,9 +156,6 @@ test_that("Weights are as expected", {
                 label = lbl)
   }
 })
-
-test_that("Boot works with posterior_approx",
-          expect_true(FALSE))
 
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

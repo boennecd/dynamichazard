@@ -48,7 +48,7 @@ A list with class \code{fahrmeier_94}. The list contains:
 \item{\code{id}}{ids used to match rows in \code{data} to individuals }
 \item{\code{order}}{Order of the random walk }
 \item{\code{F_}}{Matrix with that map transition from one state vector to the next }
-\item{\code{method}}{Method used in the E-step }
+\item{\code{method}}{Method used in the E-step}
 \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm }
 \item{\code{hazard_func}}{Hazard function }
 \item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
@@ -70,7 +70,7 @@ It is recommended to see the Shiny app demo for this function by calling \code{\
 
 The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
 \describe{
-\item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter or \code{"UKF"}for the Unscented Kalman Filter. \code{"EKF"} is the default}
+\item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"}for the Unscented Kalman Filter or \code{"post_approx"} for the posterior mode approximation method.\code{"EKF"} is the default}
 \item{\code{LR}}{Learning rate for the Extended Kalman filter}
 \item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
 \item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter}
@@ -86,6 +86,7 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \item{\code{fixed_terms_method}}{The method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively}
 \item{\code{Q_0_term_for_fixed_E_step}}{The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step}
 \item{\code{eps_fixed_parems}}{Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects}
+\item{\code{permu}}{\code{TRUE} if the risk sets should be permutated before computation. This is \code{TRUE} by default for posterior mode approximation method and \code{FALSE} for all other methods}
 }
 }
 \references{

@@ -20,7 +20,7 @@ knitr::knit_hooks$set(
   mySettings  = function(before, options, envir){
     if (before && options$mySettings){ 
       par(
-        mar = c(10, 10, 4, 4),
+        mar = c(5, 6, 1, 1),
         bty = "n",
         xaxs = "i",
         pch=16,
@@ -341,7 +341,7 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
 plot(dd_fit)
 ```
 
-First, we run the code with the `NR_eps` element of the list passed to the `control` argument set to something that is finite. The value is the threshold for the relative change of in the state vector in correction step of the EKF. We end the code above by creating plots of the new estimates. The curves seems to be less smooth. Notice that we decrease `Q_0`. The algorithm diverges if we do not
+First, we run the code with the `NR_eps` element of the list passed to the `control` argument set to something that is finite. The value is the threshold for the relative change of in the state vector in correction step of the EKF. We end the code above by creating plots of the new estimates
 
 ## Estimation with Unscented Kalman Filter
 Another option is to perform the E-step using an unscented Kalman filter. This is done below. We start by setting the initial co-variance matrix $\mat{Q}$ large:
@@ -394,12 +394,61 @@ dd_fit_UKF <- ddhazard(
 plot(dd_fit_UKF)
 ```
 
-This is comparable to the fits from the EKF and GAM model. The main point here is:
+This is comparable to the fits from the EKF and GAM model. The main points here are:
 
-1. The UKF may work for certain data set. It may require "more care" for some data sets
-2. The algorithm is sensitive to the choice of $\mat{Q}$ and $\mat{Q}_0$. Further, there is dependence on hyper parameters $\alpha$, $\kappa$ and $\beta$ which we have not explored
+1. The UKF may work for certain data set. It may require tuning for some data sets
+2. The algorithm is sensitive to the choice of $\mat{Q}$ and $\mat{Q}_0$. Further, there is dependence on hyperparameters $\alpha$, $\kappa$ and $\beta$ which we have not explored
 3. The output you get by setting `debug` in the list passed to the `control` argument can be useful. Combine this with `sink` because the output may be long
 4. The UKF has shown better performs than the EKF previously. Examples includes [@romanenko04], [@kandepu08], [@julier04], [@wan00] and chapter 11 of [@durbin12]
+
+## Estimation with rank-one posterior modes approximation
+
+Another method is to use the sequential rank-one approximation of the posterior posterior modes. This is done below. First, we estimate the model with the Extended Kalman filter and next with rank-one posterior modes approximation. We estimate both for comparison:
+
+```{r, echo = FALSE}
+set.seed(7686280) # <-- Data is permuated so we set a seed
+```
+
+
+```{r}
+dd_fit_EKF <- 
+  ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
+             log(albumin) + log(protime) + log(bili), pbc2,
+           id = pbc2$id, by = 100, max_T = 3600,
+           Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
+
+dd_fit_post_approx <- 
+  ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
+             log(albumin) + log(protime) + log(bili), pbc2,
+           id = pbc2$id, by = 100, max_T = 3600,
+           
+           control = list(method = "post_approx"), # change estimation method 
+                                                   # from default
+           Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
+```
+
+Next, we plot the two sets of predicted coefficients:
+
+```{r, eval = FALSE}
+par(mfcol = c(2, 3))
+for(i in 1:6){
+  plot(dd_fit_EKF, cov_index = i, col = "black")
+  plot(dd_fit_post_approx, cov_index = i, col = "red", add = TRUE)
+}
+```
+
+
+```{r, echo=FALSE}
+par_old <- par(no.readonly = T)
+par(mfcol = c(2, 3))
+par(cex = par_old$cex * .85, mar = par_old$mar * 1.33)
+for(i in 1:6){
+  plot(dd_fit_EKF, cov_index = i, col = "black")
+  plot(dd_fit_post_approx, cov_index = i, col = "red", add = TRUE)
+}
+```
+
+The red curves are from the sequential rank-one approximation. The difference seems minor for this data set
 
 ## Estimation with fixed effects
 We may want to fit a model where we assume that some of the co-variates are fixed. For instance, we may want to fit a model where `age`, the intercept, `log(protime)` and `log(albumin)` are fixed. We fix these based on the previous plots where the effects seems no to be time-varying. The model can be fitted as by the following call:
@@ -416,7 +465,7 @@ dd_fit <- ddhazard(
 plot(dd_fit)
 ```
 
-The estimates seems similar. Moreover, the fixed effects are in agreement with the previous fits (they are printed below):
+The predicted curves seems similar. Moreover, the fixed effects are in agreement with the previous fits (they are printed below):
 
 ```{r, fig.height = 6}
 dd_fit$fixed_effects
@@ -435,28 +484,53 @@ dd_fit <- ddhazard(
 plot(dd_fit)
 ```
 
-We see that the curve is less smooth similar to what we saw previously
-
 ## Second order random walk
 
-We will end by fitting a second order random walk to model where only `log(bili)` effect is time varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have a time varying coefficient. We fit the model below:
+We will end by fitting a second order random walk to model where only `log(bili)` effect is time varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have a time varying coefficient. We will comparer estimates with the Extended Kalman Filter and the sequential rank-one approximation. First, we make the two estimations
 
-```{r}
-dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ 
-                     ddFixed(1) + ddFixed(age) + 
-                     ddFixed(edema) + ddFixed(log(albumin)) + 
-                     ddFixed(log(protime)) + log(bili), pbc2,
-                   id = pbc2$id, by = 100, max_T = 3600,
-                   order = 2,             # <-- second order
-                   Q_0 = diag(c(10, 10)), # <-- needs more elements
-                   Q = matrix(0.001))
-
-plot(dd_fit)
-
-dd_fit$fixed_effects
+```{r, echo = FALSE}
+set.seed(3434439) # <-- Data is permuated so we set a seed
 ```
 
-We plot the curve after the fit. We see that the estimate is more smooth as expected with a second order random walk. Further, we can confirm that the fixed effects are comparable with our previous fits
+```{r}
+# Define formula
+form <- Surv(tstart, tstop, death == 2) ~ 
+                     ddFixed(1) + ddFixed(age) + 
+                     ddFixed(edema) + ddFixed(log(albumin)) + 
+                     ddFixed(log(protime)) + log(bili)
+
+# Fit models
+dd_fit_EKF <- 
+  ddhazard(form, pbc2,
+           id = pbc2$id, by = 100, max_T = 3600,
+           order = 2,            # <-- second order
+           Q_0 = diag(10000, 2), # <-- needs more elements
+           Q = 0.001)
+
+dd_fit_post <- 
+  ddhazard(form, pbc2,
+           id = pbc2$id, by = 100, max_T = 3600, 
+           order = 2,
+           Q_0 = diag(10000, 2), Q = 0.001, 
+           control = list(method = "post_approx"))
+```
+
+The fixed effects estimates are not to far from each other:
+
+```{r}
+rbind(
+  "EKF" = dd_fit_EKF$fixed_effects,
+  "Posterior approximation" = dd_fit_post$fixed_effects)
+```
+
+The predicted curves are also not to far from each other and the shapes are almost identical:
+
+```{r}
+plot(dd_fit_EKF)
+plot(dd_fit_post, col = "red", add = T)
+```
+
+We see that the predicted curve is more smooth as expected with a second order random walk. Further, we can confirm that the fixed effects are comparable with our previous fits
 
 
 <!-- ## Residuals and predict

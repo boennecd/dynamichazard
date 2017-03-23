@@ -1,3 +1,7 @@
+# Had issues with win builder. Thus, these lines
+test_name <- "Posterior approx"
+cat("\nRunning", test_name, "\n")
+
 if(interactive()){
   library(survival); library(dynamichazard); library(testthat)
 
@@ -168,11 +172,5 @@ test_that("Posterior gives previous found results with large by length for pbc d
   expect_equal(f1, read_to_test("posterior_approx_logit_pbc_large_by"), tolerance = 1.490116e-08)
 })
 
-test_that("Works with exponential model",
-          expect_true(FALSE))
-
-test_that("Add option to Shiny app",
-          expect_true(FALSE))
-
-test_that("Gets same result regardless of which exponential model specification you give",
-          expect_true(FALSE))
+# Had issues with win builder. Thus, these lines
+cat("\nFinished", test_name, "\n")

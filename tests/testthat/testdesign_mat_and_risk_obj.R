@@ -535,11 +535,5 @@ test_that("Reverse permutating the data frame and the initial values", {
   expect_equal(risk_obj$is_event_in, risk_obj_org$is_event_in)
 })
 
-test_that("Change boot to handle permutation of weights and data",
-          expect_true(FALSE))
-
-test_that("Permutate the weights",
-          expect_true(FALSE))
-
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

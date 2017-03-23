@@ -12,20 +12,14 @@ test_that("How to compute the starting value for lag one cov with UKF",
 get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 
 test_that("Implement lag-one-cov with weights", {
-  set.seed(10)
-  ws <- sample.int(nrow(head_neck_cancer), 60)
-  ws <- sapply(1:nrow(head_neck_cancer), function(x) sum(ws == x))
-
-  expect_silent(
-    ddhazard(
-      formula = survival::Surv(stop, event) ~ group,
-      data = head_neck_cancer,
-      by = 3,
-      a_0 = rep(0, 2), Q_0 = diag(1, 2),
-      control = list(method = meth),
-      max_T = 27, order = 1,
-      weights = ws))
+  expect_true(FALSE)
 })
+
+test_that("Works with exponential model for post_approx",
+          expect_true(FALSE))
+
+test_that("Gets same result regardless of which exponential model specification you give with post_approx",
+          expect_true(FALSE))
 
 test_that("This work when get_design_matrix when function is defined not in global scope", {
   # Simulate data

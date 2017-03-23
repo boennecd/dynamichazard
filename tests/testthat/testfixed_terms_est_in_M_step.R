@@ -164,6 +164,23 @@ test_that("UKF with fixed effects works", {
 })
 
 
+test_that("posterior_approx gives previous found values with fixed effects in M-step", {
+  set.seed(950466)
+  f1 <- ddhazard(Surv(tstart, tstop, death == 2) ~ ddFixed(age) + ddFixed(edema) +
+                  log(albumin) + log(protime) + log(bili), pbc2,
+                 id = pbc2$id, by = 100, max_T = 3600,
+                 control = list(method = "post_approx",  fixed_terms_method = "M_step"),
+                 Q_0 = diag(rep(100000, 4)), Q = diag(rep(0.01, 4)))
+
+  # plot(f1)
+  # f1$fixed_effects
+  f1 <- f1[c("state_vecs", "state_vecs")]
+  # save_to_test(f1, "posterior_approx_logit_fixed_M")
+
+  expect_equal(f1, read_to_test("posterior_approx_logit_fixed_M"), tolerance = 1.490116e-08)
+})
+
+
 test_that("Only fixed effects yields same results as bigglm with exponential model with weights", {
   set.seed(2555647)
   ws <- runif(nrow(sims$res))

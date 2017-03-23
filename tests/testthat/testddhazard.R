@@ -30,7 +30,7 @@ test_that("Testing names of output from ddhazard on head and neck cancer dataset
   expect_equal(unlist(dimnames(result$Q_0)), rep(c("(Intercept)", "group1"), 2))
 })
 
-result <- result[c("state_vecs", "state_vars","lag_one_cov")]
+result <- result[c("state_vecs", "state_vars","lag_one_cov", "model")]
 # save_to_test(result, "ddhazard_head_neck")
 
 test_that("get previous results with head_neck", {
