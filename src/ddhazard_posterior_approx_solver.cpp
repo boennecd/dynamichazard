@@ -1,19 +1,18 @@
 #include "ddhazard.h"
 
 
-
-
 inline double Posterior_approx_hepler_logit::NR_delta(
-      const double offset, const double coef1, const double coef2, const bool is_event, const double c0){
+      const double offset, const double coef1, const double coef2,
+      const double w, const bool is_event, const double c0){
     const double e = exp(c0 + offset);
 
     if(is_event){
-      return (2. * coef1 * c0 + coef2 - 1./(1. + e)) /
-        (2. * coef1 + e / pow(1. + e, 2));
+      return (2. * coef1 * c0 + coef2 - w/(1. + e)) /
+        (2. * coef1 + w * e / pow(1. + e, 2));
     }
 
-    return (2. * coef1 * c0 + coef2 + e/(1. + e)) /
-      (2. * coef1 + e / pow(1. + e, 2));
+    return (2. * coef1 * c0 + coef2 + w * e/(1. + e)) /
+      (2. * coef1 + w * e / pow(1. + e, 2));
 };
 
 
@@ -25,21 +24,16 @@ inline double Posterior_approx_hepler_logit::get_outcome(
 };
 
 inline double Posterior_approx_hepler_logit::compute_length(
-    const double offset, const double coef1, const double coef2, const double y){
+    const double offset, const double coef1, const double coef2,
+    const double w, const double y){
   double c0 = 0.;
   double c1;
   bool is_event = y == double_one;
 
-  // Rcpp::Rcout << "Boh " << coef1 << ", " << coef2 << ", " << offset <<std::endl;
-
   for(int i = 0; i < 100; i++){
-    c1 = c0 - NR_delta(offset, coef1, coef2, is_event, c0);
-
-    // Rcpp::Rcout << c0 << ", " << c1 << ", " << std::abs(c1 - c0) << " " << 1e-5 << "\t";
+    c1 = c0 - NR_delta(offset, coef1, coef2, w, is_event, c0);
 
     if(std::abs(c1 - c0) < 1e-5){
-      // Rcpp::Rcout << std::endl;
-
       return c1;
     }
 
@@ -55,13 +49,26 @@ inline double Posterior_approx_hepler_logit::compute_length(
   return c1;
 };
 
-double Posterior_approx_hepler_logit::second_d(
+inline double Posterior_approx_hepler_logit::second_d(
   const double c, const double offset){
     const double e = exp(c + offset);
     return -e / pow(1. + e, 2);
 };
 
+// Export for tests
+// [[Rcpp::export]]
+double Posterior_approx_hepler_logit_compute_length(
+    const double offset, const double coef1, const double coef2,
+    const double w, const bool y){
+  return Posterior_approx_hepler_logit::compute_length(
+    offset, coef1, coef2, w, y);
+};
 
+// [[Rcpp::export]]
+double Posterior_approx_hepler_logit_second_d(
+    const double c, const double offset){
+  return Posterior_approx_hepler_logit::second_d(c, offset);
+};
 
 
 
@@ -92,43 +99,51 @@ void Posterior_approx<T>::solve(){
     V = p_dat.V_t_less_s.slice(t - 1);
 
     for(auto it = r_set.begin(); it != r_set.end(); it++){
-      //TODO: deal with weigths
-      // Compute polynomial coefficients
+      my_print(V);
+
       const arma::vec x_(p_dat.X.colptr(*it), p_dat.n_params_state_vec, false);
+      const double w = p_dat.weights(*it);
 
       const double offset = (p_dat.any_fixed_in_M_step) ?
         arma::dot(p_dat.fixed_parems, p_dat.fixed_terms.col(*it)) : 0.;
 
-      const double f1 = 1./arma::dot(x_, (V * x_));
+      const arma::vec inter_vec =
+        V(p_dat.span_current_cov, p_dat.span_current_cov) * x_;
+
+      const double f1 =
+        std::max(1./arma::dot(x_, inter_vec), 1e-8);
       const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
 
       const double y = T::get_outcome(
         p_dat.is_event_in_bin(*it) == bin_number,
         p_dat.tstart(*it), bin_tstart, p_dat.tstop(*it), bin_tstop);
 
-      const double c = T::compute_length(offset, f1 / 2., -f2 * f1, y);
-      const double second_d = T::second_d(c, offset);
-      const arma::vec inter_vec = V * x_;
+      const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, y);
+      const double second_d = w * T::second_d(c, offset);
 
-      a(p_dat.span_current_cov) -= ((f2 - c) * f1) * inter_vec;
+      Rcpp::Rcout << -(1. - second_d * arma::dot(inter_vec, x_)) << std::endl;
+
+      Rcpp::Rcout << c << "\t" << w << "\t" << f1 / 2.<< "\t" << -f2 * f1
+                  << "\t" << second_d << "\t"<< y <<  std::endl;
+
+      a(p_dat.span_current_cov) -= p_dat.LR * ((f2 - c) * f1) * inter_vec;
       V(p_dat.span_current_cov, p_dat.span_current_cov) +=
-        inter_vec *  (inter_vec.t() * second_d) /
-          (1. - second_d * arma::dot(inter_vec, x_));
+        inter_vec *  (inter_vec.t() * (second_d  /
+          (1. - second_d * arma::dot(inter_vec, x_))));
 
-      Rcpp::Rcout << "y: " << (p_dat.is_event_in_bin(*it) == bin_number)
-                  << "\tc: " << c
-                  << "\t2d:" << T::second_d(c, offset)
-                  << "\tStep_len: "<< (f2 - c) * f1
-                  << "\tcoef1: " << f1 / 2.
-                  << "\tcoef2: " << -f2 * f1
-                  << "\tf1: " << f1
-                  << "\tf2: " << f2
-                  << "\tDenom: " << (1. - second_d * arma::dot(inter_vec, x_))
-                  <<   std::endl;
       my_print(x_);
-      my_print(inter_vec);
       my_print(a);
       my_print(V);
+    }
+
+    if(a.has_inf() || a.has_nan()){
+      Rcpp::stop("State vector in correction step has nan or inf elements in in bin " +
+        std::to_string(t) + ". Try decreasing the learning rate");
+
+    } else if(V.has_inf() || V.has_nan()){
+      Rcpp::stop("Covariance matrix in correction step had inf or nan elements in bin " +
+        std::to_string(t) + ". Try decreasing the learning rate");
+
     }
 
     if(p_dat.debug){
@@ -136,7 +151,7 @@ void Posterior_approx<T>::solve(){
       str << t << "|" << t;
 
       my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
-      my_print(p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str() + "))\n");
+      my_print(p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")\n");
     }
     arma::mat V_t_less_s_inv;
     inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,

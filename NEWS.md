@@ -12,6 +12,10 @@ The following has been changed or added:
 * Added information about the `residuals` method and a vignette with examples of usage of the `residuals` function
 * Added a `hatvalues` method for `ddhazard`
 * Fixed bug with default starting value with fixed effects
+* Re-wrote the ddhazard vignette to have more consistent notation
+* Implemented new filter which use an approximation of the posterior the correction step
+* Added description of the posterior approximation method to ddhazard vignette
+* Added section about weights to the ddhazard vignette
 
 # dynamichazard 0.2.0
 The following have been added:

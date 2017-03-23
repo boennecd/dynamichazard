@@ -400,7 +400,7 @@ void EKF_solver::solve(){
       str << t << "|" << t;
 
       my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
-      my_print(p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str() + "))\n");
+      my_print(p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")");
     }
 
     if(t == p_dat.d){

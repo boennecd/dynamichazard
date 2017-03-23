@@ -21,6 +21,14 @@ bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, et
     invisible(.Call('dynamichazard_bigglm_updateQR_rcpp', PACKAGE = 'dynamichazard', D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
 }
 
+Posterior_approx_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
+    .Call('dynamichazard_Posterior_approx_hepler_logit_compute_length', PACKAGE = 'dynamichazard', offset, coef1, coef2, w, y)
+}
+
+Posterior_approx_hepler_logit_second_d <- function(c, offset) {
+    .Call('dynamichazard_Posterior_approx_hepler_logit_second_d', PACKAGE = 'dynamichazard', c, offset)
+}
+
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {
     .Call('dynamichazard_logLike_cpp', PACKAGE = 'dynamichazard', X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }

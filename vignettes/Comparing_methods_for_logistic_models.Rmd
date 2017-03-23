@@ -317,7 +317,7 @@ library(dynamichazard)
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                         log(albumin) + log(protime) + log(bili), pbc2,
                    id = pbc2$id, by = 100, max_T = 3600, 
-                   Q_0 = diag(rep(10, 6)), Q = diag(rep(0.001, 6)))
+                   Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
 
 plot(dd_fit)
 ```
@@ -333,9 +333,8 @@ Another idea is to take extra iterations in the correction step of the EKF. The 
 dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                         log(albumin) + log(protime) + log(bili), pbc2,
                    id = pbc2$id, by = 100, max_T = 3600,
-                   a_0 = glm_fit_big$coefficients,
                    control = list(NR_eps = 0.1), # <-- tolerance in correction step
-                   Q_0 = diag(rep(1, 6)),        # <-- decreased Q_0
+                   Q_0 = diag(rep(100000, 6)),
                    Q = diag(rep(0.001, 6)))
 
 # Plot result

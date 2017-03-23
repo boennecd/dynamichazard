@@ -241,7 +241,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     solver.reset(new UKF_solver_Org(*p_data.get(), kappa));
 
-  } else if (method == "posterior_approx"){
+  } else if (method == "post_approx"){
     p_data.reset(new problem_data(
         n_fixed_terms_in_state_vec,
         X, fixed_terms, tstart, tstop, is_event_in_bin,
