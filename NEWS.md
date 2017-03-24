@@ -5,17 +5,17 @@ The following has been changed or added:
 * A bug have been fixed in the `get_risk_obj` when `is_for_discrete_model = TRUE` in the call. The issue was that individuals who were right censored in the middle of an interval was included despite that we do not know that they survive the entire interval. This will potentially affect the output for logit fits with  `ddhazard`
 * The `ddhazard_boot` now provides the option of different learning rates to be used rather than one
 * Error in computation of likelihood have been fixed
-* Added the option to use relative change in the likelihood (not including the prior) as a convergence criteria instead of relative change in coefficients. The new option is selected by by calling `ddhazard` with `control = list(criteria = "delta_likeli", ...)`. The relative change in coefficient seems "preferable" as a default since as it tends to not converge when the fit is has large "odd" deviation due to a few observations. The likelihood method though stops earlier for model does not have such deviation
+* Added the option to use relative change in the likelihood (not including the prior) as a convergence criteria instead of relative change in coefficients. The new option is selected by by calling `ddhazard` with `control = list(criteria = "delta_likeli", ...)`. The relative change in coefficient seems "preferable" as a default since it tends to not converge when the fit is has large "odd" deviation due to a few observations. The likelihood method though stops earlier for model does not have such deviation
 * The default for kappa in the UKF have been changed to yield a weight on the first sigma point of 0.1 rather than 0
 * Fixed memory leak in `ddhazard`
 * New example have been added to the bootstrap vignette and other minor changes have been made
-* Added information about the `residuals` method and a vignette with examples of usage of the `residuals` function
-* Added a `hatvalues` method for `ddhazard`
+* Added information about the `residuals` method and a vignette "Diagnostics" with examples of usage of the `residuals` function
+* Added a `hatvalues` method for `ddhazard`. These described "ddhazard" vignette and examples of usage are shown the vignette "Diagnostics"
 * Fixed bug with default starting value with fixed effects
-* Re-wrote the ddhazard vignette to have more consistent notation
-* Implemented new filter which use an approximation of the posterior the correction step
-* Added description of the posterior approximation method to ddhazard vignette
-* Added section about weights to the ddhazard vignette
+* Re-wrote the ddhazard vignette to have more a consistent notation
+* Implemented new filter which use an series of rank-one approximation of the posterior in the correction step
+* Added description of the posterior approximation method to the "ddhazard" vignette
+* Added section about weights to the "ddhazard" vignette
 
 # dynamichazard 0.2.0
 The following have been added:
