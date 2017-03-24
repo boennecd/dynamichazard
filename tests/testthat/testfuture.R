@@ -1,5 +1,6 @@
 test_that("predict works for second order random walk",
           expect_true(FALSE))
+
 test_that("residuals works for second order random walk",
           expect_true(FALSE))
 
@@ -14,12 +15,6 @@ get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 test_that("Implement lag-one-cov with weights", {
   expect_true(FALSE)
 })
-
-test_that("Works with exponential model for post_approx",
-          expect_true(FALSE))
-
-test_that("Gets same result regardless of which exponential model specification you give with post_approx",
-          expect_true(FALSE))
 
 test_that("This work when get_design_matrix when function is defined not in global scope", {
   # Simulate data

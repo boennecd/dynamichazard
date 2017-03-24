@@ -23,8 +23,45 @@ ddhazard <- function(..., control){
 
 # Global params
 t_max <- 30
-max_rugs <- 1e3
 start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
+
+# Plot function to show density
+n_breaks <- 101
+breaks <-  seq(0, t_max, length.out = n_breaks)
+
+rug_dens <- function(case_times, control_count){
+  case_count <- hist(case_times, plot = F, breaks = breaks)$counts
+
+  b <- 4
+  cases_cols_scale <- log((case_count + 1) / max(control_count), b)
+  controls_cols_scale <- log((control_count + 1) / max(control_count), b)
+
+  ma <- max(cases_cols_scale, controls_cols_scale)
+  mi <- min(cases_cols_scale, controls_cols_scale)
+
+  a <- .8
+  cases_cols_scale <- a * (cases_cols_scale - mi) / (ma - mi)
+  controls_cols_scale <- a * (controls_cols_scale - mi) / (ma - mi)
+
+  # Add rect for controls
+  y_consts <- c(.01, .03)
+  y_dif <- diff(par("usr")[3:4])
+  y0 <- par("usr")[3] - y_consts[1] * y_dif
+  y1 <- y0 -  y_consts[2] * y_dif
+  cols <- rgb(0, 0, 0, controls_cols_scale)
+
+  rect(head(breaks, -1), rep(y0, length(breaks) - 1),
+       breaks[-1], rep(y1, length(breaks) - 1),
+       col = cols, border = NA, xpd = TRUE)
+
+  # Add rect for cases
+  y0 <- par("usr")[3] + y_consts[1] * y_dif
+  y1 <- y0 +  y_consts[2] * y_dif
+  cols <- rgb(0, 0, 0, cases_cols_scale)
+  rect(head(breaks, -1), rep(y0, length(breaks) - 1),
+       breaks[-1], rep(y1, length(breaks) - 1),
+       col = cols, border = NA, xpd = TRUE)
+}
 
 # params for UI
 col_w <- 4
@@ -48,7 +85,7 @@ get_JS_code_for_log_slider <- function(input_name, base, exp_min, exp_max){
   }, 5)})")
 }
 
-n_series_stuff <- list(base = 2, exp_min = 6, exp_max = 12)
+n_series_stuff <- list(base = 2, exp_min = 6, exp_max = 18)
 
 JScode <- get_JS_code_for_log_slider(
   "n_series", n_series_stuff$base, n_series_stuff$exp_min, n_series_stuff$exp_max)
@@ -156,33 +193,35 @@ ui <- fluidPage(
 
      conditionalPanel(
        "input.more_options",
-       wellPanel(
-         conditionalPanel(
-           "input.est_with_method == 'EKF'",
-           h4("EKF settings"),
+       conditionalPanel(
+         "input.est_with_method != 'post_approx'",
+         wellPanel(
+           conditionalPanel(
+             "input.est_with_method == 'EKF'",
+             h4("EKF settings"),
 
-           checkboxInput("use_extra_correction",
-                         "Extra correction steps",
-                         value = FALSE)),
+             checkboxInput("use_extra_correction",
+                           "Extra correction steps",
+                           value = FALSE)),
 
-         conditionalPanel(
-           "input.est_with_method == 'UKF'",
-           h4("UKF settings"),
+           conditionalPanel(
+             "input.est_with_method == 'UKF'",
+             h4("UKF settings"),
 
-           sliderInput("beta",
-                       "Beta",
-                       min = 0,
-                       max = 2,
-                       step = .5,
-                       value = 0),
+             sliderInput("beta",
+                         "Beta",
+                         min = 0,
+                         max = 2,
+                         step = .5,
+                         value = 0),
 
-           sliderInput("alpha",
-                       "Alpha",
-                       min = 1e-2,
-                       max = 1,
-                       step = 1e-2,
-                       value = 1))
-       )),
+             sliderInput("alpha",
+                         "Alpha",
+                         min = 1e-2,
+                         max = 1,
+                         step = 1e-2,
+                         value = 1))
+         ))),
 
      wellPanel(
        checkboxInput("more_options", label = "Show more options", value = FALSE, width = "12em"))
@@ -375,7 +414,8 @@ server <- function(input, output) {
     tmp <- fit_quote_input()
     eval_quote <- tmp$quote
     data <- tmp$data
-    eval(eval_quote)
+    t <- system.time(fit <- eval(eval_quote))
+    list(fit = fit, time = t)
   })
 
   output$n_deaths <- renderText({
@@ -383,7 +423,7 @@ server <- function(input, output) {
   })
 
   output$LR_out <- renderText({
-    LR <- fit_input()$LR
+    LR <- fit_input()$fit$LR
     out <- sprintf(paste0("The used learning rate is ", ifelse(LR == 1, "%d", "%.3f")), LR)
 
     if(LR < 1)
@@ -394,7 +434,7 @@ server <- function(input, output) {
 
   output$MSE <- renderText({
     n_fixed <- n_fixed_when_est()
-    fit <- fit_input()
+    fit <- fit_input()$fit
 
     state_vecs <- if(n_fixed == 0)
       fit$state_vecs[1:input$obs_time + 1, 1:6] else
@@ -407,22 +447,22 @@ server <- function(input, output) {
 
   output$rug_explanation <- renderText({
     text_out <- if(input$sim_with == "exponential")
-      "The lines above x-axis indicates when a death is observed. " else
-        "The lines above x-axis indicates when a death is observed. A small jitter is added to distinguish them (this is only when we simulate from the logit model). "
+      "The density above x-axis indicates when a death is observed. " else
+        "The density above x-axis indicates when a death is observed. A small jitter is added to distinguish them (this is only when we simulate from the logit model). "
 
-    paste0(text_out, "The lines below the x-axis is when a stop time is observed that is not a death.")
+    paste0(text_out, "The density below the x-axis indicates the size of the control set. The densities are log scaled")
   })
 
   output$coef_plot <- renderPlot({
     sims <- sim_input()
-    fit <- fit_input()
+    fit <- fit_input()$fit
     n_fixed <- n_fixed_when_est()
 
     par(mai = rep(1, 4))
     matplot(seq_len(dim(sims$beta)[1]) - 1, sims$beta, lty = 1, type = "l",
             ylim = range(sims$beta, fit$state_vecs, fit$fixed_effects),
             ylab = "Coefficients", xlab = "Time", cex.lab = 1.4,
-            frame = FALSE, axes=F)
+            frame = FALSE, axes=F, xlim = c(0 - .2, t_max + .2), xaxs = "i")
     matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs[, 1:(6 - n_fixed)],
             lty = 2, type = "l", add = T,
             col = (1+n_fixed):6)
@@ -434,38 +474,42 @@ server <- function(input, output) {
     if(n_fixed > 0)
       abline(h = fit$fixed_effects, col = 1:n_fixed, lty = 2)
 
+    risk_obj <- with(
+      sims$res,
+      get_risk_obj(Surv(tstart, tstop, event), t_max / (n_breaks - 1), max_T = t_max,
+                   id = id, is_for_discrete_model = fit$model == "logit"))
+    count_at_risk <- unlist(lapply(risk_obj$risk_sets, length))
+
     # Add rug plots to illustrate survivers and deaths
     death_times <- sims$res$tstop[sims$res$event==1]
-    if(length(death_times) > max_rugs){
-      death_times <- sample(death_times, max_rugs, replace = F)
-    }
-
     if(input$sim_with == "logit")
-      death_times <- jitter(death_times, amount = .2)
+      death_times <- pmin(pmax(jitter(death_times, amount = .2), 0), t_max)
 
-    rug(death_times, line = -.25, col = rgb(0,0,0,.1), lwd = 1)
-
-    surv_times <- sims$res$tstop[sims$res$event==0]
-    if(length(sims$res$tstop[sims$res$event==0]) > max_rugs){
-      surv_times <- sample(surv_times, size = max_rugs, replace = F)
-    }
-    rug(surv_times, line = .75, col = rgb(0,0,0,.1), lwd = 1)
-
+    rug_dens(death_times, count_at_risk)
   })
 
   output$model_text <- renderText({
-    result <- fit_input()
+    tmp <- fit_input()
+    result <- tmp$fit
 
     out <- paste0("Model is estimated with order ", result$order, " and with the ", result$method, " in the E-step.",
                   " ", result$n_iter, " iterations was used in the EM algorithm.")
 
     if(result$method == "EKF"){
       out <- paste0(out, ifelse(is.null(result$control$NR_eps), " No extra", " Extra"),
-                    " iterations are used in correction step")
+                    " iterations are used in correction step.")
     } else if (result$method == "UKF"){
       out <- paste0(out, " Alpha and beta are ", result$control$alpha, " and ",
-                    result$control$beta)
+                    result$control$beta, ".")
     }
+
+    t <- tmp$t
+    fmt <- "%.3f"
+    out <-
+      paste0(out, "\n The computation time of estimation was",
+             " user: ", sprintf(fmt, t["user.self"]),
+             ", system: ", sprintf(fmt, t["sys.self"]),
+             ", elapsed: ", sprintf(fmt, t["elapsed"]))
 
     return(out)
   })
