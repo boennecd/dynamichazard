@@ -13,9 +13,19 @@ if(interactive()){
     with(environment(ddhazard), Posterior_approx_hepler_logit_compute_length)
   Posterior_approx_hepler_logit_second_d <-
     with(environment(ddhazard), Posterior_approx_hepler_logit_second_d)
+
+  Posterior_approx_hepler_exp_compute_length <-
+    with(environment(ddhazard), Posterior_approx_hepler_exp_compute_length)
+  Posterior_approx_hepler_exp_second_d <-
+    with(environment(ddhazard), Posterior_approx_hepler_exp_second_d)
+
+  exp_model_names <- with(environment(ddhazard), exp_model_names)
 }
 
-test_that("NR method for logit function gives correct values", {
+#####
+# Test for logit model
+
+test_that("NR method for logit function gives correct values for logit", {
   expect_equal(
     Posterior_approx_hepler_logit_compute_length(0, .3, .6, 1, T),
     -0.117687, tolerance = 1e-5)
@@ -45,7 +55,7 @@ test_that("NR method for logit function gives correct values", {
     -2.15823, tolerance = 1e-5)
 })
 
-test_that("Logit second deriv gives correct values", {
+test_that("Logit second deriv gives correct values for", {
   expect_equal(
     Posterior_approx_hepler_logit_second_d(1, 1),
     -exp(2) / (1+ exp(2))^2)
@@ -170,6 +180,89 @@ test_that("Posterior gives previous found results with large by length for pbc d
   # save_to_test(f1, "posterior_approx_logit_pbc_large_by")
 
   expect_equal(f1, read_to_test("posterior_approx_logit_pbc_large_by"), tolerance = 1.490116e-08)
+})
+
+#####
+# Test for exponential model
+
+test_that("NR method for logit function gives correct values for Exponential", {
+  expect_equal(
+    Posterior_approx_hepler_exp_compute_length(0, .2, .1, 1, T, 1),
+    -0.0733015, tolerance = 1e-5)
+  expect_equal(
+    Posterior_approx_hepler_exp_compute_length(0, .2, .1, 1, F, 1),
+    -1.09029, tolerance = 1e-5)
+
+  expect_equal(
+    Posterior_approx_hepler_exp_compute_length(4, .4, .1, 1, T, 1),
+    -2.8445, tolerance = 1e-5)
+  expect_equal(
+    Posterior_approx_hepler_exp_compute_length(4, .4, .1, 1, F, 1),
+    -3.12465, tolerance = 1e-5)
+
+  expect_equal(
+    Posterior_approx_hepler_exp_compute_length(0, 1, .2, 2, T, 1),
+    -0.0506302, tolerance = 1e-5)
+  expect_equal(
+    Posterior_approx_hepler_exp_compute_length(0, 1, .2, 2, F, 1),
+    -0.631692, tolerance = 1e-5)
+
+  expect_equal(
+    Posterior_approx_hepler_exp_compute_length(0, .5, .05, 1, T, 10),
+    -1.43386, tolerance = 1e-5)
+  expect_equal(
+    Posterior_approx_hepler_exp_compute_length(0, .5, .05, 1, F, 10),
+    -1.76385, tolerance = 1e-5)
+})
+
+test_that("Exponential second deriv gives correct values for", {
+  expect_equal(
+    Posterior_approx_hepler_exp_second_d(1, 0, 1),
+    - exp(1 + 0 + log(1)))
+
+  expect_equal(
+    Posterior_approx_hepler_exp_second_d(1, 1, 1),
+    - exp(1 + 1 + log(1)))
+
+  expect_equal(
+    Posterior_approx_hepler_exp_second_d(1, 1, 10),
+    - exp(1 + 1 + log(10)))
+})
+
+
+args <- list(Surv(tstart, tstop, death == 2) ~ age + edema +
+               log(albumin) + log(protime) + log(bili), pbc2,
+             id = pbc2$id, by = 100, max_T = 3600,
+             model = "exp_clip_time_w_jump",
+             control = list(method = "post_approx"),
+             Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.001, 6)))
+
+test_that("Exponential model for posterior_approx gives previous found values", {
+  set.seed(507958)
+  f1 <- do.call(ddhazard, args)
+
+  # plot(f1)
+  f1 <- f1[c("state_vecs", "state_vecs")]
+  # save_to_test(f1, "posterior_approx_exp_pbc")
+
+  expect_equal(f1, read_to_test("posterior_approx_exp_pbc"), tolerance = 1.490116e-08)
+})
+
+test_that("Exponential model yields the same results for all the method inputs with same seed", {
+  seed <- 259430
+
+  set.seed(seed)
+  args$model <- "exp_clip_time_w_jump"
+  set.seed(seed)
+  f1 <- do.call(ddhazard, args)
+
+  for(n in exp_model_names[exp_model_names != "exp_clip_time_w_jump"]){
+    set.seed(seed)
+    args$model <- n
+    f2 <- do.call(ddhazard, args)
+
+    expect_equal(f1$state_vecs, f2$state_vecs)
+  }
 })
 
 # Had issues with win builder. Thus, these lines

@@ -231,20 +231,35 @@ class Posterior_approx_hepler_logit{
 private:
   static double NR_delta(
       const double offset, const double coef1, const double coef2,
-      const double w, const bool is_event, const double c0);
-
-  constexpr static double double_one = 1.;
+      const double w, const double c0, const bool is_event,
+      const double length);
 
 public:
-  static double get_outcome(
-      const bool is_event,
-      const double tstart, const double bin_tstart,
-      const double tstop, const double bin_tstop);
-
   static double compute_length(
-      const double, const double, const double, const double, const double);
+      const double, const double, const double, const double,
+      const bool, const double);
 
-  static double second_d(const double, const double);
+  static double second_d(const double, const double,
+                         const double);
+};
+
+
+
+
+class Posterior_approx_hepler_exp{
+private:
+  static double NR_delta(
+      const double offset, const double coef1, const double coef2,
+      const double w, const double c0, const bool is_event,
+      const double length);
+
+public:
+  static double compute_length(
+      const double, const double, const double, const double, const bool,
+      const double);
+
+  static double second_d(const double, const double,
+                         const double);
 };
 
 

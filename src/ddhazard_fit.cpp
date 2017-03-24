@@ -6,6 +6,7 @@ using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
 using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
 
 using Posterior_approx_logit =  Posterior_approx<Posterior_approx_hepler_logit>;
+using Posterior_approx_exp =  Posterior_approx<Posterior_approx_hepler_exp>;
 
 // Define convergence criteria used later
 inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &new_est){
@@ -255,6 +256,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     if(model == "logit"){
       solver.reset(new Posterior_approx_logit(*p_data.get()));
+    } else if(is_exponential_model(model)){
+      solver.reset(new Posterior_approx_exp(*p_data.get()));
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
 

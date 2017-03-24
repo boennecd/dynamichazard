@@ -29,6 +29,14 @@ Posterior_approx_hepler_logit_second_d <- function(c, offset) {
     .Call('dynamichazard_Posterior_approx_hepler_logit_second_d', PACKAGE = 'dynamichazard', c, offset)
 }
 
+Posterior_approx_hepler_exp_compute_length <- function(offset, coef1, coef2, w, y, length) {
+    .Call('dynamichazard_Posterior_approx_hepler_exp_compute_length', PACKAGE = 'dynamichazard', offset, coef1, coef2, w, y, length)
+}
+
+Posterior_approx_hepler_exp_second_d <- function(c, offset, length) {
+    .Call('dynamichazard_Posterior_approx_hepler_exp_second_d', PACKAGE = 'dynamichazard', c, offset, length)
+}
+
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {
     .Call('dynamichazard_logLike_cpp', PACKAGE = 'dynamichazard', X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }

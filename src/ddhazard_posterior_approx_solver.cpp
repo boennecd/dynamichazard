@@ -1,9 +1,11 @@
 #include "ddhazard.h"
 
 
+
 inline double Posterior_approx_hepler_logit::NR_delta(
       const double offset, const double coef1, const double coef2,
-      const double w, const bool is_event, const double c0){
+      const double w, const double c0, const bool is_event,
+      const double length){
     const double e = exp(c0 + offset);
 
     if(is_event){
@@ -15,23 +17,14 @@ inline double Posterior_approx_hepler_logit::NR_delta(
       (2. * coef1 + w * e / pow(1. + e, 2));
 };
 
-
-inline double Posterior_approx_hepler_logit::get_outcome(
-  const bool is_event,
-  const double tstart, const double bin_tstart,
-  const double tstop, const double bin_tstop){
-  return is_event;
-};
-
 inline double Posterior_approx_hepler_logit::compute_length(
     const double offset, const double coef1, const double coef2,
-    const double w, const double y){
+    const double w, const bool is_event, const double length){
   double c0 = 0.;
   double c1;
-  bool is_event = y == double_one;
 
   for(int i = 0; i < 100; i++){
-    c1 = c0 - NR_delta(offset, coef1, coef2, w, is_event, c0);
+    c1 = c0 - NR_delta(offset, coef1, coef2, w, c0, is_event, 0.);
 
     if(std::abs(c1 - c0) < 1e-5){
       return c1;
@@ -50,7 +43,7 @@ inline double Posterior_approx_hepler_logit::compute_length(
 };
 
 inline double Posterior_approx_hepler_logit::second_d(
-  const double c, const double offset){
+  const double c, const double offset, const double length){
     const double e = exp(c + offset);
     return - e / pow(1. + e, 2);
 };
@@ -61,14 +54,79 @@ double Posterior_approx_hepler_logit_compute_length(
     const double offset, const double coef1, const double coef2,
     const double w, const bool y){
   return Posterior_approx_hepler_logit::compute_length(
-    offset, coef1, coef2, w, y);
+    offset, coef1, coef2, w, y, 0.);
 };
 
 // [[Rcpp::export]]
 double Posterior_approx_hepler_logit_second_d(
     const double c, const double offset){
-  return Posterior_approx_hepler_logit::second_d(c, offset);
+  return Posterior_approx_hepler_logit::second_d(c, offset,0.);
 };
+
+
+
+
+
+
+inline double Posterior_approx_hepler_exp::NR_delta(
+    const double offset, const double coef1, const double coef2,
+    const double w, const double c0, const bool is_event,
+    const double length){
+  const double e = exp(c0 + offset + log(length));
+
+  if(is_event){
+    return (2. * coef1 * c0 + coef2 - w * (1. - e)) / (2. * coef1 + w * e);
+  }
+
+  return (2. * coef1 * c0 + coef2 + w *  e) / (2. * coef1 + w * e);
+};
+
+inline double Posterior_approx_hepler_exp::compute_length(
+    const double offset, const double coef1, const double coef2,
+    const double w, const bool is_event, const double length){
+  double c0 = 0.;
+  double c1;
+
+  for(int i = 0; i < 100; i++){
+    c1 = c0 - NR_delta(offset, coef1, coef2, w, c0, is_event, length);
+
+    if(std::abs(c1 - c0) < 1e-5){
+      return c1;
+    }
+
+    c0 = c1;
+  }
+
+  static bool have_failed_once;
+  if(!have_failed_once){
+    have_failed_once = true;
+    Rcpp::warning("Newton Rapshon in prediction step failed at least once\n");
+  }
+
+  return c1;
+};
+
+inline double Posterior_approx_hepler_exp::second_d(
+    const double c, const double offset, const double length){
+  return -  exp(c + offset + log(length));
+};
+
+// Export for tests
+// [[Rcpp::export]]
+double Posterior_approx_hepler_exp_compute_length(
+    const double offset, const double coef1, const double coef2,
+    const double w, const bool y, const double length){
+  return Posterior_approx_hepler_exp::compute_length(
+    offset, coef1, coef2, w, y, length);
+};
+
+// [[Rcpp::export]]
+double Posterior_approx_hepler_exp_second_d(
+    const double c, const double offset, const double length){
+  return Posterior_approx_hepler_exp::second_d(c, offset, length);
+};
+
+
 
 
 
@@ -121,12 +179,12 @@ void Posterior_approx<T>::solve(){
         std::max(1./arma::dot(x_, inter_vec(p_dat.span_current_cov)), 1e-10);
       const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
 
-      const double y = T::get_outcome(
-        p_dat.is_event_in_bin(*it) == bin_number,
-        p_dat.tstart(*it), bin_tstart, p_dat.tstop(*it), bin_tstop);
+      const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
+      const double at_risk_lenght =
+        std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
 
-      const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, y);
-      const double neg_second_d = - w * T::second_d(c, offset);
+      const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, is_event, at_risk_lenght);
+      const double neg_second_d = - w * T::second_d(c, offset, at_risk_lenght);
 
       a -= p_dat.LR * ((f2 - c) * f1) * inter_vec;
       V -= inter_vec *  (inter_vec.t() * (neg_second_d  / (1. + neg_second_d / f1)));
@@ -175,4 +233,5 @@ void Posterior_approx<T>::solve(){
 
 // Define classes
 template class Posterior_approx<Posterior_approx_hepler_logit>;
+template class Posterior_approx<Posterior_approx_hepler_exp>;
 
