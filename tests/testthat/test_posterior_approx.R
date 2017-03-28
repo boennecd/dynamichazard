@@ -68,7 +68,8 @@ test_that("Logit second deriv gives correct values for", {
 args <- list(Surv(tstart, tstop, death == 2) ~ age + edema +
                log(albumin) + log(protime) + log(bili), pbc2,
              id = pbc2$id, by = 100, max_T = 3600,
-             control = list(method = "post_approx"),
+             control = list(method = "post_approx",
+                            posterior_version = "woodbury"),
              Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
 
 test_that("Logit model for posterior_approx gives previous found values", {
@@ -80,6 +81,30 @@ test_that("Logit model for posterior_approx gives previous found values", {
   # save_to_test(f1, "posterior_approx_logit_pbc")
 
   expect_equal(f1, read_to_test("posterior_approx_logit_pbc"), tolerance = 1.490116e-08)
+})
+
+test_that("Changing between woodbury and cholesky makes a slight difference with PBC",{
+  expect_equal(args$control$posterior_version, "woodbury")
+
+  set.seed(seed <- 5517547)
+  f1 <- do.call(ddhazard, args)
+  set.seed(seed)
+  f2 <- do.call(ddhazard, args)
+
+  expect_equal(f1[c("state_vars", "state_vecs")], f2[c("state_vars", "state_vecs")],
+               tolerance = 1e-16)
+
+  args$control$posterior_version <- "cholesky"
+  set.seed(seed)
+  f2 <- do.call(ddhazard, args)
+
+  expect_true(is.character(all.equal(
+    f1[c("state_vars", "state_vecs")],
+    f2[c("state_vars", "state_vecs")], tolerance = 1e-16)))
+
+  # The difference is not that big though
+  expect_equal(f1[c("state_vars", "state_vecs")],
+               f2[c("state_vars", "state_vecs")], tolerance = 1e-4)
 })
 
 test_that("Logit model for posterior_approx differs due to permutation", {

@@ -43,6 +43,7 @@
 #' \item{\code{Q_0_term_for_fixed_E_step}}{The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step}
 #' \item{\code{eps_fixed_parems}}{Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects}
 #' \item{\code{permu}}{\code{TRUE} if the risk sets should be permutated before computation. This is \code{TRUE} by default for posterior mode approximation method and \code{FALSE} for all other methods}
+#' \item{\code{posterior_version}}{The implementation version of the posterior approximation method. Either \code{"woodbury"} or \code{"cholesky"}}
 #'}
 #'
 #' @return
@@ -139,7 +140,8 @@ ddhazard = function(formula, data,
                           Q_0_term_for_fixed_E_step = NULL,
                           use_pinv = T, criteria = "delta_coef",
                           permu = if(!is.null(control$method))
-                            control$method == "post_approx" else F)
+                            control$method == "post_approx" else F,
+                          posterior_version = "cholesky")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -476,7 +478,8 @@ ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
                    n_fixed_terms_in_state_vec = n_fixed_terms_in_state_vec,
                    weights = weights,
                    use_pinv = control$use_pinv,
-                   criteria = control$criteria)
+                   criteria = control$criteria,
+                   posterior_version = control$posterior_version)
 }
 
 

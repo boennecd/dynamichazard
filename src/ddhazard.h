@@ -267,11 +267,15 @@ template<class T>
 class Posterior_approx : public Solver
 {
   problem_data &p_dat;
+  std::string method;
 
 public:
-  Posterior_approx(problem_data &p_):
-  p_dat(p_)
-  {};
+  Posterior_approx(problem_data &p_, std::string method_):
+  p_dat(p_), method(method_)
+  {
+    if(method != "woodbury" && method != "cholesky")
+      Rcpp::stop("Method '", method, "' not implemented");
+  };
 
   void solve();
 };

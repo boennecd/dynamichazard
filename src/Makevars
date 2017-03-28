@@ -1,13 +1,13 @@
 SOURCES_C = stats/lm.c
-SOURCES_F = biglm/boundedQRf.f
-SOURCES_CPP = Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp thread_pool.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp ddhazard_posterior_approx_solver.cpp
+SOURCES_CPP = Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp thread_pool.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp LAPACK_wrapper.cpp ddhazard_posterior_approx_solver.cpp
+SOURCES_F = biglm/boundedQRf.f dchur.f
 CXX_STD = CXX11
 OBJECTS = $(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
 
 ## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags
 PKG_CXXFLAGS = $(BLAS_CXXFLAGS_USE) $(SHLIB_PTHREAD_FLAGS)
 ## PKG_LIBS: Linker flags
-PKG_LIBS = $(FLIBS) $(BLAS_LIBS) $(LAPACK_LIBS) $(SHLIB_PTHREAD_FLAGS)
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SHLIB_PTHREAD_FLAGS)
 
 DD_DEPS = arma_n_rcpp.h ddhazard_problem_data.h ddhazard.h
 BIGGLM_DEPS = arma_n_rcpp.h bigglm_wrapper.h

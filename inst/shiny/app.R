@@ -193,8 +193,6 @@ ui <- fluidPage(
 
      conditionalPanel(
        "input.more_options",
-       conditionalPanel(
-         "input.est_with_method != 'post_approx'",
          wellPanel(
            conditionalPanel(
              "input.est_with_method == 'EKF'",
@@ -220,8 +218,17 @@ ui <- fluidPage(
                          min = 1e-2,
                          max = 1,
                          step = 1e-2,
-                         value = 1))
-         ))),
+                         value = 1)),
+
+           conditionalPanel(
+             "input.est_with_method == 'post_approx'",
+             h4("Posterior approximation method settings"),
+
+             selectInput("post_approx_version",
+                         "Computation version",
+                         choices = c("woodbury", "cholesky"),
+                         selected = "woodbury"))
+         )),
 
      wellPanel(
        checkboxInput("more_options", label = "Show more options", value = FALSE, width = "12em"))
@@ -380,6 +387,8 @@ server <- function(input, output) {
       if(input$use_extra_correction)
         control_list <- c(control_list,
                           list(NR_eps = .1))
+    } else if(input$est_with_method == "post_approx"){
+      control_list$posterior_version = input$post_approx_version
     }
 
     if(n_fixed > 0){
