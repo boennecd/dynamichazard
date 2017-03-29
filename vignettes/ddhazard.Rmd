@@ -90,6 +90,11 @@ knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
 %
 \newcommand{\argmaxu}[1]{\underset{#1}{\argmax}\:}
 \newcommand{\argminu}[1]{\underset{#1}{\argmin}\:}
+% 
+% 
+\newcommand{\qr}[1]{\text{qr}\Lparen{#1}}
+\newcommand{\cholup}[1]{\text{cholupdate}\Lparen{#1}}
+
 
 # Introduction
 This note will cover the `ddhazard` function used for estimation in the `dynamichazard` library. You can install the version of the library used to make this vignette from github with the `devtools` library as follows:
@@ -503,6 +508,85 @@ $$\begin{aligned}
 
 where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(n_t)$ since $\widehat{\mat{H}}$ is a diagonal matrix and all products involves at most multiplications of $q\times n_t$ or $n_t \times q$ matrices
 
+## The Square-root Unscented Kalman filter
+
+Another idea could be to try the Square-root Unscented Kalman filter suggested in [@Van01]. The idea is to use a QR decompositions and Cholesky updates to get a faster method and more stable method. While [@Van01] shows that this scales  equally well in the dimension of the state vector we show below that it does not scale well with the number of individuals at risk, $n_t$. The prediction step is as before. Next, let 
+$$\begin{aligned}
+  &\qr{\mat{B}} = \mat{C}, \qquad \mat{C}\text{ is the Choleksy decomposition of } \mat{B}\mat{B}^\top = \mat{C}^\top\mat{C} \\
+%
+  &\cholup{\mat{C}, \vec{c}, v} = \widetilde{\mat{C}}, \qquad  \widetilde{\mat{C}}\text{ is the updated Cholesky factor } 
+    \widetilde{\mat{C}}^\top\widetilde{\mat{C}} = \mat{C}^\top\mat{C} + v \vec{c}\vec{c}^\top
+\end{aligned}$$
+
+Whether we make an update or a downdate depends on the sign of $v$. The correction step can done as follows:
+
+$$\begin{aligned}
+  &\mat{C} = \qr{\begin{bmatrix}
+    \sqrt{W_1^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}} &
+    \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}} & \dots &
+    \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
+    \end{bmatrix}} \\
+%
+  &\mat{C} \leftarrow \cholup{\mat{C}, \wvec{y}_0 - \overline{\vec{y}}, \text{sign}\Lparen{W_0^{[c]}} \sqrt{\vert W_0^{[c]}\vert}} \\
+% 
+  &\ukfNotee{\alpha}{y}{t} = \Delta\wmat{A}\diag{\vec{W}^{[cc]}}\Delta\wmat{Y}^\top \\
+% 
+  &\mat{K} = \ukfNotee{\alpha}{y}{t}\mat{C}^{-1}\Lparen{\mat{C}^{-1}}^\top \\
+%
+  &\emNotee{\vec{a}}{t}{t} = \emNotee{\vec{a}}{t}{t - 1} + \mat{K}\Lparen{\vec{y}_t - \overline{\vec{y}}} \\
+%
+  & \emNotee{\mat{V}}{t}{t} = \emNotee{\mat{V}}{t}{t - 1} - \mat{K}\mat{C}^\top\mat{C}\mat{K}^\top
+\end{aligned}$$
+
+where we use the left arrow, $\leftarrow$, to indicate an update and all definitions of matrices and vectors are as in the beginning of this section. We will show that this is equivalent to the first method. First, assume that the first weight is positive, $W_0^{[c]} > 0$, such that we do not need the Cholesky update. Then:
+$$\begin{aligned}
+  &\mat{C} = \qr{\begin{bmatrix}
+      \sqrt{W_0^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}} &
+      \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}} & \dots &
+      \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
+    \end{bmatrix}} \\
+%
+  &\begin{aligned} \Rightarrow  \mat{C}^\top\mat{C} & = 
+    \begin{bmatrix}
+      \sqrt{W_0^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}} &
+      \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}} & \dots &
+      \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
+    \end{bmatrix}
+    \begin{bmatrix}
+      \sqrt{W_0^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}}^\top \\
+      \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}}^\top \\ \vdots \\
+      \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}}^\top \\ 
+      \sqrt{\widehat{\mat{H}}}
+    \end{bmatrix} \\
+    & = \Delta\wmat{Y}\diag{\vec{W}^{[c]}}\Delta\wmat{Y}^\top + \wmat{H} = \ukfNotee{y}{y}{t} 
+  \end{aligned} \\
+% 
+  &\ukfNotee{\alpha}{y}{t} = \Delta\wmat{A}\diag{\vec{W}^{[cc]}}\Delta\wmat{Y}^\top \\
+% 
+  &\mat{K} = \ukfNotee{\alpha}{y}{t}\mat{C}^{-1}\Lparen{\mat{C}^{-1}}^\top = \ukfNotee{\alpha}{y}{t}
+     \Lparen{\mat{C}^\top\mat{C}}^{-1} =  \ukfNotee{\alpha}{y}{t}  \ukfNotee{y}{y}{t}^{-1} \\
+%
+  &\emNotee{\vec{a}}{t}{t} = \emNotee{\vec{a}}{t}{t - 1} + \mat{K}\Lparen{\vec{y}_t - \overline{\vec{y}}} 
+    = \emNotee{\vec{a}}{t}{t - 1} + \ukfNotee{\alpha}{y}{t}  \ukfNotee{y}{y}{t}^{-1}\Lparen{\vec{y}_t - \overline{\vec{y}}} \\
+%
+  & \emNotee{\mat{V}}{t}{t} = \emNotee{\mat{V}}{t}{t - 1} - \mat{K}\mat{C}^\top\mat{C}\mat{K}^\top
+    = \emNotee{\mat{V}}{t}{t-1} - \ukfNotee{\alpha}{y}{t}\ukfNotee{y}{y}{t}^{-1}\ukfNotee{\alpha}{y}{t}^\top
+\end{aligned}$$
+
+Next, we look at the computational cost of the case where $W_0^{[c]} > 0$. Since $\mat{C} \in \mathbb{R}^{(2q + 1 + n_t)\times n_t}$, the cost of finding the decompisition of $\mat{C}$ is $O((2q + 1 + n_t)n_t^2)$ as stated in [@Van01]. Consequently, we end with a $O(n_t^3)$ cost in every iteration of the filter making this method of little use when $n_t$ is large. I have some ideas how we might change the method. Lets continue with the assumption that the first weight is postive. Then one idea is to compute:
+
+$$\begin{aligned}
+  &\mat{C} = \qr{\begin{bmatrix}
+    \sqrt{W_0^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}} &
+    \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}} & \dots &
+    \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}}
+    \end{bmatrix}} \\
+%
+  &\mat{C} \leftarrow \cholup{\mat{C}, \widehat{\mat{H}}, 1}
+\end{aligned}$$
+
+In this case, we first find $\mat{C} \in \mathbb{R}^{(2q + 1)\times n_t}$ and then make a rank-$n_t$ update. The rest of the computations are in-expensive relative to the number of observations, $n_t$, since we reduce the dimension of $\mat{C} \in \mathbb{R}^{(2q + 1)\times n_t}$. In general, the key is that we want a Cholesky decomposition (or another decomposition) of $\Delta\wmat{Y}\diag{\vec{W}^{[c]}}\Delta\wmat{Y}^\top + \wmat{H}$ which is easy to compute and ease the rest of the computations and storage requirements
+
 ## Extreme values
 As with the EKF, a minor addition is made to the covariance matrix of the observational equation such that we replace $\widehat{\mat{H}}$ by:
 
@@ -607,14 +691,14 @@ The Woodbury matrix identity can perform poorly for ill-conditioned matrices. Th
 $$\emNote{\vec{a}}{t}{t}{0} = \emNotee{\vec{a}}{t}{t-1},  \qquad
   \emNote{\mat{V}}{t}{t}{0} = \emNotee{\mat{V}}{t}{t-1}, \qquad 
   \mat{L}\mat{L}^\top = \Lparen{\emNotee{\mat{V}}{t}{t-1}}^{-1}$$
-  where $\mat{L}$ is the lower triangular matrix from the Cholesky decomposition of $\Lparen{\emNotee{\mat{V}}{t}{t-1}}^{-1}$. For $k=1,2,\dots,n_1$:
+  where $\mat{L}$ is the lower triangular matrix from the Cholesky decomposition of $\Lparen{\emNotee{\mat{V}}{t}{t-1}}^{-1}$. For $k=1,2,\dots,n_t$:
 1. Perform step 1 and 2 as before to find the constant $v$ and update $\emNote{\vec{a}}{t}{t}{k}$
 2. Update $\mat{L}$ by a rank-one-update of $\vec{x}_{ij} g \vec{x}_{ij}^\top$ such that $\mat{L}\mat{L}^\top \leftarrow \mat{L}\mat{L}^\top + \vec{x}_{ij} g \vec{x}_{ij}^\top$. We use the left arrow, $\leftarrow$, to indicate that we make an update
 3. Set $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$
 
-Step 0 comes at an $O(q^3)$ cost per interval $1,2,\dots,d$ due to the  Cholesky decomposition. This is durable if we do not have too many coefficients. Further, a stable way to find the Cholesky decomposition is first to find the Cholesky decomposition of $\emNotee{\mat{V}}{t}{t-1}$ and then to perform the inversion. Step 2 can be performed in $O(q^2)$. Ideas for methods of doing the rank-one update can be found in [@gill74], [@seeger04] or at https://dahtah.wordpress.com/2011/11/29/rank-one-updates-for-faster-matrix-inversion/. Step 3 can be done with back substitution at a of cost $O(q^2)$. Thus, we end with an algorithm that is scale as well as with the Woodbury matrix identity a part from the first step 0
+Step 0 comes at an $O(q^3)$ cost per interval $1,2,\dots,d$ due to the  Cholesky decomposition. This is durable if we do not have too many coefficients. Step 2 can be performed in $O(q^2)$. The current implementation use the Fortran code from the post here http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646 based on [@seeger04]. It is the algorithm mentioned in [@golub12] in section 6.5.4. Step 3 can be done in $O(q^2)$ using backward substitution when we compute $\Lparen{\mat{L}^{-1}}^\top$. Thus, we end with an algorithm that is scale as well as with the Woodbury matrix identity a part from the first step 0
 
-Moreover, we can save computations throughout by storing $\widetilde{\mat{L}} = \Lparen{\mat{L}^{-1}}^\top$ instead of storing $\emNote{\mat{V}}{t}{t}{k}$. $\widetilde{\mat{L}}$ is also a triangular matrix. Thus, we need to do less operations when doing the matrix multiplications. Another advantage is that the rank-one update yields a positive definite matrix $\mat{L}\mat{L}^\top$. This is true since $\vec{x}_{ij}\vec{x}_{ij}^\top$ is a vector outer product and as $g$ is positive with distributions from the exponential family. Hence, $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$ will remains a positive definite matrix
+Moreover, we can save computations throughout by storing $\widetilde{\mat{L}} = \Lparen{\mat{L}^{-1}}^\top$ instead of storing $\emNote{\mat{V}}{t}{t}{k}$. $\widetilde{\mat{L}}$ is also a triangular matrix. Thus, we need to do less operations when doing the matrix multiplications. Another advantage is that the rank-one update yields a positive definite matrix $\mat{L}\mat{L}^\top$. This is true since $\vec{x}_{ij}\vec{x}_{ij}^\top$ is a vector outer product and as $g$ is positive with distributions from the exponential family. Hence, $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$ will remains a positive definite matrix. The method described here is used if you set the element `posterior_version = cholesky` in the list passed to the `control` argument of `ddhazard`. The former method using the Woodbury matrix identity is used if you set `posterior_version = woodbury`
 
 ## Pros and cons
 The pros of the approximation of the posterior mode presented in this section are:

@@ -6,6 +6,52 @@
 
 using namespace Rcpp;
 
+// chol_rank_one_update
+void chol_rank_one_update(arma::mat& R, arma::vec x);
+RcppExport SEXP dynamichazard_chol_rank_one_update(SEXP RSEXP, SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type R(RSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    chol_rank_one_update(R, x);
+    return R_NilValue;
+END_RCPP
+}
+// square_tri_inv
+void square_tri_inv(const arma::mat& R, arma::mat& out);
+RcppExport SEXP dynamichazard_square_tri_inv(SEXP RSEXP, SEXP outSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
+    square_tri_inv(R, out);
+    return R_NilValue;
+END_RCPP
+}
+// symmetric_mat_chol
+void symmetric_mat_chol(const arma::mat& A, arma::mat& out);
+RcppExport SEXP dynamichazard_symmetric_mat_chol(SEXP ASEXP, SEXP outSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
+    symmetric_mat_chol(A, out);
+    return R_NilValue;
+END_RCPP
+}
+// tri_mat_times_vec
+void tri_mat_times_vec(arma::mat& A, const arma::vec& x, arma::vec& out, bool is_transpose);
+RcppExport SEXP dynamichazard_tri_mat_times_vec(SEXP ASEXP, SEXP xSEXP, SEXP outSEXP, SEXP is_transposeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type out(outSEXP);
+    Rcpp::traits::input_parameter< bool >::type is_transpose(is_transposeSEXP);
+    tri_mat_times_vec(A, x, out, is_transpose);
+    return R_NilValue;
+END_RCPP
+}
 // bigglm_regcf_rcpp
 arma::vec bigglm_regcf_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol);
 RcppExport SEXP dynamichazard_bigglm_regcf_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP) {
@@ -174,39 +220,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type length(lengthSEXP);
     rcpp_result_gen = Rcpp::wrap(Posterior_approx_hepler_exp_second_d(c, offset, length));
     return rcpp_result_gen;
-END_RCPP
-}
-// chol_rank_one_update
-void chol_rank_one_update(arma::mat& R, arma::vec x);
-RcppExport SEXP dynamichazard_chol_rank_one_update(SEXP RSEXP, SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat& >::type R(RSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
-    chol_rank_one_update(R, x);
-    return R_NilValue;
-END_RCPP
-}
-// square_tri_inv
-void square_tri_inv(const arma::mat& R, arma::mat& out);
-RcppExport SEXP dynamichazard_square_tri_inv(SEXP RSEXP, SEXP outSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
-    square_tri_inv(R, out);
-    return R_NilValue;
-END_RCPP
-}
-// symmetric_mat_chol
-void symmetric_mat_chol(const arma::mat& A, arma::mat& out);
-RcppExport SEXP dynamichazard_symmetric_mat_chol(SEXP ASEXP, SEXP outSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
-    symmetric_mat_chol(A, out);
-    return R_NilValue;
 END_RCPP
 }
 // logLike_cpp

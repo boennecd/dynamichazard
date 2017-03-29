@@ -4,6 +4,8 @@ if(interactive()){
   square_tri_inv <- with(environment(ddhazard), square_tri_inv)
 
   symmetric_mat_chol <- with(environment(ddhazard), symmetric_mat_chol)
+
+  tri_mat_times_vec <- with(environment(ddhazard), tri_mat_times_vec)
 }
 
 test_name <- "Testing LAPACK wrapper functions"
@@ -129,6 +131,36 @@ test_that("Symmetric matrix Choleksy decomposition works", {
     expect_equal(d1, d2)
   }
 })
+
+#####
+
+test_that("Triangular matrix times vector works", {
+  for(n in c(10, 50, 100)){
+    r_mat <- get_random_sym_post_def_mat(n)
+    d1 <- t(chol(r_mat))
+
+    v1 <- rnorm(n)
+    out <- rep(0, n)
+    tri_mat_times_vec(d1, v1, out, F)
+    expect_equal(c(d1 %*% v1), out)
+
+    v2 <- rnorm(n)
+    out <- rep(0, n)
+    tri_mat_times_vec(d1, v2, out, T)
+    expect_equal(c(t(d1) %*% v2), out)
+
+    v3 <- rnorm(n / 2)
+    out <- rep(0, n)
+    tri_mat_times_vec(d1, v3, out, F)
+    expect_equal(c(d1[, 1:(n/2)] %*% v3), out)
+
+    v4 <- rnorm(n / 2)
+    out <- rep(0, n)
+    tri_mat_times_vec(d1, v4, out, T)
+    expect_equal(c(t(d1)[, 1:(n/2)] %*% v4), out)
+  }
+})
+
 
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

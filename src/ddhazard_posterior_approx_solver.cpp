@@ -1,5 +1,5 @@
 #include "ddhazard.h"
-#include "LAPACK_wrapper.h"
+#include "arma_utils.h"
 
 inline double Posterior_approx_hepler_logit::NR_delta(
       const double offset, const double coef1, const double coef2,
@@ -193,6 +193,7 @@ void Posterior_approx<T>::solve(){
       arma::mat L_inv = arma::inv_sympd(V); // only temporary
       symmetric_mat_chol(L_inv, L); // Cholesky decomposition of information matrix
       square_tri_inv(L, L_inv); // V = L_inv^T * L_inv
+      arma::vec inter_vec(L.n_cols);
 
       for(auto it = r_set.begin(); it != r_set.end(); it++){
         const arma::vec x_(p_dat.X.colptr(*it), p_dat.n_params_state_vec, false);
@@ -201,8 +202,7 @@ void Posterior_approx<T>::solve(){
         const double offset = (p_dat.any_fixed_in_M_step) ?
           arma::dot(p_dat.fixed_parems, p_dat.fixed_terms.col(*it)) : 0.;
 
-        const arma::vec inter_vec =
-          L_inv(arma::span::all, p_dat.span_current_cov) * x_;
+        tri_mat_times_vec(L_inv, x_, inter_vec, false);
 
         const double f1 =
           std::max(1./arma::dot(inter_vec, inter_vec), 1e-10);
@@ -215,7 +215,8 @@ void Posterior_approx<T>::solve(){
         const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, is_event, at_risk_lenght);
         const double neg_second_d = - w * T::second_d(c, offset, at_risk_lenght);
 
-        a -= p_dat.LR * ((f2 - c) * f1) * (L_inv.t() * inter_vec);
+        tri_mat_times_vec(L_inv, inter_vec, true);
+        a -=  (p_dat.LR * (f2 - c) * f1) * inter_vec;
 
         arma::vec rank_1_update_vec(p_dat.space_dim_in_arrays, arma::fill::zeros);
         rank_1_update_vec(p_dat.span_current_cov) = x_ * sqrt(neg_second_d);

@@ -16,6 +16,7 @@ The following has been changed or added:
 * Implemented new filter which use an series of rank-one approximation of the posterior in the correction step
 * Added description of the posterior approximation method to the "ddhazard" vignette
 * Added section about weights to the "ddhazard" vignette
+* Removed the `rug` call in the shiny app demo and added the computation time of the estimation
 * Inverses has been replaced by pseudo inverses. This will only have implications the matrices are rank deficient. The old option can be used by calling `ddhazard` with `control = list(use_pinv = FALSE, ...)`
 
 # dynamichazard 0.2.0
