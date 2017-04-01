@@ -87,6 +87,7 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \item{\code{Q_0_term_for_fixed_E_step}}{The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step}
 \item{\code{eps_fixed_parems}}{Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects}
 \item{\code{permu}}{\code{TRUE} if the risk sets should be permutated before computation. This is \code{TRUE} by default for posterior mode approximation method and \code{FALSE} for all other methods}
+\item{\code{posterior_version}}{The implementation version of the posterior approximation method. Either \code{"woodbury"} or \code{"cholesky"}}
 }
 }
 \references{

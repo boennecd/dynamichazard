@@ -92,8 +92,17 @@ test_that("Covs are fixed or not depends on is fixed argument", {
   }
 })
 
+test_that("Sim functions gives previous results", {
+  set.seed(897730)
+  sim_logit <- test_sim_func_logit(1e2, n_vars = 3)
+  sim_exp <- test_sim_func_exp(1e2, n_vars = 3)
 
+  # save_to_test(sim_logit, "util_sim_logit")
+  # save_to_test(sim_exp, "util_sim_exp")
 
+  expect_equal(sim_logit, read_to_test("util_sim_logit"), tolerance = 1.490116e-08)
+  expect_equal(sim_exp, read_to_test("util_sim_exp"), tolerance = 1.490116e-08)
+})
 
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

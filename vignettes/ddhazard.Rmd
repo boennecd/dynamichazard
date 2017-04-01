@@ -231,7 +231,7 @@ $$\begin{aligned}
 	\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =    
 		\log L \Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} = & 
 		- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
-	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top\psi_t^{-1}\mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
+	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top\mat{R}^\top\psi_t^{-1}\mat{Q}^{-1}\mat{R}\Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
 	&  - \frac{1}{2} \log \deter{\mat{Q}_0} - \frac{1}{2d} \log \deter{\mat{Q}} \\
 	&  + \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t})
 \end{aligned}$$
@@ -680,9 +680,11 @@ This method is selected by setting `method = post_approx` in the list passed to 
 Finding the constant $v$ in step 2 can be done by the Newton Raphson method to find a unique minimum when: 
 
 1. $- \Lparen{y_{ijt} \log h(b) + (1 - y_{ijt}) \log (1 - h(b)}$ is convex in $b$
-2. $- \Lparen{y_{ijt} \log h(b) + (1 - y_{ijt}) \log (1 - h(b)}$ has a finite minimum
+2. $- \Lparen{y_{ijt} \log h(b) + (1 - y_{ijt}) \log (1 - h(b)}$ bounded from below
 
-Number 1 and 2 are true for the binomial model and true for all exponential families where the form though will change. That is, we have to change the likelihood expression of $-\log \proppCond{y_{ijt}}{\vec{\alpha}}$. Step 2 may further be at a limit as is the case for the binomial model since for $y_{ijt} = 1$ the limit is $0$ at $b \rightarrow \infty$ and for $y_{ijt} = 0$ the limit is $0$ for $b \rightarrow -\infty$. The convex polynomial will eventually dominate the slope of the logit function which tends towards zero. Further, the learning rate $\zeta_0$ the decrease factor $\zeta$ as in the EKF can be used here to by changing the correction step to:
+Number 1 and 2 are true for the binomial model and true for all exponential families where the form though will change. That is, we have to change the likelihood expression of $-\log \proppCond{y_{ijt}}{\vec{\alpha}}$ which leads to $- \Lparen{y_{ijt} \log h(b) + (1 - y_{ijt}) \log (1 - h(b)}$ in the binary case. 
+
+As an example, point 2 is true for the logistic model since for $y_{ijt} = 1$ the limit is $0$ at $b \rightarrow \infty$ and for $y_{ijt} = 0$ the limit is $0$ for $b \rightarrow -\infty$. The convex polynomial will eventually dominate the slope of the logit function which tends towards zero. Thus, we get a unique finite minimum. Further, the learning rate $\zeta_0$ the decrease factor $\zeta$ as in the EKF can be used here to by changing the correction step to:
 
 $$\emNote{\vec{a}}{t}{t}{k} = \emNote{\vec{a}}{t}{t}{k-1} - (d_1 - v) d_2 \zeta_0 \emNote{\mat{V}}{t}{t}{k-1}\vec{x}_{ij}$$
 The Woodbury matrix identity can perform poorly for ill-conditioned matrices. This motivates the following algorithm:
@@ -696,9 +698,9 @@ $$\emNote{\vec{a}}{t}{t}{0} = \emNotee{\vec{a}}{t}{t-1},  \qquad
 2. Update $\mat{L}$ by a rank-one-update of $\vec{x}_{ij} g \vec{x}_{ij}^\top$ such that $\mat{L}\mat{L}^\top \leftarrow \mat{L}\mat{L}^\top + \vec{x}_{ij} g \vec{x}_{ij}^\top$. We use the left arrow, $\leftarrow$, to indicate that we make an update
 3. Set $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$
 
-Step 0 comes at an $O(q^3)$ cost per interval $1,2,\dots,d$ due to the  Cholesky decomposition. This is durable if we do not have too many coefficients. Step 2 can be performed in $O(q^2)$. The current implementation use the Fortran code from the post here http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646 based on [@seeger04]. It is the algorithm mentioned in [@golub12] in section 6.5.4. Step 3 can be done in $O(q^2)$ using backward substitution when we compute $\Lparen{\mat{L}^{-1}}^\top$. Thus, we end with an algorithm that is scale as well as with the Woodbury matrix identity a part from the first step 0
+Step 0 comes at an $O(q^3)$ cost per interval $1,2,\dots,d$ due to the  Cholesky decomposition. This is durable if we do not have too many coefficients. Step 2 can be performed in $O(q^2)$. The current implementation use the Fortran code from the post here http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646 based on [@seeger04]. It is the algorithm mentioned in [@golub12] in section 6.5.4. Step 3 can be done in $O(q^2)$ using backward substitution when we compute $\Lparen{\mat{L}^{-1}}^\top$. Thus, we end with an algorithm that scales as well as with the Woodbury matrix identity a part from the first step 0
 
-Moreover, we can save computations throughout by storing $\widetilde{\mat{L}} = \Lparen{\mat{L}^{-1}}^\top$ instead of storing $\emNote{\mat{V}}{t}{t}{k}$. $\widetilde{\mat{L}}$ is also a triangular matrix. Thus, we need to do less operations when doing the matrix multiplications. Another advantage is that the rank-one update yields a positive definite matrix $\mat{L}\mat{L}^\top$. This is true since $\vec{x}_{ij}\vec{x}_{ij}^\top$ is a vector outer product and as $g$ is positive with distributions from the exponential family. Hence, $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$ will remains a positive definite matrix. The method described here is used if you set the element `posterior_version = cholesky` in the list passed to the `control` argument of `ddhazard`. The former method using the Woodbury matrix identity is used if you set `posterior_version = woodbury`
+Moreover, we can save computations throughout by storing $\widetilde{\mat{L}} = \Lparen{\mat{L}^{-1}}^\top$ instead of storing $\emNote{\mat{V}}{t}{t}{k}$. $\widetilde{\mat{L}}$ is also a triangular matrix. Thus, we need to do less operations when doing the matrix multiplications. Another advantage is that the rank-one update yields a positive semi definite matrix $\mat{L}\mat{L}^\top$. This is true since $\vec{x}_{ij}\vec{x}_{ij}^\top$ is a vector outer product and as $g$ is positive with distributions from the exponential family. Hence, $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$ will remains a positive semi definite matrix. The method described here is used if you set the element `posterior_version = cholesky` in the list passed to the `control` argument of `ddhazard`. The former method using the Woodbury matrix identity is used if you set `posterior_version = woodbury`
 
 ## Pros and cons
 The pros of the approximation of the posterior mode presented in this section are:
@@ -1172,20 +1174,15 @@ You can get the Pearson residuals by calling `residuals` with a `ddhazard` fit a
 ## Hat values
 Finding the influence matrix also known as the hat matrix does not seem to be possible in a computationally efficient way. Thus, we will look at an approximation. We will focus on the logistic model. In the filters in the E-step, each correction step in itself can be viewed as an logistic regression with an L2 penalty. Say we at time $t$ in the filter in the correction step with estimates $\emNotee{\vec{a}}{t}{t-1}$ and $\emNotee{\mat{V}}{t}{t-1}$. Then the penalty could be interpreted as a prior $N(\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1})$. With this view, regular hat values would be computed by:
 
-$$\begin{aligned}
-  \mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2}\mat{X}_t
-    \Lparen{\mat{X}_t^\top \mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{t-1}^{-1}}
-  \mat{X}_t^\top\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2} \hspace{-150pt}& \\
-%
-    &=\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})\mat{X}_t
-    \Lparen{\mat{X}_t^\top \mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{t-1}^{-1}}\mat{X}_t^\top
-\end{aligned}$$
+$$\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2}\mat{X}_t
+    \Lparen{\mat{X}_t^\top \mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{t-1}^{-1}}^{-1}
+  \mat{X}_t^\top\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2}$$
 
-where $\mat{X}_t$ is the design matrix in interval $t$ and the equality holds when $\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})$ is a diagonal matrix. The above could motivate the following matrix as the "hat-like" matrix in each interval: 
+where $\mat{X}_t$ is the design matrix in interval $t$. The above could motivate the following matrix as the "hat-like" matrix in each interval: 
 
-$$\widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d})\mat{X}_t
-    \Lparen{\mat{X}_t^\top \widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d}) \mat{X}_t + \emNotee{\mat{V}}{t}{d}^{-1}}
-  \mat{X}_t^\top, \qquad 
+$$\widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d})^{1/2}\mat{X}_t
+    \Lparen{\mat{X}_t^\top \widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{d}^{-1}}^{-1}
+  \mat{X}_t^\top\widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d})^{1/2}, \qquad 
   \widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d}) = \mat{H}_t(\emNotee{\vec{\alpha}}{t}{d}) + \xi\mat{I}$$
 
 where we have used the final smoothed estimators and adjusted for the $\xi$ factor as done in the algorithm. Plotting cumulative values versus time may show influential observations. You can get these estimates by calling `hatvalues` with a `ddhazard` fit
@@ -1197,7 +1194,7 @@ $$\widehat{\vec{\eta}}_t = \mat{R}^\top\Lparen{
     \emNotee{\vec{a}}{t}{d} - \mat{F}\emNotee{\vec{a}}{t - 1}{d}}
       \sim N \left( \vec{0}, \varpCond{\vec{\eta}_t}{\vec{Y}_d} \right)$$
     
-This will require that we find the smoothed covariance matrix $\varpCond{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}{\vec{Y}_d}$ in order to standardize the predicted errors. We will explain how this can be estimated in the following paragraphs when the EKF have been used. Standard results yields:
+This will require that we find the smoothed covariance matrix $\varpCond{\vec{\eta}_t}{\vec{Y}_d} = \mat{R}^\top\varpCond{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}{\vec{Y}_d}\mat{R}$ in order to standardize the predicted errors. We will explain how this can be estimated in the following paragraphs when the EKF have been used. Standard results yields:
 
 $$\begin{aligned}
  \varpCond{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}{\vec{Y}_d} 

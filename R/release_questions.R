@@ -8,6 +8,7 @@ release_questions <- function() {
     "Have you updated NEWS.md?",
     "Have you run devtools::spell_check()?",
     "Have you checked reverse dependencies?",
-    "Did you set args = c('--compact-vignettes=gs+qpdf')"
+    "Did you set args = c('--compact-vignettes=gs+qpdf')",
+    "Did you search through for CHECK?"
   )
 }

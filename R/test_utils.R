@@ -152,7 +152,8 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
                                 sds = rep(1, n_vars + !missing(intercept_start)),
                                 is_fixed = c(), lambda = 1,
                                 tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
-                                  t_0){
+                                  t_0,
+                                betas){
   # Make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
@@ -169,15 +170,19 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
     beta_start <- rep(beta_start, n_vars)
 
   # draw betas
-  use_intercept <- !missing(intercept_start)
-  betas <- matrix(get_norm_draw((t_max - t_0 + 1) * (n_vars + use_intercept)),
-                  ncol = n_vars + use_intercept, nrow = t_max - t_0 + 1)
-  betas <- t(t(betas) * sds)
-  betas[1, ] <- if(use_intercept) c(intercept_start, beta_start) else beta_start
-  betas <- apply(betas, 2, cumsum)
+  if(missing(betas)){
+    use_intercept <- !missing(intercept_start)
+    betas <- matrix(get_norm_draw((t_max - t_0 + 1) * (n_vars + use_intercept)),
+                    ncol = n_vars + use_intercept, nrow = t_max - t_0 + 1)
+    betas <- t(t(betas) * sds)
+    betas[1, ] <- if(use_intercept) c(intercept_start, beta_start) else beta_start
+    betas <- apply(betas, 2, cumsum)
 
-  betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
-                              nrow = nrow(betas))
+    betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
+                                nrow = nrow(betas))
+  } else {
+    use_intercept = ncol(betas) >= n_vars
+  }
 
   ceiler <- function(x) ceiling(x * 100) / 100
   x_adj <- - x_range / 2 + x_mean
