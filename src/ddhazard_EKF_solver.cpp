@@ -344,6 +344,8 @@ void EKF_solver::solve(){
     arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
     arma::vec i_a_t = p_dat.a_t_less_s.col(t - 1);
     arma::mat V_t_less_s_inv;
+    inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
+              "ddhazard_fit_cpp estimation error: Failed to invert V_(t|t-1)");
     unsigned int n_NR_it = 0;
 
     while(true){
@@ -376,9 +378,6 @@ void EKF_solver::solve(){
 #endif
 
       // E-step: scoring step: update values
-      inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
-                "ddhazard_fit_cpp estimation error: Failed to invert V_(t|t-1)");
-
       arma::mat tmp_mat; // defined to avoid unhandled error if the next code throws
       inv_sympd(tmp_mat, V_t_less_s_inv + p_dat.U, p_dat.use_pinv,
                 "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");

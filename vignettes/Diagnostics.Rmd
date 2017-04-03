@@ -342,7 +342,7 @@ invisible(
          col = gray(0, alpha = .2)))
 ```
 
-We may further want to compare the likelihood of the two models to make sure that the new model has a greater or equal likelihood. However, the final model seems to convergece towards a degenerated distribution if we keep iterating in the EM algorithm. Hence, the liklihood cannot be evaluated precisely as shown next:
+We may further want to compare the likelihood of the two models to make sure that the new model has a greater or equal likelihood. However, the final model seems to convergece towards a degenerated distribution if we keep iterating in the EM algorithm. Thus, the EM slowly in the end:
 
 ```{r, output.lines=list(1:5, 100:105, 196:200), warning=TRUE}
 # Make control list for ddhazard
@@ -748,7 +748,7 @@ for(i in 1:3){
 ```
 
 
-It is worth stressing that neither the initial seed nor the parameters have been selected here to yield a particular result. The take away for me is that the prevoius finding with the Rossi data set and WHAS data set is an artifact of the data set and fitted method and not something with should assume to see if we have an actual random walk model
+It is worth stressing that neither the initial seed nor the parameters have been selected here to yield a particular result. The take away for me is that the prevoius finding with the Rossi data set and WHAS data set is an artifact of the data set and fitted method and not something we would see if we have an actual random walk model
 
 ## Residuals for observations
 

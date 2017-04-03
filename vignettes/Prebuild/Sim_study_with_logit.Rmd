@@ -15,7 +15,8 @@ knitr::knit_hooks$set(default_options = function(before, options, envir) {
 options(ddhazard_max_threads = parallel::detectCores())
 
 options(digits = 4)
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE, message = FALSE, warning = FALSE, default_options = T)
+knitr::opts_chunk$set(
+  echo = TRUE, cache = TRUE, message = FALSE, warning = FALSE, default_options = T)
 ```
 
 # Intro 
