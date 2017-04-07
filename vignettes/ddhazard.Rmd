@@ -473,7 +473,7 @@ $$\begin{aligned}
   \wmat{Y} &= (\wvec{y}_0, \dots, \wvec{y}_{2q}) \\
   \overline{\vec{y}} &= \sum_{j = 0}^{2q} W_j^{[m]} \vec{y}_j, \qquad
   \Delta\wmat{Y} = \wmat{Y} - \overline{\vec{y}} \vec{1}^\top, \qquad 
-  \wmat{H} = \sum_{j=0}^q W_j^{[c]}\mat{H}_t(\wmat{a}_j) \\
+  \wmat{H} = \sum_{j=0}^{2q} W_j^{[c]}\mat{H}_t(\wvec{a}_j) \\
 %
   \Delta\wmat{A} &= (\wvec{a}_0, \dots, \wvec{a}_{2q}) - \emNotee{\vec{a}}{t}{t-1}\vec{1}^\top \\
 %
@@ -860,7 +860,7 @@ The  logistic model uses the inverse logit function as the inverse link function
 ## Event times to binary variables
 This section will illustrate how we go from event time to binary variables for the logistic model and how this can lead to loss of information. It is elementary but included to stress this point and motivate the continuous time model. We will use `r tolower(captioner::captioner()("binning_fig", display = "cite"))` as the illustration. Each horizontal line represent an individual. A cross represents when the covariate values change for the individual and a filled circle represents the death of an individual. Lines that ends with an open circle are right censored
 
-```{r binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of going from event times to binary varibles. Each horizontal line represents an individual. A cross indicates that new covariates are observed while a filled circle indicates that the individual have died. Open circles indicates that the individual is right censored. Vertical dashed lines are time interval borders", fig.height=3}
+```{r binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of going from event times to binary variables. Each horizontal line represents an individual. A cross indicates that new covariates are observed while a filled circle indicates that the individual have died. Open circles indicates that the individual is right censored. Vertical dashed lines are time interval borders", fig.height=3}
 par(cex = .8, mar = c(1, 4, 1, 2))
 plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = F)
 
@@ -933,7 +933,7 @@ g. is not included in any time intervals. We do not know if he survived the enti
 The example illustrates that: 
 
 1. We loose  information about covariates that are updated within time intervals. For instance, a, c, d and f all use the covariates from 0 for the entire period of the first time interval despite that the covariates change at 1. Moreover, we never use the information at 2 from a, d and f
-2. We loose information when we have right censoring. For instance, g is not included at all since we only know that survives parts of the first time interval
+2. We loose information when we have right censoring. For instance, g is not included at all since we only know that he survives parts of the first time interval
 3. We loose information for observation that only occurs within time intervals as is the case for b
 
 The above motivates the continuous time model that will be covered in the next sections where we go from modelling binary outcomes to event times
@@ -956,14 +956,14 @@ $$\begin{aligned}
 	&  - \frac{1}{2} \log\deter{\mat{Q}_0} - \log\frac{1}{2d} \deter{\mat{Q}} \\
   &+ \sum_{t=1}^d\sum_{(i,j) \in \mathcal{R}_t} l_{ijt}(\vec{\alpha}_t) \\
 %
-  l_{ijt}(\vec{\alpha}_t) =& (\vec{x}_{ij}^\top\vec{\alpha}_t)^{y_{ijt}} -\exp\Lparen{\vec{x}_{ij}^\top\vec{\alpha}_t}
+  l_{ijt}(\vec{\alpha}_t) =& y_{ijt}\vec{x}_{ij}^\top\vec{\alpha}_t -\exp\Lparen{\vec{x}_{ij}^\top\vec{\alpha}_t}
   \Lparen{\min\{ t, t_{ij} \} - \max\{ t - 1, t_{i,j-1} \}}
 \end{aligned}$$
 
 where the $l_{ijt}$ terms come from the log likelihood:
 $$\log\Lparen{\proppCond{t_i}{\vec{\alpha}_0,\dots,\vec{\alpha}_d}} = 
   \vec{x}_i(t_i)^\top\vec{\alpha}(t_i)
-  -\int_0^{t_i}\exp\Lparen{\vec{x}_i(u)^\top\vec{\alpha}(u)}u\, du$$
+  -\int_0^{t_i}\exp\Lparen{\vec{x}_i(u)^\top\vec{\alpha}(u)}\, du$$
   
 which simplifies into the terms of $l_{ijt}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}(t)$ are piecewise constant. Further, $\mathcal{R}_t$ is the continuous risk set given by:
 $$\mathcal{R}_t = \Lbrace{(i,j) \in \mathbb{Z}^2_+:\, t_{i,j-1} < t \wedge t_{ij} > t - 1}$$
@@ -997,12 +997,12 @@ $$\begin{aligned}
 \propp{T_i = t} &= \propp{T_i > 1} \proppCond{T_i > 2}{T_i > 1} \cdots \proppCond{T_i = t}{T_i > \lceil t \rceil - 1} \\
 %
                &= \propp{\Delta_{i11} = 1} \proppCond{\Delta_{i22} = 1}{\Delta_{i11} = 1} \cdots  \proppCond{
-	\Delta_{i\lceil t \rceil\lceil t \rceil} = t - (\lceil t \rceil - 1)}{\Delta_{i,\lceil t \rceil - 1,\lceil t \rceil - 1} = 1)} \\
+	\Delta_{i\lceil t \rceil\lceil t \rceil} = t - (\lceil t \rceil - 1)}{\Delta_{i,\lceil t \rceil - 1,\lceil t \rceil - 1} = 1} \\
 %
 \propp{T_i > t} &= \propp{T_i > 1} \proppCond{T_i > 2}{T_i > 1} \cdots \proppCond{T_i > t}{T_i > \lceil t \rceil - 1} \\
 %
                &= \propp{\Delta_{i11} = 1} \proppCond{\Delta_{i22} = 1}{\Delta_{i11} = 1} \cdots  \proppCond{
-	\Delta_{i\lceil t \rceil\lceil t \rceil} > t - (\lceil t \rceil - 1)}{\Delta_{i,\lceil t \rceil - 1,\lceil t \rceil - 1} = 1)} \\
+	\Delta_{i\lceil t \rceil\lceil t \rceil} > t - (\lceil t \rceil - 1)}{\Delta_{i,\lceil t \rceil - 1,\lceil t \rceil - 1} = 1} \\
 \end{aligned}$$
 
 The conditional probabilities simplifies into separate terms in the log likelihood due to the memoryless property of the exponential distribution. Thus, computing the conditional mean, $h$, can be done as follows. Assume for simplicity of notation that the observation $(t_{i, j-1}, t_{i,j}]$ has at most length one and is inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$ where $\Lceil{\cdot}$ is the ceiling function and $\Lfloor{\cdot}$ is the floor function. Then:
@@ -1276,7 +1276,7 @@ TODO: mention Hogwill, motivate why to use with binary/sparse features
 	$\vec{\gamma}$ & Fixed (time in-variant) coefficients \\ \hline
 	$m$ & is the number of time-varying coefficients \\ \hline
 	$q = \text{dim}(\vec{\alpha})$ & Dimension of state vector \\ \hline
-	$n_t = \vert R_t \vert$ & Dimension/number of elements of the risk set at time $t$ \\ \hline
+	$n_t = \vert R_t \vert$ & Number of elements of the risk set at time $t$ \\ \hline
 	$\vec{x}_{ij}$ & The $i$'th individuals $j$'th covariate vector which is valid in period $(t_{i,j-1}, t_{ij}]$. This will be augmented by zeros if we use the second order random walk \\ \hline
 	$\mat{X}_t$ & Design matrix in interval $t$ \\ \hline
 	$T_i$ & Event time or censoring time for individual $i$ \\ \hline

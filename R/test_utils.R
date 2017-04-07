@@ -190,23 +190,25 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
   # Simulate
   for(id in 1:n_series){
     tstart <- tstop <- ceiler(tstart_sampl_func(t_0, t_max))
+    interval_start <- ceiling(tstart)
     repeat{
       tstop <- ceiler(tstart + 1 / lambda * get_exp_draw(1) + 1)
-      if(ceiling(tstop) >= t_max)
+      if(tstop >= t_max)
         tstop <- t_max
 
       x_vars <- x_range * get_unif_draw(n_vars) + x_adj
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
 
       tmp_t <- tstart
-      while(tmp_t < ceiling(tstop)){
-        exp_eta <- exp((betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars)[1, 1])
+      while(tmp_t <= interval_start &&  interval_start < tstop) {
+        exp_eta <- exp((betas[interval_start + 2, ] %*% l_x_vars)[1, 1])
         event <- exp_eta / (1 + exp_eta) > get_unif_draw(1)
         if(event){
-          tstop <- ceiling(min(tmp_t + 1, t_max)) # tstop can at most be t_max
+          tstop <- interval_start + 1L
           break
         }
 
+        interval_start <- interval_start + 1L
         tmp_t <- tmp_t + 1
       }
 
@@ -218,7 +220,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
       }
       cur_row <- cur_row + 1
 
-      if(event || tstop >= t_max)
+      if(event || interval_start + 2 >= t_max)
         break
 
       tstart <- tstop
