@@ -194,9 +194,10 @@ test_that("get_survival_case_weights_and_data and predict yields consistent resu
   # unique(other_s$id)[abs(other_preds - preds) > 1e-14]
   # dumdum <- cbind(other_preds - preds, id = unique(other_s$id))[abs(other_preds - preds) > 1e-14,]
   #
-  # dumdum[dumdum[, "id"] == 5, ]
-  # s$res[s$res$id == 5, ]
-  # other_s[other_s$id == 5, ]
+  # tmp_id <- 10
+  # dumdum[dumdum[, "id"] == tmp_id, ]
+  # s$res[s$res$id == tmp_id, ]
+  # other_s[other_s$id == tmp_id, ]
   #
   # suppressMessages(preds <- predict(fit, new_data = s$res, tstart = "tstart_ceil", tstop = "tstop_ceil"))
   # preds$fits[s$res$id == 5]

@@ -205,7 +205,7 @@ test_that("logLik for simulated data versus old results", {
 
   # print(log_like, digits = 16)
 
-  old <- structure(-2563.452319960646,
+  old <- structure(-2413.726305652656,
                    class = "logLik",
                    df = 5 + 5 * (1 + 5) / 2)
   expect_equal(log_like, old)
@@ -263,7 +263,7 @@ test_that("logLik for simulated data versus old results", {
 
   # print(log_like, digits = 16)
 
-  old <- structure(-2897.877470351145,
+  old <- structure(-2705.10880593261,
                    class = "logLik",
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)

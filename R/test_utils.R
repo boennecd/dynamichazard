@@ -147,7 +147,7 @@ get_norm_draw = compiler::cmpfun(get_norm_draw, options = list(
 # microbenchmark(get_unif_draw(100), runif(100))
 
 # Define functions to simulate outcomes
-test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = .1, x_mean = -.1,
+test_sim_func_logit <- function(n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x_range = .1, x_mean = -.1,
                                 re_draw = T, beta_start = 3, intercept_start,
                                 sds = rep(1, n_vars + !missing(intercept_start)),
                                 is_fixed = c(), lambda = 1,
@@ -203,12 +203,13 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
       while(tmp_t <= interval_start &&  interval_start < tstop) {
         exp_eta <- exp((betas[interval_start + 2, ] %*% l_x_vars)[1, 1])
         event <- exp_eta / (1 + exp_eta) > get_unif_draw(1)
-        if(event){
-          tstop <- interval_start + 1L
+
+        interval_start <- interval_start + 1L
+        if(event || interval_start >= t_max){
+          tstop <- interval_start
           break
         }
 
-        interval_start <- interval_start + 1L
         tmp_t <- tmp_t + 1
       }
 
@@ -220,7 +221,7 @@ test_sim_func_logit <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_ra
       }
       cur_row <- cur_row + 1
 
-      if(event || interval_start + 2 >= t_max)
+      if(event || interval_start >= t_max)
         break
 
       tstart <- tstop
@@ -360,7 +361,7 @@ save_to_test <- function(obj, file_name, tolerance = sqrt(.Machine$double.eps)){
     stop("save_to_test called not in interactive mode. Likely an error")
 
   if(getOption("ddhazard_max_threads") != 2)
-    warning("getOption('ddhazard_max_threads') is not 2. You like dont want this so call\noptions(ddhazard_max_threads = 2)")
+    warning("getOption('ddhazard_max_threads') is not 2. You likeli dont want this so call\noptions(ddhazard_max_threads = 2)")
 
   cat("Largest sizes:\n")
   if(is.list(obj))
