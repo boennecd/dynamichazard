@@ -61,7 +61,7 @@ logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_ef
     .Call('dynamichazard_logLike_cpp', PACKAGE = 'dynamichazard', X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }
 
-get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model = TRUE) {
-    .Call('dynamichazard_get_risk_obj_rcpp', PACKAGE = 'dynamichazard', start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model)
+get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model = TRUE, event_times_in = NULL, min_start_in = NULL) {
+    .Call('dynamichazard_get_risk_obj_rcpp', PACKAGE = 'dynamichazard', start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model, event_times_in, min_start_in)
 }
 

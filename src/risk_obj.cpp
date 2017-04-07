@@ -11,30 +11,32 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
                        const double &max_T,
                        const IntegerVector &order_by_id_and_rev_start,
                        const IntegerVector &id,
-                       const bool &is_for_discrete_model = true
+                       const bool &is_for_discrete_model = true,
+                       Rcpp::Nullable<Rcpp::NumericVector> event_times_in = R_NilValue,
+                       Rcpp::Nullable<Rcpp::NumericVector> min_start_in = R_NilValue
 ){
   NumericVector stop_events = stop[event];
   stop_events = stop_events[stop_events <= max_T];
 
-  const double min_start = min(start);
-
+  double min_start;
   double I_stop_time, I_start_time; // current interval start and stop time
   const unsigned int n = start.size(); // Number of observations
   unsigned int d, i, j, d_;
   NumericVector event_times; // vector of event times
   vector<int> indicies;
 
-  // Find event times
-  if(by < 0.0){ // set event times to all the unique stop times
-    event_times = sort_unique(stop_events);
+  if(event_times_in.isNotNull() && min_start_in.isNotNull()){
+    min_start = Rcpp::as< Rcpp::NumericVector >(min_start_in)[0];
+    event_times = std::move(Rcpp::NumericVector(event_times_in));
     d = event_times.size();
-  }
-  else{ // go from min to max with by as increaments
+
+  } else {
+    min_start = min(start);
     d = ceil((max_T - min_start) / by);
     event_times = NumericVector(d);
-    for(i = 0; i < d; i++){
+    for(i = 0; i < d; i++)
       event_times[i] = min_start + (i + 1) * by;
-    }
+
   }
 
   // Make flag for whether an observation is inside a bin

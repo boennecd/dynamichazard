@@ -1,12 +1,13 @@
 BLAS_CXXFLAGS_USE =
 USE_OPEN_BLAS =
 
-ifneq ($(wildcard c:/OpenBLAS),)
-BLAS_CXXFLAGS_USE = -I"c:/OpenBLAS/include" -lopenblas
-USE_OPEN_BLAS = -D USE_OPEN_BLAS
-BLAS_LIBS_USE = C:/OpenBLAS/lib/libopenblas.a
+OPEN_BLAS_DIR = C:/OpenBLAS/
+ifneq "$(wildcard $(OPEN_BLAS_DIR))" ""
+	BLAS_CXXFLAGS_USE = -I"C:/OpenBLAS/include" -lopenblas
+	USE_OPEN_BLAS = -D USE_OPEN_BLAS
+	BLAS_LIBS_USE = c:/OpenBLAS/lib/libopenblas.a
 else
-BLAS_LIBS_USE = $(BLAS_LIBS)
+	BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
 SOURCES_C = stats/lm.c
@@ -29,7 +30,13 @@ endif
 DD_DEPS = arma_n_rcpp.h ddhazard_problem_data.h ddhazard.h
 BIGGLM_DEPS = arma_n_rcpp.h bigglm_wrapper.h
 
+ifeq "$(wildcard $(OPEN_BLAS_DIR))" ""
 all: $(SHLIB)
+		@echo "Did not find $(OPEN_BLAS_DIR) and will compile with BLAS used by R"
+else
+all: $(SHLIB)
+		@echo "Found $(OPEN_BLAS_DIR) and will compile with openBlas"
+endif
 
 $(SHLIB): $(OBJECTS)
 

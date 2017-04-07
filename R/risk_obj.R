@@ -16,13 +16,73 @@
 #' \item{\code{is_for_discrete_model}}{ Value of \code{is_for_discrete_model} argument}
 #' }
 #' @export
-get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T)
-  get_risk_obj_rcpp(
-    start = Y[, 1], stop = Y[, 2], event = Y[, 3],
-    by = by, start_order = order(Y[, 1]) - 1,
-    max_T = ifelse(missing(max_T), max(Y[Y[, 3] == 1, 2]), max_T),
-    order_by_id_and_rev_start = order(id, -Y[, 1]) - 1, id = id,
-    is_for_discrete_model = is_for_discrete_model)
+get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1){
+  if(n_threads > 1){
+    min_ids <- 2000
+    unique_ids <- unique(id)
+    n_ids <- length(unique_ids)
+  }
+
+  start = Y[, 1]
+  stop = Y[, 2]
+  event = Y[, 3]
+
+  start_order = order(Y[, 1]) - 1L
+  max_T = ifelse(missing(max_T), max(Y[Y[, 3] == 1, 2]), max_T)
+  order_by_id_and_rev_start = order(id, -Y[, 1]) - 1L
+
+  min_start_in <- as.double(min(start))
+  storage.mode(max_T) <- "double"
+  storage.mode(by) <- "double"
+  event_times_in <- seq(min_start_in + by, max_T, by)
+  if(tail(event_times_in, 1) < max_T)
+    event_times_in <- c(event_times_in, tail(event_times_in, 1) + by)
+
+  if(n_threads == 1 || min_ids > n_ids){
+    return(
+      get_risk_obj_rcpp(
+        start = start, stop = stop, event = event,
+        by = by, start_order = start_order,
+        max_T = max_T,
+        order_by_id_and_rev_start = order_by_id_and_rev_start, id = id,
+        is_for_discrete_model = is_for_discrete_model,
+        min_start_in = min_start_in, event_times_in = event_times_in)
+    )
+  }
+
+  # Find number of tasks
+  n_tasks <- ceiling(n_ids / min_ids)
+  tasks <- split(unique_ids, cut(seq_along(unique_ids), n_tasks, labels = FALSE))
+
+  # Find subset of risk sets
+  cl <- makeCluster(min(n_threads, n_tasks))
+  on.exit(stopCluster(cl))
+
+  clusterExport(cl, varlist = list(
+    "id", "start_order", "order_by_id_and_rev_start",
+    "start", "stop", "event", "by", "max_T", "min_start_in",
+    "event_times_in", "is_for_discrete_model"),
+    envir = environment())
+
+
+
+
+  browser()
+
+  out <- parLapply(cl, tasks, function(ids){
+    my_indx <- id %in% ids
+    my_start_order <- start_order[my_indx]
+    my_order_by_id_and_rev_start <- order_by_id_and_rev_start[my_indx]
+
+    get_risk_obj_rcpp(
+      start = start, stop = stop, event = event,
+      by = by, start_order = my_start_order,
+      max_T = max_T,
+      order_by_id_and_rev_start = my_order_by_id_and_rev_start, id = id,
+      is_for_discrete_model = is_for_discrete_model,
+      min_start_in = min_start_in, event_times_in = event_times_in)
+  })
+}
 
 get_permu_data_exp <- function(data, risk_obj, weights){
   data <- deparse(substitute(data))

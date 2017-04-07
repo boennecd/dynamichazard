@@ -174,15 +174,6 @@ test_that("Symmetric matrix rank one update works",{
 
     expect_equal(d2, d1)
   }
-
-  n <- 100
-  d1 <- get_random_sym_post_def_mat(n)
-  x <- rnorm(n)
-  summary(microbenchmark::microbenchmark( test = {
-    d2 <- d1 + 1e-14
-    alpha <- rnorm(1)
-    sym_mat_rank_one_update(alpha, x, d1)
-  }, times = 1e3))
 })
 
 # Had issues with win builder. Thus, these lines

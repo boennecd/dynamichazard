@@ -28,12 +28,6 @@ UKF_solver_Org::UKF_solver_Org(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVec
   {};
 
 void UKF_solver_Org::solve(){
-#ifdef USE_OPEN_BLAS
-    const int prev_n_thread = openblas_get_num_threads();
-    openblas_set_num_threads(p_dat.n_threads);
-    //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
-#endif
-
     double event_time = p_dat.min_start;
     for (int t = 1; t < p_dat.d + 1; t++){
 
@@ -100,11 +94,6 @@ void UKF_solver_Org::solve(){
 
       p_dat.B_s.slice(t - 1) = arma::solve(p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
     }
-
-#ifdef USE_OPEN_BLAS
-    openblas_set_num_threads(prev_n_thread);
-    //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
-#endif
 };
 
 
@@ -177,12 +166,6 @@ UKF_solver_New::UKF_solver_New(
 };
 
 void UKF_solver_New::solve(){
-#ifdef USE_OPEN_BLAS
-    const int prev_n_thread = openblas_get_num_threads();
-    openblas_set_num_threads(p_dat.n_threads);
-    //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
-#endif
-
     const arma::vec offsets = p_dat.any_fixed_in_M_step ?
     p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat.X.n_cols, arma::fill::zeros);
     double bin_stop = p_dat.min_start;
@@ -242,11 +225,6 @@ void UKF_solver_New::solve(){
       p_dat.B_s.slice(t - 1) = arma::solve(
         p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
     }
-
-#ifdef USE_OPEN_BLAS
-    openblas_set_num_threads(prev_n_thread);
-    //Rcpp::Rcout << "n thread after = " << openblas_get_num_threads() << std::endl;
-#endif
 };
 
 

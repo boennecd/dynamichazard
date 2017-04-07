@@ -163,6 +163,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = false which should be true for model '" + model  +"'");
   }
 
+#ifdef USE_OPEN_BLAS
+  openblas_set_num_threads(std::max(n_threads, 1));
+#endif
+
   // Declare non constants and intialize some of them
   double delta_t, test_max_diff;
   const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());

@@ -256,8 +256,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // get_risk_obj_rcpp
-List get_risk_obj_rcpp(const NumericVector& start, const NumericVector& stop, const LogicalVector& event, const double& by, const IntegerVector& start_order, const double& max_T, const IntegerVector& order_by_id_and_rev_start, const IntegerVector& id, const bool& is_for_discrete_model);
-RcppExport SEXP dynamichazard_get_risk_obj_rcpp(SEXP startSEXP, SEXP stopSEXP, SEXP eventSEXP, SEXP bySEXP, SEXP start_orderSEXP, SEXP max_TSEXP, SEXP order_by_id_and_rev_startSEXP, SEXP idSEXP, SEXP is_for_discrete_modelSEXP) {
+List get_risk_obj_rcpp(const NumericVector& start, const NumericVector& stop, const LogicalVector& event, const double& by, const IntegerVector& start_order, const double& max_T, const IntegerVector& order_by_id_and_rev_start, const IntegerVector& id, const bool& is_for_discrete_model, Rcpp::Nullable<Rcpp::NumericVector> event_times_in, Rcpp::Nullable<Rcpp::NumericVector> min_start_in);
+RcppExport SEXP dynamichazard_get_risk_obj_rcpp(SEXP startSEXP, SEXP stopSEXP, SEXP eventSEXP, SEXP bySEXP, SEXP start_orderSEXP, SEXP max_TSEXP, SEXP order_by_id_and_rev_startSEXP, SEXP idSEXP, SEXP is_for_discrete_modelSEXP, SEXP event_times_inSEXP, SEXP min_start_inSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -270,7 +270,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const IntegerVector& >::type order_by_id_and_rev_start(order_by_id_and_rev_startSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type id(idSEXP);
     Rcpp::traits::input_parameter< const bool& >::type is_for_discrete_model(is_for_discrete_modelSEXP);
-    rcpp_result_gen = Rcpp::wrap(get_risk_obj_rcpp(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type event_times_in(event_times_inSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type min_start_in(min_start_inSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_risk_obj_rcpp(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, is_for_discrete_model, event_times_in, min_start_in));
     return rcpp_result_gen;
 END_RCPP
 }

@@ -535,5 +535,30 @@ test_that("Reverse permutating the data frame and the initial values", {
   expect_equal(risk_obj$is_event_in, risk_obj_org$is_event_in)
 })
 
+#####
+# By hand test of risk_obj with parallal
+
+test_that("Parallel and non-parallel version gives the same for get_risk_set", {
+  set.seed(4296745)
+  sims <-
+    test_sim_func_logit(
+      n_series = 1e4, n_vars = 1, beta_start = 1,
+      intercept_start = - 5, sds = c(sqrt(.1), rep(1, 1)),
+      x_range = 1, x_mean = .5)$res
+
+  non_parallel <- with(sims, get_risk_obj(
+    Y = Surv(tstart, tstop, event),
+    by = 1, max_T = 10, id = id, is_for_discrete_model = T))
+
+  # parallel <- with(sims, get_risk_obj(
+  #   Y = Surv(tstart, tstop, event),
+  #   by = 1, max_T = 2, id = id, is_for_discrete_model = T,
+  #   n_threads = 2))
+})
+
+
+
+
+
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")
