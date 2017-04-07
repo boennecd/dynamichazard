@@ -1,6 +1,7 @@
 #include "ddhazard.h"
 #include "exp_model_funcs.h"
 #include "thread_pool.h"
+#include "arma_utils.h"
 
 // worker class for parallel computation
 // This class is abstact as the method do_computation will differ between
@@ -65,7 +66,7 @@ private:
 
     u_ += x_ * (w * score_fac *
       ((dat.is_event_in_bin(*it) == bin_number) - exp_eta / (1.0 + exp_eta)));
-    U_ += x_ *  (x_.t() * (w * var_fac));
+    sym_mat_rank_one_update(w * var_fac, x_, U_);
 
     if(compute_z_and_H){
       dat.H_diag_inv(i) = pow(var, -1);
@@ -121,7 +122,7 @@ private:
       w * (fac_score_time * (time_outcome - expect_time) +
         fac_score_die * (do_die - expect_chance_die)));
 
-    U_ += x_ * (x_.t() * (w * var_fac));
+    sym_mat_rank_one_update(w * var_fac, x_, U_);
 
     if(compute_z_and_H){
       // Compute terms from waiting time
@@ -178,7 +179,7 @@ private:
 
     u_ += x_ * (w * score_fac * (do_die - expect_chance_die));
 
-    U_ += x_ * (x_.t() * (w * var_fac));
+    sym_mat_rank_one_update(w * var_fac, x_, U_);
 
     if(compute_z_and_H){
       // Compute terms from waiting time
@@ -229,7 +230,7 @@ private:
 
     u_ += x_ * (w * score_fac * (time_outcome - expect_time));
 
-    U_ += x_ * (x_.t() * (w * var_fac));
+    sym_mat_rank_one_update(w * var_fac, x_, U_);
 
     if(compute_z_and_H){
       // Compute terms from waiting time
@@ -280,7 +281,7 @@ private:
 
     u_ += x_ * (w * score_fac * (time_outcome - expect_time - at_risk_length * do_die));
 
-    U_ += x_ * (x_.t() * (w * var_fac));
+    sym_mat_rank_one_update(w * var_fac, x_, U_);
 
     if(compute_z_and_H){
       // Compute terms from waiting time

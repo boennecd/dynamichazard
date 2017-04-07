@@ -17,6 +17,10 @@ tri_mat_times_vec <- function(A, x, out, is_transpose) {
     invisible(.Call('dynamichazard_tri_mat_times_vec', PACKAGE = 'dynamichazard', A, x, out, is_transpose))
 }
 
+sym_mat_rank_one_update <- function(alpha, x, A) {
+    invisible(.Call('dynamichazard_sym_mat_rank_one_update', PACKAGE = 'dynamichazard', alpha, x, A))
+}
+
 bigglm_regcf_rcpp <- function(D, rbar, thetab, ss, checked, tol) {
     .Call('dynamichazard_bigglm_regcf_rcpp', PACKAGE = 'dynamichazard', D, rbar, thetab, ss, checked, tol)
 }

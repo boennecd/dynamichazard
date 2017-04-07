@@ -186,7 +186,8 @@ void Posterior_approx<T>::solve(){
         const double neg_second_d = - w * T::second_d(c, offset, at_risk_lenght);
 
         a -= p_dat.LR * ((f2 - c) * f1) * inter_vec;
-        V -= inter_vec *  (inter_vec.t() * (neg_second_d  / (1. + neg_second_d / f1)));
+        sym_mat_rank_one_update(
+          - neg_second_d  / (1. + neg_second_d / f1), inter_vec, V);
 
     }} else if (method == "cholesky"){
       arma::mat L;

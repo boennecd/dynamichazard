@@ -6,6 +6,8 @@ if(interactive()){
   symmetric_mat_chol <- with(environment(ddhazard), symmetric_mat_chol)
 
   tri_mat_times_vec <- with(environment(ddhazard), tri_mat_times_vec)
+
+  sym_mat_rank_one_update <- with(environment(ddhazard), sym_mat_rank_one_update)
 }
 
 test_name <- "Testing LAPACK wrapper functions"
@@ -27,7 +29,6 @@ get_random_sym_post_def_mat <- function(n){
 
 
 #####
-# Test for rank one update
 
 test_that("rank one update of chol decomp works", {
   for(n in c(5, 10, 50, 100)){
@@ -101,7 +102,6 @@ test_that("rank one update of chol decomp works", {
 # lm(log(out_sum$median) ~ log(ns), subset = 3:length(ns))$coefficients
 
 #####
-# Test for square tri inv
 
 test_that("Square triangular inversion works followed by rank one update", {
   for(n in c(5, 10, 50, 100)){
@@ -117,7 +117,6 @@ test_that("Square triangular inversion works followed by rank one update", {
 })
 
 #####
-# Test of symmetric matrix Choleksy decomposition
 
 test_that("Symmetric matrix Choleksy decomposition works", {
   for(n in c(5, 10, 50, 100)){
@@ -161,6 +160,30 @@ test_that("Triangular matrix times vector works", {
   }
 })
 
+#####
+
+test_that("Symmetric matrix rank one update works",{
+  for(n in c(5, 10, 50, 100)){
+    d1 <- get_random_sym_post_def_mat(n)
+    x <- rnorm(n)
+    alpha <- rnorm(1)
+
+    d2 <- d1 + x %o% (x * alpha)
+
+    sym_mat_rank_one_update(alpha, x, d1)
+
+    expect_equal(d2, d1)
+  }
+
+  n <- 100
+  d1 <- get_random_sym_post_def_mat(n)
+  x <- rnorm(n)
+  summary(microbenchmark::microbenchmark( test = {
+    d2 <- d1 + 1e-14
+    alpha <- rnorm(1)
+    sym_mat_rank_one_update(alpha, x, d1)
+  }, times = 1e3))
+})
 
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

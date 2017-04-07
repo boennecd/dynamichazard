@@ -52,6 +52,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// sym_mat_rank_one_update
+void sym_mat_rank_one_update(const double alpha, const arma::vec& x, arma::mat& A);
+RcppExport SEXP dynamichazard_sym_mat_rank_one_update(SEXP alphaSEXP, SEXP xSEXP, SEXP ASEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type A(ASEXP);
+    sym_mat_rank_one_update(alpha, x, A);
+    return R_NilValue;
+END_RCPP
+}
 // bigglm_regcf_rcpp
 arma::vec bigglm_regcf_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol);
 RcppExport SEXP dynamichazard_bigglm_regcf_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP) {

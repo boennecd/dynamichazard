@@ -64,4 +64,10 @@ void tri_mat_times_vec(arma::mat &A, arma::vec &out, bool is_transpose){
   tri_mat_times_vec(A.memptr(), out.memptr(), n, n, is_transpose);
 }
 
+// Exported for tests
+// [[Rcpp::export]]
+void sym_mat_rank_one_update(const double alpha, const arma::vec &x, arma::mat &A){
+  int n = A.n_cols;
 
+  sym_mat_rank_one_update(&n, &alpha, x.memptr(), A.memptr());
+};

@@ -97,3 +97,20 @@ void tri_mat_times_vec(double *A, double *x, int n, int lda, bool is_transpose){
   int incx = 1;
   F77_CALL(dtrmv)(uplo, trans, diag, &n, A, &lda, x, &incx);
 }
+
+void sym_mat_rank_one_update(
+    const int *n, const double *alpha, const double *x, double *A){
+ // computes A := alpha * x * x^T + A
+ // where A is a n x n is a square matrix
+ //       x is a n matrix
+
+  int inx = 1;
+
+  //F77_NAME(dger)(const int *m, const int *n, const double *alpha,
+  // const double *x, const int *incx,
+  // const double *y, const int *incy,
+  // double *a, const int *lda);
+  F77_NAME(dger)(n, n, alpha,
+                 x, &inx, x, &inx,
+                 A, n);
+}
