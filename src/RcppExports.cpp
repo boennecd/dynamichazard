@@ -256,19 +256,19 @@ BEGIN_RCPP
 END_RCPP
 }
 // get_risk_obj_rcpp
-List get_risk_obj_rcpp(const NumericVector& start, const NumericVector& stop, const LogicalVector& event, const double& by, const IntegerVector& start_order, const double& max_T, const IntegerVector& order_by_id_and_rev_start, const IntegerVector& id, const double min_start, const Rcpp::NumericVector& event_times_in, const bool& is_for_discrete_model);
+Rcpp::List get_risk_obj_rcpp(const Rcpp::NumericVector& start, const Rcpp::NumericVector& stop, const Rcpp::LogicalVector& event, const double& by, const Rcpp::IntegerVector& start_order, const double& max_T, const Rcpp::IntegerVector& order_by_id_and_rev_start, const Rcpp::IntegerVector& id, const double min_start, const Rcpp::NumericVector& event_times_in, const bool& is_for_discrete_model);
 RcppExport SEXP dynamichazard_get_risk_obj_rcpp(SEXP startSEXP, SEXP stopSEXP, SEXP eventSEXP, SEXP bySEXP, SEXP start_orderSEXP, SEXP max_TSEXP, SEXP order_by_id_and_rev_startSEXP, SEXP idSEXP, SEXP min_startSEXP, SEXP event_times_inSEXP, SEXP is_for_discrete_modelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericVector& >::type start(startSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type stop(stopSEXP);
-    Rcpp::traits::input_parameter< const LogicalVector& >::type event(eventSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type start(startSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type stop(stopSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::LogicalVector& >::type event(eventSEXP);
     Rcpp::traits::input_parameter< const double& >::type by(bySEXP);
-    Rcpp::traits::input_parameter< const IntegerVector& >::type start_order(start_orderSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type start_order(start_orderSEXP);
     Rcpp::traits::input_parameter< const double& >::type max_T(max_TSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector& >::type order_by_id_and_rev_start(order_by_id_and_rev_startSEXP);
-    Rcpp::traits::input_parameter< const IntegerVector& >::type id(idSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type order_by_id_and_rev_start(order_by_id_and_rev_startSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type id(idSEXP);
     Rcpp::traits::input_parameter< const double >::type min_start(min_startSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type event_times_in(event_times_inSEXP);
     Rcpp::traits::input_parameter< const bool& >::type is_for_discrete_model(is_for_discrete_modelSEXP);

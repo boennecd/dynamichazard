@@ -1,25 +1,25 @@
 #include "arma_n_rcpp.h"
 
-using namespace std;
-using namespace Rcpp;
+#include <map>
 
 // [[Rcpp::export]]
-List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
-                       const LogicalVector &event,
-                       const double &by, // -1 if missing
-                       const IntegerVector &start_order, // index of stop sorted in decreasing order
-                       const double &max_T,
-                       const IntegerVector &order_by_id_and_rev_start,
-                       const IntegerVector &id,
-                       const double min_start,
-                       const Rcpp::NumericVector &event_times_in,
-                       const bool &is_for_discrete_model = true){
+Rcpp::List get_risk_obj_rcpp(
+    const Rcpp::NumericVector &start, const Rcpp::NumericVector &stop,
+    const Rcpp::LogicalVector &event,
+    const double &by, // -1 if missing
+    const Rcpp::IntegerVector &start_order, // index of stop sorted in decreasing order
+    const double &max_T,
+    const Rcpp::IntegerVector &order_by_id_and_rev_start,
+    const Rcpp::IntegerVector &id,
+    const double min_start,
+    const Rcpp::NumericVector &event_times_in,
+    const bool &is_for_discrete_model = true){
   double I_stop_time, I_start_time; // current interval start and stop time
   const unsigned int n = start_order.size(); // Number of observations
   unsigned int i, j, d_;
-  NumericVector event_times = Rcpp::clone(event_times_in);
-  int d = event_times.size();
-  vector<int> indicies;
+  Rcpp::NumericVector event_times = Rcpp::clone(event_times_in);
+  unsigned int d = event_times.size();
+  std::vector<int> indicies;
 
   if(start_order.size() != order_by_id_and_rev_start.size())
     Rcpp::stop("Size of start_order and order_by_id_and_rev_start does match");
@@ -30,10 +30,12 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
   //  bin.
   // The vector will be false if is_for_discrete_model is
   // true
-  LogicalVector is_within_bin(n);
+  // The length has to match start, stop, id but not
+  // order_by_id_and_rev_start and start_order
+  Rcpp::LogicalVector is_within_bin(start.size());
 
   // List of indicies in the risk sets in each of the d bins
-  List risk_sets(d);
+  Rcpp::List risk_sets(d);
 
   I_stop_time = event_times(d - 1);
   for(d_ = d - 1; ; d_--){ // Loop over intervals
@@ -75,7 +77,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
       }
     }
 
-    risk_sets[d_] = std::move(IntegerVector(indicies.begin(), indicies.end()));
+    risk_sets[d_] = std::move(Rcpp::IntegerVector(indicies.begin(), indicies.end()));
 
     I_stop_time = I_start_time;
 
@@ -89,9 +91,9 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
   // [1, 1.5) with no event at the end the bin are [0, 1) and [1, 2). We do not
   // know if the indvidual survives [1.5, 2) so we remove his observation from
   // bin 2
-  NumericVector dum_for_find_interval(d + 2);
-  NumericVector dum_start(d + 1);
-  NumericVector dum_stop(d + 1);
+  Rcpp::NumericVector dum_for_find_interval(d + 2);
+  Rcpp::NumericVector dum_start(d + 1);
+  Rcpp::NumericVector dum_stop(d + 1);
 
   dum_start[0] = dum_for_find_interval[0] = min_start;
 
@@ -99,7 +101,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
     dum_start[i] = dum_stop[i - 1] = dum_for_find_interval[i] = event_times[i - 1];
   }
 
-  dum_for_find_interval[d + 1] = dum_stop[d] = max(max(stop) + 1.0, dum_stop[d]);
+  dum_for_find_interval[d + 1] = dum_stop[d] = std::max(max(stop) + 1.0, dum_stop[d]);
 
   int old_id, this_id, this_bin;
   unsigned int k, l;
@@ -110,7 +112,9 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
   // bin. The default is -1 which indicates that the observation is not an
   // event in any bins. Note that this is zero indexed as it will only be used
   // in cpp
-  IntegerVector is_event_in(n, -1);
+  // The length has to match start, stop, id but not
+  // order_by_id_and_rev_start and start_order
+  Rcpp::IntegerVector is_event_in(start.size(), -1);
 
   j = 0;
   this_id = std::numeric_limits<int>::min(); // NB: Assuming this not one of
@@ -140,7 +144,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
         //     in 1. from the corresponding risk set
 
         // Find the bin that the last observation stops in
-        tmp_pointer =  lower_bound(dum_for_find_interval.begin(), dum_for_find_interval.end(), stop[i]);
+        tmp_pointer =  std::lower_bound(dum_for_find_interval.begin(), dum_for_find_interval.end(), stop[i]);
         int bin_number = std::distance(dum_for_find_interval.begin(), tmp_pointer) - 1;
 
         bin_stop = dum_stop[bin_number];
@@ -179,7 +183,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
               std::vector<int> r_set = Rcpp::as<std::vector<int>>(risk_sets[bin_number]);
               r_set.erase(std::remove(r_set.begin(), r_set.end(), l + 1), // we entered the value as one indexed
                           r_set.end());
-              risk_sets[bin_number] = IntegerVector(r_set.begin(), r_set.end());
+              risk_sets[bin_number] = Rcpp::IntegerVector(r_set.begin(), r_set.end());
 
               j = k;
               break;
@@ -201,7 +205,7 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
     }
 
     // Find the bin that the last observation stops in
-    tmp_pointer =  lower_bound(dum_for_find_interval.begin(), dum_for_find_interval.end(), stop[i]);
+    tmp_pointer =  std::lower_bound(dum_for_find_interval.begin(), dum_for_find_interval.end(), stop[i]);
     int bin_number = std::distance(dum_for_find_interval.begin(), tmp_pointer) - 1;
 
     if(bin_number == event_times.size()){
@@ -256,13 +260,13 @@ List get_risk_obj_rcpp(const NumericVector &start, const NumericVector &stop,
 
   // compute length of each interval
   event_times.push_front(min_start);
-  NumericVector I_len = diff(event_times);
+  Rcpp::NumericVector I_len = diff(event_times);
 
-  return(List::create(Named("risk_sets") = risk_sets,
-                      Named("min_start") = min_start,
-                      Named("event_times") = event_times,
-                      Named("I_len") = I_len,
-                      Named("d") = d,
-                      Named("is_event_in") = is_event_in,
-                      Named("is_for_discrete_model") = is_for_discrete_model));
+  return(Rcpp::List::create(Rcpp::Named("risk_sets") = risk_sets,
+                            Rcpp::Named("min_start") = min_start,
+                            Rcpp::Named("event_times") = event_times,
+                            Rcpp::Named("I_len") = I_len,
+                            Rcpp::Named("d") = d,
+                            Rcpp::Named("is_event_in") = is_event_in,
+                            Rcpp::Named("is_for_discrete_model") = is_for_discrete_model));
 }

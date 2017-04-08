@@ -55,36 +55,53 @@ get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T, n_threads =
   tasks <- split(unique_ids, cut(seq_along(unique_ids), n_tasks, labels = FALSE))
 
   # Find subset of risk sets
-  # cl <- parallel::makeCluster(min(n_threads, n_tasks), outfile = "tmp.txt") # TODO: remove outfile
-  # on.exit(parallel::stopCluster(cl))
+  cl <- parallel::makeCluster(min(n_threads, n_tasks), outfile = "tmp.txt") # TODO: remove outfile
+  on.exit(parallel::stopCluster(cl))
+
+  parallel::clusterExport(cl, varlist = list(
+    "id", "start_order", "order_by_id_and_rev_start",
+    "start", "stop", "event", "by", "max_T", "min_start",
+    "event_times_in", "is_for_discrete_model"),
+    envir = environment())
+
+  # TODO: delete
+  # out <-  list()
+  # for(i in seq_along(tasks)){
+  #   print(i)
+  #   ids <- tasks[[i]]
   #
-  # parallel::clusterExport(cl, varlist = list(
-  #   "id", "start_order", "order_by_id_and_rev_start",
-  #   "start", "stop", "event", "by", "max_T", "min_start",
-  #   "event_times_in", "is_for_discrete_model"),
-  #   envir = environment())
+  #   my_indx <- which(id %in% ids) - 1L
+  #   my_start_order <- intersect(start_order, my_indx)
+  #   my_order_by_id_and_rev_start <- intersect(order_by_id_and_rev_start,  my_indx)
+  #
+  #
+  #   # TODO: remove
+  #   stopifnot(all(id[my_start_order +1] %in% ids))
+  #   stopifnot(!any(id[-(my_start_order +1)] %in% ids))
+  #
+  #   stopifnot(all(id[my_order_by_id_and_rev_start + 1] %in% ids))
+  #   stopifnot(!any(id[-(my_order_by_id_and_rev_start +1)] %in% ids))
+  #   print(c(length(start), length(stop), length(id), length(ids)))
+  #   if(length(my_start_order) != length(my_order_by_id_and_rev_start))
+  #     print("Boh")
+  #
+  #   out[[i]] <- get_risk_obj_rcpp(
+  #     start = start, stop = stop, event = event,
+  #     by = by, start_order = my_start_order,
+  #     max_T = max_T,
+  #     order_by_id_and_rev_start = my_order_by_id_and_rev_start, id = id,
+  #     is_for_discrete_model = is_for_discrete_model,
+  #     min_start = min_start, event_times_in = event_times_in)
+  #
+  #   out[[i]]$is_event_in[-my_order_by_id_and_rev_start] <- NA_integer_
+  # }
 
-  out <-  list()
-  for(i in seq_along(tasks)){
-    print(i)
-    ids <- tasks[[i]]
-
+  out <- parallel::parLapply(cl, tasks, function(ids){
     my_indx <- which(id %in% ids) - 1L
     my_start_order <- intersect(start_order, my_indx)
     my_order_by_id_and_rev_start <- intersect(order_by_id_and_rev_start,  my_indx)
 
-
-    # TODO: remove
-    stopifnot(all(id[my_start_order +1] %in% ids))
-    stopifnot(!any(id[-(my_start_order +1)] %in% ids))
-
-    stopifnot(all(id[my_order_by_id_and_rev_start + 1] %in% ids))
-    stopifnot(!any(id[-(my_order_by_id_and_rev_start +1)] %in% ids))
-    print(c(length(start), length(stop), length(id), length(ids)))
-    if(length(my_start_order) != length(my_order_by_id_and_rev_start))
-      print("Boh")
-
-    out[[i]] <- get_risk_obj_rcpp(
+    out <- get_risk_obj_rcpp(
       start = start, stop = stop, event = event,
       by = by, start_order = my_start_order,
       max_T = max_T,
@@ -92,26 +109,25 @@ get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T, n_threads =
       is_for_discrete_model = is_for_discrete_model,
       min_start = min_start, event_times_in = event_times_in)
 
-    gc()
+    out$is_event_in[-(my_order_by_id_and_rev_start + 1)] <- NA_integer_
+    out
+  })
+
+  # Combine results
+  final <- out[[1]]
+  final$risk_sets <-
+    lapply(seq_along(event_times_in), function(i){
+      do.call(c, unname(lapply(out, function(x){
+        x$risk_sets[[i]]
+      })))
+    })
+
+  for(i in 2:length(out)){
+    is_new <- which(!is.na(out[[i]]$is_event_in))
+    final$is_event_in[is_new] <- out[[i]]$is_event_in[is_new]
   }
 
-  out
-
-  # out <- parallel::parLapply(cl, tasks, function(ids){
-  #   print("HEY") # TODO: remove
-  #   print(ids) # TODO: remove
-  #   my_indx <- which(id %in% ids) - 1L
-  #   my_start_order <- intersect(start_order, my_indx)
-  #   my_order_by_id_and_rev_start <- intersect(order_by_id_and_rev_start,  my_indx)
-  #
-  #   get_risk_obj_rcpp(
-  #     start = start, stop = stop, event = event,
-  #     by = by, start_order = my_start_order,
-  #     max_T = max_T,
-  #     order_by_id_and_rev_start = my_order_by_id_and_rev_start, id = id,
-  #     is_for_discrete_model = is_for_discrete_model,
-  #     min_start = min_start, event_times_in = event_times_in)
-  # })
+  final
 }
 
 get_permu_data_exp <- function(data, risk_obj, weights){
