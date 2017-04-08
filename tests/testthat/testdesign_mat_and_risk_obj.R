@@ -546,14 +546,28 @@ test_that("Parallel and non-parallel version gives the same for get_risk_set", {
       intercept_start = - 5, sds = c(sqrt(.1), rep(1, 1)),
       x_range = 1, x_mean = .5)$res
 
-  non_parallel <- with(sims, get_risk_obj(
+  p1 <- with(sims, get_risk_obj(
+    Y = Surv(tstart, tstop, event),
+    by = 1, max_T = 10, id = id, is_for_discrete_model = T))
+  p2 <- with(sims, get_risk_obj(
     Y = Surv(tstart, tstop, event),
     by = 1, max_T = 10, id = id, is_for_discrete_model = T))
 
-  # parallel <- with(sims, get_risk_obj(
+  expect_equal(p1, p2)
+
+  # s_bfore <- .Random.seed # TODO delete
+  # p1 <- with(sims, get_risk_obj(
   #   Y = Surv(tstart, tstop, event),
-  #   by = 1, max_T = 2, id = id, is_for_discrete_model = T,
+  #   by = 1, max_T = 10, id = id, is_for_discrete_model = T,
   #   n_threads = 2))
+  # p2 <- with(sims, get_risk_obj(
+  #   Y = Surv(tstart, tstop, event),
+  #   by = 1, max_T = 10, id = id, is_for_discrete_model = T,
+  #   n_threads = 2))
+  #
+  # all.equal(p1, p2)
+
+  # all(s_bfore == .Random.seed)
 })
 
 

@@ -71,6 +71,8 @@ get_survival_case_weights_and_data = function(
       Y = X_Y$Y, by = by,
       max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
       id = id, is_for_discrete_model = is_for_discrete_model)
+
+    risk_obj$event_times <- tail(risk_obj$event_times, -1)
   }
 
   if(use_weights){
