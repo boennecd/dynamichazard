@@ -4,7 +4,8 @@
 \alias{get_risk_obj}
 \title{Get the risk set at each bin over an equal distance grid}
 \usage{
-get_risk_obj(Y, by, max_T, id, is_for_discrete_model = T)
+get_risk_obj(Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
+  min_id_size = 5000)
 }
 \arguments{
 \item{Y}{Vector of outcome variable}

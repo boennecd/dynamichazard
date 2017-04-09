@@ -7,4 +7,5 @@
 #' @importFrom survival Surv
 #' @importFrom boot boot
 #' @importFrom stringr str_replace_all
+#' @importFrom data.table rbindlist
 NULL

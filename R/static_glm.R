@@ -35,8 +35,11 @@ get_survival_case_weights_and_data = function(
   c_weights = "weights",
   c_end_t = "t"){
   data.frame <- function(...)
-    base::data.frame(..., check.names = F, fix.empty.names = F,
+    base::data.frame(..., row.names = NULL, check.names = F, fix.empty.names = F,
                      stringsAsFactors = F)
+  as.data.frame <- function(...)
+    base::as.data.frame(..., row.names = NULL, optional = FALSE,
+                        stringsAsFactors = F)
 
   X_Y = get_design_matrix(formula, data)
   formula <- X_Y$formula
@@ -92,17 +95,23 @@ get_survival_case_weights_and_data = function(
       r_set_not_case <- r_set[!is_case]
 
       new_case_rows <- c(
-        new_case_rows, list(
-          data.frame(Y = rep(1, sum(is_case)), data[r_set_is_case, ],
-                     weights = init_weights[r_set_is_case])))
+        new_case_rows, list(c(
+          list(Y = rep(1, sum(is_case))),
+          data[r_set_is_case, ],
+          list(weights = init_weights[r_set_is_case]))))
 
       new_weights[r_set_not_case] = new_weights[r_set_not_case] + init_weights[r_set_not_case]
     }
 
     do_keep <- new_weights > 0
-    X = data.frame(rep(0, sum(do_keep)), data[do_keep, ], new_weights[do_keep])
-    colnames(X)[c(1, ncol(X))] <- c(c_outcome, c_weights)
-    X <- data.table::rbindlist(c(list(X), new_case_rows))
+    n_keep <- sum(do_keep)
+    do_keep <- which(do_keep)
+    X = c(
+      list(Y = rep(0, n_keep)),
+      data[do_keep, ],
+      list(weights = new_weights[do_keep]))
+    X <- rbindlist(c(list(X), new_case_rows))
+    attr(X, "colnames")[c(1, ncol(X))] <- c(c_outcome, c_weights)
 
   } else {
     n_rows_final <- sum(unlist(lapply(risk_obj$risk_sets, length)))
