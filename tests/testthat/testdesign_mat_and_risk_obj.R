@@ -13,6 +13,7 @@ if(interactive()){
 # Had issues with cran buil. Thus, these lines
 test_name <- "design_mat_..."
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 

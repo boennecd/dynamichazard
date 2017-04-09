@@ -3,6 +3,7 @@ library(biglm)
 # Had issues with win builder. Thus, these lines
 test_name <- "bigglm_wrapper"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 bigqr.init <- with(environment(bigglm), bigqr.init)
 

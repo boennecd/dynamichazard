@@ -12,6 +12,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "UKF"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 test_that("UKF throws error when first sigm points weight is zero", {
   expect_error({

@@ -80,7 +80,7 @@ summary(bench)
 set.seed(4296745)
 sims <-
   test_sim_func_logit(
-    n_series = 1e6, n_vars = 20, beta_start = rnorm(20),
+    n_series = 1e5, n_vars = 20, beta_start = rnorm(20),
     intercept_start = - 5, sds = c(sqrt(.1), rep(.3, 20)),
     x_range = 2, x_mean = .5)$res
 
@@ -93,4 +93,25 @@ p <- profvis({
                        control = stats::glm.control(epsilon = Inf), family = "binomial")
 })
 
+p
+
+summary(microbenchmark::microbenchmark(
+  glm = static_glm(Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+                   data = sims, id = sims$id, by = 1,
+                   control = stats::glm.control(epsilon = Inf), family = "binomial"),
+  speedglm = static_glm(
+    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    data = sims, id = sims$id, by = 1, family = "binomial", speedglm = T,
+    maxit = 1),
+  times = 5
+))
+
+p <- profvis({
+  dd_fit <- ddhazard(
+    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    data = sims, id = sims$id, by = 1,
+    Q_0 = diag(1e6, 21), Q = diag(1e-2, 21))
+})
+
+p
 p

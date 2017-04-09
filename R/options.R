@@ -4,8 +4,8 @@ cur_load = if(exists(".onLoad()")) .onLoad else function() { NULL }
 
   op <- options()
   op.dynhazard <- list(
-    ddhazard_max_threads = -1
-  )
+    ddhazard_max_threads = -1,
+    ddhazard_use_speedglm = is.element("speedglm", installed.packages()[,1]))
   toset <- !(names(op.dynhazard) %in% names(op))
   if(any(toset)) options(op.dynhazard[toset])
 

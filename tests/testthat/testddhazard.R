@@ -9,6 +9,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "ddhazard"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 # Test on data set that is one of Farhmiers papers
 result = ddhazard(

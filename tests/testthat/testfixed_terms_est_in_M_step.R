@@ -11,6 +11,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "testfixed_terms_est_in_M_step"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 set.seed(548237)
 sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,

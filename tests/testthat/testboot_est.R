@@ -11,6 +11,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "boot"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 test_that("Throws error when risk_set or data is not saved",{
   for(tmp in list(c(T, F),

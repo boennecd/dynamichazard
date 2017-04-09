@@ -1,6 +1,9 @@
 # Find the design matrix and returns it left hand site and right hand site of
 # regression equation
-get_design_matrix = function(formula, data, response = T){
+get_design_matrix = function(formula, data, response = T, predictors = T){
+  if(!response && !predictors)
+    stop("get_design_matrix is called where neither respone or predictors is requested")
+
   Call <- match.call()
   indx <- match(c("formula", "data"),  names(Call), nomatch = 0)
 
@@ -33,44 +36,57 @@ get_design_matrix = function(formula, data, response = T){
 
       # have to do this again
       temp$formula <- eval(get_form_exp)
-    }}
+  }}
 
-  environment(temp$formula) <- parent.frame() # Needed if we use fixed intercept
-  mf <- eval(temp, parent.frame())
+  if(!predictors){
+    old_form <- temp$formula
+    temp$formula <- update(old_form, . ~ -1)
+    mf <- eval(temp, parent.frame())
 
-  Y <- if(response) model.extract(mf, "response") else NULL
+    Y <- model.response(mf)
+    temp$formula <- old_form
 
-  if(!is.null(Y) && attr(Y, "type") == "right"){ # Change outcome if formula was Surv(stop, event) ~
-    Y <- cbind(rep(0, nrow(Y)), Y)
-    dimnames(Y)[[2]] <- c("start", "stop", "status")
-    attr(Y, "type") <- "counting"
-  }
+    X <- NULL
+    fixed_terms <- NULL
 
-  Terms <- terms(mf)
-  fixed_terms_indicies <- attr(Terms, "specials")$ddFixed
-
-  # From coxph
-  if(length(fixed_terms_indicies) > 0){
-    # First deal with fixed effects
-    temppred <- attr(terms, "predvars")
-    Terms1 <- Terms[fixed_terms_indicies - 1]
-    fixed_terms <- model.matrix(Terms1, mf)
-    fixed_terms <- fixed_terms[, colnames(fixed_terms) != "(Intercept)", drop = F] # remove intercept
-
-    # Then deal with dynamic effects
-    Terms2 <- Terms[-fixed_terms_indicies + 1]
-    if (!is.null(temppred)) {
-      attr(Terms2, "predvars") <- temppred[-(1 + fixed_terms_indicies)]
-    }
-    X <- model.matrix(Terms2, mf)
-    renumber <- match(colnames(attr(Terms2, "factors")),
-                      colnames(attr(Terms, "factors")))
-    attr(X, "assign") <- c(0, renumber)[1 + attr(X, "assign")]
   } else{
-    X <- model.matrix(Terms, mf)
-    fixed_terms <- matrix(nrow = nrow(X), ncol = 0)
 
-  }
+    environment(temp$formula) <- parent.frame() # Needed if we use fixed intercept
+    mf <- eval(temp, parent.frame())
+
+    Y <- if(response) model.response(mf) else NULL
+
+    if(!is.null(Y) && attr(Y, "type") == "right"){ # Change outcome if formula was Surv(stop, event) ~
+      Y <- cbind(rep(0, nrow(Y)), Y)
+      dimnames(Y)[[2]] <- c("start", "stop", "status")
+      attr(Y, "type") <- "counting"
+    }
+
+    Terms <- terms(mf)
+    fixed_terms_indicies <- attr(Terms, "specials")$ddFixed
+
+    # From coxph
+    if(length(fixed_terms_indicies) > 0){
+      # First deal with fixed effects
+      temppred <- attr(terms, "predvars")
+      Terms1 <- Terms[fixed_terms_indicies - 1]
+      fixed_terms <- model.matrix(Terms1, mf)
+      fixed_terms <- fixed_terms[, colnames(fixed_terms) != "(Intercept)", drop = F] # remove intercept
+
+      # Then deal with dynamic effects
+      Terms2 <- Terms[-fixed_terms_indicies + 1]
+      if (!is.null(temppred)) {
+        attr(Terms2, "predvars") <- temppred[-(1 + fixed_terms_indicies)]
+      }
+      X <- model.matrix(Terms2, mf)
+      renumber <- match(colnames(attr(Terms2, "factors")),
+                        colnames(attr(Terms, "factors")))
+      attr(X, "assign") <- c(0, renumber)[1 + attr(X, "assign")]
+    } else{
+      X <- model.matrix(Terms, mf)
+      fixed_terms <- matrix(nrow = nrow(X), ncol = 0)
+
+  }}
 
   # Change fixed_terms name if ddFixed(1) or similar was used
   is_ddFixed_intercept <- grepl("^ddFixed\\(rep\\(\\s*1,\\s*nrow\\(.*\\)\\)\\)$", colnames(fixed_terms))
@@ -85,7 +101,8 @@ get_design_matrix = function(formula, data, response = T){
     rownames(attr(temp$formula, "factors"))[
       rownames(attr(temp$formula, "factors")) == old_name] <- new_name
 
-    colnames(fixed_terms)[is_ddFixed_intercept] <- new_name
+    if(predictors)
+      colnames(fixed_terms)[is_ddFixed_intercept] <- new_name
   }
 
   list(X = X, fixed_terms = fixed_terms, Y = Y, formula = temp$formula)

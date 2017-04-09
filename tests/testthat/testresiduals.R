@@ -8,6 +8,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "residuals"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 ###############
 # Simple test that methods calls succeds

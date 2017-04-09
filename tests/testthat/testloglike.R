@@ -13,6 +13,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "loglike"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 test_that("verbose prints log likelihood",{
   for(method in c("EKF", "UKF")){

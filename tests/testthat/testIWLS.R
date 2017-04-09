@@ -3,6 +3,7 @@ IWLS_logit <- with(environment(ddhazard), IWLS_logit)
 # Had issues with win builder. Thus, these lines
 test_name <- "IWLS"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 # Use the example here
 test_data <- if(grepl("testthat", getwd()))

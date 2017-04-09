@@ -1,6 +1,7 @@
 # Had issues with win builder. Thus, these lines
 test_name <- "fixed_effects_like_recursive_least_squares"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 if(interactive()){
   library(testthat); library(survival)

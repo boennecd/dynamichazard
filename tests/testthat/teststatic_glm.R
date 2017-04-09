@@ -11,6 +11,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "static_glm"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 
 

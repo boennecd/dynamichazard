@@ -1,6 +1,7 @@
 # Had issues with win builder. Thus, these lines
 test_name <- "hatvalues"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 #####
 # Load data

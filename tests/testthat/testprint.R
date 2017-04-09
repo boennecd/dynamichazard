@@ -9,6 +9,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "print"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 test_that("Print yields the expected results for object returned by ddhazard", {
   result <-  ddhazard(

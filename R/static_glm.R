@@ -34,15 +34,10 @@ get_survival_case_weights_and_data = function(
   c_outcome = "Y",
   c_weights = "weights",
   c_end_t = "t"){
-  data.frame <- function(...)
-    base::data.frame(..., row.names = NULL, check.names = F, fix.empty.names = F,
-                     stringsAsFactors = F)
-  as.data.frame <- function(...)
-    base::as.data.frame(..., row.names = NULL, optional = FALSE,
-                        stringsAsFactors = F)
 
-  X_Y = get_design_matrix(formula, data)
+  X_Y = get_design_matrix(formula, data, predictors = F)
   formula <- X_Y$formula
+  attr(data, "class") <- c("data.table", attr(data, "class"))
 
   if(missing(init_weights))
     init_weights = rep(1, nrow(data))
@@ -97,7 +92,7 @@ get_survival_case_weights_and_data = function(
       new_case_rows <- c(
         new_case_rows, list(c(
           list(Y = rep(1, sum(is_case))),
-          data[r_set_is_case, ],
+          data[r_set_is_case],
           list(weights = init_weights[r_set_is_case]))))
 
       new_weights[r_set_not_case] = new_weights[r_set_not_case] + init_weights[r_set_not_case]
@@ -108,10 +103,11 @@ get_survival_case_weights_and_data = function(
     do_keep <- which(do_keep)
     X = c(
       list(Y = rep(0, n_keep)),
-      data[do_keep, ],
+      data[do_keep],
       list(weights = new_weights[do_keep]))
     X <- rbindlist(c(list(X), new_case_rows))
     attr(X, "colnames")[c(1, ncol(X))] <- c(c_outcome, c_weights)
+    class(X) <- "data.frame"
 
   } else {
     n_rows_final <- sum(unlist(lapply(risk_obj$risk_sets, length)))
@@ -145,7 +141,8 @@ get_survival_case_weights_and_data = function(
 #' @param family \code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
 #' @param weights weights if a skewed sample or similar is used
-#' @param ... arguments passed to \code{\link{glm}}
+#' @param ... arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}
+#' @param speedglm \Code{TRUE} if \code{\link[speedglm]{speedglm}} should be used.
 #'
 #' @details
 #' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
@@ -154,7 +151,9 @@ get_survival_case_weights_and_data = function(
 #' The returned list from the \code{\link{glm}} call
 #'
 #' @export
-static_glm = function(formula, data, by, max_T, id, family = "logit", model = F, weights, risk_obj = NULL, ...){
+static_glm = function(
+  formula, data, by, max_T, id, family = "logit", model = F, weights, risk_obj = NULL, ...,
+  speedglm = F){
   if(family %in% c("binomial", "logit")){
     family <- binomial()
 
@@ -166,7 +165,7 @@ static_glm = function(formula, data, by, max_T, id, family = "logit", model = F,
     X <- tmp$X
     rm(tmp)
 
-    formula <- stats::formula(terms(formula, data = data))
+    formula <- formula(terms(formula, data = data))
 
     data <- X
     formula = update(formula, Y ~ ., data = data)
@@ -187,7 +186,7 @@ static_glm = function(formula, data, by, max_T, id, family = "logit", model = F,
                log_delta_time = log(pmin(X_Y$Y[, 2], max_T) - X_Y$Y[, 1]),
                weights = rep(1, nrow(data)))
 
-    formula <- stats::formula(terms(formula, data = data))
+    formula <- formula(terms(formula, data = data))
 
     data <- X
     formula = update(formula, Y ~ . + offset(log_delta_time), data = data)
@@ -196,5 +195,8 @@ static_glm = function(formula, data, by, max_T, id, family = "logit", model = F,
     stop("family '", family, "' not implemented in static_glm")
 
   environment(formula) <- environment() # Needed in case we have a fixed intercept
+  if(speedglm && require(speedglm, quietly = T))
+    return(speedglm(formula = formula, data = data, family = family, model = model, ...))
+
   glm(formula = formula, data = data, family = family, model = model, weights = weights, ...)
 }

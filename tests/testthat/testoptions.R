@@ -5,6 +5,7 @@ if(interactive()){
 # Had issues with win builder. Thus, these lines
 test_name <- "options"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 test_that("'ddhazard_max_threads' defaults to -1",{
   old_opt <- options()

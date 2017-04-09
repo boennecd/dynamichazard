@@ -12,6 +12,7 @@ if(interactive()){
 
 test_name <- "Testing LAPACK wrapper functions"
 cat("\nRunning", test_name, "\n")
+options(ddhazard_use_speedglm = F)
 
 set.seed(3144)
 

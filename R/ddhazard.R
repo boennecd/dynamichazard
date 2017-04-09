@@ -195,13 +195,23 @@ ddhazard = function(formula, data,
 
   } else if((missing_a_0 <- missing(a_0)) |
             (missing_fixed <- is.null(control$fixed_parems_start))){
+    if(getOption("ddhazard_use_speedglm")){
+      glm_func <- function(fam)
+        suppressWarnings( # Get warning due to convergence failures when maxit = 1
+          static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
+                     maxit = 1, family = fam, speedglm = T))
+    } else {
+      glm_func <- function(fam)
+        static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
+                   control = stats::glm.control(epsilon = Inf), family = fam,
+                   speedglm = F)
+    }
+
     if(model == "logit"){
-      tmp_mod = static_glm(formula = formula, data = data, risk_obj = risk_set,
-                           control = stats::glm.control(epsilon = Inf), family = "binomial")
+      tmp_mod = glm_func("binomial")
 
     } else if(model %in% exp_model_names){
-      tmp_mod = static_glm(formula = formula, data = data, max_T = max_T,
-                           control = stats::glm.control(epsilon = Inf), family = "exponential")
+      tmp_mod = glm_func("exponential")
 
     } else
       stop("Method not implemented to find initial values for '", model, "'. Please, provide intial values for a_0")
