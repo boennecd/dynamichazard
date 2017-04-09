@@ -34,6 +34,10 @@ get_survival_case_weights_and_data = function(
   c_outcome = "Y",
   c_weights = "weights",
   c_end_t = "t"){
+  data.frame <- function(...)
+    base::data.frame(..., check.names = F, fix.empty.names = F,
+                     stringsAsFactors = F)
+
   X_Y = get_design_matrix(formula, data)
   formula <- X_Y$formula
 
@@ -77,25 +81,30 @@ get_survival_case_weights_and_data = function(
 
   if(use_weights){
     new_weights = rep(0, nrow(data))
-    new_case_rows = data.frame()
+    new_case_rows = list()
 
     for(i in seq_along(risk_obj$risk_sets)){
       time_ = risk_obj$event_times[i]
       r_set = risk_obj$risk_sets[[i]]
 
       is_case = risk_obj$is_event_in[r_set] == i - 1
+      r_set_is_case <- r_set[is_case]
+      r_set_not_case <- r_set[!is_case]
 
-      new_case_rows = rbind(new_case_rows, cbind(
-        Y = rep(1, sum(is_case)), data[r_set[is_case], ], weights = init_weights[r_set[is_case]]))
+      new_case_rows <- c(
+        new_case_rows, list(
+          data.frame(Y = rep(1, sum(is_case)), data[r_set_is_case, ],
+                     weights = init_weights[r_set_is_case])))
 
-      new_weights[r_set[!is_case]] = new_weights[r_set[!is_case]] + init_weights[r_set[!is_case]]
+      new_weights[r_set_not_case] = new_weights[r_set_not_case] + init_weights[r_set_not_case]
     }
 
-    X = cbind(rep(0, nrow(data)), data, new_weights)[new_weights > 0, ]
+    do_keep <- new_weights > 0
+    X = data.frame(rep(0, sum(do_keep)), data[do_keep, ], new_weights[do_keep])
     colnames(X)[c(1, ncol(X))] <- c(c_outcome, c_weights)
-    X = rbind(X, new_case_rows)
+    X <- data.table::rbindlist(c(list(X), new_case_rows))
 
-  }else {
+  } else {
     n_rows_final <- sum(unlist(lapply(risk_obj$risk_sets, length)))
     X <- data.frame(matrix(NA, nrow = n_rows_final, ncol = 3 + ncol(data),
                            dimnames = list(NULL, c(colnames(data),
@@ -118,7 +127,7 @@ get_survival_case_weights_and_data = function(
 
   }
 
-  list(X = data.frame(X), formula = formula)
+  list(X = X, formula = formula)
 }
 
 
