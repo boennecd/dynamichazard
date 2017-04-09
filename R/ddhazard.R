@@ -184,6 +184,12 @@ ddhazard = function(formula, data,
 
   F_ <- get_F(order, n_params, n_fixed, est_fixed_in_E)
 
+  # Check if there are any fixed coefficients. If not set the fixed
+  # coefficients to an empty vector
+  if(is.null(attr(X_Y$formula, "specials")$ddFixed))
+    if(is.null(control$fixed_parems_start))
+      control$fixed_parems_start <- vector("double")
+
   if(n_params == 0){
     # Model is fitted using ddhazard_fit_cpp for testing
     warning("The model can be estimated more effeciently by using get_survival_case_Weights_and_data and static_glm when there is no time varying parameters")
@@ -194,7 +200,7 @@ ddhazard = function(formula, data,
         control$fixed_parems_start <- control$fixed_parems_start
 
   } else if((missing_a_0 <- missing(a_0)) |
-            (missing_fixed <- is.null(control$fixed_parems_start))){
+            (missing_fixed <- (is.null(control$fixed_parems_start)))){
     if(getOption("ddhazard_use_speedglm")){
       glm_func <- function(fam)
         suppressWarnings( # Get warning due to convergence failures when maxit = 1
