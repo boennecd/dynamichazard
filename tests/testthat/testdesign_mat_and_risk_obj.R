@@ -540,20 +540,22 @@ test_that("Reverse permutating the data frame and the initial values", {
 
 test_that("Parallel and non-parallel version gives the same for get_risk_set", {
   set.seed(4296745)
-  sims <-
+  s <-
     test_sim_func_logit(
-      n_series = 1e4, n_vars = 1, beta_start = 1,
+      n_series = 5000, n_vars = 1, beta_start = 1,
       intercept_start = - 5, sds = c(sqrt(.1), rep(1, 1)),
       x_range = 1, x_mean = .5)$res
 
-  p1 <- with(sims, get_risk_obj(
+  # TODO: clean up
+
+  p1 <- with(s, get_risk_obj(
     Y = Surv(tstart, tstop, event),
     by = 1, max_T = 10, id = id, is_for_discrete_model = T))
 
-  p2 <- with(sims, get_risk_obj(
+  p2 <- with(s, get_risk_obj(
     Y = Surv(tstart, tstop, event),
     by = 1, max_T = 10, id = id, is_for_discrete_model = T,
-    n_threads = 2))
+    n_threads = 2, min_id_size = 1000))
 
   for(i in 1:10)
     expect_true(setequal(p1$risk_sets[[i]],

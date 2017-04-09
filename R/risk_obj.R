@@ -16,9 +16,10 @@
 #' \item{\code{is_for_discrete_model}}{ Value of \code{is_for_discrete_model} argument}
 #' }
 #' @export
-get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1){
+get_risk_obj = function(
+  Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
+  min_id_size = 5000){
   if(n_threads > 1){
-    min_ids <- 2000
     unique_ids <- unique(id)
     n_ids <- length(unique_ids)
   }
@@ -38,7 +39,7 @@ get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T, n_threads =
   if(tail(event_times_in, 1) < max_T)
     event_times_in <- c(event_times_in, tail(event_times_in, 1) + by)
 
-  if(n_threads == 1 || min_ids > n_ids){
+  if(n_threads == 1 || min_id_size > n_ids){
     return(
       get_risk_obj_rcpp(
         start = start, stop = stop, event = event,
@@ -51,57 +52,17 @@ get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T, n_threads =
   }
 
   # Find number of tasks
-  n_tasks <- ceiling(n_ids / min_ids)
+  n_tasks <- ceiling(n_ids / min_id_size)
   tasks <- split(unique_ids, cut(seq_along(unique_ids), n_tasks, labels = FALSE))
 
   # Find subset of risk sets
-  cl <- parallel::makeCluster(min(n_threads, n_tasks), outfile = "tmp.txt") # TODO: remove outfile
-  on.exit(parallel::stopCluster(cl))
-
-  parallel::clusterExport(cl, varlist = list(
-    "id", "start_order", "order_by_id_and_rev_start",
-    "start", "stop", "event", "by", "max_T", "min_start",
-    "event_times_in", "is_for_discrete_model"),
-    envir = environment())
-
-  # TODO: delete
-  # out <-  list()
-  # for(i in seq_along(tasks)){
-  #   print(i)
-  #   ids <- tasks[[i]]
-  #
-  #   my_indx <- which(id %in% ids) - 1L
-  #   my_start_order <- intersect(start_order, my_indx)
-  #   my_order_by_id_and_rev_start <- intersect(order_by_id_and_rev_start,  my_indx)
-  #
-  #
-  #   # TODO: remove
-  #   stopifnot(all(id[my_start_order +1] %in% ids))
-  #   stopifnot(!any(id[-(my_start_order +1)] %in% ids))
-  #
-  #   stopifnot(all(id[my_order_by_id_and_rev_start + 1] %in% ids))
-  #   stopifnot(!any(id[-(my_order_by_id_and_rev_start +1)] %in% ids))
-  #   print(c(length(start), length(stop), length(id), length(ids)))
-  #   if(length(my_start_order) != length(my_order_by_id_and_rev_start))
-  #     print("Boh")
-  #
-  #   out[[i]] <- get_risk_obj_rcpp(
-  #     start = start, stop = stop, event = event,
-  #     by = by, start_order = my_start_order,
-  #     max_T = max_T,
-  #     order_by_id_and_rev_start = my_order_by_id_and_rev_start, id = id,
-  #     is_for_discrete_model = is_for_discrete_model,
-  #     min_start = min_start, event_times_in = event_times_in)
-  #
-  #   out[[i]]$is_event_in[-my_order_by_id_and_rev_start] <- NA_integer_
-  # }
-
-  out <- parallel::parLapply(cl, tasks, function(ids){
+  out <- parallel::mclapply(seq_along(tasks), function(i) {
+    ids <- tasks[[i]]
     my_indx <- which(id %in% ids) - 1L
     my_start_order <- intersect(start_order, my_indx)
     my_order_by_id_and_rev_start <- intersect(order_by_id_and_rev_start,  my_indx)
 
-    out <- get_risk_obj_rcpp(
+    local_res <- get_risk_obj_rcpp(
       start = start, stop = stop, event = event,
       by = by, start_order = my_start_order,
       max_T = max_T,
@@ -109,9 +70,61 @@ get_risk_obj = function(Y, by, max_T, id, is_for_discrete_model = T, n_threads =
       is_for_discrete_model = is_for_discrete_model,
       min_start = min_start, event_times_in = event_times_in)
 
-    out$is_event_in[-(my_order_by_id_and_rev_start + 1)] <- NA_integer_
-    out
-  })
+    local_res$is_event_in[-(my_order_by_id_and_rev_start + 1)] <- NA_integer_
+    local_res
+    })
+
+  # library(foreach)
+  # library(doParallel)
+  # registerDoParallel(cores = min(n_threads, n_tasks))
+  # on.exit(stopImplicitCluster())
+  #
+  # out <- foreach(
+  #   ids = tasks) %dopar% {
+  #     my_indx <- which(id %in% ids) - 1L
+  #     my_start_order <- intersect(start_order, my_indx)
+  #     my_order_by_id_and_rev_start <- intersect(order_by_id_and_rev_start,  my_indx)
+  #
+  #     local_res <- get_risk_obj_rcpp(
+  #       start = start, stop = stop, event = event,
+  #       by = by, start_order = my_start_order,
+  #       max_T = max_T,
+  #       order_by_id_and_rev_start = my_order_by_id_and_rev_start, id = id,
+  #       is_for_discrete_model = is_for_discrete_model,
+  #       min_start = min_start, event_times_in = event_times_in)
+  #
+  #     local_res$is_event_in[-(my_order_by_id_and_rev_start + 1)] <- NA_integer_
+  #     local_res
+  #   }
+
+  # # TODO: Clean up
+  # cl <- parallel::makeCluster(min(n_threads, n_tasks), outfile = "tmp.txt") # TODO: remove outfile
+  # on.exit(parallel::stopCluster(cl))
+  #
+  # print(c(min(n_threads, n_tasks), n_threads, n_tasks))
+  #
+  # parallel::clusterExport(cl, varlist = list(
+  #   "id", "start_order", "order_by_id_and_rev_start",
+  #   "start", "stop", "event", "by", "max_T", "min_start",
+  #   "event_times_in", "is_for_discrete_model"),
+  #   envir = environment())
+  #
+  # out <- parallel::parLapply(cl, tasks, function(ids){
+    # my_indx <- which(id %in% ids) - 1L
+    # my_start_order <- intersect(start_order, my_indx)
+    # my_order_by_id_and_rev_start <- intersect(order_by_id_and_rev_start,  my_indx)
+    #
+    # out <- get_risk_obj_rcpp(
+    #   start = start, stop = stop, event = event,
+    #   by = by, start_order = my_start_order,
+    #   max_T = max_T,
+    #   order_by_id_and_rev_start = my_order_by_id_and_rev_start, id = id,
+    #   is_for_discrete_model = is_for_discrete_model,
+    #   min_start = min_start, event_times_in = event_times_in)
+    #
+    # out$is_event_in[-(my_order_by_id_and_rev_start + 1)] <- NA_integer_
+    # out
+  # })
 
   # Combine results
   final <- out[[1]]

@@ -50,3 +50,36 @@ suppressMessages(result_exp <- ddhazard(
 #
 # matplot(fit$state_vecs, lty = 3, type = "l", add = T, col = 3:4)
 # abline(h = fit$fixed_effects, lty = 3, col = 1:2)
+
+
+
+set.seed(4296745)
+sims <-
+  test_sim_func_logit(
+    n_series = 1e6, n_vars = 1, beta_start = 1,
+    intercept_start = - 5, sds = c(sqrt(.1), rep(1, 1)),
+    x_range = 1, x_mean = .5)$res
+
+bench <- microbenchmark::microbenchmark(
+  non_parallel =
+    with(sims, get_risk_obj(
+      Y = Surv(tstart, tstop, event),
+      by = 1, max_T = 10, id = id, is_for_discrete_model = T)),
+
+  parallel = with(sims, get_risk_obj(
+    Y = Surv(tstart, tstop, event),
+    by = 1, max_T = 10, id = id, is_for_discrete_model = T,
+    n_threads = 7, min_id_size = 1e5)),
+
+  times = 2)
+
+summary(bench)
+
+
+#####
+set.seed(4296745)
+sims <-
+  test_sim_func_logit(
+    n_series = 1e6, n_vars = 1, beta_start = 1,
+    intercept_start = - 5, sds = c(sqrt(.1), rep(1, 1)),
+    x_range = 1, x_mean = .5)$res
