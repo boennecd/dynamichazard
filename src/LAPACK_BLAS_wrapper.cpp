@@ -1,6 +1,6 @@
 #include <Rcpp.h>
-#include <R_ext/blas.h>
-#include <R_ext/lapack.h>
+#include <R_ext/BLAS.h>
+#include <R_ext/Lapack.h>
 
 extern "C"
 {
