@@ -4,6 +4,8 @@
 #' @param max_T Last observed time
 #' @param id Vector with ids where entries match with outcomes \code{Y}
 #' @param is_for_discrete_model \code{TRUE}/\code{FALSE} for whether the model outcome is discrete. For example, a logit model is discrete whereas what is coined an exponential model in this package is a dynamic model
+#' @param n_threads Set to a value greater than one to use \code{\link{mclapply}} to find the risk object
+#' @param min_chunk Minimum chunk size of ids to use when parallel version is used.
 #'
 #' @return
 #' A list with the following elements:
@@ -18,7 +20,7 @@
 #' @export
 get_risk_obj = function(
   Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
-  min_id_size = 5000){
+  min_chunk = 5000){
   if(n_threads > 1){
     unique_ids <- unique(id)
     n_ids <- length(unique_ids)
@@ -42,7 +44,7 @@ get_risk_obj = function(
   if(event_times_in[tmp_n] < max_T)
     event_times_in <- c(event_times_in, event_times_in[tmp_n] + by)
 
-  if(n_threads == 1 || min_id_size > n_ids){
+  if(n_threads == 1 || min_chunk > n_ids){
     return(
       get_risk_obj_rcpp(
         start = start, stop = stop, event = event,
@@ -55,7 +57,7 @@ get_risk_obj = function(
   }
 
   # Find number of tasks
-  n_tasks <- ceiling(n_ids / min_id_size)
+  n_tasks <- min(ceiling(n_ids / min_chunk), 4 * n_threads)
   tasks <- split(unique_ids, cut(seq_along(unique_ids), n_tasks, labels = FALSE))
 
   # Find subset of risk sets

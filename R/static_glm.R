@@ -142,7 +142,7 @@ get_survival_case_weights_and_data = function(
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
 #' @param weights weights if a skewed sample or similar is used
 #' @param ... arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}
-#' @param speedglm \Code{TRUE} if \code{\link[speedglm]{speedglm}} should be used.
+#' @param speedglm \code{TRUE} if \code{\link[speedglm]{speedglm}} should be used.
 #'
 #' @details
 #' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
@@ -195,8 +195,8 @@ static_glm = function(
     stop("family '", family, "' not implemented in static_glm")
 
   environment(formula) <- environment() # Needed in case we have a fixed intercept
-  if(speedglm && require(speedglm, quietly = T))
-    return(speedglm(formula = formula, data = data, family = family, model = model, ...))
+  if(speedglm && requireNamespace(speedglm, quietly = T))
+    return(speedglm::speedglm(formula = formula, data = data, family = family, model = model, ...))
 
   glm(formula = formula, data = data, family = family, model = model, weights = weights, ...)
 }

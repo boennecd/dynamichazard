@@ -5,7 +5,7 @@
 \title{Function to make a static glm fit}
 \usage{
 static_glm(formula, data, by, max_T, id, family = "logit", model = F,
-  weights, risk_obj = NULL, ...)
+  weights, risk_obj = NULL, ..., speedglm = F)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
@@ -26,7 +26,9 @@ static_glm(formula, data, by, max_T, id, family = "logit", model = F,
 
 \item{risk_obj}{A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations}
 
-\item{...}{arguments passed to \code{\link{glm}}}
+\item{...}{arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}}
+
+\item{speedglm}{\code{TRUE} if \code{\link[speedglm]{speedglm}} should be used.}
 }
 \value{
 The returned list from the \code{\link{glm}} call

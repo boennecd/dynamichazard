@@ -27,7 +27,7 @@ revdep/
 ^README-.*\.png$
 
 ^vignettes/jss
-vignettes/\.*_cache
+vignettes/.*_cache
 vignettes/tex2pdf
 vignettes/Diagnostics/data_prep\.R
 vignettes/Diagnostics/Rossi_ex\.html
