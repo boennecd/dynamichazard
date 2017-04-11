@@ -1,4 +1,4 @@
----
+  ---
 title: "ddhazard"
 output: 
   pdf_document: 
@@ -493,7 +493,7 @@ $$\begin{aligned}
 \end{aligned}$$
 
 ## Re-writting
-The above formulation has the drawback that we have to invert $\ukfNotee{y}{y}{t}$ which is infeasible when the number of observations is large. We can re-write the correction step above by using the Woodbury matrix identity to get algorithm $O(n_t)$ instead of $O(n_t^3)$ where $n_t = \vert R_t \vert$ is the number of elements of the risk set. In other words, the new formulation is linear in time complexity with the dimension of the observational equation
+The above formulation has the drawback that we have to invert $\ukfNotee{y}{y}{t}$ which is infeasible when the number of observations is large. We can re-write the correction step above by using the Woodbury matrix identity to get algorithm $O(n_t^2)$ instead of $O(n_t^3)$ where $n_t = \vert R_t \vert$ is the number of elements of the risk set. In other words, the new formulation is linear in time complexity with the dimension of the observational equation
 
 The correction step can be computed as:
 $$\begin{aligned}
@@ -506,7 +506,7 @@ $$\begin{aligned}
     \Delta\wmat{A}\diag{\vec{W}^{(cc)}}\mat{L}\diag{\vec{W}^{(cc)}}\Delta\wmat{A}^\top
 \end{aligned}$$
 
-where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(n_t)$ since $\widehat{\mat{H}}$ is a diagonal matrix and all products involves at most multiplications of $q\times n_t$ or $n_t \times q$ matrices
+where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(n_t^2)$ since $\widehat{\mat{H}}$ is a diagonal matrix and due to the matrix product of a $n_t \times q$ and $q \times n_t$ matrices when we compute $\mat{G}$. Further, we avoid storing a $n_t \times n_t$ matrix which reduces the memory requirements considerably when the $n_t$ is large. 
 
 ## The Square-root Unscented Kalman filter
 
