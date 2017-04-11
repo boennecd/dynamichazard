@@ -620,8 +620,8 @@ Again, the errors seems to have to low variance to be standard normal apart from
 #### Simmulation
 
 ```{r, echo=FALSE}
-if(require(dichromat, quietly = T, warn.conflicts = F)){
-  cols <- c("#000000", colorschemes$Categorical.12[c(6, 8, 10)])
+if(requireNamespace(dichromat, quietly = T, warn.conflicts = F)){
+  cols <- c("#000000", dichromat::colorschemes$Categorical.12[c(6, 8, 10)])
 } else
   cols <- c("#000000", "#009E73", "#e79f00", "#9ad0f3")
 ```

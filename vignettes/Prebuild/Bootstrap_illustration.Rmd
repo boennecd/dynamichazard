@@ -283,20 +283,24 @@ In this section, we will test the coverage of the pointwise confidence intervals
 The simulation is to mimic a situation where we assume that the coefficients are not random (as the model implies) but we do not know the shape of the coefficient curves across time. We setup the parameters for the experiment below and plot the coefficients without noise:
 
 ```{r, echo=FALSE, eval=FALSE}
-library(colorspace)
-library(dichromat)
-cols <- colorschemes$Categorical.12[(1:5)*2]
-
-cols1 <- readhex(file = textConnection(paste(cols, collapse = "\n")),
-                 class = "RGB")
-
-#transform to hue/lightness/saturation colorspace
-cols1 <- as(cols1, "HLS")
-#multiplicative decrease of lightness
-cols1@coords[, "L"] <- cols1@coords[, "L"] * 0.5
-#going via rgb seems to work better  
-cols1 <- as(cols1, "RGB")
-cols <- hex(cols1)
+if(requireNamespace(dichromat, quietly = T, warn.conflicts = F) && 
+   requireNamespace(colorspace, quietly = T, warn.conflicts = F)
+   ){
+  cols <- dichromat::colorschemes$Categorical.12[(1:5)*2]
+  
+  cols1 <- colorspace::readhex(
+    file = textConnection(paste(cols, collapse = "\n")),
+    class = "RGB")
+  
+  #transform to hue/lightness/saturation colorspace
+  cols1 <- as(cols1, "HLS")
+  #multiplicative decrease of lightness
+  cols1@coords[, "L"] <- cols1@coords[, "L"] * 0.5
+  #going via rgb seems to work better  
+  cols1 <- as(cols1, "RGB")
+  cols <- colorspace::hex(cols1)
+} else
+  cols <- c("#BC5C00", "#BEBE00", "#23BC00", "#0082BC", "#3500C1")
 ```
 
 

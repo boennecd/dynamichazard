@@ -5,9 +5,12 @@ cur_load = if(exists(".onLoad()")) .onLoad else function() { NULL }
   op <- options()
 
   may_have_speed_glm <- FALSE
-  try({
+  tryCatch({
     find.package("speedglm")
     may_have_speed_glm <- TRUE
+  }, error = function(e){
+    if(!substr(e$message, 0, 26) == "there is no package called")
+      stop(e)
   })
 
   op.dynhazard <- list(
