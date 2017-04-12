@@ -1,0 +1,569 @@
+%%%%%%%%%%%
+% CHECK: that capitalization is correct in titles
+
+%%%%%%%%%%%
+% KF
+
+@article {Shumway82,
+author = {Shumway, R. H. and Stoffer, D. S.},
+title = {AN APPROACH TO TIME SERIES SMOOTHING AND FORECASTING USING THE EM ALGORITHM},
+journal = {Journal of Time Series Analysis},
+volume = {3},
+number = {4},
+publisher = {Blackwell Publishing Ltd},
+issn = {1467-9892},
+url = {http://dx.doi.org/10.1111/j.1467-9892.1982.tb00349.x},
+doi = {10.1111/j.1467-9892.1982.tb00349.x},
+pages = {253--264},
+keywords = {Missing data, Kalman filter, EM algorithm, forecasting, maximum likelihood},
+year = {1982},
+}
+
+@article{Harvey79,
+author = {Harvey, A. C. and Phillips, G. D. A.},
+title = {Maximum Likelihood Estimation of Regression Models with Autoregressive-Moving Average Disturbances},
+journal = {Biometrika},
+volume = {66},
+number = {1},
+pages = {49},
+year = {1979},
+doi = {10.1093/biomet/66.1.49},
+URL = { + http://dx.doi.org/10.1093/biomet/66.1.49},
+eprint = {/oup/backfile/Content_public/Journal/biomet/66/1/10.1093/biomet/66.1.49/2/66-1-49.pdf}
+}
+
+@ARTICLE{Holmes13,
+   author = {Holmes, E.~E.},
+    title = {Derivation of an EM algorithm for constrained and unconstrained multivariate autoregressive state-space (\pkg{MARSS}) models},
+  journal = {ArXiv e-prints},
+archivePrefix = "arXiv",
+   eprint = {1302.3919},
+ primaryClass = "stat.ME",
+ keywords = {Statistics - Methodology},
+     year = 2013,
+    month = feb,
+   adsurl = {http://adsabs.harvard.edu/abs/2013arXiv1302.3919H},
+  adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
+@ARTICLE{Holmes12,
+  author = {Elizabeth E. Holmes and Eric J. Ward and Kellie Wills},
+  title = {\pkg{MARSS}: Multivariate Autoregressive State-space Models for
+          Analyzing Time-series Data},
+  year = {2012},
+  journal = {{The R Journal}},
+  url = {https://journal.r-project.org/archive/2012/RJ-2012-002/index.html},
+  pages = {11--19},
+  volume = {4},
+  number = {1}
+}
+
+@INPROCEEDINGS{Angelosante09,
+author={D. Angelosante and S. I. Roumeliotis and G. B. Giannakis},
+booktitle={2009 Conference Record of the Forty-Third Asilomar Conference on Signals, Systems and Computers},
+title={Lasso-Kalman Smoother for Tracking Sparse Signals},
+year={2009},
+pages={181-185},
+keywords={Gaussian processes;Kalman filters;Markov processes;regression analysis;smoothing methods;tracking;vectors;Lasso-Kalman smoother;alternating direction method;estimation approach;fixed-interval smoothing;least-absolute shrinkage operator;linear Gauss-Markov model;linear regression problem;multipliers;recursive implementation;selection operator;sparse signal tracking;sparse time-varying vector process tracking;sparsity-agnostic KS scheme;sparsity-aware KS scheme;weighted (W)-LKS;Costs;Gaussian processes;Kalman filters;Linear regression;Magnetic resonance imaging;Recursive estimation;Signal processing;Smoothing methods;Target tracking;Vectors},
+doi={10.1109/ACSSC.2009.5470133},
+ISSN={1058-6393},
+month={Nov},}
+
+@INPROCEEDINGS{Charles11,
+author={A. Charles and M. S. Asif and J. Romberg and C. Rozell},
+booktitle={2011 45th Annual Conference on Information Sciences and Systems},
+title={Sparsity Penalties in Dynamical System Estimation},
+year={2011},
+pages={1-6},
+keywords={Kalman filters;approximation theory;optimisation;recursive estimation;signal reconstruction;state estimation;Kalman filter;coefficient estimation;compressive sensing;dynamical system estimation;one-step update optimization procedure;sparse approximation;sparsity penalty;state estimation;write recursive optimization programs;Estimation;Kalman filters;Noise;Noise measurement;Optimization;Steady-state;Technological innovation;Compressive Sensing;Dynamical Systems;State Estimation},
+doi={10.1109/CISS.2011.5766179},
+month={March},}
+
+%%%%%%%%%%%
+% UKF
+
+@proceeding{Julier97,
+author = {Julier, Simon J. and Uhlmann, Jeffrey K.},
+title = {New extension of the Kalman filter to nonlinear systems},
+journal = {Proc. SPIE},
+volume = {3068},
+number = {},
+pages = {182-193},
+abstract = {The Kalman Filter (KF) is one of the most widely used methods for tracking and estimation due to its simplicity, optimality, tractability and robustness. However, the application of the KF to nonlinear systems can be difficult. The most common approach is to use the Extended Kalman Filter (EKF) which simply linearizes all nonlinear models so that the traditional linear Kalman filter can be applied. Although the EKF (in its many forms) is a widely used filtering strategy, over thirty years of experience with it has led to a general consensus within the tracking and control community that it is difficult to implement, difficult to tune, and only reliable for systems which are almost linear on the time scale of the update intervals. In this paper a new linear estimator is developed and demonstrated. Using the principle that a set of discretely sampled points can be used to parameterize mean and covariance, the estimator yields performance equivalent to the KF for linear systems yet generalizes elegantly to nonlinear systems without the linearization steps required by the EKF. We show analytically that the expected performance of the new approach is superior to that of the EKF and, in fact, is directly comparable to that of the second order Gauss filter. The method is not restricted to assuming that the distributions of noise sources are Gaussian. We argue that the ease of implementation and more accurate estimation features of the new filter recommend its use over the EKF in virtually all applications.},
+year = {1997},
+doi = {10.1117/12.280797},
+URL = { http://dx.doi.org/10.1117/12.280797},
+eprint = {}
+}
+
+@ARTICLE{Gustafsson12,
+author={F. Gustafsson and G. Hendeby},
+journal={IEEE Transactions on Signal Processing},
+title={Some Relations Between Extended and Unscented Kalman Filters},
+year={2012},
+volume={60},
+number={2},
+pages={545-555},
+keywords={Kalman filters;Riccati equations;nonlinear filters;discrete Riccati equation;extended Kalman filter;linearized model;posterior distribution;second-order Taylor expansion;sensor network;sigma point function evaluation;sigma points;standard EKF algorithm;target tracking;unscented Kalman filter;unscented transformation;Approximation methods;Covariance matrix;Jacobian matrices;Kalman filters;Riccati equations;Taylor series;Transforms;Extended Kalman filter (EKF);transformations;unscented Kalman filter (UKF)},
+doi={10.1109/TSP.2011.2172431},
+ISSN={1053-587X},
+month={Feb},}
+
+@ARTICLE{Julier04,
+author={S. J. Julier and J. K. Uhlmann},
+journal={Proceedings of the IEEE},
+title={Unscented Filtering and Nonlinear Estimation},
+year={2004},
+volume={92},
+number={3},
+pages={401-422},
+keywords={Kalman filters;covariance analysis;filtering theory;nonlinear estimation;nonlinear filters;nonlinear systems;EKF;extended Kalman filter;nonlinear estimation;nonlinear systems;nonlinear transformations;unscented filtering;unscented transformation;Chemical processes;Control systems;Filtering;Kalman filters;Navigation;Nonlinear control systems;Nonlinear systems;Particle tracking;Target tracking;Vehicles},
+doi={10.1109/JPROC.2003.823141},
+ISSN={0018-9219},
+month={Mar},}
+
+@article{menegaz16,
+  title={Unscented Kalman Filtering on Euclidean and Riemannian Manifolds},
+  author={Menegaz, Henrique Marra Taira},
+  year={2016}
+}
+
+@INPROCEEDINGS{Wan00,
+author={E. A. Wan and R. Van Der Merwe},
+booktitle={Proceedings of the IEEE 2000 Adaptive Systems for Signal Processing, Communications, and Control Symposium (Cat. No.00EX373)},
+title={The Unscented Kalman Filter for Nonlinear Estimation},
+year={2000},
+pages={153-158},
+keywords={adaptive Kalman filters;computational complexity;covariance analysis;filtering theory;learning (artificial intelligence);nonlinear estimation;nonlinear systems;parameter estimation;state estimation;Gaussian random variable;computational complexity;covariance;deterministic sampling approach;dual estimation problems;extended Kalman filter;machine learning;neural networks training;nonlinear control;nonlinear estimation;nonlinear system;nonlinear system identification;posterior mean;sample points;state distribution;state-estimation;system dynamics;unscented Kalman filter;Computational complexity;Filters;Machine learning;Neural networks;Nonlinear dynamical systems;Nonlinear systems;Performance gain;Random variables;Sampling methods;Taylor series},
+doi={10.1109/ASSPCC.2000.882463},
+month={},}
+
+@article{Xiong06,
+title = "Performance evaluation of UKF-based nonlinear filtering",
+journal = "Automatica ",
+volume = "42",
+number = "2",
+pages = "261 - 270",
+year = "2006",
+note = "",
+issn = "0005-1098",
+doi = "http://dx.doi.org/10.1016/j.automatica.2005.10.004",
+url = "http://www.sciencedirect.com/science/article/pii/S0005109805003705",
+author = "K. Xiong and H.Y. Zhang and C.W. Chan",
+keywords = "Nonlinear systems",
+keywords = "Stochastic systems",
+keywords = "Extended Kalman filter",
+keywords = "Unscented Kalman filter",
+keywords = "Stability ",
+abstract = "The performance of the modified unscented Kalman filter (UKF) for nonlinear stochastic discrete-time system with linear measurement equation is investigated. It is proved that under certain conditions, the estimation error of the \{UKF\} remains bounded. Furthermore, it is shown that the design of noise covariance matrix plays an important role in improving the stability of the algorithm. Error behavior of the \{UKF\} is then derived in terms of mean square error (MSE), and the Cramér–Rao lower bound (CRLB) is introduced as a performance measure. The modified \{UKF\} is found to approach the \{CRLB\} if the difference between the real noise covariance matrix and the selected one is small enough. These results are verified by using Monte Carlo simulations on two example systems. "
+}
+
+%%%%%%%%%%%
+% EKF
+
+@article{Fahrmeir94,
+ ISSN = {00063444},
+ URL = {http://www.jstor.org/stable/2336962},
+ abstract = {This paper describes a dynamic or state-space approach for analyzing discrete time or grouped survival data. Simultaneous estimation of baseline hazard functions and of time-varying covariate effects is based on maximization of posterior densities or, equivalently, a penalized likelihood, leading to Kalman-type smoothing algorithms. Data-driven choice of unknown smoothing parameters is possible via an EM-type procedure. The methods are illustrated by applications to real data.},
+ author = {Ludwig Fahrmeir},
+ journal = {Biometrika},
+ number = {2},
+ pages = {317-330},
+ publisher = {[Oxford University Press, Biometrika Trust]},
+ title = {Dynamic Modelling and Penalized Likelihood Estimation for Discrete time Survival data},
+ volume = {81},
+ year = {1994}
+}
+
+@article{Fahrmeir92,
+author = { Ludwig   Fahrmeir },
+title = {Posterior Mode Estimation by Extended Kalman Filtering for Multivariate Dynamic Generalized Linear Models},
+journal = {Journal of the American Statistical Association},
+volume = {87},
+number = {418},
+pages = {501-509},
+year = {1992},
+doi = {10.1080/01621459.1992.10475232},
+
+URL = {
+        http://amstat.tandfonline.com/doi/abs/10.1080/01621459.1992.10475232
+
+},
+eprint = {
+        http://amstat.tandfonline.com/doi/pdf/10.1080/01621459.1992.10475232
+
+}}
+
+@article{Fahrmeir96,
+author = { Ludwig   Fahrmeir  and  Stefan   Wagenpfeil },
+title = {Smoothing Hazard Functions and Time-Varying Effects in Discrete Duration and Competing Risks Models},
+journal = {Journal of the American Statistical Association},
+volume = {91},
+number = {436},
+pages = {1584-1594},
+year = {1996},
+doi = {10.1080/01621459.1996.10476726},
+
+URL = {
+        http://amstat.tandfonline.com/doi/abs/10.1080/01621459.1996.10476726
+
+},
+eprint = {
+        http://amstat.tandfonline.com/doi/pdf/10.1080/01621459.1996.10476726
+
+}
+
+}
+
+%%%%%%%%%%%
+% Software
+
+@article{Sanderson16,
+  doi = {10.21105/joss.00026},
+  url = {https://doi.org/10.21105%2Fjoss.00026},
+  year  = {2016},
+  month = {jun},
+  publisher = {The Open Journal},
+  volume = {1},
+  number = {2},
+  author = {Conrad Sanderson and Ryan Curtin},
+  title = {Armadillo: A Template-based \proglang{C++} library for linear algebra},
+  journal = {The Journal of Open Source Software}
+}
+
+@Manual{baseR16,
+  title = {R: A Language and Environment for Statistical Computing},
+  author = {{R Core Team}},
+  organization = {R Foundation for Statistical Computing},
+  address = {Vienna, Austria},
+  year = {2016},
+  url = {https://www.R-project.org/},
+}
+
+@BOOK{laug,
+      AUTHOR = {Anderson, E. and Bai, Z. and Bischof, C. and
+                Blackford, S. and Demmel, J. and Dongarra, J. and
+                Du Croz, J. and Greenbaum, A. and Hammarling, S. and
+                McKenney, A. and Sorensen, D.},
+      TITLE = {\pkg{LAPACK} Users' Guide},
+      EDITION = {Third},
+      PUBLISHER = {Society for Industrial and Applied Mathematics},
+      YEAR = {1999},
+      ADDRESS = {Philadelphia, PA},
+      ISBN = {0-89871-447-8 (paperback)}}
+
+@online{LAPACKThread,
+  author = {Nicolas Cellier},
+  title = {Thread titled Cholseski update of rank one on \pkg{LAPACK}-forum},
+  year = 2011,
+  url = {http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646},
+  urldate = {2017-05-04}
+}
+
+@techreport{seeger04,
+  title={Low Rank Updates for the Cholesky Decomposition},
+  author={Seeger, Matthias},
+  year={2004}
+}
+
+@article{Miller92,
+ ISSN = {00359254, 14679876},
+ URL = {http://www.jstor.org/stable/2347583},
+ author = {Alan J. Miller},
+ journal = {Journal of the Royal Statistical Society. Series C (Applied Statistics)},
+ number = {2},
+ pages = {458-478},
+ publisher = {[Wiley, Royal Statistical Society]},
+ title = {Algorithm AS 274: Least Squares Routines to Supplement Those of Gentleman},
+ volume = {41},
+ year = {1992}
+}
+
+@INPROCEEDINGS{Xianyi12,
+author={Z. Xianyi and W. Qian and Z. Yunquan},
+booktitle={2012 IEEE 18th International Conference on Parallel and Distributed Systems},
+title={Model-driven Level 3 BLAS Performance Optimization on Loongson 3A Processor},
+year={2012},
+pages={684-691},
+keywords={cache storage;floating point arithmetic;linear algebra;mathematics computing;multi-threading;multiprocessing systems;optimisation;parallel architectures;public domain software;shared memory systems;software performance evaluation;Chinese Academy of Sciences;Institute of Computing Technology;L1 data cache misses;Loongson 3A 128-bit memory;Loongson 3A architecture;Loongson 3A quadcore processor;OpenBLAS;bank conflicts;basic linear algebra subprograms;extension instructions;fundamental math library;general-purpose 64-bit MIPS64 quadcore processor;mainstream processor vendor;mainstream x86 CPU;model-driven level 3 BLAS performance optimization;multiple threads;open source BLAS project;parallel performance improvement;performance model;register blocking;scientific computing;single precision floating point SIMD instructions;single thread optimization;software prefetching;word length 128 bit;word length 64 bit;Kernel;Optimization;Pipelines;Prefetching;Registers;BLAS;Loongson 3A;MIPS64;Multi-core;Optimization},
+doi={10.1109/ICPADS.2012.97},
+ISSN={1521-9097},
+month={Dec},}
+
+%%%%%%%%%%%
+% State space models
+
+@article{Petris11,
+   author = {Giovanni Petris and Sonia Petrone},
+   title = {State Space Models in \proglang{R}},
+   journal = {Journal of Statistical Software},
+   volume = {41},
+   number = {1},
+   year = {2011},
+   keywords = {},
+   abstract = {We give an overview of some of the software tools available in R, either as built- in functions or contributed packages, for the analysis of state space models. Several illustrative examples are included, covering constant and time-varying models for both univariate and multivariate time series. Maximum likelihood and Bayesian methods to obtain parameter estimates are considered.},
+   issn = {1548-7660},
+   pages = {1--25},
+   doi = {10.18637/jss.v041.i04},
+   url = {https://www.jstatsoft.org/index.php/jss/article/view/v041i04}
+}
+
+@article{Tusell11,
+   author = {Fernando Tusell},
+   title = {Kalman Filtering in R},
+   journal = {Journal of Statistical Software},
+   volume = {39},
+   number = {1},
+   year = {2011},
+   keywords = {},
+   abstract = {Support in R for state space estimation via Kalman filtering was limited to one package, until fairly recently. In the last five years, the situation has changed with no less than four additional packages offering general implementations of the Kalman filter, including in some cases smoothing, simulation smoothing and other functionality.  This paper reviews some of the offerings in R to help the prospective user to make an informed choice.},
+   issn = {1548-7660},
+   pages = {1--27},
+   doi = {10.18637/jss.v039.i02},
+   url = {https://www.jstatsoft.org/index.php/jss/article/view/v039i02}
+}
+
+@Manual{kfas,
+    title = {\pkg{KFAS}: Kalman Filter and Smoother for Exponential Family State Space Models},
+    author = {Helske, Jouni},
+    year = {2016},
+    note = {R package version 1.2.5},
+    url = {https://cran.r-project.org/package=KFAS},
+  }
+
+@article{helske16,
+  title={\pkg{KFAS}: Exponential family state space models in \proglang{R}},
+  author={Helske, Jouni},
+  journal={arXiv preprint arXiv:1612.01907},
+  year={2016}
+}
+
+@article{King16,
+   author = {Aaron King and Dao Nguyen and Edward Ionides},
+   title = {Statistical Inference for Partially Observed Markov Processes via the \proglang{R} Package pomp},
+   journal = {Journal of Statistical Software},
+   volume = {69},
+   number = {1},
+   year = {2016},
+   keywords = {Markov processes; hidden Markov model; state space model; stochastic dynamical system; maximum likelihood; plug-and-play; time series; mechanistic model; sequential Monte Carlo; R},
+   abstract = {Partially observed Markov process (POMP) models, also known as hidden Markov models or state space models, are ubiquitous tools for time series analysis. The R package pomp provides a very flexible framework for Monte Carlo statistical investigations using nonlinear, non-Gaussian POMP models. A range of modern statistical methods for POMP models have been implemented in this framework including sequential Monte Carlo, iterated filtering, particle Markov chain Monte Carlo, approximate Bayesian computation, maximum synthetic likelihood estimation, nonlinear forecasting, and trajectory matching. In this paper, we demonstrate the application of these methodologies using some simple toy problems. We also illustrate the specification of more complex POMP models, using a nonlinear epidemiological model with a discrete population, seasonality, and extra-demographic stochasticity. We discuss the specification of user-defined models and the development of additional methods within the programming environment provided by pomp.},
+   issn = {1548-7660},
+   pages = {1--43},
+   doi = {10.18637/jss.v069.i12},
+   url = {https://www.jstatsoft.org/index.php/jss/article/view/v069i12}
+}
+
+@Misc{rstan,
+    title = {\pkg{RStan}: the \proglang{R} interface to \proglang{Stan}},
+    author = {{Stan Development Team}},
+    note = {R package version 2.14.1},
+    year = {2016},
+    url = {http://mc-stan.org/},
+}
+
+%%%%%%%%%%%
+% Other methods
+
+@Manual{Enea17,
+    title = {\pkg{speedglm}: Fitting Linear and Generalized Linear Models to Large Data Sets},
+    author = {Marco Enea},
+    year = {2017},
+    note = {R package version 0.3-2},
+    url = {https://CRAN.R-project.org/package=speedglm},
+  }
+
+@book{wood06,
+  title={Generalized Additive Models: An Introduction with \proglang{R}},
+  author={Wood, Simon},
+  year={2006},
+  publisher={CRC press}
+}
+
+@book{martinussen07,
+  title={Dynamic Regression Models for Survival Data},
+  author={Martinussen, Torben and Scheike, Thomas H},
+  year={2007},
+  publisher={Springer Science \& Business Media}
+}
+
+@Manual{dynsurv,
+    title = {\pkg{dynsurv}: Dynamic Models for Survival Data},
+    author = {Xiaojing Wang and Ming-Hui Chen and Wenjie Wang and Jun Yan},
+    note = {{R} package version 0.3-5},
+    year = {2017},
+    url = {https://CRAN.R-project.org/package=dynsurv},
+  }
+
+@Manual{pch,
+    title = {\pkg{pch}: Piecewise Constant Hazards Models for Censored and Truncated Data},
+    author = {Paolo Frumento},
+    year = {2016},
+    note = {R package version 1.3},
+    url = {https://CRAN.R-project.org/package=pch},
+  }
+
+@software{survival,
+  author = {Terry M. Therneau},
+  title = {A Package for Survival Analysis in \proglang{S}},
+  url = {https://CRAN.R-project.org/package=survival},
+  version = {2.38},
+  year = {2015},
+}
+
+@Manual{concreg,
+    title = {\pkg{concreg}: Concordance Regression},
+    author = {Georg Heinze and Meinhard Ploner and Daniela Dunkler},
+    year = {2016},
+    note = {R package version 0.6},
+    url = {https://CRAN.R-project.org/package=concreg},
+}
+
+@Manual{rstpm2,
+  title = {\pkg{rstpm2}: Generalized Survival Models},
+  author = {Mark Clements and Xing-Rong Liu},
+  year = {2016},
+  note = {R package version 1.3.4},
+  url = {https://CRAN.R-project.org/package=rstpm2},
+}
+
+@article{Simon11,
+   author = {Noah Simon and Jerome Friedman and Trevor Hastie and Rob Tibshirani},
+   title = {Regularization Paths for Cox's Proportional Hazards Model via Coordinate Descent},
+   journal = {Journal of Statistical Software},
+   volume = {39},
+   number = {1},
+   year = {2011},
+   keywords = {},
+   abstract = {We introduce a pathwise algorithm for the Cox proportional hazards model, regularized by convex combinations of l1 and l2 penalties (elastic net). Our algorithm fits via cyclical coordinate descent, and employs warm starts to find a solution along a regularization path. We demonstrate the efficacy of our algorithm on real and simulated data sets, and find considerable speedup between our algorithm and competing methods.},
+   issn = {1548-7660},
+   pages = {1--13},
+   doi = {10.18637/jss.v039.i05},
+   url = {https://www.jstatsoft.org/index.php/jss/article/view/v039i05}
+}
+
+@Manual{glmpath,
+    title = {\pkg{glmpath}: L1 Regularization Path for Generalized Linear Models and Cox Proportional Hazards Model},
+    author = {Mee Young Park and Trevor Hastie},
+    year = {2013},
+    note = {R package version 0.97},
+    url = {https://CRAN.R-project.org/package=glmpath},
+  }
+
+@article{Goeman10,
+  author = {Goeman, Jelle J.},
+  title = {L1 Penalized Estimation in the Cox Proportional Hazards Model},
+  journal = {Biometrical Journal},
+  volume = {52},
+  number = {1},
+  publisher = {WILEY-VCH Verlag},
+  issn = {1521-4036},
+  url = {http://dx.doi.org/10.1002/bimj.200900028},
+  doi = {10.1002/bimj.200900028},
+  pages = {70--84},
+  keywords = {Gradient ascent, Lasso, Penalty, Survival},
+  year = {2010},
+}
+
+@article{Schnatter07,
+title = "Auxiliary mixture sampling with applications to logistic models",
+journal = "Computational Statistics \& Data Analysis ",
+volume = "51",
+number = "7",
+pages = "3509 - 3528",
+year = "2007",
+note = "",
+issn = "0167-9473",
+doi = "http://dx.doi.org/10.1016/j.csda.2006.10.006",
+url = "http://www.sciencedirect.com/science/article/pii/S0167947306003720",
+author = "Sylvia Frühwirth-Schnatter and Rudolf Frühwirth",
+keywords = "Binary data",
+keywords = "Categorical data",
+keywords = "Markov chain Monte Carlo",
+keywords = "Random-effects models",
+keywords = "State space models",
+keywords = "Utilities ",
+abstract = "A new method of data augmentation for binary and multinomial logit models is described. First, the latent utilities are introduced as auxiliary latent variables, leading to a latent model which is linear in the unknown parameters, but involves errors from the type I extreme value distribution. Second, for each error term the density of this distribution is approximated by a mixture of normal distributions, and the component indicators in these mixtures are introduced as further latent variables. This leads to Markov chain Monte Carlo estimation based on a convenient auxiliary mixture sampler that draws from standard distributions like normal or exponential distributions and, in contrast to more common Metropolis–Hastings approaches, does not require any tuning. It is shown how the auxiliary mixture sampler is implemented for binary or multinomial logit models, and it is demonstrated how to extend the sampler to mixed effect models and time-varying parameter models for binary and categorical data. Finally, an application to Austrian labor market data is discussed. "
+}
+
+@article{friedman10,
+   author = {Jerome Friedman and Trevor Hastie and Rob Tibshirani},
+   title = {Regularization Paths for Generalized Linear Models via Coordinate Descent},
+   journal = {Journal of Statistical Software},
+   volume = {33},
+   number = {1},
+   year = {2010},
+   keywords = {},
+   abstract = {We develop fast algorithms for estimation of generalized linear models with convex penalties. The models include linear regression, two-class logistic regression, and multi- nomial regression problems while the penalties include ℓ1 (the lasso), ℓ2 (ridge regression) and mixtures of the two (the elastic net). The algorithms use cyclical coordinate descent, computed along a regularization path. The methods can handle large problems and can also deal efficiently with sparse features. In comparative timings we find that the new algorithms are considerably faster than competing methods.},
+   issn = {1548-7660},
+   pages = {1--22},
+   doi = {10.18637/jss.v033.i01},
+   url = {https://www.jstatsoft.org/index.php/jss/article/view/v033i01}
+}
+
+@Manual{biglm,
+    title = {\pkg{biglm}: Bounded Memory Linear and Generalized Linear Models},
+    author = {Thomas Lumley},
+    year = {2013},
+    note = {R package version 0.9-1},
+    url = {https://CRAN.R-project.org/package=biglm},
+}
+
+@article{Thomas14,
+   author = {Laine Thomas and Eric Reyes},
+   title = {Tutorial: Survival Estimation for Cox Regression  Models with Time-Varying coefficients Using \proglang{SAS}  and \proglang{R}},
+   journal = {Journal of Statistical Software},
+   volume = {61},
+   number = {1},
+   year = {2014},
+   keywords = {},
+   abstract = {Survival estimates are an essential compliment to multivariable regression models for time-to-event data, both for prediction and illustration of covariate effects. They are easily obtained under the Cox proportional-hazards model. In populations defined by an initial, acute event, like myocardial infarction, or in studies with long-term followup, the proportional-hazards assumption of constant hazard ratios is frequently violated. One alternative is to fit an interaction between covariates and a prespecified function of time, implemented as a time-dependent covariate. This effectively creates a time-varying coefficient that is easily estimated in software such as SAS and R. However, the usual programming statements for survival estimation are not directly applicable. Unique data manipulation and syntax is required, but is not well documented for either software. This paper offers a tutorial in survival estimation for the time-varying coefficient model, implemented in SAS and R. We provide a macro coxtvc to facilitate estimation in SAS where the current functionality is more limited. The macro is validated in simulated data and illustrated in an application. },
+   issn = {1548-7660},
+   pages = {1--23},
+   doi = {10.18637/jss.v061.c01},
+   url = {https://www.jstatsoft.org/index.php/jss/article/view/v061c01}
+}
+
+@Article{Rizopoulos16,
+    title = {The \proglang{R} Package \pkg{JMbayes} for Fitting Joint Models for Longitudinal and Time-to-Event Data Using MCMC},
+    author = {Dimitris Rizopoulos},
+    journal = {Journal of Statistical Software},
+    year = {2016},
+    volume = {72},
+    number = {7},
+    pages = {1--45},
+    doi = {10.18637/jss.v072.i07},
+  }
+
+@book{durbin12,
+  title={Time Series Analysis by State Space Methods},
+  author={Durbin, James and Koopman, Siem Jan},
+  volume={38},
+  year={2012},
+  publisher={OUP Oxford}
+}
+
+
+%%%%%%%%%%%
+% Data sets
+
+@article{Abrams94,
+author = { Abrams ,  Donald I.  and  Goldman ,  Anne I.  and  Launer ,  Cynthia  and  Korvick ,  Joyce A.  and  Neaton ,  James D.  and  Crane ,  Lawrence R.  and  Grodesky ,  Michael  and  Wakefield ,  Steven  and  Muth ,  Katherine  and  Kornegay ,  Sandra  and  Cohn ,  David L.  and  Harris ,  Allen  and  Luskin-Hawk ,  Roberta  and  Markowitz ,  Norman  and  Sampson ,  James H.  and  Thompson ,  Melanie  and  Deyton ,  Lawrence  and the Terry Beirn Community Programs for Clinical Research on AIDS},
+title = {A Comparative Trial of Didanosine or Zalcitabine after Treatment with Zidovudine in Patients with Human Immunodeficiency Virus Infection},
+journal = {New England Journal of Medicine},
+volume = {330},
+number = {10},
+pages = {657-662},
+year = {1994},
+doi = {10.1056/NEJM199403103301001},
+    note ={PMID: 7906384},
+
+URL = {
+        http://dx.doi.org/10.1056/NEJM199403103301001
+
+},
+eprint = {
+        http://dx.doi.org/10.1056/NEJM199403103301001
+}
+}
+
+

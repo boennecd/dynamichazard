@@ -19,7 +19,13 @@ src-x64
 revdep
 **/*_cache/
 **/tex2pdf*/
-vignettes/jss/
+vignettes/jss/cache/
+vignettes/jss/figure/
+vignettes/jss/sim_env.Rds
+vignettes/jss/results_from_simulation.Rds
+vignettes/jss/jss*
+
+vignettes/Prebuild/figure/
 vignettes/Prebuild/cache/
 sandbox/*
 Rprof.out

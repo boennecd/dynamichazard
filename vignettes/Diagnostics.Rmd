@@ -46,14 +46,9 @@ knitr::knit_hooks$set(output = function(x, options) {
    hook_output(x, options)
  })
 
-knitr::knit_hooks$set(default_opts = function(before, options, envir) {
-    if (before){
-      options(digist = 4)
-    }
-})
-options(digist = 3)
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, dpi = 36, cache = T)
-knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
+knitr::opts_knit$set(warning = F, message = F)
+options(digits = 3)
 
 knit_print.data.frame <- function(
   x, ..., row.names = F, digits = getOption("digits")){
@@ -122,14 +117,12 @@ knit_print.matrix <- function(x, ..., digits = getOption("digits"), row.names = 
 
 # Introduction
 
-This vignette will show examples of how the `residuals` and `hatvalues` functions can be used for an object returned by `ddhazard`. See the vignette `ddhazard` For details of the computations
-
-First, we will present all the data sets we will use and the diagnostics which turned out to be potentially usefull for the given data set. This is in the section called "First round of checks". Then we return to the data sets using the other methods. The latter part is included to illustrate how the function in this package work. This is in the section called "Second round of checks" 
+This vignette will show examples of how the `residuals` and `hatvalues` functions can be used for an object returned by `ddhazard`. See the vignette `ddhazard` For details of the computations. First, we will present all the data sets we will use and the diagnostics which turned out to be potentially useful for the given data set. This is in the section called "First round of checks". Then we return to the data sets using the other methods. The latter part is included to illustrate how the function in this package work. This is in the section called "Second round of checks".
 
 # First round of checks
 ## Data set 1: Prisoner recidivism
 
-The first data set we will look at an experimental study of recidivism of 432 male prisoners a year after being released from prison. The datails of the data set is in [@rossi80]. The study randomly gave financial aid to the prisoners. The variables we will look at are:
+The first data set we will look at is an experimental study of recidivism of 432 male prisoners a year after being released from prison. The details of the data set is in [@rossi80]. The study randomly gave financial aid to the prisoners when they where released. The variables we will look at are:
 
 - `fin`: 1 if the prisoner got aid and zero otherwise
 - `age`: age at time of release
@@ -145,7 +138,7 @@ A `.pdf` file called `Appendix-Cox-Regression.pdf` was previously on CRAN where 
 
 ### Loading the data set
 
-We load the data set with the next line. The details of how the `.RData` file is made is on the github site in the `vignettes/Diagnostics/` folder
+We load the data set with the next line. The details of how the `.RData` file is made is on the github site in the `vignettes/Diagnostics/` folder.
 
 ```{r}
 load("Diagnostics/Rossi.RData")
@@ -155,7 +148,7 @@ Rossi <- Rossi[
   , c("id","start","stop","event", "fin", "age", "prio", "employed.cumsum")]
 ```
 
-The data is in the typical start-stop form for Survival analysis. We print the number of individuals and show an example of how the data looks for one of the individuals
+The data is in the typical start-stop form for Survival analysis. We print the number of individuals and show an example of how the data looks for one of the individuals:
 
 ```{r}
 # Number of unique individauls
@@ -165,7 +158,7 @@ length(unique(Rossi$id))
 Rossi[Rossi$id == 2, ]
 ```
 
-Next, we illustrate which of the variables are and which are not time-varying
+Next, we illustrate which of the variables are and which are not time-varying:
 
 ```{r}
 # See the varying and non-varying covariates
@@ -181,7 +174,7 @@ colMeans(do.call(rbind, as.list(tmp)))
 stopifnot(setequal(unique(Rossi$stop), 1:52))
 ```
 
-The events happens more less evenly across time after the first 8 weeks as the next plot shows. Hence, we may see an increasing intercept later since all individuals start at time zero. Thus, the risk sets only get smaller as time progress while roughly the same number of people gets rearrested
+The events happens more less evenly across time after the first 8 weeks as the next plot shows. Hence, we may see an increasing intercept later since all individuals start at time zero. Thus, the risk sets only get smaller as time progress while roughly the same number of people gets rearrested:
 
 ```{r, echo = FALSE}
 # Individuals have event through out the period
@@ -224,7 +217,7 @@ Then we plot the predicted coefficients:
 plot(dd_rossi)
 ```
 
-The dashed lines are 95% confidence bounds from the smoothed covariance matrices. Both the intercept and the age seems to have time-varying effects while the other variables seems not to have
+The dashed lines are 95% confidence bounds from the smoothed covariance matrices. Both the intercept and the age seems to have time-varying coefficients.
 
 ### Hat values
 
@@ -234,7 +227,7 @@ We start by looking at the "hat-like" values which are suggested in the ddhazard
 hats <- hatvalues(dd_rossi)
 ```
 
-The returned object is list with a matrix for each interval. Each matrix have a column for the hat values, the row number in the orginal data set and the id of the individual the hat values belongs to: 
+The returned object is list with a matrix for each interval. Each matrix have a column for the hat values, the row number in the original data set and the id of the individual the hat values belongs to: 
 
 ```{r}
 str(hats[1:3]) # Print str of first three matrices
@@ -260,7 +253,7 @@ stack_hats <- function(hats){
 }
 ```
 
-We have defined a function to stack the hat values for each inidivudal called `stack_hats` such that we get a single matrix instead of list of matrices. Further, the function also adds an extra column for the interval number. The defintion of the function is printed at the end of this vignette. The stacked values looks as follows:
+We have defined a function to stack the hat values for each individual called `stack_hats` such that we get a single matrix instead of list of matrices. Further, the function also adds an extra column for the interval number. The definition of the function is printed at the end of this vignette. The stacked values looks as follows:
 
 ```{r}
 hats_stacked <- stack_hats(hats)
@@ -268,7 +261,7 @@ hats_stacked <- stack_hats(hats)
 head(hats_stacked)
 ```
 
-We accumulate the hat values for each individual and plot them against time. The motivation to do this is to spot if a given individual has a lot high sum hat value. This could indiciate that he has a large influence on the estimates
+We accumulate the hat values for each individual and plot them against time. The motivation to do this is to spot if a given individual has a lot high sum hat value. This could indicate that he has a large influence on the estimates
 
 ```{r}
 # Compute cumulated hat values
@@ -283,12 +276,12 @@ invisible(
          col = gray(0, alpha = .2)))
 ```
 
-Some of the observations seems to be quite influential. We find these five individuals and plot the last record for each of these:
+Some of the observations seems to be quite influential. We find the five individuals with the most extreme maximum value and plot the last record for each of these:
 
 ```{r}
 max_cum <- tapply(hats_stacked$hats_cum, hats_stacked$id, max)
 is_max <- names(max_cum)[order(max_cum, decreasing = T)[1:5]]
-is_max # The id of ther persons
+is_max # The id of the persons
 
 # We print the last record each of these
 Rossi_subset <- Rossi[Rossi$id %in% is_max, ]
@@ -304,7 +297,7 @@ plot(as.numeric(names(tmp)), c(tmp), ylab = "frequency", type = "h",
      xlab = "Number of prior convictions")
 ```
 
-This could suggest a transformation of the variables. Thus, we try with the logarithm of the value plus one with one added to avoid $log(0)$ (with one arbitrarily chosen): 
+This could suggest a transformation of the variables. Thus, we try with the logarithm of the value plus one with one added to avoid $\log(0)$ (with one arbitrarily chosen): 
 
 ```{r}
 tmp <- xtabs(~log(Rossi$prio[!duplicated(Rossi$id)] + 1))
@@ -312,7 +305,7 @@ plot(as.numeric(names(tmp)), c(tmp), ylab = "frequency", type = "h",
      xlab = "Log(Number of prior convictions + 1)")
 ```
 
-We make a fit where we use this transformation of prior convictions instead below
+Below, we make a fit where we use this transformation of prior convictions instead:
 
 ```{r}
 dd_rossi_trans <- ddhazard(
@@ -323,7 +316,7 @@ dd_rossi_trans <- ddhazard(
 plot(dd_rossi_trans)
 ```
 
-Notice that the coefficient for `prio` is more stable / less wiggly. Further, computing the hat values and making a similar plot to the one before shows that the individuals are much less influential
+Notice that the coefficient for `prio` is more stable / less wiggly. Further, computing the hat values and making a similar plot to the one before shows that the individuals are much less influential.
 
 ```{r, echo = FALSE}
 hats <- hatvalues(dd_rossi_trans)
@@ -342,7 +335,7 @@ invisible(
          col = gray(0, alpha = .2)))
 ```
 
-We may further want to compare the likelihood of the two models to make sure that the new model has a greater or equal likelihood. However, the final model seems to convergece towards a degenerated distribution if we keep iterating in the EM algorithm. Thus, the EM slowly in the end:
+We may further want to compare the likelihood of the two models to make sure that the new model has a greater or equal likelihood. However, the final model seems to converge towards a degenerated distribution if we keep iterating in the EM algorithm. Thus, the EM slowly converge towards the end making it infeasible to get a good estimate of the likelihood.  
 
 ```{r, output.lines=list(1:5, 100:105, 196:200), warning=TRUE}
 # Make control list for ddhazard
@@ -409,7 +402,7 @@ summary(log_error2)
 ```
 
 ## Data set 2: Worcester Heart Attack Study
-Next, We will look at the Worcester Heart Attack Study. The dataset contains individuals who had a heart attack and is then followed up to check if they have a heart attack in the following days. Below, we load the the data and plot the date of deaths:
+Next, We will look at the Worcester Heart Attack Study. The dataset contains individuals who had a heart attack and is then followed up to check if they die within the following days. Below, we load the the data and plot the date of deaths:
 
 ```{r}
 load("Diagnostics/whas500.RData")
@@ -445,7 +438,7 @@ dd_whas <- ddhazard(
 plot(dd_whas)
 ```
 
-The intercept drops in the first period which plossibly is due to the intial high number of deaths right after the first heart attack. We further simply the model the model by removing `gender` variable which seems to be zero:
+The intercept drops in the first period which possibly is due to the initial high number of deaths right after the first heart attack. We further simply the model the model by removing `gender` variable which seems to be zero:
 
 ```{r}
 dd_whas <- ddhazard(
@@ -469,13 +462,13 @@ dd_whas_no_age <- ddhazard(
 plot(dd_whas_no_age)
 ```
 
-Then we could think that we would be able to see that the covariate was left out using the Pearson residuals as in a regular logistic regression. We compute the Pearson residuals to see if this would work
+Then we could think that we would be able to see that the covariate was left out using the Pearson residuals as in a regular logistic regression. We compute the Pearson residuals to see if this would work:
 
 ```{r}
 obs_res <- residuals(dd_whas_no_age, type = "pearson")
 ```
 
-The returned object is a list with two elements. One element denotes the type and another contains the residuals. The latter is a list with a matrix for each interval. Each matrix has four columns for the residuals, the computed likelihood of an event, the outcome and the row number in the initial data matrix for those that were at risk in the interval. This is illustrated in the next lines:
+The returned object is a list with two elements. One element denotes the type of the residuals and another contains the residuals. The latter is a list with a matrix for each interval. Each matrix has four columns for the residuals, the computed likelihood of an event, the outcome and the row number in the initial data matrix for those that were at risk in the interval. This is illustrated in the next lines:
 
 ```{r}
 # We have matrix for each interval
@@ -488,7 +481,7 @@ str(obs_res$residuals[1:5])
 head(obs_res$residuals[[1]]) 
 ```
 
-The list of matricies is un-handy so we have defined a function called `stack_residuals` stack the matrices, add the interval number and the id of that the observations belongs to in. The definition of the function is given at the end of this vignette
+The list of matrices is un-handy so we have defined a function called `stack_residuals` stack the matrices, add the interval number and the id of that the observations belongs to in. The definition of the function is given at the end of this vignette.
 
 ```{r stack_res, echo = FALSE}
 stack_residuals <- function(fit, resids){
@@ -526,7 +519,8 @@ head(resids_stacked, 10)
 ```
 
 
-Next, we add the age variable to the stacked residuals, stratify the age variable, compute cumulated mean accross each stratum in each interval and plot against time:  
+Next, we add the age variable to the stacked residuals, stratify the age variable, compute cumulated mean across each stratum in each interval and plot against time:
+
 ```{r}
 # Add age variable
 resids_stacked$age <- 
@@ -561,14 +555,14 @@ legend("topleft", bty = "n",
        cex = par()$cex * .8)
 ```
 
-We see that the older and youngest strata stand out and deviates from zero. Hence, suggesting that the age variable should have been in the model 
+We see that the older and youngest strata stand out and deviates from zero. Hence, suggesting that the age variable should have been in the model.
 
 # Second round of checks
-We will illustrate some other uses of the `residuals` function in this section. This part is included more to show how the function works as they do not "discover" anything new about the data sets
+We will illustrate some other uses of the `residuals` function in this section. This part is included more to show how the function works as they do not "discover" anything new about the data sets.
 
 ## Residuals from state space vector
 
-We start by looking at the standardized state space errors as explained in the ddhazard vignette. We may expect these to be standard iid normal destributed. First, we compute the values with the `residuals` by passing `type = "std_space_error"` with the first fit we made with the Rossi data set:
+We start by looking at the standardized state space errors as explained in the ddhazard vignette. We may expect these to be standard iid normal distributed. First, we compute the values with the `residuals` by passing `type = "std_space_error"` with the first fit we made with the Rossi data set:
 
 ```{r}
 stat_res <- residuals(dd_rossi, type = "std_space_error")
@@ -586,7 +580,7 @@ stopifnot(all(abs(stat_res$residuals) < 1.96))
 plot(stat_res, mod = dd_rossi, p_cex = .75, ylim = c(-2, 2))
 ```
 
-The variables appears to be nothing like standard normal (we have $52 * 6$ residuals with no one outside $\pm 1.96$). Another idea is only marginally standardize (that is, not rotate the residuals). This can be done as follows:
+The variables appears to be nothing like standard normal (we have $52 \cdot 6$ residuals with no one outside $\pm 1.96$). Another idea is only marginally standardize (that is, not rotate the residuals). This can be done as follows:
 
 ```{r}
 # Get non-standardized residuals
@@ -605,9 +599,7 @@ for(i in 1:ncol(stat_res$residuals))
        ylim = c(-2, 2))
 ```
 
-which I again find hard to draw any conclussion from. It seems like there is structure in the errors for the intercept and `fin`. However, this might be what we expected. For instance, we may expect the intercept to increase through time (i.e. not be random).  Further, assuming that the covariance estimate are conservative then there might be an error for `prio` in interval 20-25 and an error  in `age` in interval 10-12 that seems extreme
-
-We can do the same thing for the first fit with the Rossi data set:
+which I again find hard to draw any conclusion from. It seems like there is structure in the errors for the intercept and `fin`. However, this might be what we expected. For instance, we may expect the intercept to increase through time (i.e. not be random as assumed by the model).  Further, assuming that the covariance estimate are conservative then there might be an error for `prio` in interval 20-25 and an error  in `age` in interval 10-12 that seems extreme. We can do the same thing for the first fit with the Rossi data set:
 
 ```{r}
 stat_res <- residuals(dd_whas, type = "std_space_error")
@@ -615,7 +607,7 @@ stat_res <- residuals(dd_whas, type = "std_space_error")
 plot(stat_res, mod = dd_whas, ylim = c(-4, 4), p_cex = .8)
 ```
 
-Again, the errors seems to have to low variance to be standard normal apart from one which is more than three standard deviations away. I am not sure what to conclude from this. A question is whether we would see the same for a simulated data set where the true coefficients follows a random walk. We do this in the following paragraphs
+Again, the errors seems to have to low variance to be standard normal apart from one which is more than three standard deviations away. I am not sure what to conclude from this. A question is whether we would see the same for a simulated data set where the true coefficients follows a random walk. We check this in the next paragraph.
 
 #### Simmulation
 
@@ -626,7 +618,7 @@ if(requireNamespace("dichromat", quietly = T, warn.conflicts = F)){
   cols <- c("#000000", "#009E73", "#e79f00", "#9ad0f3")
 ```
 
-We startout by getting a reference to the `test_sim_func_logit` function in the `dynamichazard` package which is not exported. We will use it to simulate the each individuals series
+We start by getting a reference to the `test_sim_func_logit` function in the `dynamichazard` package which is not exported. We will use it to simulate the each individuals series>
 
 ```{r}
 sim_func <- with(environment(ddhazard), test_sim_func_logit)
@@ -646,10 +638,10 @@ betas[, 1] <- betas[, 1] - 4     # we reduce the intercept
 matplot(betas, col = cols, lty = 1, type = "l")
 ```
 
-We reduce the variance of the intercept and decrease the intercept to yield a lower baseline risk of an event. The inividuals and their outcomes are simulated as follows:
+We reduce the variance of the intercept and decrease the intercept to yield a lower baseline risk of an event. The individuals and their outcomes are simulated as follows:
 
 * Each individual start at time $0$
-* The individuals covariates are simulated form $\text{Unif}(-1, 1)$
+* The individuals covariates are simulated from $\text{Unif}(-1, 1)$
 * We update the individuals covariate with intervals times drawn from a $\text{Exp}(1/10)$
 
 This is done in the following call:
@@ -663,11 +655,11 @@ sim_dat <- sim_func(
   x_mean = 0,          # the mean of the uniform covariates
   n_vars = 3,          # 4 - 1 for the intercept
   lambda = 1/10,       # lambda in the exponential distribution for time 
-                       # between updates
+                       # between updates of covariate vectors
   betas = betas)
 ```
 
-The first rows of the simmulation looks as follows
+The first rows of the simulation looks as follows
 
 ```{r}
 head(sim_dat$res, 10)
@@ -693,14 +685,14 @@ stat_res <- residuals(f1, type = "std_space_error")
 plot(stat_res, mod = f1, p_cex = .8)
 ```
 
-The errors seems more variable than before. Moreover, a QQ-plot shows that the errors are in fact too heavy tailed
+The errors seems more variable than before>
 
 ```{r}
 qqnorm(c(stat_res$residuals), pch = 16, cex = .8)
 qqline(c(stat_res$residuals))
 ```
 
-Re-running the above three times gives the following QQ-plots:
+Re-running the above three times gives the following plots:
 
 ```{r, echo=FALSE, fig.height=8}
 # CHECK: arguments below match those above
@@ -748,11 +740,11 @@ for(i in 1:3){
 ```
 
 
-It is worth stressing that neither the initial seed nor the parameters have been selected here to yield a particular result. The take away for me is that the prevoius finding with the Rossi data set and WHAS data set is an artifact of the data set and fitted method and not something we would see if we have an actual random walk model
+It is worth stressing that neither the initial seed nor the parameters have been selected here to yield a particular result. The take away for me is that the previous finding with the Rossi data set and WHAS data set is an artifact of the data set and fitted method and not something we would see if we have an actual random walk model. 
 
 ## Residuals for observations
 
-We will look at the Pearson residuals but at an individual level in the following paragraphs. We start with the Rossi data set
+We will look at the Pearson residuals but at an individual level in the following paragraphs. We use the Rossi data set where we find the residuals as follows:
 
 ```{r}
 obs_res <- residuals(dd_rossi, type = "pearson")
@@ -776,7 +768,7 @@ invisible(
          col = gray(0, alpha = .2)))
 ```
 
-We may want to take a closer look at the individuals with a high maximum accumlated residual:
+We may want to take a closer look at the individuals with a high maximum accumulated residual:
 
 ```{r}
 max_cum <- tapply(resids_stacked$residuals_cum, resids_stacked$id, max)
@@ -806,7 +798,7 @@ Moreover, they all have a low number of prior convictions:
 summary(Rossi$prio[!duplicated(Rossi$id)])
 ```
 
-We can repeat the same procedure for the lowest accumlated residual as follows:
+We can repeat the same procedure for the lowest accumulated residual as follows:
 
 ```{r}
 min_cum <- tapply(resids_stacked$residuals_cum, resids_stacked$id, min)
@@ -837,7 +829,7 @@ for(i in 1:5){
 }
 ```
 
-The red curves are the predicted coefficients without the previous discussed cases. Similar conclussion applies for doing the same with the Worcester Heart Attack Study data set
+The red curves are the predicted coefficients without the previous discussed cases. Similar conclusion applies for doing the same with the Worcester Heart Attack Study data set
 
 ## Hat values for Worcester Heart Attack Study
 
@@ -874,7 +866,7 @@ is_max
 whas500[is_max, ]
 ```
 
-The first one has a high heart rate while the latter two has low BMI (below 18.5 is underweight). Another idea is to look at the average up to the given time of the hat values. The motivation is the two lines that end arround the 5'th interval either because they die or are right censored. Hence, we normalize by the interval number and plot against time
+The first one has a high heart rate while the latter two has low BMI (below 18.5 is underweight). Another idea is to look at the average up to the given time of the hat values. The motivation is the two lines that end around the 5'th interval either because they die or are right censored. Hence, we normalize by the interval number and plot against time
 
 ```{r}
 # Averages of hat values
@@ -922,7 +914,7 @@ plot(whas500$lenfol, whas500$age, col = cols, pch = pchs,
      xlab = "Follow-up time", ylab = "Age")
 ```
 
-This could motivate us to stop the slightly before the last cluster of censoring of individuals occours. Thus, we set the final time (the `by` argument to `ddhazard`) to 1700 instead of 2000 in the next code block where we re-estimate the model. Further, we make a fit without the "extreme" indivduals: 
+This could motivate us to stop the slightly before the last cluster of censoring of individuals occurs. Thus, we set the final time (the `max_T` argument to `ddhazard`) to 1700 instead of 2000 in the next code block where we re-estimate the model. Further, we make a fit without the "extreme" individuals: 
 
 ```{r}
 dd_whas <- ddhazard(
@@ -949,10 +941,10 @@ for(i in 1:5){
 }
 ```
 
-The blue line is the predicted coefficients without the "extreme" individuals. The difference seems minor
+The blue line is the predicted coefficients without the "extreme" individuals. The difference seems minor.
 
 # Function definitions
-The functions used in this vignette that are no included in the package are defined below
+The functions used in this vignette that are no included in the package are defined below:
 
 ```{r stack_hats, eval = FALSE}
 ```

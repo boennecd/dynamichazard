@@ -183,7 +183,6 @@ void UKF_solver_New::solve(){
         my_print(p_dat.V_t_less_s.slice(t - 1), "Chol decomposing for regenerations:");
       }
 
-
       compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
                            sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
@@ -249,19 +248,21 @@ void UKF_solver_New_logit::Compute_intermediates(
       w_i * arma::sum(O.cols(1, O.n_cols - 1), 1);
 
     // ** 3: Compute variances and expected variance **
-    arma::vec vars = w_0_c * (O.unsafe_col(0) % (1.0 - O.unsafe_col(0)));
+    arma::vec sqrt_weights_to_sds = w_0_c * (O.unsafe_col(0) % (1.0 - O.unsafe_col(0)));
     for(arma::uword i = 1; i < O.n_cols; ++i){
-      vars += w_i * (O.unsafe_col(i) % (1.0 - O.unsafe_col(i)));
+      sqrt_weights_to_sds += w_i * (O.unsafe_col(i) % (1.0 - O.unsafe_col(i)));
     }
-
-    vars += p_dat.ridge_eps;
+    sqrt_weights_to_sds += p_dat.ridge_eps;
+    sqrt_weights_to_sds = p_dat.weights(r_set) / sqrt_weights_to_sds;
+    sqrt_weights_to_sds.transform(sqrt);
 
     // ** 4: Compute c **
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
+    O = (O.each_col() % sqrt_weights_to_sds).t();
 
-    c_vec = (O.each_col() % (p_dat.weights(r_set) / vars)).t() * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar);
-    O = O.t() * (O.each_col() % (p_dat.weights(r_set) / vars));
+    c_vec = O * (sqrt_weights_to_sds % ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar));
+    O = O * O.t();
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
@@ -293,7 +294,7 @@ void UKF_solver_New_exp_bin::Compute_intermediates(
     // ** 1-3: compute outcome given sigma points, means and variances **
     const arma::uword n_risk = r_set.n_elem;
     O.set_size(n_risk, sigma_points.n_cols);
-    arma::vec vars(n_risk, arma::fill::zeros);
+    arma::vec sqrt_weights_to_sds(n_risk, arma::fill::zeros);
 
     arma::vec y_bar(n_risk, arma::fill::zeros);
 
@@ -324,20 +325,23 @@ void UKF_solver_New_exp_bin::Compute_intermediates(
         const double inv_exp_v = exp(-1 * v);
 
         O(j, i) = exp_model_funcs::expect_chance_die(v, inv_exp_v);
-        vars(j) += w_c * exp_model_funcs::var_chance_die(v, inv_exp_v);
+        sqrt_weights_to_sds(j) += w_c * exp_model_funcs::var_chance_die(v, inv_exp_v);
       }
 
       y_bar += w * O.col(i);
     }
 
-    vars += p_dat.ridge_eps;
+    sqrt_weights_to_sds += p_dat.ridge_eps;
+    sqrt_weights_to_sds = p_dat.weights(r_set) / sqrt_weights_to_sds;
+    sqrt_weights_to_sds.transform(sqrt);
 
     // ** 4: Compute c **
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
+    O = (O.each_col() % sqrt_weights_to_sds).t();
 
-    c_vec = (O.each_col() % (p_dat.weights(r_set) / vars)).t() * (do_die - y_bar);
-    O = O.t() * (O.each_col() % (p_dat.weights(r_set) / vars));
+    c_vec = O * (sqrt_weights_to_sds % (do_die - y_bar));
+    O = O * O.t();
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
@@ -367,7 +371,7 @@ void UKF_solver_New_exp_clip_time::Compute_intermediates(
     // ** 1-3: compute outcome given sigma points, means and variances **
     const arma::uword n_risk = r_set.n_elem;
     O.set_size(n_risk, sigma_points.n_cols);
-    arma::vec vars(n_risk, arma::fill::zeros);
+    arma::vec sqrt_weights_to_sds(n_risk, arma::fill::zeros);
 
     arma::vec y_bar(n_risk, arma::fill::zeros);
 
@@ -400,20 +404,23 @@ void UKF_solver_New_exp_clip_time::Compute_intermediates(
         const double inv_exp_v = exp(-1 * v);
 
         O(j, i) = exp_model_funcs::expect_time(v, at_risk_length(j), inv_exp_v, exp_eta);
-        vars(j) += w_c * exp_model_funcs::var_wait_time(v, at_risk_length(j),  exp_eta, inv_exp_v);
+        sqrt_weights_to_sds(j) += w_c * exp_model_funcs::var_wait_time(v, at_risk_length(j),  exp_eta, inv_exp_v);
       }
 
       y_bar += w * O.col(i);
     }
 
-    vars += p_dat.ridge_eps;
+    sqrt_weights_to_sds += p_dat.ridge_eps;
+    sqrt_weights_to_sds = p_dat.weights(r_set) / sqrt_weights_to_sds;
+    sqrt_weights_to_sds.transform(sqrt);
 
     // ** 4: Compute c **
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
+    O = (O.each_col() % sqrt_weights_to_sds).t();
 
-    c_vec = (O.each_col() % (p_dat.weights(r_set) / vars)).t() * (time_outcome - y_bar);
-    O = O.t() * (O.each_col() % (p_dat.weights(r_set) / vars));
+    c_vec = O * (sqrt_weights_to_sds % (time_outcome - y_bar));
+    O = O * O.t();
 
     // Compute intermediate matrix
     arma::mat tmp_mat;
@@ -444,7 +451,7 @@ void UKF_solver_New_exp_clip_time_w_jump::Compute_intermediates(
     // ** 1-3: compute outcome given sigma points, means and variances **
     const arma::uword n_risk = r_set.n_elem;
     O.set_size(n_risk, sigma_points.n_cols);
-    arma::vec vars(n_risk, arma::fill::zeros);
+    arma::vec sqrt_weights_to_sds(n_risk, arma::fill::zeros);
 
     arma::vec y_bar(n_risk, arma::fill::zeros);
 
@@ -483,20 +490,23 @@ void UKF_solver_New_exp_clip_time_w_jump::Compute_intermediates(
         const double inv_exp_v = exp(- v);
 
         O(j, i) = exp_model_funcs::expect_time_w_jump(exp_eta, inv_exp_eta, inv_exp_v, at_risk_length(j));
-        vars(j) += w_c * exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, at_risk_length(j));
+        sqrt_weights_to_sds(j) += w_c * exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, at_risk_length(j));
       }
 
       y_bar += w * O.col(i);
     }
 
-    vars += p_dat.ridge_eps;
+    sqrt_weights_to_sds += p_dat.ridge_eps;
+    sqrt_weights_to_sds = p_dat.weights(r_set) / sqrt_weights_to_sds;
+    sqrt_weights_to_sds.transform(sqrt);
 
     // ** 4: Compute c **
     // Substract y_bar to get deviations
     O.each_col() -= y_bar;
+    O = (O.each_col() % sqrt_weights_to_sds).t();
 
-    c_vec = (O.each_col() % (p_dat.weights(r_set) / vars)).t() * (time_outcome - y_bar);
-    O = O.t() * (O.each_col() % (p_dat.weights(r_set) / vars));
+    c_vec = O * (sqrt_weights_to_sds %  (time_outcome - y_bar));
+    O = O * O.t();
 
     // Compute intermediate matrix
     arma::mat tmp_mat;

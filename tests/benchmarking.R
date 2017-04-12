@@ -133,8 +133,17 @@ p <- profvis({
   dd_fit <- ddhazard(
     Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
     data = sims, id = sims$id, by = 1,
-    Q_0 = diag(1e6, 21), Q = diag(1e-2, 21),
-    control = list(method = "post_approx"))
+    Q_0 = diag(1, 21), Q = diag(1e-2, 21),
+    control = list(method = "UKF", n_max = 10))
 })
 
 p
+
+summary(microbenchmark::microbenchmark(
+  UKF =  ddhazard(
+    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    data = sims, id = sims$id, by = 1,
+    Q_0 = diag(1, 21), Q = diag(1e-2, 21),
+    control = list(method = "UKF", n_max = 10)),
+  times = 5
+))
