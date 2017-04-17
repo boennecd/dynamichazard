@@ -585,7 +585,7 @@ The Extended Kalman filter (EKF) presented here is due to \cite{Fahrmeir94}. It 
 \end{algorithmic}
 \end{algorithm}
 
-Another point is that \citeAlgLineTwo{alg:EKF:varUpdate}{alg:EKF:stateUpdate}{alg:EKF} is a similar to a Newton-Raphson step for a logistic regression model with a $L2$ penalty when we use the logistic link function. This could motivate to take further steps. An issue with the EKF is that it can diverge. Two steps are taken to overcome cases where divergence is a problem. The first step is introduce a learning rate, $\zeta_0$, in \citeAlgLine{alg:EKF:stateUpdate}{alg:EKF} when we update the state vector. The second step is to increase the variance in the denominator of the score vector and information matrix in \citeAlgLineTwo{alg:EKF:scoreVec}{alg:EKF:scoreMat}{alg:EKF}. This reduces the effect of values predicted near the boundaries of the outcome space. This is similar to the approach taken in \pkg{glmnet} \cite[page~9]{friedman10} to deal with extreme values. These three changes of the correction step are shown in algorithm~\ref{alg:EKFextra}.
+Another point is that \citeAlgLineTwo{alg:EKF:varUpdate}{alg:EKF:stateUpdate}{alg:EKF} is a similar to a Newton-Raphson step. This could motivate to take further steps. An issue with the EKF is that it can diverge. Two steps are taken to overcome cases where divergence is a problem. The first step is introduce a learning rate, $\zeta_0$, in \citeAlgLine{alg:EKF:stateUpdate}{alg:EKF} when we update the state vector. The second step is to increase the variance in the denominator of the score vector and information matrix in \citeAlgLineTwo{alg:EKF:scoreVec}{alg:EKF:scoreMat}{alg:EKF}. This reduces the effect of values predicted near the boundaries of the outcome space. This is similar to the approach taken in \pkg{glmnet} \cite[page~9]{friedman10} to deal with extreme values. These three changes of the correction step are shown in algorithm~\ref{alg:EKFextra}.
 
 \begin{algorithm}
 \caption{EKF with extra correction steps, learning rate and parameter $\xi$ replacing \citeAlgLineTo{alg:EKF:scoreVec}{alg:EKF:stateUpdate}{alg:EKF}.}\label{alg:EKFextra}
@@ -596,8 +596,8 @@ Another point is that \citeAlgLineTwo{alg:EKF:varUpdate}{alg:EKF:stateUpdate}{al
 \Repeat
 \State $\vec{u}_t (\vec{\alpha}_t) = \sum_{(i,j) \in R_t} \vec{u}_{ijt} (\vec{\alpha}_t), \quad\vec{u}_{ijt} (\vec{\alpha}_t)= \left. \vec{x}_{ij} \frac{\partial h(\eta)/ \partial \eta}{H_{kkt}(\vec{\alpha}_t)+ \xi} \Lparen{y_{ijt} - h(\eta)} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{\alpha}_t}$\label{alg:EKFextra:scoreVec}
 \State $\mat{U}_t (\vec{\alpha}_t) = \sum_{(i,j) \in R_t} \mat{U}_{ijt} (\vec{\alpha}_t), \quad \mat{U}_{ijt} (\vec{\alpha}_t) = \left. \vec{x}_{ij} \vec{x}_{ij}^\top \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{kkt}(\vec{\alpha}_t) + \xi} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{\alpha}_t}$
-\State $\emNotee{\vec{a}}{t}{t} = \vec{a} + \zeta_0 \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})$
 \State $\emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\vec{a})\right)^{-1}$
+\State $\emNotee{\vec{a}}{t}{t} = \vec{a} + \zeta_0 \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})$
 \UntilElse{$\LVert{\emNotee{\vec{a}}{t}{t} - \vec{a}}/ (\LVert{\vec{a}} + \delta) < \epsilon$}{set $\vec{a} = \emNotee{\vec{a}}{t}{t}$}
 \end{algorithmic}
 \end{algorithm}
@@ -852,7 +852,7 @@ Another idea is to do the following:
 \end{equation}
 \end{itemize}
 
-We will denote this method by Sequential Mode Approximation (SMA). Two algorithms for doing the above are shown in algorithms~\ref{alg:approxMode} and~\ref{alg:approxModeChol}. The latter replaces the correction step in the former by propagating a Cholesky decomposition of the information matrix but is otherwise identical. The advantageous of using the Cholesky decomposition in algorithm~\ref{alg:approxModeChol} is that we ensure that the covariance matrix is positive semi definite. Algorithm~\ref{alg:approxModeChol} is slightly slower although we do use that \citeAlgLine{alg:approxModeChol:LInvUpdate}{alg:approxModeChol} can be inverted in $\bigO{q^2}$ since $\mat{L}$ is a triangular matrix. Further, the rank-one update of the Cholesky decomposition in~\citeAlgLine{alg:approxModeChol:LUpdate}{alg:approxModeChol} is done using the Fortran code from~\cite{LAPACKThread} which implements the method in~\cite{seeger04} with a time complexity of~$\bigO{q^2}$. Lastly, we exploit that $\tmat{L}$ triangular matrix to reduce the computational cost of the matrix and vector products. Still the correction step with algorithm~\ref{alg:approxModeChol} is slower. The constant $v$ in \citeAlgLine{alg:approxMode:findConst}{alg:approxMode} and \citeAlgLine{alg:approxModeChol:findConst}{alg:approxModeChol} is solved by the Newton Raphson method. $- \log\proppCond{y_{ijt}}{\vec{\alpha}_t^\top \vec{x}_{ij} = b}$ is convex in $b$ with a finite lower bound for the models currently implemented in \code{ddhazard} so the Newton Raphson finds the unique minimum if it converges. The former method is $\bigO{q^2n_t}$ while the latter is $\bigO{q^2n_t + q^3}$ due to the inversion of \citeAlgLine{alg:approxMode:setup}{alg:approxMode}.
+We will denote this method by Sequential Mode Approximation (SMA). Two algorithms for doing the above are shown in algorithms~\ref{alg:approxMode} and~\ref{alg:approxModeChol}. The latter replaces the correction step in the former by propagating a Cholesky decomposition of the information matrix but is otherwise identical. The advantageous of using the Cholesky decomposition in algorithm~\ref{alg:approxModeChol} is that we ensure that the covariance matrix is positive semi definite. Algorithm~\ref{alg:approxModeChol} is slightly slower although we do use that \citeAlgLine{alg:approxModeChol:LInvUpdate}{alg:approxModeChol} can be inverted in $\bigO{q^2}$ since $\mat{L}$ is a triangular matrix. Further, the rank-one update of the Cholesky decomposition in~\citeAlgLine{alg:approxModeChol:LUpdate}{alg:approxModeChol} is done using the Fortran code from~\cite{LAPACKThread} which implements the method in~\cite{seeger04} with a time complexity of~$\bigO{q^2}$. Lastly, we exploit that $\tmat{L}$ triangular matrix to reduce the computational cost of the matrix and vector products. Still the correction step with algorithm~\ref{alg:approxModeChol} is slower. The constant $v$ in \citeAlgLine{alg:approxMode:findConst}{alg:approxMode} and \citeAlgLine{alg:approxModeChol:findConst}{alg:approxModeChol} is solved by the Newton Raphson method. $\proppCond{y_{ijt}}{\vec{\alpha}_t^\top \vec{x}_{ij} = b}$ is log concave in $b$ with a finite upper bound for the models currently implemented in \code{ddhazard} so the Newton Raphson method finds the unique minimum if it converges. Both methods are $\bigO{n_tq^3}$.
 
 \begin{algorithm}
 \caption{Approximation of the posterior mode.}\label{alg:approxMode}
@@ -883,7 +883,7 @@ We will denote this method by Sequential Mode Approximation (SMA). Two algorithm
 \end{algorithmic}
 \end{algorithm}
 
-A disadvantage of SMA is that it is sequential and all matrix and vector products are in dimension $q\times q$ and $q$. Thus, there is little to gain from doing the computations in parallel unless $q$ is large. Moreover, the results depends on the order of the risk set. For this reason, the risk sets are permuted before running the EM-algoirthm. This can be avoided by setting \code{permu = FALSE} to the \code{control} argument of \code{ddhazard}. One advantageous of the methods is that it tends to converge in fewer iterations of the EM algorithm and the likelihood do tend to increasing in every iteration. The latter seems to be an issue with the EKF for some data sets. The EM algorithm should always have increasing likelihood if we computed the likelihood exactly. This is not the case here due to the sequential approximation of the modes with the SMA, the error due to the linearisation in the EKF and the approximation in the UKF. Further, we do not need to compute the expected mean of the outcome in each interval ($h(\eta)$ in~\citeAlgLine{alg:EKF:scoreVec}{alg:EKF} and $\overline{\vec{y}}$ in~\citeAlgLine{alg:UKF:mean}{alg:UKF}) with the SMA but instead work with the likelihood. The latter is particularly useful for the continuous time model we cover in section~\ref{subsec:contTime} as we avoid the definition of the outcome variable.
+ It is worth stressing that~\cite{Fahrmeir92} points out that the EKF to approximate modes rather than the means. Though,~\cite{Durbin00} writes:\textit{" [Their] experience has been that in the examples that [they] have examined there is very little difference between the mode [estimated by their methods and by the EKF in~\cite{Fahrmeir92}] and the mean ..."}. Thus, the error may not be big. A disadvantage of SMA is that it is sequential and all matrix and vector products are in dimension $q\times q$ and $q$. Thus, there is little to gain from doing the computations in parallel unless $q$ is large. Moreover, the results depends on the order of the risk set. For this reason, the risk sets are permuted before running the EM-algoirthm. This can be avoided by setting \code{permu = FALSE} to the \code{control} argument of \code{ddhazard}. One advantageous of the methods is that it tends to converge in fewer iterations of the EM algorithm and the likelihood do tend to increasing in every iteration. The latter seems to be an issue with the EKF for some data sets. The EM algorithm should always have increasing likelihood if we computed the likelihood exactly. This is not the case here due to the sequential approximation of the modes with the SMA, the error due to the linearisation in the EKF and the approximation in the UKF. Further, we do not need to compute the expected mean of the outcome in each interval ($h(\eta)$ in~\citeAlgLine{alg:EKF:scoreVec}{alg:EKF} and $\overline{\vec{y}}$ in~\citeAlgLine{alg:UKF:mean}{alg:UKF}) with the SMA but instead work with the likelihood. The latter is particularly useful for the continuous time model we cover in section~\ref{subsec:contTime} as we avoid the definition of the outcome variable.
 
 \begin{algorithm}
 \caption{Alternative correction step in the procedure at~\citeAlgLine{alg:approxMode:correction}{alg:approxMode} with a Cholesky decomposition. Left-arrow, $\leftarrow$, indicates an update instead of an equality.}\label{alg:approxModeChol}
@@ -894,7 +894,7 @@ A disadvantage of SMA is that it is sequential and all matrix and vector product
 \State $\tvec{x}_{ij} = \tmat{L}^\top\vec{x}_{ij}$
 \State $d_1 = \frac{1}{\tvec{x}_{ij}^\top \tvec{x}_{ij}}$
 \State $d_2 = \vec{x}_{ij}^\top \emNote{\vec{a}}{t}{t}{k-1}$
-\State $ v = \argminu{b} b^2 \frac{1}{2}d_1 - b d_1d_2 - \log\proppCond{y_{ijt}}{\vec{\alpha}_t^\top \vec{x}_{ij} = b}$\label{alg:approxModeChol:findConst}
+\State $v = \argminu{b} b^2 \frac{1}{2}d_1 - b d_1d_2 - \log\proppCond{y_{ijt}}{\vec{\alpha}_t^\top \vec{x}_{ij} = b}$\label{alg:approxModeChol:findConst}
 \State $g =  -\left. \frac{\log \proppCond{y_{ijt}}{\vec{x}_{ij}^\top \vec{\alpha} = b}}{\partial b^2} \right|_{b = v}$
 \State $\emNote{\vec{a}}{t}{t}{k} = \emNote{\vec{a}}{t}{t}{k-1} - (d_1 - v) d_2 \zeta_0 \tmat{L}\tvec{x}_{ij}$
 \State $\mat{L}\mat{L}^\top \leftarrow \mat{L}\mat{L}^\top + \vec{x}_{ij} g \vec{x}_{ij}^\top$\label{alg:approxModeChol:LUpdate}
@@ -903,6 +903,58 @@ A disadvantage of SMA is that it is sequential and all matrix and vector product
 \Statex Set $\emNotee{\vec{a}}{t}{t} = \emNote{\vec{a}}{t}{t}{n_t}$ and $\emNotee{\mat{V}}{t}{t} = \tmat{L}\tmat{L}^\top$
 \end{algorithmic}
 \end{algorithm}
+
+\subsection{Different approches}
+We could directly minimize equaion~\ref{eqn:modeExact}. This is equivalent to a L2 penalized for a Generalized Linear Models (GLM) since only models from the exponential family is used in this package. This can be done with the usual  iteratively reweighted ridge regression. Every iteration can be done in $\bigO{n_tq^2 + q^3}$. We will go through computations in the following paragraphs. Define:
+
+\begin{equation}\begin{aligned}
+	 &\tilde h(\vec{\alpha}) =  - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
+    -\sum_{(i,j) \in R_t} \log\proppCond{y_{ijt}}{\vec{\alpha}} \\
+%
+	&\begin{aligned}
+	\tvec{g}(\vec{\alpha}) =  \tilde h'(\vec{\alpha})
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \vec{\alpha} - \left. \sum_{(i,j) \in R_t} \frac{\partial\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \vec{\alpha} - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'} \right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p'} \\
+%
+	\tmat{G}(\vec{\alpha}) = \tilde h''(\vec{\alpha})
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \left. \sum_{(i,j) \in R_t} \frac{\partial^2\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'\partial \Lparen{\vec{\alpha}'}^\top} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\diag{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p''}\mat{X}_t
+\end{aligned}\end{aligned}\end{equation}
+
+where $\diag{\cdot}$ returns a diagonal matrix with only the entries of the argument matrix in the diagonal. Algorithm~\ref{alg:GlobalMA} shows the iteratively re-weighted ridge regression. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
+
+\begin{algorithm}
+\caption{Correction step with global mode approximation with iteratively reweighted ridge regression.}\label{alg:GlobalMA}
+\begin{algorithmic}[1]\raggedright
+\Statex Set $\vec{a}^{(0)} =\emNotee{\vec{a}}{t}{t-1}$ and $k= 1$. Let $\vec{g}$ denote the inverse link function
+\Repeat
+\State %
+$\begin{aligned}
+\vec{a}^{(k)} &= \vec{a}^{(k - 1)} + \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{-\tmat{g}(\vec{a}^{(k - 1)})} \\
+	&= \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{
+		- \mat{X}_t^\top  p'' \mat{X}_t  \vec{a}^{(k - 1)}
+		+ \mat{X}_t^\top p'} \\
+	&= \Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-p'')\mat{X}_t}^{-1}\mat{X}_t^\top
+		\Lparen{-p''}\Lparen{
+		 \mat{X}_t  \vec{a}^{(k - 1)} -
+		\Lparen{p''}^{-1}p'}
+\end{aligned}$
+\UntilElse{$\LVert{\vec{a}^{(k)} - \vec{a}^{(k-1)}}/ (\LVert{\vec{a}^{(k-1)}} + \delta) < \epsilon$}{Set $k\leftarrow k + 1$}
+\State $\emNotee{\mat{V}}{t}{t} = \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{equation}
+  \tilde{p}(d) = \proppCond{y_{ijt}}{d = \vec{x}_{ij}^\top\vec{\alpha}} = \exp\Lparen{\frac{y_{ijt} d - b(d)}{\phi} + c(y_{ij},\phi)}
+\end{equation}
+
+For these models we have:
+
+\begin{equation}
+	\tilde p'(d) = y_{ijt} - b'(d) = y_{ijt} - h(c) \qquad \tilde p''(d) = -b''(d) = - \frac{\varpCond{y_{ijt}}{d = \vec{x}_{ij}^\top\vec{\alpha}}}{\phi}
+\end{equation}
+
+Particularly, non of the implemented models has a dispersion parameter, $\phi$, that is not one. From this, we see the Algorithm~\ref{alg:GlobalMA} and~algorithm~\ref{alg:EKFextra} are similar but not identical. The global mode approximation is mentioned in~\cite[Section 10.6]{durbin12}. Though, \cite{durbin12} only suggest a single step. This yield a mode estimation method which can be implemented with the regular Kalman filter and smoother. The package \pkg{KFAS} implement this linerization method. They further ease the computation in \pkg{KFAS} by using the sequantial method for the correction step for the Kalman filter described in~\cite{Koopman00}. Lastly, if the negative value under the minimization operator in equation~\ref{eqn:modeExact} is not log-concave then then the global instead of sequential optimization can be done by the second method in~\cite{Durbin00} or by the methods in~\cite{So03}.
 
 \subsection{Examples with SMA}
 We will use the \code{aids} data set to show that the predicted coefficients do converge quicker with the SMA method than with the EKF. We illustrate this below by estimating the model with SMA method and EKF method. We set the convergence threshold lower than the default and use the correction step with the Cholesky decomposition in algorithm~\ref{alg:approxModeChol}. Further, we print out information while computing by setting the \code{verbose} argument to \code{ddhazard} to a positive number.
@@ -960,7 +1012,9 @@ Embarrassingly parallel & The most computational expensive part is easily comput
 $\mat{Q}_0$ & $\mat{Q}_0$ can be set to a diagonal matrix with large entries which exact values does not have a big impact. \\
 \textbf{Cons of EKF} & \\
 \hline
-Linearisation & The linearisation may be a poor approximation.
+Linearisation & The linearisation may be a poor approximation. \\
+\hline
+  Modes & We get modes instead of the means which are required for the EM-algorithm.
 }{The pros and cons for the EKF.\label{tab:proConsEKF}}
 
 \WiTbl{
@@ -996,7 +1050,7 @@ Hyperparameters & Additional hyperparameters $(\alpha,\beta,\kappa)$ have to be 
 }{The pros and cons for the SMA.\label{tab:proConsSMA}}
 
 \subsection{Constant effects}
-We may assume that some of the coefficients are constant (time-invariant). Two methods are implemented to estimate such coefficients: one that augments the state vector and estimate the coefficients in the E-step and one that estimates the coefficients by a first order Taylor expansion in the M-step. The computation in the E-step is achieved by augmenting the state vector with the fixed coefficients. Further, we set the entries of the rows and columns of $\mat{Q}$ for the fixed coefficients to zero and set the corresponding diagonal entries of $\mat{Q}_0$ to large values. It is a common way of estimating parameters in filtering (see e.g. \cite{Harvey79}) and is equivalent to Recursive Least Squares if all coefficients are fixed.
+We may assume that some of the coefficients are constant (time-invariant). Two methods are implemented to estimate such coefficients: one that augments the state vector and estimate the coefficients in the E-step and one that estimates the coefficients by a first order Taylor expansion in the M-step. The computation in the E-step is achieved by augmenting the state vector with the fixed coefficients. Further, we set the entries of the rows and columns of $\mat{Q}$ for the fixed coefficients to zero and set the corresponding diagonal entries of $\mat{Q}_0$ to large values. It is a common way of estimating parameters in filtering (see e.g. \cite{Harvey79}) and is equivalent to Recursive Least Squares if all coefficients are fixed. This approach is also used in~\cite{Fahrmeir92} with the EKF.
 
 The other method is to estimate the fixed coefficients in the M-step. The fixed coefficients times the covariates acts as offsets in the filters. Moreover, the estimation of $\vec{a}_0$ and $\mat{Q}$ in the M-step are not affected since the only relevant terms for fixed effects in the M-step will be the last line of the log-likelihood in equation~\ref{eqn:logLike}. However, the optimization is not easily solved exactly in the M-step for the fixed coefficients. To illustrate this, let $\vec{\gamma}$ denote the fixed coefficients. Then the log likelihood we need to maximize in the M-step is:
 
@@ -1336,7 +1390,7 @@ if(!already_computed){
 
     #####
     # Define parameters
-    n_series <- 2^(9:18)
+    n_series <- 2^(9:21)
     n_vars <- c(20, 20)
     t_max <- 30L
     intercept_start <- -3.5
@@ -1350,14 +1404,14 @@ if(!already_computed){
     eps <- 0.01
     cov_params <- list(c("sigma" = 1), c("lb" = -0.5, "ub" = 0.5))
 
-    n_sims <- 5
+    n_sims <- 11
     set.seed(4368560)
     seeds <- sample.int(n_sims)
 
     ukf_alpha <- 1
     ukf_w0 <- 0.01
     ukf_beta <- 0
-    ukf_max <- 2^18
+    ukf_max <- 2^19
     ukf_kappa <- (2 * n_vars + 1) * (1 + ukf_alpha^2 * (ukf_w0 - 1)) / (ukf_alpha^2 * (1 - ukf_w0))
     ukf_Q_0 <- .01
 
@@ -1522,7 +1576,7 @@ sma_time_coef <-
 @
 
 
-The simulations are run on a laptop running Windows 10 with a Intel\textregistered~core\texttrademark~i7-6700hq cpu @ 2.60ghz processor and 16GB ram. The 64 bit Rtools 34 is used to build \proglang{R} and the \pkg{dynamichazard} package. The medians and means of the computation time are shown in figure~\ref{fig:sim_comp_time}. The EKF is more than twice as fast as the SMA. The last median computation times is $\Sexpr{max(medians[1,,"EKF","elapsed"])}$ for the EKF, $\Sexpr{max(medians[1,,"UKF","elapsed"])}$ for the UKF and $\Sexpr{max(medians[1,,"SMA","elapsed"])}$ for the SMA. The slope of the log-log regression of computation time on number of individuals are $\Sexpr{ekf_time_coef}$ for the EKF, $\Sexpr{ukf_time_coef}$ for the UKF and $\Sexpr{sma_time_coef}$ for the SMA for number of individual greater than or equal to $\Sexpr{log_reg_cut_off}$. A plot of the predicted mean square error is shown in figure~\ref{fig:sim_MSE}. TODO: comment
+The simulations are run on a laptop running Windows 10 with a Intel\textregistered~core\texttrademark~i7-6700hq cpu @ 2.60ghz processor and 16GB ram. The 64 bit Rtools 34 is used to build \proglang{R} and the \pkg{dynamichazard} package. The medians and means of the computation time are shown in figure~\ref{fig:sim_comp_time}. The EKF is more than twice as fast as the SMA. The last median computation times is $\Sexpr{max(medians[1,,"EKF","elapsed"])}$ for the EKF, $\Sexpr{max(medians[1,,"UKF","elapsed"], na.rm = T)}$ for the UKF (up to $n = \Sexpr{sim_env$ukf_max}$) and $\Sexpr{max(medians[1,,"SMA","elapsed"])}$ for the SMA. The slope of the log-log regression of computation time on number of individuals are $\Sexpr{ekf_time_coef}$ for the EKF, $\Sexpr{ukf_time_coef}$ for the UKF and $\Sexpr{sma_time_coef}$ for the SMA for number of individual greater than or equal to $\Sexpr{log_reg_cut_off}$. A plot of the predicted mean square error is shown in figure~\ref{fig:sim_MSE}. TODO: comment
 
 <<sim_comp_time, echo=FALSE, results="hide", fig.cap = "Median computation times of the simulations for each method for different values of $n$. The gray symbols to the right are the means. The EKF, UKF and SMA are respectivly the squares, triangles and circles. The scales are logarithmic.", par_1x1 = TRUE, cache = FALSE>>=
 # Plot parameters
@@ -1594,6 +1648,8 @@ Mixture models can be implemented to model heterogeneity. The mixture probabilit
 Other models can be implemented in the Survival analysis like recurrent events and competing risk (see \cite{Fahrmeir96}). Further, the methods can also be used a outside Survival analysis. For instance, we could observe real valued outcomes, multinomial outcomes, ordinal outcome etc. for each individual in each interval. The underlying time could depend on the context. E.g. it could be calender time and time since enrollment.
 
 The current implementation of parallel computation for the EKF is based on shared memory. However, it can be extended to a distributed network instead. Different ways of approaching this are introduced in~\cite[chapter 3]{rigatos17}. Two approach is either to distribute the work in each step of the filter or to run seperate filters and aggregate the filters at the end.
+
+TODO: smoothing as in KFAS.
 
 <<echo = FALSE, comment = "%", results = "asis", cache = FALSE>>=
 # Log session info to tex file

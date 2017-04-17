@@ -1,4 +1,4 @@
-  ---
+---
 title: "ddhazard"
 output: 
   pdf_document: 
@@ -151,20 +151,19 @@ source("../R/test_utils.R")
 start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
 
 # set.seed(print(round(runif(1, max = 1e6))))
-set.seed(126259)
+set.seed(126265)
 simple_ex <- test_sim_func_logit(
     n_series = 2e3, 
-    beta_start = c(2, 1),
-    intercept_start = - 5, 
-    sds = rep(1, 3),
+    beta_start = c(1.5, -1),
+    intercept_start = - 3, 
+    sds = rep(.5, 3),
     t_max = 28,
     n_vars = 2,
     lambda = 1/5,
     x_range = 1,
-    x_mean = .5,
+    x_mean = 0,
     tstart_sampl_func = start_fun)$res
 # sum(simple_ex$event)
-# max(simple_ex$event[simple_ex$id == 1])
 
 stopifnot(any(simple_ex$event[simple_ex$id == 1] == 1) && 
               all(simple_ex$event[simple_ex$id == 2] == 0))
@@ -174,7 +173,7 @@ stopifnot(any(simple_ex$event[simple_ex$id == 1] == 1) &&
 knitr::kable(head(simple_ex, 10), digits = 4)
 ```
 
-This is in the typical start and stop time format. The column `id` shows which individual the row belongs to, `tstart` is point at which the row is valid from and `tstop` is when the row is valid to. `event` is one if the individual dies at `tstop` and `x1` and `x2` are two covariates. Thus, the individual with id `1` dies at time `r simple_ex$tstop[1]` while id `2` survives all the periods we observe. The models we look at will allow for censoring to deal handle an individual like id `2`
+This is in the typical start and stop time format. The column `id` shows which individual the row belongs to, `tstart` is point at which the row is valid from and `tstop` is when the row is valid to. `event` is one if the individual dies at `tstop` and `x1` and `x2` are two covariates. Thus, the individual with id `1` dies at time `r simple_ex$tstop[2]` while id `2` survives all the periods we observe. The models we look at will allow for censoring to deal handle an individual like id `2`
 
 We will put the observations into intervals $1, 2, \dots, d$ each with length $\psi_1, \psi_2, \dots, \psi_d$. That is, we observe a total of $d$ intervals. Assume that each $\psi_t = 1$ for simplicity. Then we define the a series of indicators for each individual given by:
 $$y_{ijt} = 1_{\left\{T_i \in (t_{i,j-1}, t_{ij}] \wedge t - 1 < t_{ij} \leq t \right\}}$$
@@ -493,7 +492,7 @@ $$\begin{aligned}
 \end{aligned}$$
 
 ## Re-writting
-The above formulation has the drawback that we have to invert $\ukfNotee{y}{y}{t}$ which is infeasible when the number of observations is large. We can re-write the correction step above by using the Woodbury matrix identity to get algorithm $O(n_t^2)$ instead of $O(n_t^3)$ where $n_t = \vert R_t \vert$ is the number of elements of the risk set. In other words, the new formulation is linear in time complexity with the dimension of the observational equation
+The above formulation has the drawback that we have to invert $\ukfNotee{y}{y}{t}$ which is infeasible when the number of observations is large. We can re-write the correction step above by using the Woodbury matrix identity to get algorithm $O(n_t)$ instead of $O(n_t^3)$ where $n_t = \vert R_t \vert$ is the number of elements of the risk set. In other words, the new formulation is linear in time complexity with the dimension of the observational equation
 
 The correction step can be computed as:
 $$\begin{aligned}
@@ -506,7 +505,7 @@ $$\begin{aligned}
     \Delta\wmat{A}\diag{\vec{W}^{(cc)}}\mat{L}\diag{\vec{W}^{(cc)}}\Delta\wmat{A}^\top
 \end{aligned}$$
 
-where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(n_t^2)$ since $\widehat{\mat{H}}$ is a diagonal matrix and due to the matrix product of a $n_t \times q$ and $q \times n_t$ matrices when we compute $\mat{G}$. Further, we avoid storing a $n_t \times n_t$ matrix which reduces the memory requirements considerably when the $n_t$ is large. 
+where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(n_t)$ since $\widehat{\mat{H}}$ is a diagonal matrix.
 
 ## The Square-root Unscented Kalman filter
 
