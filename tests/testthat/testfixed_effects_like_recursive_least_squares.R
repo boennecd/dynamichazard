@@ -173,7 +173,7 @@ test_that("posterior_approx gives previous found values with fixed effects in E-
   f1 <- ddhazard(Surv(tstart, tstop, death == 2) ~ ddFixed(age) + ddFixed(edema) +
                    log(albumin) + log(protime) + log(bili), pbc2,
                  id = pbc2$id, by = 100, max_T = 3600,
-                 control = list(method = "post_approx",  fixed_terms_method = "E_step"),
+                 control = list(method = "SMA",  fixed_terms_method = "E_step"),
                  Q_0 = diag(rep(100000, 4)), Q = diag(rep(0.01, 4)))
 
   # plot(f1)

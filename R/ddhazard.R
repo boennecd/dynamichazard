@@ -26,7 +26,7 @@
 #' @section Control:
 #' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
 #' \describe{
-#' \item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"}for the Unscented Kalman Filter or \code{"post_approx"} for the posterior mode approximation method.\code{"EKF"} is the default}
+#' \item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"}for the Unscented Kalman Filter or \code{"SMA"} for the posterior mode approximation method.\code{"EKF"} is the default}
 #' \item{\code{LR}}{Learning rate for the Extended Kalman filter}
 #' \item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
 #' \item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter}
@@ -140,7 +140,7 @@ ddhazard = function(formula, data,
                           Q_0_term_for_fixed_E_step = NULL,
                           use_pinv = T, criteria = "delta_coef",
                           permu = if(!is.null(control$method))
-                            control$method == "post_approx" else F,
+                            control$method == "SMA" else F,
                           posterior_version = "cholesky")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))

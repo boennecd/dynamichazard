@@ -5,8 +5,12 @@ using uword = arma::uword;
 using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
 using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
 
+using UKF_logit = UKF_solver_New_New<UKF_solver_New_hepler_logit>;
+
 using SMA_logit =  SMA<SMA_hepler_logit>;
 using SMA_exp =  SMA<SMA_hepler_exp>;
+
+using GMA_logit =  GMA<GMA_hepler_logit>;
 
 // Define convergence criteria used later
 inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &new_est){
@@ -213,7 +217,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       criteria));
 
     if(model == "logit"){
-      solver.reset(new UKF_solver_New_logit(*p_data.get(), kappa, alpha, beta));
+      solver.reset(new UKF_logit(*p_data.get(), kappa, alpha, beta));
 
     } else if (model == "exp_combined"){
       solver.reset(new UKF_solver_New_exponential(*p_data.get(), kappa, alpha, beta));
@@ -247,7 +251,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     solver.reset(new UKF_solver_Org(*p_data.get(), kappa));
 
-  } else if (method == "post_approx"){
+  } else if (method == "SMA"){
     p_data.reset(new problem_data(
         n_fixed_terms_in_state_vec,
         X, fixed_terms, tstart, tstop, is_event_in_bin,
@@ -266,7 +270,24 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
 
-  }else{
+  } else if (method == "GMA"){
+    p_data.reset(new problem_data(
+        n_fixed_terms_in_state_vec,
+        X, fixed_terms, tstart, tstop, is_event_in_bin,
+        a_0, fixed_parems_start, Q_0, Q,
+        risk_obj, F_,
+        eps_fixed_parems, max_it_fixed_params,
+        weights,
+        n_max, eps, verbose,
+        order_, est_Q_0, debug, LR, n_threads, ridge_eps, use_pinv,
+        criteria));
+
+    if(model == "logit"){
+      solver.reset(new GMA_logit(*p_data.get()));
+    } else
+      Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
+
+  } else{
     Rcpp::stop("method '" + method  + "'is not implemented");
   }
 

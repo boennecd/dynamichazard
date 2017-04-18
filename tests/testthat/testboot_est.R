@@ -91,7 +91,7 @@ test_that("Boot works with posterior_approx and gives previous found results", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(method = "post_approx"),
+    control = list(method = "SMA"),
     Q_0 = diag(1e5, 2), Q = diag(0.01, 2),
     max_T = 45)
 
@@ -113,7 +113,7 @@ test_that("Boot do result differs when control$permu = T",{
     data = head_neck_cancer,
     by = 1,
     control = list(est_Q_0 = F, permu = T,
-                   method = "post_approx"),
+                   method = "SMA"),
     Q_0 = diag(1e5, 2), Q = diag(0.01, 2),
     max_T = 45)
 

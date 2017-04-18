@@ -69,7 +69,7 @@ test_that("Logit second deriv gives correct values for", {
 args <- list(Surv(tstart, tstop, death == 2) ~ age + edema +
                log(albumin) + log(protime) + log(bili), pbc2,
              id = pbc2$id, by = 100, max_T = 3600,
-             control = list(method = "post_approx",
+             control = list(method = "SMA",
                             posterior_version = "woodbury"),
              Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
 
@@ -121,7 +121,7 @@ test_that("Logit model for posterior_approx gives previous found values with wei
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, method = "post_approx",
+    control = list(est_Q_0 = F, method = "SMA",
                    save_data = F, save_risk_set = F,
                    permu = F), # <-- we turn off permutation!
     Q_0 = diag(100000, 2), Q = diag(0.01, 2),
@@ -154,7 +154,7 @@ test_that("Chaning the learning changes the result for the posterior approx meth
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, method = "post_approx",
+    control = list(est_Q_0 = F, method = "SMA",
                    save_data = F, save_risk_set = F),
     Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45, order = 1)
@@ -182,7 +182,7 @@ test_that("Second order model gives previous found result for posterior approx",
     by = 1,
     control = list(est_Q_0 = F,
                    save_data = F, save_risk_set = F,
-                   method = "post_approx"),
+                   method = "SMA"),
     Q_0 = diag(1e5, 4), Q = diag(0.01, 2),
     max_T = 30, order = 2)
 
@@ -198,7 +198,7 @@ test_that("Posterior gives previous found results with large by length for pbc d
   f1 <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                   log(albumin) + log(protime) + log(bili), pbc2,
                  id = pbc2$id, by = 300, max_T = 3600,
-                 control = list(method = "post_approx"),
+                 control = list(method = "SMA"),
                  Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
 
   # plot(f1)
@@ -260,7 +260,7 @@ args <- list(Surv(tstart, tstop, death == 2) ~ age + edema +
                log(albumin) + log(protime) + log(bili), pbc2,
              id = pbc2$id, by = 100, max_T = 3600,
              model = "exp_clip_time_w_jump",
-             control = list(method = "post_approx"),
+             control = list(method = "SMA"),
              Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.001, 6)))
 
 test_that("Exponential model for posterior_approx gives previous found values", {

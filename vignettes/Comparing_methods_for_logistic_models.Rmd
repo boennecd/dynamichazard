@@ -411,12 +411,12 @@ dd_fit_EKF <-
            id = pbc2$id, by = 100, max_T = 3600,
            Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
 
-dd_fit_post_approx <- 
+dd_fit_SMA <- 
   ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
              log(albumin) + log(protime) + log(bili), pbc2,
            id = pbc2$id, by = 100, max_T = 3600,
            
-           control = list(method = "post_approx"), # change estimation method 
+           control = list(method = "SMA"), # change estimation method 
                                                    # from default
            Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
 ```
@@ -427,7 +427,7 @@ Next, we plot the two sets of predicted coefficients:
 par(mfcol = c(2, 3))
 for(i in 1:6){
   plot(dd_fit_EKF, cov_index = i, col = "black")
-  plot(dd_fit_post_approx, cov_index = i, col = "red", add = TRUE)
+  plot(dd_fit_SMA, cov_index = i, col = "red", add = TRUE)
 }
 ```
 
@@ -438,7 +438,7 @@ par(mfcol = c(2, 3))
 par(cex = par_old$cex * .85, mar = par_old$mar * 1.33)
 for(i in 1:6){
   plot(dd_fit_EKF, cov_index = i, col = "black")
-  plot(dd_fit_post_approx, cov_index = i, col = "red", add = TRUE)
+  plot(dd_fit_SMA, cov_index = i, col = "red", add = TRUE)
 }
 ```
 
@@ -506,7 +506,7 @@ dd_fit_post <-
            id = pbc2$id, by = 100, max_T = 3600, 
            order = 2,
            Q_0 = diag(10000, 2), Q = 0.001, 
-           control = list(method = "post_approx"))
+           control = list(method = "SMA"))
 ```
 
 The fixed effects estimates are not to far from each other:

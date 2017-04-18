@@ -80,8 +80,8 @@ summary(bench)
 set.seed(4296745)
 sims <-
   test_sim_func_logit(
-    n_series = 1e4, n_vars = 20, beta_start = rnorm(20),
-    intercept_start = - 5, sds = c(sqrt(.1), rep(.3, 20)),
+    n_series = 1e4, n_vars = 4, beta_start = rnorm(4),
+    intercept_start = - 5, sds = c(sqrt(.1), rep(.3, 4)),
     x_range = 2, x_mean = .5)$res
 
 library(profvis)
@@ -124,26 +124,37 @@ summary(microbenchmark::microbenchmark(
     Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
     data = sims, id = sims$id, by = 1,
     Q_0 = diag(1e6, 21), Q = diag(1e-2, 21),
-    control = list(method = "post_approx"))),
+    control = list(method = "SMA"))),
   times = 5
 ))
 
 
+set.seed(4296745)
+sims <-
+  test_sim_func_logit(
+    n_series = 1e4, n_vars = 4, beta_start = rnorm(4),
+    intercept_start = - 3, sds = c(sqrt(.1), rep(.5, 4)),
+    x_range = 2, x_mean = 0)
+sum(sims$res$event)
+
 p <- profvis({
   dd_fit <- ddhazard(
     Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-    data = sims, id = sims$id, by = 1,
-    Q_0 = diag(1, 21), Q = diag(1e-2, 21),
-    control = list(method = "UKF", n_max = 10))
+    data = sims$res, id = sims$res$id, by = 1,
+    Q_0 = diag(1e5, 5), Q = diag(1e-2, 5),
+    control = list(method = "GMA", n_max = 10))
 })
+
+matplot(sims$betas, typ = "l", lty = 1)
+matplot(dd_fit$state_vecs, typ = "l", lty = 2, add = T)
 
 p
 
 summary(microbenchmark::microbenchmark(
   UKF =  ddhazard(
     Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-    data = sims, id = sims$id, by = 1,
-    Q_0 = diag(1, 21), Q = diag(1e-2, 21),
+    data = sims$res, id = sims$res$id, by = 1,
+    Q_0 = diag(1, 5), Q = diag(1e-2, 5),
     control = list(method = "UKF", n_max = 10)),
-  times = 5
+  times = 25
 ))

@@ -109,6 +109,121 @@ public:
 };
 
 
+
+
+
+template<class T>
+class UKF_solver_New_New : public Solver{
+protected:
+  problem_data &p_dat;
+  const arma::uword m;
+  const double a;
+  const double k;
+  const double b;
+  const double lambda;
+  const double w_0;
+  const double w_0_c;
+  const double w_0_cc;
+  const double w_i;
+  const double sqrt_m_lambda;
+  arma::mat sigma_points;
+
+  arma::vec weights_vec;
+  arma::vec weights_vec_inv;
+  arma::vec weights_vec_c;
+  arma::vec weights_vec_c_inv;
+  arma::vec weights_vec_cc;
+
+  inline void compute_sigma_points(const arma::vec &a_t,
+                                   arma::mat &s_points,
+                                   const arma::mat &P_x_x){
+    arma::mat cholesky_decomp;
+    if(!arma::chol(cholesky_decomp, P_x_x, "lower")){
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Cholesky decomposition failed");
+    }
+
+    s_points.col(0) = a_t;
+    for(arma::uword i = 1; i < s_points.n_cols; ++i)
+      if(i % 2 == 0)
+        s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
+          s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
+  }
+
+public:
+  UKF_solver_New_New(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
+                     Rcpp::Nullable<Rcpp::NumericVector> &alpha,
+                     Rcpp::Nullable<Rcpp::NumericVector> &beta);
+
+  void solve();
+};
+
+class UKF_solver_New_hepler_logit{
+public:
+  static constexpr bool need_risk_len = false;
+  static constexpr bool adj_risk_len = false;
+
+  static void mean_in_place(
+      double&, const double);
+
+  static double var(
+      const double, const double);
+
+  static double outcome(
+      const bool, const double, const double, const double, const double);
+};
+
+class UKF_solver_New_hepler_exp_bin{
+public:
+  static constexpr bool need_risk_len = true;
+  static constexpr bool adj_risk_len = true;
+
+  static void mean_in_place(
+      double&, const double);
+
+  static double var(
+      const double, const double);
+
+  static double outcome(
+      const bool, const double, const double, const double, const double);
+};
+
+class UKF_solver_New_exp_clip_time{
+public:
+  static constexpr bool need_risk_len = true;
+  static constexpr bool adj_risk_len = false;
+
+  static void mean_in_place(
+      double&, const double);
+
+  static double var(
+      const double, const double);
+
+  static double outcome(
+      const bool, const double, const double, const double, const double);
+};
+
+class UKF_solver_New_exp_clip_time_w_jump{
+public:
+  static constexpr bool need_risk_len = true;
+  static constexpr bool adj_risk_len = false;
+
+  static void mean_in_place(
+      double&, const double);
+
+  static double var(
+      const double, const double);
+
+  static double outcome(
+      const bool, const double, const double, const double, const double);
+};
+
+
+
+
+
+
+
+
 class UKF_solver_New : public Solver{
 protected:
   problem_data &p_dat;
@@ -278,13 +393,22 @@ public:
 
 // Solver with approximation at the posterior mode sequentially
 
+class GMA_hepler_logit{
+public:
+  static double d1(
+      const double, const bool, const double);
+
+  static double d2(
+      const double, const double);
+};
+
 template<class T>
 class GMA : public Solver
 {
   problem_data &p_dat;
 
 public:
-  SMA(problem_data &p_, std::string method_):
+  GMA(problem_data &p_):
   p_dat(p_)
   { };
 

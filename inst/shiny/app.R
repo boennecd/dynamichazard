@@ -159,7 +159,7 @@ ui <- fluidPage(
 
        selectInput("est_with_method",
                    "Choose method to use in the E-step",
-                   choices = c("UKF", "EKF", "post_approx"),
+                   choices = c("UKF", "EKF", "SMA", "GMA"),
                    selected = "EKF"),
 
        radioButtons("est_fix_options",
@@ -221,10 +221,10 @@ ui <- fluidPage(
                          value = 1)),
 
            conditionalPanel(
-             "input.est_with_method == 'post_approx'",
+             "input.est_with_method == 'SMA'",
              h4("Posterior approximation method settings"),
 
-             selectInput("post_approx_version",
+             selectInput("SMA_version",
                          "Computation version",
                          choices = c("woodbury", "cholesky"),
                          selected = "woodbury"))
@@ -387,8 +387,8 @@ server <- function(input, output) {
       if(input$use_extra_correction)
         control_list <- c(control_list,
                           list(NR_eps = .1))
-    } else if(input$est_with_method == "post_approx"){
-      control_list$posterior_version = input$post_approx_version
+    } else if(input$est_with_method == "SMA"){
+      control_list$posterior_version = input$SMA_version
     }
 
     if(n_fixed > 0){

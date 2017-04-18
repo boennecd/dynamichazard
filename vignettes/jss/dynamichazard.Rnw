@@ -930,10 +930,10 @@ We could directly minimize equaion~\ref{eqn:modeExact}. This is equivalent to a 
 %
 	\tmat{G}(\vec{\alpha}) = \tilde h''(\vec{\alpha})
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \left. \sum_{(i,j) \in R_t} \frac{\partial^2\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'\partial \Lparen{\vec{\alpha}'}^\top} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
-		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\diag{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p''}\mat{X}_t
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p''}\mat{X}_t
 \end{aligned}\end{aligned}\end{equation}
 
-where $\diag{\cdot}$ returns a diagonal matrix with only the entries of the argument matrix in the diagonal. Algorithm~\ref{alg:GlobalMA} shows the iteratively re-weighted ridge regression. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
+where we can note that $p''$ is diagonal matrix. Algorithm~\ref{alg:GlobalMA} shows the iteratively re-weighted ridge regression. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
 
 \begin{algorithm}
 \caption{Correction step with global mode approximation with iteratively reweighted ridge regression.}\label{alg:GlobalMA}
@@ -947,9 +947,8 @@ $\begin{aligned}
 		- \mat{X}_t^\top  p'' \mat{X}_t  \vec{a}^{(k - 1)}
 		+ \mat{X}_t^\top p'} \\
 	&= \Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-p'')\mat{X}_t}^{-1}\mat{X}_t^\top
-		\Lparen{-p''}\Lparen{
-		 \mat{X}_t  \vec{a}^{(k - 1)} -
-		\Lparen{p''}^{-1}p'}
+		\Lparen{
+		 \Lparen{-p''}\mat{X}_t  \vec{a}^{(k - 1)} + p'}
 \end{aligned}$
 \UntilElse{$\LVert{\vec{a}^{(k)} - \vec{a}^{(k-1)}}/ (\LVert{\vec{a}^{(k-1)}} + \delta) < \epsilon$}{Set $k\leftarrow k + 1$}
 \State $\emNotee{\mat{V}}{t}{t} = \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}$
@@ -998,7 +997,7 @@ fit_SMA <- ddhazard(
   Q_0 = diag(10000, 5),
   verbose = 5,                      # Print information while computing
   control = list(
-    method = "post_approx",         # Use SMA
+    method = "SMA",         # Use SMA
     posterior_version = "cholesky", # The Cholesky decomposition method
     eps = 0.001,                    # Convergence treshold for EM method
     n_max = 100))                   # Maximum number of iteration of EM method
@@ -1531,7 +1530,7 @@ if(!already_computed){
           }
 
           # SMA
-          out <- get_fit(data = sims$res, "post_approx", run_n)
+          out <- get_fit(data = sims$res, "SMA", run_n)
           if(!is.null(out)){
             results[run_n, i, j, "SMA", "elapsed"] <- out$time
             results[run_n, i, j, "SMA", "MSE"] <- mse_func(sims$betas, out$fit)

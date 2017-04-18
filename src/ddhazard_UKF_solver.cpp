@@ -97,6 +97,229 @@ void UKF_solver_Org::solve(){
 };
 
 
+
+
+template<class T>
+UKF_solver_New_New<T>::UKF_solver_New_New(
+  problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
+  Rcpp::Nullable<Rcpp::NumericVector> &alpha,
+  Rcpp::Nullable<Rcpp::NumericVector> &beta):
+  p_dat(p_),
+  m(p_.a_t_t_s.n_rows),
+
+  a(!alpha.isNull() ? Rcpp::as< Rcpp::NumericVector >(alpha)[0] : 1e-1),
+  k(!kappa.isNull() ?
+      Rcpp::as< Rcpp::NumericVector >(kappa)[0] :
+      m * (1 + pow(a, 2) * (.1 - 1)) / (pow(a, 2) * (1 - .1))),
+      b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 2.0),
+      lambda(pow(a, 2) * (m + k) - m),
+
+      w_0(lambda / (m + lambda)),
+      w_0_c(w_0 + 1 - pow(a, 2) + b),
+      w_0_cc(w_0 + 1 - a),
+      w_i(1 / (2 * (m + lambda))),
+      sqrt_m_lambda(std::sqrt(m + lambda)),
+
+      sigma_points(arma::mat(m, 2 * m + 1))
+{
+  if(w_0 == 0)
+    Rcpp::stop("UKF not implemented for hyperparameters that yield zero weight on first sigma point");
+
+  weights_vec = arma::vec(std::vector<double>(2 * m + 1, w_i));
+  weights_vec[0] = w_0;
+  weights_vec_inv = arma::pow(weights_vec, -1);
+
+  weights_vec_c = weights_vec;
+  weights_vec_c[0] = w_0_c;
+  weights_vec_c_inv = arma::pow(weights_vec_c, -1);
+
+  weights_vec_cc = weights_vec;
+  weights_vec_cc[0] = w_0_cc;
+
+  if(p_dat.debug){
+    Rcpp::Rcout << "alpha, beta, kappa, n_dim = "
+                << a << ", "
+                << b << ", "
+                << k << ", "
+                << m << std::endl;
+    Rcpp::Rcout << "w_0, w_0_c, w_0_cc, w_i, lambda = "
+                << w_0 << ", "
+                << w_0_c << ", "
+                << w_0_cc << ", "
+                << w_i << ", "
+                << lambda << std::endl;
+  }
+};
+
+template<class T>
+void UKF_solver_New_New<T>::solve(){
+  const arma::vec offsets = p_dat.any_fixed_in_M_step ?
+  p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat.X.n_cols, arma::fill::zeros);
+  double bin_stop = p_dat.min_start;
+  for (int t = 1; t < p_dat.d + 1; t++){
+    double bin_start = bin_stop;
+    double delta_t = p_dat.I_len[t - 1];
+    bin_stop += delta_t;
+
+    // E-step: Prediction
+    p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
+    p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
+
+    // Re-generate
+    if(p_dat.debug){
+      my_print(p_dat.V_t_less_s.slice(t - 1), "Chol decomposing for regenerations:");
+    }
+
+    compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
+                         sigma_points, p_dat.V_t_less_s.slice(t - 1));
+
+    if(p_dat.debug){
+      my_print(sigma_points, "new sigma points");
+    }
+
+    // E-step: correction-step
+    arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
+
+    // ** 1: compute means and variances **
+    arma::uword n_risk = r_set.n_elem;
+    arma::vec sqrt_weights_to_sds(n_risk, arma::fill::zeros);
+    arma::vec y_bar(n_risk, arma::fill::zeros);
+
+    arma::mat O = (sigma_points.rows(p_dat.span_current_cov).t() * p_dat.X.cols(r_set)).t();
+    O.each_col() += offsets(r_set);
+    O = arma::trunc_exp(O);
+
+    arma::ivec do_die = arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
+    arma::vec at_risk_length(n_risk), outcome(n_risk);
+    arma::vec starts = p_dat.tstop(r_set);
+    arma::vec stops = p_dat.tstop(r_set);
+
+    auto it_end = r_set.end();
+    auto outcome_it = outcome.begin();
+    auto at_risk_it = at_risk_length.begin();
+    auto start_it =  starts.begin();
+    auto stop_it = stops.begin();
+    for(auto it = r_set.begin();
+        it != it_end;
+        ++it, ++outcome_it, ++at_risk_it, ++start_it, ++stop_it){
+      const bool do_die = p_dat.is_event_in_bin(*it) == t - 1;
+      *outcome_it = T::outcome(do_die, *stop_it, bin_stop, *start_it, bin_start);
+
+      if(!T::need_risk_len)
+        continue;
+
+      *at_risk_it = do_die || T::adj_risk_len ?
+        std::min(*stop_it, bin_stop) - std::max(*start_it, bin_start) :
+        bin_stop - std::max(*start_it, bin_start);
+    }
+
+    for(arma::uword i = 0; i < sigma_points.n_cols; ++i){
+      double w = (i == 0) ? w_0 : w_i;
+      double w_c = (i == 0) ? w_0_c : w_i;
+
+      auto sd_it = sqrt_weights_to_sds.begin();
+      auto risk_len_it = at_risk_length.begin();
+      auto O_end = O.end_col(i);
+
+      for(auto O_it = O.begin_col(i);
+          O_it != O_end;
+          sd_it++, risk_len_it++, O_it++){
+        *sd_it += w_c * T::var(*O_it, *risk_len_it);
+        T::mean_in_place(*O_it, *risk_len_it);
+      }
+
+      y_bar += w * O.col(i);
+    }
+
+    sqrt_weights_to_sds += p_dat.ridge_eps;
+    sqrt_weights_to_sds = p_dat.weights(r_set) / sqrt_weights_to_sds;
+    sqrt_weights_to_sds.transform(sqrt);
+
+    // ** 4: Compute c **
+    // Substract y_bar to get deviations
+    O.each_col() -= y_bar;
+    O = (O.each_col() % sqrt_weights_to_sds).t();
+
+    arma::vec c_vec = O * (sqrt_weights_to_sds % (outcome - y_bar));
+    O = O * O.t();
+
+    // Compute intermediate matrix
+    arma::mat tmp_mat;
+    inv(tmp_mat, arma::diagmat(weights_vec_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
+    tmp_mat = O * tmp_mat;
+
+    // Compute vector for state space vector
+    c_vec = c_vec -  tmp_mat * c_vec;
+
+    // ** 5: Compute L using the notation in vignette **
+    // Re-compute intermediate matrix using the other weight vector
+    //arma::inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O);
+    inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
+    tmp_mat = O * tmp_mat;
+
+    // compute matrix for co-variance
+    O = O - tmp_mat * O;
+
+    // Substract mean to get delta sigma points
+    arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
+
+    p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.LR * delta_sigma_points * (weights_vec_cc % c_vec);
+
+    p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
+      (delta_sigma_points.each_row() % weights_vec_cc.t()) * O * (delta_sigma_points.each_row() % weights_vec_cc.t()).t();
+
+    if(p_dat.debug){
+      std::stringstream str, str_less;
+      str_less << t << "|" << t - 1;
+      str << t << "|" << t;
+
+      my_print(p_dat.V_t_less_s.slice(t - 1).diag(), "diag(V_(" + str_less.str() + "))");
+      my_print(p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str()  + "))");
+      my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str_less.str() + ")");
+      my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
+    }
+
+    // Solve should be faster than inv_sympd http://arma.sourceforge.net/docs.html#inv_sympd
+    // Solves yields a solution X to A * X = B <=> X = A^-1 B
+    // We are looking at:
+    //  X = B A^-1
+    // X^T = A^-1 B^T <=> A X^T = B^T
+    p_dat.B_s.slice(t - 1) = arma::solve(
+      p_dat.V_t_less_s.slice(t - 1), p_dat.F_ * p_dat.V_t_t_s.slice(t - 1)).t();
+  }
+};
+
+
+inline void UKF_solver_New_hepler_logit::mean_in_place(
+  double &exp_eta, const double at_risk_length){
+    exp_eta = exp_eta / (1 + exp_eta);
+}
+
+inline double UKF_solver_New_hepler_logit::var(
+    const double exp_eta, const double at_risk_length){
+  return(exp_eta / std::pow(1 + exp_eta, 2));
+}
+
+inline double UKF_solver_New_hepler_logit::outcome(
+    const bool do_die, const double start, const double bin_start,
+    const double stop, const double bin_stop){
+  return(do_die);
+}
+
+
+
+
+// Define classes
+template class UKF_solver_New_New<UKF_solver_New_hepler_logit>;
+
+
+
+
+
+
+
 // New method that use the Woodbury matrix identity to make the UKF algorithm
 // scale linearly with the dimension of the observationally.
 
