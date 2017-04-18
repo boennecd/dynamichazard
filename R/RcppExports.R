@@ -41,20 +41,20 @@ bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, et
     invisible(.Call('dynamichazard_bigglm_updateQR_rcpp', PACKAGE = 'dynamichazard', D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
 }
 
-Posterior_approx_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
-    .Call('dynamichazard_Posterior_approx_hepler_logit_compute_length', PACKAGE = 'dynamichazard', offset, coef1, coef2, w, y)
+SMA_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
+    .Call('dynamichazard_SMA_hepler_logit_compute_length', PACKAGE = 'dynamichazard', offset, coef1, coef2, w, y)
 }
 
-Posterior_approx_hepler_logit_second_d <- function(c, offset) {
-    .Call('dynamichazard_Posterior_approx_hepler_logit_second_d', PACKAGE = 'dynamichazard', c, offset)
+SMA_hepler_logit_second_d <- function(c, offset) {
+    .Call('dynamichazard_SMA_hepler_logit_second_d', PACKAGE = 'dynamichazard', c, offset)
 }
 
-Posterior_approx_hepler_exp_compute_length <- function(offset, coef1, coef2, w, y, length) {
-    .Call('dynamichazard_Posterior_approx_hepler_exp_compute_length', PACKAGE = 'dynamichazard', offset, coef1, coef2, w, y, length)
+SMA_hepler_exp_compute_length <- function(offset, coef1, coef2, w, y, length) {
+    .Call('dynamichazard_SMA_hepler_exp_compute_length', PACKAGE = 'dynamichazard', offset, coef1, coef2, w, y, length)
 }
 
-Posterior_approx_hepler_exp_second_d <- function(c, offset, length) {
-    .Call('dynamichazard_Posterior_approx_hepler_exp_second_d', PACKAGE = 'dynamichazard', c, offset, length)
+SMA_hepler_exp_second_d <- function(c, offset, length) {
+    .Call('dynamichazard_SMA_hepler_exp_second_d', PACKAGE = 'dynamichazard', c, offset, length)
 }
 
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {

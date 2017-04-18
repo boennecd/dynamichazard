@@ -225,9 +225,9 @@ public:
 
 
 
-// Solver with approximation at the posterior
+// Solver with approximation at the posterior mode sequentially
 
-class Posterior_approx_hepler_logit{
+class SMA_hepler_logit{
 private:
   static double NR_delta(
       const double offset, const double coef1, const double coef2,
@@ -243,10 +243,7 @@ public:
                          const double);
 };
 
-
-
-
-class Posterior_approx_hepler_exp{
+class SMA_hepler_exp{
 private:
   static double NR_delta(
       const double offset, const double coef1, const double coef2,
@@ -262,20 +259,34 @@ public:
                          const double);
 };
 
-
 template<class T>
-class Posterior_approx : public Solver
+class SMA : public Solver
 {
   problem_data &p_dat;
   std::string method;
 
 public:
-  Posterior_approx(problem_data &p_, std::string method_):
+  SMA(problem_data &p_, std::string method_):
   p_dat(p_), method(method_)
   {
     if(method != "woodbury" && method != "cholesky")
       Rcpp::stop("Method '", method, "' not implemented");
   };
+
+  void solve();
+};
+
+// Solver with approximation at the posterior mode sequentially
+
+template<class T>
+class GMA : public Solver
+{
+  problem_data &p_dat;
+
+public:
+  SMA(problem_data &p_, std::string method_):
+  p_dat(p_)
+  { };
 
   void solve();
 };

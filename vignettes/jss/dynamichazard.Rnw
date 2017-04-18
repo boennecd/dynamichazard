@@ -114,6 +114,18 @@ State space models can be implemented to provide an computational efficient way 
 % \newcommand{\VAR}{Var}
 % \newcommand{\E}{E}
 
+
+
+\newcommand\eqnGblModeTerma{
+\begin{pmatrix}
+  	\diag{\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{1/2} & \mat{0} \\
+	\mat{0} &  \emNotee{\mat{V}}{t}{t-1}^{1/2}
+\end{pmatrix}}
+\newcommand\eqnGblModeTermb{
+\begin{pmatrix}\mat{X}_t \\ \mat{I} \end{pmatrix}}
+\newcommand\eqnGblModeTermc{
+\begin{pmatrix} \vec{z} \\  \emNotee{\vec{\alpha}}{t}{t-1} \end{pmatrix}}
+
 \begin{document}
 
 <<setup, echo=FALSE, cache=FALSE>>=
@@ -955,6 +967,23 @@ For these models we have:
 \end{equation}
 
 Particularly, non of the implemented models has a dispersion parameter, $\phi$, that is not one. From this, we see the Algorithm~\ref{alg:GlobalMA} and~algorithm~\ref{alg:EKFextra} are similar but not identical. The global mode approximation is mentioned in~\cite[Section 10.6]{durbin12}. Though, \cite{durbin12} only suggest a single step. This yield a mode estimation method which can be implemented with the regular Kalman filter and smoother. The package \pkg{KFAS} implement this linerization method. They further ease the computation in \pkg{KFAS} by using the sequantial method for the correction step for the Kalman filter described in~\cite{Koopman00}. Lastly, if the negative value under the minimization operator in equation~\ref{eqn:modeExact} is not log-concave then then the global instead of sequential optimization can be done by the second method in~\cite{Durbin00} or by the methods in~\cite{So03}.
+
+An alternative to algorithm~\ref{alg:GlobalMA} for the exponential family is to re-write the orignal problem to use working responses to get a weighted least squares problem of the form:
+
+\begin{equation}
+\begin{aligned}
+&\vec{z} = \mat{X}_t  \vec{a}^{(k-1)} + \Lparen{\vec{y}_t - \vec{h}\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}}\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}} \\
+%
+&\vphantom{\LVert{\underbrace{\eqnGblModeTerma}_{\tmat{W}}}}
+%
+\LVert{
+\smash{\underbrace{\eqnGblModeTerma}_{\tmat{W}^{1/2}}}\vphantom{\eqnGblModeTerma}
+ \Lparen{
+  \smash{\underbrace{\eqnGblModeTermb}_{\tmat{X}_t}}\vphantom{\eqnGblModeTermb} \vec{\alpha}
+  - \smash{\underbrace{\eqnGblModeTermc}_{\tvec{z}}}\vphantom{\eqnGblModeTermc}}}
+\end{aligned}\end{equation}%
+%
+where $\vec{z}$ is the working responses, $\vec{h}$ temporaily denotes the inverse link function, the deriative $\vec{h}'$ is with respect to the state vector $\vec{\alpha}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{W}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{W}\tvec{z}$. This problem can be solved with mehtods for weighted least squares problem. A brief review and comparison of methods is in~\cite{Leary90}.
 
 \subsection{Examples with SMA}
 We will use the \code{aids} data set to show that the predicted coefficients do converge quicker with the SMA method than with the EKF. We illustrate this below by estimating the model with SMA method and EKF method. We set the convergence threshold lower than the default and use the correction step with the Cholesky decomposition in algorithm~\ref{alg:approxModeChol}. Further, we print out information while computing by setting the \code{verbose} argument to \code{ddhazard} to a positive number.

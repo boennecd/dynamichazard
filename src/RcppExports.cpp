@@ -178,9 +178,9 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// Posterior_approx_hepler_logit_compute_length
-double Posterior_approx_hepler_logit_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y);
-RcppExport SEXP dynamichazard_Posterior_approx_hepler_logit_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP) {
+// SMA_hepler_logit_compute_length
+double SMA_hepler_logit_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y);
+RcppExport SEXP dynamichazard_SMA_hepler_logit_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -189,25 +189,25 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type coef2(coef2SEXP);
     Rcpp::traits::input_parameter< const double >::type w(wSEXP);
     Rcpp::traits::input_parameter< const bool >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(Posterior_approx_hepler_logit_compute_length(offset, coef1, coef2, w, y));
+    rcpp_result_gen = Rcpp::wrap(SMA_hepler_logit_compute_length(offset, coef1, coef2, w, y));
     return rcpp_result_gen;
 END_RCPP
 }
-// Posterior_approx_hepler_logit_second_d
-double Posterior_approx_hepler_logit_second_d(const double c, const double offset);
-RcppExport SEXP dynamichazard_Posterior_approx_hepler_logit_second_d(SEXP cSEXP, SEXP offsetSEXP) {
+// SMA_hepler_logit_second_d
+double SMA_hepler_logit_second_d(const double c, const double offset);
+RcppExport SEXP dynamichazard_SMA_hepler_logit_second_d(SEXP cSEXP, SEXP offsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const double >::type c(cSEXP);
     Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
-    rcpp_result_gen = Rcpp::wrap(Posterior_approx_hepler_logit_second_d(c, offset));
+    rcpp_result_gen = Rcpp::wrap(SMA_hepler_logit_second_d(c, offset));
     return rcpp_result_gen;
 END_RCPP
 }
-// Posterior_approx_hepler_exp_compute_length
-double Posterior_approx_hepler_exp_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y, const double length);
-RcppExport SEXP dynamichazard_Posterior_approx_hepler_exp_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP, SEXP lengthSEXP) {
+// SMA_hepler_exp_compute_length
+double SMA_hepler_exp_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y, const double length);
+RcppExport SEXP dynamichazard_SMA_hepler_exp_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP, SEXP lengthSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -217,20 +217,20 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type w(wSEXP);
     Rcpp::traits::input_parameter< const bool >::type y(ySEXP);
     Rcpp::traits::input_parameter< const double >::type length(lengthSEXP);
-    rcpp_result_gen = Rcpp::wrap(Posterior_approx_hepler_exp_compute_length(offset, coef1, coef2, w, y, length));
+    rcpp_result_gen = Rcpp::wrap(SMA_hepler_exp_compute_length(offset, coef1, coef2, w, y, length));
     return rcpp_result_gen;
 END_RCPP
 }
-// Posterior_approx_hepler_exp_second_d
-double Posterior_approx_hepler_exp_second_d(const double c, const double offset, const double length);
-RcppExport SEXP dynamichazard_Posterior_approx_hepler_exp_second_d(SEXP cSEXP, SEXP offsetSEXP, SEXP lengthSEXP) {
+// SMA_hepler_exp_second_d
+double SMA_hepler_exp_second_d(const double c, const double offset, const double length);
+RcppExport SEXP dynamichazard_SMA_hepler_exp_second_d(SEXP cSEXP, SEXP offsetSEXP, SEXP lengthSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const double >::type c(cSEXP);
     Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
     Rcpp::traits::input_parameter< const double >::type length(lengthSEXP);
-    rcpp_result_gen = Rcpp::wrap(Posterior_approx_hepler_exp_second_d(c, offset, length));
+    rcpp_result_gen = Rcpp::wrap(SMA_hepler_exp_second_d(c, offset, length));
     return rcpp_result_gen;
 END_RCPP
 }
