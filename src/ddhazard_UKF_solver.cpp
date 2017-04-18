@@ -191,44 +191,29 @@ void UKF_solver_New_New<T>::solve(){
 
     arma::ivec do_die = arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
     arma::vec at_risk_length(n_risk), outcome(n_risk);
-    arma::vec starts = p_dat.tstop(r_set);
+    arma::vec starts = p_dat.tstart(r_set);
     arma::vec stops = p_dat.tstop(r_set);
 
-    auto it_end = r_set.end();
-    auto outcome_it = outcome.begin();
-    auto at_risk_it = at_risk_length.begin();
-    auto start_it =  starts.begin();
-    auto stop_it = stops.begin();
-    for(auto it = r_set.begin();
-        it != it_end;
-        ++it, ++outcome_it, ++at_risk_it, ++start_it, ++stop_it){
-      const bool do_die = p_dat.is_event_in_bin(*it) == t - 1;
-      *outcome_it = T::outcome(do_die, *stop_it, bin_stop, *start_it, bin_start);
+    for(arma::uword i = 0; i < n_risk; i++){
+      outcome[i] = T::outcome(do_die[i], starts[i], bin_start, stops[i], bin_stop);
 
       if(!T::need_risk_len)
         continue;
 
-      *at_risk_it = do_die || T::adj_risk_len ?
-        std::min(*stop_it, bin_stop) - std::max(*start_it, bin_start) :
-        bin_stop - std::max(*start_it, bin_start);
+      at_risk_length[i] = T::adj_risk_len && do_die[i] == 1L?
+        bin_stop - std::max(starts[i], bin_start) :
+        std::min(stops[i], bin_stop) - std::max(starts[i], bin_start);
     }
 
-    for(arma::uword i = 0; i < sigma_points.n_cols; ++i){
-      double w = (i == 0) ? w_0 : w_i;
-      double w_c = (i == 0) ? w_0_c : w_i;
+    for(arma::uword j = 0; j < sigma_points.n_cols; ++j){
+      double w = (j == 0) ? w_0 : w_i;
+      double w_c = (j == 0) ? w_0_c : w_i;
 
-      auto sd_it = sqrt_weights_to_sds.begin();
-      auto risk_len_it = at_risk_length.begin();
-      auto O_end = O.end_col(i);
+      for(arma::uword i = 0; i < n_risk; i++)
+        T::mean_n_var_in_place(O(i,j), at_risk_length[i], sqrt_weights_to_sds[i], w_c);
 
-      for(auto O_it = O.begin_col(i);
-          O_it != O_end;
-          sd_it++, risk_len_it++, O_it++){
-        *sd_it += w_c * T::var(*O_it, *risk_len_it);
-        T::mean_in_place(*O_it, *risk_len_it);
-      }
 
-      y_bar += w * O.col(i);
+      y_bar += w * O.col(j);
     }
 
     sqrt_weights_to_sds += p_dat.ridge_eps;
@@ -292,14 +277,10 @@ void UKF_solver_New_New<T>::solve(){
 };
 
 
-inline void UKF_solver_New_hepler_logit::mean_in_place(
-  double &exp_eta, const double at_risk_length){
-    exp_eta = exp_eta / (1 + exp_eta);
-}
-
-inline double UKF_solver_New_hepler_logit::var(
-    const double exp_eta, const double at_risk_length){
-  return(exp_eta / std::pow(1 + exp_eta, 2));
+inline void UKF_solver_New_hepler_logit::mean_n_var_in_place(
+  double &exp_eta, const double at_risk_length, double &var, const double w){
+  var += w * exp_eta / std::pow(1 + exp_eta, 2);
+  exp_eta = exp_eta / (1 + exp_eta);
 }
 
 inline double UKF_solver_New_hepler_logit::outcome(
@@ -311,9 +292,68 @@ inline double UKF_solver_New_hepler_logit::outcome(
 
 
 
-// Define classes
-template class UKF_solver_New_New<UKF_solver_New_hepler_logit>;
+inline void UKF_solver_New_hepler_exp_bin::mean_n_var_in_place(
+    double &exp_eta, const double at_risk_length, double &var, const double w){
+  const double v = at_risk_length * exp_eta;
+  const double inv_exp_v = exp(-1 * v);
 
+  var += w * exp_model_funcs::var_chance_die(v, inv_exp_v);
+  exp_eta = exp_model_funcs::expect_chance_die(v, inv_exp_v);
+}
+
+inline double UKF_solver_New_hepler_exp_bin::outcome(
+    const bool do_die, const double start, const double bin_start,
+    const double stop, const double bin_stop){
+  return(do_die);
+}
+
+
+
+inline void UKF_solver_New_hepler_exp_clip_time::mean_n_var_in_place(
+  double &exp_eta, const double at_risk_length, double &var, const double w){
+  const double v = at_risk_length * exp_eta;
+  const double inv_exp_v = exp(-1 * v);
+
+  var += w * exp_model_funcs::var_wait_time(v, at_risk_length,  exp_eta, inv_exp_v);
+  exp_eta = exp_model_funcs::expect_time(v, at_risk_length, inv_exp_v, exp_eta);
+}
+
+inline double UKF_solver_New_hepler_exp_clip_time::outcome(
+    const bool do_die, const double start, const double bin_start,
+    const double stop, const double bin_stop){
+  return(std::min(stop, bin_stop) - std::max(start, bin_start));
+}
+
+
+inline void UKF_solver_New_hepler_exp_clip_time_w_jump::mean_n_var_in_place(
+    double &exp_eta, const double at_risk_length, double &var, const double w){
+  const double v = at_risk_length * exp_eta;
+  const double inv_exp_v = exp(-1 * v);
+
+  var += w * exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, at_risk_length);
+  exp_eta = exp_model_funcs::expect_time_w_jump(exp_eta, pow(exp_eta, -1), inv_exp_v, at_risk_length);
+}
+
+inline double UKF_solver_New_hepler_exp_clip_time_w_jump::outcome(
+    const bool do_die, const double start, const double bin_start,
+    const double stop, const double bin_stop){
+  const double t1 = std::max(start, bin_start);
+  const double xtra = do_die ? bin_stop - t1 : 0.;
+
+  return(std::min(stop, bin_stop) - t1 - xtra);
+}
+
+
+
+
+
+
+
+// D  efine classes
+template class UKF_solver_New_New<UKF_solver_New_hepler_logit>;
+template class UKF_solver_New_New<UKF_solver_New_hepler_exp_bin>;
+template class UKF_solver_New_New<UKF_solver_New_hepler_exp_clip_time>;
+template class UKF_solver_New_New<UKF_solver_New_hepler_exp_clip_time_w_jump>;
 
 
 
