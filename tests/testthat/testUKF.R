@@ -27,6 +27,20 @@ test_that("UKF throws error when first sigm points weight is zero", {
   }, regexp = "UKF not implemented for hyperparameters that yield zero weight on first sigma point")
 })
 
+test_that("UKF throws error when one tries 'exp_combined'", {
+  expect_error({
+    ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1, Q_0 = diag(1, 2), a_0 = c(-3, 0),
+      Q = diag(1e-1, 2),
+      model = "exp_combined",
+      control = list(kappa = 0, method = "UKF"),
+      max_T = 30,
+      id = head_neck_cancer$id, order = 1)
+  }, regexp = "'exp_combined' is not supported since version 0.3.0")
+})
+
 
 test_that("UKF on head_neck works with logit model", {
   suppressMessages(result <- ddhazard(
@@ -191,7 +205,7 @@ test_that("UKF on simulated data works with exponential model where both variabl
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exp_combined"))
+    model = "exp_clip_time_w_jump"))
 
   # matplot(sims$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, type = "l", lty = 2, add = T)

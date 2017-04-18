@@ -1105,7 +1105,7 @@ $$\tiny\begin{aligned}
 The at risk length is computed in the same way as the right clipped time variable. That is, we use $\bar t_{ij}$ instead of the $\min$ term in case of a death. You can estimate with the right clipped time variable by setting the argument `model = "exp_clip_time_w_jump"` in the call to `ddhazard`
 
 ## Combining the first two
-Another idea is to use the binary variable and the first mentioned right clipped time at the same time. Though, this method has shown worse performance on simulated data. Thus, the details of the method is omitted
+Another idea is to use the binary variable and the first mentioned right clipped time at the same time. Though, this method has shown worse performance on simulated data. Thus, the details of the method is omitted and this version is not supported since version 0.3.0.
 
 ## Fixed effects
 Fixed effects in the M-step are estimated using a Poisson model with an offset equal to the logarithm of the time observed in each time interval plus the estimated offset from time-varying effects. That is, we use that if an arrival time $T$ is exponential distributed with rate $\lambda$ then having an outcome at at time $t$ is Poisson distributed $Y\sim\text{Poisson}(\lambda t)$. For example, say that we fit the following model:
@@ -1323,134 +1323,6 @@ TODO: mention Hogwill, motivate why to use with binary/sparse features
 	$\Delta\mat{K}$ & Deviation of matrix $\mat{K}$ with $\mat{K}$ defined in the context \\  \hline
 	$\ukfNotee{a}{b}{t}$ & The correlation between a vector $\vec{a}_t$ and a vector $\vec{b}_t$ using the information up to time $t$ 
 }
-
-<!-- ## Combining the first two continuous models 
-An idea is to combine the binary method and the first mentioned time variable for the continuous time model. Thus, we can use tuples $(y_{i,j,s}, \Delta_{i,j})$ for each observation. Further, we change the inverse link function for the binary outcome to:
-$$\begin{aligned} 
-h^{\tilde Y}_{i,j}(\vec{x}_{i,j}^\top \vec{\alpha}_{s}) =  1 -  \exp\Lparen{ - \exp(\vec{x}_{i,j}^\top \vec{\alpha}_{s}) 
-    \Lparen{\bar t_{i,j} - \max\{ s - 1, t_{i,j-1} \} }}
-\end{aligned}$$
-
-such that we round the stop time for the binary in case of death (we use $\bar t_{i,j}$ instead of the $\min$ term). The motivation is to ease derivation and as we can compute the mean without knowing the actual outcome time.
-
-The use of tuples means that we get covariance terms in the observational equation. This will affect the score vector and information matrix ($\vec{u}_t(\emNotee{\vec{a}}{t}{t-1})$ and $\mat{U}_t(\emNotee{\vec{a}}{t}{t-1})$) in the EKF. Further, it will affect the covariance matrix $\widehat{\mat{H}}$ in the UKF. First though, we have to derive the covariance. Assume that all observations in the time interval $s$ that focus on have $(t_{i, j-1}, t_{i,j}]$ with at most length one and are inside a time interval such that $\Lceil{t_{i,j}} - 1 = \Lfloor{t_{i,j-1}}$. Then, we can drop the third subscript on the binary outcomes. Further we define the following variables to ease the notation:
-$$\delta = \bar t_{i,j}-t_{i,j-1}, \qquad \lambda = \exp \Lparen{\vec{x}_{i,j}^\top \vec{\alpha}_s}, \qquad
-  Z \sim \text{Exp}\Lparen{\lambda}$$
-
-Consequently, we have the following relation (conditional on having survived up to time $t_{i,j-1}$):
-$$Y_{i,j} \sim 1_{\Lbrace{Z\in[0,\delta\}}}, \qquad \Delta_{i,j} \sim Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}} = \left\{\begin{matrix}Z & Y_{i,j}=1 \\  \delta & Y_{i,j} = 0\end{matrix}\right.$$
-
-where $\sim$ denotes "similarly distributed" and $1_{\Lbrace{\cdot}}$ is one if the condition in the braces are satisfied and zero otherwise. Hence, we can find the covariance by: 
-$$\begin{aligned}
-\covp{1_{\Lbrace{Z\in[0,\delta\}}}, Z + (\delta - Z) 1_{\Lbrace{Z\in[\delta,\infty\}}}}
-  \hspace{-150pt}& \\ 
-  &=\covp{1_{\Lbrace{Z\in[0,\delta\}}}, Z}
-  + \delta\covp{1_{\Lbrace{Z\in[0,\delta\}}},1_{\Lbrace{Z\in[\delta,\infty\}}}} 
-  - \covp{1_{\Lbrace{Z\in[0,\delta\}}}, Z 1_{\Lbrace{Z\in[\delta,\infty\}}}} \\
-  &=-\exp (-\lambda\delta)\delta 
-    + \delta \Lparen{- \Lparen{1 - \exp(-\lambda\delta)} \exp(-\lambda\delta)} 
-    - \frac{- \Lparen{1 - \exp(-\lambda\delta)} \exp(-\lambda\delta)(1+\delta\lambda)}{\lambda} \\
-  &= - \frac{\exp (-2\lambda\delta)\Lparen{1 + \lambda\delta\exp(\lambda\delta)-\exp(\lambda\delta)}}{\lambda}
-\end{aligned}$$
-
-Next, define,
-$$\varp{Y_{i,j}} = \sigma_{Y_{i,j}}^2, \qquad \varp{\Delta_{i,j}} = \sigma_{\Delta_{i,j}}^2,  \qquad
-  \covp{Y_{i,j}, \Delta_{i,j}} = \xi_{i,j}$$
-
-where we suppress the dependents on $\vec{\alpha}_s$. Further, order the observational equation such that
-$$\vec{y}_t = \Lparen{y_{1,i_{1,1}}, \Delta_{1,i_{1,1}},
-  y_{1,i_{1,2}}, \Delta_{1,i_{1,2}} \dots y_{m,i_{m,k}}, \Delta_{m,i_{m,k}}}^\top$$
-  
-where $i_{j,i}$ is an index that correspond to the index of the $j$'th individuals $i$'th observation in this time interval. Although this notation is tedious, it is included to stress that any given individual could have none, one or multiple entries in this time interval $s$. Further, notice that $\vec{y}_t$ refers to the whole observation vector (including clipped stop times) while $y_{l,j}$ refers to the indicator for whether individual $l$ dies at his $j$'th observations. The co-variance matrix $\mat{H}_s(\vec{\alpha}_s)$ is then a block diagonal matrix with the form:
-
-$$\mat{H}_s(\vec{\alpha}_s) = \begin{pmatrix}
-  \mat{H}_{1,i_{1,1}}(\vec{\alpha}_s) & \mat{0} & \cdots & \mat{0} \\
-  \mat{0} & \mat{H}_{1,i_{1,2}}(\vec{\alpha}_s) & \ddots & \vdots \\
-  \vdots & \ddots & \ddots & \mat{0} \\
-  \mat{0} & \cdots & \mat{0} & \mat{H}_{m,i_{m,k}}(\vec{\alpha}_s)
-\end{pmatrix}, \qquad 
-  \mat{H}_{l,j}(\vec{\alpha}_s) = \begin{pmatrix}
-    \sigma_{Y_{l,j}}^2 & \xi_{l,j} \\
-    \xi_{l,j} & \sigma_{\Delta_{l,j}}^2
-  \end{pmatrix}$$
-  
-You can estimate with the tuples method by setting the argument `model = "exp_combined"` in the call to `ddhazard`
-
-### EKF
-Next, we turn to the EKF. In order to update the EKF we have to go back to the formulas for the score vector and information matrix. They are:
-$$\begin{array}{c}
-  \dot{\vec{z}}_s(\alpha_s) = \left. \frac{\partial\vec{z}_s(\vec{\eta})}{\partial \vec{\eta}} \right\vert_{\vec{\eta}= \vec{\alpha}_s}\vspace{10pt} \\
-  \vec{u}_s(\vec{\alpha}_s) = \dot{\vec{z}}_s(\alpha_t) \mat{H}_s(\vec{\alpha}_s)^{-1}\Lparen{\vec{y}_s - \vec{z}_s(\vec{\alpha}_s)}, \qquad
-\mat{U}_s(\vec{\alpha}_s) = \dot{\vec{z}}_s(\alpha_s) \mat{H}_s(\vec{\alpha}_s)^{-1} \dot{\vec{z}}_s(\alpha_s)^\top
-\end{array}$$
-
-where we get the simpler expression we saw previously when $\mat{H}_s(\vec{\alpha}_s)$ is a diagonal matrix. In the present case the inverse covariance matrix is block diagonal matrix given by: 
-$$\mat{H}_s(\vec{\alpha}_s)^{-1} = \begin{pmatrix}
-  \mat{H}_{1,i_{1,1}}(\vec{\alpha}_s)^{-1} & \mat{0} & \cdots & \mat{0} \\
-  \mat{0} & \mat{H}_{1,i_{1,2}}(\vec{\alpha}_s)^{-1} & \ddots & \vdots \\
-  \vdots & \ddots & \ddots & \mat{0} \\
-  \mat{0} & \cdots & \mat{0} & \mat{H}_{m,i_{m,k}}(\vec{\alpha}_s)^{-1}
-\end{pmatrix}$$
-
-Setting $\mat{K}_{l,j} = \mat{H}_{l,j}(\vec{\alpha}_s)^{-1}$ gives us the following score matrix:
-$$\small\begin{aligned}
-\vec{u}_s(\vec{\alpha}_s) = \sum_{l,j} 
-  &\vec{x}_{l,j}\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\Lparen{\MyInd{\mat{K}_{l,j}}{1,1} + \MyInd{\mat{K}_{l,j}}{1,2}}(y_{l,j} - h^{\tilde Y}_{l,j}(\vec{x}_{l,j}^\top\vec{\alpha}_s)) \\
-  &\hspace{4pt}+\vec{x}_{l,j}\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\Lparen{\MyInd{\mat{K}_{l,j}}{2,2} + \MyInd{\mat{K}_{l,j}}{1,2}}(\Delta_{l,j} - h^\Delta_{l,j}(\vec{x}_{l,j}^\top\vec{\alpha}_s))
-\end{aligned}$$
-
-where $\Lparen{h^\Delta_{l,j}}'$ and $\Lparen{h^{\tilde Y}_{l,j}}'$ are the first derivatives of the inverse link functions w.r.t. the linear predictor for the clipped waiting time and the binary outcome. Similarly, $h^\Delta_{l,j}$ and $h^{\tilde Y}_{l,j}$ are the inverse link functions the clipped waiting time and the binary outcome. We need the subscript because each observation can be at risk for different amount of time in the time interval we are focusing on. Lastly, $(\cdot)_{ij}$ is the $(i,j)$'th entry of the matrix in the parenthesis. Finally, the information matrix can be computed by:
-
-$$\small\begin{aligned}
-\mat{U}_s(\vec{\alpha}_s) = \sum_{i=1}^r 
-  &\vec{x}_{l,j}\Lparen{\Lparen{\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)}^2\MyInd{\mat{K}_{l,j}}{1,1} +
-    \Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\cdot\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\MyInd{\mat{K}_{l,j}}{1,2}}\vec{x}_{l,j}^\top\\
-  & \hspace{4pt}+\vec{x}_{l,j}\Lparen{\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\cdot\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\MyInd{\mat{K}_{l,j}}{1,2} +
-    \Lparen{\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)}^2\MyInd{\mat{K}_{l,j}}{2,2}}\vec{x}_{l,j}^\top
-\end{aligned}$$
-
-The method with the tuples is more prone to diverge due to the correlation between the tuples. Thus, a ridge regression like solution is used where $\mat{H}_s(\vec{\alpha}_t)$ is replaced by:
-$$\widetilde{\mat{H}}_s(\vec{\alpha}_s) = \mat{H}_s(\vec{\alpha}_s) + \xi\mat{I}$$
-
-Below, the formulas are given for each of elements of the block diagonal matrices of the inverse covariance matrix with the ridge regression like term:
-
-$$\tiny\begin{aligned} 
-\MyInd{\widetilde{\mat{K}}_{l,j}}{11} &=
-  \frac{-2 \delta _{l,j} \lambda _{l,j} \exp\Lparen{-\delta _{l,j} \lambda _{l,j}}-\exp\Lparen{-2 \delta
-   _{l,j} \lambda _{l,j}}+\xi  \lambda _{l,j}^2+1}{\exp\Lparen{-\delta _{l,j} \lambda _{l,j}} \left(-2
-   \xi  \delta _{l,j} \lambda _{l,j}+\xi  \lambda _{l,j}^2+1\right)+\exp\Lparen{-2 \delta _{l,j}
-   \lambda _{l,j}} \left(-\delta _{l,j}^2 \lambda _{l,j}^2-\xi  \lambda _{l,j}^2-\xi
-   -2\right)+\exp\Lparen{-3 \delta _{l,j} \lambda _{l,j}}+\xi ^2 \lambda _{l,j}^2+\xi }\\
-%
-\MyInd{\widetilde{\mat{K}}_{l,j}}{2,2} &=
-  \frac{\lambda _{l,j}^2 \left(-\exp\Lparen{-2 \delta _{l,j} \lambda _{l,j}}\right)+\lambda _{l,j}^2
-     \exp\Lparen{-\delta _{l,j} \lambda _{l,j}}+\xi  \lambda _{l,j}^2}{\exp\Lparen{-\delta _{l,j} \lambda _{l,j}}
-     \left(-2 \xi  \delta _{l,j} \lambda _{l,j}+\xi  \lambda _{l,j}^2+1\right)+\exp\Lparen{-2 \delta
-     _{l,j} \lambda _{l,j}} \left(-\delta _{l,j}^2 \lambda _{l,j}^2-\xi  \lambda _{l,j}^2-\xi
-     -2\right)+\exp\Lparen{-3 \delta _{l,j} \lambda _{l,j}}+\xi ^2 \lambda _{l,j}^2+\xi } \\
-%
-\MyInd{\widetilde{\mat{K}}_{l,j}}{1,2} &=
-  \frac{\lambda _{l,j} \exp\Lparen{-2 \delta _{l,j} \lambda _{l,j}}+\exp\Lparen{-\delta _{l,j} \lambda _{l,j}}
-     \left(\delta _{l,j} \lambda _{l,j}^2-\lambda _{l,j}\right)}{\exp\Lparen{-\delta _{l,j} \lambda
-     _{l,j}} \left(-2 \xi  \delta _{l,j} \lambda _{l,j}+\xi  \lambda _{l,j}^2+1\right)+\exp\Lparen{-2
-     \delta _{l,j} \lambda _{l,j}} \left(-\delta _{l,j}^2 \lambda _{l,j}^2-\xi  \lambda
-     _{l,j}^2-\xi -2\right)+\exp\Lparen{-3 \delta _{l,j} \lambda _{l,j}}+\xi ^2 \lambda _{l,j}^2+\xi }
-\end{aligned}$$
-
-where $\lambda_{l,j} = \exp(\vec{x}_{l,j}^\top\vec{\alpha}_s)$. Though, it is numerically more stable to reduce the following three factors where the two first are used for the score vector and the last factor is used for the information matrix
-
-$$\begin{aligned}
-&\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\Lparen{\MyInd{\MyInd{\widetilde{\mat{K}}_{l,j}}{11}}{ii} + \MyInd{\widetilde{\mat{K}}_{l,j}}{1,2}} \\
-&\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\Lparen{\MyInd{\widetilde{\mat{K}}_{l,j}}{2,2} + \MyInd{\widetilde{\mat{K}}_{l,j}}{1,2}}\\
-&\Lparen{\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)}^2\MyInd{\MyInd{\widetilde{\mat{K}}_{l,j}}{11}}{ii} +
-    2\Lparen{h^{\tilde Y}_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\cdot\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)\MyInd{\widetilde{\mat{K}}_{l,j}}{1,2} + 
-    \Lparen{\Lparen{h^\Delta_{l,j}}'(\vec{x}_{l,j}^\top\vec{\alpha}_s)}^2\MyInd{\widetilde{\mat{K}}_{l,j}}{2,2}
-\end{aligned}$$
-
-### UKF
-As with the UKF for the logit model, the multiplication by the inverse of $\widehat{\mat{H}}$ can be an issue. More so, the covariance terms does not help in this regard as the matrix can become (even) closer to singular. Hence, we replace the $\widehat{\mat{H}}$ by:
-$$\widetilde{\widehat{\mat{H}}} = \widehat{\mat{H}} + \xi \mat{I}$$
-The matrix inversion of the matrix is easily computed since it only involves inversions of $2\times 2$ matrices -->
 
 # References
 

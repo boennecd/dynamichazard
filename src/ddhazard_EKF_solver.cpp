@@ -81,73 +81,6 @@ public:
   {}
 };
 
-// worker for the continous model with exponential distribution
-class EKF_filter_worker_exponential : public EKF_filter_worker {
-private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
-    // Compute intermediates
-    const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
-    const double w = dat.weights(*it);
-
-    double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
-    const double eta = arma::dot(i_a_t, x_) + offset;
-
-    const double do_die = (dat.is_event_in_bin(*it) == bin_number);
-    const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
-    const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
-
-    const double exp_eta = exp(eta);
-    const double inv_exp_eta = pow(exp_eta, -1);
-
-    const double v = at_risk_length * exp_eta;
-    const double exp_v = exp(v);
-    const double inv_exp_v = pow(exp_v, -1.0);
-
-    const double expect_time = exp_model_funcs::expect_time(
-      v, at_risk_length, inv_exp_v, exp_eta);
-
-    const double expect_chance_die = exp_model_funcs::expect_chance_die(v, inv_exp_v);
-
-    const double fac_score_die = exp_model_funcs::EKF_fac_score_die(
-      exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
-    const double fac_score_time = exp_model_funcs::EKF_fac_score_time(
-      exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
-    const double var_fac = exp_model_funcs::EKF_fac_var(
-      exp_eta, v, exp_v, at_risk_length, dat.ridge_eps);
-
-    u_ += x_ * (
-      w * (fac_score_time * (time_outcome - expect_time) +
-        fac_score_die * (do_die - expect_chance_die)));
-
-    sym_mat_rank_one_update(w * var_fac, x_, U_);
-
-    if(compute_z_and_H){
-      // Compute terms from waiting time
-      dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
-
-      dat.z_dot(dat.span_current_cov, i) =  x_ * ((v >= 1e-6) ?
-                                                    inv_exp_v * (inv_exp_eta + at_risk_length) - inv_exp_eta :
-                                                    // Taylor series from https://www.wolframalpha.com/input/?i=exp(-v)%2Bv*exp(-v)-1
-                                                    inv_exp_eta * (- v * v) * (1/2 - v * (1/3 - v * (1/8 - v * (1/30 - v/144)))));
-
-      // Compute terms from binary out come
-      dat.H_diag_inv(i + dat.n_in_last_set) = exp_model_funcs::inv_var_chance_die(
-        v, expect_chance_die);
-
-      dat.z_dot(dat.span_current_cov, i + dat.n_in_last_set) =
-        x_ * (at_risk_length * exp_eta * inv_exp_v);
-      ++i;
-    }
-  }
-
-public:
-  EKF_filter_worker_exponential(problem_data_EKF &p_data):
-  EKF_filter_worker(p_data)
-  {}
-};
 
 // worker for the continous model with exponential distribution where only the
 // binary variable is used
@@ -463,10 +396,6 @@ void EKF_helper::parallel_filter_step(arma::uvec::const_iterator first, arma::uv
   for(auto i = workers.size(); i < num_blocks; i++){
     if(model == "logit"){
       std::shared_ptr<EKF_filter_worker> new_p(new EKF_filter_worker_logit(p_data));
-      workers.push_back(std::move(new_p));
-
-    } else if (model == "exp_combined"){
-      std::shared_ptr<EKF_filter_worker> new_p(new EKF_filter_worker_exponential(p_data));
       workers.push_back(std::move(new_p));
 
     } else if (model == "exp_bin"){

@@ -61,7 +61,7 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
   form <- formula(survival::Surv(tstart, tstop, event) ~
                     -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
 
-  suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
+  suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exp_clip_time_w_jump", by = 1, id = sims$res$id, max_T = 10,
                                     control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3,
                                                    fixed_terms_method = "M_step")))
 
@@ -80,7 +80,7 @@ test_that("Changing fixed effect control parems changes the result", {
   arg_list <- list(
     formula(survival::Surv(tstart, tstop, event) ~
               -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3)),
-    data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
+    data = sims$res, model = "exp_clip_time_w_jump", by = 1, id = sims$res$id, max_T = 10,
     control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3,
                    fixed_terms_method = "M_step"))
 
@@ -191,7 +191,7 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
   form <- formula(survival::Surv(tstart, tstop, event) ~
                     -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + ddFixed(x2) + ddFixed(x3))
 
-  suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exp_combined", by = 1, id = sims$res$id, max_T = 10,
+  suppressWarnings(res1 <- ddhazard(form, data = sims$res, model = "exp_clip_time_w_jump", by = 1, id = sims$res$id, max_T = 10,
                                     control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3,
                                                    fixed_terms_method = "M_step"),
                                     weights = sims$res$ws))

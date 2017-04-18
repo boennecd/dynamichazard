@@ -5,10 +5,10 @@ using uword = arma::uword;
 using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
 using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
 
-using UKF_logit = UKF_solver_New_New<UKF_solver_New_hepler_logit>;
-using UKF_exp_bin = UKF_solver_New_New<UKF_solver_New_hepler_exp_bin>;
-using UKF_exp_clip_time = UKF_solver_New_New<UKF_solver_New_hepler_exp_clip_time>;
-using UKF_exp_clip_time_w_jump = UKF_solver_New_New<UKF_solver_New_hepler_exp_clip_time_w_jump>;
+using UKF_logit = UKF_solver_New<UKF_solver_New_hepler_logit>;
+using UKF_exp_bin = UKF_solver_New<UKF_solver_New_hepler_exp_bin>;
+using UKF_exp_clip_time = UKF_solver_New<UKF_solver_New_hepler_exp_clip_time>;
+using UKF_exp_clip_time_w_jump = UKF_solver_New<UKF_solver_New_hepler_exp_clip_time_w_jump>;
 
 using SMA_logit =  SMA<SMA_hepler_logit>;
 using SMA_exp =  SMA<SMA_hepler_exp>;
@@ -223,7 +223,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       solver.reset(new UKF_logit(*p_data.get(), kappa, alpha, beta));
 
     } else if (model == "exp_combined"){
-      solver.reset(new UKF_solver_New_exponential(*p_data.get(), kappa, alpha, beta));
+      Rcpp::stop("exp_combined is not supported since version 0.3.0");
 
     } else if (model == "exp_bin"){
       solver.reset(new UKF_exp_bin(*p_data.get(), kappa, alpha, beta));

@@ -277,7 +277,7 @@ test_that("I did not mess up with get_data_func", {
 test_that("bigglm and my c++ version yields similar results", {
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
 
-  for(model in c("logit", "exp_combined", "exp_bin", "exp_clip_time")){
+  for(model in c("logit", "exp_bin", "exp_clip_time")){
     suppressWarnings(bigglm_res <- biglm::bigglm(
       form, get_data_func,
       family = if(model == "logit") binomial() else poisson()))
@@ -296,7 +296,7 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
   sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
-  for(model in c("logit", "exp_combined")){
+  for(model in c("logit", "exp_clip_time_w_jump")){
     suppressWarnings(bigglm_res <- biglm::bigglm(
       form, get_data_func,
       family = if(model == "logit") binomial() else poisson()))
@@ -320,7 +320,7 @@ test_that("bigglm and my c++ version yields similar with weights", {
   sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
-  for(model in c("logit", "exp_combined")){
+  for(model in c("logit", "exp_clip_time_w_jump")){
     suppressWarnings(bigglm_res <- biglm::bigglm(
       form, get_data_func,
       family = if(model == "logit") binomial() else poisson(),

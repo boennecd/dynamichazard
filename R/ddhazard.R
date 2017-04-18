@@ -2,7 +2,7 @@
 #' @description  Function to fit dynamic discrete hazard models using state space models
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
 #' @param data Data frame or environment containing the outcome and co-variates
-#' @param model \code{"logit"}, \code{"exp_clip_time_w_jump"}, \code{"exp_clip_time"}, \code{"exp_bin"} or \code{"exp_combined"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the four latter cases (see the ddhazard vignette for details of the methods)
+#' @param model \code{"logit"}, \code{"exp_clip_time_w_jump"}, \code{"exp_clip_time"} or \code{"exp_bin"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the three latter cases (see the ddhazard vignette for details of the methods)
 #' @param by Interval length of the bins in which parameters are fixed
 #' @param max_T End of the last interval. The last stop time with an event is selected if the parameter is omitted
 #' @param id Vector of ids for each row of the in the design matrix
@@ -89,6 +89,8 @@ ddhazard = function(formula, data,
   } else if(model == "exp_trunc_time_w_jump"){
     message("Model 'exp_trunc_time_w_jump' have been renamed to 'exp_clip_time_w_jump'")
     model <- "exp_clip_time_w_jump"
+  } else if(model == "exp_combined"){
+    stop("'exp_combined' is not supported since version 0.3.0")
   }
 
   if(missing(id)){
@@ -528,5 +530,5 @@ get_F <- function(order, n_params, n_fixed, est_fixed_in_E){
   } else stop("Method not implemented for order ", order)
 }
 
-exp_model_names <- c("exp_combined", "exp_bin",
+exp_model_names <- c("exp_bin",
                      "exp_clip_time", "exp_clip_time_w_jump")
