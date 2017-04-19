@@ -17,7 +17,7 @@
 #' @details
 #' This function can be used to estimate a binary regression where the regression parameters follows a given order random walk. The order is specified by the \code{order} argument. 1. and 2. order random walks is implemented. The regression parameters are updated at time \code{by}, 2\code{by}, ..., \code{max_T}. See the vignette 'ddhazard' for more details
 #'
-#' The Extended Kalman filter or Unscented Kalman filter needs an initial co-variance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
+#' All filter methods needs a state covariance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
 #'
 #' The model is specified through the \code{model} argument. See the \code{model} in the argument above for details. The logistic model is where outcomes are binned into the intervals. Be aware that there can be loss of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time varying co-variates. The the exponential models use an exponential model for the arrival times where there is no loss information due to binning
 #'
@@ -26,7 +26,7 @@
 #' @section Control:
 #' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
 #' \describe{
-#' \item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"}for the Unscented Kalman Filter or \code{"SMA"} for the posterior mode approximation method.\code{"EKF"} is the default}
+#' \item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"}for the Unscented Kalman Filter, \code{"SMA"} for the squential posterior mode approximation method or \code{"GMA"} for the global mode approximation method. \code{"EKF"} is the default}
 #' \item{\code{LR}}{Learning rate for the Extended Kalman filter}
 #' \item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
 #' \item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter}
@@ -44,6 +44,8 @@
 #' \item{\code{eps_fixed_parems}}{Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects}
 #' \item{\code{permu}}{\code{TRUE} if the risk sets should be permutated before computation. This is \code{TRUE} by default for posterior mode approximation method and \code{FALSE} for all other methods}
 #' \item{\code{posterior_version}}{The implementation version of the posterior approximation method. Either \code{"woodbury"} or \code{"cholesky"}}
+#' \item{\code{GMA_max_rep}}{Maximum number of iterations in the correction step if \code{method = 'GMA'}}
+#' \item{\code{GMA_NR_eps}}{Tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}}
 #'}
 #'
 #' @return
@@ -143,7 +145,9 @@ ddhazard = function(formula, data,
                           use_pinv = T, criteria = "delta_coef",
                           permu = if(!is.null(control$method))
                             control$method == "SMA" else F,
-                          posterior_version = "cholesky")
+                          posterior_version = "cholesky",
+                          GMA_max_rep = 10,
+                          GMA_NR_eps = 0.1)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -497,7 +501,9 @@ ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
                    weights = weights,
                    use_pinv = control$use_pinv,
                    criteria = control$criteria,
-                   posterior_version = control$posterior_version)
+                   posterior_version = control$posterior_version,
+                   GMA_max_rep = control$GMA_max_rep,
+                   GMA_NR_eps = control$GMA_NR_eps)
 }
 
 

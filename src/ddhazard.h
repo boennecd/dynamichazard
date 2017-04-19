@@ -279,10 +279,12 @@ template<class T>
 class GMA : public Solver
 {
   problem_data &p_dat;
+  const signed int max_rep;
+  const double NR_eps;
 
 public:
-  GMA(problem_data &p_):
-  p_dat(p_)
+  GMA(problem_data &p_, signed int max_rep_, double NR_eps_):
+  p_dat(p_), max_rep(max_rep_), NR_eps(NR_eps_)
   { };
 
   void solve();

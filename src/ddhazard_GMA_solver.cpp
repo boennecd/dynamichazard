@@ -2,16 +2,29 @@
 
 inline double GMA_hepler_logit::d1(
     const double eta, const bool is_event, const double at_risk_length){
-  const double e = exp(eta);
   if(is_event){
-    return(1 / (1 + e));
+    //if(eta > 10.)
+    //  return(0.0000453979);
+    //if(eta < - 10.)
+    //  return(0.999955);
+
+    return(1 / (1 + exp(eta)));
   }
 
+  //if(eta > 10.)
+  //  return(0.999955);
+  //if(eta < - 10.)
+  //  return(0.0000453979);
+
+  const double e = exp(eta);
   return(- e / (1 + e));
 }
 
 inline double GMA_hepler_logit::d2(
   double eta, const double at_risk_length){
+  if(eta < -10. || eta > 10.)
+    return(- 0.0000453958);
+
   const double e = exp(eta);
   return - e / pow(1. + e, 2);
 }
@@ -35,6 +48,7 @@ inline double GMA_hepler_exp::d2(
 
 template<class T>
 void GMA<T>::solve(){
+  bool have_failed_once = false;
   double bin_tstop = p_dat.min_start;
 
   for (int t = 1; t < p_dat.d + 1; t++){
@@ -72,7 +86,7 @@ void GMA<T>::solve(){
 
     const arma::vec offsets =
       (p_dat.any_fixed_in_M_step) ?
-        p_dat.fixed_parems * p_dat.fixed_terms.cols(r_set) :
+        p_dat.fixed_terms.cols(r_set).t() * p_dat.fixed_parems :
         arma::vec(r_set.n_elem, arma::fill::zeros);
 
     const arma::vec w = p_dat.weights(r_set);
@@ -90,14 +104,15 @@ void GMA<T>::solve(){
     arma::vec h_2d_neg(r_set.n_elem);
 
     arma::mat X_tilde;
-    int k;
-    for(k = 1; k < 20; k++){
+    signed int k;
+    for(k = 1; k < max_rep; k++){
       arma::vec a_old = a;
+
       arma::vec eta = (a(p_dat.span_current_cov).t() * X_t).t() + offsets;
 
       for(arma::uword i = 0; i < r_set.n_elem; i++){
         h_1d[i] = T::d1(eta[i], is_event[i], at_risk_lenght[i]);
-        h_2d_neg[i] = - T::d2(eta[i], at_risk_lenght[i]) + p_dat.ridge_eps; // TODO: want the addition?
+        h_2d_neg[i] = - T::d2(eta[i], at_risk_lenght[i]);
       }
       h_1d %= w;
       h_2d_neg %= w;
@@ -109,14 +124,17 @@ void GMA<T>::solve(){
         Rcpp::Rcout << "Condition number of X^T(-p'')X is " << arma::cond(X_tilde) << std::endl;
       }
 
-      //TODO: Move?
-      inv_sympd(V, X_tilde + V_t_less_inv, p_dat.use_pinv,
-                "Failed to invert Hessian");
-      a = arma::solve(X_tilde + V_t_less_inv, X_tilde * a  + grad_term + X_t * h_1d);
-      //a =  V * (X_tilde * a  + grad_term + X_t * h_1d);
+      {
+        arma::mat tmp = V_t_less_inv;
+        tmp(p_dat.span_current_cov, p_dat.span_current_cov) += X_tilde;
+        inv_sympd(V, tmp, p_dat.use_pinv, "Failed to invert Hessian");
+      }
 
-      if(arma::norm(a - a_old, 2) / (arma::norm(a_old, 2) + 1e-8) < 1e-4)
-        break;
+      {
+        arma::vec tmp = grad_term;
+        tmp(p_dat.span_current_cov) += X_tilde * a(p_dat.span_current_cov) + X_t * h_1d;
+        a =  V * tmp;
+      }
 
       if(p_dat.debug){
         std::stringstream str;
@@ -127,6 +145,16 @@ void GMA<T>::solve(){
 
         Rcpp::Rcout << "Condition number of V is " << arma::cond(V) << std::endl;
       }
+
+      if(arma::norm(a - a_old, 2) / (arma::norm(a_old, 2) + 1e-8) < NR_eps)
+        break;
+    }
+    if(k == max_rep && !have_failed_once){
+      have_failed_once = true;
+      std::ostringstream warning;
+      warning << "Failed once to make correction step within " << max_rep << " iterations"
+              << " and a tolerance of relative change in coefficients of " << NR_eps;
+      Rcpp::warning(warning.str());
     }
 
     if(a.has_inf() || a.has_nan()){

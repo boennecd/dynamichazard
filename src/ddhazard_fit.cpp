@@ -163,7 +163,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const int n_fixed_terms_in_state_vec = 0,
                             const bool use_pinv = false,
                             const std::string criteria = "delta_coef",
-                            const std::string posterior_version = "cholesky"){
+                            const std::string posterior_version = "cholesky",
+                            const signed int GMA_max_rep = 10,
+                            const double GMA_NR_eps = 0.1){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) &&
      is_exponential_model(model)){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
@@ -287,9 +289,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         criteria));
 
     if(model == "logit"){
-      solver.reset(new GMA_logit(*p_data.get()));
+      solver.reset(new GMA_logit(*p_data.get(), GMA_max_rep, GMA_NR_eps));
     }  else if(is_exponential_model(model)){
-      solver.reset(new GMA_exp(*p_data.get()));
+      solver.reset(new GMA_exp(*p_data.get(), GMA_max_rep, GMA_NR_eps));
     }else
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
 

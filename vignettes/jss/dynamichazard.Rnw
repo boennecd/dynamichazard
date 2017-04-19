@@ -967,6 +967,10 @@ For these models we have:
 	\tilde p'(d) = y_{ijt} - b'(d) = y_{ijt} - h(c) \qquad \tilde p''(d) = -b''(d) = - \frac{\varpCond{y_{ijt}}{d = \vec{x}_{ij}^\top\vec{\alpha}}}{\phi}
 \end{equation}
 
+TODO: sensative to $\mat{Q}_0$
+
+TODO: sensative to to ill-conditioned design matrix
+
 Particularly, non of the implemented models has a dispersion parameter, $\phi$, that is not one. From this, we see the Algorithm~\ref{alg:GlobalMA} and~algorithm~\ref{alg:EKFextra} are similar but not identical. The global mode approximation is mentioned in~\cite[Section 10.6]{durbin12}. Though, \cite{durbin12} only suggest a single step. This yield a mode estimation method which can be implemented with the regular Kalman filter and smoother. The package \pkg{KFAS} implement this linerization method. They further ease the computation in \pkg{KFAS} by using the sequantial method for the correction step for the Kalman filter described in~\cite{Koopman00}. Lastly, if the negative value under the minimization operator in equation~\ref{eqn:modeExact} is not log-concave then then the global instead of sequential optimization can be done by the second method in~\cite{Durbin00} or by the methods in~\cite{So03}.
 
 An alternative to algorithm~\ref{alg:GlobalMA} for the exponential family is to re-write the orignal problem to use working responses to get a weighted least squares problem of the form:
