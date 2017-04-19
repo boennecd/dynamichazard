@@ -120,7 +120,8 @@ inline
                  const std::string err_msg = ""){
 
     if(use_pinv){
-      inv(out, std::forward<T2>(X), true, err_msg);
+      if(!arma::inv_sympd(out, std::forward<T2>(X)))
+        inv(out, std::forward<T2>(X), true, err_msg);
     } else if(!arma::inv_sympd(out, std::forward<T2>(X))){
       Rcpp::stop(err_msg);
     }

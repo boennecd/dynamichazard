@@ -272,6 +272,8 @@ void EKF_solver::solve(){
 
       my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
       my_print(p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
+      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
+                  << arma::cond(p_dat.V_t_less_s.slice(t - 1)) << std::endl;
     }
 
     // E-step: scoring step: information matrix and scoring vector
@@ -312,11 +314,8 @@ void EKF_solver::solve(){
 #endif
 
       // E-step: scoring step: update values
-      arma::mat tmp_mat; // defined to avoid unhandled error if the next code throws
-      inv_sympd(tmp_mat, V_t_less_s_inv + p_dat.U, p_dat.use_pinv,
+      inv_sympd(p_dat.V_t_t_s.slice(t) , V_t_less_s_inv + p_dat.U, p_dat.use_pinv,
                 "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
-
-      p_dat.V_t_t_s.slice(t) = std::move(tmp_mat); // arma objects are moveable
 
       p_dat.a_t_t_s.col(t) = i_a_t + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
 
@@ -342,6 +341,8 @@ void EKF_solver::solve(){
 
       my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
       my_print(p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")");
+      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
+                  << arma::cond(p_dat.V_t_t_s.slice(t)) << std::endl;
     }
 
     if(t == p_dat.d){

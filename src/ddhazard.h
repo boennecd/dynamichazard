@@ -266,6 +266,15 @@ public:
       const double, const double);
 };
 
+class GMA_hepler_exp{
+public:
+  static double d1(
+      const double, const bool, const double);
+
+  static double d2(
+      const double, const double);
+};
+
 template<class T>
 class GMA : public Solver
 {

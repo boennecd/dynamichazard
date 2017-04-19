@@ -16,6 +16,23 @@ inline double GMA_hepler_logit::d2(
   return - e / pow(1. + e, 2);
 }
 
+
+
+inline double GMA_hepler_exp::d1(
+    const double eta, const bool is_event, const double at_risk_length){
+  const double e = exp(eta);
+  if(is_event){
+    return(1. - e * at_risk_length);
+  }
+
+  return(- e * at_risk_length);
+}
+
+inline double GMA_hepler_exp::d2(
+    double eta, const double at_risk_length){
+  return -  exp(eta) * at_risk_length;
+}
+
 template<class T>
 void GMA<T>::solve(){
   double bin_tstop = p_dat.min_start;
@@ -36,6 +53,8 @@ void GMA<T>::solve(){
 
       my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
       my_print(p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
+      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
+                  << arma::cond(p_dat.V_t_less_s.slice(t - 1)) << std::endl;
     }
 
     // E-step: Correction step
@@ -78,19 +97,36 @@ void GMA<T>::solve(){
 
       for(arma::uword i = 0; i < r_set.n_elem; i++){
         h_1d[i] = T::d1(eta[i], is_event[i], at_risk_lenght[i]);
-        h_2d_neg[i] = - T::d2(eta[i], at_risk_lenght[i]) + p_dat.ridge_eps;
+        h_2d_neg[i] = - T::d2(eta[i], at_risk_lenght[i]) + p_dat.ridge_eps; // TODO: want the addition?
       }
       h_1d %= w;
       h_2d_neg %= w;
 
       X_tilde = (X_t.each_row() % h_2d_neg.t()) * X_t.t();
+
+      if(p_dat.debug){
+        my_print(X_tilde, "X^T(-p'')X");
+        Rcpp::Rcout << "Condition number of X^T(-p'')X is " << arma::cond(X_tilde) << std::endl;
+      }
+
+      //TODO: Move?
       inv_sympd(V, X_tilde + V_t_less_inv, p_dat.use_pinv,
                 "Failed to invert Hessian");
-
-      a = V * (X_tilde * a  + grad_term + X_t * h_1d);
+      a = arma::solve(X_tilde + V_t_less_inv, X_tilde * a  + grad_term + X_t * h_1d);
+      //a =  V * (X_tilde * a  + grad_term + X_t * h_1d);
 
       if(arma::norm(a - a_old, 2) / (arma::norm(a_old, 2) + 1e-8) < 1e-4)
         break;
+
+      if(p_dat.debug){
+        std::stringstream str;
+        str << "^(" << k << ")";
+
+        my_print(a, "a" + str.str());
+        my_print(V, "V" + str.str());
+
+        Rcpp::Rcout << "Condition number of V is " << arma::cond(V) << std::endl;
+      }
     }
 
     if(a.has_inf() || a.has_nan()){
@@ -111,6 +147,7 @@ void GMA<T>::solve(){
 
       my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
       my_print(p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")\n");
+      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is " << arma::cond(p_dat.V_t_t_s.slice(t)) << std::endl;
     }
 
     p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_inv;
@@ -119,3 +156,4 @@ void GMA<T>::solve(){
 
 // Define classes
 template class GMA<GMA_hepler_logit>;
+template class GMA<GMA_hepler_exp>;

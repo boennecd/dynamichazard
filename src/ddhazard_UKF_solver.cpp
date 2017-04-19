@@ -276,7 +276,13 @@ void UKF_solver_New<T>::solve(){
       str << t << "|" << t;
 
       my_print(p_dat.V_t_less_s.slice(t - 1).diag(), "diag(V_(" + str_less.str() + "))");
+      Rcpp::Rcout << "Condition number of V_(" + str_less.str() + ") is "
+                  << arma::cond(p_dat.V_t_less_s.slice(t - 1)) << std::endl;
+
       my_print(p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str()  + "))");
+      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
+                  << arma::cond(p_dat.V_t_t_s.slice(t)) << std::endl;
+
       my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str_less.str() + ")");
       my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
     }

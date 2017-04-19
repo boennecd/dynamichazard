@@ -14,6 +14,7 @@ using SMA_logit =  SMA<SMA_hepler_logit>;
 using SMA_exp =  SMA<SMA_hepler_exp>;
 
 using GMA_logit =  GMA<GMA_hepler_logit>;
+using GMA_exp = GMA<GMA_hepler_exp>;
 
 // Define convergence criteria used later
 inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &new_est){
@@ -287,7 +288,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     if(model == "logit"){
       solver.reset(new GMA_logit(*p_data.get()));
-    } else
+    }  else if(is_exponential_model(model)){
+      solver.reset(new GMA_exp(*p_data.get()));
+    }else
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
 
   } else{
@@ -346,6 +349,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
           ss << t << "|" <<  p_data->d;
           my_print(p_data->a_t_t_s.col(t), "a(" + ss.str() + ")");
           my_print(p_data->V_t_t_s.slice(t).diag(), "diag(V(" + ss.str() + "))");
+          Rcpp::Rcout << "Condition number of V_(" + ss.str() + ") is "
+                      << arma::cond(p_data->V_t_t_s.slice(t)) << std::endl;
         }
       }
 
