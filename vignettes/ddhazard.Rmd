@@ -238,7 +238,7 @@ $$\begin{aligned}
 $$l_{ijt}(\vec{\alpha}_t) = y_{ijt} \log h(\vec{x}_{ijt}^\top \vec{\alpha}_t) + (1 - y_{ijt}) 
 	\log \Lparen{1 - h(\vec{x}_{ij}^\top \vec{\alpha}_t)}$$
 
-The unknown parameters are the initial state vector $\vec{\alpha}_0$ and the covariance matrix $\mat{Q}$ . We estimate these using an EM-algorithm. The E-step is carried out first by filtering with an Extended Kalman filter (EKF), an Unscented Kalman filter (UKF) or an approximation of the posterior modes. We apply a smoother after the filtering. The method is chosen by passing a list to the `control` argument of `ddhazard` with `list(method = "EKF", ...)`, `list(method = "UKF", ...)` or `list(method = "post_approx", ...)` respectively. All filtering methods requires an initial state vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and initial co-variance matrix $\mat{Q}_0$ to start
+The unknown parameters are the initial state vector $\vec{\alpha}_0$ and the covariance matrix $\mat{Q}$ . We estimate these using an EM-algorithm. The E-step is carried out first by filtering with an Extended Kalman filter (EKF), an Unscented Kalman filter (UKF) or an approximation of the posterior modes. We apply a smoother after the filtering. The method is chosen by passing a list to the `control` argument of `ddhazard` with `list(method = "EKF", ...)`, `list(method = "UKF", ...)` or `list(method = "SMA", ...)` respectively. All filtering methods requires an initial state vector $\vec{\alpha}_0$, co-variance matrix $\mat{Q}$ and initial co-variance matrix $\mat{Q}_0$ to start
 
 A key thing to notice (and a likely source of errors if forgotten) is that the `Q` argument for $\mat{Q}$ is scaled by the length of the time interval, $\psi_t$. The motivation for this behavior is that you can alter $\psi_t$ and get comparable estimates of `Q`. Further, it will also be useful if unequal intervals lengths are implemented later. As a last comment in this context, `Q_0` is not scaled and thus will exactly match $\mat{Q}_0$ in the estimation. The logic here is that $\mat{Q}_0$ is independent of our time interval length and reflects our uncertainty of $\vec{\alpha}_0$
 
@@ -673,7 +673,7 @@ $$\emNote{\mat{V}}{t}{t}{k} = \emNote{\mat{V}}{t}{t}{k-1} -
     \mat{C} = 1
 \end{aligned} -->
 
-This method is selected by setting `method = post_approx` in the list passed to the `control` argument of `ddhazard`
+This method is selected by setting `method = SMA` in the list passed to the `control` argument of `ddhazard`
 
 ## Implementation 
 Finding the constant $v$ in step 2 can be done by the Newton Raphson method to find a unique minimum when: 

@@ -49,6 +49,7 @@ void GMA<T>::solve(){
     arma::mat V_t_less_inv;
     inv_sympd(V_t_less_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
               "Failed to invert covariance matrix after prediction step");
+    arma::vec grad_term = V_t_less_inv * p_dat.a_t_less_s.col(t - 1);
 
     const arma::vec offsets =
       (p_dat.any_fixed_in_M_step) ?
@@ -56,14 +57,14 @@ void GMA<T>::solve(){
         arma::vec(r_set.n_elem, arma::fill::zeros);
 
     const arma::vec w = p_dat.weights(r_set);
-    const arma::mat X = p_dat.X.cols(r_set).t();
+    const arma::mat X_t = p_dat.X.cols(r_set);
 
     const arma::uvec is_event = p_dat.is_event_in_bin(r_set) == bin_number;
     arma::vec at_risk_lenght(r_set.n_elem);
     int i = 0;
     for(auto it = r_set.begin(); it < r_set.end(); it++, i++){
-      at_risk_lenght[i] = std::min(p_dat.tstop(*it), bin_tstop)
-        - std::max(p_dat.tstart(*it), bin_tstart);
+      at_risk_lenght[i] =
+        std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
     }
 
     arma::vec h_1d(r_set.n_elem);
@@ -71,9 +72,9 @@ void GMA<T>::solve(){
 
     arma::mat X_tilde;
     int k;
-    for(k = 1; k < 10; k++){
+    for(k = 1; k < 20; k++){
       arma::vec a_old = a;
-      arma::vec eta = X * a(p_dat.span_current_cov)  + offsets;
+      arma::vec eta = (a(p_dat.span_current_cov).t() * X_t).t() + offsets;
 
       for(arma::uword i = 0; i < r_set.n_elem; i++){
         h_1d[i] = T::d1(eta[i], is_event[i], at_risk_lenght[i]);
@@ -82,16 +83,11 @@ void GMA<T>::solve(){
       h_1d %= w;
       h_2d_neg %= w;
 
-      X_tilde = X.t() * (X.each_col() % h_2d_neg);
+      X_tilde = (X_t.each_row() % h_2d_neg.t()) * X_t.t();
       inv_sympd(V, X_tilde + V_t_less_inv, p_dat.use_pinv,
                 "Failed to invert Hessian");
 
-      a = V * (X_tilde * a  + X.t() * h_1d);
-
-
-      Rcpp::Rcout << "BOH " << k << std::endl;
-      Rcpp::Rcout << a << std::endl;
-      Rcpp::Rcout << a_old << std::endl;
+      a = V * (X_tilde * a  + grad_term + X_t * h_1d);
 
       if(arma::norm(a - a_old, 2) / (arma::norm(a_old, 2) + 1e-8) < 1e-4)
         break;

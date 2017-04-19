@@ -925,18 +925,20 @@ We could directly minimize equaion~\ref{eqn:modeExact}. This is equivalent to a 
 %
 	&\begin{aligned}
 	\tvec{g}(\vec{\alpha}) =  \tilde h'(\vec{\alpha})
-		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \vec{\alpha} - \left. \sum_{(i,j) \in R_t} \frac{\partial\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
-		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \vec{\alpha} - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'} \right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p'} \\
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \Lparen{\vec{\alpha} - \emNotee{\vec{a}}{t}{t-1}}
+      - \left. \sum_{(i,j) \in R_t} \frac{\partial\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \Lparen{\vec{\alpha} - \emNotee{\vec{a}}{t}{t-1}}
+		  - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'} \right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p'} \\
 %
 	\tmat{G}(\vec{\alpha}) = \tilde h''(\vec{\alpha})
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \left. \sum_{(i,j) \in R_t} \frac{\partial^2\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'\partial \Lparen{\vec{\alpha}'}^\top} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p''}\mat{X}_t
 \end{aligned}\end{aligned}\end{equation}
 
-where we can note that $p''$ is diagonal matrix. Algorithm~\ref{alg:GlobalMA} shows the iteratively re-weighted ridge regression. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
+Algorithm~\ref{alg:GlobalMA} shows the iteratively re-weighted ridge regression. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
 
 \begin{algorithm}
-\caption{Correction step with global mode approximation with iteratively reweighted ridge regression.}\label{alg:GlobalMA}
+\caption{Correction step with global mode approximation by Newton Raphson.}\label{alg:GlobalMA}
 \begin{algorithmic}[1]\raggedright
 \Statex Set $\vec{a}^{(0)} =\emNotee{\vec{a}}{t}{t-1}$ and $k= 1$. Let $\vec{g}$ denote the inverse link function
 \Repeat
@@ -945,10 +947,10 @@ $\begin{aligned}
 \vec{a}^{(k)} &= \vec{a}^{(k - 1)} + \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{-\tmat{g}(\vec{a}^{(k - 1)})} \\
 	&= \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{
 		- \mat{X}_t^\top  p'' \mat{X}_t  \vec{a}^{(k - 1)}
+		+ \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1}
 		+ \mat{X}_t^\top p'} \\
-	&= \Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-p'')\mat{X}_t}^{-1}\mat{X}_t^\top
-		\Lparen{
-		 \Lparen{-p''}\mat{X}_t  \vec{a}^{(k - 1)} + p'}
+	&= \Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-p'')\mat{X}_t}^{-1}
+		 \Lparen{\mat{X}_t^\top\Lparen{-p''}\mat{X}_t  \vec{a}^{(k - 1)} + \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1} + \mat{X}_t^\top p'}
 \end{aligned}$
 \UntilElse{$\LVert{\vec{a}^{(k)} - \vec{a}^{(k-1)}}/ (\LVert{\vec{a}^{(k-1)}} + \delta) < \epsilon$}{Set $k\leftarrow k + 1$}
 \State $\emNotee{\mat{V}}{t}{t} = \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}$

@@ -342,7 +342,7 @@ We may further want to compare the likelihood of the two models to make sure tha
 ctrl = list(
     criteria =  "delta_likeli", # Use the relative likelihood as the 
                                 # convergence criteria
-    method = "post_approx",     # Use rank-one approximation of posterior mode. 
+    method = "SMA",             # Use rank-one approximation of posterior mode. 
                                 # Tends to convergence in fewer iteration and 
                                 # yield similar results
     eps = .0001,                # Set the tolerance low
