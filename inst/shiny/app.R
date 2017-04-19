@@ -129,7 +129,7 @@ ui <- fluidPage(
                    selected = "exponential"),
 
        radioButtons("sim_fix_options",
-                    label = "Number of fixed covariates",
+                    label = "Number of fixed coefficients",
                     choices = list("Zero" = 1,
                                    "Intercept and two coef" = 2,
                                    "All but one coef" = 3),
@@ -146,7 +146,16 @@ ui <- fluidPage(
 
          numericInput("seed",
                       label = "RNG seed",
-                      value = 65848))
+                      value = 65848),
+
+         sliderInput("covar_range", "Range to draw covariates from uniformly:",
+                     min = -3, max = 3, value = c(-.5, .5), step = .5),
+
+         sliderInput("sd_intercept", "Standard deviations for intercept:",
+                     min = .1, max = 1, value = .2, step = .1),
+
+         sliderInput("sd_coef", "Standard deviations for coefficients:",
+                     min = .1, max = 1, value = .5, step = .1))
      ),
 
      wellPanel(
@@ -163,7 +172,7 @@ ui <- fluidPage(
                    selected = "EKF"),
 
        radioButtons("est_fix_options",
-                    label = "Number of fixed covariates",
+                    label = "Number of fixed coefficients",
                     choices = list("Zero" = 1,
                                    "Intercept and two coef" = 2,
                                    "All but one coef" = 3),
@@ -300,13 +309,19 @@ server <- function(input, output) {
 
     n_varying <- 5 - n_fixed + (n_fixed > 0)
 
+    # TODO: Figure out what is going on here
+    x_range <- diff(input$covar_range)
+    x_mean <- mean(input$covar_range)
+
+    print(c(x_range, x_mean))
+
     dat <- f_choice(
       n_series = n_series_input(),
       n_vars = 5,
       t_max = t_max, re_draw = T, beta_start = runif(5, min = -1.5, max = 1.5),
       intercept_start = -3.5,
-      sds = c(.25, rep(.5, 5)),
-      x_range = 1, x_mean = 0, lambda = 5 / t_max,
+      sds = c(input$sd_intercept, rep(input$sd_coef, 5)),
+      x_range = x_range, x_mean = x_mean, lambda = 5 / t_max,
       is_fixed = if(n_fixed == 0) c() else 1:n_fixed,
 
       tstart_sampl_func = start_fun)
