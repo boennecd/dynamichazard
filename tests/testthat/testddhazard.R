@@ -46,16 +46,16 @@ test_that("Invalid penalty terms throw error", {
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, # Use by month intervals
-      control = list(ridge_eps = 0)),
-    regexp = "Method not implemented with penalty term \\(control\\$ridge_eps\\) equal to 0")
+      control = list(denom_term = 0)),
+    regexp = "Method not implemented with penalty term \\(control\\$denom_term\\) equal to 0")
 
   expect_error(
     ddhazard(
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, # Use by month intervals
-      control = list(ridge_eps = -1)),
-    regexp = "Method not implemented with penalty term \\(control\\$ridge_eps\\) equal to -1")
+      control = list(denom_term = -1)),
+    regexp = "Method not implemented with penalty term \\(control\\$denom_term\\) equal to -1")
 })
 
 
@@ -83,7 +83,7 @@ suppressMessages(
     by = 3, Q_0 = diag(10000, 2),
     Q = diag(1e-3, 2),
     control = list(est_Q_0 = F, n_max = 10^3, eps = 10^-4,
-                   ridge_eps = 6e-2, save_data = F, save_risk_set = F),
+                   denom_term = 6e-2, save_data = F, save_risk_set = F),
     max_T = 30,
     id = head_neck_cancer$id, order = 1,
     verbose = F,
@@ -232,7 +232,7 @@ test_that("Result of exponential model with only binary or right clipped time yi
     Q_0 = diag(1000000, 11),
     Q = diag(1e-2, 11),
     control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3,
-                   save_data = F, save_risk_set = F, ridge_eps = 1e-4),
+                   save_data = F, save_risk_set = F, denom_term = 1e-4),
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,

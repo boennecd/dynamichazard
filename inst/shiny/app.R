@@ -90,12 +90,12 @@ n_series_stuff <- list(base = 2, exp_min = 6, exp_max = 18)
 JScode <- get_JS_code_for_log_slider(
   "n_series", n_series_stuff$base, n_series_stuff$exp_min, n_series_stuff$exp_max)
 
-ridge_eps_stuff <- list(base = 10, exp_min = -6, exp_max = -1)
+denom_term_stuff <- list(base = 10, exp_min = -6, exp_max = -1)
 
 JScode <- paste(
   JScode,
   get_JS_code_for_log_slider(
-  "ridge_eps", ridge_eps_stuff$base, ridge_eps_stuff$exp_min, ridge_eps_stuff$exp_max),
+  "denom_term", denom_term_stuff$base, denom_term_stuff$exp_min, denom_term_stuff$exp_max),
   sep = "\n")
 
 # Define UI for application that draws a histogram
@@ -187,10 +187,10 @@ ui <- fluidPage(
                      step = 1,
                      value = 1),
 
-         sliderInput("ridge_eps",
-                     "Ridge regresion like penalty factor",
+         sliderInput("denom_term",
+                     "denom_term",
                      min = 0,
-                     max = ridge_eps_stuff$exp_max - ridge_eps_stuff$exp_min - 1,
+                     max = denom_term_stuff$exp_max - denom_term_stuff$exp_min - 1,
                      value = 1),
 
          selectInput("fixed_terms_method",
@@ -293,8 +293,8 @@ server <- function(input, output) {
     n_series_stuff$base^(n_series_stuff$exp_min + input$n_series)
   })
 
-  ridge_eps <- reactive({
-    ridge_eps_stuff$base^(ridge_eps_stuff$exp_min + input$ridge_eps)
+  denom_term <- reactive({
+    denom_term_stuff$base^(denom_term_stuff$exp_min + input$denom_term)
   })
 
   sim_input <- reactive({
@@ -392,7 +392,7 @@ server <- function(input, output) {
     }
 
     control_list <- list(eps = 10^-2,
-                         ridge_eps = ridge_eps(),
+                         denom_term = denom_term(),
                          method = input$est_with_method)
 
     if(input$est_with_method == "UKF"){

@@ -60,7 +60,7 @@ Function to fit dynamic discrete hazard models using state space models
 \details{
 This function can be used to estimate a binary regression where the regression parameters follows a given order random walk. The order is specified by the \code{order} argument. 1. and 2. order random walks is implemented. The regression parameters are updated at time \code{by}, 2\code{by}, ..., \code{max_T}. See the vignette 'ddhazard' for more details
 
-The Extended Kalman filter or Unscented Kalman filter needs an initial co-variance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
+All filter methods needs a state covariance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
 
 The model is specified through the \code{model} argument. See the \code{model} in the argument above for details. The logistic model is where outcomes are binned into the intervals. Be aware that there can be loss of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time varying co-variates. The the exponential models use an exponential model for the arrival times where there is no loss information due to binning
 
@@ -70,7 +70,7 @@ It is recommended to see the Shiny app demo for this function by calling \code{\
 
 The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
 \describe{
-\item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"}for the Unscented Kalman Filter or \code{"SMA"} for the posterior mode approximation method.\code{"EKF"} is the default}
+\item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"}for the Unscented Kalman Filter, \code{"SMA"} for the squential posterior mode approximation method or \code{"GMA"} for the global mode approximation method. \code{"EKF"} is the default}
 \item{\code{LR}}{Learning rate for the Extended Kalman filter}
 \item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
 \item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter}
@@ -81,7 +81,7 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}}
 \item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
 \item{\code{save_data}}{\code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
-\item{\code{ridge_eps}}{Penalty term added to the diagonal of the covariance matrix of the observational equation in either the EKF or UKF}
+\item{\code{denom_term}}{Term added to denominators in either the EKF or UKF}
 \item{\code{fixed_parems_start}}{Starting value for fixed terms}
 \item{\code{fixed_terms_method}}{The method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively}
 \item{\code{Q_0_term_for_fixed_E_step}}{The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step}

@@ -43,7 +43,7 @@ public:
   const double eps_fixed_parems;
   const int max_it_fixed_params;
 
-  const double ridge_eps;
+  const double denom_term;
 
   const bool debug;
   const double LR;
@@ -87,7 +87,7 @@ public:
                const bool debug_,
                Rcpp::Nullable<Rcpp::NumericVector> LR_,
                const int n_threads_,
-               const double ridge_eps_,
+               const double denom_term_,
                const bool use_pinv_,
                const std::string criteria_):
     d(Rcpp::as<int>(risk_obj["d"])),
@@ -124,7 +124,7 @@ public:
 
     eps_fixed_parems(eps_fixed_parems_),
     max_it_fixed_params(max_it_fixed_params_),
-    ridge_eps(ridge_eps_),
+    denom_term(denom_term_),
 
     debug(debug_),
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
@@ -200,7 +200,7 @@ public:
                    const unsigned int NR_it_max_,
                    const bool debug_,
                    const int n_threads_,
-                   const double ridge_eps_,
+                   const double denom_term_,
                    const bool use_pinv_,
                    const std::string criteria_):
     problem_data(n_fixed_terms_in_state_vec_, X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0,
@@ -210,7 +210,7 @@ public:
                  n_max, eps, verbose,
                  order_, est_Q_0, debug_,
                  LR_,
-                 n_threads_, ridge_eps_,
+                 n_threads_, denom_term_,
                  use_pinv_, criteria_),
 
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),

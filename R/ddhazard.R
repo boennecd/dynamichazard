@@ -37,7 +37,7 @@
 #' \item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}}
 #' \item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
 #' \item{\code{save_data}}{\code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
-#' \item{\code{ridge_eps}}{Penalty term added to the diagonal of the covariance matrix of the observational equation in either the EKF or UKF}
+#' \item{\code{denom_term}}{Term added to denominators in either the EKF or UKF}
 #' \item{\code{fixed_parems_start}}{Starting value for fixed terms}
 #' \item{\code{fixed_terms_method}}{The method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively}
 #' \item{\code{Q_0_term_for_fixed_E_step}}{The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step}
@@ -139,7 +139,7 @@ ddhazard = function(formula, data,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
                           LR_decrease_fac = 1.5,
                           n_threads = getOption("ddhazard_max_threads"),
-                          ridge_eps = .0001,
+                          denom_term = .0001,
                           fixed_terms_method = "E_step",
                           Q_0_term_for_fixed_E_step = NULL,
                           use_pinv = T, criteria = "delta_coef",
@@ -167,10 +167,10 @@ ddhazard = function(formula, data,
   if(!control$fixed_terms_method %in% c("M_step", "E_step"))
     stop("fixed_terms_method method '", control$fixed_terms_method,"' is not implemented")
 
-  if(control$ridge_eps <= 0){
-    stop("Method not implemented with penalty term (control$ridge_eps) equal to ", control$ridge_eps)
-  } else if(control$ridge_eps < 1e-6)
-    warning("Method is no tested with penalty term (control$ridge_eps) less than ", 1e-6)
+  if(control$denom_term <= 0){
+    stop("Method not implemented with penalty term (control$denom_term) equal to ", control$denom_term)
+  } else if(control$denom_term < 1e-6)
+    warning("Method is no tested with penalty term (control$denom_term) less than ", 1e-6)
 
   if(verbose)
     message("Finding Risk set")
@@ -374,7 +374,7 @@ ddhazard = function(formula, data,
   if(!did_fit)
     stop("Failed to estimate model. The following learning rates was tried: ",
          paste0(control$LR / control$LR_decrease_fac^k_vals, collapse = ", "),
-         ". Try decreasing the learning rate or change the penalty term ridge_eps")
+         ". Try decreasing the learning rate or change the penalty term denom_term")
 
   if(k != 0)
     message("Did not succed to fit the model wit a learning rate of ", control$LR,
@@ -496,7 +496,7 @@ ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
                    fixed_effect_chunk_size = control$fixed_effect_chunk_size,
                    debug = control$debug,
                    n_threads = control$n_threads,
-                   ridge_eps = control$ridge_eps,
+                   denom_term = control$denom_term,
                    n_fixed_terms_in_state_vec = n_fixed_terms_in_state_vec,
                    weights = weights,
                    use_pinv = control$use_pinv,

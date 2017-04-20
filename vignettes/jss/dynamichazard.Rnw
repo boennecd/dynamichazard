@@ -614,7 +614,7 @@ Another point is that \citeAlgLineTwo{alg:EKF:varUpdate}{alg:EKF:stateUpdate}{al
 \end{algorithmic}
 \end{algorithm}
 
-Extra correction are not taken by default. They can be if you set the element \code{NR_eps} to the value of $\epsilon$ you want in the list passed to the \code{control} argument of \code{ddhazard}. The learning rate, $\zeta_0$, is set by setting the element \code{LR} to the value you want in the list passed to the \code{control} argument. By default, the current implementation tries a decreasing series of learning rates starting with $\zeta_0$ until the algorithm does not diverge. $\xi$ is changed by altering the \code{ridge_eps} element in the list passed to the \code{control} argument. Typically values in the range $[10^{-6},10^{-4}]$ tend to be sufficient.
+Extra correction are not taken by default. They can be if you set the element \code{NR_eps} to the value of $\epsilon$ you want in the list passed to the \code{control} argument of \code{ddhazard}. The learning rate, $\zeta_0$, is set by setting the element \code{LR} to the value you want in the list passed to the \code{control} argument. By default, the current implementation tries a decreasing series of learning rates starting with $\zeta_0$ until the algorithm does not diverge. $\xi$ is changed by altering the \code{denom_term} element in the list passed to the \code{control} argument. Typically values in the range $[10^{-6},10^{-4}]$ tend to be sufficient.
 
 TODO: Write about stability and convergence conditions? I have read some papers which provides different conditions.
 
@@ -630,12 +630,12 @@ ekf_aids <- ddhazard(
   Q = diag(.1, 5),
   Q_0 = diag(10000, 5),
   control = list(
-    LR = 1,              # Learning rate
-    ridge_eps = 0.000001 # Extra term in denominator of information matrix and
-                         # score vector
+    LR = 1,               # Learning rate
+    denom_term = 0.000001 # Extra term in denominator of information matrix and
+                          # score vector
   ))
 
-plot(ekf_aids)           # Shown in figure \ref{fig:aids_n_EKF}
+plot(ekf_aids)            # Shown in figure \ref{fig:aids_n_EKF}
 @
 
 We start of by altering the $\xi$ parameter and show that the mean square difference of the predicted coefficients is small compared to the previous fit.
@@ -652,7 +652,7 @@ ekf_aids_higher_xi <- ddhazard(
   Q_0 = diag(10000, 5),
   control = list(
     LR = 1,
-    ridge_eps = 0.001    # Increased
+    denom_term = 0.001    # Increased
   ))
 
 # Small difference in mean square difference
@@ -674,7 +674,7 @@ ekf_aids_lower_learning <- ddhazard(
   Q_0 = diag(10000, 5),
   control = list(
     LR = 0.25,           # Decreased
-    ridge_eps = 0.000001
+    denom_term = 0.000001
   ))
 
 plot(ekf_aids_lower_learning) # Shown in figure \ref{fig:aids_n_EKF_lower_LR}
@@ -1432,7 +1432,7 @@ if(!already_computed){
     intercept_sd <- 0.1
     Q_0_arg <- 1e5
     Q_arg <- 0.1
-    ridge_eps <- 0.00001
+    denom_term <- 0.00001
     LR <- 1
     n_max <- 9
     eps <- 0.01
@@ -1479,7 +1479,7 @@ if(!already_computed){
             control = list(
               LR = if(method == "EKF") .(LR) else 1,
               method = method, alpha = .(ukf_alpha), beta = .(ukf_beta),
-              kappa = .(ukf_kappa)[run_n], ridge_eps = .(ridge_eps),
+              kappa = .(ukf_kappa)[run_n], denom_term = .(denom_term),
               save_risk_set = F, save_data = F,
               LR_max_try = 1, # we only try on learning rate
               n_max = .(n_max),

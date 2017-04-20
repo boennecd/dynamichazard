@@ -412,7 +412,7 @@ $$\begin{aligned}
 	& \mat{U}_t (\vec{\alpha}_t) = \sum_{(i,j) \in R_t} \mat{U}_{ijt} (\vec{\alpha}_t), \quad \mat{U}_{ijt} (\vec{\alpha}_t) = \left. \vec{x}_{ijt} \vec{x}_{ijt}^\top 
 		 \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{fft}(\vec{\alpha}_t) + \xi} \right\vert_{\eta = \vec{x}_{ijt}^\top \vec{\alpha}_t}
 \end{aligned}$$
-where $\xi>0$ is a small number. The default can be changed by altering the `ridge_eps` in the list passed to the `control` argument of `ddhazard`. The approach is similar to how the `glmnet` package handles close to boundary estimates (see [@friedman10])
+where $\xi>0$ is a small number. The default can be changed by altering the `denom_term` in the list passed to the `control` argument of `ddhazard`. The approach is similar to how the `glmnet` package handles close to boundary estimates (see [@friedman10])
 
 
 ## Parallel BLAS or LAPACK

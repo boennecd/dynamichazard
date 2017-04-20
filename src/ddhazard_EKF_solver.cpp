@@ -60,9 +60,9 @@ private:
     const double var = std::isinf(tmp_denom) ?
     pow(exp_eta, -1) : (exp_eta / pow(exp_eta + 1.0, 2.0));
 
-    double score_fac = exp_eta/(dat.ridge_eps + exp_eta +
-                                2*dat.ridge_eps*exp_eta + dat.ridge_eps*pow(exp_eta,2));
-    double var_fac = pow(exp_eta,2)/(pow(1 + exp_eta,4)*(dat.ridge_eps + exp_eta/pow(1 + exp_eta, 2)));
+    double score_fac = exp_eta/(dat.denom_term + exp_eta +
+                                2*dat.denom_term*exp_eta + dat.denom_term*pow(exp_eta,2));
+    double var_fac = pow(exp_eta,2)/(pow(1 + exp_eta,4)*(dat.denom_term + exp_eta/pow(1 + exp_eta, 2)));
 
     u_ += x_ * (w * score_fac *
       ((dat.is_event_in_bin(*it) == bin_number) - exp_eta / (1.0 + exp_eta)));
@@ -107,8 +107,8 @@ private:
 
     const double expect_chance_die = exp_model_funcs::expect_chance_die(v, inv_exp_v);
 
-    const double score_fac = exp_model_funcs::binary_score_fac(v, inv_exp_v, dat.ridge_eps);
-    const double var_fac = exp_model_funcs::binary_var_fac(v, inv_exp_v, dat.ridge_eps);
+    const double score_fac = exp_model_funcs::binary_score_fac(v, inv_exp_v, dat.denom_term);
+    const double var_fac = exp_model_funcs::binary_var_fac(v, inv_exp_v, dat.denom_term);
 
     u_ += x_ * (w * score_fac * (do_die - expect_chance_die));
 
@@ -156,9 +156,9 @@ private:
     const double expect_time = exp_model_funcs::expect_time(v, at_risk_length, inv_exp_v, exp_eta);
 
     const double score_fac = exp_model_funcs::clip_time_score_fac(
-      exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
+      exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.denom_term);
     const double var_fac = exp_model_funcs::clip_time_var_fac(
-      exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.ridge_eps);
+      exp_eta, inv_exp_eta, inv_exp_v, at_risk_length, dat.denom_term);
 
 
     u_ += x_ * (w * score_fac * (time_outcome - expect_time));
@@ -207,9 +207,9 @@ private:
     const double expect_time = exp_model_funcs::expect_time_w_jump(exp_eta, inv_exp_eta, inv_exp_v, at_risk_length);
 
     const double score_fac = exp_model_funcs::clip_time_w_jump_score_fac(
-      exp_eta, v, inv_exp_v, at_risk_length, dat.ridge_eps);
+      exp_eta, v, inv_exp_v, at_risk_length, dat.denom_term);
     const double var_fac = exp_model_funcs::clip_time_w_jump_var_fac(
-      exp_eta, v, inv_exp_v, at_risk_length, dat.ridge_eps);
+      exp_eta, v, inv_exp_v, at_risk_length, dat.denom_term);
 
 
     u_ += x_ * (w * score_fac * (time_outcome - expect_time - at_risk_length * do_die));

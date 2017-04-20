@@ -63,7 +63,7 @@ hatvalues.fahrmeier_94 <- function(model, ...){
     etas = design_mat_sub %*% coefs_cur
 
     # Compute the variances
-    vars <- mapply(model$var_func, eta = etas, tstart = tsta, tstop = tsto) + model$control$ridge_eps
+    vars <- mapply(model$var_func, eta = etas, tstart = tsta, tstop = tsto) + model$control$denom_term
 
     # Compute the hat values
     # H <- solve(t_design_mat_sub %*% diag(vars) %*% design_mat_sub  + V_inv)

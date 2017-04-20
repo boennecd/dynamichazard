@@ -92,7 +92,7 @@ test_that("Alters mfcol and sets it back", {
     Q_0 = diag(10, 11),
     Q = diag(1e-2, 11),
     control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3,
-                   save_data = F, save_risk_set = F, ridge_eps = 1e-2),
+                   save_data = F, save_risk_set = F, denom_term = 1e-2),
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,

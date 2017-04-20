@@ -82,7 +82,7 @@ void UKF_solver_Org::solve(){
           arma::diagmat(w_i * Z_t.unsafe_col(i) % (1 - Z_t.unsafe_col(i)));
       }
 
-      P_v_v.diag() += p_dat.ridge_eps;
+      P_v_v.diag() += p_dat.denom_term;
 
       // Compute new estimates
       inv_sympd(P_v_v, P_v_v, p_dat.use_pinv, "ddhazard_fit_cpp estimation error: Failed to invert P_v_v");
@@ -231,7 +231,7 @@ void UKF_solver_New<T>::solve(){
       y_bar += w * O.col(j);
     }
 
-    sqrt_weights_to_sds += p_dat.ridge_eps;
+    sqrt_weights_to_sds += p_dat.denom_term;
     sqrt_weights_to_sds = p_dat.weights(r_set) / sqrt_weights_to_sds;
     sqrt_weights_to_sds.transform(sqrt);
 

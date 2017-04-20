@@ -159,7 +159,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const bool debug = false,
                             const unsigned int NR_it_max = 100,
                             const int n_threads = -1,
-                            const double ridge_eps = .0001,
+                            const double denom_term = .0001,
                             const int n_fixed_terms_in_state_vec = 0,
                             const bool use_pinv = false,
                             const std::string criteria = "delta_coef",
@@ -205,7 +205,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, model != "logit", NR_it_max, debug, n_threads,
-      ridge_eps, use_pinv, criteria));
+      denom_term, use_pinv, criteria));
     solver.reset(new EKF_solver(static_cast<problem_data_EKF &>(*p_data.get()), model));
 
   } else if (method == "UKF"){
@@ -219,7 +219,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       risk_obj, F_,
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
-      order_, est_Q_0, debug, LR, n_threads, ridge_eps, use_pinv,
+      order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
       criteria));
 
     if(model == "logit"){
@@ -249,7 +249,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params,
       weights,
       n_max, eps, verbose,
-      order_, est_Q_0, debug, LR, n_threads, ridge_eps, use_pinv,
+      order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
       criteria));
 
     if(p_data->any_fixed_in_M_step)
@@ -266,7 +266,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         eps_fixed_parems, max_it_fixed_params,
         weights,
         n_max, eps, verbose,
-        order_, est_Q_0, debug, LR, n_threads, ridge_eps, use_pinv,
+        order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
         criteria));
 
     if(model == "logit"){
@@ -285,7 +285,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         eps_fixed_parems, max_it_fixed_params,
         weights,
         n_max, eps, verbose,
-        order_, est_Q_0, debug, LR, n_threads, ridge_eps, use_pinv,
+        order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
         criteria));
 
     if(model == "logit"){

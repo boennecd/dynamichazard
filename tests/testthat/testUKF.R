@@ -287,7 +287,7 @@ test_that("UKF second order model works", {
                                Q_0 = diag(c(rep(.25, ncol(sims$res) + 1 - 4), rep(.25, ncol(sims$res) + 1 - 4))),
                                Q = diag(rep(.1, ncol(sims$res) + 1 - 4)),
                                control = list(est_Q_0 = F, method = "UKF", eps = 1e-1,
-                                              ridge_eps = 1e-3),
+                                              denom_term = 1e-3),
                                id = sims$res$id,
                                verbose = F, model = m,
                                order = 2,

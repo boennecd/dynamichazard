@@ -112,7 +112,7 @@ void GMA<T>::solve(){
 
       for(arma::uword i = 0; i < r_set.n_elem; i++){
         h_1d[i] = T::d1(eta[i], is_event[i], at_risk_lenght[i]);
-        h_2d_neg[i] = - T::d2(eta[i], at_risk_lenght[i]); // + p_dat.ridge_eps; // TODO: want this? If so document!
+        h_2d_neg[i] = - T::d2(eta[i], at_risk_lenght[i]);
       }
       h_1d %= w;
       h_2d_neg %= w;

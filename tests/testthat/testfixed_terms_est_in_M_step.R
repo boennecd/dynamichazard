@@ -113,7 +113,7 @@ test_that("Get previous results with exponential model with some fixed terms", {
     res1 <- ddhazard(form, data = sims$res, model = "exp_clip_time_w_jump", by = 1, id = sims$res$id, max_T = 10,
                     control = list(eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3,
                                    save_risk_set = F, save_data = F, n_max = 1e2,
-                                   ridge_eps = .0001,
+                                   denom_term = .0001,
                                    fixed_terms_method = "M_step"),
                     Q_0 = diag(rep(100000, 3)), Q = diag(.01, 3)))
 

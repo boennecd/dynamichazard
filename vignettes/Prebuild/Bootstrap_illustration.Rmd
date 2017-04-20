@@ -424,7 +424,7 @@ fit_expression <- expression({
                 data = sim_list$sims, id = sim_list$sims$id, max_T = tmax, 
                 by = 1, Q_0 = diag(1e4, 5), Q = diag(1, 5),
                 a_0 = rep(0, 5), control = list(
-                  ridge_eps = 1e-3, eps = .01, criteria = "delta_likeli"))
+                  denom_term = 1e-3, eps = .01, criteria = "delta_likeli"))
 })
 eval(fit_expression)
 
