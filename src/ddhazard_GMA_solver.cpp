@@ -2,19 +2,9 @@
 
 inline double GMA_hepler_logit::d1(
     const double eta, const bool is_event, const double at_risk_length){
-  if(is_event){
-    //if(eta > 10.)
-    //  return(0.0000453979);
-    //if(eta < - 10.)
-    //  return(0.999955);
-
+  if(is_event)
     return(1 / (1 + exp(eta)));
-  }
 
-  //if(eta > 10.)
-  //  return(0.999955);
-  //if(eta < - 10.)
-  //  return(0.0000453979);
 
   const double e = exp(eta);
   return(- e / (1 + e));
@@ -22,8 +12,8 @@ inline double GMA_hepler_logit::d1(
 
 inline double GMA_hepler_logit::d2(
   double eta, const double at_risk_length){
-  if(eta < -10. || eta > 10.)
-    return(- 0.0000453958);
+  if(eta < -15. || eta > 15.)
+    return(0);
 
   const double e = exp(eta);
   return - e / pow(1. + e, 2);
@@ -105,7 +95,7 @@ void GMA<T>::solve(){
 
     arma::mat X_tilde;
     signed int k;
-    for(k = 1; k < max_rep; k++){
+    for(k = 0; k < max_rep; k++){
       arma::vec a_old = a;
 
       arma::vec eta = (a(p_dat.span_current_cov).t() * X_t).t() + offsets;

@@ -1,12 +1,3 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
 library(dynamichazard)
 
@@ -91,11 +82,17 @@ JScode <- get_JS_code_for_log_slider(
   "n_series", n_series_stuff$base, n_series_stuff$exp_min, n_series_stuff$exp_max)
 
 denom_term_stuff <- list(base = 10, exp_min = -6, exp_max = -1)
+GMA_NR_eps_stuff <- list(base = 10, exp_min = -6, exp_max = 1)
 
 JScode <- paste(
   JScode,
+
   get_JS_code_for_log_slider(
   "denom_term", denom_term_stuff$base, denom_term_stuff$exp_min, denom_term_stuff$exp_max),
+
+  get_JS_code_for_log_slider(
+    "GMA_NR_eps", GMA_NR_eps_stuff$base, GMA_NR_eps_stuff$exp_min, GMA_NR_eps_stuff$exp_max),
+
   sep = "\n")
 
 # Define UI for application that draws a histogram
@@ -148,13 +145,13 @@ ui <- fluidPage(
                       label = "RNG seed",
                       value = 65848),
 
-         sliderInput("covar_range", "Range to draw covariates from uniformly:",
+         sliderInput("covar_range", "Range to draw covariates from uniformly",
                      min = -3, max = 3, value = c(-.5, .5), step = .5),
 
-         sliderInput("sd_intercept", "Standard deviations for intercept:",
+         sliderInput("sd_intercept", "Standard deviations for intercept",
                      min = .1, max = 1, value = .2, step = .1),
 
-         sliderInput("sd_coef", "Standard deviations for coefficients:",
+         sliderInput("sd_coef", "Standard deviations for coefficients",
                      min = .1, max = 1, value = .5, step = .1))
      ),
 
@@ -187,11 +184,13 @@ ui <- fluidPage(
                      step = 1,
                      value = 1),
 
-         sliderInput("denom_term",
-                     "denom_term",
-                     min = 0,
-                     max = denom_term_stuff$exp_max - denom_term_stuff$exp_min - 1,
-                     value = 1),
+         conditionalPanel(
+           "input.est_with_method == 'EKF' || input.est_with_method == 'UKF'",
+           sliderInput("denom_term",
+                       "denom_term for extra term in denominators",
+                       min = 0,
+                       max = denom_term_stuff$exp_max - denom_term_stuff$exp_min - 1,
+                       value = 1)),
 
          selectInput("fixed_terms_method",
                      "Estimate fixed effect in",
@@ -231,12 +230,29 @@ ui <- fluidPage(
 
            conditionalPanel(
              "input.est_with_method == 'SMA'",
-             h4("Posterior approximation method settings"),
+             h4("SMA method settings"),
 
              selectInput("SMA_version",
                          "Computation version",
                          choices = c("woodbury", "cholesky"),
-                         selected = "woodbury"))
+                         selected = "woodbury")),
+
+           conditionalPanel(
+             "input.est_with_method == 'GMA'",
+             h4("GMA method settings"),
+
+             sliderInput("GMA_max_rep",
+                         "GMA_max_rep parameter",
+                         min = 1,
+                         max = 25,
+                         step = 1,
+                         value = 5),
+
+             sliderInput("GMA_NR_eps",
+                         "GMA_NR_eps parameter",
+                         min = 0,
+                         max = GMA_NR_eps_stuff$exp_max - GMA_NR_eps_stuff$exp_min - 1,
+                         value = 4))
          )),
 
      wellPanel(
@@ -297,6 +313,10 @@ server <- function(input, output) {
     denom_term_stuff$base^(denom_term_stuff$exp_min + input$denom_term)
   })
 
+  GMA_NR_eps <- reactive({
+    GMA_NR_eps_stuff$base^(GMA_NR_eps_stuff$exp_min + input$GMA_NR_eps)
+  })
+
   sim_input <- reactive({
     set.seed(input$seed)
     f_choice <- if(input$sim_with == "exponential")
@@ -309,11 +329,8 @@ server <- function(input, output) {
 
     n_varying <- 5 - n_fixed + (n_fixed > 0)
 
-    # TODO: Figure out what is going on here
     x_range <- diff(input$covar_range)
     x_mean <- mean(input$covar_range)
-
-    print(c(x_range, x_mean))
 
     dat <- f_choice(
       n_series = n_series_input(),
@@ -374,7 +391,9 @@ server <- function(input, output) {
       stop("n_fixed is not implemented")
 
     q_0_len <- 6 - n_fixed
-    q_0_term <- ifelse(input$est_with_method %in% c("UKF", "GMA"), 1, 1e5)
+    q_0_term <- ifelse(
+      input$est_with_method %in% c("UKF", "GMA"),
+      1, 1e5)
 
     if(input$order == 2){
       if(q_0_len > 1){
@@ -392,18 +411,25 @@ server <- function(input, output) {
     }
 
     control_list <- list(eps = 10^-2,
-                         denom_term = denom_term(),
                          method = input$est_with_method)
 
     if(input$est_with_method == "UKF"){
       control_list <- c(control_list,
-                        list(beta = input$beta, alpha = input$alpha))
+                        list(beta = input$beta, alpha = input$alpha,
+                             denom_term = denom_term()))
+
     } else if (input$est_with_method == "EKF"){
+      control_list$denom_term <- denom_term()
       if(input$use_extra_correction)
         control_list <- c(control_list,
                           list(NR_eps = .1))
+
     } else if(input$est_with_method == "SMA"){
       control_list$posterior_version = input$SMA_version
+    } else if(input$est_with_method == "GMA"){
+      control_list <- c(control_list,
+                        list(GMA_max_rep = input$GMA_max_rep,
+                             GMA_NR_eps = GMA_NR_eps()))
     }
 
     if(n_fixed > 0){
