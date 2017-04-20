@@ -114,7 +114,7 @@ State space models can be implemented to provide an computational efficient way 
 % \newcommand{\VAR}{Var}
 % \newcommand{\E}{E}
 
-
+% Math commands for section on global mode approximation
 
 \newcommand\eqnGblModeTerma{
 \begin{pmatrix}
@@ -125,6 +125,21 @@ State space models can be implemented to provide an computational efficient way 
 \begin{pmatrix}\mat{X}_t \\ \mat{I} \end{pmatrix}}
 \newcommand\eqnGblModeTermc{
 \begin{pmatrix} \vec{z} \\  \emNotee{\vec{\alpha}}{t}{t-1} \end{pmatrix}}
+
+\newcommand\algGMAscore[1]{
+\begin{aligned}
+	 #1&\Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-p''(\vec{\alpha}^{(k-1)})\mat{X}_t}^{-1}
+	 \left(\zeta_0 \vphantom{\Lparen{-p''(\vec{\alpha}^{(k-1)})}}
+		 \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1} + \zeta_0 \mat{X}_t^\top p'(\vec{\alpha}^{(k-1)})
+		\right. \\
+		&\hspace{50pt}\left. + \Lparen{\mat{X}_t^\top\Lparen{-p''(\vec{\alpha}^{(k-1)})}\mat{X}_t + (1-\zeta_0)   \emNotee{\mat{V}}{t}{t-1}^{-1}} \vec{a}^{(k - 1)} \right)
+\end{aligned}}
+
+\newcommand\algGMApPrime{
+\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'} \right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}
+
+\newcommand\algGMApPrimePrime{
+\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}
 
 \begin{document}
 
@@ -928,30 +943,37 @@ We could directly minimize equaion~\ref{eqn:modeExact}. This is equivalent to a 
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \Lparen{\vec{\alpha} - \emNotee{\vec{a}}{t}{t-1}}
       - \left. \sum_{(i,j) \in R_t} \frac{\partial\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \Lparen{\vec{\alpha} - \emNotee{\vec{a}}{t}{t-1}}
-		  - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'} \right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p'} \\
+		  - \mat{X}_t^\top \underbrace{\algGMApPrime}_{p'(\vec{\alpha})} \\
 %
 	\tmat{G}(\vec{\alpha}) = \tilde h''(\vec{\alpha})
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \left. \sum_{(i,j) \in R_t} \frac{\partial^2\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'\partial \Lparen{\vec{\alpha}'}^\top} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
-		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}_{p''}\mat{X}_t
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\algGMApPrimePrime}_{p''(\vec{\alpha})}\mat{X}_t
 \end{aligned}\end{aligned}\end{equation}
+
+Thus, the update equation is:
+\begin{equation}
+\begin{aligned}
+\vec{a}^{(k)} &= \vec{a}^{(k - 1)} + \zeta_0 \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{-\tmat{g}(\vec{a}^{(k - 1)})} \\
+%	&= \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{
+%		- \mat{X}_t^\top  p''(\vec{\alpha}^{(k-1)}) \mat{X}_t  \vec{a}^{(k - 1)}
+%		+ (1-\zeta_0)   \emNotee{\mat{V}}{t}{t-1}^{-1} \vec{a}^{(k-1)}
+%		+ \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1}
+%		+ \zeta_0 \mat{X}_t^\top p'(\vec{\alpha}^{(k-1)})} \\
+	& \algGMAscore{\ =}
+\end{aligned}
+\end{equation}
 
 Algorithm~\ref{alg:GlobalMA} shows the iteratively re-weighted ridge regression. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
 
 \begin{algorithm}
 \caption{Correction step with global mode approximation by Newton Raphson.}\label{alg:GlobalMA}
 \begin{algorithmic}[1]\raggedright
-\Statex Set $\vec{a}^{(0)} =\emNotee{\vec{a}}{t}{t-1}$ and $k= 1$. Let $\vec{g}$ denote the inverse link function
+\Statex Set $\vec{a}^{(0)} =\emNotee{\vec{a}}{t}{t-1}$ and define:
+\Statex $p'(\vec{\alpha}) = \algGMApPrime$
+\Statex $p''(\vec{\alpha}) = \algGMApPrimePrime$
 \Repeat
 \State %
-$\begin{aligned}
-\vec{a}^{(k)} &= \vec{a}^{(k - 1)} + \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{-\tmat{g}(\vec{a}^{(k - 1)})} \\
-	&= \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{
-		- \mat{X}_t^\top  p'' \mat{X}_t  \vec{a}^{(k - 1)}
-		+ \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1}
-		+ \mat{X}_t^\top p'} \\
-	&= \Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-p'')\mat{X}_t}^{-1}
-		 \Lparen{\mat{X}_t^\top\Lparen{-p''}\mat{X}_t  \vec{a}^{(k - 1)} + \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1} + \mat{X}_t^\top p'}
-\end{aligned}$
+$\algGMAscore{\vec{a}^{(k)} =}$
 \UntilElse{$\LVert{\vec{a}^{(k)} - \vec{a}^{(k-1)}}/ (\LVert{\vec{a}^{(k-1)}} + \delta) < \epsilon$}{Set $k\leftarrow k + 1$}
 \State $\emNotee{\mat{V}}{t}{t} = \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}$
 \end{algorithmic}

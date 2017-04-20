@@ -135,5 +135,51 @@ test_that("GMA makes one mesasge when global scoring did not succed within given
   expect_silent(suppressMessages(f1 <- do.call(ddhazard, args)))
 })
 
+test_that("Changing learning rates changes the result w/ GMA", {
+  args <- list(
+    formula = Surv(tstart, tstop, death == 2) ~ edema + age + log(albumin) + log(bili) + log(protime),
+    data = pbc2,
+    id = pbc2$id, by = 100, max_T = 3600,
+    control = list(method = "GMA"),
+    Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6)))
+
+  f1 <- do.call(ddhazard, args)
+  args$control$LR <- .75
+  f2 <- do.call(ddhazard, args)
+
+  expect_true(is.character(all.equal(f1$state_vecs, f2$state_vecs)))
+})
+
+test_that("GAM works w/ weights", {
+  args <-  list(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    control = list(est_Q_0 = F, method = "GMA",
+                   save_data = F, save_risk_set = F),
+    Q_0 = diag(1, 2), Q = diag(0.01, 2),
+    max_T = 45, order = 1)
+
+  f1 <- do.call(ddhazard, args) # no weigths
+
+  set.seed(10211)
+  ws <- sample(1:3, nrow(head_neck_cancer), replace = T)
+  args$weights = ws
+  f2 <- do.call(ddhazard, args) # with weigths
+
+  expect_true(is.character(all.equal(
+    f1$state_vecs, f2$state_vecs, tolerance = 1e-8)))
+  expect_equal(
+    f1$state_vecs, f2$state_vecs, tolerance = 1)
+
+  dum_dat <-
+    head_neck_cancer[unlist(mapply(rep, x = seq_along(ws), times = ws)), ]
+  args$weights <- NULL
+  args$data <- dum_dat
+  f3 <- do.call(ddhazard, args) # with dummy data mimic weigths
+
+  expect_equal(f2$state_vecs, f3$state_vecs, 1e-3)
+})
+
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

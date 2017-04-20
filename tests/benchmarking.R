@@ -21,36 +21,34 @@ suppressMessages(result_exp <- ddhazard(
   max_T = 10,
   id = sims$res$id, order = 1,
   verbose = F))
-#
-# matplot(result_exp$state_vecs, lty = 2, type = "l")
-# matplot(sims$betas, type = "l", lty = 1, add = T)
-#
-#
-# set.seed(45219272)
-#
-# sims <- test_sim_func_logit(n_series = 5e2, n_vars = 3, t_0 = 0, t_max = 10,
-#                             x_range = 1, x_mean = 0.5, re_draw = T, beta_start = 2,
-#                             intercept_start = -5, sds = rep(1, 2),
-#                             is_fixed = 1:2)
-# sum(sims$res$event)
-#
-#
-# fit <- ddhazard(Surv(tstart, tstop, event) ~ ddFixed(1) + ddFixed(x1) + x2 + x3,
-#                 data = sims$res, id = sims$res$id, by = 1, max_T = 10,
-#                 model = "logit", Q_0 = diag(10, 2), Q = diag(.01, 2))
-#
-# matplot(sims$betas, lty = 1, type = "l", ylim = range(sims$betas, fit$state_vecs, fit$fixed_effects))
-# matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:4)
-# abline(h = fit$fixed_effects, lty = 2, col = 1:2)
-#
-# fit <- ddhazard(Surv(tstart, tstop, event) ~ ddFixed(1) + ddFixed(x1) + x2 + x3,
-#                 data = sims$res, id = sims$res$id, by = 1, max_T = 10,
-#                 model = "logit", Q_0 = diag(10, 2), Q = diag(.01, 2),
-#                 control = list(fixed_terms_method = "E_step"))
-#
-# matplot(fit$state_vecs, lty = 3, type = "l", add = T, col = 3:4)
-# abline(h = fit$fixed_effects, lty = 3, col = 1:2)
 
+
+
+set.seed(65848L)
+dat <- test_sim_func_logit(n_series = 65536, n_vars = 5,
+                           t_max = 30, re_draw = T, beta_start = runif(5,
+                                                                       min = -1.5, max = 1.5), intercept_start = -3.5,
+                           sds = c(0.4, rep(1L, 5)), x_range = 3L, x_mean = -0.5,
+                           lambda = 0.166666666666667, is_fixed = NULL,
+                           tstart_sampl_func = function(t_0 = t_0, t_max = t_max) max(0,
+                                                                                      runif(1, t_0 - t_max, t_max - 1 - 1e-08)))
+dat$res[dat$res$event == 0 & dat$res$tstop > 30,
+        "tstop"] <- 30
+
+tmp <- file("tmp.txt")
+sink(tmp)
+fit <- ddhazard(formula = survival::Surv(tstart,
+                                  tstop, event) ~ x1 + x2 + x3 +
+           x4 + x5, data = dat$res, by = 1,
+         Q_0 = diag(1, 6), Q = diag(0.1,
+                                    6), max_T = 30L, id = dat$res$id,
+         order = 1L, model = "logit",
+         control = list(eps = 0.01,
+                        method = "GMA", GMA_max_rep = 10L,
+                        GMA_NR_eps = 0.1, debug = T,
+                        LR = .5))
+sink()
+close(tmp)
 
 
 set.seed(4296745)

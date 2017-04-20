@@ -177,6 +177,13 @@ ui <- fluidPage(
 
        conditionalPanel(
          "input.more_options",
+         sliderInput("LR",
+                     "Learning rate",
+                     min = .1,
+                     max = 2,
+                     step = .1,
+                     value = 1),
+
          sliderInput("order",
                      "Randowm walk order in estimation",
                      min = 1,
@@ -318,9 +325,8 @@ server <- function(input, output) {
   })
 
   sim_input <- reactive({
-    set.seed(input$seed)
     f_choice <- if(input$sim_with == "exponential")
-      test_sim_func_exp else test_sim_func_logit
+      quote(test_sim_func_exp) else quote(test_sim_func_logit)
 
     n_fixed <- if(input$sim_fix_options == 1)
       0 else if(input$sim_fix_options == 2)
@@ -332,18 +338,28 @@ server <- function(input, output) {
     x_range <- diff(input$covar_range)
     x_mean <- mean(input$covar_range)
 
-    dat <- f_choice(
-      n_series = n_series_input(),
-      n_vars = 5,
-      t_max = t_max, re_draw = T, beta_start = runif(5, min = -1.5, max = 1.5),
-      intercept_start = -3.5,
-      sds = c(input$sd_intercept, rep(input$sd_coef, 5)),
-      x_range = x_range, x_mean = x_mean, lambda = 5 / t_max,
-      is_fixed = if(n_fixed == 0) c() else 1:n_fixed,
+    sim_exp <- bquote({
+      set.seed(.(input$seed))
+      dat <- .(f_choice)(
+        n_series = .(n_series_input()),
+        n_vars = 5,
+        t_max = .(t_max), re_draw = T, beta_start = runif(5, min = -1.5, max = 1.5),
+        intercept_start = -3.5,
+        sds = c(.(input$sd_intercept), rep(.(input$sd_coef), 5)),
+        x_range = .(x_range), x_mean = .(x_mean), lambda = .(5 / t_max),
+        is_fixed = .(if(n_fixed == 0) c() else 1:n_fixed),
 
-      tstart_sampl_func = start_fun)
+        tstart_sampl_func = .(start_fun))
 
-    dat$res[dat$res$event == 0 & dat$res$tstop > t_max, "tstop"] <- t_max
+      dat$res[dat$res$event == 0 & dat$res$tstop > t_max, "tstop"] <- t_max
+    })
+
+    out <- formatR::tidy_source(text = capture.output(sim_exp), width.cutoff = 50,
+                                output = FALSE)
+    out <- out$text.tidy
+    cat(paste0("Data is simulated with this call: \n", out, "\n"))
+
+    eval(sim_exp)
     dat
   })
 
@@ -436,6 +452,10 @@ server <- function(input, output) {
       control_list <- c(control_list, list(fixed_terms_method  = input$fixed_terms_method))
     }
 
+    if(input$LR != 1){
+      control_list$LR <- input$LR
+    }
+
     Q <- if(6 - n_fixed > 1)
       bquote(diag(.1, .(6 - n_fixed))) else 0.1
 
@@ -455,8 +475,12 @@ server <- function(input, output) {
 
   output$fit_call_txt <- renderText({
     eval_quote <- fit_quote_input()$quote
-    out <- formatR::tidy_source(text = capture.output(eval_quote), width.cutoff = 30)
+    out <- formatR::tidy_source(text = capture.output(eval_quote), width.cutoff = 30,
+                                output = FALSE)
     out <- out$text.tidy
+
+    cat(paste0("Model is fitted with this call: \n", out, "\n"))
+
     paste0(out, "\n\n# data is the simulated data set")
   })
 

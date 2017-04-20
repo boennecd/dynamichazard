@@ -72,7 +72,7 @@ void GMA<T>::solve(){
     arma::mat V_t_less_inv;
     inv_sympd(V_t_less_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
               "Failed to invert covariance matrix after prediction step");
-    arma::vec grad_term = V_t_less_inv * p_dat.a_t_less_s.col(t - 1);
+    arma::vec grad_term = V_t_less_inv * (p_dat.LR * p_dat.a_t_less_s.col(t - 1));
 
     const arma::vec offsets =
       (p_dat.any_fixed_in_M_step) ?
@@ -122,13 +122,21 @@ void GMA<T>::solve(){
 
       {
         arma::vec tmp = grad_term;
-        tmp(p_dat.span_current_cov) += X_tilde * a(p_dat.span_current_cov) + X_t * h_1d;
+        if(1. - 1e-15 < p_dat.LR && p_dat.LR < 1. + 1e-15){
+          tmp(p_dat.span_current_cov) +=
+            X_tilde * a(p_dat.span_current_cov) + X_t * h_1d;
+
+        } else {
+          tmp(p_dat.span_current_cov) +=
+            X_tilde * a(p_dat.span_current_cov) + X_t * (h_1d * p_dat.LR) +
+              V_t_less_inv * ((1 - p_dat.LR) * a);
+        }
         a =  V * tmp;
       }
 
       if(p_dat.debug){
         std::stringstream str;
-        str << "^(" << k << ")";
+        str << "^(" << k + 1 << ")";
 
         my_print(a, "a" + str.str());
         my_print(V, "V" + str.str());
