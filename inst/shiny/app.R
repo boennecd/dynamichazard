@@ -253,7 +253,7 @@ ui <- fluidPage(
        column(
          6,
          h3("Intro"),
-         div("Illustrates simulated data and a fit. The true coeffecient are the continous curves and the predicted coeffecients are the dashed curves.", style = get_em(3)),
+         div("Illustrates simulated data and a fit. The true coefficients are the continous curves and the predicted coefficients are the dashed curves.", style = get_em(3)),
          div(textOutput("rug_explanation"), style = get_em(4)),
          div("See the ddhazard vignette for further details", style = get_em(1))
        ),
@@ -465,7 +465,7 @@ server <- function(input, output) {
         cbind(sapply(fit$fixed_effects, rep, times = input$obs_time),
               fit$state_vecs[1:input$obs_time + 1, 1:(6 - n_fixed)])
 
-    sprintf("MSE for coeffecients is %.3f",
+    sprintf("MSE for coefficients is %.3f",
       mean.default((sim_input()$beta[1:input$obs_time + 1, ] - state_vecs)^2))
   })
 

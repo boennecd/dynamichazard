@@ -149,7 +149,7 @@ test_that("Works with UKF and continous time model", {
 
 test_that("Works with second order random walk and continous time model",{
   fit <- suppressWarnings(ddhazard(form,
-                                   Q_0 = diag(c(rep(10, 2), rep(1, 2))), Q = diag(1, 2),
+                                   Q_0 = diag(1, 4), Q = diag(1, 2),
                                    data = sims_exp$res, id = sims_exp$res$id,
                                    by = 1, model = "exp_clip_time_w_jump", max_T = 10,
                                    control = list(fixed_terms_method = "E_step",

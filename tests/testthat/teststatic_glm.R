@@ -55,9 +55,10 @@ test_that("static glm gives results with exponential that match previous computa
     family = "exponential", model = T)
 
   tmp <- res["coefficients"]
+  # print(unname(c(tmp$coefficients)), digits = 16)
 
   expect_equal(unname(c(tmp$coefficients)),
-               c(-3.0654969893646609, 0.4515918710312326, 1.0892116143756236, -0.7820465199455019 ))
+               c(-3.6459235444693050, 0.9102151731455984, 1.6979905314632640, -1.0289178389697182))
 
   # test with lower max_T
   res_lower <- dynamichazard::static_glm(
@@ -68,7 +69,7 @@ test_that("static glm gives results with exponential that match previous computa
   # get_expect_equal(tmp)
 
   expect_equal(unname(c(tmp$coefficients)),
-               c(-2.7659195344671597, -0.6083779316590273, -0.1280512349287461, -1.0481131739738363 ))
+               c(-3.3190612949254423, 0.1945288932439811, 0.2521056063913886, -1.3733242160716073 ))
 })
 
 test_that("design_matrix yields equal result with different values of use_weights", {
