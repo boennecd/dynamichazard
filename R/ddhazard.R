@@ -137,7 +137,7 @@ ddhazard = function(formula, data,
                           save_data = T, eps_fixed_parems = 1e-3,
                           max_it_fixed_params = 10, fixed_effect_chunk_size = 1e4,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
-                          LR_decrease_fac = 1.5,
+                          LR_decrease_fac = 0.9,
                           n_threads = getOption("ddhazard_max_threads"),
                           denom_term = .0001,
                           fixed_terms_method = "E_step",
@@ -351,12 +351,12 @@ ddhazard = function(formula, data,
   }
 
   result <- NA
-  k_vals <- if(control$method == "EKF") seq_len(control$LR_max_try) - 1 else 0
+  k_vals <- seq_len(control$LR_max_try) - 1
   for(k in k_vals){
     tryCatch({
       result <- ddhazard_no_validation(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose, Q = Q,
                                        risk_set= risk_set, X_Y = X_Y, order = order, model = model,
-                                       LR = control$LR / control$LR_decrease_fac^(k),
+                                       LR = control$LR * control$LR_decrease_fac^(k),
                                        n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
                                        weights = weights,
                                        control)
@@ -365,7 +365,7 @@ ddhazard = function(formula, data,
           !grepl("^ddhazard_fit_cpp estimation error:", e$message))
         stop(e))
 
-    LR <- control$LR / control$LR_decrease_fac^(k)
+    LR <- control$LR * control$LR_decrease_fac^(k)
     if(did_fit <- !(length(result) == 1 && is.na(result)))
       break
   }
@@ -373,8 +373,8 @@ ddhazard = function(formula, data,
   # Check if fit succeeded
   if(!did_fit)
     stop("Failed to estimate model. The following learning rates was tried: ",
-         paste0(control$LR / control$LR_decrease_fac^k_vals, collapse = ", "),
-         ". Try decreasing the learning rate or change the penalty term denom_term")
+         paste0(control$LR * control$LR_decrease_fac^k_vals, collapse = ", "),
+         ". Try decreasing the learning rate or change denom_term")
 
   if(k != 0)
     message("Did not succed to fit the model wit a learning rate of ", control$LR,

@@ -146,7 +146,7 @@ ui <- fluidPage(
                       value = 65848),
 
          sliderInput("covar_range", "Range to draw covariates from uniformly",
-                     min = -3, max = 3, value = c(-.5, .5), step = .5),
+                     min = -2, max = 2, value = c(-.5, .5), step = .5),
 
          sliderInput("sd_intercept", "Standard deviations for intercept",
                      min = .1, max = 1, value = .2, step = .1),
@@ -253,7 +253,7 @@ ui <- fluidPage(
                          min = 1,
                          max = 25,
                          step = 1,
-                         value = 5),
+                         value = 25),
 
              sliderInput("GMA_NR_eps",
                          "GMA_NR_eps parameter",

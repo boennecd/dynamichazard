@@ -273,15 +273,15 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
   betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
                               nrow = nrow(betas))
 
-  ceiler <- function(x) ceiling(x * 1000) / 1000
+  ceiler <- function(x, level=1) round(x + 5*10^(-level-1), level)
 
   # Simulate
   mean_term <- - x_range / 2 + x_mean
 
   for(id in 1:n_series){
-    tstart <- tstop <-  ceiler(tstart_sampl_func(t_0, t_max))
+    tstart <- tstop <-  ceiler(tstart_sampl_func(t_0, t_max), 2)
     repeat{
-      tstop <- ceiler(tstart + get_exp_draw(1)/lambda)
+      tstop <- ceiler(tstart + get_exp_draw(1)/lambda, 2)
 
       x_vars <- x_range * get_unif_draw(n_vars) + mean_term
       l_x_vars <- if(use_intercept) c(1, x_vars) else x_vars
@@ -292,7 +292,7 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
         new_time <- get_exp_draw(1) / exp(drop(betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars))
         event <- new_time <= delta_max
         if(event){
-          tstop <- ceiler(new_time + tmp_t) # Arrival time is uniform conditional on event
+          tstop <- ceiler(new_time + tmp_t, 14)
           break
         }
 
