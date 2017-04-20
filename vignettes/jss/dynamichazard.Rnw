@@ -128,11 +128,11 @@ State space models can be implemented to provide an computational efficient way 
 
 \newcommand\algGMAscore[1]{
 \begin{aligned}
-	 #1&\Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-p''(\vec{\alpha}^{(k-1)})\mat{X}_t}^{-1}
-	 \left(\zeta_0 \vphantom{\Lparen{-p''(\vec{\alpha}^{(k-1)})}}
-		 \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1} + \zeta_0 \mat{X}_t^\top p'(\vec{\alpha}^{(k-1)})
+	 #1&\Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-c''(\vec{\alpha}^{(k-1)})\mat{X}_t}^{-1}
+	 \left(\zeta_0 \vphantom{\Lparen{-c''(\vec{\alpha}^{(k-1)})}}
+		 \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1} + \zeta_0 \mat{X}_t^\top c'(\vec{\alpha}^{(k-1)})
 		\right. \\
-		&\hspace{50pt}\left. + \Lparen{\mat{X}_t^\top\Lparen{-p''(\vec{\alpha}^{(k-1)})}\mat{X}_t + (1-\zeta_0)   \emNotee{\mat{V}}{t}{t-1}^{-1}} \vec{a}^{(k - 1)} \right)
+		&\hspace{50pt}\left. + \Lparen{\mat{X}_t^\top\Lparen{-c''(\vec{\alpha}^{(k-1)})}\mat{X}_t + (1-\zeta_0)   \emNotee{\mat{V}}{t}{t-1}^{-1}} \vec{a}^{(k - 1)} \right)
 \end{aligned}}
 
 \newcommand\algGMApPrime{
@@ -932,7 +932,7 @@ We will denote this method by Sequential Mode Approximation (SMA). Two algorithm
 \end{algorithm}
 
 \subsection{Different approches}
-We could directly minimize equaion~\ref{eqn:modeExact}. This is equivalent to a L2 penalized for a Generalized Linear Models (GLM) since only models from the exponential family is used in this package. This can be done with the usual  iteratively reweighted ridge regression. Every iteration can be done in $\bigO{n_tq^2 + q^3}$. We will go through computations in the following paragraphs. Define:
+We can directly minimize equaion~\ref{eqn:modeExact}. This is equivalent to a L2 penalized for a Generalized Linear Models (GLM) since we only models from the exponential family. This can be done with the usual  iteratively reweighted ridge regression. Every iteration can be done in $\bigO{n_tq^2 + q^3}$. We will go through computations in the following paragraphs. First, we derive the gradient and the Hessian:
 
 \begin{equation}\begin{aligned}
 	 &\tilde h(\vec{\alpha}) =  - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
@@ -943,11 +943,11 @@ We could directly minimize equaion~\ref{eqn:modeExact}. This is equivalent to a 
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \Lparen{\vec{\alpha} - \emNotee{\vec{a}}{t}{t-1}}
       - \left. \sum_{(i,j) \in R_t} \frac{\partial\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \Lparen{\vec{\alpha} - \emNotee{\vec{a}}{t}{t-1}}
-		  - \mat{X}_t^\top \underbrace{\algGMApPrime}_{p'(\vec{\alpha})} \\
+		  - \mat{X}_t^\top \underbrace{\algGMApPrime}_{c'(\vec{\alpha})} \\
 %
 	\tmat{G}(\vec{\alpha}) = \tilde h''(\vec{\alpha})
 		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \left. \sum_{(i,j) \in R_t} \frac{\partial^2\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'\partial \Lparen{\vec{\alpha}'}^\top} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
-		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\algGMApPrimePrime}_{p''(\vec{\alpha})}\mat{X}_t
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\algGMApPrimePrime}_{c''(\vec{\alpha})}\mat{X}_t
 \end{aligned}\end{aligned}\end{equation}
 
 Thus, the update equation is:
@@ -955,22 +955,22 @@ Thus, the update equation is:
 \begin{aligned}
 \vec{a}^{(k)} &= \vec{a}^{(k - 1)} + \zeta_0 \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{-\tmat{g}(\vec{a}^{(k - 1)})} \\
 %	&= \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{
-%		- \mat{X}_t^\top  p''(\vec{\alpha}^{(k-1)}) \mat{X}_t  \vec{a}^{(k - 1)}
+%		- \mat{X}_t^\top  c''(\vec{\alpha}^{(k-1)}) \mat{X}_t  \vec{a}^{(k - 1)}
 %		+ (1-\zeta_0)   \emNotee{\mat{V}}{t}{t-1}^{-1} \vec{a}^{(k-1)}
 %		+ \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1}
-%		+ \zeta_0 \mat{X}_t^\top p'(\vec{\alpha}^{(k-1)})} \\
+%		+ \zeta_0 \mat{X}_t^\top c'(\vec{\alpha}^{(k-1)})} \\
 	& \algGMAscore{\ =}
 \end{aligned}
 \end{equation}
 
-Algorithm~\ref{alg:GlobalMA} shows the iteratively re-weighted ridge regression. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
+Algorithm~\ref{alg:GlobalMA} shows the final implementation with a learning rate $\zeta_0$. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
 
 \begin{algorithm}
 \caption{Correction step with global mode approximation by Newton Raphson.}\label{alg:GlobalMA}
 \begin{algorithmic}[1]\raggedright
 \Statex Set $\vec{a}^{(0)} =\emNotee{\vec{a}}{t}{t-1}$ and define:
-\Statex $p'(\vec{\alpha}) = \algGMApPrime$
-\Statex $p''(\vec{\alpha}) = \algGMApPrimePrime$
+\Statex $c'(\vec{\alpha}) = \algGMApPrime$
+\Statex $c''(\vec{\alpha}) = \algGMApPrimePrime$
 \Repeat
 \State %
 $\algGMAscore{\vec{a}^{(k)} =}$
@@ -986,7 +986,7 @@ $\algGMAscore{\vec{a}^{(k)} =}$
 For these models we have:
 
 \begin{equation}
-	\tilde p'(d) = y_{ijt} - b'(d) = y_{ijt} - h(c) \qquad \tilde p''(d) = -b''(d) = - \frac{\varpCond{y_{ijt}}{d = \vec{x}_{ij}^\top\vec{\alpha}}}{\phi}
+	\tilde c'(d) = y_{ijt} - b'(d) = y_{ijt} - h(c) \qquad \tilde c''(d) = -b''(d) = - \frac{\varpCond{y_{ijt}}{d = \vec{x}_{ij}^\top\vec{\alpha}}}{\phi}
 \end{equation}
 
 TODO: sensative to $\mat{Q}_0$

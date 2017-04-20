@@ -50,6 +50,7 @@ knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
 \newcommand{\Lbrace}[1]{\left \{ #1\right \}} 
 \newcommand{\Lceil}[1]{\left \lceil #1\right \rceil}
 \newcommand{\Lfloor}[1]{\left \lfloor #1\right \rfloor}
+\newcommand{\LVert}[1]{\left\rVert #1\right\lVert}
 %
 \newcommand{\propp}[1]{P\Lparen{#1}}
 \newcommand{\proppCond}[2]{P\Lparen{\left. #1 \right\vert  #2}}
@@ -72,9 +73,10 @@ knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
 \newcommand{\ukfNotee}[3]{\mat{P}_{\vec{#1}_{#3}, \vec{#2}_{#3}}}
 %
 \newcommand{\diag}[1]{\text{diag}{\Lparen{#1}}}
-\newcommand{\wvec}[1]{\widehat{\vec{#1}}}
-\newcommand{\wmat}[1]{\widehat{\mat{#1}}}
-\newcommand{\wtvec}[1]{\widetilde{\vec{#1}}}
+\newcommand{\hvec}[1]{\widehat{\vec{#1}}}
+\newcommand{\hmat}[1]{\widehat{\mat{#1}}}
+\newcommand{\tmat}[1]{\widetilde{\mat{#1}}}
+\newcommand{\tvec}[1]{\widetilde{\vec{#1}}}
 \newcommand{\bvec}[1]{\bar{\vec{#1}}}
 %
 \newcommand{\deter}[1]{\left| #1 \right|}
@@ -94,6 +96,32 @@ knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
 % 
 \newcommand{\qr}[1]{\text{qr}\Lparen{#1}}
 \newcommand{\cholup}[1]{\text{cholupdate}\Lparen{#1}}
+%
+%
+\newcommand\algGMAscore[1]{
+\begin{aligned}
+	 #1&\Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-c''(\vec{\alpha}^{(k-1)})\mat{X}_t}^{-1}
+	 \left(\zeta_0 \vphantom{\Lparen{-c''(\vec{\alpha}^{(k-1)})}}
+		 \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1} + \zeta_0 \mat{X}_t^\top c'(\vec{\alpha}^{(k-1)})
+		\right. \\
+		&\hspace{50pt}\left. + \Lparen{\mat{X}_t^\top\Lparen{-c''(\vec{\alpha}^{(k-1)})}\mat{X}_t + (1-\zeta_0)   \emNotee{\mat{V}}{t}{t-1}^{-1}} \vec{a}^{(k - 1)} \right)
+\end{aligned}}
+%
+\newcommand\algGMApPrime{
+\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'} \right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}
+%
+\newcommand\algGMApPrimePrime{
+\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}
+%
+\newcommand\eqnGblModeTerma{
+\begin{pmatrix}
+  	\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{-1/2} & \mat{0} \\
+	\mat{0} &  \emNotee{\mat{V}}{t}{t-1}^{-1/2}
+\end{pmatrix}}
+\newcommand\eqnGblModeTermb{
+\begin{pmatrix}\mat{X}_t \\ \mat{I} \end{pmatrix}}
+\newcommand\eqnGblModeTermc{
+\begin{pmatrix} \vec{b} \\  \emNotee{\vec{\alpha}}{t}{t-1} \end{pmatrix}}
 
 
 # Introduction
@@ -217,7 +245,7 @@ $$\mat{F} = \begin{pmatrix}
 \end{pmatrix},  \qquad 
 \mat{R} = \begin{pmatrix} \mat{I}_m \\ \mat{0}_m \end{pmatrix}$$
 
-where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The vector in the state equation is ordered as $\vec{\alpha}_t = (\wtvec{\alpha}_t^\top, \wtvec{\alpha}_{t-1}^\top)^\top$ to match the definition of $\mat{F}$ and $\mat{R}$ where the tilde is added to indicate the coefficients used when computing the linear predictor. The likelihood of the model where $\vec{\alpha}_t$ are observed can be written as follows by application of the markovian property of the model:
+where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The vector in the state equation is ordered as $\vec{\alpha}_t = (\tvec{\alpha}_t^\top, \tvec{\alpha}_{t-1}^\top)^\top$ to match the definition of $\mat{F}$ and $\mat{R}$ where the tilde is added to indicate the coefficients used when computing the linear predictor. The likelihood of the model where $\vec{\alpha}_t$ are observed can be written as follows by application of the markovian property of the model:
 $$\begin{split}
 	\proppCond{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}{\vec{y}_{t},\dots,\vec{y}_T} &\propto 
 		L\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} \\
@@ -448,12 +476,12 @@ $$\begin{aligned}
   \emNotee{\mat{V}}{t}{t - 1} = \mat{F}\emNotee{\mat{V}}{t - 1}{t - 1}\mat{F}^\top + \mat{R}\mat{Q}\mat{R}^\top
 \end{aligned}$$
 
-That is, we use the closed form solution. This version is both exact given the previous estimates $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$ and computationally less demanding. Then we select $2q + 1$ so-called *sigma points* (where $q$ is the dimension of the state equation) denoted by $\wvec{a}_0, \wvec{a}_1, \dots, \wvec{a}_{2q + 1}$ according to:
+That is, we use the closed form solution. This version is both exact given the previous estimates $\emNotee{\vec{a}}{t - 1}{t - 1}$ and $\emNotee{\mat{V}}{t - 1}{t - 1}$ and computationally less demanding. Then we select $2q + 1$ so-called *sigma points* (where $q$ is the dimension of the state equation) denoted by $\hvec{a}_0, \hvec{a}_1, \dots, \hvec{a}_{2q + 1}$ according to:
 
 $$\begin{aligned}
-  \wvec{a}_0 &= \emNotee{\vec{a}}{t}{t-1} \\
-  \wvec{a}_{j} &= \emNotee{\vec{a}}{t}{t-1} + \sqrt{q + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t}{t - 1}}\right)_j \\
-  \wvec{a}_{j + q} &= \emNotee{\vec{a}}{t}{t - 1} - \sqrt{q + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t}{t - 1}}\right)_j
+  \hvec{a}_0 &= \emNotee{\vec{a}}{t}{t-1} \\
+  \hvec{a}_{j} &= \emNotee{\vec{a}}{t}{t-1} + \sqrt{q + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t}{t - 1}}\right)_j \\
+  \hvec{a}_{j + q} &= \emNotee{\vec{a}}{t}{t - 1} - \sqrt{q + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t}{t - 1}}\right)_j
 \end{aligned} \qquad j = 1,2,\dots, q$$
 
 where $\left(\sqrt{\emNotee{\mat{V}}{t}{t - 1}}\right)_j$ is the $j$'th column of the lower triangular matrix of the Cholesky decomposition of $\emNotee{\mat{V}}{t}{t - 1}$. We assign the following weights to each sigma point (we will cover selection of the hyperparameters $\alpha$, $\beta$ and $\kappa$ shortly):
@@ -468,20 +496,20 @@ $$\begin{aligned}
 Then we proceed to the correction step. We start by defining the following intermediates: 
 
 $$\begin{aligned}
-  \wvec{y}_j &= \vec{z}_t \left(\wvec{a}_j \right), \qquad j = 0,1,\dots, 2q \\
-  \wmat{Y} &= (\wvec{y}_0, \dots, \wvec{y}_{2q}) \\
+  \hvec{y}_j &= \vec{z}_t \left(\hvec{a}_j \right), \qquad j = 0,1,\dots, 2q \\
+  \hmat{Y} &= (\hvec{y}_0, \dots, \hvec{y}_{2q}) \\
   \overline{\vec{y}} &= \sum_{j = 0}^{2q} W_j^{[m]} \vec{y}_j, \qquad
-  \Delta\wmat{Y} = \wmat{Y} - \overline{\vec{y}} \vec{1}^\top, \qquad 
-  \wmat{H} = \sum_{j=0}^{2q} W_j^{[c]}\mat{H}_t(\wvec{a}_j) \\
+  \Delta\hmat{Y} = \hmat{Y} - \overline{\vec{y}} \vec{1}^\top, \qquad 
+  \hmat{H} = \sum_{j=0}^{2q} W_j^{[c]}\mat{H}_t(\hvec{a}_j) \\
 %
-  \Delta\wmat{A} &= (\wvec{a}_0, \dots, \wvec{a}_{2q}) - \emNotee{\vec{a}}{t}{t-1}\vec{1}^\top \\
+  \Delta\hmat{A} &= (\hvec{a}_0, \dots, \hvec{a}_{2q}) - \emNotee{\vec{a}}{t}{t-1}\vec{1}^\top \\
 %
   \ukfNotee{y}{y}{t} &= \sum_{j=0}^{2q} W_j^{[c]} \left(
-    (\wvec{y}_j - \overline{\vec{y}})(\wvec{y}_j - \overline{\vec{y}})^\top + \wmat{H}\right)
-  = \Delta\wmat{Y}\diag{\vec{W}^{[c]}}\Delta\wmat{Y}^\top + \wmat{H} \\
+    (\hvec{y}_j - \overline{\vec{y}})(\hvec{y}_j - \overline{\vec{y}})^\top + \hmat{H}\right)
+  = \Delta\hmat{Y}\diag{\vec{W}^{[c]}}\Delta\hmat{Y}^\top + \hmat{H} \\
   \ukfNotee{\alpha}{y}{t} &= \sum_{j=0}^{2q} W_j^{[cc]} 
-    (\wvec{a}_j - \emNotee{\vec{a}}{t}{t-1})(\wvec{y}_j - \overline{\vec{y}})^\top
-  = \Delta\wmat{A}\diag{\vec{W}^{[cc]}}\Delta\wmat{Y}^\top
+    (\hvec{a}_j - \emNotee{\vec{a}}{t}{t-1})(\hvec{y}_j - \overline{\vec{y}})^\top
+  = \Delta\hmat{A}\diag{\vec{W}^{[cc]}}\Delta\hmat{Y}^\top
 \end{aligned}$$
 
 The correction step is then:
@@ -496,13 +524,13 @@ The above formulation has the drawback that we have to invert $\ukfNotee{y}{y}{t
 
 The correction step can be computed as:
 $$\begin{aligned}
-  \tilde{\vec{y}} &= \Delta \wmat{Y}^\top \widehat{\mat{H}}^{-1}(\vec{y}_t - \overline{\vec{y}}) \\ 
-    \mat{G} &= \Delta\wmat{Y}^\top\widehat{\mat{H}}^{-1}\Delta\wmat{Y} \\
+  \tilde{\vec{y}} &= \Delta \hmat{Y}^\top \widehat{\mat{H}}^{-1}(\vec{y}_t - \overline{\vec{y}}) \\ 
+    \mat{G} &= \Delta\hmat{Y}^\top\widehat{\mat{H}}^{-1}\Delta\hmat{Y} \\
   \vec{c} &= \tilde{\vec{y}} - \mat{G}\left( \diag{\vec{W}^{(m)}}^{-1} + \mat{G}\right)^{-1} \tilde{\vec{y}} \\ 
     \mat{L} &= \mat{G} - \mat{G}\left( \diag{\vec{W}^{(c)}}^{-1} + \mat{G}\right)^{-1} \mat{G} \\
-  \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \Delta\wmat{A}\diag{\vec{W}^{(cc)}}\vec{c} \\
+  \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \Delta\hmat{A}\diag{\vec{W}^{(cc)}}\vec{c} \\
   \emNotee{\mat{V}}{t}{t} &= \emNotee{\mat{V}}{t}{t - 1} - 
-    \Delta\wmat{A}\diag{\vec{W}^{(cc)}}\mat{L}\diag{\vec{W}^{(cc)}}\Delta\wmat{A}^\top
+    \Delta\hmat{A}\diag{\vec{W}^{(cc)}}\mat{L}\diag{\vec{W}^{(cc)}}\Delta\hmat{A}^\top
 \end{aligned}$$
 
 where $\tilde{\vec{y}}$, $\mat{G}$, $\mat{L}$ and $\vec{c}$ are intermediates. The above algorithm is $O(n_t)$ since $\widehat{\mat{H}}$ is a diagonal matrix.
@@ -521,14 +549,14 @@ Whether we make an update or a downdate depends on the sign of $v$. The correcti
 
 $$\begin{aligned}
   &\mat{C} = \qr{\begin{bmatrix}
-    \sqrt{W_1^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}} &
-    \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}} & \dots &
-    \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
+    \sqrt{W_1^{[c]}}\Lparen{\hvec{y}_1 - \overline{\vec{y}}} &
+    \sqrt{W_2^{[c]}}\Lparen{\hvec{y}_2 - \overline{\vec{y}}} & \dots &
+    \sqrt{W_{2q}^{[c]}}\Lparen{\hvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
     \end{bmatrix}} \\
 %
-  &\mat{C} \leftarrow \cholup{\mat{C}, \wvec{y}_0 - \overline{\vec{y}}, \text{sign}\Lparen{W_0^{[c]}} \sqrt{\vert W_0^{[c]}\vert}} \\
+  &\mat{C} \leftarrow \cholup{\mat{C}, \hvec{y}_0 - \overline{\vec{y}}, \text{sign}\Lparen{W_0^{[c]}} \sqrt{\vert W_0^{[c]}\vert}} \\
 % 
-  &\ukfNotee{\alpha}{y}{t} = \Delta\wmat{A}\diag{\vec{W}^{[cc]}}\Delta\wmat{Y}^\top \\
+  &\ukfNotee{\alpha}{y}{t} = \Delta\hmat{A}\diag{\vec{W}^{[cc]}}\Delta\hmat{Y}^\top \\
 % 
   &\mat{K} = \ukfNotee{\alpha}{y}{t}\mat{C}^{-1}\Lparen{\mat{C}^{-1}}^\top \\
 %
@@ -540,27 +568,27 @@ $$\begin{aligned}
 where we use the left arrow, $\leftarrow$, to indicate an update and all definitions of matrices and vectors are as in the beginning of this section. We will show that this is equivalent to the first method. First, assume that the first weight is positive, $W_0^{[c]} > 0$, such that we do not need the Cholesky update. Then:
 $$\begin{aligned}
   &\mat{C} = \qr{\begin{bmatrix}
-      \sqrt{W_0^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}} &
-      \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}} & \dots &
-      \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
+      \sqrt{W_0^{[c]}}\Lparen{\hvec{y}_1 - \overline{\vec{y}}} &
+      \sqrt{W_2^{[c]}}\Lparen{\hvec{y}_2 - \overline{\vec{y}}} & \dots &
+      \sqrt{W_{2q}^{[c]}}\Lparen{\hvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
     \end{bmatrix}} \\
 %
   &\begin{aligned} \Rightarrow  \mat{C}^\top\mat{C} & = 
     \begin{bmatrix}
-      \sqrt{W_0^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}} &
-      \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}} & \dots &
-      \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
+      \sqrt{W_0^{[c]}}\Lparen{\hvec{y}_1 - \overline{\vec{y}}} &
+      \sqrt{W_2^{[c]}}\Lparen{\hvec{y}_2 - \overline{\vec{y}}} & \dots &
+      \sqrt{W_{2q}^{[c]}}\Lparen{\hvec{y}_{2q} - \overline{\vec{y}}} & \sqrt{\widehat{\mat{H}}}
     \end{bmatrix}
     \begin{bmatrix}
-      \sqrt{W_0^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}}^\top \\
-      \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}}^\top \\ \vdots \\
-      \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}}^\top \\ 
+      \sqrt{W_0^{[c]}}\Lparen{\hvec{y}_1 - \overline{\vec{y}}}^\top \\
+      \sqrt{W_2^{[c]}}\Lparen{\hvec{y}_2 - \overline{\vec{y}}}^\top \\ \vdots \\
+      \sqrt{W_{2q}^{[c]}}\Lparen{\hvec{y}_{2q} - \overline{\vec{y}}}^\top \\ 
       \sqrt{\widehat{\mat{H}}}
     \end{bmatrix} \\
-    & = \Delta\wmat{Y}\diag{\vec{W}^{[c]}}\Delta\wmat{Y}^\top + \wmat{H} = \ukfNotee{y}{y}{t} 
+    & = \Delta\hmat{Y}\diag{\vec{W}^{[c]}}\Delta\hmat{Y}^\top + \hmat{H} = \ukfNotee{y}{y}{t} 
   \end{aligned} \\
 % 
-  &\ukfNotee{\alpha}{y}{t} = \Delta\wmat{A}\diag{\vec{W}^{[cc]}}\Delta\wmat{Y}^\top \\
+  &\ukfNotee{\alpha}{y}{t} = \Delta\hmat{A}\diag{\vec{W}^{[cc]}}\Delta\hmat{Y}^\top \\
 % 
   &\mat{K} = \ukfNotee{\alpha}{y}{t}\mat{C}^{-1}\Lparen{\mat{C}^{-1}}^\top = \ukfNotee{\alpha}{y}{t}
      \Lparen{\mat{C}^\top\mat{C}}^{-1} =  \ukfNotee{\alpha}{y}{t}  \ukfNotee{y}{y}{t}^{-1} \\
@@ -576,15 +604,15 @@ Next, we look at the computational cost of the case where $W_0^{[c]} > 0$. Since
 
 $$\begin{aligned}
   &\mat{C} = \qr{\begin{bmatrix}
-    \sqrt{W_0^{[c]}}\Lparen{\wvec{y}_1 - \overline{\vec{y}}} &
-    \sqrt{W_2^{[c]}}\Lparen{\wvec{y}_2 - \overline{\vec{y}}} & \dots &
-    \sqrt{W_{2q}^{[c]}}\Lparen{\wvec{y}_{2q} - \overline{\vec{y}}}
+    \sqrt{W_0^{[c]}}\Lparen{\hvec{y}_1 - \overline{\vec{y}}} &
+    \sqrt{W_2^{[c]}}\Lparen{\hvec{y}_2 - \overline{\vec{y}}} & \dots &
+    \sqrt{W_{2q}^{[c]}}\Lparen{\hvec{y}_{2q} - \overline{\vec{y}}}
     \end{bmatrix}} \\
 %
   &\mat{C} \leftarrow \cholup{\mat{C}, \widehat{\mat{H}}, 1}
 \end{aligned}$$
 
-In this case, we first find $\mat{C} \in \mathbb{R}^{(2q + 1)\times n_t}$ and then make a rank-$n_t$ update. The rest of the computations are in-expensive relative to the number of observations, $n_t$, since we reduce the dimension of $\mat{C} \in \mathbb{R}^{(2q + 1)\times n_t}$. In general, the key is that we want a Cholesky decomposition (or another decomposition) of $\Delta\wmat{Y}\diag{\vec{W}^{[c]}}\Delta\wmat{Y}^\top + \wmat{H}$ which is easy to compute and ease the rest of the computations and storage requirements
+In this case, we first find $\mat{C} \in \mathbb{R}^{(2q + 1)\times n_t}$ and then make a rank-$n_t$ update. The rest of the computations are in-expensive relative to the number of observations, $n_t$, since we reduce the dimension of $\mat{C} \in \mathbb{R}^{(2q + 1)\times n_t}$. In general, the key is that we want a Cholesky decomposition (or another decomposition) of $\Delta\hmat{Y}\diag{\vec{W}^{[c]}}\Delta\hmat{Y}^\top + \hmat{H}$ which is easy to compute and ease the rest of the computations and storage requirements
 
 ## Extreme values
 As with the EKF, a minor addition is made to the covariance matrix of the observational equation such that we replace $\widehat{\mat{H}}$ by:
@@ -607,7 +635,7 @@ Experience with different data sets and the UKF shows that the method is sensiti
 
 $\mat{Q}$ has a similar effect although it is harder to illustrate with a small example as it occurs in an intermediate computations in the UKF. Based on experience, it seems that $\mat{Q}_0$ should be a diagonal matrix with *"somewhat"* large values and $\mat{Q}$ should be a diagonal matrix with small values. Though, what is *"somewhat"* large and what is small dependent on the data set.
 
-# Approximation of the posterior mode
+# Sequential approximation of the posterior mode (SMA)
 Another idea is do sequential rank-one approximations of the posterior modes. This section will go into the details of this method, the implementation and the pros and cons. Say we are at a given iteration $t$ of the filtering in the E-step. First, we carry out the prediction step with the closed form solution:
 
 $$\begin{aligned}
@@ -673,7 +701,7 @@ $$\emNote{\mat{V}}{t}{t}{k} = \emNote{\mat{V}}{t}{t}{k-1} -
     \mat{C} = 1
 \end{aligned} -->
 
-This method is selected by setting `method = SMA` in the list passed to the `control` argument of `ddhazard`
+This method is selected by setting `method = "SMA"` in the list passed to the `control` argument of `ddhazard`
 
 ## Implementation 
 Finding the constant $v$ in step 2 can be done by the Newton Raphson method to find a unique minimum when: 
@@ -702,17 +730,101 @@ Step 0 comes at an $O(q^3)$ cost per interval $1,2,\dots,d$ due to the  Cholesky
 Moreover, we can save computations throughout by storing $\widetilde{\mat{L}} = \Lparen{\mat{L}^{-1}}^\top$ instead of storing $\emNote{\mat{V}}{t}{t}{k}$. $\widetilde{\mat{L}}$ is also a triangular matrix. Thus, we need to do less operations when doing the matrix multiplications. Another advantage is that the rank-one update yields a positive semi definite matrix $\mat{L}\mat{L}^\top$. This is true since $\vec{x}_{ij}\vec{x}_{ij}^\top$ is a vector outer product and as $g$ is positive with distributions from the exponential family. Hence, $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$ will remains a positive semi definite matrix. The method described here is used if you set the element `posterior_version = cholesky` in the list passed to the `control` argument of `ddhazard`. The former method using the Woodbury matrix identity is used if you set `posterior_version = woodbury`
 
 ## Pros and cons
-The pros of the approximation of the posterior mode presented in this section are:
+The pros of the SMA presented in this section are:
 \notaTbl{
   Better approximation & We may have a better approximation of the posterior mode because we avoid the linerization error of the EKF under the expectation operator \\ \hline
   Cont. model & We avoid having the various definition of the continuous time model we introduce later. This is true since we directly maximize the likelihood and do not need residual outcome in the correction step as we do with the EKF and UKF \\ \hline
-  Scalability & This method is also $O(n_t)$ when we use the Woodbury matrix identity to update the covariance matrix
+  Scalability & This method is also $O(n_t)$
 }
 
 The cons are:
 \notaTbl{
   Sequential & The updates are sequential and hence cannot be done in parallel as the EKF. Further, the gain of doing the matrix and vector operations is minor due to the low dimensionality compared to the UKF \\ \hline
   Ordering & The final outcome will depend on how we order the risk sets. Thus, the current implementation permute each risk set once with this method by default. You can switch this off by setting \texttt{permu = FALSE} to the \texttt{control} argument of \texttt{ddhazard}}
+
+# Global approximation of the posterior mode (GMA)
+We can directly minimize:
+
+$$\argminu{\vec{\alpha}} 
+  - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}	
+    -\sum_{(i,j) \in R_t} \log\proppCond{y_{ijt}}{\vec{\alpha}}$$
+
+This is equivalent to a L2 penalized Generalized Linear Models (GLM) since we only use models from the exponential family. This can be done with the usual iteratively reweighted ridge regression. Every iteration can be done in $O\Lparen{n_tq^2 + q^3}$. We will go through computations in the following paragraphs. First, we derive the gradient and the Hessian:
+
+$$\begin{aligned}
+	 &\tilde h(\vec{\alpha}) =  - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
+    -\sum_{(i,j) \in R_t} \log\proppCond{y_{ijt}}{\vec{\alpha}} \\
+%
+	&\begin{aligned}
+	\tvec{g}(\vec{\alpha}) =  \tilde h'(\vec{\alpha})
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \Lparen{\vec{\alpha} - \emNotee{\vec{a}}{t}{t-1}}
+      - \left. \sum_{(i,j) \in R_t} \frac{\partial\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} \Lparen{\vec{\alpha} - \emNotee{\vec{a}}{t}{t-1}}
+		  - \mat{X}_t^\top \underbrace{\algGMApPrime}_{c'(\vec{\alpha})} \\
+%
+	\tmat{G}(\vec{\alpha}) = \tilde h''(\vec{\alpha})
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \left. \sum_{(i,j) \in R_t} \frac{\partial^2\log\proppCond{y_{ijt}}{\vec{\alpha}'}}{\partial \vec{\alpha}'\partial \Lparen{\vec{\alpha}'}^\top} \right|_{\vec{\alpha}' = \vec{\alpha}} \\
+		& = \emNotee{\mat{V}}{t}{t-1}^{-1} - \mat{X}_t^\top \underbrace{\algGMApPrimePrime}_{c''(\vec{\alpha})}\mat{X}_t
+\end{aligned}\end{aligned}$$
+
+Thus, the update equation with a learning rate, $\zeta_0$, is:
+$$\begin{aligned}
+\vec{a}^{(k)} &= \vec{a}^{(k - 1)} + \zeta_0 \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}\Lparen{-\tmat{g}(\vec{a}^{(k - 1)})} \\
+	& \algGMAscore{\ =}
+\end{aligned}$$
+
+The box below shows the final algorithm for the correction step:
+
+\begin{algorithm}
+\caption{Correction step with global mode approximation by Newton Raphson.}
+\begin{algorithmic}[1]\raggedright
+\Statex Set $\vec{a}^{(0)} =\emNotee{\vec{a}}{t}{t-1}$, $k = 0$ and define:
+\Statex $c'(\vec{\alpha}) = \algGMApPrime$
+\Statex $c''(\vec{\alpha}) = \algGMApPrimePrime$
+\Repeat
+\State $\emNotee{\mat{V}}{t}{t} = \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}$
+\State %
+$\algGMAscore{\vec{a}^{(k)} =}$
+\UntilElse{$\LVert{\vec{a}^{(k)} - \vec{a}^{(k-1)}}/ (\LVert{\vec{a}^{(k-1)}} + \delta) < \epsilon$~\Or~$k \geq k_{\text{max}}$}{Set $k\leftarrow k + 1$}
+\end{algorithmic}
+\end{algorithm}
+
+This method is selected by setting `method = "GMA"` in the list passed to the `control` argument of `ddhazard`. You can change $k_{\text{max}}$ and $\epsilon$ by respectivly setting the elements `GMA_max_rep` and `GMA_NR_eps` to the `control` argument. The above is sensitive to the choice of $\mat{Q}_0$. An extreme example is if we have no events in the first interval and only an intercept. Then setting $\mat{Q}_0$ to a diagonal matrix with large entries (in this case $\mat{Q}_0$ is a scalar) implies almost no restrictions on the intercept. Thus, it will be optimal to select a value tending towards minus infinity. $c'$ and $c''$ can be computed in parallel though this is not implemented at this point. Further, building with a multithreaded BLAS can decrease the computation time of $\mat{X}_t^\top c''(\vec{\alpha}) \mat{X}_t$ along with the other matrix and vector products
+
+<!-- Check that c' and c'' is not computed in parallel in present version --> 
+
+## Alternative implementation
+An alternative to the above algorithm for the exponential family is to re-write the orignal problem to get a weighted least squares problem of the form:
+
+$$\begin{aligned}
+&\vec{b} = \mat{X}_t  \vec{a}^{(k-1)} + \Lparen{\vec{y}_t - \vec{h}\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}} \vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{-1}   \\
+%
+&\vphantom{\LVert{\underbrace{\eqnGblModeTerma}_{\tmat{W}}}}
+%
+\argmin_{\vec{\alpha}}\LVert{
+\smash{\underbrace{\eqnGblModeTerma}_{\tmat{C}^{1/2}}}\vphantom{\eqnGblModeTerma}
+ \Lparen{
+  \smash{\underbrace{\eqnGblModeTermb}_{\tmat{X}_t}}\vphantom{\eqnGblModeTermb} \vec{\alpha}
+  - \smash{\underbrace{\eqnGblModeTermc}_{\tvec{b}}}\vphantom{\eqnGblModeTermc}}}
+\end{aligned}$$
+
+where $\vec{h}$ temporaily denotes the inverse link function at time $t$, $\vec{h}'$ is the deriative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with mehtods for least squares problem. A brief review and comparison of methods is in [@Leary90].
+
+## Pros and cons
+The pros of the SMA presented in this section are:
+\notaTbl{
+  Better approximation & We may have a better approximation of the posterior mode because we avoid the linerization error of the EKF under the expectation operator \\ \hline
+  Cont. model & We avoid having the various definition of the continuous time model we introduce later. This is true since we directly maximize the likelihood and do not need residual outcome in the correction step as we do with the EKF and UKF \\ \hline
+  Scalability & This method is also $O(n_t)$  \\ \hline
+  Global & Performs global updates without effect of ordering of observations \\ \hline
+  Parallel & Can be computed in parallel
+}
+
+The cons are:
+
+\notaTbl{
+  $\mat{Q}_0$ & Sensitive to the choice of $\mat{Q}_0$ for some data sets \\ \hline 
+  Iterative & May require more computations than the SMA. The computation time may be offset by the use of BLAS for matrix and vector product and parallel computation}
 
 # Weights
 Weights can be used in the EKF, UKF and posterior mode approximation. This can reduce the computation in the logistic model with only categorical covariates or if we want to bootstrap the estimates. The following section covers how the weights are handled in the previous filters. We will denote the weights at time $t$ by $\vec{e}_t = (e_1, e_2, \dots, e_{n_t})$ where $n_t = \vert R_t \vert$ is the number of observations at risk at time $t$. Further, we denote $\mat{E}_t$ as the diagonal matrix with $\vec{e}_t$ as the diagonal
@@ -732,16 +844,16 @@ where $\Lparen{R_t}_f$ is the $f$'th element of $R_t$
 
 ## UKF
 Weights are handled in the UKF by replacing: 
-$$\tilde{\vec{y}} = \Delta \wmat{Y}^\top \widehat{\mat{H}}^{-1}(\vec{y}_t - \overline{\vec{y}}) \qquad
-    \mat{G} = \Delta\wmat{Y}^\top\widehat{\mat{H}}^{-1}\Delta\wmat{Y}$$
+$$\tilde{\vec{y}} = \Delta \hmat{Y}^\top \widehat{\mat{H}}^{-1}(\vec{y}_t - \overline{\vec{y}}) \qquad
+    \mat{G} = \Delta\hmat{Y}^\top\widehat{\mat{H}}^{-1}\Delta\hmat{Y}$$
     
 with
 
-$$\tilde{\vec{y}} = \Delta \wmat{Y}^\top \mat{E}_t\widehat{\mat{H}}^{-1}(\vec{y}_t - \overline{\vec{y}}) \qquad
-    \mat{G} = \Delta\wmat{Y}^\top\mat{E}_t\widehat{\mat{H}}^{-1}\Delta\wmat{Y}$$
+$$\tilde{\vec{y}} = \Delta \hmat{Y}^\top \mat{E}_t\widehat{\mat{H}}^{-1}(\vec{y}_t - \overline{\vec{y}}) \qquad
+    \mat{G} = \Delta\hmat{Y}^\top\mat{E}_t\widehat{\mat{H}}^{-1}\Delta\hmat{Y}$$
 
-## Posterior mode approximation
-Weights are handled in the posterior mode approximation by replacing: 
+## SMA
+Weights are handled in the SMA by replacing: 
 $$\begin{aligned}
   &v =\argminu{b} b^2 \frac{1}{2}d_1 - b d_1d_2 - \Lparen{y_{ijt} \log h(b) + (1 - y_{ijt}) \log (1 - h(b)} \\
 %
@@ -761,6 +873,9 @@ $$\begin{aligned}
 \end{aligned}$$
 
 I.e. we change the weight on the likelihood term and scale the second derivative
+
+## GMA
+Weights are handled in the same way as for the SMA by multiplying the $c'(\vec{\alpha})$ and $c''(\vec{\alpha})$ with the weights of the observation. 
 
 # Fixed effects
 This section will cover how fixed effects (non time-varying effects) are estimated. We will denote the coefficients for the fixed effects by $\vec{\gamma}$. The fixed effects can be estimated with two methods. The first one is by adding the fixed effects to state equation with their elements of the covariance matrix $\mat{Q}$ set to zero. That is, we estimate the fixed effects in the E-step. The second method is to estimate the fixed effects in the M-step
@@ -806,32 +921,32 @@ $$\begin{aligned}
 	&  + \xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t})}
 \end{aligned}$$
 
-Suppose now that we assume that some of the effects are fixed such that we replace the linear predictor $\vec{x}_{it}^\top\vec{\alpha}_t$ by $\wtvec{x}_{ij}^\top\widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma}$ where $\vec{\gamma}$ is the fixed coefficients and $\bvec{x}_{it}$ are the corresponding covariates. The new definition of $l_{ijt}$ is:
+Suppose now that we assume that some of the effects are fixed such that we replace the linear predictor $\vec{x}_{it}^\top\vec{\alpha}_t$ by $\tvec{x}_{ij}^\top\widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma}$ where $\vec{\gamma}$ is the fixed coefficients and $\bvec{x}_{it}$ are the corresponding covariates. The new definition of $l_{ijt}$ is:
 
-$$l_{ijt}(\widetilde{\vec{\alpha}}_t, \vec{\gamma}) = y_{ijt} \log h(\wtvec{x}_{ij}^\top \widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma}) + (1 - y_{ijt}) 
-	\log \Lparen{1 - h(\wtvec{x}_{ij}^\top \widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma})}$$
+$$l_{ijt}(\widetilde{\vec{\alpha}}_t, \vec{\gamma}) = y_{ijt} \log h(\tvec{x}_{ij}^\top \widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma}) + (1 - y_{ijt}) 
+	\log \Lparen{1 - h(\tvec{x}_{ij}^\top \widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma})}$$
 
 Suppose that we fix $\vec{\gamma}^{(k-1)}$ doing the E-step and estimate $\vec{\gamma}^{(k)}$ doing the M-step. Then the new expected log likelihood is: 
-$$\xyzp{\widetilde{E}_k}{\mathcal{L}\Lparen{\wtvec{\alpha}_0, \dots, \wtvec{\alpha}_{d}}} = 
-  \expecpCond{\mathcal{L}\Lparen{\wtvec{\alpha}_0, \dots, \wtvec{\alpha}_{d}}}
-    {\mat{Q}_0,\mat{Q}^{(k-1)},\wtvec{a}_0^{(k-1)},\vec{\gamma}^{(k-1)}}$$
+$$\xyzp{\widetilde{E}_k}{\mathcal{L}\Lparen{\tvec{\alpha}_0, \dots, \tvec{\alpha}_{d}}} = 
+  \expecpCond{\mathcal{L}\Lparen{\tvec{\alpha}_0, \dots, \tvec{\alpha}_{d}}}
+    {\mat{Q}_0,\mat{Q}^{(k-1)},\tvec{a}_0^{(k-1)},\vec{\gamma}^{(k-1)}}$$
     
 We observe that: 
 
 1. The $\bvec{x}_{ij}^\top\vec{\gamma}^{(k-1)}$ term acts like offsets in the E-step where $\vec{\gamma}^{(k-1)}$ is fixed. Thus, we only need to add these offsets to the linear predictors
-2. $\vec{\gamma}^{(k)}$ is estimated separately from $\wtvec{\alpha}_0^{(k)}$ and $\mat{Q}^{(k)}$ in the M-step. Thus, no changes are needed in the update formulas for $\mat{Q}^{(k)}$ and $\wtvec{\alpha}_0^{(k)}$
+2. $\vec{\gamma}^{(k)}$ is estimated separately from $\tvec{\alpha}_0^{(k)}$ and $\mat{Q}^{(k)}$ in the M-step. Thus, no changes are needed in the update formulas for $\mat{Q}^{(k)}$ and $\tvec{\alpha}_0^{(k)}$
 
 However, the update of $\vec{\gamma}^{(k)}$ requires that we optimize
 
-$$\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\wtvec{\alpha}_t, \vec{\gamma})}$$
+$$\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\tvec{\alpha}_t, \vec{\gamma})}$$
 
-with respect to $\vec{\gamma}$. The update formulas are not as simple as for $\wtvec{\alpha}_0^{(k)}$ and $\mat{Q}^{(k)}$ as the terms of $l_{ijt}$ are non-linear in the time-varying effects $\wtvec{\alpha}_0\dots,\wtvec{\alpha}_d$. A simple way to overcome this is to make a zero order Taylor expansion around the mean estimates $\emNote{\wtvec{a}}{0}{d}{k},\dots,\emNote{\wtvec{a}}{d}{d}{k}$:
-$$\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\wtvec{\alpha}_t}, \vec{\gamma})}
-  \approx \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\emNote{\wtvec{a}}{t}{d}{k}, \vec{\gamma})$$
+with respect to $\vec{\gamma}$. The update formulas are not as simple as for $\tvec{\alpha}_0^{(k)}$ and $\mat{Q}^{(k)}$ as the terms of $l_{ijt}$ are non-linear in the time-varying effects $\tvec{\alpha}_0\dots,\tvec{\alpha}_d$. A simple way to overcome this is to make a zero order Taylor expansion around the mean estimates $\emNote{\tvec{a}}{0}{d}{k},\dots,\emNote{\tvec{a}}{d}{d}{k}$:
+$$\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\tvec{\alpha}_t}, \vec{\gamma})}
+  \approx \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\emNote{\tvec{a}}{t}{d}{k}, \vec{\gamma})$$
   
 This expansion coincides with a first order Taylor expansion as the first order terms are zero. The advantages are:
 
-3. $\wtvec{x}_{ij}^\top \wtvec{a}_t$ acts like offsets in the M-step when we estimate $\vec{\gamma}^{(k)}$
+3. $\tvec{x}_{ij}^\top \tvec{a}_t$ acts like offsets in the M-step when we estimate $\vec{\gamma}^{(k)}$
 4. $\vec{\gamma}^{(k)}$ is estimated in the M-step as a generalized linear model with offsets for distributions from the exponential family. Weights are treated as in typical generalized linear models
 
 The fixed effects will be estimated in the M-step when you set `fixed_terms_method = M_step` in the list passed to the `control` argument
@@ -848,7 +963,7 @@ The estimation will stop if the criteria given by $\epsilon$ is not meet within 
 Surely, other methods to solve the QR problem or fit a generalized linear model could be used that does not require us to store the entire design matrix and are faster and/or more stable. An example could be the algorithm described in [@hammarling08]. The current method is used since it has shown to work well in the `bigglm` function and as we assume that few parameters will be fixed. Thus, the $O(\vert\vec{\gamma}\vert^2)$ cost of doing the M-step should not be an issue. Other options are for example stochastic gradient descent methods or methods from Online learning.
 
 ### Other options
-Another option is to use higher order expansions of $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\wtvec{\alpha}_t})}$, approximate the expectation with an MCMC method using the conditional means $\emNote{\wtvec{a}}{0}{d}{k},\dots,\emNote{\wtvec{a}}{d}{d}{k}$ and conditional covariance matrices $\emNote{\mat{V}}{0}{d}{k},\dots,\emNote{\mat{V}}{d}{d}{k}$, or any other method to approximate $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\wtvec{\alpha}_t})}$. At this point, the zero order Taylor expansion is the only implemented method to estimate $\vec{\gamma}$ in the M-step
+Another option is to use higher order expansions of $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\tvec{\alpha}_t})}$, approximate the expectation with an MCMC method using the conditional means $\emNote{\tvec{a}}{0}{d}{k},\dots,\emNote{\tvec{a}}{d}{d}{k}$ and conditional covariance matrices $\emNote{\mat{V}}{0}{d}{k},\dots,\emNote{\mat{V}}{d}{d}{k}$, or any other method to approximate $\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\tvec{\alpha}_t})}$. At this point, the zero order Taylor expansion is the only implemented method to estimate $\vec{\gamma}$ in the M-step
 
 ## Which method to use
 Neither the method that use the Recursive Least Squares like method in the E-step, nor the zero order Taylor expansion in the M-step have performed consistently better on the data sets seen so far. Hence, both are valid alternatives at this point. Fixed terms can be estimated by wrapping the covariates in the formula of `ddhazard` in the `ddFixed` function. As an example, `ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), ...)` will fit a model where `x1` is time-varying and `x2` is not.
@@ -1258,9 +1373,6 @@ The methods and models could be used for active learning setting as in [@lee10].
 
 A further point in this connection is that computing upper bounds for the predicted outcome given an input variable is straight forward if we the predicted point-wise covariance matrix. Thus, the method could be applied in a bandit setting
 
-## Hogwill
-TODO: mention Hogwill, motivate why to use with binary/sparse features
-
 # Appendix
 ## Notation
 ### General notation
@@ -1301,7 +1413,7 @@ TODO: mention Hogwill, motivate why to use with binary/sparse features
 	$l_{ijt}(\vec{\alpha}_t) $ & The likelihood term from $i$'th individual with the $j$'th covariate vector in interval $t$ given state vector $\vec{\alpha}$.  It~\impDep \\ \hline
 	$\delta$ & Small constants which values differs between contexts \\ \hline
 	$\epsilon$ & Convergence threshold which values differs between contexts \\ \hline
-	$v,b,g,$ $\vec{v}, \vec{b}, \wtvec{y}, \vec{c},$ $\mat{A}, \mat{C},\mat{K}, \mat{G}, \mat{L}$ & Scalars, vectors and matrices which depend on the context \\ \hline
+	$v,b,g,$ $\vec{v}, \vec{b}, \tvec{y}, \vec{c},$ $\mat{A}, \mat{C},\mat{K}, \mat{G}, \mat{L}$ & Scalars, vectors and matrices which depend on the context \\ \hline
 	$\mathbb{Z}_+$ & The natural numbers $1,2,\dots$ \\ \hline
 	$\delta_{ijs}$ & Maximal length individual $i$'s observation with the $j$'th covariate can take in interval $s$ \\ \hline
 	$\Delta_{ijs}$ & Right clipped outcome in the continuous time model in interval $s$ for individual $i$ with the $j$'th covariate vector \\ \hline
@@ -1317,7 +1429,7 @@ TODO: mention Hogwill, motivate why to use with binary/sparse features
 ### Notation in UKF
 
 \notaTbl{
-	$\wvec{a}_j$ & $j$'th sigma point \\  \hline
+	$\hvec{a}_j$ & $j$'th sigma point \\  \hline
 	$W^{\Lbrack{f}}_j$ & $j$'th sigma weight of type $f$ \\  \hline
 	$\alpha,\beta,\kappa,\lambda$ & Hyperparameters \\  \hline
 	$\Delta\mat{K}$ & Deviation of matrix $\mat{K}$ with $\mat{K}$ defined in the context \\  \hline

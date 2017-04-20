@@ -1,9 +1,24 @@
 \usepackage{bm}
 \usepackage{longtable}
 \usepackage{array}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
 \newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
 \newcommand{\notaTbl}[1]{{\renewcommand{\arraystretch}{2.5}\begin{longtable}{R{3cm} p{12cm}}#1\end{longtable}}}
 
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
+
+% algorithm and algpseudocode definitions
+\newcommand\StateX{\Statex\hspace{\algorithmicindent}}
+\newcommand\StateXX{\Statex\hspace{\algorithmicindent}\hspace{\algorithmicindent}}
+\newcommand\StateXXX{\Statex\hspace{\algorithmicindent}\hspace{\algorithmicindent}\hspace{\algorithmicindent}}
+
+\algnewcommand{\UntilElse}[2]{\Until{#1\ \algorithmicelse\ #2}}
+
+\algtext*{EndFor} \algtext*{EndProcedure}
+
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\INPUT{\item[\algorithmicinput]}
+\algnewcommand\Or{\textbf{or}}
