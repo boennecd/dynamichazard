@@ -7,5 +7,7 @@ dist: trusty # use Trusty for GCC 4.8.4. See http://genbattle.bitbucket.org/blog
 sudo: required
 r_build_args: --compact-vignettes=gs+qpdf
 r_check_args: --compact-vignettes=gs+qpdf
+before_install:
+  - sudo apt-get install texlive-science
 
 after_failure: "cat /home/travis/build/boennecd/dynamichazard/dynamichazard.Rcheck/00install.out"
