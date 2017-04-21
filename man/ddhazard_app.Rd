@@ -4,14 +4,22 @@
 \alias{ddhazard_app}
 \title{A Shiny app to illustrates model and method}
 \usage{
-ddhazard_app()
+ddhazard_app(quietly = F, ...)
+}
+\arguments{
+\item{quietly}{\code{TRUE} if no messages should be printed when the app is run}
+
+\item{...}{Starting values for the shiny app
+
+Runs a shiny app where you try different model specifications on simulated data}
 }
 \description{
-Runs a shiny app where you try different model specifications on simulated data
+A Shiny app to illustrates model and method
 }
 \examples{
 \dontrun{
 dynamichazard::ddhazard_app()
+dynamichazard::ddhazard_app(seed = 1, more_options = TRUE)
 }
 }
 

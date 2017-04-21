@@ -19,6 +19,7 @@ The following has been changed or added:
 * Removed the `rug` call in the shiny app demo, fixed a bug with the simulation function for the logit model and added the computation time of the estimation
 * Inverses has been replaced by pseudo inverses. This will only have implications the matrices are rank deficient. The old option can be used by calling `ddhazard` with `control = list(use_pinv = FALSE, ...)
 * Refactored the UKF code. This version no longer supports the `exp_combined` method
+* Global mode approximation have been added
 
 # dynamichazard 0.2.0
 The following have been added:

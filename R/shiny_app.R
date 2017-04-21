@@ -1,15 +1,18 @@
+#' @title ddhazard demo
 #' A Shiny app to illustrates model and method
 #'
 #' @param quietly \code{TRUE} if no messages should be printed when the app is run
 #' @param ... Starting values for the shiny app
 #'
+#' @details
 #' Runs a shiny app where you try different model specifications on simulated data
-#' @export
+#'
 #' @examples
 #'\dontrun{
 #'dynamichazard::ddhazard_app()
 #'dynamichazard::ddhazard_app(seed = 1, more_options = TRUE)
 #'}
+#' @export
 ddhazard_app = function(quietly = F, ...) {
   for(pkg in c("shiny", "formatR")){
     if (!requireNamespace(pkg, quietly = TRUE)) {

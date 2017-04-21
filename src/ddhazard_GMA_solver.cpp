@@ -71,7 +71,7 @@ void GMA<T>::solve(){
 
     arma::mat V_t_less_inv;
     inv_sympd(V_t_less_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
-              "Failed to invert covariance matrix after prediction step");
+              "ddhazard_fit_cpp estimation error: Failed to invert covariance matrix after prediction step");
     arma::vec grad_term = V_t_less_inv * (p_dat.LR * p_dat.a_t_less_s.col(t - 1));
 
     const arma::vec offsets =
@@ -118,7 +118,8 @@ void GMA<T>::solve(){
       {
         arma::mat tmp = V_t_less_inv;
         tmp(p_dat.span_current_cov, p_dat.span_current_cov) += X_tilde;
-        inv_sympd(V, tmp, p_dat.use_pinv, "Failed to invert Hessian");
+        inv_sympd(V, tmp, p_dat.use_pinv,
+                  "ddhazard_fit_cpp estimation error: Failed to invert Hessian");
       }
 
       {
