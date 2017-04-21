@@ -2,19 +2,18 @@
 % Please edit documentation in R/shiny_app.R
 \name{ddhazard_app}
 \alias{ddhazard_app}
-\title{A Shiny app to illustrates model and method}
+\title{ddhazard demo
+A Shiny app to illustrates model and method}
 \usage{
 ddhazard_app(quietly = F, ...)
 }
 \arguments{
 \item{quietly}{\code{TRUE} if no messages should be printed when the app is run}
 
-\item{...}{Starting values for the shiny app
-
-Runs a shiny app where you try different model specifications on simulated data}
+\item{...}{Starting values for the shiny app}
 }
-\description{
-A Shiny app to illustrates model and method
+\details{
+Runs a shiny app where you try different model specifications on simulated data
 }
 \examples{
 \dontrun{
