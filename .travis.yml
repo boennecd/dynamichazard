@@ -8,6 +8,7 @@ sudo: required
 r_build_args: --compact-vignettes=gs+qpdf
 r_check_args: --compact-vignettes=gs+qpdf
 before_install:
+  - sudo apt-get install texlive-latex-base
   - sudo apt-get install texlive-science
 
 after_failure: "cat /home/travis/build/boennecd/dynamichazard/dynamichazard.Rcheck/00install.out"

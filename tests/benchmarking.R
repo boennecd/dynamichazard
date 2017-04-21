@@ -109,21 +109,9 @@ summary(microbenchmark::microbenchmark(
   EKF = try(ddhazard(
     Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
     data = sims, id = sims$id, by = 1,
-    Q_0 = diag(1e6, 21), Q = diag(1e-2, 21),
-    control = list(method = "EKF"))),
-
-  UKF = try(ddhazard(
-    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-    data = sims, id = sims$id, by = 1,
-    Q_0 = diag(1, 21), Q = diag(1e-2, 21),
-    control = list(method = "UKF"))),
-
-  SMA = try(ddhazard(
-    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-    data = sims, id = sims$id, by = 1,
-    Q_0 = diag(1e6, 21), Q = diag(1e-2, 21),
-    control = list(method = "SMA"))),
-  times = 5
+    Q_0 = diag(1, 5), Q = diag(1e-2, 5),
+    control = list(method = "GMA"))),
+  times = 25
 ))
 
 

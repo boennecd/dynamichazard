@@ -105,9 +105,10 @@ void GMA<T>::solve(){
         h_2d_neg[i] = - T::d2(eta[i], at_risk_lenght[i]);
       }
       h_1d %= w;
-      h_2d_neg %= w;
+      h_2d_neg = arma::sqrt(w % h_2d_neg);
 
-      X_tilde = (X_t.each_row() % h_2d_neg.t()) * X_t.t();
+      X_tilde = X_t.each_row() % h_2d_neg.t();
+      X_tilde = X_tilde * X_tilde.t();
 
       if(p_dat.debug){
         my_print(X_tilde, "X^T(-p'')X");

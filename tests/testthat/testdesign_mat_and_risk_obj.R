@@ -51,24 +51,29 @@ test_that("Fixed terms works as expected",{
 })
 
 test_that("Different forms of fixing the intercept gives same results",{
+  set.seed(11111)
+  sims = as.data.frame(test_sim_func_exp(n_series = 5e2, n_vars = 3, beta_start = 1,
+                                         intercept_start = - 5, sds = c(sqrt(.1), rep(1, 3)),
+                                         x_range = 1, x_mean = .5)$res)
+
   for(m in c("logit", exp_model_names)){
     m1 <- suppressWarnings(suppressMessages(
       ddhazard(survival::Surv(tstart, tstop, event) ~ ddFixed(1) + x1 + x2,
-               model = m, by = 2.5, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.1, 2),
-               control = list(denom_term = .01, eps = .1,
+               model = m, by = 1, data = sims, max_T = 10,
+               Q_0 = diag(1, 2), Q = diag(.01, 2),
+               control = list(eps = .1, method = "GMA",
                               fixed_terms_method = "M_step"))))
     m2 <- suppressWarnings(suppressMessages(
       ddhazard(survival::Surv(tstart, tstop, event) ~ -1 + ddFixed(1) + x1 + x2,
-               model = m, by = 2.5, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.1, 2),
-               control = list(denom_term = .01, eps = .1,
+               model = m, by = 1, data = sims, max_T = 10,
+               Q_0 = diag(1, 2), Q = diag(.01, 2),
+               control = list(eps = .1, method = "GMA",
                               fixed_terms_method = "M_step"))))
     m3 <- suppressWarnings(suppressMessages(
       ddhazard(survival::Surv(tstart, tstop, event) ~ -1 + ddFixed(rep(1, length(x1))) + x1 + x2,
-               model = m, by = 2.5, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.1, 2),
-               control = list(denom_term = .01, eps = .1,
+               model = m, by = 1, data = sims, max_T = 10,
+               Q_0 = diag(1, 2), Q = diag(.01, 2),
+               control = list(eps = .1, method = "GMA",
                               fixed_terms_method = "M_step"))))
 
     expect_equal(m1$state_vecs, m2$state_vecs, tolerance = 1e-5)
