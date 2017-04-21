@@ -1,6 +1,4 @@
 #' @title ddhazard demo
-#' A Shiny app to illustrates model and method
-#'
 #' @param quietly \code{TRUE} if no messages should be printed when the app is run
 #' @param ... Starting values for the shiny app
 #'
@@ -9,8 +7,8 @@
 #'
 #' @examples
 #'\dontrun{
-#'dynamichazard::ddhazard_app()
-#'dynamichazard::ddhazard_app(seed = 1, more_options = TRUE)
+#' dynamichazard::ddhazard_app()
+#' dynamichazard::ddhazard_app(seed = 1, more_options = TRUE)
 #'}
 #' @export
 ddhazard_app = function(quietly = F, ...) {

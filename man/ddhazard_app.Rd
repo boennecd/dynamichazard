@@ -2,8 +2,7 @@
 % Please edit documentation in R/shiny_app.R
 \name{ddhazard_app}
 \alias{ddhazard_app}
-\title{ddhazard demo
-A Shiny app to illustrates model and method}
+\title{ddhazard demo}
 \usage{
 ddhazard_app(quietly = F, ...)
 }

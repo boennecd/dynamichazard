@@ -11,6 +11,7 @@ if(is_build_win)
 
 cat("Running tests on:\n")
 print(R.version)
+options(warn=1)
 
 
 test_check("dynamichazard")
