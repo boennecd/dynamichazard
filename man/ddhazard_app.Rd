@@ -11,6 +11,9 @@ ddhazard_app(quietly = F, ...)
 
 \item{...}{Starting values for the shiny app}
 }
+\description{
+\code{ddhazard_app} runs a shiny app with demonstration of models
+}
 \details{
 Runs a shiny app where you try different model specifications on simulated data
 }

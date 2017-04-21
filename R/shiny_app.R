@@ -1,4 +1,8 @@
 #' @title ddhazard demo
+#'
+#' @description
+#' \code{ddhazard_app} runs a shiny app with demonstration of models
+#'
 #' @param quietly \code{TRUE} if no messages should be printed when the app is run
 #' @param ... Starting values for the shiny app
 #'
