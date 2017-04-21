@@ -23,6 +23,8 @@ ddhazard_app = function(quietly = F, ...) {
 
   input_args <- list(...)
 
+  ui <- NULL
+  server <- NULL
   source(system.file('shiny/app.R', package = 'dynamichazard'), local = TRUE)
 
   shiny::shinyApp(ui = ui, server = server)
