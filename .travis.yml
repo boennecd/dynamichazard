@@ -2,9 +2,9 @@
 
 language: R
 before_install:
-  - sudo apt-get install texlive-latex-base
-  - sudo apt-get install texlive-science
-  - tlmgr install algorithm algpseudocode
+  - tlmgr install algorithm
+  - tlmgr install algpseudocode
+
 
 cache: packages
 #sudo: false

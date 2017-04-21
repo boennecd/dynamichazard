@@ -786,12 +786,12 @@ $\algGMAscore{\vec{a}^{(k)} =}$
 \end{algorithmic}
 \end{algorithm}
 
-This method is selected by setting `method = "GMA"` in the list passed to the `control` argument of `ddhazard`. You can change $k_{\text{max}}$ and $\epsilon$ by respectivly setting the elements `GMA_max_rep` and `GMA_NR_eps` to the `control` argument. The above is sensitive to the choice of $\mat{Q}_0$. An extreme example is if we have no events in the first interval and only an intercept. Then setting $\mat{Q}_0$ to a diagonal matrix with large entries (in this case $\mat{Q}_0$ is a scalar) implies almost no restrictions on the intercept. Thus, it will be optimal to select a value tending towards minus infinity. $c'$ and $c''$ can be computed in parallel though this is not implemented at this point. Further, building with a multithreaded BLAS can decrease the computation time of $\mat{X}_t^\top c''(\vec{\alpha}) \mat{X}_t$ along with the other matrix and vector products
+This method is selected by setting `method = "GMA"` in the list passed to the `control` argument of `ddhazard`. You can change $k_{\text{max}}$ and $\epsilon$ by respectively setting the elements `GMA_max_rep` and `GMA_NR_eps` to the `control` argument. The above is sensitive to the choice of $\mat{Q}_0$. An extreme example is if we have no events in the first interval and only an intercept. Then setting $\mat{Q}_0$ to a diagonal matrix with large entries (in this case $\mat{Q}_0$ is a scalar) implies almost no restrictions on the intercept. Thus, it will be optimal to select a value tending towards minus infinity. $c'$ and $c''$ can be computed in parallel though this is not implemented at this point. Further, building with a multithreaded BLAS can decrease the computation time of $\mat{X}_t^\top c''(\vec{\alpha}) \mat{X}_t$ along with the other matrix and vector products. We can make an implementation like the EKF which will reduce the memory requirement as we avoid storing the matrix $\mat{X}_t$
 
 <!-- Check that c' and c'' is not computed in parallel in present version --> 
 
 ## Alternative implementation
-An alternative to the above algorithm for the exponential family is to re-write the orignal problem to get a weighted least squares problem of the form:
+An alternative to the above algorithm for the exponential family is to re-write the original problem to get a weighted least squares problem of the form:
 
 $$\begin{aligned}
 &\vec{b} = \mat{X}_t  \vec{a}^{(k-1)} + \Lparen{\vec{y}_t - \vec{h}\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}} \vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{-1}   \\
@@ -805,10 +805,10 @@ $$\begin{aligned}
   - \smash{\underbrace{\eqnGblModeTermc}_{\tvec{b}}}\vphantom{\eqnGblModeTermc}}}
 \end{aligned}$$
 
-where $\vec{h}$ temporaily denotes the inverse link function at time $t$, $\vec{h}'$ is the deriative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with mehtods for least squares problem. A brief review and comparison of methods is in [@Leary90].
+where $\vec{h}$ temporarily denotes the inverse link function at time $t$, $\vec{h}'$ is the derivative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with methods for least squares problem. A brief review and comparison of methods is in [@Leary90].
 
 ## Pros and cons
-The pros of the SMA presented in this section are:
+The pros of the GMA presented in this section are:
 \notaTbl{
   Better approximation & We may have a better approximation of the posterior mode because we avoid the linerization error of the EKF under the expectation operator \\ \hline
   Cont. model & We avoid having the various definition of the continuous time model we introduce later. This is true since we directly maximize the likelihood and do not need residual outcome in the correction step as we do with the EKF and UKF \\ \hline
