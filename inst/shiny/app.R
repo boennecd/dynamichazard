@@ -1,5 +1,6 @@
-library(shiny)
 library(dynamichazard)
+if(!require(shiny))
+  stop("Requires 'shiny' to run the demo")
 
 test_sim_func_exp <- with(environment(ddhazard), test_sim_func_exp)
 test_sim_func_logit <- with(environment(ddhazard), test_sim_func_logit)
@@ -13,17 +14,49 @@ ddhazard <- function(..., control){
 }
 
 # Global params
+quietly <- if(exists("quietly")) quietly else FALSE
+cat_l <- if(quietly) function(...) { invisible() } else cat
+print_l <- if(quietly) function(...) { invisible() } else print
+
 t_max <- 30
 start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
 
-# Plot function to show density
-n_breaks <- 101
-breaks <-  seq(0, t_max, length.out = n_breaks)
+# Starting arguments
+start_args <- list(
+  n_series = 2, sim_with = "exponential", sim_fix_options = 1,
+  obs_time = t_max, seed = 65848, covar_range = c(-.5, .5),
+  sd_intercept = .2, sd_coef = .5, est_with_model = "exp_clip_time_w_jump",
+  est_with_method = "EKF", est_fix_options = 1, LR = 1,
+  order = 1, denom_term = 1, fixed_terms_method = "M_step",
+  use_extra_correction = F, beta = 0, alpha = 1,
+  SMA_version = "woodbury", GMA_max_rep = 25,
+  GMA_NR_eps = 4, more_options = F)
 
-rug_dens <- function(case_times, control_count){
+if(exists("input_args")){
+  if(any(is.na(arg_match <- match(names(input_args), names(start_args)))))
+    stop("These input arguments are not recognized: ",
+         paste0(names(input_args)[is.na(arg_match)], collapse = "\t"))
+
+  start_args[arg_match] <- input_args
+}
+
+cat_l("Starting app with these arguments:\n")
+print_l(start_args)
+
+# Plot function to show density
+breaks <-  function(model){
+  if(model != "logit")
+    return(seq(0, t_max, length.out = 101))
+
+  return(0:t_max)
+}
+
+rug_dens <- function(case_times, control_count, model){
+  breaks <- breaks(model)
+  n_breaks <- length(breaks)
   case_count <- hist(case_times, plot = F, breaks = breaks)$counts
 
-  b <- 4
+  b <- 2
   cases_cols_scale <- log((case_count + 1) / max(control_count), b)
   controls_cols_scale <- log((control_count + 1) / max(control_count), b)
 
@@ -118,19 +151,19 @@ ui <- fluidPage(
                    "Number of series to simulate",
                    min = 0,
                    max = n_series_stuff$exp_max - n_series_stuff$exp_min - 1,
-                   value = 2),
+                   value = start_args$n_series),
 
        selectInput("sim_with",
                    "Choose model to simulate from",
                    choices = c("logit", "exponential"),
-                   selected = "exponential"),
+                   selected = start_args$sim_with),
 
        radioButtons("sim_fix_options",
                     label = "Number of fixed coefficients",
                     choices = list("Zero" = 1,
                                    "Intercept and two coef" = 2,
                                    "All but one coef" = 3),
-                    selected = 1),
+                    selected = start_args$sim_fix_options),
 
        conditionalPanel(
          "input.more_options",
@@ -139,20 +172,20 @@ ui <- fluidPage(
                      min = 1,
                      max = t_max,
                      step = 1,
-                     value = t_max),
+                     value = start_args$obs_time),
 
          numericInput("seed",
                       label = "RNG seed",
-                      value = 65848),
+                      value = start_args$seed),
 
          sliderInput("covar_range", "Range to draw covariates from uniformly",
-                     min = -2, max = 2, value = c(-.5, .5), step = .5),
+                     min = -2, max = 2, value = start_args$covar_range, step = .5),
 
          sliderInput("sd_intercept", "Standard deviations for intercept",
-                     min = .1, max = 1, value = .2, step = .1),
+                     min = .1, max = 1, value = start_args$sd_intercept, step = .1),
 
          sliderInput("sd_coef", "Standard deviations for coefficients",
-                     min = .1, max = 1, value = .5, step = .1))
+                     min = .1, max = 1, value = start_args$sd_coef, step = .1))
      ),
 
      wellPanel(
@@ -161,19 +194,19 @@ ui <- fluidPage(
        selectInput("est_with_model",
                    "Choose model to estimate with",
                    choices = c("logit", exp_model_names),
-                   selected = "exp_clip_time_w_jump"),
+                   selected = start_args$est_with_model),
 
        selectInput("est_with_method",
                    "Choose method to use in the E-step",
                    choices = c("UKF", "EKF", "SMA", "GMA"),
-                   selected = "EKF"),
+                   selected = start_args$est_with_method),
 
        radioButtons("est_fix_options",
                     label = "Number of fixed coefficients",
                     choices = list("Zero" = 1,
                                    "Intercept and two coef" = 2,
                                    "All but one coef" = 3),
-                    selected = 1),
+                    selected = start_args$est_fix_options),
 
        conditionalPanel(
          "input.more_options",
@@ -182,14 +215,14 @@ ui <- fluidPage(
                      min = .1,
                      max = 2,
                      step = .1,
-                     value = 1),
+                     value = start_args$LR),
 
          sliderInput("order",
                      "Randowm walk order in estimation",
                      min = 1,
                      max = 2,
                      step = 1,
-                     value = 1),
+                     value = start_args$order),
 
          conditionalPanel(
            "input.est_with_method == 'EKF' || input.est_with_method == 'UKF'",
@@ -197,12 +230,12 @@ ui <- fluidPage(
                        "denom_term for extra term in denominators",
                        min = 0,
                        max = denom_term_stuff$exp_max - denom_term_stuff$exp_min - 1,
-                       value = 1)),
+                       value = start_args$denom_term)),
 
          selectInput("fixed_terms_method",
                      "Estimate fixed effect in",
                      choices = c("E_step", "M_step"),
-                     selected = "M_step"))
+                     selected = start_args$fixed_terms_method))
      ),
 
 
@@ -215,7 +248,7 @@ ui <- fluidPage(
 
              checkboxInput("use_extra_correction",
                            "Extra correction steps",
-                           value = FALSE)),
+                           value = start_args$use_extra_correction)),
 
            conditionalPanel(
              "input.est_with_method == 'UKF'",
@@ -226,14 +259,14 @@ ui <- fluidPage(
                          min = 0,
                          max = 2,
                          step = .5,
-                         value = 0),
+                         value = start_args$beta),
 
              sliderInput("alpha",
                          "Alpha",
                          min = 1e-2,
                          max = 1,
                          step = 1e-2,
-                         value = 1)),
+                         value = start_args$alpha)),
 
            conditionalPanel(
              "input.est_with_method == 'SMA'",
@@ -242,7 +275,7 @@ ui <- fluidPage(
              selectInput("SMA_version",
                          "Computation version",
                          choices = c("woodbury", "cholesky"),
-                         selected = "woodbury")),
+                         selected = start_args$SMA_version)),
 
            conditionalPanel(
              "input.est_with_method == 'GMA'",
@@ -253,17 +286,18 @@ ui <- fluidPage(
                          min = 1,
                          max = 25,
                          step = 1,
-                         value = 25),
+                         value = start_args$GMA_max_rep),
 
              sliderInput("GMA_NR_eps",
                          "GMA_NR_eps parameter",
                          min = 0,
                          max = GMA_NR_eps_stuff$exp_max - GMA_NR_eps_stuff$exp_min - 1,
-                         value = 4))
+                         value = start_args$GMA_NR_eps))
          )),
 
      wellPanel(
-       checkboxInput("more_options", label = "Show more options", value = FALSE, width = "12em"))
+       checkboxInput("more_options", label = "Show more options",
+                     value = start_args$more_options, width = "12em"))
 
      ),
 
@@ -276,7 +310,7 @@ ui <- fluidPage(
        column(
          6,
          h3("Intro"),
-         div("Illustrates simulated data and a fit. The true coefficients are the continous curves and the predicted coefficients are the dashed curves.", style = get_em(3)),
+         div("Illustrates simulated data and a fit. The true coefficients are the continous curves and the predicted coefficients are the dashed curves. Shaded areas are 95% confidence bounds from smoothed covariance matrices", style = get_em(3)),
          div(textOutput("rug_explanation"), style = get_em(4)),
          div("See the ddhazard vignette for further details", style = get_em(1))
        ),
@@ -357,7 +391,7 @@ server <- function(input, output) {
     out <- formatR::tidy_source(text = capture.output(sim_exp), width.cutoff = 50,
                                 output = FALSE)
     out <- out$text.tidy
-    cat(paste0("Data is simulated with this call: \n", out, "\n"))
+    cat_l(paste0("Data is simulated with this call: \n", out, "\n"))
 
     eval(sim_exp)
     dat
@@ -426,7 +460,7 @@ server <- function(input, output) {
 
     }
 
-    control_list <- list(eps = 10^-2,
+    control_list <- list(eps = 10^-2, n_max = 10,
                          method = input$est_with_method)
 
     if(input$est_with_method == "UKF"){
@@ -479,7 +513,7 @@ server <- function(input, output) {
                                 output = FALSE)
     out <- out$text.tidy
 
-    cat(paste0("Model is fitted with this call: \n", out, "\n"))
+    cat_l(paste0("Model is fitted with this call: \n", out, "\n"))
 
     paste0(out, "\n\n# data is the simulated data set")
   })
@@ -520,11 +554,7 @@ server <- function(input, output) {
   })
 
   output$rug_explanation <- renderText({
-    text_out <- if(input$sim_with == "exponential")
-      "The density above x-axis indicates when a death is observed. " else
-        "The density above x-axis indicates when a death is observed. A small jitter is added to distinguish them (this is only when we simulate from the logit model). "
-
-    paste0(text_out, "The density below the x-axis indicates the size of the control set. The densities are log scaled")
+    "The density above x-axis indicates when a death is observed. The density below the x-axis indicates the size of the control set. The densities are log scaled"
   })
 
   output$coef_plot <- renderPlot({
@@ -532,22 +562,39 @@ server <- function(input, output) {
     fit <- fit_input()$fit
     n_fixed <- n_fixed_when_est()
 
+    cols <- palette()[1:ncol(sims$beta)]
+    cols_conf <- apply(sapply(cols, col2rgb)/255, 2,
+                       function(x)
+                         rgb(x[1], x[2], x[3], alpha=.1))
+
     par(mai = rep(1, 4))
-    matplot(seq_len(dim(sims$beta)[1]) - 1, sims$beta, lty = 1, type = "l",
+    x <- seq_len(dim(sims$beta)[1]) - 1
+    matplot(x, sims$beta, lty = 1, type = "l",
             ylim = range(sims$beta, fit$state_vecs, fit$fixed_effects),
             ylab = "Coefficients", xlab = "Time", cex.lab = 1.4,
-            frame = FALSE, axes=F, xlim = c(0 - .2, t_max + .2), xaxs = "i")
-    matplot(seq_len(dim(fit$state_vecs)[1]) - 1, fit$state_vecs[, 1:(6 - n_fixed)],
+            frame = FALSE, axes=F, xlim = c(0 - .2, t_max + .2), xaxs = "i",
+            col = cols)
+    matplot(x, fit$state_vecs[, 1:(6 - n_fixed)],
             lty = 2, type = "l", add = T,
-            col = (1+n_fixed):6)
+            col = cols[(1+n_fixed):6])
 
+    for(i in (1+n_fixed):6){
+      j <- i - n_fixed
+      fac <- qnorm(.5 - .95 / 2)
+      lb = fit$state_vecs[, j] + fac * sqrt(fit$state_vars[i, j, ])
+      ub = fit$state_vecs[, j] - fac * sqrt(fit$state_vars[i, j, ])
+
+      polygon(c(x, rev(x)), c(ub, rev(lb)),
+              col = cols_conf[i], border = NA)
+    }
 
     axis(1, lwd.ticks = 0, at = c(-10, seq(0, 30, 3), 100))
     axis(2, at = c(-10, axTicks(2), 10))
 
     if(n_fixed > 0)
-      abline(h = fit$fixed_effects, col = 1:n_fixed, lty = 2)
+      abline(h = fit$fixed_effects, col = cols[1:n_fixed], lty = 2)
 
+    n_breaks <- length(breaks(input$sim_with))
     risk_obj <- with(
       sims$res,
       get_risk_obj(Surv(tstart, tstop, event), t_max / (n_breaks - 1), max_T = t_max,
@@ -556,10 +603,8 @@ server <- function(input, output) {
 
     # Add rug plots to illustrate survivers and deaths
     death_times <- sims$res$tstop[sims$res$event==1]
-    if(input$sim_with == "logit")
-      death_times <- pmin(pmax(jitter(death_times, amount = .2), 0), t_max)
 
-    rug_dens(death_times, count_at_risk)
+    rug_dens(death_times, count_at_risk,  input$sim_with)
   })
 
   output$model_text <- renderText({
