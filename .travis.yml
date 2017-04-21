@@ -2,8 +2,8 @@
 
 language: R
 before_install:
-  - tlmgr install algorithm
-  - tlmgr install algpseudocode
+  - tlmgr install algorithmicx
+  - tlmgr install algorithms
 
 
 cache: packages
