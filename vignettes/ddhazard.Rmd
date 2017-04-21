@@ -3,9 +3,6 @@ title: "ddhazard"
 output: 
   pdf_document: 
     fig_caption: yes
-    pandoc_args: [
-      "--verbose"
-    ]
     includes:
       in_header: ddhazard_header.tex
 date: "`r Sys.Date()`"
@@ -777,10 +774,10 @@ The box below shows the final algorithm for the correction step:
 
 \begin{algorithm}
 \caption{Correction step with global mode approximation by Newton Raphson.}
-\begin{algorithmic}[1]\raggedright
-\Statex Set $\vec{a}^{(0)} =\emNotee{\vec{a}}{t}{t-1}$, $k = 0$ and define:
-\Statex $c'(\vec{\alpha}) = \algGMApPrime$
-\Statex $c''(\vec{\alpha}) = \algGMApPrimePrime$
+\begin{algorithmic}\raggedright
+\State Set $\vec{a}^{(0)} =\emNotee{\vec{a}}{t}{t-1}$, $k = 0$ and define:
+\State $c'(\vec{\alpha}) = \algGMApPrime$
+\State $c''(\vec{\alpha}) = \algGMApPrimePrime$
 \Repeat
 \State $\emNotee{\mat{V}}{t}{t} = \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}$
 \State %

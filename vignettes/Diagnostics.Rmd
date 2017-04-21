@@ -3,9 +3,6 @@ title: "ddhazard Diagnostics"
 output: 
   pdf_document: 
     fig_caption: yes
-    pandoc_args: [
-      "--verbose"
-    ]
 date: "`r Sys.Date()`"
 author: "Benjamin Christoffersen"
 header-includes:
