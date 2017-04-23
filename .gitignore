@@ -2,6 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+.txt
+**/*.txt
 src/*.o
 src/*.so
 src/*.dll
@@ -10,24 +12,24 @@ src/*.dll
 .pdf
 inst/doc
 vignettes/figures
-get_expect_equal.txt
-dunsurv.txt
-dynsurv.txt
-tmp.txt
+
 src-i386
 src-x64
+
 revdep
-**/*_cache/
 **/tex2pdf*/
 
-*_cache/
+vignettes/*_cache/
+vignettes/Prebuild/*_cache/
+vignettes/pandoc*.pdf
+vignettes/Prebuild/figure/
+vignettes/Prebuild/cache/
+
 vignettes/jss/cache/
 vignettes/jss/figure/
 vignettes/jss/sim_env.Rds
 vignettes/jss/results_from_simulation.Rds
 vignettes/jss/jss*
 
-vignettes/Prebuild/figure/
-vignettes/Prebuild/cache/
 sandbox/*
 Rprof.out
