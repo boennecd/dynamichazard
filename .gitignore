@@ -19,6 +19,7 @@ src-x64
 revdep
 **/*_cache/
 **/tex2pdf*/
+vignettes/*_cache/
 vignettes/jss/cache/
 vignettes/jss/figure/
 vignettes/jss/sim_env.Rds
