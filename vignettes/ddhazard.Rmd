@@ -794,7 +794,7 @@ This method is selected by setting `method = "GMA"` in the list passed to the `c
 An alternative to the above algorithm for the exponential family is to re-write the original problem to get a weighted least squares problem of the form:
 
 $$\begin{aligned}
-&\vec{b} = \mat{X}_t  \vec{a}^{(k-1)} + \Lparen{\vec{y}_t - \vec{h}\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}} \vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{-1}   \\
+&\vec{b} = \mat{X}_t  \vec{a}^{(k-1)} + \vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{-1}\Lparen{\vec{y}_t - \vec{h}\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}}   \\
 %
 &\vphantom{\LVert{\underbrace{\eqnGblModeTerma}_{\tmat{W}}}}
 %
@@ -805,7 +805,32 @@ $$\begin{aligned}
   - \smash{\underbrace{\eqnGblModeTermc}_{\tvec{b}}}\vphantom{\eqnGblModeTermc}}}
 \end{aligned}$$
 
-where $\vec{h}$ temporarily denotes the inverse link function at time $t$, $\vec{h}'$ is the derivative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with methods for least squares problem. A brief review and comparison of methods is in [@Leary90].
+where $\vec{h}$ temporarily denotes the inverse link function at time $t$, $\vec{h}'$ is the derivative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with methods for least squares problem. Though, this is the EKF shown earlier. To see this, set $\vec{\alpha} = \emNotee{\vec{a}}{t}{t - 1}$. Then,
+
+\begin{equation}
+\Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1} = 
+	\left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}
+\end{equation}
+
+Further, 
+
+\begin{equation}\begin{aligned}
+\tmat{X}_t^\top \tmat{C}\tvec{b}
+	&= \mat{X}_t^T\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{2}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{-1}\mat{X}_t\emNotee{\vec{a}}{t}{t - 1}
+	+ \vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})
+	+ \emNotee{\mat{V}}{t}{t-1}^{-1}\emNotee{\vec{a}}{t}{t - 1} \\
+%
+	&= \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)\emNotee{\vec{a}}{t}{t - 1} + \vec{u}_t (\emNotee{\vec{a}}{t}{t - 1}) 
+\end{aligned}\end{equation}
+
+Thus, 
+
+\begin{equation}
+\Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}
+	= \emNotee{\vec{a}}{t}{t - 1} + \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}\vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})
+\end{equation}
+
+This is the update equation in the EKF. This may give ideas to different implementation of the EKF that are more numerically stable and/or where we can easily check for singularity. A review of numerical method for least square problems and numerical examples is in e.g. [@Leary90] 
 
 ## Pros and cons
 The pros of the GMA presented in this section are:
