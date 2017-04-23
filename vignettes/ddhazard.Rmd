@@ -1276,6 +1276,7 @@ $$\begin{aligned}
 
 Then we could:
 
+ * Plot residuals against time and highlight the individuals with atleast on high residual
  * Accumulate residuals for each individual $i$ and plot against $t$. Any individuals with large or small values may worth looking at
  * Stratify a covariate values into factors and plot accumulated residuals versus time. Any structural deviations may show a missing covariate or incorrect transformation of the covariate on the linear predictor scale
  * Accumulate residuals across intervals $t$ and plot these
