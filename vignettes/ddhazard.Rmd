@@ -805,7 +805,7 @@ $$\begin{aligned}
   - \smash{\underbrace{\eqnGblModeTermc}_{\tvec{b}}}\vphantom{\eqnGblModeTermc}}}
 \end{aligned}$$
 
-where $\vec{h}$ temporarily denotes the inverse link function at time $t$, $\vec{h}'$ is the derivative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with methods for least squares problem. Though, this is the EKF shown earlier. To see this, set $\vec{\alpha} = \emNotee{\vec{a}}{t}{t - 1}$. Then,
+where $\vec{b}$ is the working responses, $\vec{h}$ temporarily denotes the inverse link function at time $t$, $\vec{h}'$ is the derivative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with methods for least squares problem. Though, this is the EKF shown earlier. To see this, set $\vec{\alpha} = \emNotee{\vec{a}}{t}{t - 1}$. Then,
 
 \begin{equation}
 \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1} = 

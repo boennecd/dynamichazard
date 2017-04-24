@@ -1,99 +1,387 @@
+#####
+# This script assumes that you are in the directory .../dynamichazard or
+# .../dynamichazard/... where the exists a directory called
+# .../dynamichazard/vignettes/jss/HDs/
+
 library(RSQLite)
 library(sqldf)
 library(tcltk)
+require(stringr)
+library(testthat)
+library(survival)
 
+#####
+# Define object used through out
 cur_ls <- ls()
-current_wd <- getwd()
-conn <- NULL
-tmp <- list()
+tmp_files <- list()
 new_folder <- NULL
 pb <- NULL
-do_remove <- TRUE
+conn <- NULL
+log_file <- NULL
+warn_old <- getOption("warn")
+db <- "driver_stats.db"
+final_tbl_name <- "HDs.RDS"
+
+sqlFromFile <- function(file){
+  sql <- readLines(file)
+  sql <- gsub("(--.*$)|(\\t)"," " ,sql)
+  sql <- unlist(str_split(paste(sql,collapse=" "),";"))
+  sql <- sql[grep("^ *$", sql, invert=T)]
+  sql
+}
+
+dbSendQueries <- function(con,sql){
+  dummyfunction <- function(sql,con){
+    dbSendQuery(con,sql)
+  }
+  lapply(sql, dummyfunction, con)
+}
+
+reset_dir <- bquote(setwd(.(getwd())))
+
+set_dir <- bquote(
+  setwd(.(paste0(
+    stringr::str_match(getwd(), ".+dynamichazard"), "/vignettes/jss/HDs/"))))
 
 tryCatch({
-  setwd(paste0(
-    stringr::str_match(getwd(), ".+dynamichazard"), "/vignettes/jss/HDs/"))
+  eval(set_dir)
+  options(warn = 1)
 
-  db <- "driver_stats.db"
-  if(file.exists(db) && do_remove)
-    unlink(db, force = T)
+  # Check if db should made
+  make_db <- file.exists(db)
+  if(make_db)
+    make_db <- "YES" ==
+    winDialog("yesno", "Do you want to remake the data base for the hard disks?")
 
-  sqlite <- dbDriver("SQLite")
-  conn <- dbConnect(sqlite, db)
+  log_file <- file("setup.log", if(make_db) "wt" else "at")
+  sink(log_file)
+  cat("\n#############\n ",  as.character(as.POSIXlt(Sys.time())), "\n#############\n\n")
 
-  create_query <- paste0(readLines("create_table.sql"), collapse = "\n")
-  dbSendQuery(conn, create_query)
+  #####
+  # Create database
+  if(make_db){
+    if(file.exists(db) && do_remove)
+      unlink(db, force = T)
 
-  suffixes <- c("2013", "2014", "2015", "Q1_2016", "Q2_2016", "Q3_2016")
-  for(suffix in suffixes){
-    # TODO: Clean up
-    # doc_url <- "https://f001.backblaze.com/file/Backblaze-Hard-Drive-Data/docs_2013.zip"
-    data_url <- paste0("https://f001.backblaze.com/file/Backblaze-Hard-Drive-Data/data_", suffix, ".zip")
+    sqlite <- dbDriver("SQLite")
+    conn <- dbConnect(sqlite, db)
 
-    # # Dl import query file
-    # tmp$query <- tempfile()
-    # download.file(doc_url, tmp$query)
-    # import_sql <- paste0(readLines(
-    #   unz(tmp$query, "docs_2013/import_2013.sql")),
-    #   collapse = "\n")
-    # unlink(tmp$query)
-    # tmp$query <- NULL
+    queries <- sqlFromFile("create_table.sql")
+    dbSendQueries(conn, queries)
 
-    # Dl data files and unzip
-    cat("Downloading files for", suffix, "\n")
-    tmp$data <- tempfile()
-    download.file(data_url, tmp$data)
-    tmp$data_dir <- suffix
-    if(substr(suffix, 0, 1) == "Q")
-      tmp$data_dir <- paste0("data_", tmp$data_dir)
-    unzip(tmp$data)
-    unlink(tmp$data)
-    tmp$data <- NULL
+    dbListTables(conn)
 
-    # Import
-    cat("Adding data to database for", suffix, "\n")
-    fs <- dir(tmp$data_dir)
-    pb <- txtProgressBar(
-      1, length(fs), 0, title = paste("Progress for file suffix", suffix),
-      style=3)
-    for(i in seq_along(fs)){
-      setTxtProgressBar(pb, i)
-      f <- fs[i]
-      f <- paste0("./", tmp$data_dir, "/", f)
-      read.csv.sql(
-        f, paste(
-          "INSERT INTO drive_stats",
-          # "SELECT date, serial_number, model, capacity_bytes, failure, smart_1_normalized, smart_1_raw, smart_2_normalized, smart_2_raw, smart_3_normalized, smart_3_raw, smart_4_normalized, smart_4_raw, smart_5_normalized, smart_5_raw, smart_7_normalized, smart_7_raw, smart_8_normalized, smart_8_raw, smart_9_normalized, smart_9_raw, smart_10_normalized, smart_10_raw, smart_11_normalized, smart_11_raw, smart_12_normalized, smart_12_raw, smart_13_normalized, smart_13_raw, smart_15_normalized, smart_15_raw, smart_183_normalized, smart_183_raw, smart_184_normalized, smart_184_raw, smart_187_normalized, smart_187_raw, smart_188_normalized, smart_188_raw, smart_189_normalized, smart_189_raw, smart_190_normalized, smart_190_raw, smart_191_normalized, smart_191_raw, smart_192_normalized, smart_192_raw, smart_193_normalized, smart_193_raw, smart_194_normalized, smart_194_raw, smart_195_normalized, smart_195_raw, smart_196_normalized, smart_196_raw, smart_197_normalized, smart_197_raw, smart_198_normalized, smart_198_raw, smart_199_normalized, smart_199_raw, smart_200_normalized, smart_200_raw, smart_201_normalized, smart_201_raw, smart_223_normalized, smart_223_raw, smart_225_normalized, smart_225_raw, smart_240_normalized, smart_240_raw, smart_241_normalized, smart_241_raw, smart_242_normalized, smart_242_raw, smart_250_normalized, smart_250_raw, smart_251_normalized, smart_251_raw, smart_252_normalized, smart_252_raw, smart_254_normalized, smart_254_raw, smart_255_normalized, smart_255_raw",
-          "SELECT date, serial_number, model, capacity_bytes, failure, smart_1_raw, smart_2_raw, smart_3_raw, smart_4_raw, smart_5_raw, smart_7_raw, smart_8_raw, smart_9_raw, smart_10_raw, smart_11_raw, smart_12_raw, smart_13_raw, smart_15_raw, smart_183_raw, smart_184_raw, smart_187_raw, smart_188_raw, smart_189_raw, smart_190_raw, smart_191_raw, smart_192_raw, smart_193_raw, smart_194_raw, smart_195_raw, smart_196_raw, smart_197_raw, smart_198_raw, smart_199_raw, smart_200_raw, smart_201_raw, smart_223_raw, smart_225_raw, smart_240_raw, smart_241_raw, smart_242_raw, smart_250_raw, smart_251_raw, smart_252_raw, smart_254_raw, smart_255_raw",
-          "FROM file"),
-        dbname = db)
+    suffixes <- c("2013", "2014", "2015", "Q1_2016", "Q2_2016", "Q3_2016")
+    for(suffix in suffixes){
+      data_url <- paste0("https://f001.backblaze.com/file/Backblaze-Hard-Drive-Data/data_", suffix, ".zip")
+
+      # Dl data files and unzip
+      cat("Downloading files for", suffix, "\n")
+      tmp_files$data <- tempfile()
+      download.file(data_url, tmp_files$data)
+      tmp_files$data_dir <- suffix
+      if(substr(suffix, 0, 1) == "Q")
+        tmp_files$data_dir <- paste0("data_", tmp_files$data_dir)
+      unzip(tmp_files$data)
+      unlink(tmp_files$data)
+      tmp_files$data <- NULL
+
+      # Import
+      cat("Adding data to database for", suffix, "\n")
+      fs <- dir(tmp_files$data_dir)
+      pb <- txtProgressBar(
+        1, length(fs), 0, title = paste("Progress for file suffix", suffix),
+        style=3)
+      for(i in seq_along(fs)){
+        setTxtProgressBar(pb, i)
+        f <- fs[i]
+        f <- paste0("./", tmp_files$data_dir, "/", f)
+        read.csv.sql(
+          f, paste(
+            "INSERT INTO drive_stats",
+            # "SELECT date, serial_number, model, capacity_bytes, failure, smart_1_normalized, smart_1_raw, smart_2_normalized, smart_2_raw, smart_3_normalized, smart_3_raw, smart_4_normalized, smart_4_raw, smart_5_normalized, smart_5_raw, smart_7_normalized, smart_7_raw, smart_8_normalized, smart_8_raw, smart_9_normalized, smart_9_raw, smart_10_normalized, smart_10_raw, smart_11_normalized, smart_11_raw, smart_12_normalized, smart_12_raw, smart_13_normalized, smart_13_raw, smart_15_normalized, smart_15_raw, smart_183_normalized, smart_183_raw, smart_184_normalized, smart_184_raw, smart_187_normalized, smart_187_raw, smart_188_normalized, smart_188_raw, smart_189_normalized, smart_189_raw, smart_190_normalized, smart_190_raw, smart_191_normalized, smart_191_raw, smart_192_normalized, smart_192_raw, smart_193_normalized, smart_193_raw, smart_194_normalized, smart_194_raw, smart_195_normalized, smart_195_raw, smart_196_normalized, smart_196_raw, smart_197_normalized, smart_197_raw, smart_198_normalized, smart_198_raw, smart_199_normalized, smart_199_raw, smart_200_normalized, smart_200_raw, smart_201_normalized, smart_201_raw, smart_223_normalized, smart_223_raw, smart_225_normalized, smart_225_raw, smart_240_normalized, smart_240_raw, smart_241_normalized, smart_241_raw, smart_242_normalized, smart_242_raw, smart_250_normalized, smart_250_raw, smart_251_normalized, smart_251_raw, smart_252_normalized, smart_252_raw, smart_254_normalized, smart_254_raw, smart_255_normalized, smart_255_raw",
+            "SELECT date, serial_number, model, capacity_bytes, failure, smart_1_raw, smart_2_raw, smart_3_raw, smart_4_raw, smart_5_raw, smart_7_raw, smart_8_raw, smart_9_raw, smart_10_raw, smart_11_raw, smart_12_raw, smart_13_raw, smart_15_raw, smart_183_raw, smart_184_raw, smart_187_raw, smart_188_raw, smart_189_raw, smart_190_raw, smart_191_raw, smart_192_raw, smart_193_raw, smart_194_raw, smart_195_raw, smart_196_raw, smart_197_raw, smart_198_raw, smart_199_raw, smart_200_raw, smart_201_raw, smart_223_raw, smart_225_raw, smart_240_raw, smart_241_raw, smart_242_raw, smart_250_raw, smart_251_raw, smart_252_raw, smart_254_raw, smart_255_raw",
+            "FROM file"),
+          dbname = db)
+      }
+      close(pb)
+      unlink(tmp_files$data_dir, recursive = T, force = T)
     }
-    close(pb)
-    unlink(tmp$data_dir, recursive = T, force = T)
+
+    #####
+    # Make survival table
+    cat("Making surival table in data base\n")
+
+    queries <- sqlFromFile("create_surv_table.sql")
+    dbSendQueries(conn, queries)
+
+  } else
+    cat("Db exists and will not be made again\n")
+
+  #####
+  # Make data frame for analysis
+  if(is.null(conn)){
+    sqlite <- dbDriver("SQLite")
+    conn <- dbConnect(sqlite, db)
   }
 
-  }, finally = {
-    setwd(current_wd)
-    if(!is.null(conn))
-      dbDisconnect(conn)
+  surv_tbl <- dbReadTable(conn, "drive_stats_survival")
 
-    for(l in tmp)
-      unlink(l, recursive = T)
+  # Make stats functions and use it
+  stats_func <- function(){
+    cat("The total number of rows are", nrow(surv_tbl), "with ",
+        length(unique(surv_tbl$serial_number)), "individuals",
+        "\n")
+    cat("Str on the table yields:\n")
+    str(surv_tbl)
+    cat("Summary stats are:\n")
+    print(summary(surv_tbl))
+  }
+  stats_func()
 
-    if(!is.null(pb))
-      close(pb)
+  # Format data
+  cat("Formatting data columns\n")
+  for(n in c("date", "min_date", "max_date")){
+    surv_tbl[[n]] <- as.Date(surv_tbl[[n]])
+  }
 
-    rm(list = ls()[!ls() %in% cur_ls])
+  cat("There are a few different model where some are quite sparse:\n")
+  sort(print(xtabs(~ model, surv_tbl, subset = !duplicated(surv_tbl$serial_number))))
+
+  test_that("All disks only have one model", expect_true(
+    all(tapply(surv_tbl$model, surv_tbl$serial_number, function(x) all(x[1] == x)))
+  ))
+
+  cat("Thus, we focus on the manufacturer:\n")
+  surv_tbl$manufacturer <- str_extract(surv_tbl$model, "^([A-z]+(?=\ ))|(ST)")
+
+  # "As noted in the BackBlaze article, models listed as HGST or Hitachi should be under the same label"
+  # Source: http://blog.applied.ai/survival-analysis-part2/
+
+  surv_tbl$manufacturer[surv_tbl$manufacturer == "Hitachi"] <- 'HGST'
+
+  test_that("We found a manufacturer for all observations",
+            expect_true(!any(is.na(surv_tbl$manufacturer))))
+  tmp_tbl <- data.frame(ftable(xtabs(
+    ~ manufacturer + model, surv_tbl, subset = !duplicated(surv_tbl$serial_number)),
+    row.vars = c("manufacturer", "model")))
+  tmp_tbl <- tmp_tbl[tmp_tbl$Freq != 0, ]
+  print(tmp_tbl)
+  print(xtabs(~ manufacturer, surv_tbl))
+
+  cat("We remove SAMSUNG and TOSHIBA\n")
+  surv_tbl <- surv_tbl[!surv_tbl$manufacturer %in% c("SAMSUNG", "TOSHIBA"), ]
+  surv_tbl$model <- as.factor(surv_tbl$model)
+  surv_tbl$manufacturer <- as.factor(surv_tbl$manufacturer)
+  stats_func()
+
+  cat("A few HDs have more than one size. These are:\n")
+
+  all_sizes_equal_exp <- expression(
+    tapply(surv_tbl$capacity_bytes_MB, surv_tbl$serial_number,
+           function(x) all(x[1] == x)))
+  has_more_sizes <- which(!eval(all_sizes_equal_exp))
+  test_that("There are some HDs with more than onse size",
+            expect_gt(length(has_more_sizes), 0))
+
+  print(
+    surv_tbl[surv_tbl$serial_number %in% names(has_more_sizes),
+             c("serial_number", "capacity_bytes_MB")])
+
+  cat("We handle these on a case by case basis\n")
+  replacement_sizes <- c(
+    "PL2331LAGPJ89J" = 4000787,
+    "PL2331LAGSUPTJ" = 4000787,
+    "PL2331LAGSU5RJ" = 4000787,
+    "W300935A" = 4000787,
+    "W300A7LV" = 4000787,
+    "W300A8MC" = 4000787,
+    "W300A9M2" = 4000787,
+    "W300BV4X" = 4000787,
+    "W300C6K2" = 4000787,
+    "W300CDJ1" = 4000787,
+    "W300CSMW" = 4000787,
+    "W300CSYX" = 4000787,
+    "W300F1LC" = 4000787,
+    "WD-WCAU45478169" = 1000205,
+    "WD-WCAU47760976" = 1000205,
+    "Z300JZGN" = 4000787,
+    "Z300K0NG" = 4000787,
+    "Z300K1HK" = 4000787,
+    "Z300K1L6" = 4000787,
+    "Z300K204" = 4000787,
+    "Z300K8MM" = 4000787,
+    "Z300K9LT" = 4000787,
+    "Z300KCGQ" = 4000787,
+    "Z300KCR8" = 4000787,
+    "Z300KCT4" = 4000787,
+    "Z300KMMG" = 4000787,
+    "Z300KN1Y" = 4000787,
+    "Z305GFM1" = 4000787)
+  for(i in seq_along(replacement_sizes)){
+    indx <- which(surv_tbl$serial_number == names(replacement_sizes)[i])
+    stopifnot(any(surv_tbl$capacity_bytes_MB[indx] == replacement_sizes[i]))
+    surv_tbl$capacity_bytes_MB[indx] <- replacement_sizes[i]
+  }
+
+  test_that("There are not HDs with more than onse size",
+            expect_true(all(eval(all_sizes_equal_exp))))
+
+  cat("There are some very small HDS\n")
+  xtabs(~surv_tbl$capacity_bytes_MB)
+
+  cat("We remove the smallest\n")
+  surv_tbl <- surv_tbl[surv_tbl$capacity_bytes_MB > 1e5, ]
+  stats_func()
+
+  cat("Some HDs fails more than once")
+  xtabs(~ surv_tbl$n_fails, subset = !duplicated(surv_tbl$serial_number))
+
+  cat("We remove these")
+  surv_tbl <- surv_tbl[surv_tbl$n_fails < 2, ]
+  stats_func()
+
+  cat("We format the rest of the columns")
+  surv_tbl$serial_number <- as.factor(surv_tbl$serial_number)
+  for(n in c("smart_187_raw", "smart_201_raw")){
+    is_missing <- surv_tbl[[n]] == ""
+    surv_tbl[[n]] <- as.integer(surv_tbl[[n]])
+    surv_tbl[[n]][is_missing] <- NA_integer_
+  }
+
+  test_that("We miss all values of 201", expect_true(
+    all(is.na(surv_tbl$smart_201_raw))))
+  surv_tbl$smart_201_raw <- NULL
+
+  equal_min_n_max_h <- expression(
+    sum(surv_tbl$min_hours == surv_tbl$max_hours))
+  cat("There are", eval(equal_min_n_max_h), "HDs with equal min and max hours. We remove these\n")
+
+  test_that("There are some cases with equal min and max hours",
+            expect_gt(eval(equal_min_n_max_h), 0))
+  surv_tbl <- surv_tbl[surv_tbl$min_hours < surv_tbl$max_hours, ]
+  test_that("There are no longer cases with equal min and max hours",
+            expect_equal(eval(equal_min_n_max_h), 0))
+
+  cat("There are some HDs which seems to have run for more than 20 years. We remove these\n")
+
+  test_that("Some have run for more than 20",
+            expect_true(any(surv_tbl$max_hours > 365 * 24 * 20)))
+
+  surv_tbl <- surv_tbl[surv_tbl$max_hours < 365 * 24 * 20, ]
+
+  # par(mfcol = c(2, 1))
+  # by(surv_tbl[!duplicated(surv_tbl$serial_number), ],
+  #    surv_tbl$n_fails[!duplicated(surv_tbl$serial_number)],
+  #    function(x) hist(x$max_hours))
+
+  stats_func()
+
+  test_that("Check what is up with large number of power cycles",
+            expect_true(FALSE))
+
+  #####
+  # Reproduce results from http://blog.applied.ai/survival-analysis-part-4/
+  tmp_dat <- surv_tbl[!duplicated(surv_tbl$serial_number), ]
+  tmp_dat$size <- round(tmp_dat$capacity_bytes_MB / 1e6, 1)
+  tmp_dat <- tmp_dat[tmp_dat$size < 7 & tmp_dat$size > 1.4, ]
+
+  tmp_dat$manufacturer <- relevel(
+    tmp_dat$manufacturer, ref = "HGST")
+  tmp_dat$size <- as.factor(tmp_dat$size)
+  tmp_dat$size <- relevel(tmp_dat$size, ref = 1.5)
+
+  tmp_fit <- coxph(
+    Surv(max_hours, n_fails > 0) ~ manufacturer + size, tmp_dat)
+
+  # tmp_fit$coefficients
+
+  test_that("Roughly matches w/ 2015 example", {
+    coefs <- tmp_fit$coefficients
+    expect_true(2.5 < coefs["manufacturerST"] && coefs["manufacturerST"] < 3.5)
+    expect_true(2 < coefs["manufacturerWDC"] && coefs["manufacturerWDC"] < 2.5)
+    expect_true(1 < coefs["size2"] && coefs["size2"] < 1.3)
+    expect_true(1.5 < coefs["size3"] && coefs["size3"] < 3)
   })
 
-# db <- "driver_stats.db"
-# sqlite <- dbDriver("SQLite")
-# conn <- dbConnect(sqlite, db)
-# dbExistsTable(conn, "drive_stats")
-#
-# rs = dbSendQuery(conn, "select * from drive_stats  LIMIT 100")
-# d = fetch(rs, n = -1)
-#
-# head(d, 100)
-#
-# dbDisconnect(conn)
+  # # Compare with size with http://blog.applied.ai/survival-analysis-part2/
+  # # It seems like they have purchased some new HDs of size 4Tb and larger since
+  # # this analysis
+  # xtabs(~tmp_dat$size)
+
+  #####
+  # Make table for survival analysis
+
+  # Need to sort first
+  surv_tbl <- surv_tbl[order(surv_tbl$serial_number, surv_tbl$smart_9_raw), ]
+
+  # Make base frame
+  tmp <- subset(
+    surv_tbl, !duplicated(surv_tbl$serial_number),
+    select = c(serial_number, model, manufacturer, n_fails, n_records,
+               min_date, max_date, min_hours, max_hours))
+  final_tbl <- tmerge(
+    tmp, tmp, id = serial_number, fails = event(max_hours, n_fails),
+    tstart = min_hours, tstop = max_hours,
+    options = list(idname = "serial_number"))
+
+  # Add time-varying covariates
+  covs <-
+    c("smart_5", "smart_10", "smart_12",
+      "smart_187", "smart_196", "smart_197", "smart_198")
+  expres <- parse(
+    text = paste(
+      "tmerge(
+      final_tbl, surv_tbl, id = serial_number,\n",
+      paste0(covs, " = tdc(smart_9_raw, ", covs, "_raw)", collapse = ",\n"),
+      ", options=list(na.rm=FALSE))"))
+
+  final_tbl <- eval(expres)
+
+  summary(final_tbl)
+
+  # Add binary features and cum sums
+  for(n in covs[covs != "smart_12"]){
+    final_tbl[[paste0(n, "_bin")]] <- final_tbl[[n]] > 0
+
+    final_tbl[[paste0(n, "_bin_cumsum")]] <- unlist(tapply(
+      final_tbl[[paste0(n, "_bin")]], final_tbl$serial_number, cumsum))
+
+    final_tbl[[paste0(n, "_cumsum")]] <- unlist(tapply(
+      final_tbl[[n]], final_tbl$serial_number, cumsum))
+  }
+
+  saveRDS(final_tbl, final_tbl_name)
+
+}, finally = {
+  if(!is.null(conn))
+    dbDisconnect(conn)
+  conn <- NULL
+
+  for(l in tmp_files)
+    unlink(l, recursive = T)
+  tmp_files <- list()
+
+  if(!is.null(pb)){
+    close(pb)
+    pb <- NULL
+  }
+
+  eval(reset_dir)
+
+  sink()
+  if(!is.null(log_file))
+    close(log_file)
+
+  options(warn = warn_old)
+
+  rm(list = ls()[!ls() %in% cur_ls])
+})
+
+
+# dbGetQuery(
+#   conn,
+#   "SELECT serial_number, date, smart_5_raw, smart_9_raw, smart_12_raw, smart_187_raw, smart_197_raw, smart_198_raw
+# FROM drive_stats
+#   where serial_number = 'WD-WCAU45409452'
+#   ORDER BY smart_9_raw ASC")
