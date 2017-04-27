@@ -98,6 +98,16 @@ test_that("Result of exponential model on head_neck_data match previous results"
 })
 
 test_that("exponential model and logit moels hazzard functions differs", {
+  result = ddhazard(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    control = list(est_Q_0 = F,
+                   save_data = F, save_risk_set = F),
+    a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
+    max_T = 45,
+    id = head_neck_cancer$id, order = 1)
+
   expect_true(result_exp$model != result$model)
   expect_true(toString(body(result_exp$hazard_func)) !=
                 toString(body(result$hazard_func)))

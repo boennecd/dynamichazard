@@ -130,8 +130,9 @@ void GMA<T>::solve(){
 
         } else {
           tmp(p_dat.span_current_cov) +=
-            X_tilde * a(p_dat.span_current_cov) + X_t * (h_1d * p_dat.LR) +
-              V_t_less_inv * ((1 - p_dat.LR) * a);
+            X_tilde * a(p_dat.span_current_cov) + X_t * (h_1d * p_dat.LR);
+
+          tmp += V_t_less_inv * ((1 - p_dat.LR) * a);
         }
         a =  V * tmp;
       }

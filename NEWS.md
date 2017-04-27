@@ -20,6 +20,7 @@ The following has been changed or added:
 * Inverses has been replaced by pseudo inverses. This will only have implications the matrices are rank deficient. The old option can be used by calling `ddhazard` with `control = list(use_pinv = FALSE, ...)
 * Refactored the UKF code. This version no longer supports the `exp_combined` method
 * Global mode approximation have been added
+* Changed the formula for the EKF with multiple iterations to give yield a mode approximation
 
 # dynamichazard 0.2.0
 The following have been added:

@@ -68,6 +68,19 @@ test_that("GMA works w/ second order random walk", {
   f1 <- f1[c("state_vars", "state_vars")]
   # save_to_test(f1, "GMA_pbc_o2_logit")
   expect_equal(f1, read_to_test("GMA_pbc_o2_logit"), tolerance = 1.490116e-08)
+
+  f1 <- ddhazard(
+    formula = Surv(tstart, tstop, death == 2) ~ edema + log(albumin) + log(bili) + log(protime),
+    data = pbc2,
+    order = 2,
+    id = pbc2$id, by = 100, max_T = 3600,
+    control = list(method = "GMA", LR = .5),
+    Q_0 = diag(rep(1, 10)), Q = diag(rep(1e-4, 5)))
+
+  # plot(f1)
+  f1 <- f1[c("state_vars", "state_vars")]
+  # save_to_test(f1, "GMA_pbc_o2_logit_lower_LR")
+  expect_equal(f1, read_to_test("GMA_pbc_o2_logit_lower_LR"), tolerance = 1.490116e-08)
 })
 
 test_that("GMA works w/ fixed effects in E-step", {

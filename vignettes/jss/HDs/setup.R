@@ -9,6 +9,7 @@ library(tcltk)
 require(stringr)
 library(testthat)
 library(survival)
+library(testthat)
 
 #####
 # Define object used through out
@@ -32,6 +33,7 @@ sqlFromFile <- function(file){
 
 dbSendQueries <- function(con,sql){
   dummyfunction <- function(sql,con){
+    cat("Running the following sql:\n", sql, sep = "\n")
     dbSendQuery(con,sql)
   }
   lapply(sql, dummyfunction, con)
@@ -54,13 +56,14 @@ tryCatch({
     winDialog("yesno", "Do you want to remake the data base for the hard disks?")
 
   log_file <- file("setup.log", if(make_db) "wt" else "at")
-  sink(log_file)
+  sink(log_file, append = F, split = T, type = "output")
+  sink(log_file, append = T, split = F, type = "message")
   cat("\n#############\n ",  as.character(as.POSIXlt(Sys.time())), "\n#############\n\n")
 
   #####
   # Create database
   if(make_db){
-    if(file.exists(db) && do_remove)
+    if(file.exists(db))
       unlink(db, force = T)
 
     sqlite <- dbDriver("SQLite")
@@ -119,7 +122,7 @@ tryCatch({
     cat("Db exists and will not be made again\n")
 
   #####
-  # Make data frame for analysis
+  # Make data frame for analysis and save as .RDS
   if(is.null(conn)){
     sqlite <- dbDriver("SQLite")
     conn <- dbConnect(sqlite, db)
@@ -243,7 +246,8 @@ tryCatch({
 
   cat("We format the rest of the columns")
   surv_tbl$serial_number <- as.factor(surv_tbl$serial_number)
-  for(n in c("smart_187_raw", "smart_201_raw")){
+  for(n in c("smart_187_raw", "smart_188_raw", "smart_189_raw",
+             "smart_201_raw")){
     is_missing <- surv_tbl[[n]] == ""
     surv_tbl[[n]] <- as.integer(surv_tbl[[n]])
     surv_tbl[[n]][is_missing] <- NA_integer_
@@ -277,8 +281,10 @@ tryCatch({
 
   stats_func()
 
-  test_that("Check what is up with large number of power cycles",
-            expect_true(FALSE))
+  # Check the smart_12
+  surv_tbl <- surv_tbl[order(surv_tbl$serial_number, surv_tbl$smart_9_raw), ]
+  test_that("smart_12 is sorted", expect_true(
+    all(!unlist(tapply(surv_tbl$smart_12_raw, surv_tbl$smart_12_raw, is.unsorted)))))
 
   #####
   # Reproduce results from http://blog.applied.ai/survival-analysis-part-4/
@@ -314,11 +320,12 @@ tryCatch({
 
   # Need to sort first
   surv_tbl <- surv_tbl[order(surv_tbl$serial_number, surv_tbl$smart_9_raw), ]
+  surv_tbl$size_tb <- round(surv_tbl$capacity_bytes_MB / 1e6, 1)
 
   # Make base frame
   tmp <- subset(
     surv_tbl, !duplicated(surv_tbl$serial_number),
-    select = c(serial_number, model, manufacturer, n_fails, n_records,
+    select = c(serial_number, model, manufacturer, n_fails, n_records, size_tb,
                min_date, max_date, min_hours, max_hours))
   final_tbl <- tmerge(
     tmp, tmp, id = serial_number, fails = event(max_hours, n_fails),
@@ -328,7 +335,8 @@ tryCatch({
   # Add time-varying covariates
   covs <-
     c("smart_5", "smart_10", "smart_12",
-      "smart_187", "smart_196", "smart_197", "smart_198")
+      "smart_187", "smart_188", "smart_189",
+      "smart_196", "smart_197", "smart_198")
   expres <- parse(
     text = paste(
       "tmerge(
@@ -338,10 +346,17 @@ tryCatch({
 
   final_tbl <- eval(expres)
 
-  summary(final_tbl)
+  # summary(final_tbl)
+
+  # TODO: Why are there extreme counts of smart_12? The disk cannot have had that many power cycles!
+  # TODO: Should we be aware of extreme values for some of the others?
+  # TODO: How to treat tha NAs / missing fields for smart_187 to smart_189
+  # TODO: Are failures also when they change HDs due to some of the covariates? If so, which?
+  # TODO: what is the scan errors in 'Failure Trends in a Large Disk Drive Population'
+  # TODO: fill in the a zero dummy value for those w/ first observation that end within the first week of running
 
   # Add binary features and cum sums
-  for(n in covs[covs != "smart_12"]){
+  for(n in covs[covs %in% c("smart_197")]){
     final_tbl[[paste0(n, "_bin")]] <- final_tbl[[n]] > 0
 
     final_tbl[[paste0(n, "_bin_cumsum")]] <- unlist(tapply(
@@ -352,6 +367,10 @@ tryCatch({
   }
 
   saveRDS(final_tbl, final_tbl_name)
+
+  test_that("Pulling out a random sample from the complete data base and processing gives the same", {
+    expect_true(FALSE)
+  })
 
 }, finally = {
   if(!is.null(conn))
@@ -370,6 +389,7 @@ tryCatch({
   eval(reset_dir)
 
   sink()
+  sink(file = NULL, type = "message")
   if(!is.null(log_file))
     close(log_file)
 

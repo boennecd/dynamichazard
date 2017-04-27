@@ -284,6 +284,8 @@ void EKF_solver::solve(){
               "ddhazard_fit_cpp estimation error: Failed to invert V_(t|t-1)");
     unsigned int n_NR_it = 0;
 
+    arma::vec update_term = V_t_less_s_inv * p_dat.a_t_less_s.col(t - 1);
+
     while(true){
       ++n_NR_it;
 
@@ -317,7 +319,9 @@ void EKF_solver::solve(){
       inv_sympd(p_dat.V_t_t_s.slice(t) , V_t_less_s_inv + p_dat.U, p_dat.use_pinv,
                 "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
 
-      p_dat.a_t_t_s.col(t) = i_a_t + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
+      //p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.col(t - 1) + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
+      p_dat.a_t_t_s.col(t) = p_dat.V_t_t_s.slice(t) * (
+        p_dat.U * i_a_t + update_term + (p_dat.LR * p_dat.u));
 
       if(!p_dat.is_mult_NR || arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) < p_dat.NR_eps)
         break;

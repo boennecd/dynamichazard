@@ -415,6 +415,8 @@ Initial testing shows that the EKF has issues with divergence for some data set.
 
 Simulated datasets show that the learning rate solves the issues with divergence. Let $1\geq \zeta_0>0$ denote the learning rate and $\epsilon_\text{NR}$ denote the tolerance for convergence in the correction step. Then set $\vec{a} = \emNotee{\vec{a}}{t}{t-1}$ and compute:
 
+<!-- TODO: Update me -->
+
 $$\begin{aligned}
   &\emNotee{\vec{a}}{t}{t} = \vec{a} + \zeta_0 \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})\\
   &\emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\vec{a})\right)^{-1} \\
@@ -805,7 +807,7 @@ $$\begin{aligned}
   - \smash{\underbrace{\eqnGblModeTermc}_{\tvec{b}}}\vphantom{\eqnGblModeTermc}}}
 \end{aligned}$$
 
-where $\vec{b}$ is the working responses, $\vec{h}$ temporarily denotes the inverse link function at time $t$, $\vec{h}'$ is the derivative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with methods for least squares problem. Though, this is the EKF shown earlier. To see this, set $\vec{\alpha} = \emNotee{\vec{a}}{t}{t - 1}$. Then,
+where $\vec{b}$ is the working responses, $\vec{h}$ temporarily denotes the inverse link function at time $t$, $\vec{h}'$ is the derivative w.r.t. the linear predictor $\mat{X}_t  \vec{a}^{(k-1)}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{C}\tvec{b}$. This problem can be solved with methods for least squares problem. Though, this is the EKF shown earlier. To see this, set $\vec{a}^{(k-1)} = \emNotee{\vec{a}}{t}{t - 1}$. Then,
 
 \begin{equation}
 \Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1} = 
@@ -816,7 +818,7 @@ Further,
 
 \begin{equation}\begin{aligned}
 \tmat{X}_t^\top \tmat{C}\tvec{b}
-	&= \mat{X}_t^T\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{2}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{-1}\mat{X}_t\emNotee{\vec{a}}{t}{t - 1}
+	&= \mat{X}_t^T\vec{h}'\Lparen{\mat{X}_t  \emNotee{\vec{a}}{t}{t - 1}}^{2}\varpCond{\vec{Y}_t}{\mat{X}_t\emNotee{\vec{a}}{t}{t - 1}}^{-1}\mat{X}_t\emNotee{\vec{a}}{t}{t - 1}
 	+ \vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})
 	+ \emNotee{\mat{V}}{t}{t-1}^{-1}\emNotee{\vec{a}}{t}{t - 1} \\
 %
@@ -830,7 +832,23 @@ Thus,
 	= \emNotee{\vec{a}}{t}{t - 1} + \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}\vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})
 \end{equation}
 
-This is the update equation in the EKF. This may give ideas to different implementation of the EKF that are more numerically stable and/or where we can easily check for singularity. A review of numerical method for least square problems and numerical examples is in e.g. [@Leary90] 
+This is the update equation in the EKF. Taking multiple steps give us:
+
+\begin{equation}
+\Lparen{\tmat{X}_t^\top \tmat{C}\tmat{X}_t}^{-1} = 
+	\left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\vec{a}^{(k-1)})\right)^{-1}
+\end{equation}
+
+\begin{equation}\begin{aligned}
+\tmat{X}_t^\top \tmat{C}\tvec{b}
+	&= \mat{X}_t^T\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{2}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{-1}\mat{X}_t\vec{a}^{(k-1)}
+	+ \vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})
+	+ \emNotee{\mat{V}}{t}{t-1}^{-1}\emNotee{\vec{a}}{t}{t - 1} \\
+%
+	&= \mat{U}_t (\vec{a}^{(k-1)})\vec{a}^{(k-1)} + \emNotee{\mat{V}}{t}{t - 1}^{-1}\emNotee{\vec{a}}{t}{t - 1} + \vec{u}_t (\vec{a}^{(k-1)}) 
+\end{aligned}\end{equation}
+
+The above may give ideas to different implementation of the EKF that are more numerically stable and/or where we can easily check for singularity. A review of numerical method for least square problems and numerical examples is in e.g. [@Leary90] 
 
 ## Pros and cons
 The pros of the GMA presented in this section are:

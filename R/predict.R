@@ -53,9 +53,12 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms){
   term_names_org = c("(Intercept)", attr(object$formula,"term.labels"))
   term_names = stringr::str_replace_all(term_names_org, "(\\W)", "\\\\\\1") # add escape version of charecters
 
-  var_names = colnames(object$state_vecs)
+  var_names <- colnames(object$state_vecs)
+  if(object$order == 2)
+    var_names <- var_names[1:(length(var_names) / 2)]
   terms_to_vars = sapply(term_names, function(t_name) which(grepl(t_name, var_names)))
   found_match <- which(lapply(terms_to_vars, length)  > 0)
+
   terms_to_vars <- terms_to_vars[found_match]
 
   stopifnot(!duplicated(unlist(terms_to_vars)))
