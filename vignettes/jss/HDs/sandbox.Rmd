@@ -1,0 +1,754 @@
+---
+title: "Looking at HD data"
+output: 
+  html_document:
+    toc: true
+date: "`r Sys.Date()`"
+author: "Benjamin Christoffersen"
+---
+
+```{css}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+```{r, echo = FALSE, cache = FALSE, message=FALSE}
+with(new.env(), {
+  par_default <- function(cex_mult = 1, ...){
+    cex <- .6 * cex_mult
+
+    list(
+      mar = c(5, 5, 2, 2),
+      bty = "L",
+      xaxs = "i",
+      pch=16,
+      cex= cex,
+      cex.axis = 1.5,
+      cex.lab = 1.5,
+      lwd= 1)
+  }
+
+  knitr::knit_hooks$set(
+    par_1x1 =
+      function(before, options, envir) {
+        if(!options$par_1x1)
+          return()
+
+        if (before){
+          par(mfcol = c(1, 1))
+          par(par_default())
+        }
+      },
+    
+    par_2x1 =
+      function(before, options, envir) {
+        if(!options$par_2x1)
+          return()
+
+        if (before){
+          par(mfcol = c(2, 1))
+          tmp <- par_default()
+          tmp$mar <- c(5, 5, 1, 1)
+          par(tmp)
+        }
+      },
+
+    par_2x3 =
+      function(before, options, envir) {
+        if(!options$par_2x3)
+          return()
+
+        if (before){
+          par(mfcol = c(2, 3))
+          tmp <- par_default()
+          tmp$mar <- c(5, 5, 1, 1)
+          par(tmp)
+        }
+    },
+
+    par_2x2 =
+      function(before, options, envir) {
+        if(!options$par_2x2)
+          return()
+
+        if (before){
+          par(mfcol = c(2, 2))
+          tmp <- par_default()
+          tmp$mar <- c(5, 5, 1, 2)
+          par(tmp)
+        }
+    },
+    par_3x3 =
+      function(before, options, envir) {
+        if(!options$par_3x3)
+          return()
+
+        if (before){
+          par(mfcol = c(3, 3))
+          tmp <- par_default(.8)
+          tmp$mar <- c(5, 5, 1, 2)
+          par(tmp)
+        }
+    })
+})
+
+knitr::opts_chunk$set(
+  echo = TRUE, warning = F, message = F, dpi = 36,
+  default_par = T, cache = T, par_1x1 = F, par_2x3 = F, par_2x2 = F, par_3x3 = F,
+  par_2x1 = F, cache = T,
+  fig.align = "center",
+  fig.height = -1, fig.width = -1, # see the changed hooks next
+  abbreviate_after = 60)
+
+options(digits = 3, scipen=7, width = 250)
+
+knitr::opts_hooks$set(
+  fig.height = function(options) {
+    if(options$fig.height > 0)
+      return(options)
+
+    if (!is.null(options$par_3x3) && options$par_3x3) {
+      options$fig.height <- 9
+    } else if (!is.null(options$par_2x3) && options$par_2x3){
+      options$fig.height <- 7
+    } else if(!is.null(options$par_2x1) && options$par_2x1){
+      options$fig.height <- 7
+    } else if(!is.null(options$par_2x2) && options$par_2x2){
+      options$fig.height <- 7
+    } else
+      options$fig.height <- 4
+    options
+  },
+
+  fig.width = function(options) {
+    if(options$fig.width > 0)
+      return(options)
+
+    if (!is.null(options$par_3x3) && options$par_3x3) {
+      options$fig.width <- 12
+    } else if (!is.null(options$par_2x3) && options$par_2x3) {
+      options$fig.width <- 12
+    } else if(!is.null(options$par_2x2) && options$par_2x2){
+      options$fig.width <- 10
+    } else
+      options$fig.width <- 7
+    options
+  })
+
+library(xtable)
+print.xtable <- with(new.env(), {
+  org_fun <- print.xtable
+  function(..., comment = FALSE)
+    org_fun(..., comment = comment)
+})
+
+library(dynamichazard)
+library(splines)
+library(zoo)
+```
+
+
+# First look at data
+
+First, we load the data:
+
+```{r}
+setwd(paste0(
+    stringr::str_match(getwd(), ".+dynamichazard"), "/vignettes/jss/HDs/"))
+
+hds_dat <- readRDS("HDs.RDS")
+```
+
+The data is in the typical start-stop format in Survival analysis. We have skipped downloading the data, preparing the data frame and some preliminary cleaning:
+
+```{r}
+head(hds_dat[
+  # There is a few columns we dont print
+  , !colnames(hds_dat) %in% c(
+  "model", "n_records", "min_date", "max_date", "min_hours", "max_hours", 
+  "n_fails")
+  ], 10)
+```
+
+The time scale is the smart_9_raw which is the power-on hours. We plot the histograms of the covariates below for both the original and the log the covariate + 1 where the covariates are greater than zero:
+
+```{r hist_plots, fig.height=6, par_3x3 = TRUE}
+colnames(hds_dat)
+covs <- colnames(hds_dat)[grepl("^smart_\\d+$", colnames(hds_dat), perl = T)]
+
+hist_exp <- expression({
+  for(n in covs[covs %in% "smart_197"]){
+    tmp <- paste0(n, "_bin_cumsum")
+    
+    hist(hds_dat[[tmp]],
+         xlab = tmp, main = "")
+    hist(hds_dat[[tmp]][hds_dat[[tmp]] > 0],
+         xlab = paste0(tmp, " (>0)"), main = "")
+    hist(log(hds_dat[[tmp]][hds_dat[[tmp]] > 0] + 1),
+         xlab = paste0("log(", tmp, " + 1) (>0)"), main = "")
+  
+    tmp <- paste0(n, "_cumsum")
+    hist(hds_dat[[tmp]][hds_dat[[tmp]] > 0],
+         xlab = paste0(tmp, " (>0)"), main = "")
+    hist(log(hds_dat[[tmp]][hds_dat[[tmp]] > 0] + 1),
+         xlab = paste0("log(", tmp, " + 1) (>0)"), main = "")
+  }
+  
+  for(n in covs[covs %in% c(
+    "smart_5", "smart_10", "smart_12", "smart_187", 
+    "smart_188", "smart_189", "smart_198")]){
+    hist(hds_dat[[n]], xlab = n, main = "")
+    hist(log(hds_dat[[n]][hds_dat[[n]] > 0] + 1), 
+         xlab = paste0("log(", n, " + 1) (>0)"), main = "")
+  }
+})
+
+eval(hist_exp)
+```
+
+We winsorize (truncate the values at a given quantile) as the covariates some of the covariates are right-skewed. The we re-plot the histograms:
+
+```{r, par_2x2 = TRUE}
+q_lvl <- .95
+
+for(n in covs){
+  quant <- quantile(hds_dat[[n]][hds_dat[[n]] > 0], .95, na.rm = T) 
+  cat(q_lvl * 100, "% quantile of ", n, " for values greater than zero is ", 
+      quant, ". The max is ",  max(hds_dat[[n]], na.rm = TRUE), "\n", sep = "")
+  hds_dat[[n]] <- pmin(hds_dat[[n]], quant)
+  
+  if(n != "smart_197")
+    next
+  
+  hds_dat[[paste0(n, "_cumsum")]] <- unlist(tapply(
+      hds_dat[[n]], hds_dat$serial_number, cumsum))
+}
+```
+
+Make hist plot again
+
+```{r, par_3x3 = TRUE}
+eval(hist_exp)
+```
+
+We will use the failure indicator provided by BackBlaze as as the outcome. We need to be aware of the definition of the failure indicator: 
+
+> Backblaze counts a drive as failed when it is removed from a Storage Pod and replaced because it has 1) totally stopped working, or 2) because it has shown evidence of failing soon.
+> 
+> A drive is considered to have stopped working when the drive appears physically dead (e.g. won't power up), doesn't respond to console commands or the RAID system tells us that the drive can't be read or written.
+> 
+> To determine if a drive is going to fail soon we use SMART statistics as evidence to remove a drive before it fails catastrophically or impedes the operation of the Storage Pod volume.
+> 
+> From experience, we have found the following 5 SMART metrics indicate impending disk drive failure:
+> 
+> * SMART 5 - Reallocated_Sector_Count.
+> * SMART 187 - Reported_Uncorrectable_Errors.
+> * SMART 188 - Command_Timeout.
+> * SMART 197 - Current_Pending_Sector_Count.
+> * SMART 198 - Offline_Uncorrectable.
+
+The source is https://www.backblaze.com/blog/hard-drive-smart-stats/. This is also confirmed by:
+
+> For Backblaze there are three reasons a drive is considered to have "failed":
+> 
+> 1. The drive will not spin up or connect to the OS.
+> 2. The drive will not sync, or stay synced, in a RAID Array (see note below).
+> 3. The Smart Stats we use show values above our thresholds.
+
+The source is https://www.backblaze.com/blog/hard-drive-reliability-stats-q1-2016/. Thus, we will focus on SMART 10 and SMART 12 initially not to just reproduce the thresholds used by BackBlaze. A questions is whether these are correlated with the other stats. This seems not be the case when we look at the correlations:
+
+```{r}
+round(
+  cor(hds_dat[, covs], 
+      use = "pairwise.complete.obs" # be aware of the issues with this option on ?cor
+      ), 
+  2)
+
+round(
+  cor(log(hds_dat[, covs] + 1), 
+      use = "pairwise.complete.obs"),
+  2)
+```
+
+Hence, we can speculate that we only get the cases that are not marked as failed due to the SMART stats that BackBlaze uses when we use a model with SMART 12 and 10. We resale the time to 30 days of running as one unit:
+
+```{r}
+tmp <- 24 * 30
+hds_dat$tstart  <- hds_dat$tstart / tmp
+hds_dat$tstop <- hds_dat$tstop / tmp
+```
+
+We make histograms of observations that ends with and without a failure:
+
+```{r, par_2x1 = TRUE}
+hist(hds_dat$tstop[hds_dat$fails == 0], xlab = "Stop times of no failures", main = "")
+hist(hds_dat$tstop[hds_dat$fails == 1], xlab = "Stop times of failures", main = "")
+```
+
+Size of the hard disk and the manufacturer are correlated:
+
+```{r}
+ftable(xtabs(
+  ~  manufacturer + size_tb + n_fails, hds_dat, 
+  subset = !duplicated(hds_dat$serial_number)),
+  row.vars = 1:2)
+```
+
+Further, we note that we don't have any 6 or 8 TB HDs towards the end:
+
+```{r}
+ftable(xtabs(
+  ~ manufacturer + size_tb + cut(tstop, 5), hds_dat),
+  row.vars = 1:2)
+```
+
+Another way to view this is on a model basis:
+
+```{r}
+xtabs(~ model + cut(tstop, 5), hds_dat, drop.unused.levels = T)
+```
+
+Lastly, we have many NAs value from fields in the original .csv files that were blank:
+
+```{r}
+round(sapply(hds_dat, function(x) sum(is.na(x)) / length(x)), 3)
+
+sapply(hds_dat, function(x) anyNA(x))
+```
+
+We will use "last value carried forward" approach for these with a default starting value of zero:
+
+```{r}
+# Make sure that data is sorted
+hds_dat <- hds_dat[order(hds_dat$serial_number, hds_dat$tstart), ]
+
+# Fill in blanks with carry the last observation forward 
+# Define function to fill in the blanks
+library(zoo)
+
+func <- function(x)
+  na.locf0(c(0, x))[-1]
+func <- compiler::cmpfun(func)
+
+# Examples of usage
+func(c(2, NA, 1))
+func(c(NA, NA, 1))
+
+# Use the function
+for(n in colnames(hds_dat)[grepl("^smart_\\d+$", colnames(hds_dat))]){
+  hds_dat[[n]] <- unlist(
+    tapply(hds_dat[[n]], as.integer(hds_dat$serial_number), func), 
+    use.names = F)
+}
+```
+
+We do not have any NAs now for the covariates we use later:
+
+```{r}
+sapply(hds_dat, function(x) anyNA(x))
+```
+
+Few start at time zero:
+
+```{r}
+sum(hds_dat$tstart <=0)
+sum(hds_dat$tstart < 0)
+```
+
+Thus, we set the starting time to be a after 2 days of running:
+
+```{r}
+new_start <- 2 / 30
+sum(hds_dat$tstart < new_start) # Have more of these
+hds_dat$tstart <- pmax(new_start, hds_dat$tstart)
+hds_dat$tstart <- hds_dat$tstart - new_start
+hds_dat$tstop <- hds_dat$tstop - new_start
+
+# We need to remove the records that ends before or at the starting time
+sum(hds_dat$tstart >= hds_dat$tstop) # the number of entries we remove
+hds_dat <- hds_dat[hds_dat$tstart < hds_dat$tstop, ]
+
+hds_dat$serial_number <- droplevels(hds_dat$serial_number)
+nrow(hds_dat) # final number of records
+```
+
+We end by noticing that only very few HDs ever report a SMART 10 stat greater than zero:
+
+```{r}
+sum(tapply(hds_dat$smart_10 > 0, hds_dat$serial_number, any))
+```
+
+# Model fitting
+
+We look at the quantiles of the smart_12 stat as we are going to use a natural cubic spline for it later:
+
+```{r}
+quantile(hds_dat$smart_12, 0:10/10)
+```
+
+Next, we fit the model
+
+```{r}
+library(dynamichazard)
+library(splines)
+
+hds_dat$size_tb_fac <- as.factor(hds_dat$size_tb)
+ddfit <- ddhazard(
+  Surv(tstart, tstop, fails) ~
+    manufacturer +       # Factor for the manufacturer
+    size_tb_fac +        # Factor for the size of the HD
+    I(smart_10 > 0) +    # Binary for whether the smart_10 value is larger than 
+                         # zero
+    ns(smart_12,                   # Use natural cubic spline for smart_12        
+       knots = c(10, 25, 30), 
+       Boundary.knots = c(0, 65)), 
+  hds_dat,
+  id = hds_dat$serial_number,
+  model = "logit",       # Use the logistic model
+  Q_0 = diag(1, 17), 
+  Q = diag(.01, 17),
+  by = 1,                # Put into intervals of length 1
+  max_T = 60,
+  control = list(
+    method = "EKF",
+    NR_eps = .1, 
+    LR = .5
+  ))
+```
+
+First, we plot the coefficients for the intercept and manufacturer:
+
+```{r, par_2x2 = TRUE}
+# This is the reference point which the intercept shows
+levels(hds_dat$manufacturer)[1] 
+
+# Here is the plot
+plot(ddfit, cov_index = 1:3)
+```
+
+Both ST and WDC seems to be at a higher risk then HGST. This is similar to what they find with the Cox Proportional Hazards Model in this block post http://blog.applied.ai/survival-analysis-part-4/. We can make a similar plot for the size factor:
+
+```{r, par_3x3 = TRUE}
+# This is the reference point
+levels(as.factor(hds_dat$size_tb))[1] 
+
+plot(ddfit, cov_index = 4:12)
+```
+
+We should keep in mind that: 
+
+1) We do not have data for some sizes in some time periods. For instance, we do not have data in the latter part for the 6 TB and 8 TB HDs. This is why we see the increasing confidence bounds
+2) Some sizes are only represented by a few models. Hence, it is speculative to draw concussion in general for a given size of hard disk
+3) Shortly, we will see why we have the peak for the 3 TB HDs and the peak for the ST HDs around month 25-35
+
+Next, we look at the coefficients for the SMART stats:
+
+```{r, par_3x3 = TRUE}
+plot(ddfit, cov_index = 13:17)
+```
+
+The plots for the coefficients for the smart_12 are not too useful as we used a spline. Thus, we look at the effect for different levels of smart_12:
+
+```{r, par_1x1 = TRUE}
+# Plot predicted linear terms for the spline w/ confidence bounds 
+tmp <- data.frame(
+  manufacturer = rep(hds_dat$manufacturer[1], 3),
+  size_tb_fac = rep(hds_dat$size_tb_fac[1], 3),
+  
+  smart_10 = rep(0, 3),
+  smart_12 = c(5, 25, 45))
+tmp 
+
+smart_12_plot_exp <- expression({
+  preds <- predict(ddfit, tmp, type = "term", sds = T)
+    
+  is_ns <- grepl(
+    "^ns\\(smart_12", dimnames(preds$terms)[[3]])
+  
+  preds$lbs <- preds$terms[,, is_ns]  - 1.96 * preds$sds[,, is_ns]
+  preds$ubs <- preds$terms[,, is_ns] + 1.96 * preds$sds[,, is_ns]
+  
+  xs <- ddfit$times
+  plot(range(xs), range(preds$lbs, preds$ubs), type = "n", 
+       xlab = "Time", ylab = "Size term")
+  abline(h = 0, lty = 2)
+  matplot(xs, preds$terms[,, is_ns], type = "l", add = T, lty = 1)
+  
+  for(i in 1:dim(preds$terms)[2]){
+    icol <- adjustcolor(palette()[i], alpha.f = 0.1)
+    polygon(c(xs, rev(xs)), c(preds$ubs[,i], rev(preds$lbs[,i])),
+            col = icol, border = NA)
+    lines(xs, preds$ubs[,i], lty = 2, col = palette()[i])
+    lines(xs, preds$lbs[,i], lty = 2, col = palette()[i])
+  }
+  
+  legend(
+    "bottomleft", bty = "n",
+    legend = paste0(tmp$smart_12, " smart_12"),
+    lty = rep(1, nrow(tmp)), 
+    col = 1:nrow(tmp),
+    cex = par()$cex * 2)
+})
+
+eval(smart_12_plot_exp)
+```
+
+It seems that HDs with higher number of power cycles have a higher risk of failure. However, we should be aware that an HD has a power cycles when the storage pod it is in is shut off. As BackBlaze points out: 
+
+> Most of our drives have very few power cycles. They just happily sit in their Storage Pods holding your data. If one of the drives in a Storage Pod fails, we cycle down the entire Storage Pod to replace the failed drive. This only takes a few minutes and then power is reapplied and everything cycles back up. Occasionally we power cycle a Storage Pod for maintenance and on rare occasions we've had power failures, but generally, the drives just stay up.
+> 
+> As a result, the correlation of power cycles to failure is strong, but the power cycles may not be the cause of the failures because of our limited number of power cycles for a drive (less than 100) and also considering the variety of other possible failure causes during that period.
+
+Source: https://www.backblaze.com/blog/hard-drive-smart-stats/. We can speculate that the same models or HD from the same batch are in the same pod. Then we could be picking up a batch effect here
+
+# Examples of predictions
+
+```{r}
+# We look at a random sample of failing and non-failing
+set.seed(612725)
+do_fail <- tapply(
+  hds_dat$fails == 1, as.character(hds_dat$serial_number), any)
+
+tmp_serials <- c(
+  sample(names(do_fail)[do_fail], size = 100),
+  sample(names(do_fail)[!do_fail], size = 100))
+```
+
+```{r, echo = FALSE, eval = FALSE}
+# # Print these
+# cols_to_print <- c(
+#   "serial_number", "manufacturer", "size_tb", 
+#   "tstart", "tstop", "fails", "smart_10", "smart_12")
+# hds_dat[hds_dat$serial_number %in% tmp_serials, cols_to_print]
+```
+
+We create a dummy data frame for each observation in each interval given the data as follows (this is needed for the predict function):
+
+```{r}
+dummy_dat <- get_survival_case_weights_and_data(
+  ddfit$formula, data = hds_dat, 
+  by = 1, max_T = 60, id = hds_dat$serial_number,
+  use_weights = F)
+
+# Adjust the start at stop time
+dummy_dat$X$tstart <- dummy_dat$X$t - 1
+dummy_dat$X$tstop <- dummy_dat$X$t
+
+dummy_dat_sub <- dummy_dat$X[dummy_dat$X$serial_number %in% tmp_serials, ]
+```
+
+```{r, eval = FALSE, echo = FALSE}
+# # Print examples
+# cols_to_print <- c(
+#   "serial_number", "manufacturer", "size_tb",
+#   "tstart", "tstop", "fails", "smart_10", "smart_12")
+# 
+# head(
+#   dummy_dat_sub[order(dummy_dat_sub$serial_number, dummy_dat_sub$tstart),
+#               c(cols_to_print, "t")],
+#   200)
+```
+
+
+```{r, echo = FALSE}
+row.names(dummy_dat) <- NULL
+```
+
+Then, we plot the predicted values. Those hard disks that do fail at the end has a red color:
+
+```{r, par_1x1 = TRUE}
+preds <- predict(
+  ddfit, new_data = dummy_dat_sub, 
+  type = "response", tstart = "tstart", tstop = "tstop")
+
+options(scipen=5)
+plot(c(1, 59), range(preds$fits), type = "n", log = "y",
+     xlab = "Month", ylab = "Chance of failing next month")
+for(f in tmp_serials){
+  indx <- dummy_dat_sub$serial_number == f
+  fails <- any(dummy_dat_sub$n_fails[indx] == 1)
+  lines(preds$istop[indx], preds$fits[indx], 
+        col = if(fails) "red" else "Black")
+}
+```
+
+Notice the log scale on the y-axis. A questions is why some of the hard disks are at such a high predicted level of failure. We look at what these have in common below:
+
+```{r}
+# Pull out the maximum predicted chance of failure for each HD
+serial_max <- tapply(
+  preds$fits, as.character(dummy_dat_sub$serial_number), max)
+
+# Find those with largest predicted chance of failure
+is_max <- names(head(sort(serial_max, decreasing = T), 10))
+is_max
+
+# Get the data for these
+tmp <- hds_dat[hds_dat$serial_number %in% is_max, ]
+
+# Show the models these are from 
+unique(tmp$model)
+
+# Print the failure rate for these types of models (ignoring the time)
+hds_dat_sub <- hds_dat[hds_dat$model %in% unique(tmp$model), ]
+do_fail <- tapply(
+  hds_dat_sub$fails == 1, as.character(hds_dat_sub$serial_number), any)
+mean(do_fail)
+
+# How is the distribution of the time that these fails
+hist(hds_dat_sub$tstop[hds_dat_sub$fails == 1], 
+     main = "", xlab = "Time of failure conditional on failure", 
+     breaks = 30)
+```
+
+# Refitting
+A quick google search confirms that this is already noted by BackBlaze for one of these models: https://en.wikipedia.org/wiki/ST3000DM001#Reception. This motivate us to fit a model with a factor for the model instead. Though, we only have few examples for some models so we restrict our analysis to a subset of the models with where we observe more than a given amount of hard disks: 
+
+```{r}
+n_per_model <- 
+  xtabs(~ model, hds_dat, subset = !duplicated(serial_number))
+sort(n_per_model, decreasing = T)
+
+# We take those larger than a given size
+models_to_keep <- names(n_per_model)[n_per_model > 400]
+models_to_keep
+hds_dat_model <- hds_dat[hds_dat$model %in% models_to_keep, ]
+hds_dat_model$model <- droplevels(hds_dat_model$model)
+
+# Check the number of failures per model
+tapply(
+  hds_dat_model$fails == 1, hds_dat_model$model, sum)
+```
+
+Then we re-fit the model with the model factor:
+
+```{r}
+ddfit <- ddhazard(
+  Surv(tstart, tstop, fails) ~
+    -1 +              # We remove the intercept to make intepretation of factor
+                      # coefficients easier
+    model +           # Use model instead        
+    # size_tb_fac +   # No size because this is linearly dependent with model 
+    I(smart_10 > 0) +    
+    ns(smart_12,                   
+       knots = c(10, 25, 30), 
+       Boundary.knots = c(0, 65)), 
+  hds_dat_model,
+  id = hds_dat_model$serial_number,
+  model = "logit",       
+  Q_0 = diag(1, 22), 
+  Q = diag(.01, 22),
+  by = 1,                
+  max_T = 60,
+  control = list(
+    method = "EKF",
+    NR_eps = .1, 
+    LR = .5
+  ))
+```
+
+Plots of the predicted coefficients for each of the factors are given below (note that we do not use a reference point in this model - there is no intercept):
+
+```{r, par_3x3 = TRUE}
+plot(ddfit, cov_index = 1:9)
+plot(ddfit, cov_index = 10:17)
+```
+
+The ST3000DM001 model stands out as expected after reading the Wikipedia here https://en.wikipedia.org/wiki/ST3000DM001#Reception. Next, we look at the other coefficients:
+
+```{r, par_1x1 = TRUE}
+plot(ddfit, cov_index = 18)
+```
+
+```{r, par_1x1 = TRUE}
+# Plot linear terms for the spline
+tmp <- data.frame(
+  model = rep(hds_dat_model$model[1], 3),
+  
+  smart_10 = rep(0, 3),
+  smart_12 = c(5, 25, 45))
+tmp 
+
+eval(smart_12_plot_exp)
+```
+
+# Using SMART stats used by BackBlaze
+
+```{r, eval = FALSE, echo = FALSE}
+cor(hds_dat$smart_5 > 0, log(hds_dat$smart_5 + 1), method = "pearson")
+cor(hds_dat$smart_187 > 0, log(hds_dat$smart_187 + 1), method = "pearson")
+cor(hds_dat$smart_198 > 0, log(hds_dat$smart_198 + 1), method = "pearson")
+```
+
+We end by looking at a model where we include the log of covariate + 1 of SMART stats 5, 187, 188 and 198. We do not include 197 as it is quite correlated with 198. Be warned that we may just reproduce the threshold values used by BackBlaze. First, we fit the model:
+
+```{r}
+ddfit <- ddhazard(
+  Surv(tstart, tstop, fails) ~
+    -1 +              
+    model +           
+    I(smart_10 > 0) +    
+    ns(smart_12,                   
+       knots = c(10, 25, 30), 
+       Boundary.knots = c(0, 65)) + 
+    
+    # We include coeffecient for the log + 1
+    log(smart_5 + 1) + 
+    log(smart_187 + 1) +
+    log(smart_188 + 1) + 
+    log(smart_198 + 1), 
+  hds_dat_model,
+  id = hds_dat_model$serial_number,
+  model = "logit",       
+  Q_0 = diag(1, 26), 
+  Q = diag(.01, 26),
+  by = 1,                
+  max_T = 60,
+  control = list(
+    method = "EKF",
+    NR_eps = .1, 
+    LR = .5
+  ))
+```
+
+We plot the coefficients below:
+
+```{r, par_2x2 = TRUE}
+plot(ddfit, cov_index = 23:26)
+```
+
+For completeness, we also include the predicted coefficients for the factors for the models:
+
+```{r, par_3x3 = TRUE}
+plot(ddfit, cov_index = 1:9)
+plot(ddfit, cov_index = 10:17)
+```
+
+Here are the coefficients for the two last terms (we show the predicted linear predictor for given value of smart_12 for the latter):
+
+```{r, par_1x1 = TRUE}
+plot(ddfit, cov_index = 18)
+```
+
+```{r, par_1x1 = TRUE}
+# Plot linear terms for the spline
+tmp <- data.frame(
+  model = rep(hds_dat_model$model[1], 3),
+  
+  smart_5 = rep(0, 3),
+  smart_10 = rep(0, 3),
+  smart_187 = rep(0, 3),
+  smart_187 = rep(0, 3),
+  smart_188 = rep(0, 3),
+  smart_198 = rep(0, 3),
+  
+  smart_12 = c(5, 25, 45))
+tmp 
+
+eval(smart_12_plot_exp)
+```
+
