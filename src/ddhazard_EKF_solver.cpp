@@ -392,7 +392,7 @@ void EKF_helper::parallel_filter_step(arma::uvec::const_iterator first, arma::uv
   // Compute the number of blocks to create
   unsigned long const length = std::distance(first, last);
 
-  unsigned long const block_size = 250;
+  unsigned long const block_size = p_data.EKF_batch_size;
   unsigned long const num_blocks=(length+block_size-1)/block_size;
   std::vector<std::future<void> > futures(num_blocks-1);
   thread_pool pool(num_blocks - 1, max_threads);

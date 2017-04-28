@@ -52,6 +52,8 @@ public:
   const bool use_pinv;
   const std::string criteria;
 
+  const int EKF_batch_size;
+
   // Declare non constants. Some are intialize
   arma::vec fixed_parems;
 
@@ -89,7 +91,8 @@ public:
                const int n_threads_,
                const double denom_term_,
                const bool use_pinv_,
-               const std::string criteria_):
+               const std::string criteria_,
+               const int EKF_batch_size_):
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
 
@@ -132,6 +135,8 @@ public:
     any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec_ > 0),
     use_pinv(use_pinv_),
     criteria(criteria_),
+
+    EKF_batch_size(EKF_batch_size_),
 
     fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
     Q(Q_),
@@ -202,7 +207,8 @@ public:
                    const int n_threads_,
                    const double denom_term_,
                    const bool use_pinv_,
-                   const std::string criteria_):
+                   const std::string criteria_,
+                   const int EKF_batch_size_):
     problem_data(n_fixed_terms_in_state_vec_, X, fixed_terms, tstart_, tstop_, is_event_in_bin_, a_0,
                  fixed_parems_start, Q_0_, Q_, risk_obj, F__,
                  eps_fixed_parems_, max_it_fixed_params_,
@@ -211,7 +217,7 @@ public:
                  order_, est_Q_0, debug_,
                  LR_,
                  n_threads_, denom_term_,
-                 use_pinv_, criteria_),
+                 use_pinv_, criteria_, EKF_batch_size_),
 
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),

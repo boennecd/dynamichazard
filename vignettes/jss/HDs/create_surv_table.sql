@@ -37,7 +37,7 @@ CREATE TABLE drive_stats_survival (
   --    attempts to reach the fully operational speed (under the condition that
   --    the first attempt was unsuccessful). Spin attempts are counted for the
   --    entire hard drive's lifetime so far
-  -- The count is cummulative so there is no need to aggregate later
+  -- Not cummulative and increases and decreases
 	smart_10_raw INTEGER,
 
 	smart_12_raw INTEGER,  -- Power Cycle Count
@@ -71,7 +71,33 @@ CREATE TABLE drive_stats_survival (
 	smart_201_raw INTEGER  -- Soft Read Error Rate or TA Counter Detected
 );
 
-CREATE INDEX idx_ex101 ON drive_stats(serial_number, date);
+DROP TABLE IF EXISTS sum_table;
+
+CREATE TEMP TABLE sum_table (
+  serial_number TEXT NOT NULL,
+  n_fails INTEGER,
+	min_date TEXT NOT NULL,
+	max_date TEXT NOT NULL,
+	n_records INTEGER,
+	min_hours INTEGER,
+	max_hours INTEGER);
+
+DROP INDEX IF EXISTS idx_ex101;
+CREATE INDEX idx_ex101 ON drive_stats(serial_number);
+
+INSERT INTO sum_table SELECT
+  c.serial_number,
+	sum(c.failure) as n_fails,
+	min(c.date) AS min_date,
+	max(c.date) AS max_date,
+	count(c.date) AS n_records,
+	min(c.smart_9_raw) AS min_hours,
+	max(c.smart_9_raw) AS max_hours
+	FROM drive_stats as 'c'
+	GROUP BY c.serial_number;
+
+DROP INDEX IF EXISTS idx_ex201;
+CREATE INDEX idx_ex201 ON sum_table(serial_number);
 
 INSERT INTO drive_stats_survival
 	SELECT
@@ -103,44 +129,36 @@ INSERT INTO drive_stats_survival
 	a.smart_201_raw
 
 	FROM drive_stats AS 'a'
-	INNER JOIN (SELECT
-		c.serial_number,
-		sum(c.failure) as n_fails,
-		min(c.date) AS min_date,
-		max(c.date) AS max_date,
-		count(c.date) AS n_records,
-		min(c.smart_9_raw) AS min_hours,
-		max(c.smart_9_raw) AS max_hours
-		FROM drive_stats as 'c'
-		GROUP BY c.serial_number) AS 'b'
+	INNER JOIN sum_table AS 'b'
 		ON a.serial_number == b.serial_number
 	WHERE
 --		a.serial_number IN ('MJ1311YNG5HWYA', 'W1F0A11P', 'W1F0SCL1', 'STF605MH1MR9DW', '13H2B97AS') AND
-		(b.min_date == a.date OR (b.max_date == a.date) OR
-			(a.smart_5_raw   IS NOT NULL OR a.smart_5_raw > 0   OR a.smart_5_raw   <> '') OR
-			(a.smart_10_raw  IS NOT NULL OR a.smart_10_raw > 0  OR a.smart_10_raw  <> '') OR
+		(b.min_date == a.date OR b.max_date == a.date OR
+			a.smart_5_raw   IS NOT NULL OR a.smart_5_raw > 0   OR a.smart_5_raw   <> '' OR
+--			a.smart_10_raw  IS NOT NULL OR a.smart_10_raw > 0  OR a.smart_10_raw  <> '' OR
 --   smart_12_raw is the number of times it has been turned on. Seems to be missing to start with
-			(a.smart_187_raw IS NOT NULL OR a.smart_187_raw > 0 OR a.smart_187_raw <> '') OR
-			(a.smart_188_raw IS NOT NULL OR a.smart_188_raw > 0 OR a.smart_188_raw <> '') OR
-			(a.smart_189_raw IS NOT NULL OR a.smart_189_raw > 0 OR a.smart_189_raw <> '') OR
+			a.smart_187_raw IS NOT NULL OR a.smart_187_raw > 0 OR a.smart_187_raw <> '' OR
+			a.smart_188_raw IS NOT NULL OR a.smart_188_raw > 0 OR a.smart_188_raw <> '' OR
+			a.smart_189_raw IS NOT NULL OR a.smart_189_raw > 0 OR a.smart_189_raw <> '' OR
 --		(a.smart_197_raw IS NOT NULL OR a.smart_197_raw > 0 OR a.smart_197_raw <> '') OR
-			(a.smart_198_raw IS NOT NULL OR a.smart_198_raw > 0 OR a.smart_198_raw <> '') OR
-			(a.smart_201_raw IS NOT NULL OR a.smart_201_raw > 0 OR a.smart_201_raw <> ''))
-	ORDER BY a.serial_number, date ASC;
+			a.smart_198_raw IS NOT NULL OR a.smart_198_raw > 0 OR a.smart_198_raw <> '' OR
+			a.smart_201_raw IS NOT NULL OR a.smart_201_raw > 0 OR a.smart_201_raw <> '')
+	ORDER BY a.serial_number, a.date ASC;
 
+DROP INDEX IF EXISTS idx_ex1;
 CREATE INDEX idx_ex1 ON drive_stats_survival(serial_number, date);
 
 DROP TABLE IF EXISTS keep_table;
 
 CREATE TEMP TABLE keep_table (
-  date date NOT NULL,
+  date TEXT NOT NULL,
   serial_number TEXT NOT NULL);
 
 INSERT INTO keep_table
   SELECT a.date, a.serial_number
   FROM drive_stats_survival AS a
   WHERE NOT EXISTS (
-    SELECT *
+    SELECT 1
     FROM (SELECT *
           FROM drive_stats_survival AS c
           WHERE
@@ -159,11 +177,12 @@ INSERT INTO keep_table
       b.smart_197_raw == a.smart_197_raw AND
       b.smart_198_raw == a.smart_198_raw AND
       b.smart_201_raw == a.smart_201_raw
-    );
+    LIMIT 1);
 
+DROP INDEX IF EXISTS idx_ex2;
 CREATE INDEX idx_ex2 ON keep_table(serial_number, date);
 
---SELECT count(*)
+-- SELECT count(*)
 --    FROM drive_stats_survival
 --	where EXISTS (
 --		SELECT *
@@ -175,9 +194,10 @@ CREATE INDEX idx_ex2 ON keep_table(serial_number, date);
 
 DELETE FROM drive_stats_survival
   WHERE NOT EXISTS (
-    SELECT *
+    SELECT 1
     FROM keep_table
     WHERE
       drive_stats_survival.serial_number =  keep_table.serial_number AND
       drive_stats_survival.date =  keep_table.date
+    LIMIT 1
     );

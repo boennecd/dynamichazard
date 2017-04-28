@@ -147,7 +147,8 @@ ddhazard = function(formula, data,
                             control$method == "SMA" else F,
                           posterior_version = "cholesky",
                           GMA_max_rep = 10,
-                          GMA_NR_eps = 0.1)
+                          GMA_NR_eps = 0.1,
+                          EKF_batch_size = 2000L)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -503,7 +504,8 @@ ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
                    criteria = control$criteria,
                    posterior_version = control$posterior_version,
                    GMA_max_rep = control$GMA_max_rep,
-                   GMA_NR_eps = control$GMA_NR_eps)
+                   GMA_NR_eps = control$GMA_NR_eps,
+                   EKF_batch_size = control$EKF_batch_size)
 }
 
 

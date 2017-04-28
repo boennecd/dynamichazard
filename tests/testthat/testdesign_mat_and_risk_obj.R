@@ -485,7 +485,7 @@ test_that("Individuals are markeds as events in the correct bins", {
 # Test randomize
 
 set.seed(875080)
-X_Y <-  get_design_matrix(
+X_Y <- get_design_matrix(
   Surv(tstart, tstop, death == 2) ~ ddFixed(age) + albumin, pbc2)
 risk_obj_org <- risk_obj <- get_risk_obj(X_Y$Y, 100, max_T = 3600, pbc2$id)
 X_Y[1:3] <- lapply(X_Y[1:3], data.frame)

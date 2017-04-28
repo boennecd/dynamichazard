@@ -87,6 +87,4 @@ CREATE TABLE drive_stats (
 --    smart_254_normalized INTEGER,
     smart_254_raw INTEGER,
 --    smart_255_normalized INTEGER,
-    smart_255_raw INTEGER,
-	PRIMARY KEY (serial_number, date)
-    );
+    smart_255_raw INTEGER);

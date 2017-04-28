@@ -130,6 +130,8 @@ get_survival_case_weights_and_data = function(
       j <- j + n_risk
     }
 
+    for(i in which(sapply(data, is.factor)))
+      X[[i]] <- factor(levels(data[[i]])[X[[i]]], levels = levels(data[[i]]))
   }
 
   list(X = X, formula = formula)
@@ -195,7 +197,7 @@ static_glm = function(
     stop("family '", family, "' not implemented in static_glm")
 
   environment(formula) <- environment() # Needed in case we have a fixed intercept
-  if(speedglm && requireNamespace(speedglm, quietly = T))
+  if(speedglm && requireNamespace("speedglm", quietly = T))
     return(speedglm::speedglm(formula = formula, data = data, family = family, model = model, ...))
 
   glm(formula = formula, data = data, family = family, model = model, weights = weights, ...)

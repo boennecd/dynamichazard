@@ -415,17 +415,17 @@ Initial testing shows that the EKF has issues with divergence for some data set.
 
 Simulated datasets show that the learning rate solves the issues with divergence. Let $1\geq \zeta_0>0$ denote the learning rate and $\epsilon_\text{NR}$ denote the tolerance for convergence in the correction step. Then set $\vec{a} = \emNotee{\vec{a}}{t}{t-1}$ and compute:
 
-<!-- TODO: Update me -->
-
 $$\begin{aligned}
-  &\emNotee{\vec{a}}{t}{t} = \vec{a} + \zeta_0 \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})\\
   &\emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\vec{a})\right)^{-1} \\
+  &\emNotee{\vec{a}}{t}{t} = 
+	\emNotee{\mat{V}}{t}{t}\Lparen{
+		\mat{U}_t (\vec{a})\vec{a} + \emNotee{\mat{V}}{t}{t - 1}^{-1}\emNotee{\vec{a}}{t}{t - 1} + \zeta_0 \vec{u}_t (\vec{a})} \\
   &\text{if } \rVert \emNotee{\vec{a}}{t}{t} - \vec{a} \lVert / (\rVert \vec{a} \lVert + \delta) < \epsilon_{\text{NR}} 
     \text{ then exit}\\
   &\text{else set } \vec{a} = \emNotee{\vec{a}}{t}{t} \text{ and repeat} 
 \end{aligned}$$
 
-where $\delta$ is small like $10^{-9}$. Selecting $\zeta_0 < 1$ in case of divergence can solve the non-convergence issue. Thus, the following procedure is used if the algorithm fails with initial learning rate $\zeta_0$: try a learning of $\zeta_0$ for given $0<\zeta_0\leq 1$ and define $0<\zeta < 1$. If that fails then try a rate of $\zeta_0\zeta^1$. If that fails then try a rate of $\zeta_0\zeta^2$ etc. The process is stopped when we succeed to fit the model or we fail to estimate the model with a learning rate of $\zeta_0\zeta^b$ for a given integer $b$. 
+where $\delta$ is small like $10^{-9}$. The arguments for the above are formulas are covered later on the global mode approximation section. Selecting $\zeta_0 < 1$ in case of divergence can solve the non-convergence issue. Thus, the following procedure is used if the algorithm fails with initial learning rate $\zeta_0$: try a learning of $\zeta_0$ for given $0<\zeta_0\leq 1$ and define $0<\zeta < 1$. If that fails then try a rate of $\zeta_0\zeta^1$. If that fails then try a rate of $\zeta_0\zeta^2$ etc. The process is stopped when we succeed to fit the model or we fail to estimate the model with a learning rate of $\zeta_0\zeta^b$ for a given integer $b$. 
 
 While [@fahrmeir92] does not observe improvements with multiple iterations, we find improvements in terms of out-of-sample prediction (for example by setting $\epsilon_{\text{NR}} = 10^{-2}$ or lower) with a moderate or large amount of observations. See the vignette "Simulation study with logit model" for details
 
@@ -842,11 +842,17 @@ This is the update equation in the EKF. Taking multiple steps give us:
 \begin{equation}\begin{aligned}
 \tmat{X}_t^\top \tmat{C}\tvec{b}
 	&= \mat{X}_t^T\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{2}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{-1}\mat{X}_t\vec{a}^{(k-1)}
-	+ \vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})
+	+ \vec{u}_t (\vec{a}^{(k-1)})
 	+ \emNotee{\mat{V}}{t}{t-1}^{-1}\emNotee{\vec{a}}{t}{t - 1} \\
 %
 	&= \mat{U}_t (\vec{a}^{(k-1)})\vec{a}^{(k-1)} + \emNotee{\mat{V}}{t}{t - 1}^{-1}\emNotee{\vec{a}}{t}{t - 1} + \vec{u}_t (\vec{a}^{(k-1)}) 
 \end{aligned}\end{equation}
+
+\begin{equation}
+\vec{a}^{(k)} = 
+	\left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\vec{a}^{(k-1)})\right)^{-1}\Lparen{
+		\mat{U}_t (\vec{a}^{(k-1)})\vec{a}^{(k-1)} + \emNotee{\mat{V}}{t}{t - 1}^{-1}\emNotee{\vec{a}}{t}{t - 1} + \vec{u}_t (\vec{a}^{(k-1)})}
+\end{equation}
 
 The above may give ideas to different implementation of the EKF that are more numerically stable and/or where we can easily check for singularity. A review of numerical method for least square problems and numerical examples is in e.g. [@Leary90] 
 

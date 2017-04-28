@@ -45,7 +45,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
       par_org <- par(no.readonly = TRUE)
       on.exit(par(par_org))
       par(mfcol =
-            if(n_plots <= 2) c(1,2) else
+            if(n_plots <= 2) c(2,1) else
               if(n_plots <= 4) c(2,2) else
                 if(n_plots <= 6) c(2,3) else
                   c(3,3))

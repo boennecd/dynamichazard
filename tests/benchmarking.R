@@ -117,8 +117,8 @@ summary(microbenchmark::microbenchmark(
 
 set.seed(4296745)
 sims <-
-  test_sim_func_exp(
-    n_series = 1e4, n_vars = 4, beta_start = rnorm(4),
+  test_sim_func_logit(
+    n_series = 5e4, n_vars = 4, beta_start = rnorm(4),
     intercept_start = - 3, sds = c(sqrt(.1), rep(.5, 4)),
     x_range = 2, x_mean = 0)
 sum(sims$res$event)
@@ -127,36 +127,41 @@ p <- profvis({
   dd_fit <- ddhazard(
     Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
     data = sims$res, id = sims$res$id, by = 1,
-    Q_0 = diag(1e5, 5), Q = diag(1e-2, 5),
-    control = list(method = "GMA", n_max = 10))
+    Q_0 = diag(1, 5), Q = diag(1e-2, 5),
+    control = list(method = "EKF", n_max = 10,
+                   NR_eps = .1))
 })
-
-matplot(sims$betas, typ = "l", lty = 1)
-matplot(dd_fit$state_vecs, typ = "l", lty = 2, add = T)
 
 p
 
 summary(microbenchmark::microbenchmark(
-  UKF =  ddhazard(
+  EKF = ddhazard(
     Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
     data = sims$res, id = sims$res$id, by = 1,
     Q_0 = diag(1, 5), Q = diag(1e-2, 5),
-    max_T = 10,
-    model = "exp_clip_time",
-    control = list(method = "UKF", n_max = 10)),
-  times = 25
+    control = list(method = "EKF", n_max = 10,
+                   NR_eps = .1, EKF_batch_size = 2500L)),
+
+  EKF_smaller = ddhazard(
+    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    data = sims$res, id = sims$res$id, by = 1,
+    Q_0 = diag(1, 5), Q = diag(1e-2, 5),
+    control = list(method = "EKF", n_max = 10,
+                   NR_eps = .1, EKF_batch_size = 1000L)),
+
+  EKF_smallest = ddhazard(
+    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    data = sims$res, id = sims$res$id, by = 1,
+    Q_0 = diag(1, 5), Q = diag(1e-2, 5),
+    control = list(method = "EKF", n_max = 10,
+                   NR_eps = .1, EKF_batch_size = 250L)),
+
+  GMA = ddhazard(
+    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    data = sims$res, id = sims$res$id, by = 1,
+    Q_0 = diag(1, 5), Q = diag(1e-2, 5),
+    control = list(method = "GMA", n_max = 10,
+                   GMA_NR_eps = .1)),
+
+  times = 20
 ))
-
-tmp <- file("tmp.txt")
-sink(tmp)
-result <- ddhazard(
-  Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-  data = sims$res, id = sims$res$id, by = 1,
-  Q_0 = diag(1, 5), Q = diag(1e-2, 5),
-  max_T = 10,
-  model = "exp_clip_time",
-  control = list(method = "GMA", n_max = 10, debug = T))
-sink()
-close(tmp)
-
-plot(result)

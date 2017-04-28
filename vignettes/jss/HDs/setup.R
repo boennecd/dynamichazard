@@ -34,7 +34,10 @@ sqlFromFile <- function(file){
 dbSendQueries <- function(con,sql){
   dummyfunction <- function(sql,con){
     cat("Running the following sql:\n", sql, sep = "\n")
-    dbSendQuery(con,sql)
+    tm <- system.time(out <- dbSendQuery(con,sql))
+    cat("Run time info is:\n")
+    print(tm)
+    out
   }
   lapply(sql, dummyfunction, con)
 }
@@ -44,6 +47,11 @@ reset_dir <- bquote(setwd(.(getwd())))
 set_dir <- bquote(
   setwd(.(paste0(
     stringr::str_match(getwd(), ".+dynamichazard"), "/vignettes/jss/HDs/"))))
+
+conn_exp <- expression({
+  sqlite <- dbDriver("SQLite")
+  conn <- dbConnect(sqlite, db, cache_size = 8e5, synchronous = "off")
+})
 
 tryCatch({
   eval(set_dir)
@@ -66,8 +74,7 @@ tryCatch({
     if(file.exists(db))
       unlink(db, force = T)
 
-    sqlite <- dbDriver("SQLite")
-    conn <- dbConnect(sqlite, db)
+    eval(conn_exp)
 
     queries <- sqlFromFile("create_table.sql")
     dbSendQueries(conn, queries)
@@ -123,11 +130,10 @@ tryCatch({
 
   #####
   # Make data frame for analysis and save as .RDS
-  if(is.null(conn)){
-    sqlite <- dbDriver("SQLite")
-    conn <- dbConnect(sqlite, db)
-  }
+  if(is.null(conn))
+    eval(conn_exp)
 
+  # surv_tbl <- readRDS("tmp.RDS")
   surv_tbl <- dbReadTable(conn, "drive_stats_survival")
 
   # Make stats functions and use it
@@ -181,7 +187,7 @@ tryCatch({
   cat("A few HDs have more than one size. These are:\n")
 
   all_sizes_equal_exp <- expression(
-    tapply(surv_tbl$capacity_bytes_MB, surv_tbl$serial_number,
+    tapply(surv_tbl$capacity_bytes_GB, surv_tbl$serial_number,
            function(x) all(x[1] == x)))
   has_more_sizes <- which(!eval(all_sizes_equal_exp))
   test_that("There are some HDs with more than onse size",
@@ -189,52 +195,52 @@ tryCatch({
 
   print(
     surv_tbl[surv_tbl$serial_number %in% names(has_more_sizes),
-             c("serial_number", "capacity_bytes_MB")])
+             c("serial_number", "capacity_bytes_GB")])
 
   cat("We handle these on a case by case basis\n")
   replacement_sizes <- c(
-    "PL2331LAGPJ89J" = 4000787,
-    "PL2331LAGSUPTJ" = 4000787,
-    "PL2331LAGSU5RJ" = 4000787,
-    "W300935A" = 4000787,
-    "W300A7LV" = 4000787,
-    "W300A8MC" = 4000787,
-    "W300A9M2" = 4000787,
-    "W300BV4X" = 4000787,
-    "W300C6K2" = 4000787,
-    "W300CDJ1" = 4000787,
-    "W300CSMW" = 4000787,
-    "W300CSYX" = 4000787,
-    "W300F1LC" = 4000787,
-    "WD-WCAU45478169" = 1000205,
-    "WD-WCAU47760976" = 1000205,
-    "Z300JZGN" = 4000787,
-    "Z300K0NG" = 4000787,
-    "Z300K1HK" = 4000787,
-    "Z300K1L6" = 4000787,
-    "Z300K204" = 4000787,
-    "Z300K8MM" = 4000787,
-    "Z300K9LT" = 4000787,
-    "Z300KCGQ" = 4000787,
-    "Z300KCR8" = 4000787,
-    "Z300KCT4" = 4000787,
-    "Z300KMMG" = 4000787,
-    "Z300KN1Y" = 4000787,
-    "Z305GFM1" = 4000787)
+    "PL2331LAGPJ89J" = 4001,
+    "PL2331LAGSUPTJ" = 4001,
+    "PL2331LAGSU5RJ" = 4001,
+    "W300935A" = 4001,
+    "W300A7LV" = 4001,
+    "W300A8MC" = 4001,
+    "W300A9M2" = 4001,
+    "W300BV4X" = 4001,
+    "W300C6K2" = 4001,
+    "W300CDJ1" = 4001,
+    "W300CSMW" = 4001,
+    "W300CSYX" = 4001,
+    "W300F1LC" = 4001,
+    "WD-WCAU45478169" = 1000,
+    "WD-WCAU47760976" = 1000,
+    "Z300JZGN" = 4001,
+    "Z300K0NG" = 4001,
+    "Z300K1HK" = 4001,
+    "Z300K1L6" = 4001,
+    "Z300K204" = 4001,
+    "Z300K8MM" = 4001,
+    "Z300K9LT" = 4001,
+    "Z300KCGQ" = 4001,
+    "Z300KCR8" = 4001,
+    "Z300KCT4" = 4001,
+    "Z300KMMG" = 4001,
+    "Z300KN1Y" = 4001,
+    "Z305GFM1" = 4001)
   for(i in seq_along(replacement_sizes)){
     indx <- which(surv_tbl$serial_number == names(replacement_sizes)[i])
-    stopifnot(any(surv_tbl$capacity_bytes_MB[indx] == replacement_sizes[i]))
-    surv_tbl$capacity_bytes_MB[indx] <- replacement_sizes[i]
+    stopifnot(any(surv_tbl$capacity_bytes_GB[indx] == replacement_sizes[i]))
+    surv_tbl$capacity_bytes_GB[indx] <- replacement_sizes[i]
   }
 
   test_that("There are not HDs with more than onse size",
             expect_true(all(eval(all_sizes_equal_exp))))
 
   cat("There are some very small HDS\n")
-  xtabs(~surv_tbl$capacity_bytes_MB)
+  xtabs(~surv_tbl$capacity_bytes_GB)
 
   cat("We remove the smallest\n")
-  surv_tbl <- surv_tbl[surv_tbl$capacity_bytes_MB > 1e5, ]
+  surv_tbl <- surv_tbl[surv_tbl$capacity_bytes_GB > 1e2, ]
   stats_func()
 
   cat("Some HDs fails more than once")
@@ -246,8 +252,9 @@ tryCatch({
 
   cat("We format the rest of the columns")
   surv_tbl$serial_number <- as.factor(surv_tbl$serial_number)
-  for(n in c("smart_187_raw", "smart_188_raw", "smart_189_raw",
-             "smart_201_raw")){
+  for(n in c("smart_10_raw", "smart_12_raw",
+             "smart_187_raw", "smart_188_raw", "smart_189_raw",
+             "smart_196_raw", "smart_198_raw", "smart_201_raw")){
     is_missing <- surv_tbl[[n]] == ""
     surv_tbl[[n]] <- as.integer(surv_tbl[[n]])
     surv_tbl[[n]][is_missing] <- NA_integer_
@@ -289,7 +296,7 @@ tryCatch({
   #####
   # Reproduce results from http://blog.applied.ai/survival-analysis-part-4/
   tmp_dat <- surv_tbl[!duplicated(surv_tbl$serial_number), ]
-  tmp_dat$size <- round(tmp_dat$capacity_bytes_MB / 1e6, 1)
+  tmp_dat$size <- round(tmp_dat$capacity_bytes_GB / 1e3, 1)
   tmp_dat <- tmp_dat[tmp_dat$size < 7 & tmp_dat$size > 1.4, ]
 
   tmp_dat$manufacturer <- relevel(
@@ -320,7 +327,7 @@ tryCatch({
 
   # Need to sort first
   surv_tbl <- surv_tbl[order(surv_tbl$serial_number, surv_tbl$smart_9_raw), ]
-  surv_tbl$size_tb <- round(surv_tbl$capacity_bytes_MB / 1e6, 1)
+  surv_tbl$size_tb <- round(surv_tbl$capacity_bytes_GB / 1e3, 1)
 
   # Make base frame
   tmp <- subset(
@@ -354,6 +361,7 @@ tryCatch({
   # TODO: Are failures also when they change HDs due to some of the covariates? If so, which?
   # TODO: what is the scan errors in 'Failure Trends in a Large Disk Drive Population'
   # TODO: fill in the a zero dummy value for those w/ first observation that end within the first week of running
+  # TODO: Some HDs seems to jump in time (like W300R8HJ). Smart_12 though seems consistent with smart_9 (and not the date)
 
   # Add binary features and cum sums
   for(n in covs[covs %in% c("smart_197")]){
@@ -368,8 +376,63 @@ tryCatch({
 
   saveRDS(final_tbl, final_tbl_name)
 
-  test_that("Pulling out a random sample from the complete data base and processing gives the same", {
-    expect_true(FALSE)
+  #####
+  # Check final tbl versus data from the orginal data base
+
+  set.seed(467322)
+  ids <- sample(unique(final_tbl$serial_number), 25)
+
+  raw_data <- dbGetQuery(
+    conn,
+    paste0("Select * from drive_stats where serial_number IN (", paste0(
+      "'", ids, "'", collapse = ", "
+    ), ")"))
+
+  raw_data <- raw_data[order(raw_data$serial_number, raw_data$smart_9_raw), ]
+
+  n <- nrow(raw_data)
+  keep <- c(
+    T,
+    raw_data$serial_number[-n] != raw_data$serial_number[-1] |
+      raw_data$smart_5_raw[-n] != raw_data$smart_5_raw[-1] |
+      raw_data$smart_10[-n] != raw_data$smart_10[-1] |
+      raw_data$smart_12[-n] != raw_data$smart_12[-1] |
+      raw_data$smart_187[-n] != raw_data$smart_187[-1] |
+      raw_data$smart_188[-n] != raw_data$smart_188[-1] |
+      raw_data$smart_189[-n] != raw_data$smart_189[-1] |
+      raw_data$smart_196[-n] != raw_data$smart_196[-1] |
+      raw_data$smart_197[-n] != raw_data$smart_197[-1] |
+      raw_data$smart_198[-n] != raw_data$smart_198[-1])
+
+  raw_data <- raw_data[keep, ]
+  final_tbl_sub <- final_tbl[final_tbl$serial_number %in% ids, ]
+  final_tbl_sub$serial_number <- as.character(final_tbl_sub$serial_number)
+  final_tbl_sub <- final_tbl_sub[order(final_tbl_sub$serial_number), ]
+
+  raw_data[, -1] <- apply(
+    raw_data[, -1], 2, function(x){
+      if(is.character(x)){
+        x[x == ""] <- NA_character_
+        x <- as.numeric(x)
+        return(x)
+      }
+      x
+    })
+
+  row.names(raw_data) <- NULL
+  row.names(final_tbl_sub) <- NULL
+
+  test_that("Table in R match with final survival table", {
+    expect_equal(nrow(raw_data), nrow(final_tbl_sub))
+    expect_equal(raw_data$serial_number,
+                 as.character(final_tbl_sub$serial_number))
+
+    expect_equal(raw_data$smart_9_raw, final_tbl_sub$tstart)
+
+    tmp_names <- colnames(final_tbl_sub)[grepl(
+      "^smart_\\d+$", colnames(final_tbl_sub))]
+    expect_equal(raw_data[, paste0(tmp_names, "_raw")],
+                 final_tbl_sub[, tmp_names])
   })
 
 }, finally = {

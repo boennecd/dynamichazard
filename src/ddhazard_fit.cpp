@@ -165,7 +165,8 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const std::string criteria = "delta_coef",
                             const std::string posterior_version = "cholesky",
                             const signed int GMA_max_rep = 10,
-                            const double GMA_NR_eps = 0.1){
+                            const double GMA_NR_eps = 0.1,
+                            const int EKF_batch_size = 5000L){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) &&
      is_exponential_model(model)){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
@@ -205,7 +206,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, model != "logit", NR_it_max, debug, n_threads,
-      denom_term, use_pinv, criteria));
+      denom_term, use_pinv, criteria, EKF_batch_size));
     solver.reset(new EKF_solver(static_cast<problem_data_EKF &>(*p_data.get()), model));
 
   } else if (method == "UKF"){
@@ -220,7 +221,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-      criteria));
+      criteria, EKF_batch_size));
 
     if(model == "logit"){
       solver.reset(new UKF_logit(*p_data.get(), kappa, alpha, beta));
@@ -250,7 +251,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       weights,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-      criteria));
+      criteria, EKF_batch_size));
 
     if(p_data->any_fixed_in_M_step)
       Rcpp::stop("Fixed effects is not implemented with UKF");
@@ -267,7 +268,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         weights,
         n_max, eps, verbose,
         order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-        criteria));
+        criteria, EKF_batch_size));
 
     if(model == "logit"){
       solver.reset(new SMA_logit(*p_data.get(), posterior_version));
@@ -286,7 +287,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         weights,
         n_max, eps, verbose,
         order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-        criteria));
+        criteria, EKF_batch_size));
 
     if(model == "logit"){
       solver.reset(new GMA_logit(*p_data.get(), GMA_max_rep, GMA_NR_eps));

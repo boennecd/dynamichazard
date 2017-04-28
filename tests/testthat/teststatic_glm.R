@@ -95,6 +95,19 @@ test_that("design_matrix yields equal result with different values of use_weight
 })
 
 
+test_that("get_survival_case_weights_and_data work w/ factors and weights",{
+  tmp <- data.frame(
+    start = 0:4 * 2,
+    stop = 1:5 * 2,
+    x = factor(c("a", "a", "b", "b", "c")))
+
+  suppressWarnings(
+    res <- get_survival_case_weights_and_data(
+      Surv(start, stop, rep(1, 5)) ~ x,
+      data = tmp, by = 1, max_T = 10, use_weights = F))
+
+  expect_equal(tmp$x, res$X$x[1:5*2])
+})
 
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")
