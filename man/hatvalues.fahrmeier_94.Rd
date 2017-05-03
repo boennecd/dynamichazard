@@ -23,4 +23,3 @@ Computes hat-"like" values in each interval for each individual at risk in the i
 \seealso{
 \code{\link{ddhazard}}
 }
-

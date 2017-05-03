@@ -92,6 +92,7 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \item{\code{GMA_NR_eps}}{Tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}}
 }
 }
+
 \references{
 Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation for discrete time survival data}. Biometrika 81.2 (1994): 317-330.
 
@@ -100,4 +101,3 @@ Durbin, James, and Siem Jan Koopman. \emph{Time series analysis by state space m
 \seealso{
 \code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}
 }
-

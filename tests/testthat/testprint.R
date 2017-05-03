@@ -33,12 +33,12 @@ test_that("Print yields the expected results for object returned by ddhazard", {
     control = list(est_Q_0 = F, n_max = 10^4, eps = 1e-1,
                    save_data = F, save_risk_set = F,
                    fixed_terms_method = "E_step"),
-    a_0 = rep(0, 2), Q_0 = diag(1, 2),
+    a_0 = rep(0, 1), Q_0 = diag(1, 1),
     max_T = 20, order = 1)
 
   # print(paste0(capture.output(print(result, digits = 4)), collapse = "\n"), max.print = 1e8)
   expect_that(print(result, digits = 4),
-              prints_text("Formula:\nsurvival::Surv(stop, event) ~ ddFixed(1) + group\n\nEstimated with EKF in 3 iterations of the EM algorithm\n\nEstimated time-varying effects and point-wise standard deviation:\n      group2    sd  group1    sd \nt0  -0.12734 0.8745 0.1273 0.8745\nt1  -0.13878 0.9878 0.1450 1.0187\nt2   0.44852 1.0907 0.7447 1.1319\nt3   0.61420 1.1119 1.4339 1.1391\nt4   1.36766 1.1345 1.1935 1.0988\nt5   1.51739 1.1048 2.2492 1.1257\nt6   1.42554 1.1021 2.0740 1.0910\nt7   1.17621 1.1118 1.2379 1.1050\nt8   0.61468 1.1244 1.3992 1.1475\nt9   0.46213 1.1554 1.2493 1.1482\nt10  0.37433 1.1716 1.0877 1.1632\nt11  0.29088 1.1817 0.5633 1.1810\nt12  0.15197 1.1893 0.4445 1.2336\nt13 -0.12769 1.1994 0.8584 1.2714\nt14 -0.18141 1.2264 1.9502 1.2675\nt15  0.03043 1.2439 1.5042 1.1525\nt16  0.03152 1.2341 0.9260 1.1841\nt17 -0.16720 1.2300 0.7390 1.2339\nt18 -0.15531 1.2582 1.0564 1.2826\nt19 -0.40867 1.2899 1.2180 1.3189\nt20 -0.54259 1.3846 2.0253 1.4447\n\nFixed effects are estimated in the E_step. The estimates are:\n(Intercept) \n     -3.489 ",
+              prints_text("Formula:\nsurvival::Surv(stop, event) ~ ddFixed(1) + group\n\nEstimated with EKF in 2 iterations of the EM algorithm\n\nEstimated time-varying effects and point-wise standard deviation:\n     group1    sd \nt0  -0.2848 0.7478\nt1  -0.3929 0.5696\nt2   0.1458 0.6336\nt3   0.8916 0.5785\nt4   0.6187 0.4406\nt5   1.7126 0.5019\nt6   1.5240 0.4089\nt7   0.6616 0.4473\nt8   0.8427 0.5509\nt9   0.6898 0.5493\nt10  0.5305 0.5821\nt11 -0.0174 0.6183\nt12 -0.1406 0.7227\nt13  0.3111 0.7925\nt14  1.5061 0.7855\nt15  1.0142 0.5459\nt16  0.3840 0.6165\nt17  0.1672 0.7149\nt18  0.4952 0.8014\nt19  0.6538 0.8563\nt20  1.5255 1.0509\n\nFixed effects are estimated in the E_step. The estimates are:\n(Intercept) \n     -2.925 ",
                           fixed = T))
 
   suppressWarnings(result <-  ddhazard(

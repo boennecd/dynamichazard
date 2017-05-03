@@ -48,4 +48,3 @@ Tutz, Gerhard, and Matthias Schmid. \emph{Nonparametric Modeling and Smooth Effe
 \seealso{
 \code{\link{ddhazard}}, \code{\link{static_glm}}
 }
-

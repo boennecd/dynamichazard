@@ -39,4 +39,3 @@ Function to make a static glm fit
 \details{
 Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
 }
-

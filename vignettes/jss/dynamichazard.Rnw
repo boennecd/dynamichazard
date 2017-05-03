@@ -9,7 +9,7 @@ Benjamin Christoffersen\\Copenhagen Business School Center for Statistics
 \Keywords{Survival Analysis, Time-varying Coefficients, Extended Kalman Filter, EM-algorithm, Unscented Kalman filter, Parallel computing, \proglang{R}}
 
 \Abstract{
-State space models can be implemented to provide an computational efficient way to model time-varying coefficients in Survival analysis. The paper shows how this is done in the \pkg{dynamichazard} package. We cover the methods and models implemented in \pkg{dynamichazard} along with examples. Further, the models and methods are applied to an large data set and a simulation study is performed to show the computation time and performance. The methods in the paper can be applied to other topics then Survival analysis at the same computational cost for general non-linear filtering problems.
+State space models provides an computational efficient way to model time-varying coefficients in survival analysis. This is implemented in the \pkg{dynamichazard} package. We cover the methods and models implemented in \pkg{dynamichazard} along with examples. Furthermore, the models and methods are applied to an large data set and a simulation study is performed to show the computation time and performance. The methods in the paper can be applied to other topics then Survival analysis at the same computational cost for general non-linear filtering problems.
 }
 
 \Plainauthor{Benjamin Christoffersen}
@@ -32,12 +32,12 @@ State space models can be implemented to provide an computational efficient way 
   URL: \url{http://bit.ly/2nPbTfK}\\~\\
   }
 
-\usepackage{amsmath} \usepackage{bm} \usepackage{amsfonts}
-\usepackage{algorithm} \usepackage{algpseudocode} \usepackage{hyperref}
 \usepackage{array}
 \usepackage[utf8]{inputenc}
 \usepackage{fancyvrb} % for references inside Verbatim
 \usepackage{textcomp} % copy right and trademark
+\usepackage{amsmath} \usepackage{bm} \usepackage{amsfonts}
+\usepackage{algorithm} \usepackage{algpseudocode} \usepackage{hyperref}
 
 %
 \DefineVerbatimEnvironment{Sinput}{Verbatim}{fontshape=sl,commandchars=\\\{\}}
@@ -116,16 +116,6 @@ State space models can be implemented to provide an computational efficient way 
 
 % Math commands for section on global mode approximation
 
-\newcommand\eqnGblModeTerma{
-\begin{pmatrix}
-  	\diag{\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{1/2} & \mat{0} \\
-	\mat{0} &  \emNotee{\mat{V}}{t}{t-1}^{1/2}
-\end{pmatrix}}
-\newcommand\eqnGblModeTermb{
-\begin{pmatrix}\mat{X}_t \\ \mat{I} \end{pmatrix}}
-\newcommand\eqnGblModeTermc{
-\begin{pmatrix} \vec{z} \\  \emNotee{\vec{\alpha}}{t}{t-1} \end{pmatrix}}
-
 \newcommand\algGMAscore[1]{
 \begin{aligned}
 	 #1&\Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-c''(\vec{\alpha}^{(k-1)})\mat{X}_t}^{-1}
@@ -134,12 +124,24 @@ State space models can be implemented to provide an computational efficient way 
 		\right. \\
 		&\hspace{50pt}\left. + \Lparen{\mat{X}_t^\top\Lparen{-c''(\vec{\alpha}^{(k-1)})}\mat{X}_t + (1-\zeta_0)   \emNotee{\mat{V}}{t}{t-1}^{-1}} \vec{a}^{(k - 1)} \right)
 \end{aligned}}
-
+%
 \newcommand\algGMApPrime{
 \left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'} \right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}
-
+%
 \newcommand\algGMApPrimePrime{
 \left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}
+%
+\newcommand\eqnGblModeTerma{
+\begin{pmatrix}
+  	\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{-1/2} & \mat{0} \\
+	\mat{0} &  \emNotee{\mat{V}}{t}{t-1}^{-1/2}
+\end{pmatrix}}
+\newcommand\eqnGblModeTermb{
+\begin{pmatrix}\mat{X}_t \\ \mat{I} \end{pmatrix}}
+\newcommand\eqnGblModeTermc{
+\begin{pmatrix} \vec{b} \\  \emNotee{\vec{\alpha}}{t}{t-1} \end{pmatrix}}
+
+
 
 \begin{document}
 
@@ -273,26 +275,25 @@ print.xtable <- with(new.env(), {
 })
 @
 
+The focus of the \pkg{dynamichazard} package is perform survival with time-variying coefficients, scale well with the number of observations and be fast. The contribution of this paper and the package is to give an overview of state space models that scale well in the dimension of the observational equation, provide an easy interface to use for such models in Survival analysis and illustrate the use of the methods. Time-varying coefficients are commonly encountered in Survival Analysis. An example is when the proportional hazards assumption in a Cox proportional hazards model is not satisfied. Splines are often used to model the time-varying coefficients. Various package in \proglang{R} \citep{baseR16} on the Comprehensive R Archive Network (CRAN) take this approach. Examples include \code{splineCox} from \pkg{dynsurv} package \citep{dynsurv} which also includes a non-spline based Bayesian approach with piecewise constant coefficients and a transformation based approach and the \pkg{rstpm2} package \citep{rstpm2}. Further, penalized time-varying coefficients can be estimated by using any of the regularization methods in packages like \pkg{glmnet} \citep{Simon11}, \pkg{glmpath} \citep{glmpath}, \pkg{mgcv} \citep{wood06} and \pkg{penalized} \citep{Goeman10} combined with the method described by~\cite{Thomas14}.
 
-Time-varying coefficients are commonly encountered in Survival Analysis. A typical example is a violation of the proportional hazards assumption in a Cox proportional hazards model. Splines are often used to model the time-varying coefficients. Various package in \proglang{R} \citep{baseR16} on the Comprehensive R Archive Network (CRAN) take this approach. Examples include \code{splineCox} from \pkg{dynsurv} package \citep{dynsurv} which also includes a non-spline based Bayesian approach with piecewise constant coefficients and a transformation based approach and the \pkg{rstpm2} package \citep{rstpm2}. Further, penalized time-varying coefficients can be estimated by using any of the regularization methods in packages like \pkg{glmnet} \citep{Simon11}, \pkg{glmpath} \citep{glmpath}, \pkg{mgcv} \citep{wood06} and \pkg{penalized} \citep{Goeman10} combined with the method described in~\cite{Thomas14}.
+Non-spline based approaches are used in the \pkg{timereg} package \citep{martinussen07} for both the cox regression model and the additive hazards models. Similarly, the \code{aareg} function in the package \pkg{survival} \citep{survival} included with R can estimate the non-parametric Aalen model with time-varying coefficients. The \pkg{pch} package \citep{pch} fits time-varying coefficients by dividing the time into periods and making separate Poisson regressions in each period. \pkg{concreg} \citep{concreg} uses conditional logistic regression to estimate the time-varying coefficients. A similar method to the Extended Kalman filter presented later is implemented by only for a time-varying intercept is implemented in \pkg{bshazard} \citep{Rebora14}. It is motivated by the connection between B-splines and Generalized Linear Mixed Models and yields an similar estimation as in \pkg{ddhazard}.
 
-Non-spline based approaches are taken in the \pkg{timereg} package \citep{martinussen07} for both the cox regression model and the additive hazards models. Similarly, the \code{aareg} function in the package \pkg{survival} \citep{survival} included with R can estimate the non-parametric Aalen model with time-varying coefficients. The \pkg{pch} package \citep{pch} fits time-varying coefficients by dividing the time into periods and making separate Poisson regressions in each period. \pkg{concreg} \citep{concreg} uses conditional logistic regression to estimate the time-varying coefficients. A similar method to the Extended Kalman filter presented later is implemented by only for a time-varying intercept is implemented in \pkg{bshazard} \citep{Rebora14}. It is motivated by the connection between B-splines and Generalized Linear Mixed Models and yields an similar estimation as in \pkg{ddhazard}.
+Another approach to model the time-varying coefficients is by using discrete state space models where the coefficients are assumed to be piecewise constant. An advantage of this approach is that we have parametric model for the coefficients which allows for extrapolation beyond the last observed period. This is implemented in this package. Moreover, the methods the methods have linear computational cost relative to the number of observed individuals and some can be computed in parallel. Consequently, they scale well to large data sets.
 
-Another approach to model the time-varying coefficients is by using discrete state space models where the coefficients are assumed to be piecewise constant. An advantage of this approach is that we have parametric model for the coefficients which allows for extrapolation beyond the last observed period. Moreover, the methods implemented in this package, \pkg{dynamichazard}, has the advantage that all the methods have linear computational cost relative to the number of observed individuals and some can be computed in parallel. Consequently, they scale well to large data sets.
+Various packages for state space models are on CRAN. Two reviews of packages for the standard Gaussian models from 2011 are \cite{Petris11} and \cite{Tusell11}. They briefly mention non-linear models that can be used in a Survival analysis. The package \pkg{KFAS} \citep{kfas} provides non-linear models which can be used in a Survival Analysis. See \cite{helske16} for the examples of the non-linear models in \pkg{KFAS}. Another package is \pkg{pomp} \citep{King16} for general non-linear models with both Bayesian and frequentist's methods. One could also use \pkg{rstan} \citep{rstan} to set up a variety of models. Common for all the packages is that they are quite general. However, this comes at a cost of making it cumbersome to set up models like those \pkg{dynamichazard} is well suited for and at a high computational cost.
 
-Various packages for state space models are on CRAN. Two reviews of packages for the standard Gaussian models from 2011 are \cite{Petris11} and \cite{Tusell11}. They briefly mention non-linear models that can be used in a Survival analysis. The package \pkg{KFAS} \citep{kfas} provides non-linear models which can be used in a Survival Analysis. See \cite{helske16} for the examples of the non-linear models in \pkg{KFAS}. Another package is \pkg{pomp} \citep{King16} for general non-linear models with both Bayesian and frequentist's methods. One could also use \pkg{rstan} \citep{rstan} to set up a variety of models. The latter two package can be used to estimate the models in \pkg{dynamichzard} or similarly the Bayesian approach made in \cite{Schnatter07}. Common for all the packages is that they are quite general. However, this comes at a cost of making it cumbersome to set up models like those \pkg{dynamichazard} is well suited for and at a high computational cost.
-
-We will cover the following example to get an idea of the typical problem  \pkg{dynamichzard} is intended for. We will use the \code{aids} data set from the \pkg{JMbayes} \citep{Rizopoulos16}. The data set is from a a randomized clinical trial between two drugs for HIV or aids patients. The details of the data set can be found \cite{Abrams94}. The event is if an individual has clinical disease progression (including death) doing the study. Patients are right censored at the end of the study. The data set is in the longitudinal/panel format with multiple rows for each patient. Though, the only longitudinal variable is the \code{CD4} count (T-cell count) which is presumably affected by the drugs. Thus, we will not use it in the model. The covariates we will use are:
+We will use the \code{aids} data set from the \pkg{JMbayes} \citep{Rizopoulos16} to give the reader an idea of a typical problem \pkg{dynamichazard} is intended for. The data set is from a randomized clinical trial between two drugs for HIV or aids patients. The details of the data set can be found \cite{Abrams94}. The event is a clinical disease progression (including death) doing the study. Patients are right censored at the end of the study. The data set is in the longitudinal/panel format with multiple rows for each patient. Though, the only longitudinal variable is the \code{CD4} count (T-cell count) which is presumably affected by the drugs. Thus, we will not use it in the model. The covariates we will use are:
 
 \begin{itemize}
 \tightlist
 \item
-  \code{AZT} is one of the two enrolment criteria. It indicates whether
+  \code{AZT} indicates whether
   the patient was enrolled due to intolerance to the drug zidovudine or
   whether the drug failed prior to the study start
 \item
   \code{prevOI} is the other enrolment criteria. Patients are enrolled
-  either due AIDS diagnosis or two CD4 counts of 300 or fewer. The
+  either due AIDS diagnosis or two CD4 counts of 300 or less. The
   variable indicates which is the case
 \item
   \code{drug} is either \code{ddC} or \code{ddI} depending on which of
@@ -328,7 +329,7 @@ print(
   include.rownames = FALSE)
 @
 
-The data set is in the typical Survival setup with a stop time and an event flag which indicate whether the patient is censored or has an event. We start of by estimating a cox proportional hazards model to compare both the syntax with the function in \pkg{dynamichazard} and the output. The coefficients along with summary statistics are printed in table~\ref{tab:aidsCox}.
+The data set is in the typical Survival setup with a stop time and an event flag which indicate whether the patient is censored or has an event. We start of by estimating a Cox proportional hazards model to compare both the syntax with the function in \pkg{dynamichazard} and the output. The coefficients along with summary statistics are printed in table~\ref{tab:aidsCox}.
 
 <<eval=FALSE>>=
 library(survival)
@@ -342,18 +343,18 @@ cox <- coxph(Surv(stop, event) ~  AZT + gender + drug + prevOI, aids)
 
 print(
   xtable(summary(cox)$coefficients, digits = getOption("digits"),
-         caption = "Estimates of coefficients with cox proportional hazards model for the \\code{aids} data set.",
+         caption = "Estimates of coefficients with Cox proportional hazards model for the \\code{aids} data set.",
          label = "tab:aidsCox"))
 @
 
-Next, we make a fit of a similar model with time-varying coefficients with the \code{ddhazard} function and plot the predicted coefficients. We will later cover what the input to \code{ddhazard} are. The fit and plot is made as this point for illustrative purposes of the interface. The plot is shown in figure~\ref{fig:aids_plot_first}.
+Next, we fit a model with an exponential hazard function with time-varying coefficients with the \code{ddhazard} function and plot the predicted coefficients. We will later cover what the input to \code{ddhazard} are and details on the estimation. The fit and plot is made as this point to illustrate the \code{ddhazard} function. The plot is shown in figure~\ref{fig:aids_plot_first}.
 
 <<aids_plot_first, message=FALSE, par_2x3=TRUE, fig.cap = 'Plot of predicted coefficients for the \\code{aids} data set using \\code{ddhazard}. Dashed lines are 95\\% confidence intervals using the smoothed covariances covered later.'>>=
 library(dynamichazard)
 fit <- ddhazard(
   Surv(stop, event) ~ AZT + gender + drug + prevOI,
-  aids,
-  model = "exp_clip_time_w_jump", # The model we use
+  data = aids,
+  model = "exp_clip_time_w_jump", # The model we use shown in section \ref{subsec:contTime}
   by = .5,                        # Length of time intervals
   max_T = 19,                     # Last period we observe when modeling
   Q = diag(.1, 5),                # Covariance matrix for state equation
@@ -406,10 +407,10 @@ invisible(
 @
 
 
-We see that the predicted coefficients are close to those of the Cox model. Moreover, the \code{ddI} seems to have a higher risk of an event up to time 13. In fact, we would have concluded the \code{ddI} yields a higher risk if we only had run the trail up to time 13 with Cox model as shown by running the next lines of code. The output is in table~\ref{tab:aidsCoxTmp}.
+We see from figure~\ref{fig:aids_plot_first} that the predicted coefficients are close to those of the Cox model. Moreover, the \code{ddI} seems to have a higher risk of an event up to time 13. In fact, we would have concluded that \code{ddI} yields a higher risk if we only had run the trial up to time 13 with Cox model as shown by running the next lines of code. The output is in table~\ref{tab:aidsCoxTmp}.
 
 <<eval = FALSE>>=
-aids_tmp <- aids                    # Take copy
+aids_tmp <- aids                    # Make copy
 aids_tmp$event <-                   # Alter event flag for those who dies after
   aids_tmp$event & aids$stop <= 13
 aids_tmp$stop <-                    # Change stop times
@@ -436,60 +437,60 @@ print(
          label = "tab:aidsCoxTmp"))
 @
 
-The rest of this paper is structured as follows. Section~\ref{sec:notation} introduces the problem and notation in this paper. Section~\ref{sec:meth} covers the EM-algorithm that all the methods are based on. This is followed by the three different filters used in the E-step. Section~\ref{sec:mod} covers the two implemented models. Section~\ref{sec:irl} illustrate the methods applied to a real life example (TODO: does it do that?). Section~\ref{sec:sims} illustrate the performance and computation time of the methods on simulated data. Section~\ref{sec:conc} concludes. Some key point to be aware of throughout are that:
+The rest of this paper is structured as follows. Section~\ref{sec:notation} introduces the problem and notation in this paper. Section~\ref{sec:meth} shows the particular EM-algorithm that all the methods are based on. This is followed by the three different filters used in the E-step. Section~\ref{sec:mod} covers the two implemented models. Section~\ref{sec:irl} illustrate the methods applied to a real life example. Section~\ref{sec:sims} illustrate the performance and computation time of the methods on simulated data. Section~\ref{sec:conc} concludes. Some key point are that:
 
 \begin{itemize}
 \tightlist
 \item
-  All methods are implemented \proglang{C++} with use of \pkg{BLAS} and
+  All methods are implemented is \proglang{C++} with use of \pkg{BLAS} and
   \pkg{LAPACK} \cite{laug} either by direct calls to the methods or
-  through the \proglang{C++} library \pkg{Armadillo} \cite{Sanderson16}.
+  through the \proglang{C++} library \pkg{Armadillo} \citep{Sanderson16}.
 \item
-  All methods scales linearly in computation time with the number of observations. The reported computational complexity in the rest of the paper is based on a single iteration of the EM-algorithm. Though, few iterations are usually required.
+  All methods scales linearly in computation time with the number of observations. The reported computational complexity in the rest of the paper is based on a single iteration of the EM-algorithm.
 \end{itemize}
 
-This is central for the \pkg{dynamichazard} package. It is meant to scale well with the number of observations and be fast. The contribution of this paper and the package is to give an overview of state space models that scale well in the dimension of the observational equation, provide an easy interface to use such models in Survival analysis and illustrate the use of the methods.
+The inspiration for the package is from \cite{Fahrmeir94} and \cite{Fahrmeir92}. The current implementation uses the EM-algorithm from these papers with extensions to other estimations methods.
 
 \section{Notation and problem}\label{sec:notation}
 
-We will start by introducing the notation in the discrete model where outcomes in the model are binary. We will later generalize to event times instead binary outcomes in section~\ref{sec:mod}. We are observing individual $1,2,\dots$ who each has an \emph{event} at time $T_1,T_2,\dots$ and \emph{right-censoring times} $D_1,D_2,\dots$. By definition we set $D_i = \infty$ if the we observe and event for individual $i$. We see covariate vectors $\vec{x}_{i1},\vec{x}_{i2},\dots$ for each individual $i$. Each covariate vector $\vec{x}_{ij}$ is valid in a period $(t_{i,j-1},t_{ij}]$. The covariates may also be time-invariant as the with the \code{aids} data set we used previously. We will put the observations into intervals $1, 2, \dots, d$ where each interval has length $\psi_1, \psi_2, \dots, \psi_d$ respectively. In this paper, we assume that each $\psi_t = 1$ for simplicity if it is not mentioned. Then we define the a series of indicators for each individual given by:
+We will start by introducing the notation in the discrete-time model in survival analysis setting. Outcomes in the model are binary in this view. Either an invidual has an event or not within each period. We will later generalize to event times instead binary outcomes in section~\ref{sec:mod}. We are observing individual $1,2,\dots$ who each has an \emph{event} at time $T_1,T_2,\dots$ and \emph{right-censoring times} $D_1,D_2,\dots$. By definition we set $D_i = \infty$ if the we observe and event for individual $i$. We see covariate vectors $\vec{x}_{i1},\vec{x}_{i2},\dots$ for each individual $i$. Each covariate vector $\vec{x}_{ij}$ is valid in a period $(t_{i,j-1},t_{ij}]$. The covariates may also be time-invariant as the with the \code{aids} data set we used previously. We will put the observations into intervals $1, 2, \dots, d$ where each interval has length $\Delta \mathrm{t}_1, \Delta \mathrm{t}_2, \dots, \Delta \mathrm{t}_d$ respectively. In this paper, we assume that each $\Delta \mathrm{t}_t = 1$ for simplicity if it is not mentioned. Then we define a series of indicators for each individual  by:
 
 \begin{equation}
-y_{ijt} = 1_{\left\{T_i \in (t_{i,j-1}, t_{ij}] \wedge t - 1 < t_{ij} \leq t \right\}}
+y_{ijt} = 1_{\left\{T_i \in (t_{i,j-1}, t_{ij}]\, \wedge\, t - 1 < t_{ij} \leq t \right\}}
 \end{equation}
 
-which denotes whether individual $i$ has event with the $j$’th covariate vector in interval $t$. Next, the \emph{risk set} in interval $t$ is given by:
+where $1_{\{\cdot\}}$ is an indicator which is one if the condition in the subscript is satisfied. Thus, $y_{ijt}$  denotes whether individual $i$ experinces an event with the $j$’th covariate vector in interval $t$. Next, the \emph{risk set} in interval $t$ is given by:
 
 \begin{equation}\label{eqn:discreteRiskSet}
 R_t = \Lbrace{(i,j)\in \mathbb{Z}^2_{+}:\, t_{i,j-1} < t - 1 \leq t_{i,j}
   \wedge t < D_i}
 \end{equation}
 
-where $\mathbb{Z}_{+}$ are the natural number $1,2,\dots$. We will refer to this as the \emph{discrete risk set} as we later introduce a continuous version. For simplicity we assume that no observations are strictly inside an interval. I.e. those where:
+where $\mathbb{Z}_{+}$ are the natural number $1,2,\dots$. We will refer to this as the \emph{discrete risk set} as we later introduce a continuous version. For simplicity we assume that no observations are inside an interval. As some examples, observations with $(t_{i,j-1},t_{ij}] = (1.5, 1.75]$ or $(t_{i,j-1},t_{ij}] = (1.5, 2]$ are inside an interval where we us intervals lengths of 1.  More formally. observations inside an interval are those where:
 
 \begin{equation}
-  \exists t\in\mathbb{Z}_{+}:  t - 1 < t_{i,j-1} < t_{ij} < t
+  \exists t\in\mathbb{Z}_{+}:  t - 1 < t_{i,j-1} < t_{ij} \leq t
 \end{equation}
 
-However, the method though does handle such cases. The only change is when we
+However, the implementation does handle such cases. The only change is when we
 have an event inside an interval. Then we need to remove the observation
-and update the first previous observation for the individual that crosses the current interval and the previous. The chance of an event for a given individual $i$ who has covariate vector $j$ in interval $t$ is given by:
+and update the first previous observation for the individual that crosses the current interval and the previous. For instance, say we have an individual, $i$, with observation times $(t_{i0}, t_{i1}]=(0, 1.5]$ and $(t_{i1}, t_{i2}] = (1.5, 2]$ with an event at time 2, $y_{i22} = 1$. Then we remove the observation $2$ and mark the observation 1 as having an event in interval $2$, $y_{i12} = 1$. The chance of an event for a given individual $i$ who has covariate vector $j$ in interval $t$ is given by:
 
 \begin{equation}\begin{aligned}\label{eqn:condProb}
   \proppCond{Y_{ijt} = 1}{\vec{y}_{1},\dots,\vec{y}_{t-1}, \vec{\alpha}_t} =
     h(\vec{\alpha}_t^\top \vec{x}_{ij})
 \end{aligned}\end{equation}
 
-where $\vec{y}_t$ is the vector of outcomes given risk set $R_t$, $\vec{\alpha}_t$ is the state vector in interval $t$ and $h$ is the inverse link function. For example, this could be the inverse logistic function such that $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$ which is used in \code{ddhazard} function. The  \code{ddhazard} function estimates models in the state space form:
+where $\vec{y}_s$ is the vector of outcomes which elements and elements ordering are given by risk set $R_t$, $\vec{\alpha}_t$ is the state vector in interval $t$ and $h$ is the inverse link function. The \code{ddhazard} function uses the inverse logistic function such that $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$ as one of the models. The  \code{ddhazard} function estimates models in the state space form:
 \begin{equation}\label{eqn:stateEqn}\begin{array}{ll}
   \vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad &
   \vec{\epsilon}_t \sim (\vec{0}, \varpCond{\vec{y}_t}{\vec{\alpha}_t})  \\
   \vec{\alpha}_{t + 1} = \mat{F}\vec{\alpha}_t + \mat{R}\vec{\eta}_t \qquad &
-  \vec{\eta}_t \sim N(\vec{0}, \psi_t \mat{Q}) \\
+  \vec{\eta}_t \sim N(\vec{0}, \Delta \mathrm{t}_t \mat{Q}) \\
 \end{array} , \qquad t = 1,\dots, d
 \end{equation}
 
-The equation for $\vec{y}_t$ is denoted the \emph{observational equation}. $\sim (v,b)$ denotes a random variable(s) with mean (vector) $v$ and variance (covariance matrix) $b$. It needs not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding \emph{state equation}. Again, $\psi_t=1$ unless stated otherwise. However, the  \code{ddhazard} function is implemented to handle any equidistant interval length. That is, $\psi_t= \psi$ for a pre-specified constant $\psi$. Further, we define the observational equation's conditional covariance matrix as $\mat{H}_t(\vec{\alpha}_t) = \varpCond{\vec{y}_t}{\vec{\alpha}_t}$. The mean $\vec{z}_t(\vec{\alpha}_t)$ and variance $\mat{H}(\vec{\alpha}_t)$ are state dependent with:
+The equation for $\vec{y}_t$ is denoted the \emph{observational equation}. $\sim (v,b)$ denotes a random variable with mean (vector) $v$ and variance (covariance matrix) $b$. It need not be a normal distribution. $\vec{\alpha}_t$ is the state vector with the corresponding \emph{state equation}. $\Delta \mathrm{t}_t=1$ unless stated otherwise. The  \code{ddhazard} function is implemented to handle any equidistant interval length. Further, we denote the observational equation's conditional covariance matrix by $\mat{H}_t(\vec{\alpha}_t) = \varpCond{\vec{y}_t}{\vec{\alpha}_t}$. The mean $\vec{z}_t(\vec{\alpha}_t)$ and variance $\mat{H}(\vec{\alpha}_t)$ are state dependent with:
 \begin{equation}\begin{aligned}
   z_{kt}(\vec{\alpha}_t) &=\expecpCond{Y_{ijt}}{\vec{\alpha}_t} = h(\vec{\alpha}_t^\top \vec{x}_{ijt}) \\
   H_{kk't}(\vec{\alpha}_t) &= \left\{\begin{matrix}
@@ -500,14 +501,14 @@ The equation for $\vec{y}_t$ is denoted the \emph{observational equation}. $\sim
   \end{matrix}\right.
 \end{aligned}\end{equation}
 
-where we assumed that individual $i$ with covariate vector $j$ was at the $k$'th index of the risk set at time $t$. The state equation is implemented with a 1. and 2. order random walk. The first order random walk has $\mat{F} = \mat{R} = \mat{I}_m$ where $m$ is the number of time-varying coefficients and $\mat{I}_m$ is the identity matrix with dimension $m$. As for the second order random walk, we have:
+where we have assumed that individual $i$ was the $k$'th index of the risk set at time $t$ with covariate vector $j$. The state equation is implemented with a 1. and 2. order random walk. The first order random walk has $\mat{F} = \mat{R} = \mat{I}_m$ where $m$ is the number of time-varying coefficients and $\mat{I}_m$ is the identity matrix with dimension $m$. We let $q$ denote the dimension for the state space vector. Thus, $q=m$ for the first order random walk. As for the second order random walk, we have:
 \begin{equation}\mat{F} = \begin{pmatrix}
   2\mat{I}_m & - \mat{I}_m \\ \mat{I}_m & \mat{0}_m
 \end{pmatrix},  \qquad
 \mat{R} = \begin{pmatrix} \mat{I}_m \\ \mat{0}_m \end{pmatrix}
 \end{equation}
 
-where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The vector in the state equation is ordered as $\vec{\alpha}_t = (\hvec{\alpha}_t^\top, \hvec{\alpha}_{t-1}^\top)^\top$ to match the definition of $\mat{F}$ and $\mat{R}$ where the hat is added to indicate the coefficients used when computing the linear predictor in equation~\ref{eqn:condProb}. The likelihood of the model where state vectors are observed can be written as follows by application of the markovian property of the model:
+where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The vector in the state equation is ordered as $\vec{\alpha}_t = (\hvec{\alpha}_t^\top, \hvec{\alpha}_{t-1}^\top)^\top$ to match the definition of $\mat{F}$ and $\mat{R}$ where the hat on the alphas is added to indicate the coefficients used when computing the linear predictor in equation~\ref{eqn:condProb}. Notice that the dimension of the final state vector is $q = 2m$ which affects the computational cost. The likelihood of the model where state vectors are observed can be written as follows by application of the markovian property of the model:
 \begin{equation}\begin{split}
 	\proppCond{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}{\vec{y}_{t},\dots,\vec{y}_T} & =
 		L\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} \\
@@ -522,7 +523,7 @@ which we can expand to:
 	 \mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}
 		 \\
 		= & - \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
-	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top\mat{R}^\top\psi_t^{-1}\mat{Q}^{-1}\mat{R}\Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\
+	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top\mat{R}^\top\Delta \mathrm{t}_t^{-1}\mat{Q}^{-1}\mat{R}\Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\
 	&  - \frac{1}{2} \log \deter{\mat{Q}_0} - \frac{1}{2d} \log \deter{\mat{Q}} \\
 	&  + \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t})
 \end{aligned}\end{equation}
@@ -532,11 +533,11 @@ l_{ijt}(\vec{\alpha}_t) = y_{ijt} \log h(\vec{x}_{ijt}^\top \vec{\alpha}_t) + (1
 	\log \Lparen{1 - h(\vec{x}_{ij}^\top \vec{\alpha}_t)}
 \end{equation}
 
-This completes the notation we will need for the discrete model. We continue with the methods to estimate the model.
+This completes the notation we will need for the discrete model. We continue with the methods used to fit the model.
 
 \section{Methodology}\label{sec:meth}
 
-All the methods implemented in the current version of \code{dynamichazard} use the EM-algorithm described in \cite{Fahrmeir94} and \cite{Fahrmeir92}. These two papers are also where the Extended Kalman filter is from and the motivation for the package. The EM-algorithm is similar to the method developed by \cite{Shumway82} but for a non-linear observational equation. The unknown parameters in the state equation~\ref{eqn:stateEqn} are the covariance matrices $\mat{Q}$ and $\mat{Q}_0$ and the initial state $\vec{\alpha}_0$. $\mat{Q}$ and $\vec{\alpha}_0$ will be estimated in the M-step of the EM-algorithm. $\mat{Q}_0$ will be fixed and we set it to diagonal matrix with large entries in the diagonal apart from when we use Unscented Kalman filter introduced later. This is common practice with Kalman filters and extension hereof. Another approach would be diffuse initialization. The idea to set $\mat{Q}_0 = c\mat{I} + \tmat{Q}_0$ for a given matrix $\tmat{Q}_0$ and letting $c\rightarrow\infty$. See~\cite[chapter 5]{durbin12}. Diffuse initialization complicates the filtering which makes the rewriting used in this package harder or impossible. Thus, diffuse initialization is not used. We make the following definitions for the conditional means and covariance matrix:
+All the methods implemented in the current version of \code{dynamichazard} use the EM-algorithm described in \cite{Fahrmeir94} and \cite{Fahrmeir92}. The EM-algorithm is similar to the method in \cite{Shumway82} but for a non-linear observational equation. The unknown parameters in the state equation~\ref{eqn:stateEqn} are the covariance matrices $\mat{Q}$ and $\mat{Q}_0$ and the initial state $\vec{\alpha}_0$. $\mat{Q}$ and $\vec{\alpha}_0$ will be estimated in the M-step of the EM-algorithm. $\mat{Q}_0$ will be fixed and we set it to diagonal matrix with large entries in the diagonal apart from when we use Unscented Kalman filter introduced later. This is common practice with Kalman filters and extension hereof. Another approach is diffuse initialization. The idea to set $\mat{Q}_0 = c\mat{I} + \tmat{Q}_0$ for a given matrix $\tmat{Q}_0$ and letting $c\rightarrow\infty$. See~\cite[chapter 5]{durbin12}. We use the following notation for the conditional means and covariance matrix:
 
 \begin{equation}
   \emNotee{\vec{a}}{t}{s} = \expecpCond{\vec{\alpha}_t}{\vec{y}_1,\dots,\vec{y}_s},  \qquad
@@ -584,11 +585,11 @@ Notice that the letter 'a' is used for the mean estimates while 'alpha' is used 
 \end{algorithmic}
 \end{algorithm}
 
-The only unspecified part is the filter in \citeAlgLine{alg:EM:filter}{alg:EM}. The matrices $\mat{X}_1,\mat{X}_2,\dots,\mat{X}_d$ are the design matrices given by the risk set $R_1,R_2\dots,R_d$ and covariate vectors. Notice that the other lines only involves product of matrices and vectors of dimension equal to the state space vector which we denote $q$. Moreover, the computational cost is independent of the size of the risk sets for the specified parts of algorithm~\ref{alg:EM}. Thus, we can fin that the the computational complexity so far is $\bigO{q^3d}$ where $q$ is the dimension of the state vector and $d$ is the number of intervals. You can select the threshold for convergence by setting the \code{eps} element of the list passed to the \code{control} argument of \code{ddhazard} (e.g. \code{list(eps = 0.01, ...)}). The EM-algorithm tend to converge slowly towards the end so a tolerance of $0.01$ is adequate from the author's experience. The filters implemented for \citeAlgLine{alg:EM:filter}{alg:EM} are an Extended Kalman filter (EKF), an Unscented Kalman filter (UKF) and a sequential approximation of the posterior modes. We will covers these in respective order.
+The only unspecified part is the filter in \citeAlgLine{alg:EM:filter}{alg:EM}. The matrices $\mat{X}_1,\mat{X}_2,\dots,\mat{X}_d$ are the design matrices given by the risk set $R_1,R_2\dots,R_d$ and the covariate vectors. Notice that the other lines only involves product of matrices and vectors of dimension equal to the state space vector which we denote $q$. Moreover, the computational cost is independent of the size of the risk sets for the specified parts of algorithm~\ref{alg:EM}. Thus, the computational complexity so far is $\bigO{q^3d}$ where $q$ is the dimension of the state vector and $d$ is the number of intervals. The threshold for convergence is determined by the \code{eps} element of the list passed to the \code{control} argument of \code{ddhazard} (e.g. \code{list(eps = 0.01, ...)}). The EM-algorithm tend to converge slowly towards the end so a tolerance of $0.01$ is adequate from the author's experience. The filters implemented for \citeAlgLine{alg:EM:filter}{alg:EM} are an Extended Kalman filter (EKF), an Unscented Kalman filter (UKF) and a sequential approximation of the posterior modes. We will covers these in respective order.
 
 \subsection{Extended Kalman filter}\label{subsec:EKF}
 
-The Extended Kalman filter (EKF) presented here is due to \cite{Fahrmeir94}. It can be derived by applying the Woodbury Matrix identity to the usual EKF. Algorithm~\ref{alg:EKF} shows the computations. The prediction step is also referred to as time update and the correction step is also referred to as the measurement update. A few points is worth making. Firstly, the largest computational burden is in \citeAlgLine{alg:EKF:scoreMat}{alg:EKF} when the dimension of the state vector, $q$, is low compared to the number of observations at time $t$ which we denote by $n_t = \vert R_t \vert$. However, the computation here is what is commonly referred to as embarrassingly parallel. That is, it can easily be computed in parallel since there is little communication required between the parallel tasks. This is exploited with the current version of \code{ddhazard} where the computation of \citeAlgLineTwo{alg:EKF:scoreVec}{alg:EKF:scoreMat}{alg:EKF} is done in parallel using the \proglang{C++} library \pkg{thread}. Each thread keeps its own version of the score vector, $\vec{u}_t (\vec{\alpha}_t)$, and information matrix, $\mat{U}_t (\vec{\alpha}_t)$, which are aggregated at the end. All the matrices and vectors are of dimension $q\times q$ and $q$ so it is easy to confirm that the filter is $\bigO{q^3n_t}$ in computational complexity.
+The Extended Kalman filter (EKF) presented here is due to \cite{Fahrmeir94}. It can be derived by applying the Woodbury Matrix identity to the usual EKF. Algorithm~\ref{alg:EKF} shows the computations. The prediction step is also referred to as the time update and the correction step is also referred to as the measurement update. A few points is worth making. Firstly, the largest computational burden is in \citeAlgLine{alg:EKF:scoreMat}{alg:EKF} when the dimension of the state vector, $q$, is low compared to the number of observations at time $t$ which we denote by $n_t = \vert R_t \vert$. However, the computation here is what is commonly referred to as embarrassingly parallel. That is, it can easily be computed in parallel since there is little communication required between the parallel tasks. This is exploited with the current version of \code{ddhazard} where the computation of \citeAlgLineTwo{alg:EKF:scoreVec}{alg:EKF:scoreMat}{alg:EKF} is done in parallel using the \proglang{C++} library \pkg{thread}. Each thread keeps its own version of the score vector, $\vec{u}_t (\vec{\alpha}_t)$, and information matrix, $\mat{U}_t (\vec{\alpha}_t)$, which are aggregated at the end. All the matrices and vectors are of dimension $q\times q$ and $q$ so it is easy to confirm that the filter is $\bigO{q^3n_t}$ in computational complexity.
 
 \begin{algorithm}
 \caption{Extended Kalman Filter (EKF). The index $k$ in the correction step in line~\ref{alg:EKF:scoreVec} and line~\ref{alg:EKF:scoreMat} are implicitly set to match the index of the $(i,j)$'th pair in the risk set.}\label{alg:EKF}
@@ -603,16 +604,17 @@ The Extended Kalman filter (EKF) presented here is due to \cite{Fahrmeir94}. It 
 \EndProcedure
 \Procedure{Correction step}{}
 \StateXX Compute score vector and information matrix and set:
-\State $\vec{u}_t (\vec{\alpha}_t) = \sum_{(i,j) \in R_t} \vec{u}_{ijt} (\vec{\alpha}_t), \quad\vec{u}_{ijt} (\vec{\alpha}_t)= \left. \vec{x}_{ij} \frac{\partial h(\eta)/ \partial \eta}{H_{kkt}(\vec{\alpha}_t)} \Lparen{y_{ijt} - h(\eta)} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{\alpha}_t}$ \label{alg:EKF:scoreVec}
-\State $\mat{U}_t (\vec{\alpha}_t) = \sum_{(i,j) \in R_t} \mat{U}_{ijt} (\vec{\alpha}_t), \quad \mat{U}_{ijt} (\vec{\alpha}_t) = \left. \vec{x}_{ij} \vec{x}_{ij}^\top \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{kkt}(\vec{\alpha}_t)} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{\alpha}_t}$ \label{alg:EKF:scoreMat}
-\State $\emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\emNotee{\vec{a}}{t}{t - 1})\right)^{-1}$ \label{alg:EKF:varUpdate}
-\State $\emNotee{\vec{a}}{t}{t} = \emNotee{\vec{a}}{t}{t - 1} + \emNotee{\mat{V}}{t}{t}\vec{u}_t (\emNotee{\vec{a}}{t}{t - 1})$ \label{alg:EKF:stateUpdate}
+\State Let $\vec{a} = \emNotee{\vec{a}}{t}{t - 1}$
+\State $\vec{u}_t (\vec{a}) = \sum_{(i,j) \in R_t} \vec{u}_{ijt} (\vec{a}), \quad\vec{u}_{ijt} (\vec{a})= \left. \vec{x}_{ij} \frac{\partial h(\eta)/ \partial \eta}{H_{kkt}(\vec{a})} \Lparen{y_{ijt} - h(\eta)} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{a}}$ \label{alg:EKF:scoreVec}
+\State $\mat{U}_t (\vec{a}) = \sum_{(i,j) \in R_t} \mat{U}_{ijt} (\vec{a}), \quad \mat{U}_{ijt} (\vec{a}) = \left. \vec{x}_{ij} \vec{x}_{ij}^\top \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{kkt}(\vec{a})} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{a}}$ \label{alg:EKF:scoreMat}
+\State $\emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\vec{a})\right)^{-1}$ \label{alg:EKF:varUpdate}
+\State $\emNotee{\vec{a}}{t}{t} = \emNotee{\vec{a}}{t}{t - 1} + \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})$ \label{alg:EKF:stateUpdate}
 \EndProcedure
 \EndFor
 \end{algorithmic}
 \end{algorithm}
 
-Another point is that \citeAlgLineTwo{alg:EKF:varUpdate}{alg:EKF:stateUpdate}{alg:EKF} is a similar to a Newton-Raphson step. This could motivate to take further steps. An issue with the EKF is that it can diverge. Two steps are taken to overcome cases where divergence is a problem. The first step is introduce a learning rate, $\zeta_0$, in \citeAlgLine{alg:EKF:stateUpdate}{alg:EKF} when we update the state vector. The second step is to increase the variance in the denominator of the score vector and information matrix in \citeAlgLineTwo{alg:EKF:scoreVec}{alg:EKF:scoreMat}{alg:EKF}. This reduces the effect of values predicted near the boundaries of the outcome space. This is similar to the approach taken in \pkg{glmnet} \cite[page~9]{friedman10} to deal with extreme values. These three changes of the correction step are shown in algorithm~\ref{alg:EKFextra}.
+Another point is that \citeAlgLineTwo{alg:EKF:varUpdate}{alg:EKF:stateUpdate}{alg:EKF} is a similar to a Newton-Raphson step. This could motivate us to take further steps. An issue with the EKF is that it can diverge. Two steps are taken to overcome cases where divergence is a problem. The first step is introduce a learning rate, $\zeta_0$, in \citeAlgLine{alg:EKF:stateUpdate}{alg:EKF} when we update the state vector. The second step is to increase the variance in the denominator of the score vector and information matrix in \citeAlgLineTwo{alg:EKF:scoreVec}{alg:EKF:scoreMat}{alg:EKF}. This reduces the effect of values predicted near the boundaries of the outcome space. This is similar to the approach taken in \pkg{glmnet} \cite[page~9]{friedman10} to deal with extreme values. These three changes of the correction step are shown in algorithm~\ref{alg:EKFextra}.
 
 \begin{algorithm}
 \caption{EKF with extra correction steps, learning rate and parameter $\xi$ replacing \citeAlgLineTo{alg:EKF:scoreVec}{alg:EKF:stateUpdate}{alg:EKF}.}\label{alg:EKFextra}
@@ -621,15 +623,16 @@ Another point is that \citeAlgLineTwo{alg:EKF:varUpdate}{alg:EKF:stateUpdate}{al
 \Statex Threshold $\epsilon$, learning rate $\zeta_0$ and small numbers $\delta$ and $\xi$
 \State $\vec{a} = \emNotee{\vec{a}}{t}{t - 1}$
 \Repeat
-\State $\vec{u}_t (\vec{\alpha}_t) = \sum_{(i,j) \in R_t} \vec{u}_{ijt} (\vec{\alpha}_t), \quad\vec{u}_{ijt} (\vec{\alpha}_t)= \left. \vec{x}_{ij} \frac{\partial h(\eta)/ \partial \eta}{H_{kkt}(\vec{\alpha}_t)+ \xi} \Lparen{y_{ijt} - h(\eta)} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{\alpha}_t}$\label{alg:EKFextra:scoreVec}
-\State $\mat{U}_t (\vec{\alpha}_t) = \sum_{(i,j) \in R_t} \mat{U}_{ijt} (\vec{\alpha}_t), \quad \mat{U}_{ijt} (\vec{\alpha}_t) = \left. \vec{x}_{ij} \vec{x}_{ij}^\top \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{kkt}(\vec{\alpha}_t) + \xi} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{\alpha}_t}$
+\State $\vec{u}_t (\vec{a}) = \sum_{(i,j) \in R_t} \vec{u}_{ijt} (\vec{\alpha}), \quad\vec{u}_{ijt} (\vec{a})= \left. \vec{x}_{ij} \frac{\partial h(\eta)/ \partial \eta}{H_{kkt}(\vec{a})+ \xi} \Lparen{y_{ijt} - h(\eta)} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{a}}$\label{alg:EKFextra:scoreVec}
+\State $\mat{U}_t (\vec{a}) = \sum_{(i,j) \in R_t} \mat{U}_{ijt} (\vec{a}), \quad \mat{U}_{ijt} (\vec{a}) = \left. \vec{x}_{ij} \vec{x}_{ij}^\top \frac{\left( \partial h(\eta)/ \partial \eta \right)^2}{H_{kkt}(\vec{a}) + \xi} \right\vert_{\eta = \vec{x}_{ij}^\top \vec{a}}$
 \State $\emNotee{\mat{V}}{t}{t} = \left( \emNotee{\mat{V}}{t}{t - 1}^{-1} + \mat{U}_t (\vec{a})\right)^{-1}$
-\State $\emNotee{\vec{a}}{t}{t} = \vec{a} + \zeta_0 \cdot \emNotee{\mat{V}}{t}{t}\vec{u}_t (\vec{a})$
+\State $\emNotee{\vec{a}}{t}{t} = \emNotee{\mat{V}}{t}{t}\Lparen{
+		\mat{U}_t (\vec{a})\vec{a} + \emNotee{\mat{V}}{t}{t - 1}^{-1}\emNotee{\vec{a}}{t}{t - 1} + \zeta_0 \vec{u}_t (\vec{a})}$
 \UntilElse{$\LVert{\emNotee{\vec{a}}{t}{t} - \vec{a}}/ (\LVert{\vec{a}} + \delta) < \epsilon$}{set $\vec{a} = \emNotee{\vec{a}}{t}{t}$}
 \end{algorithmic}
 \end{algorithm}
 
-Extra correction are not taken by default. They can be if you set the element \code{NR_eps} to the value of $\epsilon$ you want in the list passed to the \code{control} argument of \code{ddhazard}. The learning rate, $\zeta_0$, is set by setting the element \code{LR} to the value you want in the list passed to the \code{control} argument. By default, the current implementation tries a decreasing series of learning rates starting with $\zeta_0$ until the algorithm does not diverge. $\xi$ is changed by altering the \code{denom_term} element in the list passed to the \code{control} argument. Typically values in the range $[10^{-6},10^{-4}]$ tend to be sufficient.
+Extra correction steps are not taken by default. They will be taken if the element \code{NR_eps} of list passed to the \code{control} argument of \code{ddhazard} is set to the value of $\epsilon$. The learning rate, $\zeta_0$, is set by setting the element \code{LR} in the list passed to the \code{control} argument. By default, the current implementation tries a decreasing series of learning rates starting with $\zeta_0$ until the algorithm does not diverge. $\xi$ is changed by altering the \code{denom_term} element in the list passed to the \code{control} argument. Typically values in the range $[10^{-6},10^{-4}]$ tend to be sufficient. The motivation for the formulas in algorithm~\ref{alg:EKFextra} is to get a method that is closer to the mode estimation as shown in ddhazard vignette. The formulas here showed smaller mean square errors in simulation studies.
 
 TODO: Write about stability and convergence conditions? I have read some papers which provides different conditions.
 
@@ -688,7 +691,7 @@ ekf_aids_lower_learning <- ddhazard(
   Q = diag(.1, 5),
   Q_0 = diag(10000, 5),
   control = list(
-    LR = 0.25,           # Decreased
+    LR = 0.25,            # Decreased
     denom_term = 0.000001
   ))
 
@@ -699,12 +702,13 @@ mean((
   ekf_aids_lower_learning$state_vecs - ekf_aids$state_vecs)^2)
 @
 
+The author's experince is that the learning can be decreased from $1$ if divergence is an issue and setting \code{denom_term} to a small value like $10^{-5}$ with no need to be altered by the user.
 
 \subsection{Unscented Kalman filter}\label{subsec:UKF}
-The Unscented Kalman Filter (UKF) is similar to Monte Carlo methods but using deterministically selected state vectors instead of randomly drawn. The advantageous of using an UKF is a potentially better approximation than the EKF especially if the linear approximation is poor and at a lower computational cost than Monte Carlo methods. Further, the UKF does not require that one computes the Jacobian. The former two advantages are useful in this package while the latter is not a great advantage since deriving and computing the Jacobian is not complicated for the models we use. Algorithm~\ref{alg:UKF} shows the computations.
+The Unscented Kalman Filter (UKF) is similar to Monte Carlo methods but using deterministically selected state vectors and weights instead of randomly drawn. The vectors and weights are respectively referred to as \emph{sigma points} and \emph{sigma weights}. The advantageous of using an UKF is a potentially better approximation than the EKF especially if the linear approximation is poor and at a lower computational cost than Monte Carlo methods. Further, the UKF does not require that one computes the Jacobian. The former two advantages are useful in this package while the latter is not a great advantage since deriving and computing the Jacobian is not complicated for the models we use. The UKF was introduced in \cite{Julier97}. Algorithm~\ref{alg:UKF} shows the computations.
 
 \begin{algorithm}
-\caption{The Unscented Kalman Filter (UKF) where $\displaystyle\sqrt{\emNotee{\mat{V}}{t}{t - 1}}$ denotes the square root matrix of $\emNotee{\mat{V}}{t}{t - 1}$ and $\left(\displaystyle\sqrt{\emNotee{\mat{V}}{t}{t - 1}}\right)_j$ denotes the $j$'th column of the square root matrix. $\diag{\cdot}$ gives a diagonal matrix with the entries of the argument vector in the diagonal. $q$ is the dimension of the state vector. $\vec{W}^{(\cdot)}$ is the vector with elements $W^{(\cdot)}_0,W^{(\cdot)}_1,\dots,W^{(\cdot)}_{2q}$.}\label{alg:UKF}
+\caption{The Unscented Kalman Filter (UKF) where $\displaystyle\emNotee{\mat{V}}{t}{t - 1}^{1/2}$ denotes the square root matrix of $\emNotee{\mat{V}}{t}{t - 1}$ and $\left(\displaystyle\emNotee{\mat{V}}{t}{t - 1}^{1/2}\right)_j$ denotes the $j$'th column of the square root matrix. $\diag{\cdot}$ gives a diagonal matrix with the entries of the argument vector in the diagonal. $q$ is the dimension of the state vector. $\vec{W}^{(\cdot)}$ is the vector with elements $W^{(\cdot)}_0,W^{(\cdot)}_1,\dots,W^{(\cdot)}_{2q}$.}\label{alg:UKF}
 \begin{algorithmic}[1]\raggedright
 \INPUT
 \Statex $\mat{Q},\mat{Q}_0, \vec{a}_0,$ $\mat{X}_1,\dots,\mat{X}_d,$ $\vec{y}_1,\dots,\vec{y}_d,$ $R_1,\dots,R_d$
@@ -724,8 +728,8 @@ The Unscented Kalman Filter (UKF) is similar to Monte Carlo methods but using de
 \StateXX Compute \emph{sigma points}
 \State $\begin{aligned}
   &\hvec{a}_0 = \emNotee{\vec{a}}{t}{t-1} \\
-  &\hvec{a}_{j} = \emNotee{\vec{a}}{t}{t-1} + \sqrt{q + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t}{t - 1}}\right)_j \\
-  &\hvec{a}_{j + q} = \emNotee{\vec{a}}{t}{t - 1} - \sqrt{q + \lambda} \left(\sqrt{\emNotee{\mat{V}}{t}{t - 1}}\right)_j
+  &\hvec{a}_{j} = \emNotee{\vec{a}}{t}{t-1} + \sqrt{q + \lambda} \left(\emNotee{\mat{V}}{t}{t - 1}^{1/2}\right)_j \\
+  &\hvec{a}_{j + q} = \emNotee{\vec{a}}{t}{t - 1} - \sqrt{q + \lambda} \left(\emNotee{\mat{V}}{t}{t - 1}^{1/2}\right)_j
 \end{aligned} \qquad j = 1,2,\dots, q$ \label{alg:UKF:points}
 \StateXX Compute intermediates
 \State $\hvec{y}_j = \vec{z}_t \left(\hvec{a}_j \right) \qquad j = 0,1,\dots, 2q$\label{alg:UKF:expecMean}
@@ -734,7 +738,7 @@ The Unscented Kalman Filter (UKF) is similar to Monte Carlo methods but using de
 \State $\Delta\hmat{Y} = \hmat{Y} - \overline{\vec{y}} \vec{1}^\top$
 \State $\hmat{H} = \xi\mat{I} + \sum_{j=0}^{2q} W_j^{[c]}\mat{H}_t(\hvec{a}_j)$ \label{alg:UKF:obsCov}
 \State $\Delta\hmat{A} = (\hvec{a}_0, \dots, \hvec{a}_{2q}) - \emNotee{\vec{a}}{t}{t-1}\vec{1}^\top$
-\State $\tvec{y} = \Delta \hmat{Y}^\top \hmat{H}^{-1}(\vec{y}_t - \overline{\vec{y}})$
+\State $\tvec{y} = \Delta \hmat{Y}^\top \hmat{H}^{-1}(\vec{y}_t - \overline{\vec{y}})$\label{alg:UKF:residual}
 \State $\mat{G} = \Delta\hmat{Y}^\top\hmat{H}^{-1}\Delta\hmat{Y}$\label{alg:UKF:G}
 \State $\vec{c} = \tilde{\vec{y}} - \mat{G}\left( \diag{\vec{W}^{(m)}}^{-1} + \mat{G}\right)^{-1} \tvec{y}$ \label{alg:UKF:InterC}
 \State $\mat{L} = \mat{G} - \mat{G}\left( \diag{\vec{W}^{(c)}}^{-1} + \mat{G}\right)^{-1} \mat{G}$ \label{alg:UKF:InterG}
@@ -747,12 +751,12 @@ The Unscented Kalman Filter (UKF) is similar to Monte Carlo methods but using de
 \end{algorithmic}
 \end{algorithm}
 
-\code{ddhazard} uses the Cholesky decomposition for the square root matrix $\displaystyle\sqrt{\emNotee{\mat{V}}{t}{t - 1}}$. The hyperparameters can have values $0 < \alpha \leq 1$, $\kappa\in\mathbb{R}$ and $\beta\in\mathbb{R}$ under the restriction that $q + \lambda \geq 0$. We will use a small example to illustrate the intuition of the \emph{sigma points} in~\citeAlgLine{alg:UKF:points}{alg:UKF} and \emph{sigma weights} in~\citeAlgLineTo{alg:UKF:weightsSta}{alg:UKF:weightsSto}{alg:UKF}. Suppose we are at time $t$ of the correction step of the filter with with a two dimensional state equation, $q = 2$. Further, assume that we have:
+\code{ddhazard} uses the Cholesky decomposition for the square root matrix $\displaystyle\emNotee{\mat{V}}{t}{t - 1}^{1/2}$. The hyperparameters that the sigma points and sigma weights depend on can have values $0 < \alpha \leq 1$, $\kappa\in\mathbb{R}$ and $\beta\in\mathbb{R}$ under the restriction that $q + \lambda \geq 0$. We will use a small example to illustrate the intuition of the \emph{sigma points} in~\citeAlgLine{alg:UKF:points}{alg:UKF} and \emph{sigma weights} in~\citeAlgLineTo{alg:UKF:weightsSta}{alg:UKF:weightsSto}{alg:UKF}. Suppose we are at time $t$ of the correction step of the filter with with a two dimensional state equation, $q = 2$. Further, assume that we have:
 
 \begin{equation}\label{eqn:UKFEx}
 \emNotee{\vec{a}}{t}{t - 1} = \begin{pmatrix} 0 \\ 0 \end{pmatrix}, \qquad
   \emNotee{\mat{V}}{t}{t - 1} = \begin{pmatrix} 2 & 1 \\ 1 & 1 \end{pmatrix}, \qquad
-  \sqrt{\emNotee{\mat{V}}{t}{t - 1}} = \begin{pmatrix} 1.41 & 0.707 \\ 0 & 0.707 \end{pmatrix}
+  \emNotee{\mat{V}}{t}{t - 1}^{1/2} = \begin{pmatrix} 1.41 & 0.707 \\ 0 & 0.707 \end{pmatrix}
 \end{equation}
 
 We will look at the effect of the hyperparameters in the following. Say for instance that we select:
@@ -813,11 +817,11 @@ points(pts[, 1], pts[, 2],
        pch = c(rep(16, 5), rep(1, 4)), cex = par()$cex * 5)
 @
 
-Thus, decreasing $\alpha$ increases the absolute size of the weights and can lead to a negative weight on the zero sigma point, $\hvec{a}_0$. $\alpha$ also controls the spread of the sigma points through the factor $\sqrt{q + \lambda}$ in~\citeAlgLine{alg:UKF:points}{alg:UKF}. Decreasing $\alpha$ decreases the spread of the sigma points. This is illustrated in figure~\ref{fig:sigma_pts}. The filled circles are the sigma points with $(\alpha,\beta,\kappa) = (1,0,1)$ and the open circles are the sigma points with $(\alpha,\beta,\kappa) = (1/3,0,1)$. The $\alpha$ parameter in~\cite{Julier04} is used to mitigate the effect of incorrectly not choosing a skewed sigma set (not symmetrical as the one in~\citeAlgLine{alg:UKF:points}{alg:UKF}) when the state equation distribution does have a skew or vice versa. In these cases letting $\alpha \rightarrow 0^+$ can mitigate the error. However, if $\alpha$ is small than the the weight of the zero sigma point can be negative, $W_0^{[m]}<0$. While it is not immediately clear from algorithm~\ref{alg:UKF}, this can cause computational issues as pointed out in~\cite{menegaz16}. This is more easily seen in~\cite{Julier04} formulation of the UKF where the covariance matrix of the observational equation can become negative definite when the weight of the zero sigma point is less than zero. This is shown in the ddhazard vignette in this package. Thus, $W_0^{[m]}$ is chosen to be positive if $\kappa$ is not specified by altering $\kappa$. Figure~\ref{fig:sigma_pts} also shows the points that are used in the UKF to approximate the density given by the contours when we perform the correction step.
+Thus, decreasing $\alpha$ increases the absolute size of the weights and can lead to a negative weight on the zero sigma point, $\hvec{a}_0$. $\alpha$ also controls the spread of the sigma points through the factor $\sqrt{q + \lambda}$ in~\citeAlgLine{alg:UKF:points}{alg:UKF}. Decreasing $\alpha$ decreases the spread of the sigma points. This is illustrated in figure~\ref{fig:sigma_pts}. The filled circles are the sigma points with $(\alpha,\beta,\kappa) = (1,0,1)$ and the open circles are the sigma points with $(\alpha,\beta,\kappa) = (1/3,0,1)$. Different defintions of sigma points and sigma weights \emph{sets} have been suggested. Some of these have what is referred to as skewed sets while others are symmetric like the set presented in this paper. The $\alpha$ parameter in~\cite{Julier04} is used to mitigate the effect of incorrectly not choosing a skewed sigma set (not symmetrical) when the state equation distribution does not have a skew or vice versa. In these cases letting $\alpha \rightarrow 0^+$ can mitigate the error. However, if $\alpha$ is small than the the weight of the zero sigma point can be negative, $W_0^{[m]}<0$. While it is not immediately clear from algorithm~\ref{alg:UKF}, this can cause computational issues as pointed out in~\cite{menegaz16}. This is easily seen in formulation of the UKF in~\cite{Julier04} where the covariance matrix of the observational equation can become negative definite when the weight of the zero sigma point is less than zero. This is shown in the ddhazard vignette in this package. Thus, $W_0^{[m]}$ is chosen to be positive if $\kappa$ is not specified by altering $\kappa$. Figure~\ref{fig:sigma_pts} also shows the points that are used in the UKF to approximate the density given by the contours when we perform the correction step.
 
-The UKF was introduced in \cite{Julier97}. The proofs that the first and second centered moments of the observational equation after the correction steps are precise up to a seconder order Taylor expansion is in the appendix of \cite{Julier04}. \code{ddhazard} uses an equivalent specification of the three hyperparameter UKF as in \cite{Julier04} given in \cite{Wan00}. \cite{Gustafsson12} shows that the claimed second order precision of first two centered moments is not true with the suggested hyperparameter settings in \cite{Julier04} by comparison with a second order Extended Kalman filter. Many different UKFs have been suggested with different hyperparameters, algorithms and sigma points. The author finds that \cite{menegaz16} has the best comparison of different forms of UKFs in the literature. This is also where the arguments for the weights in~\citeAlgLineTo{alg:UKF:weightsSta}{alg:UKF:weightsSto}{alg:UKF} are given. Algorithm~\ref{alg:UKF} is derived by using the weight specification in~\cite{menegaz16} on the UKF from~\cite{Wan00} and applying the Woodbury matrix identity.
+The proofs that the first and second centered moments of the observational equation after the correction steps are precise up to a seconder order Taylor expansion is in the appendix of \cite{Julier04}. \code{ddhazard} uses an equivalent specification of the three hyperparameter UKF as in \cite{Julier04} given in \cite{Wan00}. \cite{Gustafsson12} show that the claimed second order precision of first two centered moments is not true one set of hyperparameter settings in \cite{Julier04} by comparison with a second order Extended Kalman filter. Many different UKFs have been suggested with different hyperparameters, algorithms and sigma points. See \cite{menegaz16} for a comparison of different forms of UKFs in the literature. This is also where the arguments for the weights in~\citeAlgLineTo{alg:UKF:weightsSta}{alg:UKF:weightsSto}{alg:UKF} are given. Algorithm~\ref{alg:UKF} is derived by using the weight specification in~\cite{menegaz16} on the UKF from~\cite{Wan00} and applying the Woodbury matrix identity.
 
-Algorithm~\ref{alg:UKF} involves at most products of $q\times n_t$ matrices and $n_t \times q$, inversion of $q\times q$ matrices and an inversion of $\hmat{H}$ which is a diagonal matrix which can be computed in $\bigO{n_t}$ time. Thus, the filter has a computational complexity of $\bigO{n_t}$. The algorithm can not as easily be done in parallel due to~\citeAlgLineTwo{alg:UKF:InterC}{alg:UKF:InterG}{alg:UKF}. However, parts of the computations (particularly~\citeAlgLineTo{alg:UKF:expecMean}{alg:UKF:obsCov}{alg:UKF}) could be done in parallel which is not implemented in the current version of \code{ddhazard}. Further, a multi-threaded \pkg{BLAS} could decrease the computation time of the products in~\citeAlgLineTwo{alg:UKF:InterC}{alg:UKF:InterG}{alg:UKF}. We make the addition of identity matrix times $\xi$ to reduce the effect of observation predicted near the boundary of the outcome space in~\citeAlgLine{alg:UKF:obsCov}{alg:UKF} as in the EKF. We will end this section on the UKF with an example.
+Algorithm~\ref{alg:UKF} involves at most products of $q\times n_t$ and $n_t \times q$ matrices, inversion of $q\times q$ matrices and an inversion of $\hmat{H}$ which is a diagonal matrix which can be computed in $\bigO{n_t}$ time. Thus, the filter has a computational complexity of $\bigO{n_t}$. The algorithm can not as easily be done in parallel due to~\citeAlgLineTwo{alg:UKF:InterC}{alg:UKF:InterG}{alg:UKF}. However, parts of the computations (particularly~\citeAlgLineTo{alg:UKF:expecMean}{alg:UKF:obsCov}{alg:UKF}) could be done in parallel but this is not implemented in the current version of \code{ddhazard}. Further, a multi-threaded \pkg{BLAS} could decrease the computation time of the products in~\citeAlgLineTwo{alg:UKF:InterC}{alg:UKF:InterG}{alg:UKF}. We make the addition of identity matrix times $\xi$ to reduce the effect of observation predicted near the boundary of the outcome space in~\citeAlgLine{alg:UKF:obsCov}{alg:UKF} as in the EKF. We will end this section on the UKF with an example.
 
 \subsubsection{Example with UKF}
 <<echo = FALSE>>=
@@ -859,27 +863,24 @@ ukf_fit <- ddhazard(
 plot(ukf_fit)
 @
 
-A mean square bound for the observational equation is given in~\cite{Xiong06}. Their finding is that the mean square for the observational equation remains bounded when $\mat{Q}$ and $\mat{Q}_0$ has an matrix $\delta \mat{I}$ added to them with a sufficiently large $\delta$. Though, taking $\delta$ too large increases the error bound. Their analysis is in a situation where the observational equation is linear and Gaussian while the state equation is non-linear with Gaussian additive noise. Hence, it is the reverse of the models implemented in \pkg{dynamichazard} and only with Gaussian additive noise. It is also only in a filtering setting where $\mat{Q}$ is fixed and with a specific set of hyperparameters. Nevertheless, it may explain the the issue we have with selecting in $\mat{Q}_0$. We need to select a matrix that is "large" but not too "large".
+A mean square bound for the observational equation is given in~\cite{Xiong06}. Their finding is that the mean square for the observational equation remains bounded when $\mat{Q}$ and $\mat{Q}_0$ has an matrix $\delta \mat{I}$ added to them with a sufficiently large $\delta$. Though, a $\delta$ too large increases the error bound. Their analysis is where the observational equation is linear and Gaussian while the state equation is non-linear with Gaussian additive noise. Hence, it is the reverse of the models implemented in \pkg{dynamichazard} where we have a linear and Gaussian state equation and non-linear observational equation. Moreover, the noise is not Gaussian in the observational equation. It is only in a filtering setting where $\mat{Q}$ is fixed and with a specific set of hyperparameters. Nevertheless, it may explain the the issue we have with selecting in $\mat{Q}_0$. We need to select a matrix that is "large" but not too "large".
 
 \subsection{Sequential approximation of the posterior modes}\label{subsec:postApprox}
-Another idea is to do the following:
-
-\begin{itemize}
-\item Replace the means with the modes. This may be an issue with the EM-algorithm shown in algorithm~\ref{alg:EM} which is based on means and not modes. The means and modes would coincide if we did not have the final line in the log-likelihood in equation~\ref{eqn:logLike} so we might not make too big of an error. Making this replacement, we will need find the minimum of equation~\ref{eqn:modeExact} followed by an update of the covariance matrix.
+Another idea is to replace the means in the filters with the modes. Making this replacement, we need to find the minimum of equation~\ref{eqn:modeExact} followed by an update of the covariance matrix.
 \begin{equation}\label{eqn:modeExact}
 \emNotee{\vec{a}}{t}{t} = \argminu{\vec{\alpha}}
   - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
     -\sum_{(i,j) \in R_t} \log\proppCond{y_{ijt}}{\vec{\alpha}}
 \end{equation}
-\item Replace the equation~\ref{eqn:modeExact} with $n_t$ rank-one updates of the form in equation~\ref{eqn:modeApprox} and an update of the covariance matrix. We use the superscript to indicate the previous estimate.
+
+An efficient way of finding this minimum is to replace the equation~\ref{eqn:modeExact} with $n_t$ rank-one updates of the form in equation~\ref{eqn:modeApprox} and an update of the covariance matrix. We use the superscript to indicate the previous estimate.
 \begin{equation}\label{eqn:modeApprox}
 \emNote{\vec{a}}{t}{t}{k} = \argminu{\vec{\alpha}}
   -\log \proppCond{\vec{\alpha}}{\emNote{\vec{a}}{t}{t}{k-1}, \emNote{\mat{V}}{t}{t}{k-1}}
   -\log\proppCond{y_{ijt}}{\vec{\alpha}}
 \end{equation}
-\end{itemize}
 
-We will denote this method by Sequential Mode Approximation (SMA). Two algorithms for doing the above are shown in algorithms~\ref{alg:approxMode} and~\ref{alg:approxModeChol}. The latter replaces the correction step in the former by propagating a Cholesky decomposition of the information matrix but is otherwise identical. The advantageous of using the Cholesky decomposition in algorithm~\ref{alg:approxModeChol} is that we ensure that the covariance matrix is positive semi definite. Algorithm~\ref{alg:approxModeChol} is slightly slower although we do use that \citeAlgLine{alg:approxModeChol:LInvUpdate}{alg:approxModeChol} can be inverted in $\bigO{q^2}$ since $\mat{L}$ is a triangular matrix. Further, the rank-one update of the Cholesky decomposition in~\citeAlgLine{alg:approxModeChol:LUpdate}{alg:approxModeChol} is done using the Fortran code from~\cite{LAPACKThread} which implements the method in~\cite{seeger04} with a time complexity of~$\bigO{q^2}$. Lastly, we exploit that $\tmat{L}$ triangular matrix to reduce the computational cost of the matrix and vector products. Still the correction step with algorithm~\ref{alg:approxModeChol} is slower. The constant $v$ in \citeAlgLine{alg:approxMode:findConst}{alg:approxMode} and \citeAlgLine{alg:approxModeChol:findConst}{alg:approxModeChol} is solved by the Newton Raphson method. $\proppCond{y_{ijt}}{\vec{\alpha}_t^\top \vec{x}_{ij} = b}$ is log concave in $b$ with a finite upper bound for the models currently implemented in \code{ddhazard} so the Newton Raphson method finds the unique minimum if it converges. Both methods are $\bigO{n_tq^3}$.
+We will refer to this method by Sequential Mode Approximation (SMA). Two algorithms for doing this are shown in algorithms~\ref{alg:approxMode} and~\ref{alg:approxModeChol}. The latter replaces the correction step in of the first by propagating a Cholesky decomposition of the information matrix but is otherwise identical. The advantage of using the Cholesky decomposition in algorithm~\ref{alg:approxModeChol} is that we ensure that the covariance matrix is positive semi definite. Algorithm~\ref{alg:approxModeChol} is slightly slower although we do use that \citeAlgLine{alg:approxModeChol:LInvUpdate}{alg:approxModeChol} can be inverted in $\bigO{q^2}$ since $\mat{L}$ is a triangular matrix. Further, the rank-one update of the Cholesky decomposition in~\citeAlgLine{alg:approxModeChol:LUpdate}{alg:approxModeChol} is done using the Fortran code from~\cite{LAPACKThread} which implements the method described in~\cite{seeger04} with a time complexity of~$\bigO{q^2}$. Lastly, we exploit that $\tmat{L}$ triangular matrix to reduce the computational cost of the matrix and vector products. Still the correction step with algorithm~\ref{alg:approxModeChol} is slower. The constant $v$ in \citeAlgLine{alg:approxMode:findConst}{alg:approxMode} and \citeAlgLine{alg:approxModeChol:findConst}{alg:approxModeChol} is solved by the Newton Raphson method. $\proppCond{y_{ijt}}{\vec{\alpha}_t^\top \vec{x}_{ij} = b}$ is log concave in $b$ with a finite upper bound for the models currently implemented in \code{ddhazard} so the Newton Raphson method finds the unique minimum if it converges. Both methods are $\bigO{n_tq^3}$.
 
 \begin{algorithm}
 \caption{Approximation of the posterior mode.}\label{alg:approxMode}
@@ -910,7 +911,7 @@ We will denote this method by Sequential Mode Approximation (SMA). Two algorithm
 \end{algorithmic}
 \end{algorithm}
 
- It is worth stressing that~\cite{Fahrmeir92} points out that the EKF to approximate modes rather than the means. Though,~\cite{Durbin00} writes:\textit{" [Their] experience has been that in the examples that [they] have examined there is very little difference between the mode [estimated by their methods and by the EKF in~\cite{Fahrmeir92}] and the mean ..."}. Thus, the error may not be big. A disadvantage of SMA is that it is sequential and all matrix and vector products are in dimension $q\times q$ and $q$. Thus, there is little to gain from doing the computations in parallel unless $q$ is large. Moreover, the results depends on the order of the risk set. For this reason, the risk sets are permuted before running the EM-algoirthm. This can be avoided by setting \code{permu = FALSE} to the \code{control} argument of \code{ddhazard}. One advantageous of the methods is that it tends to converge in fewer iterations of the EM algorithm and the likelihood do tend to increasing in every iteration. The latter seems to be an issue with the EKF for some data sets. The EM algorithm should always have increasing likelihood if we computed the likelihood exactly. This is not the case here due to the sequential approximation of the modes with the SMA, the error due to the linearisation in the EKF and the approximation in the UKF. Further, we do not need to compute the expected mean of the outcome in each interval ($h(\eta)$ in~\citeAlgLine{alg:EKF:scoreVec}{alg:EKF} and $\overline{\vec{y}}$ in~\citeAlgLine{alg:UKF:mean}{alg:UKF}) with the SMA but instead work with the likelihood. The latter is particularly useful for the continuous time model we cover in section~\ref{subsec:contTime} as we avoid the definition of the outcome variable.
+A disadvantage of SMA is that it is sequential and all matrix and vector products are in dimension $q\times q$ and $q$. Thus, there is little to gain from doing the computations in parallel unless $q$ is large. Moreover, the results depends on the order of the risk set. For this reason, the risk sets are permuted before running the algorithm. This can be avoided by setting \code{permu = FALSE} to the \code{control} argument of \code{ddhazard}. One advantageous of the methods is that it tends to converge in fewer iterations of the EM algorithm and the likelihood do tend to increasing in every iteration. The latter seems to be an issue with the EKF for some data sets when only a single iteration is taken in the correction step. The EM algorithm should always have increasing likelihood if we computed the likelihood exactly. This is not the case here due to the sequential approximation of the modes with the SMA, the error due to the linearisation in the EKF and the approximation in the UKF. Further, we do not need to compute the expected mean of the outcome in each interval ($h(\eta)$ in~\citeAlgLine{alg:EKF:scoreVec}{alg:EKF} and $\overline{\vec{y}}$ in~\citeAlgLine{alg:UKF:mean}{alg:UKF}) with the SMA but instead work with the likelihood. The latter is particularly useful for the continuous time model we cover in section~\ref{subsec:contTime} as we avoid the definition of the outcome variable with the somewhat arbitrary jump term.
 
 \begin{algorithm}
 \caption{Alternative correction step in the procedure at~\citeAlgLine{alg:approxMode:correction}{alg:approxMode} with a Cholesky decomposition. Left-arrow, $\leftarrow$, indicates an update instead of an equality.}\label{alg:approxModeChol}
@@ -931,8 +932,8 @@ We will denote this method by Sequential Mode Approximation (SMA). Two algorithm
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Different approches}
-We can directly minimize equaion~\ref{eqn:modeExact}. This is equivalent to a L2 penalized for a Generalized Linear Models (GLM) since we only models from the exponential family. This can be done with the usual  iteratively reweighted ridge regression. Every iteration can be done in $\bigO{n_tq^2 + q^3}$. We will go through computations in the following paragraphs. First, we derive the gradient and the Hessian:
+\subsection{Global mode approximation}
+We can directly minimize equaion~\ref{eqn:modeExact}. We denote this as the Global Mode Approximation (GMA). This is equivalent to a L2 penalized for a Generalized Linear Models (GLM) since we only use models from the exponential family. This can be done with the usual iteratively reweighted ridge regression. Every iteration can be done in $\bigO{n_tq^2 + q^3}$. We will go through computations in the following paragraphs with a Newton method for the estimation. First, we derive the gradient and the Hessian:
 
 \begin{equation}\begin{aligned}
 	 &\tilde h(\vec{\alpha}) =  - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
@@ -963,8 +964,6 @@ Thus, the update equation is:
 \end{aligned}
 \end{equation}
 
-Algorithm~\ref{alg:GlobalMA} shows the final implementation with a learning rate $\zeta_0$. We make the following assumption to compare the algorithm~ with the EKF in algorithm~\ref{alg:EKFextra}. We restrict us model from  the exponential family with a density function of the form:
-
 \begin{algorithm}
 \caption{Correction step with global mode approximation by Newton Raphson.}\label{alg:GlobalMA}
 \begin{algorithmic}[1]\raggedright
@@ -979,43 +978,36 @@ $\algGMAscore{\vec{a}^{(k)} =}$
 \end{algorithmic}
 \end{algorithm}
 
-\begin{equation}
-  \tilde{p}(d) = \proppCond{y_{ijt}}{d = \vec{x}_{ij}^\top\vec{\alpha}} = \exp\Lparen{\frac{y_{ijt} d - b(d)}{\phi} + c(y_{ij},\phi)}
-\end{equation}
-
-For these models we have:
-
-\begin{equation}
-	\tilde c'(d) = y_{ijt} - b'(d) = y_{ijt} - h(c) \qquad \tilde c''(d) = -b''(d) = - \frac{\varpCond{y_{ijt}}{d = \vec{x}_{ij}^\top\vec{\alpha}}}{\phi}
-\end{equation}
-
-TODO: sensative to $\mat{Q}_0$
-
-TODO: sensative to to ill-conditioned design matrix
-
-Particularly, non of the implemented models has a dispersion parameter, $\phi$, that is not one. From this, we see the Algorithm~\ref{alg:GlobalMA} and~algorithm~\ref{alg:EKFextra} are similar but not identical. The global mode approximation is mentioned in~\cite[Section 10.6]{durbin12}. Though, \cite{durbin12} only suggest a single step. This yield a mode estimation method which can be implemented with the regular Kalman filter and smoother. The package \pkg{KFAS} implement this linerization method. They further ease the computation in \pkg{KFAS} by using the sequantial method for the correction step for the Kalman filter described in~\cite{Koopman00}. Lastly, if the negative value under the minimization operator in equation~\ref{eqn:modeExact} is not log-concave then then the global instead of sequential optimization can be done by the second method in~\cite{Durbin00} or by the methods in~\cite{So03}.
+Algorithm~\ref{alg:GlobalMA} shows the final implementation with a learning rate $\zeta_0$. The global mode approximation is mentioned in~\cite[Section 10.6]{durbin12}. Though, \cite{durbin12} only suggest a single step. This yield a mode estimation method which can be implemented with the regular Kalman filter and smoother. The package \pkg{KFAS} implement this linerization method. They further ease the computation in \pkg{KFAS} by using the sequantial method for the correction step for the Kalman filter described in~\cite{Koopman00}. Lastly, if the negative value under the minimization operator in equation~\ref{eqn:modeExact} is not log-concave then then the global instead of sequential optimization can be done by the second method in~\cite{Durbin00} or by the methods in~\cite{So03}.
 
 An alternative to algorithm~\ref{alg:GlobalMA} for the exponential family is to re-write the orignal problem to use working responses to get a weighted least squares problem of the form:
 
-\begin{equation}
+\begin{equation}\label{eqn:GMAAlt}
 \begin{aligned}
-&\vec{z} = \mat{X}_t  \vec{a}^{(k-1)} + \Lparen{\vec{y}_t - \vec{h}\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}}\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}} \\
+&\vec{b} = \mat{X}_t  \vec{a}^{(k-1)} + \vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}^{-1}\Lparen{\vec{y}_t - \vec{h}\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}}   \\
 %
 &\vphantom{\LVert{\underbrace{\eqnGblModeTerma}_{\tmat{W}}}}
 %
-\LVert{
-\smash{\underbrace{\eqnGblModeTerma}_{\tmat{W}^{1/2}}}\vphantom{\eqnGblModeTerma}
+\argmin_{\vec{\alpha}}\LVert{
+\smash{\underbrace{\eqnGblModeTerma}_{\tmat{C}^{1/2}}}\vphantom{\eqnGblModeTerma}
  \Lparen{
   \smash{\underbrace{\eqnGblModeTermb}_{\tmat{X}_t}}\vphantom{\eqnGblModeTermb} \vec{\alpha}
-  - \smash{\underbrace{\eqnGblModeTermc}_{\tvec{z}}}\vphantom{\eqnGblModeTermc}}}
+  - \smash{\underbrace{\eqnGblModeTermc}_{\tvec{b}}}\vphantom{\eqnGblModeTermc}}}
 \end{aligned}\end{equation}%
 %
-where $\vec{z}$ is the working responses, $\vec{h}$ temporaily denotes the inverse link function, the deriative $\vec{h}'$ is with respect to the state vector $\vec{\alpha}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{W}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{W}\tvec{z}$. This problem can be solved with mehtods for weighted least squares problem. A brief review and comparison of methods is in~\cite{Leary90}.
+where $\vec{b}$ is the working responses, $\vec{h}$ temporaily denotes the inverse link function, the deriative $\vec{h}'$ is with respect to the state vector $\vec{\alpha}$ and the inverse link function $\vec{h}$ implicitly depends on the risk set at time $t$. The minimum w.r.t. $\vec{\alpha}$ is $\vec{\alpha}^{(k)} = \Lparen{\tmat{X}_t^\top \tmat{W}\tmat{X}_t}^{-1}\tmat{X}_t^\top \tmat{W}\tvec{z}$. This problem can be solved with mehtods for weighted least squares problem. A brief review and comparison of methods is in~\cite{Leary90}. We show in the ddhazard vignette that one iteration of solving~\ref{eqn:GMAAlt} is equivalent to the EKF with a single iteration in the correction step.
 
-\subsection{Examples with SMA}
-We will use the \code{aids} data set to show that the predicted coefficients do converge quicker with the SMA method than with the EKF. We illustrate this below by estimating the model with SMA method and EKF method. We set the convergence threshold lower than the default and use the correction step with the Cholesky decomposition in algorithm~\ref{alg:approxModeChol}. Further, we print out information while computing by setting the \code{verbose} argument to \code{ddhazard} to a positive number.
+The above is sensitive to the choice of $\mat{Q}_0$. An extreme example is if we have no events in the first interval and only an intercept. Then setting $\mat{Q}_0$ to a diagonal matrix with large entries (in this case $\mat{Q}_0$ is a scalar) implies almost no restrictions on the intercept. Thus, it will be optimal to select a value tending towards minus infinity. $c'$ and $c''$ can be computed in parallel though this is not implemented at this point. Further, building with a multithreaded BLAS can decrease the computation time of $\mat{X}_t^\top c''(\vec{\alpha}) \mat{X}_t$ along with the other matrix and vector products. We can make an implementation like the EKF which will reduce the memory requirement as we avoid storing the matrix $\mat{X}_t$.
 
-<<print_n_tail = 6>>=
+\subsection{Examples with SMA and GMA}
+We will use the \code{aids} data set to show that the predicted coefficients do converge quicker with the SMA and GMA methods than with the EKF with a single iteration in the correction step. We illustrate this below by estimating the model with SMA method, GMA method and EKF method. We set the convergence threshold lower than the default and use the correction step with the Cholesky decomposition in algorithm~\ref{alg:approxModeChol}. Further, we print out information while computing by setting the \code{verbose} argument to \code{ddhazard} to a positive number.
+
+<<echo=FALSE>>=
+set.seed(9145864)
+@
+
+
+<<print_n_tail = 2>>=
 fit_SMA <- ddhazard(
   Surv(stop, event) ~ AZT + gender + drug + prevOI,
   aids,
@@ -1025,15 +1017,31 @@ fit_SMA <- ddhazard(
   Q_0 = diag(10000, 5),
   verbose = 5,                      # Print information while computing
   control = list(
-    method = "SMA",         # Use SMA
+    method = "SMA",                 # Use SMA
     posterior_version = "cholesky", # The Cholesky decomposition method
-    eps = 0.001,                    # Convergence treshold for EM method
-    n_max = 100))                   # Maximum number of iteration of EM method
+    eps = 0.001))                   # Tolerance in EM method
 @
 
 % CHECK: arguments match
 
-<<print_n_tail = 6>>=
+<<print_n_tail = 2>>=
+fit_GMA <- ddhazard(
+  Surv(stop, event) ~ AZT + gender + drug + prevOI,
+  aids,
+  by = .5,
+  max_T = 19,
+  Q = diag(.1, 5),
+  Q_0 = diag(1, 5),                 # Decreased Q_0
+  verbose = 5,
+  control = list(
+    method = "GMA",                 # Use GMA instead
+    eps = 0.001))
+@
+
+
+% CHECK: arguments match
+
+<<print_n_tail = 2>>=
 fit_EKF <- ddhazard(
   Surv(stop, event) ~ AZT + gender + drug + prevOI,
   aids,
@@ -1044,41 +1052,39 @@ fit_EKF <- ddhazard(
   verbose = 5,
   control = list(
     method = "EKF",                 # Use EKF instead
-    eps = 0.001,
-    n_max = 100))
+    eps = 0.001))
 @
 
-The reduced amount of EM iterations can offset the benefit in terms of computation time of the EKF with the parallel computation if the data set is not too large or there are not many CPUs available. Figure~\ref{fig:EKF_vs_SMA_aids} shows the two set of predicted coefficients where the black line is the coefficients from the EKF and the gray line is with the SMA.
+The reduced amount of EM iterations can offset the benefit in terms of computation time of the EKF with the parallel computation if the data set is not too large or there are not many CPUs available. Figure~\ref{fig:EKF_vs_SMA_aids} shows the two set of predicted coefficients where the black line is the coefficients from the EKF and the gray line is with the SMA. The coefficients in figure~\ref{fig:EKF_vs_SMA_aids} seems quite similar accros the the three methods apart from the start where the SMA seems to give somewhat different results.
 
-<<EKF_vs_SMA_aids, par_2x3 = TRUE, fig.cap= "Predicted coefficients with using the EKF and SMA for the \\code{aids} data set. The gray lines are the coefficients from the SMA and the black lines are the coefficients form the EKF.", echo = FALSE>>=
+<<EKF_vs_SMA_aids, par_2x3 = TRUE, fig.cap= "Predicted coefficients using the EKF, GMA and SMA for the \\code{aids} data set. The gray lines are the coefficients from the SMA, red lines are coefficients from the GMA and the black lines are the coefficients form the EKF.", echo = FALSE>>=
 for(i in 1:5){
   plot(fit_EKF, cov_index = i)
   plot(fit_SMA, cov_index = i, col = "gray40", add = T)
+  plot(fit_GMA, cov_index = i, col = "red", add = T)
 }
 @
 
 \subsection{Summary on filters}
-All the filters have computational complexity $\bigO{n_t}$. Thus, the final EM algorithm in algorithm~\ref{alg:EM} is $\bigO{n_t}$. We summaries the pros and cons of the EKF, UKF and SMA in table~\ref{tab:proConsEKF},~\ref{tab:proConsUKF} and~\ref{tab:proConsSMA} respectively. Some of the points are under the assumption that the size of the risk set, $n_t$, is much greater than the dimension of the state vector, $q$. Lastly, it is possible to include weights for the individual for all the filters. The details hereof are in the ddhazard vignette of this package.
+All the filters have computational complexity $\bigO{n_t}$. Thus, the final EM algorithm in algorithm~\ref{alg:EM} is $\bigO{n_t}$ as the computation time of the specified parts of~\ref{alg:EM} is independent of $n_t$. We summaries the pros and cons of the EKF, UKF, SMA and GMA in table~\ref{tab:proConsEKF},~\ref{tab:proConsUKF},~\ref{tab:proConsSMA} and~\ref{tab:proConsGMA} respectively. Some of the points are under the assumption that the size of the risk set, $n_t$, is much greater than the dimension of the state vector, $q$. Lastly, it is possible to include weights for the individual for all the filters. The details hereof are in the ddhazard vignette of this package.
 
 \WiTbl{
 \textbf{Pros of EKF} & \\
 \hline
 Embarrassingly parallel & The most computational expensive part is easily computed in parallel. \\
 \hline
-$\mat{Q}_0$ & $\mat{Q}_0$ can be set to a diagonal matrix with large entries which exact values does not have a big impact. \\
+$\mat{Q}_0$ & $\mat{Q}_0$ can be set to a diagonal matrix with large entries, where the exact values do not have a big impact. \\
 \textbf{Cons of EKF} & \\
 \hline
-Linearisation & The linearisation may be a poor approximation. \\
-\hline
-  Modes & We get modes instead of the means which are required for the EM-algorithm.
-}{The pros and cons for the EKF.\label{tab:proConsEKF}}
+Linearisation & The linearisation may be a poor approximation.
+}{The pros and cons for the EKF with one iteration in the correction step.\label{tab:proConsEKF}}
 
 \WiTbl{
 \textbf{Pros of UKF} & \\
 \hline
 Approximation & Potentially better approximation than the EKF. \\
 \hline
-Parallel & The matrix and vector product can be computed in parallel with a multithreaded \pkg{BLAS}. Moreover, parts of the computations could be computed in parallel although this is not done with the current version.  \\
+Parallel & The matrix and vector product can be computed in parallel with a multithreaded \pkg{BLAS}. Moreover, parts of the computations could be computed in parallel although this is not done with the current implementation.  \\
 \textbf{Cons of UKF} & \\
 \hline
 $\mat{Q}_0$ & Sensitive to the choice of $\mat{Q}_0$. \\
@@ -1090,20 +1096,33 @@ Hyperparameters & Additional hyperparameters $(\alpha,\beta,\kappa)$ have to be 
 \WiTbl{
 \textbf{Pros of SMA} & \\
 \hline
-  Better approximation & Although we use the modes, we might get a good approximation of the modes which may be a better approximation of the means than given by the EKF and UKF. \\
+  Better approximation & We directly find the modes \\
 \hline
-  Likelihood & We maximize the likelihood directly instead of having to work with residuals. \\
+  Likelihood & We maximize the likelihood directly instead of having to work with residuals. That is, the residuals $y_{ijt} - h(\eta)$ in \citeAlgLine{alg:EKF:scoreVec}{alg:EKF} and \citeAlgLine{alg:EKFextra:scoreVec}{alg:EKFextra} and $\vec{y}_t - \overline{\vec{y}}$ in \citeAlgLine{alg:UKF:residual}{alg:UKF}. \\
 \hline
   Iterations & Predicted coefficients tend to converge in fewer iterations of the EM-algorithm. \\
 \hline
-  $\mat{Q}_0$ & $\mat{Q}_0$ can be set to a diagonal matrix with large entries which exact values does not have a big impact. \\
+  $\mat{Q}_0$ & $\mat{Q}_0$ can be set to a diagonal matrix with large entries, where the exact values do not have a big impact. \\
 \textbf{Cons of SMA} & \\
 \hline
   Sequential & The updates are sequential and hence cannot be done in parallel. \\ \hline
-  Ordering & The final outcome will depend on the order of the risk sets. \\
-\hline
-  Modes & We get modes instead of the means which are required for the EM-algorithm.
+  Ordering & The final outcome will depend on the order of the risk sets.
 }{The pros and cons for the SMA.\label{tab:proConsSMA}}
+
+\WiTbl{
+\textbf{Pros of GMA} & \\
+\hline
+  Better approximation & We directly find the modes \\
+\hline
+  Likelihood & We maximize the likelihood directly instead of having to work with residuals. That is, the residuals $y_{ijt} - h(\eta)$ in \citeAlgLine{alg:EKF:scoreVec}{alg:EKF} and \citeAlgLine{alg:EKFextra:scoreVec}{alg:EKFextra} and $\vec{y}_t - \overline{\vec{y}}$ in \citeAlgLine{alg:UKF:residual}{alg:UKF}. \\
+\hline
+  Iterations & Predicted coefficients tend to converge in fewer iterations of the EM-algorithm. \\
+\hline
+Parallel & The matrix and vector product can be computed in parallel with a multithreaded \pkg{BLAS}. Moreover, parts of the computations could be computed in parallel although this is not done with the current implementation. \\
+\textbf{Cons of GMA} & \\
+\hline
+$\mat{Q}_0$ & Sensitive to the choice of $\mat{Q}_0$.
+}{The pros and cons for the GMA. The EKF with more iteration in the correction step is very similar as shown in the ddhazard vignette. Thus, some of the points also applies to algorithm~\ref{alg:EKFextra}.\label{tab:proConsGMA}}
 
 \subsection{Constant effects}
 We may assume that some of the coefficients are constant (time-invariant). Two methods are implemented to estimate such coefficients: one that augments the state vector and estimate the coefficients in the E-step and one that estimates the coefficients by a first order Taylor expansion in the M-step. The computation in the E-step is achieved by augmenting the state vector with the fixed coefficients. Further, we set the entries of the rows and columns of $\mat{Q}$ for the fixed coefficients to zero and set the corresponding diagonal entries of $\mat{Q}_0$ to large values. It is a common way of estimating parameters in filtering (see e.g. \cite{Harvey79}) and is equivalent to Recursive Least Squares if all coefficients are fixed. This approach is also used in~\cite{Fahrmeir92} with the EKF.
@@ -1117,7 +1136,8 @@ The other method is to estimate the fixed coefficients in the M-step. The fixed 
 \emNotee{\vec{a}}{d}{d}, \emNotee{\mat{V}}{d}{d}}
 \end{equation}
 
-where we temporarily add an additional argument in the log likelihood terms, $l_{ijt}$, for the fixed effects. The current implementation makes a first order Taylor expansion around the means $\emNotee{\vec{a}}{1}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ to get:
+where we temporarily add an additional argument in the log likelihood terms, $l_{ijt}$, for the fixed effects. This further complicated by the fact that $\emNotee{\vec{a}}{0}{d}, \emNotee{\mat{V}}{0}{d}, \dots,
+\emNotee{\vec{a}}{d}{d}, \emNotee{\mat{V}}{d}{d}$ are modes and not means when we use the EKF, SMA or GMA. The current implementation makes a first order Taylor expansion around the $\emNotee{\vec{a}}{1}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ to get:
 
 \begin{equation}
 \begin{aligned}
@@ -1129,24 +1149,26 @@ where we temporarily add an additional argument in the log likelihood terms, $l_
 \end{aligned}
 \end{equation}
 
-One of the advantageous of doing this is that the problem can be solved with regular methods for Generalized Linear Models (GLM) when the model is from the exponential family. This is true for all the models in the current implementation. The design matrix will though be big as each individual will yield multiple rows due to different offset in each time interval from the dot product between the time-varying coefficients, $\emNotee{\vec{a}}{t}{d}$, and the corresponding covariates. Thus, we use the same \proglang{Fortran} code  from~\citep{Miller92} to do a series of rank-one updates of the QR-decomposition to solve the GLM problem as the package \pkg{biglm}~\citep{biglm}. The computational complexity of each update is $\bigO{c^2}$ where $c$ is the dimension of $\vec{\gamma}$.
+One of the advantages of doing this is that the problem can be solved with regular methods for Generalized Linear Models (GLM) when the model is from the exponential family. However, the design matrix will be big as each individual will yield multiple rows due to different offsets. Each time interval with have different a dot product between the time-varying coefficients, $\emNotee{\vec{a}}{t}{d}$, and the corresponding covariates. Hence, we have different offsets in each time interval for a given individual. To overcome this problem the, the current implementation uses the same \proglang{Fortran} code  from~\citep{Miller92} to do a series of rank-one updates of the QR-decomposition to solve the GLM problem. This is the same approach as in the package \pkg{biglm}~\citep{biglm}. The computational complexity of each update is $\bigO{c^2}$ where $c$ is the dimension of $\vec{\gamma}$.
 
 \subsection{Second order random walk}
 
-We will end this part of the paper by illustrating that the difference between the two ways of estimating the fixed coefficients when applied to the \code{aids} data set. Further, we will illustrate the use of the second order random walk. We estimate the model below where \code{AZT} and \code{prevOI} have fixed coefficients by wrapping the terms in the function \code{ddFixed}. Further, we specify the second order random walk for the other terms by setting the argument \code{order = 2}. The fixed effect estimation method is selected to the M-step method by setting \code{fixed_terms_method = "M_step"} in the list passed to the \code{control} argument. We increase the interval lengths, \code{by}, as not doing so causes divergence if we do not decrease the learning rate.
+We will end this part of the paper by illustrating that the difference between the two ways of estimating the fixed coefficients when applied to the \code{aids} data set. Further, we will illustrate the use of the second order random walk. We estimate the model below where \code{AZT} and \code{prevOI} have fixed coefficients by wrapping the terms in the function \code{ddFixed}. Further, we specify the second order random walk for the other terms by setting the argument \code{order = 2}. The fixed effect estimation method is selected to the M-step method by setting \code{fixed_terms_method = "M_step"} in the list passed to the \code{control} argument. We avoid divergence by decrease the learning rate by passing \code{LR} lower in the list passed to the control argument.
 
 <<>>=
 fit_M_step <- ddhazard(
-  Surv(stop, event) ~
+  Surv(stop, event) ~ - 1 +          # No intercept
     ddFixed(AZT) + ddFixed(prevOI) + # Wrap in ddFixed for fixed coefficients
     gender + drug,
   aids,
   order = 2,                         # Get 2. order
-  by = 1.5,                          # Increased interval lengths
+  by = 1,
   max_T = 19,
-  Q = diag(.01, 3),
-  Q_0 = diag(10000, 6),              # Needs more elements
+  Q = diag(.1, 2),
+  Q_0 = diag(1, 4),                  # Needs more elements
   control = list(
+    LR = .33,
+    method = "GMA",
     fixed_terms_method = "M_step"))  # Use M-step method
 @
 
@@ -1154,16 +1176,19 @@ fit_M_step <- ddhazard(
 
 <<echo=FALSE>>=
 fit_E_step <- ddhazard(
-  Surv(stop, event) ~
+  Surv(stop, event) ~ -1 +
     ddFixed(AZT) + ddFixed(prevOI) +
     gender + drug,
   aids,
   order = 2,
-  by = 1.5,
+  by = 1,
   max_T = 19,
-  Q = diag(.01, 3),
-  Q_0 = diag(10000, 6),
+  Q = diag(.1, 2),
+  Q_0 = diag(1, 4),
   control = list(
+    LR = .33,
+    Q_0_term_for_fixed_E_step = 1,
+    method = "GMA",
     fixed_terms_method = "E_step"))
 @
 
@@ -1174,7 +1199,15 @@ fit_M_step$fixed_effects
 fit_E_step$fixed_effects
 @
 
-There is some difference with respect to coefficient for \code{prevOI}. A plot of the predicted time-varying coefficients is shown in figure~\ref{fig:second_order_aids}. The predicted coefficients are more smooth as expected with the second order random walk compared to the previous fits with the first order random walk. The gray line is with fixed effects estimated in the E-step and the black line is with the fixed effects estimated in the M-step. The different is not too big.
+There is some difference with respect to coefficient for \code{prevOI}. A plot of the predicted time-varying coefficients is shown in figure~\ref{fig:second_order_aids}. The predicted coefficients are more smooth as expected with the second order random walk compared to the previous fits with the first order random walk. The gray line is with fixed effects estimated in the E-step and the black line is with the fixed effects estimated in the M-step.
+
+Notice that the difference is in the coefficient for the factor for \code{prevOI} and there is also some difference in the intercept in figure~\ref{fig:second_order_aids}. The cause may be that the there are very few events in the \code{noAIDS} group towards the end as the next code shows:
+
+<<>>=
+aids$stop_cut <- cut(aids$stop, breaks = c(0, 5, 10, 15, Inf))
+ftable(xtabs(~ prevOI + I(event * (stop <= 19))
+             + stop_cut, aids), row.vars = 1:2)
+@
 
 % CHECK: colors match with text and cap
 
@@ -1185,8 +1218,6 @@ for(i in 1:3){
   plot(fit_E_step, cov_index = i, add = TRUE, col = "gray40")
 }
 @
-
-
 
 
 \section{Models}\label{sec:mod}

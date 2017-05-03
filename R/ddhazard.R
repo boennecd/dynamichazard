@@ -162,7 +162,7 @@ ddhazard = function(formula, data,
 
   if(is.null(control$Q_0_term_for_fixed_E_step)){
     control$Q_0_term_for_fixed_E_step <- ifelse(
-      control$method == "UKF", 1, 1e5) # quite abritary values (especially the former - the latter is not too important)
+      control$method %in% c("UKF", "GMA"), 1, 1e5) # quite abritary values (especially the former - the latter is not too important)
   }
 
   if(!control$fixed_terms_method %in% c("M_step", "E_step"))
@@ -193,7 +193,7 @@ ddhazard = function(formula, data,
 
   # Check if there are any fixed coefficients. If not set the fixed
   # coefficients to an empty vector
-  if(is.null(attr(X_Y$formula, "specials")$ddFixed))
+  if(is.null(attr(X_Y$formula, "specials")[ddfixed_specials]))
     if(is.null(control$fixed_parems_start))
       control$fixed_parems_start <- vector("double")
 
@@ -230,7 +230,7 @@ ddhazard = function(formula, data,
       stop("Method not implemented to find initial values for '", model, "'. Please, provide intial values for a_0")
 
     is_fixed <- seq_along(tmp_mod$coefficients) %in% (
-      attr(X_Y$formula, "specials")$ddFixed -
+      unlist(attr(X_Y$formula, "specials")[ddfixed_specials]) -
         !attr(X_Y$formula, "intercept"))
 
     if(missing_a_0){
@@ -266,7 +266,7 @@ ddhazard = function(formula, data,
 
   if(length(a_0) != n_params * order)
     stop("a_0 does not have the correct length. Its length should be ", n_params * order,
-         " but it has length", length(a_0), " ")
+         " but it has length ", length(a_0), " ")
 
   if(order > 1){
     tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)

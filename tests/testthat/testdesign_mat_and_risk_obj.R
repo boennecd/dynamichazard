@@ -259,14 +259,13 @@ design_no_Y <- do.call(get_design_matrix, arg_list)
 
 test_that("get_design_matrix with versus without response", {
   expect_equal(design$X, design_no_Y$X)
-  expect_false(design$formula == design_no_Y$formula)
   expect_null(design_no_Y$Y)
 })
 
 arg_list$data <- sims[, !colnames(sims) %in% c("tstart", "tstop", "event")]
 
 tryCatch({
-  test_that("calling get_design_matrix without response and also no response in data",{
+  test_that("calling get_design_matrix without response and also no response in data works and give the same as calling with response",{
     design_no_Y_also_in_data <- do.call(get_design_matrix, arg_list)
 
     expect_equal(design_no_Y_also_in_data$X, design_no_Y$X)
@@ -276,6 +275,70 @@ tryCatch({
 }, error = function(...){
   test_that("calling get_design_matrix without response and also no response in data",
             expect_true(FALSE))
+})
+
+test_that("dimension are correct with get_design_matrix with different combinations of fixed or not fixed factor",{
+  #####
+  # Only time varying w/ no intercept
+  dsng_mat <- get_design_matrix(
+    Surv(tstart, tstop, event) ~
+      -1 + as.factor(x1 > .5) + as.factor(x2 > .5) + as.factor(x3 > .5), sims)
+
+  expect_equal(ncol(dsng_mat$fixed_terms), 0)
+  expect_equal(ncol(dsng_mat$X), 4)
+  expect_equal(colnames(dsng_mat$X),
+               c("as.factor(x1 > 0.5)FALSE", "as.factor(x1 > 0.5)TRUE",
+                 "as.factor(x2 > 0.5)TRUE", "as.factor(x3 > 0.5)TRUE"))
+
+  #####
+  # Only time varying w/ intercept
+  dsng_mat <- get_design_matrix(
+    Surv(tstart, tstop, event) ~
+      as.factor(x1 > .5) + as.factor(x2 > .5) + as.factor(x3 > .5), sims)
+
+  expect_equal(ncol(dsng_mat$fixed_terms), 0)
+  expect_equal(ncol(dsng_mat$X), 4)
+  expect_equal(colnames(dsng_mat$X),
+               c("(Intercept)", "as.factor(x1 > 0.5)TRUE",
+                 "as.factor(x2 > 0.5)TRUE", "as.factor(x3 > 0.5)TRUE"))
+
+  #####
+  # No intercept w/ mixed fixed and time-varying effects
+  dsng_mat <- get_design_matrix(
+    Surv(tstart, tstop, event) ~
+      -1 + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5), sims)
+
+  expect_equal(ncol(dsng_mat$fixed_terms), 2)
+  expect_equal(colnames(dsng_mat$fixed_terms),
+               c("ddFixed(as.factor(x1 > 0.5))FALSE", "ddFixed(as.factor(x1 > 0.5))TRUE"))
+  expect_equal(ncol(dsng_mat$X), 2)
+  expect_equal(colnames(dsng_mat$X),
+               c("as.factor(x2 > 0.5)TRUE", "as.factor(x3 > 0.5)TRUE"))
+
+  #####
+  # Fixed intercept w/ mixed fixed and time-varying effects
+  dsng_mat <- get_design_matrix(
+    Surv(tstart, tstop, event) ~
+      ddFixed(1) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5), sims)
+  expect_equal(ncol(dsng_mat$fixed_terms), 2)
+  expect_equal(colnames(dsng_mat$fixed_terms),
+               c("ddFixed((Intercept))", "ddFixed(as.factor(x1 > 0.5))TRUE"))
+  expect_equal(ncol(dsng_mat$X), 2)
+  expect_equal(colnames(dsng_mat$X),
+               c("as.factor(x2 > 0.5)TRUE", "as.factor(x3 > 0.5)TRUE"))
+
+  # all these formulas should give the same
+  for(frm in list(
+    Surv(tstart, tstop, event) ~ -1 + ddFixed(1) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5),
+    Surv(tstart, tstop, event) ~ ddFixed(rep(1, nrow(data))) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5),
+    Surv(tstart, tstop, event) ~ -1 + ddFixed(rep(1, nrow(data))) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5),
+    Surv(tstart, tstop, event) ~ ddFixed_intercept(nrow(data)) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5),
+    Surv(tstart, tstop, event) ~ -1 + ddFixed_intercept(nrow(data)) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5))){
+    new_dsng_mat <- get_design_matrix(frm, sims)
+
+    expect_equal(dsng_mat$X, new_dsng_mat$X)
+    expect_equal(dsng_mat$fixed_terms, new_dsng_mat$fixed_terms)
+  }
 })
 
 # Test that removal of intercepts works as in lm

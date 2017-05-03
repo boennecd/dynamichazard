@@ -22,4 +22,3 @@ Arguments have the same effects as for an object from a \code{\link{boot}} call.
 \seealso{
 \code{\link{ddhazard_boot}}
 }
-

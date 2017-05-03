@@ -29,4 +29,3 @@
 \description{
 Plot function for state space errors from \code{\link{ddhazard}} fit
 }
-

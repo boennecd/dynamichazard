@@ -34,4 +34,3 @@ See the vignette 'Bootstrap illustration'. The \code{do_stratify_with_event} may
 \seealso{
 \code{\link{ddhazard}}, \code{\link[=plot.fahrmeier_94]{plot}}
 }
-

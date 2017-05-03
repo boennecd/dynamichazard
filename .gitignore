@@ -30,6 +30,7 @@ vignettes/jss/figure/
 vignettes/jss/sim_env.Rds
 vignettes/jss/results_from_simulation.Rds
 vignettes/jss/jss*
+vignettes/jss/jss*
 
 sandbox/*
 Rprof.out

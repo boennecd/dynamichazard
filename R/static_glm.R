@@ -34,7 +34,6 @@ get_survival_case_weights_and_data = function(
   c_outcome = "Y",
   c_weights = "weights",
   c_end_t = "t"){
-
   X_Y = get_design_matrix(formula, data, predictors = F)
   formula <- X_Y$formula
   attr(data, "class") <- c("data.table", attr(data, "class"))
@@ -167,10 +166,10 @@ static_glm = function(
     X <- tmp$X
     rm(tmp)
 
-    formula <- formula(terms(formula, data = data))
-
     data <- X
-    formula = update(formula, Y ~ ., data = data)
+    formula <- update(formula, Y ~ ., data = data)
+    formula <- terms(formula, data = data, specials = ddfixed_specials)
+    class(formula) <- c("ddformula", class(formula))
 
   } else if(family == "exponential"){
     family <- poisson()
@@ -188,15 +187,14 @@ static_glm = function(
                log_delta_time = log(pmin(X_Y$Y[, 2], max_T) - X_Y$Y[, 1]),
                weights = rep(1, nrow(data)))
 
-    formula <- formula(terms(formula, data = data))
-
     data <- X
-    formula = update(formula, Y ~ . + offset(log_delta_time), data = data)
+    formula <- update(formula, Y ~ . + offset(log_delta_time), data = data)
+    formula <- terms(formula, data, specials = ddfixed_specials)
+    class(formula) <- c("ddformula", class(formula))
 
   } else
     stop("family '", family, "' not implemented in static_glm")
 
-  environment(formula) <- environment() # Needed in case we have a fixed intercept
   if(speedglm && requireNamespace("speedglm", quietly = T))
     return(speedglm::speedglm(formula = formula, data = data, family = family, model = model, ...))
 

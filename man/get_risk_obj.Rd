@@ -36,4 +36,3 @@ A list with the following elements:
 \description{
 Get the risk set at each bin over an equal distance grid
 }
-

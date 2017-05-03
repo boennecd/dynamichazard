@@ -35,4 +35,3 @@ Plot to illustrate the estimate state space variables from a \code{\link{ddhazar
 \details{
 Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
 }
-

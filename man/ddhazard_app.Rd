@@ -23,4 +23,3 @@ dynamichazard::ddhazard_app()
 dynamichazard::ddhazard_app(seed = 1, more_options = TRUE)
 }
 }
-

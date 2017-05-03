@@ -24,7 +24,7 @@ LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo
 Imports: parallel, Rcpp (>= 0.12.6), boot, stringr, data.table
 Depends: R (>= 3.3.2), stats, graphics, utils, survival
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
 Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR, R.rsp, speedglm, dichromat, colorspace
 VignetteBuilder: knitr, R.rsp
 BugReports: https://github.com/boennecd/dynamichazard/issues
