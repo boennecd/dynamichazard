@@ -615,8 +615,6 @@ test_that("Parallel and non-parallel version gives the same for get_risk_set", {
       intercept_start = - 5, sds = c(sqrt(.1), rep(1, 1)),
       x_range = 1, x_mean = .5)$res
 
-  # TODO: clean up
-
   p1 <- with(s, get_risk_obj(
     Y = Surv(tstart, tstop, event),
     by = 1, max_T = 10, id = id, is_for_discrete_model = T))

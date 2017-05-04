@@ -229,9 +229,9 @@ ddhazard = function(formula, data,
     } else
       stop("Method not implemented to find initial values for '", model, "'. Please, provide intial values for a_0")
 
-    is_fixed <- seq_along(tmp_mod$coefficients) %in% (
-      unlist(attr(X_Y$formula, "specials")[ddfixed_specials]) -
-        !attr(X_Y$formula, "intercept"))
+    is_fixed <-
+      names(tmp_mod$coefficients) %in% colnames(X_Y$fixed_terms) |
+      grepl("^ddFixed_intercept\\(", names(tmp_mod$coefficients), perl = TRUE)
 
     if(missing_a_0){
       message("a_0 not supplied. One iteration IWLS of static glm model is used")
@@ -240,7 +240,6 @@ ddhazard = function(formula, data,
 
     if(missing_fixed){
       control$fixed_parems_start <- tmp_mod$coefficients[is_fixed]
-
     }
 
     rm(tmp_mod)

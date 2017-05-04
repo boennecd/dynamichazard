@@ -119,6 +119,12 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
     old_beta = p_data->fixed_parems;
     p_data->fixed_parems = bigglm_regcf(qr);
 
+    if(p_data->debug){
+      Rcpp::Rcout << "Iteration " << it_outer + 1 << " of estimating fixed effects in M-step" << std::endl;
+      my_print(old_beta, "Fixed effects before update");
+      my_print(p_data->fixed_parems, "Fixed effects after update");
+    }
+
   } while(++it_outer < p_data->max_it_fixed_params && // Key that this the first condition we check when we use &&
     arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems);
 
@@ -307,6 +313,14 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     a_prev.zeros();
   }
 
+  arma::mat varying_only_F = p_data->F_;
+
+  if(p_data->any_fixed_terms_in_state_vec){
+    varying_only_F.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
+    varying_only_F.shed_cols(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
+  }
+
+
   do
   {
     if(p_data->debug){
@@ -460,7 +474,6 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
     double log_like = 0.0;
     if(p_data->criteria == "delta_likeli" || (verbose && it % 5 < verbose)){
-      arma::mat varying_only_F = p_data->F_; // take copy. TODO: only do this once
       arma::mat varying_only_a = p_data->a_t_t_s; // take copy
       arma::vec fixed_effects_offsets;
 
@@ -473,9 +486,6 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
           p_data->a_t_t_s(p_data->span_fixed_params, arma::span::all).col(0);
 
         varying_only_a.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
-        varying_only_F.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
-        varying_only_F.shed_cols(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
-
 
       } else{
         fixed_effects_offsets = arma::vec(p_data->X.n_cols, arma::fill::zeros);

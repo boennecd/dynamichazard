@@ -581,8 +581,8 @@ server <- function(input, output) {
     for(i in (1+n_fixed):6){
       j <- i - n_fixed
       fac <- qnorm(.5 - .95 / 2)
-      lb = fit$state_vecs[, j] + fac * sqrt(fit$state_vars[i, j, ])
-      ub = fit$state_vecs[, j] - fac * sqrt(fit$state_vars[i, j, ])
+      lb = fit$state_vecs[, j] + fac * sqrt(fit$state_vars[j, j, ])
+      ub = fit$state_vecs[, j] - fac * sqrt(fit$state_vars[j, j, ])
 
       polygon(c(x, rev(x)), c(ub, rev(lb)),
               col = cols_conf[i], border = NA)

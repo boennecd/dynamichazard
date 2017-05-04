@@ -118,7 +118,7 @@ summary(microbenchmark::microbenchmark(
 set.seed(4296745)
 sims <-
   test_sim_func_logit(
-    n_series = 5e4, n_vars = 4, beta_start = rnorm(4),
+    n_series = 1e5, n_vars = 4, beta_start = rnorm(4),
     intercept_start = - 3, sds = c(sqrt(.1), rep(.5, 4)),
     x_range = 2, x_mean = 0)
 sum(sims$res$event)

@@ -95,7 +95,7 @@ get_design_matrix = function(formula, data, response = T, predictors = T){
   }
 
   # Change fixed_terms name if ddFixed(1) or similar was used
-  is_ddFixed_intercept <- grepl("^ddFixed_intercept\\(.+\\)1$", colnames(fixed_terms))
+  is_ddFixed_intercept <- grepl("^ddFixed_intercept\\(.+\\)1$", colnames(fixed_terms), perl = TRUE)
   if(any(is_ddFixed_intercept)){
     old_name <- colnames(fixed_terms)[is_ddFixed_intercept]
     new_name <- "ddFixed((Intercept))"
