@@ -212,37 +212,47 @@ ddhazard = function(formula, data,
       glm_func <- function(fam)
         suppressWarnings( # Get warning due to convergence failures when maxit = 1
           static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
-                     maxit = 1, family = fam, speedglm = T))
+                     maxit = 1, family = fam, speedglm = T,
+                     only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms)))
     } else {
       glm_func <- function(fam)
         static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
-                   control = stats::glm.control(epsilon = Inf), family = fam,
-                   speedglm = F)
+                   epsilon = Inf, family = fam,
+                   speedglm = F,
+                   only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms))
     }
 
     if(model == "logit"){
-      tmp_mod = glm_func("binomial")
+      coefs = glm_func("binomial")
 
     } else if(model %in% exp_model_names){
-      tmp_mod = glm_func("exponential")
+      coefs = glm_func("exponential")
 
     } else
       stop("Method not implemented to find initial values for '", model, "'. Please, provide intial values for a_0")
 
     is_fixed <-
-      names(tmp_mod$coefficients) %in% colnames(X_Y$fixed_terms) |
-      grepl("^ddFixed_intercept\\(", names(tmp_mod$coefficients), perl = TRUE)
+      names(coefs) %in% colnames(X_Y$fixed_terms) |
+      grepl("^ddFixed_intercept\\(", names(coefs), perl = TRUE)
 
     if(missing_a_0){
       message("a_0 not supplied. One iteration IWLS of static glm model is used")
-      a_0 = rep(tmp_mod$coefficients[!is_fixed], order)
+      a_0 = rep(coefs[!is_fixed], order)
+
+      if(verbose){
+        message("Starting value for time-varying coeffecients are:")
+        print(a_0)
+      }
     }
 
     if(missing_fixed){
-      control$fixed_parems_start <- tmp_mod$coefficients[is_fixed]
-    }
+      control$fixed_parems_start <- coefs[is_fixed]
 
-    rm(tmp_mod)
+      if(verbose && length(control$fixed_parems_start) > 0){
+        message("Starting value for fixed coeffecients are:")
+        print(control$fixed_parems_start)
+      }
+    }
   }
 
   if(is.vector(Q) && length(Q) == 1)

@@ -193,7 +193,7 @@ void SMA<T>::solve(){
         const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, is_event, at_risk_lenght);
         const double neg_second_d = - w * T::second_d(c, offset, at_risk_lenght);
 
-        a -= p_dat.LR * ((f2 - c) * f1) * inter_vec;
+        a -= (p_dat.LR * (f2 - c) * f1) * inter_vec;
         sym_mat_rank_one_update(
           - neg_second_d  / (1. + neg_second_d / f1), inter_vec, V);
 

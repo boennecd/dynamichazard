@@ -78,31 +78,65 @@ summary(bench)
 set.seed(4296745)
 sims <-
   test_sim_func_logit(
-    n_series = 1e4, n_vars = 4, beta_start = rnorm(4),
+    n_series = 2e5, n_vars = 4, beta_start = rnorm(4),
     intercept_start = - 5, sds = c(sqrt(.1), rep(.3, 4)),
     x_range = 2, x_mean = .5)$res
 
 library(profvis)
 library(dynamichazard)
 
-p <- profvis({
+(p <- profvis({
   tmp_mod = static_glm(Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                        data = sims, id = sims$id, by = 1,
                        control = stats::glm.control(epsilon = Inf), family = "binomial")
-})
+}))
 
-p
+
+frm <- Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id
+
+tmp <- get_design_matrix(frm, sims)
+
+(p <- profvis({
+  tmp_mod = static_glm(Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+                       data = sims, id = sims$id, by = 1,
+                       epsilon = Inf, family = "binomial",
+                       only_coef = TRUE, mf = cbind(tmp$X, tmp$fixed_terms))
+}))
+
+(p <- profvis({
+  static_glm(
+    frm,
+    data = sims, id = sims$id, by = 1, family = "binomial", speedglm = T,
+    maxit = 1, only_coef = TRUE, mf = cbind(tmp$X, tmp$fixed_terms))
+}))
+
 
 summary(microbenchmark::microbenchmark(
-  glm = static_glm(Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+   glm = (f1 <- static_glm(frm,
                    data = sims, id = sims$id, by = 1,
-                   control = stats::glm.control(epsilon = Inf), family = "binomial"),
-  speedglm = static_glm(
-    Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+                   control = stats::glm.control(epsilon = Inf), family = "binomial")),
+
+  speedglm = (f2 <- static_glm(
+    frm,
     data = sims, id = sims$id, by = 1, family = "binomial", speedglm = T,
-    maxit = 1),
-  times = 5
+    maxit = 1)),
+
+  glm_coef = (f3 <-
+                static_glm(frm,
+                           data = sims, id = sims$id, by = 1,
+                           epsilon = Inf, family = "binomial",
+                           only_coef = TRUE, mf = cbind(tmp$X, tmp$fixed_terms))),
+
+  speedglm_coef = (f4 <- static_glm(
+    frm,
+    data = sims, id = sims$id, by = 1, family = "binomial", speedglm = T,
+    maxit = 1, only_coef = TRUE, mf = cbind(tmp$X, tmp$fixed_terms))),
+
+
+  times = 10
 ))
+
+rbind(f1$coefficients, f2$coefficients, f3, f4)
 
 
 summary(microbenchmark::microbenchmark(
@@ -122,6 +156,8 @@ sims <-
     intercept_start = - 3, sds = c(sqrt(.1), rep(.5, 4)),
     x_range = 2, x_mean = 0)
 sum(sims$res$event)
+
+options(ddhazard_use_speedglm = T)
 
 p <- profvis({
   dd_fit <- ddhazard(

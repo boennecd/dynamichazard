@@ -109,5 +109,67 @@ test_that("get_survival_case_weights_and_data work w/ factors and weights",{
   expect_equal(tmp$x, res$X$x[1:5*2])
 })
 
+test_that("Gets error with only_coef = TRUE and no mf",{
+  expect_error(
+    static_glm(only_coef = T),
+    "^mf must be supplied when only_coef = TRUE$")
+})
+
+test_that("Gets same with glm with only_coef = TRUE", {
+  set.seed(3946519)
+  sims <-
+    test_sim_func_logit(
+      n_series = 5e2, n_vars = 4, beta_start = rnorm(4),
+      intercept_start = - 5, sds = c(sqrt(.1), rep(.3, 4)),
+      x_range = 2, x_mean = .5)$res
+
+  # We include a transformation which will affect the final model.frame so that
+  # it does not just include the linear terms
+  frm <- Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id + x1^2
+
+  for(m in c("logit", "exponential")){
+    tmp <- get_design_matrix(frm, sims)
+
+    f1 <- static_glm(
+      frm, data = sims, by = 1, max_T = 10, family = m,
+      id = sims$id, only_coef = T, mf = cbind(tmp$X, tmp$fixed_terms))
+    f2 <- static_glm(
+      frm, data = sims, by = 1, max_T = 10, family = m,
+      id = sims$id, only_coef = F)
+
+    expect_equal(f1, f2$coefficients)
+  }
+})
+
+test_that("Gets same with speedglm with only_coef = TRUE", {
+  if(requireNamespace("speedglm", quietly = T)){
+    set.seed(3946519)
+    sims <-
+      test_sim_func_logit(
+        n_series = 5e2, n_vars = 4, beta_start = rnorm(4),
+        intercept_start = - 5, sds = c(sqrt(.1), rep(.3, 4)),
+        x_range = 2, x_mean = .5)$res
+
+    # We include a transformation which will affect the final model.frame so that
+    # it does not just include the linear terms
+    frm <- Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id + x1^2
+
+    for(m in c("logit", "exponential")){
+      tmp <- get_design_matrix(frm, sims)
+
+      f1 <- static_glm(
+        frm, data = sims, by = 1, max_T = 10, family = m,
+        id = sims$id, only_coef = T, mf = cbind(tmp$X, tmp$fixed_terms),
+        speedglm = T)
+      f2 <- static_glm(
+        frm, data = sims, by = 1, max_T = 10, family = m,
+        id = sims$id, only_coef = F,
+        speedglm = T)
+
+      expect_equal(f1, f2$coefficients)
+    }
+  }
+})
+
 # Had issues with win builder. Thus, these lines
 cat("\nFinished", test_name, "\n")

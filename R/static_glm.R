@@ -139,22 +139,38 @@ get_survival_case_weights_and_data = function(
 
 #' Function to make a static glm fit
 #' @inheritParams get_survival_case_weights_and_data
+#' @param ... arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used
 #' @param family \code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
 #' @param weights weights if a skewed sample or similar is used
-#' @param ... arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}
 #' @param speedglm \code{TRUE} if \code{\link[speedglm]{speedglm}} should be used.
+#' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{\link{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.
+#' @param mf model frame for regression. Needed when \code{only_coef = TRUE}
 #'
 #' @details
 #' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
 #'
 #' @return
-#' The returned list from the \code{\link{glm}} call
+#' The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}
 #'
 #' @export
 static_glm = function(
-  formula, data, by, max_T, id, family = "logit", model = F, weights, risk_obj = NULL, ...,
-  speedglm = F){
+  formula, data, by, max_T, ..., id, family = "logit", model = F, weights, risk_obj = NULL,
+  speedglm = F, only_coef = FALSE, mf){
+  if(only_coef && missing(mf))
+    stop("mf must be supplied when only_coef = TRUE")
+
+  if(!missing(mf) && nrow(mf) != nrow(data))
+    stop("data and mf must have the same number of rows")
+
+  if(only_coef){
+    # We mark the row numbers as some may be removed and the order may be
+    # changed
+    col_for_row_n <- ncol(data) + 1
+    data[[col_for_row_n]] <- 1:nrow(data)
+    col_for_row_n <- colnames(data)[col_for_row_n]
+  }
+
   if(family %in% c("binomial", "logit")){
     family <- binomial()
 
@@ -173,6 +189,7 @@ static_glm = function(
 
   } else if(family == "exponential"){
     family <- poisson()
+    # TODO: can be quicker when we just want the outcome
     X_Y = get_design_matrix(formula, data)
     X_Y$X <- X_Y$X[, -1] # remove the intercept
 
@@ -182,8 +199,8 @@ static_glm = function(
     data <- data[is_before_max_T, ]
     X_Y$Y <- X_Y$Y[is_before_max_T, ]
 
-    X <- cbind(data,
-               Y = X_Y$Y[, 3] & (X_Y$Y[, 2] <= max_T),
+    X <- cbind(Y = X_Y$Y[, 3] & (X_Y$Y[, 2] <= max_T),
+               data,
                log_delta_time = log(pmin(X_Y$Y[, 2], max_T) - X_Y$Y[, 1]),
                weights = rep(1, nrow(data)))
 
@@ -195,8 +212,39 @@ static_glm = function(
   } else
     stop("family '", family, "' not implemented in static_glm")
 
-  if(speedglm && requireNamespace("speedglm", quietly = T))
-    return(speedglm::speedglm(formula = formula, data = data, family = family, model = model, ...))
+  if(only_coef){
+    new_order <- data[[col_for_row_n]]
+    mf <- mf[new_order, , drop = FALSE]
+  }
+
+  if(speedglm && requireNamespace("speedglm", quietly = T)){
+    if(only_coef){
+      offset <- if(family$family == "poisson")
+        data$log_delta_time else rep(0, nrow(mf))
+
+      fit <- speedglm::speedglm.wfit(
+        X = mf, y = data$Y, weights = data$weights,
+        family = family, offset = offset, ...)
+
+      return(fit$coefficients)
+    }
+
+    return(speedglm::speedglm(
+      formula = formula, data = data, family = family, model = model,
+      weights = data$weights, ...))
+  }
+
+  if(only_coef){
+    ctrl <- do.call(glm.control, list(...))
+
+    offset <- if(family$family == "poisson")
+      data$log_delta_time else rep(0, nrow(mf))
+
+    fit <- glm.fit(x = mf, y = data$Y, weights = data$weights,
+                   family = family, control = ctrl, offset = offset)
+
+    return(fit$coefficients)
+  }
 
   glm(formula = formula, data = data, family = family, model = model, weights = weights, ...)
 }
