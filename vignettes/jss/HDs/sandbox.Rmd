@@ -647,8 +647,7 @@ ddfit <- ddhazard(
   control = list(
     method = "EKF",
     NR_eps = .1, 
-    LR = .5
-  ))
+    LR = .5))
 ```
 
 Plots of the predicted coefficients for each of the factors are given below (note that we do not use a reference point in this model - there is no intercept):
