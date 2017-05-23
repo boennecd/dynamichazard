@@ -391,9 +391,11 @@ pbc <- survival::pbc
 pbcseq <- survival::pbcseq
 
 temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))
-pbc2 <- tmerge(temp, temp, id=id, death = event(time, status))
-pbc2 <- tmerge(pbc2, pbcseq, id=id, albumin = tdc(day, albumin),
-               protime = tdc(day, protime), bili = tdc(day, bili))
+pbc2 <- survival::tmerge(
+  temp, temp, id=id, death = event(time, status))
+pbc2 <- survival::tmerge(
+  pbc2, pbcseq, id=id, albumin = tdc(day, albumin),
+  protime = tdc(day, protime), bili = tdc(day, bili))
 pbc2 <- pbc2[, c("id", "tstart", "tstop", "death", "sex", "edema",
                  "age", "albumin", "protime", "bili")]
 

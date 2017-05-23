@@ -964,6 +964,8 @@ A disadvantage of SMA is that it is sequential and all matrix and vector product
 \end{algorithmic}
 \end{algorithm}
 
+The method described here is a generalization of the univariate filtering described in \cite{Koopman00}. \cite{Koopman00} describes their univariate filtering for a linear Gaussian observational equation whereas the method here is for a non-linear observational equation.
+
 \subsection{Global mode approximation}
 We can directly minimize equation~\ref{eqn:modeExact}. We denote this as the Global Mode Approximation (GMA). This is equivalent to a L2 penalized for a Generalized Linear Models (GLM) since we only use models from the exponential family. This can be done with the usual iteratively reweighed ridge regression. Every iteration can be done in $\bigO{n_tq^2 + q^3}$. We will go through computations in the following paragraphs with a Newton method for the estimation. First, we derive the gradient and the Hessian:
 
@@ -2086,7 +2088,7 @@ Other models can be implemented in survival analysis like recurrent events and c
 
 The current implementation of parallel computation for the EKF is based on shared memory. However, it can be extended to a distributed network instead. Different ways of approaching this are introduced in~\cite[chapter 3]{rigatos17}. Two approaches are either to distribute the work in each step of the filter or to run separate filters and aggregate the filters at the end.
 
-The extended Kalman filter can be seen as an approximation of Fischer scoring as shown in~\cite{Fahrmeir91}. The Fischer scoring in~\cite{Fahrmeir91} match the estimation method in~\cite{Lee96} for hierarchical generalized linear models. Thus, test for time-varying effects, asymptotics, goodness-of-fit criterion, estimated degrees of freedom and alternative estimation methods for parameters may be used from \cite{Lee96}.
+The extended Kalman filter can be seen as an approximation of Fischer scoring as shown in~\cite{Fahrmeir91}. The Fischer scoring in~\cite{Fahrmeir91} match the estimation method in~\cite{Lee96} for hierarchical generalized linear models in equation (4.3) of~\cite{Lee96}. In particular, notice the comments to~\cite{Lee96} by Neil Shephard and the reply by the authors under the header \emph{Further developments: dynamic hierarchical generalized linear models and the Kalman filter}. Thus, one could take the estimates from the Extended Kalman filter, use it as an approximation of the method in~\cite{Lee96} and use the test for time-varying effects, estimated degrees of freedom and goodness-of-fit criterion.
 
 The methods here can be used as the initial input to the importance sampler with use of antithetic variables and control variables shown in~\cite{Durbin00}. This can extend the methods to cover state vectors with heavy-tailed distribution. This approach is implemented in the package \pkg{KFAS} \citep{kfas}.
 
