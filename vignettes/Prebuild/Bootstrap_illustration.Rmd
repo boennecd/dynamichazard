@@ -487,7 +487,7 @@ compute_coverage(fit, boot_out, sim_list$beta_w_err)
 ```{r, error=FALSE, warning=FALSE}
 set.seed(520920)
 R <- 999  # Number of bootstrap estimates in each trials 
-M <- 200  # Number of trials
+M <- 100  # Number of trials
 
 # Define matrix for output
 coverage_boot <- coverage_smooth <- matrix(
@@ -496,11 +496,22 @@ coverage_boot <- coverage_smooth <- matrix(
 # Sometimes estimations fails. We use this counter to keep track of the number
 # of times
 n_fails <- 0
-LRs <- 1.25^(0:(-6)) # Learning rates to try in order to get a fit
+LRs <- 1.1^(0:(-6)) # Learning rates to try in order to get a fit
 
 # We save this as an epxression as we will re-run it later
-boot_exp <- expression(
+boot_exp <- expression({
+  #*******
+  # Progress bar for inpatient people (me)
+  pb <- winProgressBar(
+    "Running simulation", "", 0, M, 50)
+  #*******
+      
   for(i in 1:M){
+    #*******  
+    info <- sprintf("%.2f%% done", 100 * (i - 1) / M)
+    setWinProgressBar(pb, i - 1, "Running simulation", info)
+    #*******
+    
     # Simulate data set
     sim_list <- sim_func()
     
@@ -526,13 +537,19 @@ boot_exp <- expression(
     coverage <- compute_coverage(fit, boot_out, sim_list$beta_w_err)
     coverage_smooth[i, ] <- coverage$smooth
     coverage_boot[i, ] <- coverage$boot
+  }
+  
+  #*******  
+  close(pb)
+  #*******  
+  
   })
 eval(boot_exp)
 
 n_fails # number of failed estimations 
 ```
 
-The mean of the fraction of the coverages for the two methods are printed below:
+The mean of the fraction of the overages for the two methods are printed below. That is, the mean of the fraction for each coefficient from each run that did not fail:
 
 ```{r}
 colMeans(coverage_smooth, na.rm = T)
@@ -549,9 +566,9 @@ boxplot(coverage_boot, ylim = c(.6, 1), main = "Bootstrap")
 abline(h = .95, lty = 1)
 ```
 
-The downwards skew in the bootstrap plot is due to because the learning rate have been decreased for some of the bootstrap estimates in order to estimate the model. An alternative could be to allow for this as done below:
+We do alter the learning rate in the previous simulation in order to get a fit when we bootstrap. An alternative could be not to allow for this as done below where failed fits are excluded:
 
-```{r}
+```{r, warning=FALSE}
 n_fails <- 0
 LRs <- 1     # Changed to one value only
 
@@ -559,6 +576,8 @@ eval(boot_exp)
 
 n_fails # number of failed estimations 
 ```
+
+The means and box plot are given below:
 
 ```{r}
 colMeans(coverage_smooth, na.rm = T)

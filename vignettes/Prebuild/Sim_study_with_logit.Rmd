@@ -6,7 +6,7 @@ output: pdf_document
 csl: "../bib_style.csl"
 ---
 
-```{r setup, echo=FALSE}
+```{r setup, echo=FALSE, cache = FALSE}
 knitr::opts_chunk$set(
   echo = TRUE, cache = TRUE, message = FALSE, warning = FALSE)
 ```
@@ -81,9 +81,8 @@ For clarity, here is a list of used notions:
 The findings are: 
 
 * The UKF method seems to perform well for both small and larger number of series
-* Taking multiple iterations in the correction step of the EKF seems to be beneficial with moderate amount or large amount of series
+* Taking multiple iterations in the correction step of the EKF seems to be beneficial
 * Specifying a fixed effect as time varying or setting the binning number incorrectly has little effect on the results
-* The EKF method with extra iteration in the correction step perform close to a Generalized Additive model in terms of out-sample Brier score
 
 You will see that the the estimation sometimes fails. It is worth stressing that it is my experience that you can always do "trail-and-error" with the initial covariance matrix in the state equation, the covariance matrix at time zero and tuning parameters in order to get a model to fit a given dataset. Of course, it is a disadvantage that any given data set may require some tuning by the user. Although as will be shown, tuning by the user is not often needed with data sets like those presented here.
 
@@ -629,7 +628,7 @@ simulate_n_print_res(
 Notice that we only compare across methods with mean metrics where all succeeded to fit. 
 
 ## Conclussion on run
-All models perform better than the static model in terms of Brier score. The UKF and EKF with extra iterations also does well on the Brier score compared with the GAM model. The finding is slight different if we look at the box of the standard deviations of the deviance residuals. The GAM model does worse here compared to the other methods.
+All models perform better than the static model in terms of Brier score. The UKF and EKF with extra iterations also does well on the Brier score compared with the GAM model. The finding is slight different if we look at the box plot of the standard deviations of the deviance residuals. The GAM model does worse here compared to the other methods.
 
 # Single time varying parameter
 In this part, we will look at the performs when only singe coefficient (`x2`) varies. Thus, we can see if the models where only (`x2`) is modeled as varying performs performs better.
@@ -735,7 +734,7 @@ simulate_n_print_res(
 ```
 
 ## Conclussion on run
-The UKF and extra iteration seems to perform well in both settings.
+The UKF and extra iteration seems to perform well in both settings in terms of Brier score.
 
 # Out-of-time prediction
 In the following paragraphs, we will investigate how the different estimation method performs when the following period have to be predicted. Thus, we cannot use the GAM model because it uses in-sample splines. Though, we can still use the state-space models as we can predict the following state vector given the previous. Further, we can use the static model to compare with.
