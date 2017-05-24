@@ -69,6 +69,10 @@ public:
 
   arma::cube lag_one_cov;
 
+  // Information for debugging
+  std::string computation_stage;
+  int em_iteration;
+
   problem_data(const int n_fixed_terms_in_state_vec_,
                arma::mat &X_,
                arma::mat &fixed_terms_,
@@ -235,5 +239,46 @@ public:
   problem_data_EKF(const problem_data_EKF&) = delete;
   problem_data_EKF() = delete;
 };
+
+inline std::string debug_msg_prefix(const problem_data &dat){
+  std::stringstream out;
+  out << "--it " << std::setw(5) <<  dat.em_iteration
+      << ", " << dat.computation_stage << ": ";
+  return(out.str());
+}
+
+template<typename T>
+inline
+void
+my_print(const problem_data &dat, const T &X, std::string msg = "")
+{
+  my_print(X, msg, debug_msg_prefix(dat));
+}
+
+class my_debug_logger{
+private:
+  const problem_data *dat;
+
+protected:
+  std::ostringstream os;
+
+public:
+  my_debug_logger(const problem_data &dat_):
+  dat(&dat_) {}
+
+  template<typename T>
+  std::ostringstream& operator<<(const T &obj);
+
+  ~my_debug_logger(){
+    os << std::endl;
+    Rcpp::Rcout << os.str();
+  }
+};
+
+template<typename T>
+std::ostringstream& my_debug_logger::operator<<(const T &obj){
+  os << debug_msg_prefix(*dat) << obj;
+  return os;
+}
 
 #endif

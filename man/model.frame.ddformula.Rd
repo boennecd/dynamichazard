@@ -22,11 +22,11 @@
 
 \item{xlev}{Same as \code{\link{model.frame.default}}}
 
+\item{...}{Unused}
+
 \item{object}{Same as \code{\link{model.matrix.default}}}
 
 \item{contrasts.arg}{Same as \code{\link{model.matrix.default}}}
-
-\item{xlev}{Same as \code{\link{model.matrix.default}}}
 }
 \description{
 Functions added to handle fixed (time-invariant) intercept coefficient for \code{\link{ddhazard}}. \code{model.frame.ddformula} always has \code{drop.unused.levels = FALSE} regardless of the input.

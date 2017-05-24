@@ -122,7 +122,7 @@ get_design_matrix = function(formula, data, response = T, predictors = T){
 #' @param object Same as \code{\link{model.matrix.default}}
 #' @param data Same as \code{\link{model.matrix.default}}
 #' @param contrasts.arg Same as \code{\link{model.matrix.default}}
-#' @param xlev Same as \code{\link{model.matrix.default}}
+#' @param ... Unused
 #'
 #' @description
 #' Functions added to handle fixed (time-invariant) intercept coefficient for \code{\link{ddhazard}}. \code{model.frame.ddformula} always has \code{drop.unused.levels = FALSE} regardless of the input.
@@ -142,7 +142,7 @@ model.frame.ddformula <- function (
 model.matrix.ddformula  <- function(
   object, data = environment(object), contrasts.arg = NULL,
   xlev = NULL, ...){
-  ans <- stats::model.matrix.default(object, data, contrasts.arg, xlevl)
+  ans <- stats::model.matrix.default(object, data, contrasts.arg, xlev)
 
   fix_inter <- attr(object, "specials")$ddFixed_intercept
   if(is.null(fix_inter) || length(fix_inter) == 0)

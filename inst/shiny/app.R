@@ -30,7 +30,7 @@ start_args <- list(
   order = 1, denom_term = 1, fixed_terms_method = "M_step",
   use_extra_correction = F, beta = 0, alpha = 1,
   SMA_version = "woodbury", GMA_max_rep = 25,
-  GMA_NR_eps = 4, more_options = F)
+  GMA_NR_eps = 4, more_options = F, debug = FALSE)
 
 if(exists("input_args")){
   if(any(is.na(arg_match <- match(names(input_args), names(start_args)))))
@@ -235,7 +235,11 @@ ui <- fluidPage(
          selectInput("fixed_terms_method",
                      "Estimate fixed effect in",
                      choices = c("E_step", "M_step"),
-                     selected = start_args$fixed_terms_method))
+                     selected = start_args$fixed_terms_method),
+
+         checkboxInput("debug",
+                       "Print debug information to file",
+                       value = start_args$debug))
      ),
 
 
@@ -334,7 +338,7 @@ ui <- fluidPage(
        column(
          6,
          h3("Fit call"),
-         div(verbatimTextOutput("fit_call_txt"), style = "height:20em;")
+         div(verbatimTextOutput("fit_call_txt"), style = "height:40em;")
        )
      ),
 
@@ -424,6 +428,8 @@ server <- function(input, output) {
     sims <- sim_input()
     data <- sims$res
 
+    debug <- input$debug
+
     n_fixed <- n_fixed_when_est()
 
     if(n_fixed == 0){
@@ -472,7 +478,7 @@ server <- function(input, output) {
       control_list$denom_term <- denom_term()
       if(input$use_extra_correction)
         control_list <- c(control_list,
-                          list(NR_eps = .1))
+                          list(NR_eps = .001))
 
     } else if(input$est_with_method == "SMA"){
       control_list$posterior_version = input$SMA_version
@@ -490,21 +496,44 @@ server <- function(input, output) {
       control_list$LR <- input$LR
     }
 
+    if(debug > 0){
+      control_list$debug <- debug
+    }
+
     Q <- if(6 - n_fixed > 1)
       bquote(diag(.1, .(6 - n_fixed))) else 0.1
 
-    list(quote = bquote(ddhazard(
-        formula = .(form),
-        data = data,
-        by = 1,
-        Q_0 = .(Q_0),
-        Q = .(Q),
-        max_T = .(input$obs_time),
-        id = data$id,
-        order = .(input$order),
-        model = .(input$est_with_model),
-        control = .(control_list))),
-      data = data)
+    quote = bquote(ddhazard(
+      formula = .(form),
+      data = data,
+      by = 1,
+      Q_0 = .(Q_0),
+      Q = .(Q),
+      max_T = .(input$obs_time),
+      id = data$id,
+      order = .(input$order),
+      model = .(input$est_with_model),
+      control = .(control_list)))
+
+    if(debug > 0){
+      tmp_file <- tempfile()
+      tmp_file <- paste0(gsub("\\\\", "/", tmp_file), ".txt")
+      quote <- bquote({
+        # Open this file to get information about the estimation
+        f <- file(.(tmp_file))
+        sink(f)
+        tryCatch(
+          .(quote),
+          finally = {
+            sink()
+            close(f)
+          })
+      })
+    }
+
+    list(quote = quote,
+         data = data,
+         debug_file = if(debug) tmp_file else NULL)
   })
 
   output$fit_call_txt <- renderText({
@@ -515,6 +544,10 @@ server <- function(input, output) {
 
     cat_l(paste0("Model is fitted with this call: \n", out, "\n"))
 
+    if(input$debug)
+      out <- paste0(
+        out, "\n\nCall file.edit('", fit_quote_input()$debug_file, "') to see debug info")
+
     paste0(out, "\n\n# data is the simulated data set")
   })
 
@@ -523,6 +556,7 @@ server <- function(input, output) {
     eval_quote <- tmp$quote
     data <- tmp$data
     t <- system.time(fit <- eval(eval_quote))
+
     list(fit = fit, time = t)
   })
 

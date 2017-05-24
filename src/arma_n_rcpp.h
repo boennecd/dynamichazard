@@ -49,25 +49,35 @@ extern int openblas_get_num_threads();
 // Print function to print out vectors as rows
 template<typename T>
 inline
-  void
-  my_print(const T& X, std::string msg = "")
+void
+my_print(const T &X, std::string msg = "", std::string prefix = "")
+{
+  // See armadillo-code/include/armadillo_bits/arma_ostream_meat.hpp
+  std::stringstream os;
+
+  const std::streamsize cell_width = 14;
+
+  if(msg != "")
+    os << prefix << msg << std::endl;
+
+  arma::mat to_print = X;
+  if(X.n_cols == 1)
+    to_print = to_print.t();
+
+  for(arma::uword row=0; row < to_print.n_rows; ++row)
   {
-    if(msg != "")
-      Rcpp::Rcout << msg << std::endl;
+    os << prefix;
 
-    if(X.n_cols > 1){
-      X.print();
-
-    } else{
-      for(arma::uword col=0; col < X.n_cols; ++col)
-      {
-        for(arma::uword row=0; row < X.n_rows; ++row)
-          Rcpp::Rcout << std::setw(10) << std::setprecision(5) <<  X(row,col) << ' ';
-
-        Rcpp::Rcout << std::endl;
-      }
+    for(arma::uword col=0; col < to_print.n_cols; ++col){
+      os.width(cell_width);
+      arma::arma_ostream::print_elem(os, to_print.at(row,col), true);
     }
+
+    os << std::endl;
   }
+
+  Rcpp::Rcout << os.str();
+}
 
 
 

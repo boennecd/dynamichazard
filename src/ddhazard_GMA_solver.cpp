@@ -55,10 +55,11 @@ void GMA<T>::solve(){
       std::stringstream str;
       str << t << "|" << t - 1;
 
-      my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
-      my_print(p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
-      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
-                  << arma::cond(p_dat.V_t_less_s.slice(t - 1)) << std::endl;
+      my_print(p_dat, p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
+      my_print(p_dat, p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
+      my_debug_logger(p_dat)
+        << "Condition number of V_(" + str.str() + ") is "
+        << arma::cond(p_dat.V_t_less_s.slice(t - 1));
     }
 
     // E-step: Correction step
@@ -111,8 +112,8 @@ void GMA<T>::solve(){
       X_tilde = X_tilde * X_tilde.t();
 
       if(p_dat.debug){
-        my_print(X_tilde, "X^T(-p'')X");
-        Rcpp::Rcout << "Condition number of X^T(-p'')X is " << arma::cond(X_tilde) << std::endl;
+        my_print(p_dat, X_tilde, "X^T(-p'')X");
+        my_debug_logger(p_dat) << "Condition number of X^T(-p'')X is " << arma::cond(X_tilde);
       }
 
       {
@@ -141,10 +142,10 @@ void GMA<T>::solve(){
         std::stringstream str;
         str << "^(" << k + 1 << ")";
 
-        my_print(a, "a" + str.str());
-        my_print(V, "V" + str.str());
+        my_print(p_dat, a, "a" + str.str());
+        my_print(p_dat, V, "V" + str.str());
 
-        Rcpp::Rcout << "Condition number of V is " << arma::cond(V) << std::endl;
+        my_debug_logger(p_dat) << "Condition number of V is " << arma::cond(V);
       }
 
       if(arma::norm(a - a_old, 2) / (arma::norm(a_old, 2) + 1e-8) < NR_eps)
@@ -172,11 +173,11 @@ void GMA<T>::solve(){
       std::stringstream str;
       str << t << "|" << t;
 
-      Rcpp::Rcout << "\n\n_____________________________" << std::endl;
+      my_debug_logger(p_dat) << "\n\n_____________________________";
 
-      my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
-      my_print(p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")\n");
-      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is " << arma::cond(p_dat.V_t_t_s.slice(t)) << std::endl;
+      my_print(p_dat, p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
+      my_print(p_dat, p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")\n");
+      my_debug_logger(p_dat) << "Condition number of V_(" + str.str() + ") is " << arma::cond(p_dat.V_t_t_s.slice(t));
     }
 
     p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_inv;

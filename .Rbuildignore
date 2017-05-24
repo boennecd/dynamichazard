@@ -15,10 +15,8 @@ testfuture\.R$
 ^\.travis\.yml$
 pbc_data\.Rmd$
 Sim_study_with_logit\.Rmd$
-Prebuild
 release_questions\.R$
 cran-comments\.md$
-Prebuild/
 revdep/
 
 ^README\.Rmd$
@@ -26,9 +24,11 @@ revdep/
 ^README\.bib$
 ^README-.*\.png$
 
-^vignettes/jss
+vignettes/jss
+vignettes/figure
 vignettes/.*_cache
 vignettes/tex2pdf
+vignettes/Prebuild
 vignettes/Diagnostics/data_prep\.R
 vignettes/Diagnostics/Rossi_ex\.html
 vignettes/Diagnostics/Rossi_source\.url

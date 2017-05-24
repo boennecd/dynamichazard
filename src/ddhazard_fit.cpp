@@ -120,9 +120,9 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
     p_data->fixed_parems = bigglm_regcf(qr);
 
     if(p_data->debug){
-      Rcpp::Rcout << "Iteration " << it_outer + 1 << " of estimating fixed effects in M-step" << std::endl;
-      my_print(old_beta, "Fixed effects before update");
-      my_print(p_data->fixed_parems, "Fixed effects after update");
+      my_debug_logger(*p_data) << "Iteration " << it_outer + 1 << " of estimating fixed effects in M-step";
+      my_print(*p_data, old_beta, "Fixed effects before update");
+      my_print(*p_data, p_data->fixed_parems, "Fixed effects after update");
     }
 
   } while(++it_outer < p_data->max_it_fixed_params && // Key that this the first condition we check when we use &&
@@ -323,15 +323,17 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
   do
   {
-    if(p_data->debug){
-      if(it > 0)
-        Rcpp::Rcout << "\n\n\n";
-      Rcpp::Rcout << "##########################################\nStarting iteration " << it
-                  << " with the following values" << std::endl;
-      my_print(p_data->a_t_t_s.col(0), "a_0");
-      my_print(p_data->Q.diag(), "diag(Q)");
-    }
+    p_data->em_iteration = it;
+    p_data->computation_stage = "Starting EM";
 
+    if(p_data->debug){
+      my_debug_logger(*p_data)
+        << "##########################################";
+      my_debug_logger(*p_data)
+        <<"Starting iteration " << it << " with the following values";
+      my_print(*p_data, p_data->a_t_t_s.col(0), "a_0");
+      my_print(*p_data, p_data->Q, "Q");
+    }
 
     if((it + 1) % 25 == 0)
       Rcpp::checkUserInterrupt(); // this is expensive (on Windows) - you do not want to check too often
@@ -341,11 +343,13 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       p_data->V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
       // E-step: filtering
+      p_data->computation_stage = "E-step filtering";
       solver->solve();
 
       // E-step: smoothing
+      p_data->computation_stage = "E-step smoothing";
       if(p_data->debug){
-        Rcpp::Rcout << "Started smoothing" << std::endl;
+        my_debug_logger(*p_data) << "Started smoothing";
       }
 
       for (int t = p_data->d - 1; t > -1; t--){
@@ -364,17 +368,24 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         if(p_data->debug){
           std::stringstream ss;
           ss << t << "|" <<  p_data->d;
-          my_print(p_data->a_t_t_s.col(t), "a(" + ss.str() + ")");
-          my_print(p_data->V_t_t_s.slice(t).diag(), "diag(V(" + ss.str() + "))");
-          Rcpp::Rcout << "Condition number of V_(" + ss.str() + ") is "
-                      << arma::cond(p_data->V_t_t_s.slice(t)) << std::endl;
+          my_print(*p_data, p_data->a_t_t_s.col(t), "a(" + ss.str() + ")");
+          my_print(*p_data, p_data->V_t_t_s.slice(t), "V(" + ss.str() + ")");
+          my_debug_logger(*p_data)
+            << "Condition number of V_(" + ss.str() + ") is "
+            << arma::cond(p_data->V_t_t_s.slice(t));
         }
       }
 
       // M-step
+      p_data->computation_stage = "M-step";
       if(est_Q_0){
         Q_0 = p_data->V_t_t_s.slice(0);
       }
+
+      if(p_data->debug){
+        my_print(*p_data, p_data->Q, "Q before changes in M-step");
+      }
+
       Q.zeros();
       for (int t = 1; t < p_data->d + 1; t++){
         delta_t = p_data->I_len[t - 1];
@@ -404,10 +415,6 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
       }
       Q /= p_data->d;
-
-      if(p_data->debug){
-        my_print(p_data->Q.diag(), "Diag(Q) before changes in M-step");
-      }
 
 
       if(p_data->any_fixed_terms_in_state_vec){
@@ -441,7 +448,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     }
 
     if(p_data->debug){
-      my_print(p_data->Q.diag(), "Diag(Q) after changes in M-step");
+      my_print(*p_data, p_data->Q, "Q after changes in M-step");
     }
 
     if(p_data->criteria == "delta_coef"){
@@ -518,10 +525,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       auto rcout_width = Rcpp::Rcout.width();
 
 
-      Rcpp::Rcout << "Iteration " <<  std::setw(5)<< it + 1 <<
-        " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1) <<
-          "\t" << "The log likelihood is " << log_like <<
-            std::setw(rcout_width) << std::endl;
+      my_debug_logger(*p_data)
+        << "Iteration " <<  std::setw(5)<< it + 1
+        << " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1)
+        << "\t" << "The log likelihood is " << log_like << std::setw(rcout_width);
     }
 
     if(*(conv_values.end() -1) < eps)

@@ -270,10 +270,11 @@ void EKF_solver::solve(){
       std::stringstream str;
       str << t << "|" << t - 1;
 
-      my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
-      my_print(p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
-      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
-                  << arma::cond(p_dat.V_t_less_s.slice(t - 1)) << std::endl;
+      my_print(p_dat, p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
+      my_print(p_dat, p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
+      my_debug_logger(p_dat)
+        << "Condition number of V_(" + str.str() + ") is "
+        << arma::cond(p_dat.V_t_less_s.slice(t - 1));
     }
 
     // E-step: scoring step: information matrix and scoring vector
@@ -306,9 +307,9 @@ void EKF_solver::solve(){
       }
 
       if(p_dat.debug){
-        Rcpp::Rcout << "Score vector and diagonal of information matrix at time " << t << " are:"<< std::endl;
-        my_print(p_dat.u, "u");
-        my_print(p_dat.U.diag(), "U");
+        my_debug_logger(p_dat) << "Score vector and diagonal of information matrix at time " << t << " are:";
+        my_print(p_dat, p_dat.u, "u");
+        my_print(p_dat, p_dat.U, "U");
       }
 
 #ifdef USE_OPEN_BLAS
@@ -323,6 +324,11 @@ void EKF_solver::solve(){
       p_dat.a_t_t_s.col(t) = p_dat.V_t_t_s.slice(t) * (
         p_dat.U * i_a_t + update_term + (p_dat.LR * p_dat.u));
 
+      if(p_dat.debug){
+        my_print(p_dat,i_a_t, "a^(" + std::to_string(n_NR_it - 1L) + ")");
+        my_print(p_dat, p_dat.a_t_t_s.col(t), "a^(" +  std::to_string(n_NR_it) + ")");
+      }
+
       if(!p_dat.is_mult_NR || arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) < p_dat.NR_eps)
         break;
 
@@ -330,8 +336,9 @@ void EKF_solver::solve(){
         Rcpp::stop("Failed to convergece in NR method of filter step within " + std::to_string(p_dat.NR_it_max) + " iterations");
 
       if(p_dat.debug){
-        Rcpp::Rcout << "Did not converge in filter step in iteration " << n_NR_it << ". Convergence criteria value is  "
-                    << arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) << std::endl;
+        my_debug_logger(p_dat)
+          << "Did not converge in filter step in iteration " << n_NR_it << ". Convergence criteria value is  "
+          << arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8);
       }
 
       i_a_t = p_dat.a_t_t_s.col(t);
@@ -343,10 +350,11 @@ void EKF_solver::solve(){
       std::stringstream str;
       str << t << "|" << t;
 
-      my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
-      my_print(p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")");
-      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
-                  << arma::cond(p_dat.V_t_t_s.slice(t)) << std::endl;
+      my_print(p_dat, p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
+      my_print(p_dat, p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")");
+      my_debug_logger(p_dat)
+        << "Condition number of V_(" + str.str() + ") is "
+        << arma::cond(p_dat.V_t_t_s.slice(t));
     }
 
     if(t == p_dat.d){
@@ -373,7 +381,7 @@ EKF_helper::EKF_helper(problem_data_EKF &p_data_, const std::string model_):
   p_data(p_data_), workers(), model(model_)
 {
   if(p_data.debug)
-    Rcpp::Rcout << "EKF solver will use at most " << max_threads << " threads" << std::endl;
+    my_debug_logger(p_data) << "EKF solver will use at most " << max_threads << " threads";
 }
 
 void EKF_helper::parallel_filter_step(arma::uvec::const_iterator first, arma::uvec::const_iterator last,

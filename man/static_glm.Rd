@@ -4,8 +4,8 @@
 \alias{static_glm}
 \title{Function to make a static glm fit}
 \usage{
-static_glm(formula, data, by, max_T, id, family = "logit", model = F,
-  weights, risk_obj = NULL, ..., speedglm = F)
+static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
+  weights, risk_obj = NULL, speedglm = F, only_coef = FALSE, mf)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
@@ -15,6 +15,8 @@ static_glm(formula, data, by, max_T, id, family = "logit", model = F,
 \item{by}{Length of each intervals that cases are binned into}
 
 \item{max_T}{The end time of the last bin}
+
+\item{...}{arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used}
 
 \item{id}{The id for each row in \code{data}. This is important when variables are time varying}
 
@@ -26,12 +28,14 @@ static_glm(formula, data, by, max_T, id, family = "logit", model = F,
 
 \item{risk_obj}{A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations}
 
-\item{...}{arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}}
-
 \item{speedglm}{\code{TRUE} if \code{\link[speedglm]{speedglm}} should be used.}
+
+\item{only_coef}{\code{TRUE} if only coefficients should be returned. This will only call the \code{\link{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.}
+
+\item{mf}{model frame for regression. Needed when \code{only_coef = TRUE}}
 }
 \value{
-The returned list from the \code{\link{glm}} call
+The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}
 }
 \description{
 Function to make a static glm fit

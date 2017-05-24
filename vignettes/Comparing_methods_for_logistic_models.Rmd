@@ -20,7 +20,7 @@ knitr::knit_hooks$set(
   mySettings  = function(before, options, envir){
     if (before && options$mySettings){ 
       par(
-        mar = c(5, 6, 1, 1),
+        mar = c(5, 3, 1, 1),
         bty = "n",
         xaxs = "i",
         pch=16,
@@ -28,11 +28,17 @@ knitr::knit_hooks$set(
         cex.axis = .8 / cex,
         cex.lab = .8 / cex,
         lwd= 1)
-      options(digits = 3, width = 80, warn = -1)
+    } else if(before && options$plot_2x1){
+      par(
+        mfcol = c(2, 1),
+        mar = c(3, 3, 1, 1), 
+        cex = .75)
     }})
 
+options(digits = 3, width = 80, warn = -1)
+
 knitr::opts_chunk$set(echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6,
-                      warning = F, message = F)
+                      warning = F, message = F, plot_2x1 = FALSE)
 knitr::opts_knit$set(warning = F, message = F)
 ```
 
@@ -328,7 +334,7 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                         log(albumin) + log(protime) + log(bili), pbc2,
                    id = pbc2$id, by = 100, max_T = 3600,
                    control = list(NR_eps = 0.1), # <-- tolerance in correction step
-                   Q_0 = diag(rep(100000, 6)),
+                   Q_0 = diag(rep(1, 6)),
                    Q = diag(rep(0.001, 6)))
 
 # Plot result
@@ -455,19 +461,19 @@ dd_fit <- ddhazard(
 ```
 
 
-```{r, fig.height = 3.5, mySettings=FALSE}
+```{r, fig.height = 5, mySettings=FALSE, plot_2x1 = TRUE}
 plot(dd_fit)
 ```
 
 The predicted curves seems similar. Moreover, the fixed effects are in agreement with the previous fits (they are printed below):
 
-```{r, fig.height = 6}
+```{r}
 dd_fit$fixed_effects
 ```
 
 We can also try to both fix some of terms and potentially take extra iterations in the correction step. This is done below:
 
-```{r, fig.height = 3.5, mySettings=FALSE}
+```{r, fig.height = 5, mySettings=FALSE, plot_2x1 = TRUE}
 dd_fit <- ddhazard(
   Surv(tstart, tstop, death == 2) ~ ddFixed(1) + 
     ddFixed(age) + ddFixed(log(albumin)) + edema +ddFixed(log(protime)) + log(bili), 

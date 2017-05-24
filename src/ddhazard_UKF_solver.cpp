@@ -152,17 +152,19 @@ UKF_solver_New<T>::UKF_solver_New(
   weights_vec_cc[0] = w_0_cc;
 
   if(p_dat.debug){
-    Rcpp::Rcout << "alpha, beta, kappa, n_dim = "
-                << a << ", "
-                << b << ", "
-                << k << ", "
-                << m << std::endl;
-    Rcpp::Rcout << "w_0, w_0_c, w_0_cc, w_i, lambda = "
-                << w_0 << ", "
-                << w_0_c << ", "
-                << w_0_cc << ", "
-                << w_i << ", "
-                << lambda << std::endl;
+    my_debug_logger(p_dat)
+      << "alpha, beta, kappa, n_dim = "
+      << a << ", "
+      << b << ", "
+      << k << ", "
+      << m;
+    my_debug_logger(p_dat)
+      << "w_0, w_0_c, w_0_cc, w_i, lambda = "
+      << w_0 << ", "
+      << w_0_c << ", "
+      << w_0_cc << ", "
+      << w_i << ", "
+      << lambda;
   }
 };
 
@@ -182,14 +184,14 @@ void UKF_solver_New<T>::solve(){
 
     // Re-generate
     if(p_dat.debug){
-      my_print(p_dat.V_t_less_s.slice(t - 1), "Chol decomposing for regenerations:");
+      my_print(p_dat, p_dat.V_t_less_s.slice(t - 1), "Chol decomposing for regenerations:");
     }
 
     compute_sigma_points(p_dat.a_t_less_s.col(t - 1),
                          sigma_points, p_dat.V_t_less_s.slice(t - 1));
 
     if(p_dat.debug){
-      my_print(sigma_points, "new sigma points");
+      my_print(p_dat, sigma_points, "new sigma points");
     }
 
     // E-step: correction-step
@@ -275,16 +277,18 @@ void UKF_solver_New<T>::solve(){
       str_less << t << "|" << t - 1;
       str << t << "|" << t;
 
-      my_print(p_dat.V_t_less_s.slice(t - 1).diag(), "diag(V_(" + str_less.str() + "))");
-      Rcpp::Rcout << "Condition number of V_(" + str_less.str() + ") is "
-                  << arma::cond(p_dat.V_t_less_s.slice(t - 1)) << std::endl;
+      my_print(p_dat, p_dat.V_t_less_s.slice(t - 1).diag(), "diag(V_(" + str_less.str() + "))");
+      my_debug_logger(p_dat)
+        << "Condition number of V_(" + str_less.str() + ") is "
+        << arma::cond(p_dat.V_t_less_s.slice(t - 1));
 
-      my_print(p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str()  + "))");
-      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
-                  << arma::cond(p_dat.V_t_t_s.slice(t)) << std::endl;
+      my_print(p_dat, p_dat.V_t_t_s.slice(t).diag(), "diag(V_(" + str.str()  + "))");
+      my_debug_logger(p_dat)
+        << "Condition number of V_(" + str.str() + ") is "
+        << arma::cond(p_dat.V_t_t_s.slice(t));
 
-      my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str_less.str() + ")");
-      my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
+      my_print(p_dat, p_dat.a_t_less_s.col(t - 1), "a_(" + str_less.str() + ")");
+      my_print(p_dat, p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
     }
 
     // Solve should be faster than inv_sympd http://arma.sourceforge.net/docs.html#inv_sympd

@@ -150,10 +150,11 @@ void SMA<T>::solve(){
       std::stringstream str;
       str << t << "|" << t - 1;
 
-      my_print(p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
-      my_print(p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
-      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
-                  << arma::cond(p_dat.V_t_less_s.slice(t - 1)) << std::endl;
+      my_print(p_dat, p_dat.a_t_less_s.col(t - 1), "a_(" + str.str() + ")");
+      my_print(p_dat, p_dat.V_t_less_s.slice(t - 1), "V_(" + str.str() + ")");
+      my_debug_logger(p_dat)
+        << "Condition number of V_(" + str.str() + ") is "
+        << arma::cond(p_dat.V_t_less_s.slice(t - 1));
     }
 
     // E-step: scoring step
@@ -254,12 +255,13 @@ void SMA<T>::solve(){
       std::stringstream str;
       str << t << "|" << t;
 
-      Rcpp::Rcout << "\n\n_____________________________" << std::endl;
+      my_debug_logger(p_dat) << "\n\n_____________________________";
 
-      my_print(p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
-      my_print(p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")\n");
-      Rcpp::Rcout << "Condition number of V_(" + str.str() + ") is "
-                  << arma::cond(p_dat.V_t_t_s.slice(t)) << std::endl;
+      my_print(p_dat, p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
+      my_print(p_dat, p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")\n");
+      my_debug_logger(p_dat)
+        << "Condition number of V_(" + str.str() + ") is "
+        << arma::cond(p_dat.V_t_t_s.slice(t));
     }
 
     arma::mat V_t_less_s_inv;
