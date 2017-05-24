@@ -8,5 +8,4 @@
 #' @importFrom boot boot
 #' @importFrom stringr str_replace_all
 #' @importFrom data.table rbindlist
-#' @importFrom speedglm speedglm.wfit
 NULL
