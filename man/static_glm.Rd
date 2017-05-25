@@ -28,9 +28,9 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 
 \item{risk_obj}{A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations}
 
-\item{speedglm}{\code{TRUE} if \code{\link[speedglm]{speedglm}} should be used.}
+\item{speedglm}{\code{TRUE} if \code{speedglm} should be used.}
 
-\item{only_coef}{\code{TRUE} if only coefficients should be returned. This will only call the \code{\link{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.}
+\item{only_coef}{\code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm.wfit} or \code{\link{glm.fit}} which will be faster.}
 
 \item{mf}{model frame for regression. Needed when \code{only_coef = TRUE}}
 }

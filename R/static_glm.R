@@ -143,8 +143,8 @@ get_survival_case_weights_and_data = function(
 #' @param family \code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
 #' @param weights weights if a skewed sample or similar is used
-#' @param speedglm \code{TRUE} if \code{\link[speedglm]{speedglm}} should be used.
-#' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{\link{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.
+#' @param speedglm \code{TRUE} if \code{speedglm} should be used.
+#' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm.wfit} or \code{\link{glm.fit}} which will be faster.
 #' @param mf model frame for regression. Needed when \code{only_coef = TRUE}
 #'
 #' @details
