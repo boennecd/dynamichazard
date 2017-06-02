@@ -5,6 +5,8 @@
 extern "C"
 {
   // Non LAPACK function to make rank one update of of chol decomp
+  // We could use the LINPACK function dchex. See
+  //  http://www.netlib.org/linpack/dchex.f
   void dchur_(
       char*,   // UPLO
       char*,   // TRANS
