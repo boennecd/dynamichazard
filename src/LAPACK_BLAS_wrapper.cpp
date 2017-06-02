@@ -7,7 +7,7 @@ extern "C"
   // Non LAPACK function to make rank one update of of chol decomp
   // We could use the LINPACK function dchex. See
   //  http://www.netlib.org/linpack/dchex.f
-  void dchur_(
+  void F77_NAME(dchur)(
       char*,   // UPLO
       char*,   // TRANS
       int*,    // N
@@ -39,8 +39,9 @@ void ddhazard_dchur(double *R, double *x, int n, int ldr){
   int ldz = 1;
   double z, y, rho;
 
-  dchur_(uplo, trans, &n, &m, R, &ldr,
-         x, &z, &ldz, &y, &rho, c, s, &info);
+  F77_CALL(dchur)(
+      uplo, trans, &n, &m, R, &ldr,
+      x, &z, &ldz, &y, &rho, c, s, &info);
 
   delete[] c;
   delete[] s;
