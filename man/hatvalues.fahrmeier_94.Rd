@@ -12,7 +12,7 @@
 \item{...}{Not used}
 }
 \value{
-A list of matrices. Each matrix has three columns: the hat values, the row number of the orginal data point and the id the row belongs to
+A list of matrices. Each matrix has three columns: the hat values, the row number of the original data point and the id the row belongs to
 }
 \description{
 Computes hat-"like" values from usual L2 penalized binary regression

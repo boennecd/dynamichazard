@@ -4,7 +4,7 @@ output:
   pdf_document: 
     fig_caption: yes
     includes:
-      in_header: ddhazard_header.tex
+      in_header: ddhazard_header
 date: "`r Sys.Date()`"
 author: "Benjamin Christoffersen"
 bibliography: ddhazard_bibliography.bib

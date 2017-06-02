@@ -9,7 +9,7 @@
 #' @param print_errors \code{TRUE} if errors should be printed when estimations fails
 #'
 #' @description
-#' See the vignette 'Bootstrap illustration'. The \code{do_stratify_with_event} may be useful when either cases or non-cases are very rare to ensure that the model estimation succeds.
+#' See the vignette 'Bootstrap illustration'. The \code{do_stratify_with_event} may be useful when either cases or non-cases are very rare to ensure that the model estimation succeeds.
 #'
 #' @return
 #' An object like returned from the \code{\link[boot]{boot}} function

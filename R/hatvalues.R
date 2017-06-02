@@ -9,7 +9,7 @@
 #' Computes hat-"like" values in each interval for each individual at risk in the interval. See the ddhazard vignette for details
 #'
 #' @return
-#' A list of matrices. Each matrix has three columns: the hat values, the row number of the orginal data point and the id the row belongs to
+#' A list of matrices. Each matrix has three columns: the hat values, the row number of the original data point and the id the row belongs to
 #'
 #' @seealso
 #' \code{\link{ddhazard}}

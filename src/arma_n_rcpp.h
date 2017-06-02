@@ -17,6 +17,7 @@ extern int openblas_get_num_threads();
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
+
 #define ARMA_HAVE_STD_ISFINITE
 #define ARMA_HAVE_STD_ISINF
 #define ARMA_HAVE_STD_ISNAN
@@ -29,7 +30,7 @@ extern int openblas_get_num_threads();
 #define ARMA_DEFAULT_OSTREAM Rcpp::Rcout
 #endif
 
-//#define ARMA_NO_DEBUG
+#define ARMA_NO_DEBUG
 // Note: This also disables the check in inv(A, B) for whether inversion is succesfull it seems http://arma.sourceforge.net/docs.html#inv
 // from armadillo config.hpp
 //// Uncomment the above line if you want to disable all run-time checks.
