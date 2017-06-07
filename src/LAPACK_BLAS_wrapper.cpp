@@ -7,10 +7,11 @@ extern "C"
   // Non LAPACK function to make rank one update of of chol decomp
   // We could use the LINPACK function dchex. See
   //  http://www.netlib.org/linpack/dchex.f
+  // See http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646
   // I use the macro from r-source/src/include/R_ext/RS.h
-  extern void F77_NAME(dchur)(
-      const char*,   // UPLO
-      const char*,   // TRANS
+  void F77_NAME(dchur)(
+      const char[2],   // UPLO
+      const char[2],   // TRANS
       int*,    // N
       int*,    // M
       double*, // R
@@ -30,11 +31,6 @@ void ddhazard_dchur(double *R, double *x, int n, int ldr){
 
   int info;
 
-  char *UPLO = new char[1];
-  char *TRANS = new char[1];
-  UPLO[0] = 'L';
-  TRANS[0] = 'N';
-
   double *c = new double[n];
   double *s = new double[n];
 
@@ -44,13 +40,11 @@ void ddhazard_dchur(double *R, double *x, int n, int ldr){
   double z, y, rho;
 
   F77_CALL(dchur)(
-      UPLO,   // lower triangular
-      TRANS,  // does not matter. Relates to Z
+      "L",   // lower triangular
+      "N",  // does not matter. Relates to Z
       &n, &m, R, &ldr,
       x, &z, &ldz, &y, &rho, c, s, &info);
 
-  delete[] UPLO;
-  delete[] TRANS;
   delete[] c;
   delete[] s;
 
@@ -62,12 +56,9 @@ void ddhazard_dchur(double *R, double *x, int n, int ldr){
 };
 
 void square_tri_inv(double *out, int n, int ldr){
-  char uplo[] = "L"; // lower triangular
-  char diag[] = "N"; //  non-unit triangular
-
   int info;
 
-  F77_CALL(dtrtri)(uplo, diag, &n, out, &ldr, &info);
+  F77_CALL(dtrtri)("L", "N", &n, out, &ldr, &info);
 
   if(info != 0){
     std::stringstream str;
@@ -77,10 +68,9 @@ void square_tri_inv(double *out, int n, int ldr){
 };
 
 void symmetric_mat_chol(double *out, int n, int lda){
-  char uplo[] = "L"; // lower triangular
   int info;
 
-  F77_CALL(dpotrf)(uplo, &n, out, &lda, &info);
+  F77_CALL(dpotrf)("L", &n, out, &lda, &info);
 
   if(info != 0){
     std::stringstream str;
@@ -96,17 +86,8 @@ void tri_mat_times_vec(double *A, double *x, int n, int lda, bool is_transpose){
   // X is DOUBLE PRECISION array of dimension at least
   // ( 1 + ( n - 1 )*abs( INCX ) ).
 
-  char uplo[] = "L"; // Not upper triangular
-  const char *trans;
-  if(is_transpose){
-    trans = "T";
-  } else{
-    trans = "N";
-  }
-  char diag[] = "N";  //  non-unit triangular
-
   int incx = 1;
-  F77_CALL(dtrmv)(uplo, trans, diag, &n, A, &lda, x, &incx);
+  F77_CALL(dtrmv)("L", is_transpose ? "T" : "N", "N", &n, A, &lda, x, &incx);
 }
 
 void sym_mat_rank_one_update(

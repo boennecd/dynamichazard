@@ -1,4 +1,4 @@
-#' @useDynLib dynamichazard
+#' @useDynLib dynamichazard, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @importFrom graphics abline axis lines par plot points
 #' @import stats

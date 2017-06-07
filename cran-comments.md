@@ -4,7 +4,7 @@
   R 3.4
 * Ubuntu 14.04.4 LTS (on travis-ci with codename: trusty)
   R 3.4
-* The win builder on release image
+* The win builder on release image and develop image
   
 I used the build with codename trusty for the GCC 4.8.4. It is needed for the c++11 syntax I use
 
@@ -26,6 +26,13 @@ The note from win-builder.r-project.org on the release image is:
     R      2.0Mb
     doc    3.4Mb
     libs   2.9Mb
+
+The note from win-builder.r-project.org on the develop image is:
+* installed size is  8.7Mb
+  sub-directories of 1Mb or more:
+    R      2.0Mb
+    doc    3.4Mb
+    libs   3.2Mb
 
 The note on my own laptop is:
 * checking installed package size ... NOTE

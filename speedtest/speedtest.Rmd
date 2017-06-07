@@ -1,7 +1,7 @@
 ---
 title: "speedtest"
 author: "Benjamin Christoffersen"
-date: "7 June 2017"
+date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
@@ -87,7 +87,7 @@ get_rune_time_summary <- function(n, p){
         Q = diag(1e-1, p + 1L),
         control = list(method = "UKF"))),
     
-    times = 3
+    times = 5
   ))
   
   cat("(n, p) = (", n, ", ", p, ")",
@@ -114,7 +114,7 @@ invisible(
 
 # Session info
 
-```{r}
-sessionInfo()
+```{r, results='asis', echo=FALSE}
+toLatex(sessionInfo())
 ```
 
