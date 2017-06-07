@@ -36,7 +36,7 @@ The note from win-builder.r-project.org on the develop image is:
 
 The note on my own laptop is:
 * checking installed package size ... NOTE
-  installed size is  8.3Mb
+  installed size is  8.4Mb
   sub-directories of 1Mb or more:
     R      2.0Mb
     doc    3.4Mb

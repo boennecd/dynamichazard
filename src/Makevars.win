@@ -62,4 +62,4 @@ ddhazard_posterior_approx_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_poster
 ##	At line 1 of file dchur.f
 ##	Fortran runtime error: Actual string length is shorter than the declared one for dummy argument 'uplo' (0/1)
 dchur.o:
-	$(F77) $(filter-out -fbounds-check,$(FFLAGS)) -c dchur.f -o dchur.o
+	$(F77) $(filter-out -fbounds-check,$(ALL_FFLAGS)) -c dchur.f -o dchur.o
