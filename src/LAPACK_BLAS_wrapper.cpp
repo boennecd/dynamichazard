@@ -7,9 +7,10 @@ extern "C"
   // Non LAPACK function to make rank one update of of chol decomp
   // We could use the LINPACK function dchex. See
   //  http://www.netlib.org/linpack/dchex.f
-  void F77_NAME(dchur)(
-      char*,   // UPLO
-      char*,   // TRANS
+  // I use the macro from r-source/src/include/R_ext/RS.h
+  extern void F77_NAME(dchur)(
+      const char*,   // UPLO
+      const char*,   // TRANS
       int*,    // N
       int*,    // M
       double*, // R
@@ -26,10 +27,13 @@ extern "C"
 }
 
 void ddhazard_dchur(double *R, double *x, int n, int ldr){
-  char uplo[] = "L";  // lower triangular
-  char trans[] = "N"; // does not matter. Relates to Z
 
   int info;
+
+  char *UPLO = new char[1];
+  char *TRANS = new char[1];
+  UPLO[0] = 'L';
+  TRANS[0] = 'N';
 
   double *c = new double[n];
   double *s = new double[n];
@@ -40,9 +44,13 @@ void ddhazard_dchur(double *R, double *x, int n, int ldr){
   double z, y, rho;
 
   F77_CALL(dchur)(
-      uplo, trans, &n, &m, R, &ldr,
+      UPLO,   // lower triangular
+      TRANS,  // does not matter. Relates to Z
+      &n, &m, R, &ldr,
       x, &z, &ldz, &y, &rho, c, s, &info);
 
+  delete[] UPLO;
+  delete[] TRANS;
   delete[] c;
   delete[] s;
 

@@ -1,0 +1,120 @@
+---
+title: "speedtest"
+author: "Benjamin Christoffersen"
+date: "7 June 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(digits = 3, width = 80)
+```
+
+# Setup
+
+```{r cars}
+library(dynamichazard); library(microbenchmark)
+```
+
+```{r}
+sim_func <- function(n, p){
+  func <- asNamespace("dynamichazard")$test_sim_func_logit
+  set.seed(101)
+  t_max <- 30L
+  func(n_series = n, n_vars = p, t_max = t_max, x_range = .25, x_mean = 0,
+       beta_start = runif(p), intercept_start = -4, sds = c(.1, rep(.25, p)),
+       tstart_sampl_func = function(t0, t_max)
+         max(0, runif(1, -t_max, t_max - 1L)))
+}
+
+get_rune_time_summary <- function(n, p){
+  sims <- sim_func(n, p)
+  
+  out <- summary(microbenchmark(
+    EKF_one_correction_step = 
+      suppressMessages(ddhazard(
+        formula = Surv(tstart, tstop, event) ~ . - id, 
+        data = sims$res,
+        model = "logit",
+        id = sims$res$id,
+        by = 1L, 
+        max_T = 30L, 
+        Q_0 = diag(1e6, p + 1L),
+        Q = diag(1e-1, p + 1L))),
+    
+    EKF_more_correction_step = 
+      suppressMessages(ddhazard(
+        formula = Surv(tstart, tstop, event) ~ . - id, 
+        data = sims$res,
+        model = "logit",
+        id = sims$res$id,
+        by = 1L, 
+        max_T = 30L, 
+        Q_0 = diag(1, p + 1L),
+        Q = diag(1e-1, p + 1L),
+        control = list(NR_eps = 1e-3))),
+    
+    SMA = suppressMessages(ddhazard(
+        formula = Surv(tstart, tstop, event) ~ . - id, 
+        data = sims$res,
+        model = "logit",
+        id = sims$res$id,
+        by = 1L, 
+        max_T = 30L, 
+        Q_0 = diag(1e6, p + 1L),
+        Q = diag(1e-1, p + 1L),
+        control = list(method = "SMA"))),
+    
+    GMA = suppressMessages(ddhazard(
+        formula = Surv(tstart, tstop, event) ~ . - id, 
+        data = sims$res,
+        model = "logit",
+        id = sims$res$id,
+        by = 1L, 
+        max_T = 30L, 
+        Q_0 = diag(1, p + 1L),
+        Q = diag(1e-1, p + 1L),
+        control = list(method = "GMA"))),
+    
+    UKF = suppressMessages(ddhazard(
+        formula = Surv(tstart, tstop, event) ~ . - id, 
+        data = sims$res,
+        model = "logit",
+        id = sims$res$id,
+        by = 1L, 
+        max_T = 30L, 
+        Q_0 = diag(1, p + 1L),
+        Q = diag(1e-1, p + 1L),
+        control = list(method = "UKF"))),
+    
+    times = 3
+  ))
+  
+  cat("(n, p) = (", n, ", ", p, ")",
+      ". Units is ", sQuote(attr(out, "unit")), "\n", sep = "")
+  
+  print(out[, c("expr", "lq", "median", "uq", "cld")], row.names = FALSE)
+  
+  cat("\n\n")
+  
+  invisible()
+}
+```
+
+# Test
+
+```{r}
+grid_vals <- expand.grid(
+  n = c(250, 1000, 10000),
+  p = c(5, 10, 15))
+
+invisible(
+  mapply(get_rune_time_summary, n = grid_vals$n, p = grid_vals$p))
+```
+
+# Session info
+
+```{r}
+sessionInfo()
+```
+

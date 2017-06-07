@@ -4,6 +4,8 @@
 ^\.git
 ^tests/benchmarking\.R$
 
+^\.commit$
+
 \.o$
 \.txt$
 profile\.R$
@@ -34,5 +36,6 @@ vignettes/Diagnostics/Rossi_ex\.html
 vignettes/Diagnostics/Rossi_source\.url
 vignettes/Diagnostics/Rossi\.txt
 
-Examples/
-sandbox/
+Examples
+sandbox
+speedtest
