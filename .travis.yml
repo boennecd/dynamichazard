@@ -4,7 +4,7 @@ language: R
 before_install:
   - tlmgr install algorithmicx
   - tlmgr install algorithms
-
+  - tlmgr install xkeyval
 
 cache: packages
 #sudo: false

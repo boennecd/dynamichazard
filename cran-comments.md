@@ -21,7 +21,7 @@ There is one note on travis-ci:
 
 The note from win-builder.r-project.org on the release image is:
 * checking installed package size ... NOTE
-  installed size is  8.4Mb
+  installed size is  8.3Mb
   sub-directories of 1Mb or more:
     R      2.0Mb
     doc    3.4Mb
