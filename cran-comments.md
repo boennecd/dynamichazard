@@ -42,3 +42,9 @@ The note on my own laptop is:
     doc    3.4Mb
     libs   2.9Mb
 
+## Resubmission
+Should have fixed build errors on: 
+
+* r-devel-linux-x86_64-fedora-clang
+* r-patched-solaris-sparc
+* r-patched-solaris-x86
