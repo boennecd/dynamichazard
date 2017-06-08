@@ -235,7 +235,12 @@ void UKF_solver_New<T>::solve(){
 
     sqrt_weights_to_sds += p_dat.denom_term;
     sqrt_weights_to_sds = p_dat.weights(r_set) / sqrt_weights_to_sds;
-    sqrt_weights_to_sds.transform(sqrt);
+    // This did not work
+    // sqrt_weights_to_sds.transform(std::sqrt);
+    for(auto it = sqrt_weights_to_sds.begin();
+        it != sqrt_weights_to_sds.end();
+        ++it)
+      *it = std::sqrt(*it);
 
     // ** 4: Compute c **
     // Substract y_bar to get deviations

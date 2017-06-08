@@ -1,15 +1,15 @@
 ## Test environments
 * Platform: x86_64-w64-mingw32/x64 (64-bit)
   Running under: Windows >= 8 x64 (build 9200)
-  R 3.4
+  R 3.4.0
 * Ubuntu 14.04.4 LTS (on travis-ci with codename: trusty)
-  R 3.4
+  R 3.4.0
 * The win builder on release image and develop image
   
-I used the build with codename trusty for the GCC 4.8.4. It is needed for the c++11 syntax I use
+I use the build with codename trusty for the GCC 4.8.4 C++11
 
 ## R CMD check results
-There were no errors or warnings. The where a some notes
+There were no errors or warnings. The are some notes all regarding the size
 
 There is one note on travis-ci:
 * checking installed package size ... NOTE
