@@ -16,16 +16,23 @@ options(digits = 3, width = 80)
 library(dynamichazard); library(microbenchmark)
 ```
 
+```{r, echo = FALSE, eval = FALSE}
+matplot(sims$betas, type = "l", lty = 1)
+matplot(fit$state_vecs, type = "l", lty = 2, add = TRUE)
+```
+
+
 ```{r}
 sim_func <- function(n, p){
   func <- asNamespace("dynamichazard")$test_sim_func_logit
   set.seed(101)
   t_max <- 30L
-  func(n_series = n, n_vars = p, t_max = t_max, x_range = .25, x_mean = 0,
+  func(n_series = n, n_vars = p, t_max = t_max, x_range = 1, x_mean = 0,
        beta_start = runif(p, -1.5, 1.5), 
-       intercept_start = -4, sds = c(.1, rep(.25, p)),
+       intercept_start = -3, sds = c(.1, rep(.25, p)),
        tstart_sampl_func = function(t0, t_max)
-         max(0, runif(1, -t_max, t_max - 1L)))
+         max(0, runif(1, -t_max, t_max - 1L)), 
+       lambda = 1 / 10)
 }
 
 get_rune_time_summary <- function(n, p){
