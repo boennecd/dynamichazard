@@ -10,8 +10,8 @@ extern "C"
   // See http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646
   // I use the macro from r-source/src/include/R_ext/RS.h
   void F77_NAME(dchur)(
-      const char *,   // UPLO
-      const char *,   // TRANS
+      int *,   // UPLO
+      int *,   // TRANS
       int*,    // N
       int*,    // M
       double*, // R
@@ -34,14 +34,17 @@ void ddhazard_dchur(double *R, double *x, int n, int ldr){
   double *c = new double[n];
   double *s = new double[n];
 
-  // unsused dummies
+  // unused dummies
   int m = 0;
   int ldz = 1;
   double z, y, rho;
 
+  int UPPER = false;
+  int DOTRAN = false;
+
   F77_CALL(dchur)(
-      "L",   // lower triangular
-      "N",  // does not matter. Relates to Z
+      &UPPER,   // lower triangular
+      &DOTRAN,   // does not matter. Relates to Z
       &n, &m, R, &ldr,
       x, &z, &ldz, &y, &rho, c, s, &info);
 
@@ -92,9 +95,9 @@ void tri_mat_times_vec(double *A, double *x, int n, int lda, bool is_transpose){
 
 void sym_mat_rank_one_update(
     const int *n, const double *alpha, const double *x, double *A){
- // computes A := alpha * x * x^T + A
- // where A is a n x n is a square matrix
- //       x is a n matrix
+  // computes A := alpha * x * x^T + A
+  // where A is a n x n is a square matrix
+  //       x is a n matrix
 
   int inx = 1;
 
@@ -103,6 +106,6 @@ void sym_mat_rank_one_update(
   // const double *y, const int *incy,
   // double *a, const int *lda);
   F77_NAME(dger)(n, n, alpha,
-                 x, &inx, x, &inx,
-                 A, n);
+           x, &inx, x, &inx,
+           A, n);
 }

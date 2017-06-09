@@ -48,3 +48,10 @@ Should have fixed build errors on:
 * r-devel-linux-x86_64-fedora-clang
 * r-patched-solaris-sparc
 * r-patched-solaris-x86
+
+## Resubmission
+Changed the rule Makevars and Makevars.win that professor Kurt Hornik and professor Brian Ripley mentioned.
+
+Changed dynamichazard/src/dchur.f to take in LOGICAL arguments instead of CHARACTER arguments.
+
+Sorry for violating the CRAN policies with the rule and wasting your time. Sorry for sending a HTML formatted e-mail to professor Brian Ripley and for not using the mailing list.

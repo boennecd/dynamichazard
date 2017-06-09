@@ -1,6 +1,14 @@
-      SUBROUTINE DCHUR(UPLO,TRANS,N,M,R,LDR,X,Z,LDZ,Y,RHO,C,S,INFO)
+*  Changes by Benjamin Christoffersen
+*  ==================================
+*
+*  The CHARACTER UPLO and TRANS arguments is replaced by
+*  LOGICAL UPPER and DOTRAN so LSAME is not needed
+*
+*      SUBROUTINE DCHUR(UPLO,TRANS,N,M,R,LDR,X,Z,LDZ,Y,RHO,C,S,INFO)
+      SUBROUTINE DCHUR(UPPER,DOTRAN,N,M,R,LDR,X,Z,LDZ,Y,RHO,C,S,INFO)
 *     .. Scalar Arguments ..
-      CHARACTER UPLO,TRANS
+*      CHARACTER UPLO,TRANS
+      LOGICAL UPPER,DOTRAN
       INTEGER N,M,LDR,LDZ,INFO
 *     .. Array Arguments ..
       DOUBLE PRECISION R(LDR,*)
@@ -14,7 +22,7 @@
 *  Purpose
 *  =======
 *
-*  DCHUR performs a rank 1 update of a Cholesky factor R and 
+*  DCHUR performs a rank 1 update of a Cholesky factor R and
 *  optionnally, of associated vectors Z
 *
 *  If UPLO = 'U', this solves the problems
@@ -132,14 +140,14 @@
 *  [2] LINPACK User Guide http://www.uploading.com/files/F89HJTGH/linguide.zip.html
 *  [3] Low Rank Updates for the Cholesky Decomposition - Matthias Seeger
 *      http://infoscience.epfl.ch/record/161468/files/cholupdate.pdf
-*	   
+*
 *     .. Local Scalars ..
-      LOGICAL UPPER,DOTRAN
+*      LOGICAL UPPER,DOTRAN
       INTEGER I
       DOUBLE PRECISION SC,W
 *     .. External Functions ..
-      LOGICAL LSAME
-      EXTERNAL LSAME
+*      LOGICAL LSAME
+*      EXTERNAL LSAME
 *     .. External Subroutines ..
       EXTERNAL DROT,DROTG
 *     .. Intrinsic Functions ..
@@ -149,13 +157,14 @@
 *     Test the input parameters.
 *
       INFO=0
-      UPPER=LSAME(UPLO,'U')
-      DOTRAN=LSAME(TRANS,'T')
-      IF( .NOT. UPPER .AND. .NOT. LSAME(UPLO,'L') ) THEN
-        INFO=-1
-      ELSE IF( .NOT.DOTRAN .AND. .NOT. LSAME(TRANS,'N') ) THEN
-        INFO=-2
-      ELSE IF( N.LT.0 ) THEN
+*      UPPER=LSAME(UPLO,'U')
+*      DOTRAN=LSAME(TRANS,'T')
+*      IF( .NOT. UPPER .AND. .NOT. LSAME(UPLO,'L') ) THEN
+*        INFO=-1
+*      ELSE IF( .NOT.DOTRAN .AND. .NOT. LSAME(TRANS,'N') ) THEN
+*        INFO=-2
+*      ELSE IF( N.LT.0 ) THEN
+      IF( N.LT.0 ) THEN
         INFO=-3
       ELSE IF( M.LT.0 ) THEN
         INFO=-4
@@ -176,7 +185,7 @@
 *
 * ------ FIRST PART: UPDATE R ------
 *
-      IF(UPPER) THEN 
+      IF(UPPER) THEN
 *       Compute givens rotations to annihilate x
         DO 10 I=1,N
           CALL DROTG(R(I,I), X(I), C(I), S(I))
@@ -211,7 +220,7 @@
 * ------  SECOND PART: UPDATE Z AND RHO IF REQUESTED ------
 *
       IF(M.GT.0) THEN
-        IF(DOTRAN) THEN 
+        IF(DOTRAN) THEN
 *         Update colums of z
           DO 30 I=1,N
             CALL DROT(M,Z(1,I),1,Y(1),1,C(I),S(I));
