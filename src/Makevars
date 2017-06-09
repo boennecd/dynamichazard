@@ -29,13 +29,3 @@ ddhazard_EKF_solver.o: $(DD_DEPS) exp_model_funcs.h thread_pool.h ddhazard_EKF_s
 ddhazard_UKF_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_UKF_solver.cpp
 
 ddhazard_posterior_approx_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_posterior_approx_solver.cpp
-
-## I had issues like those posted here with R-devel R-3.5.0:
-## 	https://code.launchpad.net/~fluidity-core/fluidity/gmsh-on-sphere/+merge/99395/comments/216834
-## The build output log was:
-## 	d:/Compiler/gcc-4.9.3/mingw_64/bin/gfortran -m64     -pedantic -fbounds-check -O2  -mtune=core2 -c dchur.f -o dchur.o
-## And it yielded the following error:
-##	At line 1 of file dchur.f
-##	Fortran runtime error: Actual string length is shorter than the declared one for dummy argument 'uplo' (0/1)
-dchur.o:
-	$(F77) $(filter-out -fbounds-check,$(ALL_FFLAGS)) -c dchur.f -o dchur.o
