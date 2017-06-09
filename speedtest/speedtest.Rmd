@@ -105,7 +105,7 @@ get_rune_time_summary <- function(n, p){
   
   cat("\n\n")
   
-  invisible()
+  invisible() 
 }
 ```
 
