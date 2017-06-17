@@ -11,9 +11,9 @@ EKF_filter_worker::EKF_filter_worker(problem_data_EKF &p_data):
 {};
 
 void EKF_filter_worker::operator()(arma::uvec::const_iterator first, const arma::uvec::const_iterator &last,
-                                   const arma::vec &i_a_t, const bool &compute_z_and_H,
-                                   const int &i_start, const int &bin_number,
-                                   const double &bin_tstart, const double &bin_tstop){
+                                   const arma::vec &i_a_t, const bool compute_z_and_H,
+                                   const int i_start, const int bin_number,
+                                   const double bin_tstart, const double bin_tstop){
   // potentially intialize variables and set entries to zeroes in any case
   if(is_first_call){
     u_ = arma::vec(dat.n_params_state_vec);
@@ -45,10 +45,10 @@ void EKF_filter_worker::operator()(arma::uvec::const_iterator first, const arma:
 // worker for the logit model
 class EKF_filter_worker_logit : public EKF_filter_worker {
 private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop){
     const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
     const double w = dat.weights(*it);
 
@@ -86,10 +86,10 @@ public:
 // binary variable is used
 class EKF_filter_worker_exp_bin : public EKF_filter_worker {
 private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop){
     // Compute intermediates
     const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
     const double w = dat.weights(*it);
@@ -132,10 +132,10 @@ public:
 // right clipped variable is used
 class EKF_filter_worker_exp_clip_time : public EKF_filter_worker {
 private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop){
     // Compute intermediates
     const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
     const double w = dat.weights(*it);
@@ -183,10 +183,10 @@ public:
 // right clipped variable is used where outcomes are negative
 class EKF_filter_worker_exp_clip_time_w_jump : public EKF_filter_worker {
 private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop){
     // Compute intermediates
     const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
     const double w = dat.weights(*it);
@@ -386,9 +386,9 @@ EKF_helper::EKF_helper(problem_data_EKF &p_data_, const std::string model_):
 
 void EKF_helper::parallel_filter_step(arma::uvec::const_iterator first, arma::uvec::const_iterator last,
                                       const arma::vec &i_a_t,
-                                      const bool &compute_H_and_z,
-                                      const int &bin_number,
-                                      const double &bin_tstart, const double &bin_tstop){
+                                      const bool compute_H_and_z,
+                                      const int bin_number,
+                                      const double bin_tstart, const double bin_tstop){
   // Set entries to zero
   p_data.U.zeros();
   p_data.u.zeros();
@@ -436,7 +436,7 @@ void EKF_helper::parallel_filter_step(arma::uvec::const_iterator first, arma::uv
     std::advance(block_end, block_size);
 
     auto func =
-      [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
+      [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, bin_number, bin_tstart, &bin_tstop](){
         (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
          i_start, bin_number, bin_tstart, bin_tstop);
       };

@@ -22,10 +22,10 @@ public:
 // Classes for EKF method
 class EKF_filter_worker{
 protected:
-  virtual void do_comps(const arma::uvec::const_iterator it, int &i,
-                        const arma::vec &i_a_t, const bool &compute_z_and_H,
-                        const int &bin_number,
-                        const double &bin_tstart, const double &bin_tstop) = 0; // abstact method to be implemented
+  virtual void do_comps(const arma::uvec::const_iterator it, int i,
+                        const arma::vec &i_a_t, const bool compute_z_and_H,
+                        const int bin_number,
+                        const double bin_tstart, const double bin_tstop) = 0; // abstact method to be implemented
 
   bool is_first_call;
   problem_data_EKF &dat;
@@ -38,9 +38,9 @@ public:
   EKF_filter_worker(problem_data_EKF &p_data);
 
   void operator()(arma::uvec::const_iterator first, const arma::uvec::const_iterator &last,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &i_start, const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop);
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int i_start, const int bin_number,
+                const double bin_tstart, const double bin_tstop);
 };
 
 
@@ -56,9 +56,9 @@ public:
 
   void parallel_filter_step(arma::uvec::const_iterator first, arma::uvec::const_iterator last,
                             const arma::vec &i_a_t,
-                            const bool &compute_H_and_z,
-                            const int &bin_number,
-                            const double &bin_tstart, const double &bin_tstop);
+                            const bool compute_H_and_z,
+                            const int bin_number,
+                            const double bin_tstart, const double bin_tstop);
 };
 
 
