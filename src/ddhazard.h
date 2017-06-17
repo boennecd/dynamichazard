@@ -26,48 +26,64 @@ protected:
                         const arma::vec &i_a_t, const bool compute_z_and_H,
                         const int bin_number,
                         const double bin_tstart, const double bin_tstop) = 0; // abstact method to be implemented
-
-  bool is_first_call;
+  // Variables for computations
   problem_data_EKF &dat;
+  arma::uvec::const_iterator first;
+  const arma::uvec::const_iterator last;
+  const arma::vec &i_a_t;
+  const bool compute_z_and_H;
+  const int i_start;
+  const int bin_number;
+  const double bin_tstart;
+  const double bin_tstop;
 
   // local variables to compute temporary result
   arma::colvec u_;
   arma::mat U_;
 
 public:
-  EKF_filter_worker(problem_data_EKF &p_data);
+  EKF_filter_worker(
+    problem_data_EKF &p_data,
+    arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
+    const arma::vec &i_a_t_, const bool compute_z_and_H_,
+    const int i_start_, const int bin_number_,
+    const double bin_tstart_, const double bin_tstop_);
 
-  void operator()(arma::uvec::const_iterator first, const arma::uvec::const_iterator &last,
-                const arma::vec &i_a_t, const bool compute_z_and_H,
-                const int i_start, const int bin_number,
-                const double bin_tstart, const double bin_tstop);
+  void operator()();
 };
 
+class EKF_helper_base{
+public:
+  virtual void parallel_filter_step(
+      arma::uvec::const_iterator first, arma::uvec::const_iterator last,
+      const arma::vec &i_a_t,
+      const bool compute_H_and_z,
+      const int bin_number,
+      const double bin_tstart, const double bin_tstop) = 0;
+};
 
-
-class EKF_helper{
+template<class T>
+class EKF_helper : public EKF_helper_base {
   unsigned long const max_threads;
   problem_data_EKF &p_data;
-  std::vector<std::shared_ptr<EKF_filter_worker> > workers;
-  const std::string model;
 
 public:
-  EKF_helper(problem_data_EKF &p_data_, const std::string model_);
+  EKF_helper(problem_data_EKF &p_data_);
 
-  void parallel_filter_step(arma::uvec::const_iterator first, arma::uvec::const_iterator last,
-                            const arma::vec &i_a_t,
-                            const bool compute_H_and_z,
-                            const int bin_number,
-                            const double bin_tstart, const double bin_tstop);
+  void parallel_filter_step(
+      arma::uvec::const_iterator first, arma::uvec::const_iterator last,
+      const arma::vec &i_a_t,
+      const bool compute_H_and_z,
+      const int bin_number,
+      const double bin_tstart, const double bin_tstop);
 };
-
 
 class EKF_solver : public Solver{
   problem_data_EKF &p_dat;
-  EKF_helper filter_helper;
+  const std::string model;
 
 public:
-  EKF_solver(problem_data_EKF &p_, const std::string model);
+  EKF_solver(problem_data_EKF &p_, const std::string model_);
 
   void solve();
 };
