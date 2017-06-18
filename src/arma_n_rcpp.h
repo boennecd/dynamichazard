@@ -15,6 +15,10 @@ extern int openblas_get_num_threads();
 #define ARMA_USE_BLAS
 #endif
 
+// Don't use openMP for elementwise operations. It is automatically if -fopenmp
+// is present. Seems to cause issues on some platforms
+#define ARMA_DONT_USE_OPENMP
+
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK
 
