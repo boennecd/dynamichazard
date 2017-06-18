@@ -1,5 +1,7 @@
 #include "ddhazard.h"
+#ifdef _OPENMP
 #include "omp.h"
+#endif
 #include "arma_utils.h"
 
 inline double GMA_hepler_logit::d1(
