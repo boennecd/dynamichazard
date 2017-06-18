@@ -137,3 +137,31 @@ void sym_mat_vec_mult(
       x, &dum_i, &dum_d,
       y, &dum_i);
 }
+
+void symmetric_rank_k_update(
+    const int *n, const int *k, const double *A, double *C){
+  /*
+   DSYRK  performs one of the symmetric rank k operations
+
+   C := alpha*A*A**T + beta*C,
+
+   or
+
+   C := alpha*A**T*A + beta*C,
+
+   where  alpha and beta  are scalars, C is an  n by n  symmetric matrix
+   and  A  is an  n by k  matrix in the first case and a  k by n  matrix
+   in the second case.
+   */
+
+  // We use C := alpha*A*A**T + beta*C with alpha = beta = 1.
+  // Notice that we set UPLO to U so only the upper part is updated
+
+  const double dum_d = 1.0;
+
+  F77_NAME(dsyrk)(
+      "U", "N",
+      n, k, &dum_d,
+      A, n,
+      &dum_d, C, n);
+}

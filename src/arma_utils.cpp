@@ -80,3 +80,14 @@ arma::vec sym_mat_times_vec(const arma::vec &x, const arma::mat &A){
 
   return out;
 }
+
+arma::mat out_mat_prod(const arma::mat &A){
+  int n = A.n_rows;
+  int k = A.n_cols;
+
+  arma::mat out(n, n, arma::fill::zeros);
+
+  symmetric_rank_k_update(&n, &k, A.memptr(), out.memptr());
+
+  return out;
+}

@@ -1,4 +1,6 @@
 #include "ddhazard.h"
+#include "omp.h"
+#include "arma_utils.h"
 
 inline double GMA_hepler_logit::d1(
     const double eta, const bool is_event, const double at_risk_length){
@@ -92,24 +94,29 @@ void GMA<T>::solve(){
     }
 
     arma::vec h_1d(r_set.n_elem);
-    arma::vec h_2d_neg(r_set.n_elem);
 
-    arma::mat X_tilde;
     signed int k;
     for(k = 0; k < max_rep; k++){
+      arma::mat X_tilde = X_t;
       arma::vec a_old = a;
 
       arma::vec eta = (a(p_dat.span_current_cov).t() * X_t).t() + offsets;
 
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) num_threads(std::min(p_dat.n_threads, (int)std::ceil(r_set.n_elem / 1000.)))
+#endif
       for(arma::uword i = 0; i < r_set.n_elem; i++){
-        h_1d[i] = T::d1(eta[i], is_event[i], at_risk_lenght[i]);
-        h_2d_neg[i] = - T::d2(eta[i], at_risk_lenght[i]);
+        double w_i = w[i];
+        h_1d[i] = w_i * T::d1(eta[i], is_event[i], at_risk_lenght[i]);
+        double h_2d_neg = sqrt(- w_i * T::d2(eta[i], at_risk_lenght[i]));
+        X_tilde.col(i) *= h_2d_neg;
       }
-      h_1d %= w;
-      h_2d_neg = arma::sqrt(w % h_2d_neg);
 
-      X_tilde = X_t.each_row() % h_2d_neg.t();
-      X_tilde = X_tilde * X_tilde.t();
+      /* TODO: This can be faster
+       *  1) Do as with EKF use the thread_pool
+       */
+
+      X_tilde = arma::symmatu(out_mat_prod(X_tilde));
 
       if(p_dat.debug){
         my_print(p_dat, X_tilde, "X^T(-p'')X");
