@@ -159,7 +159,7 @@ sum(sims$res$event)
 
 options(ddhazard_use_speedglm = T)
 
-p <- profvis({
+p <- profvis::profvis({
   dd_fit <- ddhazard(
     Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
     data = sims$res, id = sims$res$id, by = 1,

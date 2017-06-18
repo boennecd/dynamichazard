@@ -173,7 +173,8 @@ test_that("Symmetric matrix rank one update works",{
 
     sym_mat_rank_one_update(alpha, x, d1)
 
-    expect_equal(d2, d1)
+    expect_equal(d2[upper.tri(d2, diag = TRUE)],
+                 d1[upper.tri(d1, diag = TRUE)])
   }
 })
 

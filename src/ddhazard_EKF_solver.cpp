@@ -439,6 +439,10 @@ void EKF_helper<T>::parallel_filter_step(
   {
     futures[i].get();   // will throw if any of the threads did
   }
+
+  // reflecting the upper triangle to the lower triangle as we have used the
+  // dsyr BLAS function
+  p_data.U = symmatu(p_data.U);
 };
 
 

@@ -43,7 +43,8 @@ knitr::knit_hooks$set(output = function(x, options) {
    hook_output(x, options)
  })
 
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, dpi = 36, cache = T)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, 
+                      dpi = 144, cache = T, dev = "png")
 knitr::opts_knit$set(warning = F, message = F)
 options(digits = 3)
 

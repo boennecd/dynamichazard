@@ -98,6 +98,8 @@ void sym_mat_rank_one_update(
   // computes A := alpha * x * x^T + A
   // where A is a n x n is a square matrix
   //       x is a n matrix
+  // Note that only the upper part will be updated!
+  // See http://www.netlib.org/lapack/explore-html/d7/d15/group__double__blas__level2_ga35ca25bb135cd7bfdd5d6190b1aa4d07.html#ga35ca25bb135cd7bfdd5d6190b1aa4d07
 
   int inx = 1;
 
@@ -105,7 +107,33 @@ void sym_mat_rank_one_update(
   // const double *x, const int *incx,
   // const double *y, const int *incy,
   // double *a, const int *lda);
-  F77_NAME(dger)(n, n, alpha,
-           x, &inx, x, &inx,
-           A, n);
+  F77_NAME(dsyr)(
+      "U", n, alpha,
+      x, &inx,
+      A, n);
+}
+
+void sym_mat_vec_mult(
+    const int *n, const double *x,
+    const double *A, double *y){
+  /*
+   DSYMV  performs the matrix-vector  operation
+
+   y := alpha*A*x + beta*y,
+
+   where alpha and beta are scalars, x and y are n element vectors and
+   A is an n by n symmetric matrix.
+   */
+
+  // This is only for alpha = 1, beta = 1. We use the upper part of A
+  // See http://www.netlib.org/lapack/explore-html/d7/d15/group__double__blas__level2_ga6ab49c8fa5e2608d9545483045bf3d03.html#ga6ab49c8fa5e2608d9545483045bf3d03
+
+  const double dum_d = 1.0;
+  const int dum_i = 1L;
+
+  F77_NAME(dsymv)(
+      "U", n,
+      &dum_d, A, n,
+      x, &dum_i, &dum_d,
+      y, &dum_i);
 }

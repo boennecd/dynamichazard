@@ -20,7 +20,8 @@ knitr::knit_hooks$set(
     }
   })
 options(digist = 4)
-knitr::opts_chunk$set(echo = TRUE, fig.height = 5, dpi = 36, 
+knitr::opts_chunk$set(echo = TRUE, fig.height = 5, dpi = 144, 
+                      dev = "png",
                       cache = T, 
                       cache.path = "cache/bootstrap/",
                       fig.path = "figure/bootstrap/")

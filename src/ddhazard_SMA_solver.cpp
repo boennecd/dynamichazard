@@ -197,6 +197,7 @@ void SMA<T>::solve(){
         a -= (p_dat.LR * (f2 - c) * f1) * inter_vec;
         sym_mat_rank_one_update(
           - neg_second_d  / (1. + neg_second_d / f1), inter_vec, V);
+        V = arma::symmatu(V); // TODO: this surely can be done smarter
 
     }} else if (method == "cholesky"){
       arma::mat L;

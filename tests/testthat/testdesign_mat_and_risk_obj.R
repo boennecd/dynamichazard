@@ -8,6 +8,9 @@ if(interactive()){
 
   get_permu_data_exp <-  with(environment(ddhazard), get_permu_data_exp)
   get_permu_data_rev_exp <- with(environment(ddhazard), get_permu_data_rev_exp)
+
+  get_order_data_exp <-  with(environment(ddhazard), get_order_data_exp)
+  get_order_data_rev_exp <- with(environment(ddhazard), get_order_data_rev_exp)
 }
 
 # Had issues with cran buil. Thus, these lines
@@ -551,7 +554,7 @@ set.seed(875080)
 X_Y <- get_design_matrix(
   Surv(tstart, tstop, death == 2) ~ ddFixed(age) + albumin, pbc2)
 risk_obj_org <- risk_obj <- get_risk_obj(X_Y$Y, 100, max_T = 3600, pbc2$id)
-X_Y[1:3] <- lapply(X_Y[1:3], data.frame)
+X_Y[1:2] <- lapply(X_Y[1:2], data.frame)
 X_Y_org <- X_Y
 
 w_org <- w <- sample(1:3, replace = T, nrow(pbc2))
@@ -561,13 +564,15 @@ eval(get_permu_data_exp(X_Y[1:3], risk_obj, w))
 
 got_plyr <- suppressWarnings(require(plyr, quietly = T))
 test_that("Permutating gives the data frame and risk set permutated", {
-  for(i in 1:3){
+  for(i in 1:2){
     expect_true(any(as.matrix(X_Y[[i]]) != as.matrix(X_Y_org[[i]])))
     expect_equal(nrow(X_Y[[i]]), nrow(X_Y_org[[i]]))
     if(got_plyr){
-      expect_equal(nrow(suppressMessages(match_df(X_Y_org[[i]], X_Y[[i]]))), nrow(X_Y_org[[i]]))
+      expect_equal(nrow(suppressMessages(match_df(X_Y_org[[i]], X_Y[[i]]))),
+        nrow(X_Y_org[[i]]))
     }
   }
+  expect_true(sum(is.na(match(X_Y_org$Y, X_Y$Y))) == 0)
 
   expect_true(setequal(w_org, w))
   expect_true(any(w_org != w))
@@ -602,6 +607,69 @@ test_that("Reverse permutating the data frame and the initial values", {
   expect_equal(w, w_org)
 
   expect_equal(risk_obj$is_event_in, risk_obj_org$is_event_in)
+})
+
+#####
+# Test sorting
+set.seed(875080 + 1)
+X_Y <- get_design_matrix(
+  Surv(tstart, tstop, death == 2) ~ ddFixed(age) + albumin, pbc2)
+risk_obj_org <- risk_obj <- get_risk_obj(X_Y$Y, 100, max_T = 3600, pbc2$id)
+X_Y[1:2] <- lapply(X_Y[1:2], data.frame)
+X_Y_org <- X_Y
+
+w_org <- w <- sample(1:3, replace = T, nrow(pbc2))
+
+eval(get_order_data_exp(X_Y[1:3], risk_obj, w))
+
+test_that("Ordering gives the data frame and risk set orded", {
+  for(i in 1:2){
+    expect_true(any(as.matrix(X_Y[[i]]) != as.matrix(X_Y_org[[i]])))
+    expect_equal(nrow(X_Y[[i]]), nrow(X_Y_org[[i]]))
+    if(got_plyr){
+      expect_equal(nrow(suppressMessages(match_df(X_Y_org[[i]], X_Y[[i]]))),
+                   nrow(X_Y_org[[i]]))
+    }
+  }
+  expect_true(sum(is.na(match(X_Y_org$Y, X_Y$Y))) == 0)
+
+  expect_true(setequal(w_org, w))
+  expect_true(any(w_org != w))
+
+  expect_equal(length(risk_obj$risk_sets), length(risk_obj_org$risk_sets))
+  for(i in seq_along(risk_obj$risk_sets)){
+    r1 <- risk_obj$risk_sets[[i]]
+    r2 <- risk_obj_org$risk_sets[[i]]
+
+    expect_true(!is.unsorted(risk_obj$risk_sets[[i]]))
+    expect_true(any(r1 != r2))
+    expect_equal(length(r1), length(r2))
+  }
+
+  expect_true(any(risk_obj$is_event_in != risk_obj_org$is_event_in))
+  expect_true(setequal(risk_obj$is_event_in, risk_obj_org$is_event_in))
+
+  expect_false(is.unsorted(X_Y$Y[, 2]))
+})
+
+eval(get_order_data_rev_exp(X_Y[1:3], risk_obj, w))
+
+test_that("Reverse permutating the data frame and the initial values", {
+  for(i in 1:3)
+    expect_equal(as.matrix(X_Y[[i]]), as.matrix(X_Y_org[[i]]))
+
+  for(i in seq_along(risk_obj$risk_sets)){
+    r1 <- risk_obj$risk_sets[[i]]
+    r2 <- risk_obj_org$risk_sets[[i]]
+
+    expect_equal(r1, r2)
+  }
+
+  expect_equal(w, w_org)
+
+  expect_equal(risk_obj$is_event_in, risk_obj_org$is_event_in)
+
+  expect_true(is.unsorted(X_Y$Y[, 2]))
 })
 
 #####

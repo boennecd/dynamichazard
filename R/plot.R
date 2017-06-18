@@ -99,10 +99,11 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
       lines(x$times, ub, lty = 2, col = col)
 
       if(!missing_boot){
-        if(nrow(boot_ests) > 5e2){
+        max_print = 50
+        if(nrow(boot_ests) > max_print){
           if(i == cov_index[1])
-            message("Only plotting ", 5e2, " of the boot sample estimates")
-          boot_ests <- boot_ests[sample.int(nrow(boot_ests), size = 5e2, replace = F), ]
+            message("Only plotting ", max_print, " of the boot sample estimates")
+          boot_ests <- boot_ests[sample.int(nrow(boot_ests), size = max_print, replace = F), ]
         }
 
         new_col <- c(col2rgb(col = col))

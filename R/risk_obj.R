@@ -95,15 +95,11 @@ get_risk_obj = function(
   final
 }
 
-get_permu_data_exp <- function(data, risk_obj, weights){
-  data <- deparse(substitute(data))
-  risk_obj <- deparse(substitute(risk_obj))
-  weights <- deparse(substitute(weights))
+######
+# Get expression to permutate data and risk set
 
-  txt_exp <-
-    "permu <- sample(nrow(data[[1]]), replace = F)
-
-    for(i in seq_along(data))
+permu_txt <-
+  "for(i in seq_along(data))
       data[[i]] <- data[[i]][permu, , drop = F]
 
     for(i in seq_along(risk_obj$risk_sets))
@@ -116,32 +112,44 @@ get_permu_data_exp <- function(data, risk_obj, weights){
 
     rm(i)"
 
+get_permu_data_exp <- function(data, risk_obj, weights){
+  data <- deparse(substitute(data))
+  risk_obj <- deparse(substitute(risk_obj))
+  weights <- deparse(substitute(weights))
+
+  txt_exp <- paste0(
+    "permu <- sample(nrow(data[[1]]), replace = F)
+
+    ", permu_txt)
+
   txt_exp <- gsub("data", data, txt_exp)
   txt_exp <- gsub("risk_obj", risk_obj, txt_exp)
   txt_exp <- gsub("weights", weights, txt_exp)
 
   parse(text = txt_exp)
 }
+
+permu_rev_txt <-
+  "org_order <- order(permu)
+
+  for(i in seq_along(data))
+    data[[i]] <- data[[i]][org_order, , drop = F]
+
+  for(i in seq_along(risk_obj$risk_sets))
+    risk_obj$risk_sets[[i]] <- attr(risk_obj$risk_sets[[i]], 'org')
+
+  risk_obj$is_event_in <- risk_obj$is_event_in[org_order]
+
+  weights <- weights[org_order]
+
+  rm(permu, org_order, i)"
 
 get_permu_data_rev_exp <- function(data, risk_obj, weights){
   data <- deparse(substitute(data))
   risk_obj <- deparse(substitute(risk_obj))
   weights <- deparse(substitute(weights))
 
-  txt_exp <-
-    "org_order <- order(permu)
-
-    for(i in seq_along(data))
-      data[[i]] <- data[[i]][org_order, , drop = F]
-
-    for(i in seq_along(risk_obj$risk_sets))
-      risk_obj$risk_sets[[i]] <- attr(risk_obj$risk_sets[[i]], 'org')
-
-    risk_obj$is_event_in <- risk_obj$is_event_in[org_order]
-
-    weights <- weights[org_order]
-
-    rm(permu, org_order, i)"
+  txt_exp <- permu_rev_txt
 
   txt_exp <- gsub("data", data, txt_exp)
   txt_exp <- gsub("risk_obj", risk_obj, txt_exp)
@@ -149,3 +157,25 @@ get_permu_data_rev_exp <- function(data, risk_obj, weights){
 
   parse(text = txt_exp)
 }
+
+######
+# Get expression to sort data and risk set by start and stop time
+
+get_order_data_exp <- function(data, risk_obj, weights){
+  data <- deparse(substitute(data))
+  risk_obj <- deparse(substitute(risk_obj))
+  weights <- deparse(substitute(weights))
+
+  txt_exp <- paste0(
+    "permu <- order(X_Y[['Y']][, 2], X_Y[['Y']][, 1])
+
+    ", permu_txt)
+
+  txt_exp <- gsub("data", data, txt_exp)
+  txt_exp <- gsub("risk_obj", risk_obj, txt_exp)
+  txt_exp <- gsub("weights", weights, txt_exp)
+
+  parse(text = txt_exp)
+}
+
+get_order_data_rev_exp <- get_permu_data_rev_exp
