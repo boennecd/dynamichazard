@@ -11,3 +11,6 @@ void tri_mat_times_vec(double*, double*, int , int, bool);
 
 // wrapper for dger
 void sym_mat_rank_one_update(const int*, const double*, const double*, double *);
+
+// wrapper for
+void sym_mat_vec_mult(const int *n, const double *x, const double *A, double *y);

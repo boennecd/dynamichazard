@@ -11,7 +11,7 @@ else
 endif
 
 SOURCES_C = stats/lm.c
-SOURCES_CPP = LAPACK_BLAS_wrapper.cpp arma_utils.cpp Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp thread_pool.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp ddhazard_SMA_solver.cpp ddhazard_GMA_solver.cpp
+SOURCES_CPP = LAPACK_BLAS_wrapper.cpp arma_utils.cpp Cdqrls_wrapper.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp ddhazard_SMA_solver.cpp ddhazard_GMA_solver.cpp
 SOURCES_F = biglm/boundedQRf.f dchur.f
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o)  $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)

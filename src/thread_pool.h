@@ -24,8 +24,11 @@
  DEALINGS IN THE SOFTWARE.
  */
 
-// Code from:
-// Williams, Anthony. C++ concurrency in action. London, 2012
+/*
+ Code from:
+ Williams, Anthony. C++ concurrency in action. London, 2012
+ Available at: https://www.manning.com/books/c-plus-plus-concurrency-in-action
+ */
 
 #ifndef THREAD_POOL_H
 #define THREAD_POOL_H
@@ -41,7 +44,10 @@
 #include <queue>
 #include <type_traits>
 
-// Listing 6.6
+/*
+ Listing 6.6 A thread-safe queue with fine-grained locking
+ Uses a singly linked list with a seperate mutex for the head and tail
+ */
 template<typename T>
 class thread_safe_queue
 {
@@ -126,6 +132,18 @@ public:
   ~join_threads();
 };
 
+join_threads::join_threads(std::vector<std::thread>& threads_):
+  threads(threads_)
+{}
+
+join_threads::~join_threads()
+{
+  for(unsigned long i=0;i<threads.size();++i)
+  {
+    threads[i].join();
+  }
+}
+
 // Listing 9.2
 class function_wrapper
 {
@@ -164,112 +182,68 @@ public:
   function_wrapper& operator=(const function_wrapper&)=delete;
 };
 
-
-// Listing 9.7:
-class work_stealing_queue
-{
-private:
-  typedef function_wrapper data_type;
-  std::deque<data_type> the_queue;
-  mutable std::mutex the_mutex;
-
-public:
-  work_stealing_queue()
-  {}
-
-  work_stealing_queue(const work_stealing_queue& other)=delete;
-  work_stealing_queue& operator=(
-    const work_stealing_queue& other)=delete;
-
-  void push(data_type data);
-  bool empty() const;
-  bool try_pop(data_type& res);
-  bool try_steal(data_type& res);
-};
-
-// Listing 9.8:
+// Listing 9.2:
 class thread_pool
 {
-  typedef function_wrapper task_type;
+  thread_safe_queue<function_wrapper> work_queue;
 
+  void worker_thread()
+  {
+    while(!done)
+    {
+      function_wrapper task;
+      if(work_queue.try_pop(task))
+      {
+        task();
+      }
+      else
+      {
+        std::this_thread::yield();
+      }
+    }
+  }
+
+  // From listing 9.1
   std::atomic_bool done;
-  std::atomic_bool start; // added
-  thread_safe_queue<task_type> pool_work_queue;
-  std::vector<std::unique_ptr<work_stealing_queue> > queues;
   std::vector<std::thread> threads;
   join_threads joiner;
 
-  // A way to get a static __thread member in a header class. See http://stackoverflow.com/a/11711082
-  static work_stealing_queue*& local_work_queue(){
-    static __thread work_stealing_queue* local_work_queue_;
-    return local_work_queue_;
-  }
-  static unsigned& my_index(){
-    static __thread unsigned my_index_;
-    return my_index_;
-  }
-
-  void worker_thread(unsigned my_index_)
-  {
-    while(!start){
-      std::this_thread::yield();
-    }
-
-    my_index()=my_index_;
-    local_work_queue()=queues[my_index()].get();
-
-    while(!done)
-    {
-      run_pending_task();
-    }
-
-    local_work_queue() = NULL;
-  }
-
-  bool pop_task_from_local_queue(task_type& task)
-  {
-    return local_work_queue() && local_work_queue()->try_pop(task);
-  }
-
-  bool pop_task_from_pool_queue(task_type& task)
-  {
-    return pool_work_queue.try_pop(task);
-  }
-
-  bool pop_task_from_other_thread_queue(task_type& task)
-  {
-    for(unsigned i=0;i<queues.size();++i)
-    {
-      unsigned const index=(my_index()+i+1)%queues.size();
-      if(queues[index]->try_steal(task))
-      {
-        return true;
-      }
-    }
-
-    return false;
-  }
+  // Added
+  unsigned const thread_count;
 
 public:
-  thread_pool(unsigned int n_jobs, unsigned int max_threads = 1):
-  done(false), start(false), joiner(threads)
+  template<typename FunctionType>
+  std::future<typename std::result_of<FunctionType()>::type>
+  submit(FunctionType f)
   {
-    unsigned const thread_count = std::min(n_jobs, max_threads);
+    typedef typename std::result_of<FunctionType()>::type result_type;
 
+    std::packaged_task<result_type()> task(std::move(f));
+    std::future<result_type> res(task.get_future());
+    work_queue.push(std::move(task));
+    return res;
+  }
+
+  // From listing 9.2
+  thread_pool(
+    // Added
+    unsigned const n_jobs, unsigned const max_threads = 1):
+    done(false),
+    joiner(threads),
+    thread_count(std::min(n_jobs, max_threads))
+  {
+    // Moved to private member
+    //unsigned const thread_count=std::thread::hardware_concurrency();
     try
     {
       for(unsigned i=0;i<thread_count;++i)
       {
-        queues.emplace_back(new work_stealing_queue);
         threads.push_back(
-          std::thread(&thread_pool::worker_thread,this,i));
+          std::thread(&thread_pool::worker_thread,this));
       }
-
-      start = true;
     }
     catch(...)
     {
-      start = true;
       done=true;
       throw;
     }
@@ -278,42 +252,6 @@ public:
   ~thread_pool()
   {
     done=true;
-  }
-
-  // template<typename ResultType>
-  // using task_handle = std::future<ResultType>;
-  // future is re-named in the book as far as I gather. using task_handle=std::unique_future<ResultType>;
-  template<typename FunctionType>
-  std::future<typename std::result_of<FunctionType()>::type> submit(FunctionType f)
-  {
-    typedef typename std::result_of<FunctionType()>::type result_type;
-
-    std::packaged_task<result_type()> task(f);
-    std::future<result_type> res(task.get_future());
-    if(local_work_queue())
-    {
-      local_work_queue()->push(std::move(task));
-    }
-    else
-    {
-      pool_work_queue.push(std::move(task));
-    }
-    return res;
-  }
-
-  void run_pending_task()
-  {
-    task_type task;
-    if(pop_task_from_local_queue(task) ||
-       pop_task_from_pool_queue(task) ||
-       pop_task_from_other_thread_queue(task))
-    {
-      task();
-    }
-    else
-    {
-      std::this_thread::yield();
-    }
   }
 };
 

@@ -346,8 +346,14 @@ ddhazard = function(formula, data,
     message("Running EM")
   }
 
-  if(control$permu)
+  if(control$permu){
+    # Permuting is useful for e.g. the SMA
     eval(get_permu_data_exp(X_Y[1:3], risk_set, weights))
+  } else {
+    # Otherwise the computation time may be reduced by sorting
+    # I tested with up to n = 100.000 and it did not matter
+    # eval(get_order_data_exp(X_Y[1:3], risk_set, weights))
+  }
 
   if(!est_fixed_in_E){
     X_Y$X <- t(X_Y$X) # we transpose for performance due to the column-major
@@ -415,8 +421,12 @@ ddhazard = function(formula, data,
     F_ <- F_[-indicies_fix, -indicies_fix, drop = F]
   }
 
-  if(control$permu)
+  if(control$permu){
     eval(get_permu_data_rev_exp(list(), risk_set, weights))
+  } else{
+    # See above with comments about ordering
+    # eval(get_order_data_rev_exp(list(), risk_set, weights))
+  }
 
   # Set names
   tmp_names = rep(rownames(X_Y$X), order)

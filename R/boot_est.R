@@ -114,9 +114,10 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
     boot_risk_set$is_event_in <-
       boot_risk_set$is_event_in[which_rows_are_included]
 
-    # Permutate if needed
-    if(ddhazard_fit$control$permu)
+    # Permutate if done on the first fit
+    if(ddhazard_fit$control$permu){
       eval(get_permu_data_exp(boot_X_Y[1:3], boot_risk_set, ws))
+    }
 
     # Add fixed terms to design matrix if fixed terms are estimated in the
     # E-step

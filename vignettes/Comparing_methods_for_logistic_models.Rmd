@@ -37,8 +37,10 @@ knitr::knit_hooks$set(
 
 options(digits = 3, width = 80, warn = -1)
 
-knitr::opts_chunk$set(echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6,
-                      warning = F, message = F, plot_2x1 = FALSE)
+knitr::opts_chunk$set(
+  echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6,
+  warning = F, message = F, plot_2x1 = FALSE)
+
 knitr::opts_knit$set(warning = F, message = F)
 ```
 

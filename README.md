@@ -99,7 +99,7 @@ boot_out <- ddhazard_boot(fit, R = 10000) # R is number of bootstrap samples
 # Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
 # bootstrap estimates. Transparent lines are bootstrap estimates
 plot(fit, ddhazard_boot = boot_out)
-#> Only plotting 500 of the boot sample estimates
+#> Only plotting 50 of the boot sample estimates
 ```
 
 ![](README-unnamed-chunk-2-2.png)

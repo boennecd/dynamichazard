@@ -6,26 +6,29 @@
 // worker class for parallel computation
 // This class is abstact as the method do_computation will differ between
 // the models
-EKF_filter_worker::EKF_filter_worker(problem_data_EKF &p_data):
-  is_first_call(true), dat(p_data)
+EKF_filter_worker::EKF_filter_worker(
+  problem_data_EKF &p_data,
+  arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
+  const arma::vec &i_a_t_, const bool compute_z_and_H_,
+  const int i_start_, const int bin_number_,
+  const double bin_tstart_, const double bin_tstop_)
+
+  :
+
+  dat(p_data), first(first_), last(last_),
+  i_a_t(i_a_t_), compute_z_and_H(compute_z_and_H_),
+  i_start(i_start_), bin_number(bin_number_),
+  bin_tstart(bin_tstart_), bin_tstop(bin_tstop_),
+  u_(dat.n_params_state_vec, arma::fill::zeros),
+  U_(dat.n_params_state_vec, dat.n_params_state_vec, arma::fill::zeros)
 {};
 
-void EKF_filter_worker::operator()(arma::uvec::const_iterator first, const arma::uvec::const_iterator &last,
-                                   const arma::vec &i_a_t, const bool &compute_z_and_H,
-                                   const int &i_start, const int &bin_number,
-                                   const double &bin_tstart, const double &bin_tstop){
+void EKF_filter_worker::operator()(){
   // potentially intialize variables and set entries to zeroes in any case
-  if(is_first_call){
-    u_ = arma::vec(dat.n_params_state_vec);
-    U_ = arma::mat(dat.n_params_state_vec, dat.n_params_state_vec);
-    is_first_call = false;
-  }
-  u_.zeros();
-  U_.zeros();
 
   // compute local results
   int i = i_start;
-  for(arma::uvec::const_iterator it = first; it != last; it++){
+  for(arma::uvec::const_iterator it = first; it != last; it++, i++){
     do_comps(it, i, i_a_t, compute_z_and_H, bin_number,
              bin_tstart, bin_tstop);
   }
@@ -45,10 +48,10 @@ void EKF_filter_worker::operator()(arma::uvec::const_iterator first, const arma:
 // worker for the logit model
 class EKF_filter_worker_logit : public EKF_filter_worker {
 private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop){
     const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
     const double w = dat.weights(*it);
 
@@ -71,14 +74,11 @@ private:
     if(compute_z_and_H){
       dat.H_diag_inv(i) = pow(var, -1);
       dat.z_dot(dat.span_current_cov, i) = x_ *  var;
-      ++i;
     }
   }
 
 public:
-  EKF_filter_worker_logit(problem_data_EKF &p_data):
-  EKF_filter_worker(p_data)
-  {}
+  using EKF_filter_worker::EKF_filter_worker;
 };
 
 
@@ -86,10 +86,10 @@ public:
 // binary variable is used
 class EKF_filter_worker_exp_bin : public EKF_filter_worker {
 private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop){
     // Compute intermediates
     const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
     const double w = dat.weights(*it);
@@ -119,23 +119,21 @@ private:
       dat.H_diag_inv(i) = exp_model_funcs::inv_var_chance_die(v, expect_chance_die);
 
       dat.z_dot(dat.span_current_cov, i) =  x_ * (inv_exp_v * v);
-      ++i;
     }
   }
+
 public:
-  EKF_filter_worker_exp_bin(problem_data_EKF &p_data):
-  EKF_filter_worker(p_data)
-  {}
+  using EKF_filter_worker::EKF_filter_worker;
 };
 
 // worker for the continous model with exponential distribution where only the
 // right clipped variable is used
 class EKF_filter_worker_exp_clip_time : public EKF_filter_worker {
 private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop){
     // Compute intermediates
     const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
     const double w = dat.weights(*it);
@@ -170,23 +168,21 @@ private:
       dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
 
       dat.z_dot(dat.span_current_cov, i) =  x_ * (inv_exp_eta*inv_exp_v*(1 - exp_v + v));
-      ++i;
     }
   }
+
 public:
-  EKF_filter_worker_exp_clip_time(problem_data_EKF &p_data):
-  EKF_filter_worker(p_data)
-  {}
+  using EKF_filter_worker::EKF_filter_worker;
 };
 
 // worker for the continous model with exponential distribution where only the
 // right clipped variable is used where outcomes are negative
 class EKF_filter_worker_exp_clip_time_w_jump : public EKF_filter_worker {
 private:
-  void do_comps(const arma::uvec::const_iterator it, int &i,
-                const arma::vec &i_a_t, const bool &compute_z_and_H,
-                const int &bin_number,
-                const double &bin_tstart, const double &bin_tstop){
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop){
     // Compute intermediates
     const arma::vec x_(dat.X.colptr(*it), dat.n_params_state_vec, false);
     const double w = dat.weights(*it);
@@ -224,13 +220,11 @@ private:
       dat.z_dot(dat.span_current_cov, i) =  x_ * (
         -inv_exp_eta + at_risk_length*inv_exp_v - pow(at_risk_length,2)*exp_eta*inv_exp_v + inv_exp_eta*inv_exp_v
       );
-      ++i;
     }
   }
+
 public:
-  EKF_filter_worker_exp_clip_time_w_jump(problem_data_EKF &p_data):
-  EKF_filter_worker(p_data)
-  {}
+  using EKF_filter_worker::EKF_filter_worker;
 };
 
 
@@ -249,8 +243,8 @@ public:
 
 
 
-EKF_solver::EKF_solver(problem_data_EKF &p_, const std::string model):
-  p_dat(p_), filter_helper(p_, model)
+EKF_solver::EKF_solver(problem_data_EKF &p_, const std::string model_):
+  p_dat(p_), model(model_)
   {};
 
 void EKF_solver::solve(){
@@ -293,18 +287,26 @@ void EKF_solver::solve(){
 #if defined(USE_OPEN_BLAS)
       openblas_set_num_threads(1);
 #endif
-      filter_helper.parallel_filter_step(r_set.begin(), r_set.end(), i_a_t(p_dat.span_current_cov), t == p_dat.d, t - 1,
-                                         bin_tstart, bin_tstop);
 
-      if(p_dat.u.has_inf() || p_dat.u.has_nan()){
-        Rcpp::stop("ddhazard_fit_cpp estimation error: Score vector in correction step had inf or nan elements in bin " +
-          std::to_string(t) + ". Try decreasing the learning rate");
+      std::unique_ptr<EKF_helper_base> helper;
+      if(model == "logit"){
+        helper.reset(new EKF_helper<EKF_filter_worker_logit>(p_dat));
 
-      } else if(p_dat.U.has_inf() || p_dat.U.has_nan()){
-        Rcpp::stop("ddhazard_fit_cpp estimation error: information matrix in correction step had inf or nan elements in bin " +
-          std::to_string(t) + ". Try decreasing the learning rate");
+      } else if (model == "exp_bin"){
+        helper.reset(new EKF_helper<EKF_filter_worker_exp_bin>(p_dat));
 
-      }
+      } else if(model == "exp_clip_time"){
+        helper.reset(new EKF_helper<EKF_filter_worker_exp_clip_time>(p_dat));
+
+      } else if(model == "exp_clip_time_w_jump"){
+        helper.reset(new EKF_helper<EKF_filter_worker_exp_clip_time_w_jump>(p_dat));
+
+      } else
+        Rcpp::stop("EKF is not implemented for model '" + model  +"'");
+
+      helper->parallel_filter_step(
+        r_set.begin(), r_set.end(), i_a_t(p_dat.span_current_cov),
+        t == p_dat.d, t - 1, bin_tstart, bin_tstop);
 
       if(p_dat.debug){
         my_debug_logger(p_dat) << "Score vector and diagonal of information matrix at time " << t << " are:";
@@ -375,20 +377,24 @@ void EKF_solver::solve(){
 
 
 
-
-EKF_helper::EKF_helper(problem_data_EKF &p_data_, const std::string model_):
+template<class T>
+EKF_helper<T>::EKF_helper(problem_data_EKF &p_data_):
   max_threads((p_data_.n_threads > 1) ? p_data_.n_threads - 1 : 1),
-  p_data(p_data_), workers(), model(model_)
+  p_data(p_data_)
 {
-  if(p_data.debug)
+  if(p_data.debug){
     my_debug_logger(p_data) << "EKF solver will use at most " << max_threads << " threads";
+  }
 }
 
-void EKF_helper::parallel_filter_step(arma::uvec::const_iterator first, arma::uvec::const_iterator last,
-                                      const arma::vec &i_a_t,
-                                      const bool &compute_H_and_z,
-                                      const int &bin_number,
-                                      const double &bin_tstart, const double &bin_tstop){
+template<class T>
+void EKF_helper<T>::parallel_filter_step(
+    arma::uvec::const_iterator first, arma::uvec::const_iterator last,
+    const arma::vec &i_a_t,
+    const bool compute_H_and_z,
+    const int bin_number,
+    const double bin_tstart, const double bin_tstop){
+
   // Set entries to zero
   p_data.U.zeros();
   p_data.u.zeros();
@@ -405,52 +411,38 @@ void EKF_helper::parallel_filter_step(arma::uvec::const_iterator first, arma::uv
   std::vector<std::future<void> > futures(num_blocks-1);
   thread_pool pool(num_blocks - 1, max_threads);
 
-  // Create workers if needed
-  for(auto i = workers.size(); i < num_blocks; i++){
-    if(model == "logit"){
-      std::shared_ptr<EKF_filter_worker> new_p(new EKF_filter_worker_logit(p_data));
-      workers.push_back(std::move(new_p));
+  std::vector<T> workers;
 
-    } else if (model == "exp_bin"){
-      std::shared_ptr<EKF_filter_worker> new_p(new EKF_filter_worker_exp_bin(p_data));
-      workers.push_back(std::move(new_p));
-    } else if(model == "exp_clip_time"){
-      std::shared_ptr<EKF_filter_worker> new_p(new EKF_filter_worker_exp_clip_time(p_data));
-      workers.push_back(std::move(new_p));
-    } else if(model == "exp_clip_time_w_jump"){
-      std::shared_ptr<EKF_filter_worker> new_p(new EKF_filter_worker_exp_clip_time_w_jump(p_data));
-      workers.push_back(std::move(new_p));
-    } else
-      Rcpp::stop("EKF is not implemented for model '" + model  +"'");
-  }
-
-  // start workers
   // declare outsite of loop to ref after loop
   arma::uvec::const_iterator block_start = first;
   auto it = workers.begin();
   int i_start = 0;
 
-  for(unsigned long i = 0; i < num_blocks - 1; ++i, ++it)
-  {
+  for(unsigned long i = 0; i < num_blocks - 1; ++i, ++it){
     arma::uvec::const_iterator block_end = block_start;
     std::advance(block_end, block_size);
 
-    auto func =
-      [it, block_start, block_end, &i_a_t, &compute_H_and_z, i_start, &bin_number, &bin_tstart, &bin_tstop](){
-        (*it->get())(block_start, block_end, i_a_t, compute_H_and_z,
-         i_start, bin_number, bin_tstart, bin_tstop);
-      };
+    workers.emplace_back(
+      p_data, block_start, block_end, i_a_t, compute_H_and_z,
+      i_start, bin_number, bin_tstart, bin_tstop);
 
-      futures[i] = pool.submit(func);
-      i_start += block_size;
-      block_start = block_end;
+    futures[i] = pool.submit(workers.back());
+    i_start += block_size;
+    block_start = block_end;
   }
-  (*(it->get()))(block_start, last, i_a_t, compute_H_and_z, i_start, bin_number, bin_tstart, bin_tstop); // compute last enteries on this thread
+
+  T( // compute last enteries on this thread
+    p_data, block_start, last, i_a_t, compute_H_and_z,
+    i_start, bin_number, bin_tstart, bin_tstop)();
 
   for(unsigned long i = 0; i < num_blocks - 1; ++i)
   {
     futures[i].get();   // will throw if any of the threads did
   }
+
+  // reflecting the upper triangle to the lower triangle as we have used the
+  // dsyr BLAS function
+  p_data.U = symmatu(p_data.U);
 };
 
 
