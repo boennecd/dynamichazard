@@ -53,7 +53,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
     for(; it != p_data->risk_sets.end(); ++it, ++t){
 
       double bin_start = bin_stop;
-      double delta_t = p_data->I_len[t - 1];
+      double delta_t = p_data->I_len[t - 1]; // I_len is std::vector and thus uses zero index
       bin_stop += delta_t;
 
       // Find the risk set and the number of elements to take
@@ -74,6 +74,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
 
       if(p_data->any_dynamic){
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
+		  // .col(t) and not .col(t - 1) this is a_(0 | d)
           p_data->X.cols(r_set).t() * p_data->a_t_t_s.col(t).head(p_data->n_params_state_vec);
       } else {
         offsets.subvec(n_elements, n_elements + n_elements_to_take - 1).fill(0.);
@@ -106,7 +107,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
       }
 
       if(cursor_risk_set + n_elements_to_take < r_set_size){ // there are still elements left in the bin
-        cursor_risk_set = cursor_risk_set + n_elements_to_take;
+        cursor_risk_set += n_elements_to_take;
         --it;
         --t;
         bin_stop -= delta_t;
