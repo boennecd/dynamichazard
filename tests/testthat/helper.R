@@ -52,8 +52,6 @@ library(testthat)
 library(dynamichazard)
 
 options(ddhazard_max_threads = 2)
-
-print(R.version)
 options(warn=1)
 
 head_neck_cancer <- get_head_neck_cancer_data()

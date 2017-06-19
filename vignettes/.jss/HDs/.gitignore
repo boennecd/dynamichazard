@@ -1,9 +1,0 @@
-# Ignore everything
-*
-
-# But not these files...
-!.gitignore
-!create_table.sql
-!setup.R
-!create_surv_table.sql
-!sandbox.Rmd

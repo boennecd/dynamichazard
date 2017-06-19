@@ -3,9 +3,9 @@
 .RData
 .Ruserdata
 .txt
-src/*.o
-src/*.so
-src/*.dll
+src/**/*.o
+src/**/*.so
+src/**/*.dll
 *.log
 
 vignettes/figures
@@ -23,6 +23,7 @@ vignettes/Prebuild/*_cache/
 vignettes/pandoc*.pdf
 vignettes/Prebuild/figure/
 vignettes/Prebuild/cache/
+vignettes/Prebuild/logit_sim_*.RDS
 vignettes/figure/
 vignettes/.jss/cache/
 vignettes/.jss/figure/
@@ -31,6 +32,16 @@ vignettes/.jss/results_from_simulation.Rds
 vignettes/.jss/jss*
 vignettes/.jss/jss*
 
+# Ignore everything
+vignettes/.jss/HDs/*
+# But not these files...
+!vignettes/.jss/HDs/create_table.sql
+!vignettes/.jss/HDs/setup.R
+!vignettes/.jss/HDs/create_surv_table.sql
+!vignettes/.jss/HDs/sandbox.Rmd
+
 sandbox/*
 **/Rprof.out
 **/Sweave.sty
+
+tests/profile.R
