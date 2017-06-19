@@ -32,121 +32,133 @@ get_head_neck_cancer_data <- function(){
 }
 
 # Simple function to make sure that we do not call rexp to many times
-get_exp_draw <- with(new.env(), {
-  n_max <- n_draws <- 10^5
-  n_cur <- 1
-  draws <- rexp(n = n_draws, rate = 1)
-  #env_p <- environment()
+get_exp_draw <- function(cmpfun = TRUE) {
+  out <- with(new.env(parent = .GlobalEnv), {
+    is_first <- TRUE
+    n_max <- n_draws <- 1e5
+    n_cur <- NULL
+    draws <- NULL
 
-  function(n, re_draw = F){
-    if(re_draw){
-      n_max <<- n_draws
-      n_cur <<- 1
-      draws <<- rexp(n = n_draws, rate = 1)
+    function(n, re_draw = F){
+      if(re_draw || is_first){
+        n_max <<- n_draws
+        n_cur <<- 1
+        draws <<- rexp(n = n_draws, rate = 1)
+        is_first <<- FALSE
 
-      return(NULL)
+        if(re_draw)
+          return(NULL)
+      }
+
+      if(n == 1 && n_max > n_cur){
+        n_cur <<- n_cur + 1
+        return(draws[n_cur - 1])
+      }
+
+      # Draw if needed
+      if(n > n_max - n_cur){ # we forget about the - 1
+        n_max <<- n + n_draws
+        n_cur <<- 1
+        draws <<- rexp(n = n + n_draws, rate = 1)
+      }
+
+      tmp <- n_cur
+      n_cur <<- n_cur + n
+      draws[tmp:(tmp + (n - 1))]
     }
+  })
 
-    if(n == 1 && n_max > n_cur){
-      n_cur <<- n_cur + 1
-      return(draws[n_cur - 1])
+  if(cmpfun)
+    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = T)) else
+      out
+}
+
+get_norm_draw <- function(cmpfun = TRUE) {
+  out <- with(new.env(parent = .GlobalEnv), {
+    is_first <- TRUE
+    n_max <- n_draws <- 1e5
+    n_cur <- NULL
+    draws <- NULL
+
+    function(n, re_draw = F){
+      if(re_draw || is_first){
+        n_max <<- n_draws
+        n_cur <<- 1
+        draws <<- rnorm(n = n_draws)
+        is_first <<- FALSE
+
+        if(re_draw)
+          return(NULL)
+      }
+
+      if(n == 1 && n_max > n_cur){
+        n_cur <<- n_cur + 1
+        return(draws[n_cur - 1])
+      }
+
+      # Draw if needed
+      if(n > n_max - n_cur){ # we forget about the - 1
+        n_max <<- n + n_draws
+        n_cur <<- 1
+        draws <<- rnorm(n = n + n_draws)
+      }
+
+      tmp <- n_cur
+      n_cur <<- n_cur + n
+      draws[tmp:(tmp + (n - 1))]
     }
+  })
 
-    # Draw if needed
-    if(n > n_max - n_cur){ # we forget about the - 1
-      n_max <<- n + n_draws
-      n_cur <<- 1
-      draws <<- rexp(n = n + n_draws, rate = 1)
+  if(cmpfun)
+    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = T)) else
+      out
+}
+
+get_unif_draw <- function(cmpfun = TRUE) {
+  out <- with(new.env(parent = .GlobalEnv), {
+    is_first <- TRUE
+    n_max <- n_draws <- 1e5
+    n_cur <- NULL
+    draws <- NULL
+
+    function(n, re_draw = F){
+      if(re_draw || is_first){
+        n_max <<- n_draws
+        n_cur <<- 1
+        draws <<- runif(n = n_draws)
+        is_first <<- FALSE
+
+        if(re_draw)
+          return(NULL)
+      }
+
+      if(n == 1 && n_max > n_cur){
+        n_cur <<- n_cur + 1
+        return(draws[n_cur - 1])
+      }
+
+      # Draw if needed
+      if(n > n_max - n_cur){ # we forget about the - 1
+        n_max <<- n + n_draws
+        n_cur <<- 1
+        draws <<- runif(n = n + n_draws)
+      }
+
+      tmp <- n_cur
+      n_cur <<- n_cur + n
+      draws[tmp:(tmp + (n - 1))]
     }
+  })
 
-    tmp <- n_cur
-    n_cur <<- n_cur + n
-    draws[tmp:(tmp + (n - 1))]
-  }
-})
+  if(cmpfun)
+    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = T)) else
+      out
+}
 
-get_norm_draw <- with(new.env(), {
-  n_max <- n_draws <- 10^5
-  n_cur <- 1
-  draws <- rnorm(n = n_draws)
-  #env_p <- environment()
-
-  function(n, re_draw = F){
-    if(re_draw){
-      n_max <<- n_draws
-      n_cur <<- 1
-      draws <<- rnorm(n = n_draws)
-
-      return(NULL)
-    }
-
-    if(n == 1 && n_max > n_cur){
-      n_cur <<- n_cur + 1
-      return(draws[n_cur - 1])
-    }
-
-    # Draw if needed
-    if(n > n_max - n_cur){ # we forget about the - 1
-      n_max <<- n + n_draws
-      n_cur <<- 1
-      draws <<- rnorm(n = n + n_draws)
-    }
-
-    tmp <- n_cur
-    n_cur <<- n_cur + n
-    draws[tmp:(tmp + (n - 1))]
-  }
-})
-
-
-get_unif_draw <- with(new.env(), {
-  n_max <- n_draws <- 10^5
-  n_cur <- 1
-  draws <- runif(n_draws)
-  #env_p <- environment()
-
-  function(n, re_draw = F){
-    if(re_draw){
-      n_max <<- n_draws
-      n_cur <<- 1
-      draws <<- runif(n = n_draws)
-
-      return(NULL)
-    }
-
-    if(n == 1 && n_max > n_cur){
-      n_cur <<- n_cur + 1
-      return(draws[n_cur - 1])
-    }
-
-    # Draw if needed
-    if(n > n_max - n_cur){ # we forget about the - 1
-      n_max <<- n + n_draws
-      n_cur <<- 1
-      draws <<- runif(n = n + n_draws)
-    }
-
-    tmp <- n_cur
-    n_cur <<- n_cur + n
-    draws[tmp:(tmp + (n - 1))]
-  }
-})
-
-# library(microbenchmark)
-# microbenchmark(get_exp_draw(1), rexp(1,1))
-# microbenchmark(get_exp_draw(010), rexp(100,1))
-
-get_exp_draw = compiler::cmpfun(get_exp_draw, options = list(
-  optimize = 3, suppressAll = T))
-get_unif_draw = compiler::cmpfun(get_unif_draw, options = list(
-  optimize = 3, suppressAll = T))
-get_norm_draw = compiler::cmpfun(get_norm_draw, options = list(
-  optimize = 3, suppressAll = T))
-
-# microbenchmark(get_exp_draw(1), rexp(1,1))
-# microbenchmark(get_exp_draw(100), rexp(100,1))
-# microbenchmark(get_unif_draw(1), runif(1))
-# microbenchmark(get_unif_draw(100), runif(100))
+# n <- 5e4
+# microbenchmark(
+#   { get_exp_draw()(n); for(i in 1:n) { }},
+#   for(i in 1:n) { rexp(1,1) })
 
 # Define functions to simulate outcomes
 test_sim_func_logit <- function(n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x_range = .1, x_mean = -.1,
@@ -161,6 +173,10 @@ test_sim_func_logit <- function(n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
                 dimnames = list(NULL, c("id", "tstart", "tstop", "event", paste0("x", 1:n_vars))))
   cur_row <- 1
+
+  get_unif_draw <- get_unif_draw()
+  get_exp_draw <- get_exp_draw()
+  get_norm_draw <- get_norm_draw()
 
   if(re_draw){
     get_unif_draw(re_draw = T)
@@ -254,6 +270,10 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
                 dimnames = list(NULL, c("id", "tstart", "tstop", "event", paste0("x", 1:n_vars))))
   cur_row <- 1
+
+  get_unif_draw <- get_unif_draw()
+  get_exp_draw <- get_exp_draw()
+  get_norm_draw <- get_norm_draw()
 
   if(re_draw){
     get_unif_draw(re_draw = T)
@@ -391,6 +411,14 @@ read_to_test <- function(file_name){
 get_pbc2_data <- function(){
   pbc <- survival::pbc
   pbcseq <- survival::pbcseq
+
+  # Avoid notes with CRAN tests
+  id <- NULL
+  sex <- NULL
+  time <- NULL
+  status <- NULL
+  edema <- NULL
+  age <- NULL
 
   temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))
   pbc2 <- survival::tmerge(

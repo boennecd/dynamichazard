@@ -3,7 +3,7 @@ context("Testing test_utils")
 set.seed(101010)
 
 test_that("Testing util functions to sim for test", {
-  test_pairs <- cbind("new funcs" = c(get_exp_draw, get_unif_draw, get_norm_draw),
+  test_pairs <- cbind("new funcs" = c(get_exp_draw(), get_unif_draw(), get_norm_draw()),
                      "funcs" = c(rexp, runif, rnorm))
 
   for(i in seq_len(nrow(test_pairs))){

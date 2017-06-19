@@ -1661,9 +1661,9 @@ if(!already_computed){
   with(sim_env <- new.env(), {
     #####
     # Function to make sampling go quicker
-    get_exp_draw <- with(environment(ddhazard), get_exp_draw)
-    get_unif_draw <- with(environment(ddhazard), get_unif_draw)
-    get_norm_draw <- with(environment(ddhazard), get_norm_draw)
+    get_exp_draw <- with(environment(ddhazard), get_exp_draw())
+    get_unif_draw <- with(environment(ddhazard), get_unif_draw())
+    get_norm_draw <- with(environment(ddhazard), get_norm_draw())
 
     #####
     # Define simulation function
