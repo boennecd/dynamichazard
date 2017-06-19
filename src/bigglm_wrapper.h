@@ -4,19 +4,6 @@
 #include <memory>
 #include "arma_n_rcpp.h"
 
-// Classes for R like distributions families
-class dist_family {
-public:
-  virtual double link_func(const double&) const = 0;
-  virtual double link_func_inv(const double&) const = 0;
-  virtual double variance(const double&) const = 0;
-  virtual double d_mu_d_eta(const double&) const = 0; // d mu / d eta
-  virtual double dev_resids(const double&, const double&, const double&) const = 0;
-
-  virtual double time_offset(const double&) const = 0;
-};
-
-
 // Functions and classes for fixed effects. Similar to object in bigglm
 int binomialCoeff(int n, int k);
 
@@ -38,93 +25,91 @@ public:
 };
 
 
-template<class T>
+template<typename T>
 class bigglm_updateQR{
   // match logic in update.bigqr
-  arma::vec linkinv(const arma::vec &eta);
+  static arma::vec linkinv(const arma::vec &eta);
 
-  arma::vec d_mu_d_eta(const arma::vec &eta);
+  static arma::vec d_mu_d_eta(const arma::vec &eta);
 
-  arma::vec variance(const arma::vec &mu);
-
-protected:
-  T t;
+  static arma::vec variance(const arma::vec &mu);
 
 public:
-  bigglm_updateQR<T>(): t() {}
+  static void update(
+      qr_obj &qr, // Previous/starting value. Will be overwritten
+      const arma::mat &X, const arma::vec &eta,
+      const arma::vec &offset, arma::vec &y, // y will not be altered
+      const arma::vec &w);
 
-  void update(qr_obj &qr, // Previous/starting value. Will be overwritten
-              const arma::mat &X, const arma::vec &eta,
-              const arma::vec &offset, arma::vec &y, // y will not be altered
-              const arma::vec &w);
+  typedef T family;
 };
 
 arma::vec bigglm_regcf(qr_obj &qr);
 
 //logit_fam
-class logit_fam : public dist_family {
+class logit_fam {
 private:
   static constexpr double THRESH = 30.;
   static constexpr double MTHRESH = -30.;
   static constexpr double INVEPS = 1 / DOUBLE_EPS;
 
 public:
-  double link_func(const double &mu) const{
+  static inline double link_func(const double &mu){
     return (log(mu / (1 - mu)));
   };
 
-  double link_func_inv(const double &eta) const{
+  static inline double link_func_inv(const double &eta){
     double tmp = (eta < MTHRESH) ? DOUBLE_EPS :
     ((eta > THRESH) ? INVEPS : exp(eta));
 
     return( tmp / (1.0 + tmp));
   };
 
-  double variance(const double &mu) const{
+  static inline double variance(const double &mu){
     return(mu * (1 - mu));
   };
 
-  double d_mu_d_eta(const double& eta) const{
+  static inline double d_mu_d_eta(const double& eta){
     double exp_eta = exp(eta);
     double opexp = 1 + exp_eta;
 
     return((eta > THRESH || eta < MTHRESH) ?  DOUBLE_EPS : exp_eta / (opexp * opexp));
   };
 
-  double dev_resids(const double &y, const double &mu, const double &w) const{
+  static inline double dev_resids(const double &y, const double &mu, const double &w){
     return (y > 0.0) ? - log(mu) : - log(1 - mu);
   };
 
-  double time_offset(const double &delta_t) const{
+  static inline double time_offset(const double &delta_t){
     return 0.;
   }
 };
 
 //poisson_fam
-class poisson_fam : public dist_family
+class poisson_fam
 {
 public:
-  double link_func(const double &mu) const{
+  static inline double link_func(const double &mu){
     return log(mu);
   };
 
-  double link_func_inv(const double &eta) const{
+  static inline double link_func_inv(const double &eta){
     return std::max(exp(eta), DOUBLE_EPS);
   };
 
-  double variance(const double &mu) const{
+  static inline double variance(const double &mu){
     return mu;
   };
 
-  double d_mu_d_eta(const double &eta) const{
+  static inline double d_mu_d_eta(const double &eta){
     return std::max(exp(eta), DOUBLE_EPS);
   };
 
-  double dev_resids(const double &y, const double &mu, const double &w) const{
+  static inline double dev_resids(const double &y, const double &mu, const double &w){
     return (y > 0.0) ? w * (y * log(y / mu) - (y - mu)) : mu * w;
   };
 
-  double time_offset(const double &delta_t) const{
+  static inline double time_offset(const double &delta_t){
     return log(delta_t);
   };
 };

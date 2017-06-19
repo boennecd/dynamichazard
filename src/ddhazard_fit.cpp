@@ -30,12 +30,9 @@ extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
                                        const arma::vec &,
                                        const int, const std::string);
 
-
-
 // Method to estimate fixed effects like in biglm::bigglm
-template<typename T>
-void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
-                            bigglm_updateQR<T> &updater){
+template <class updater>
+void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
   int it_outer = 0;
   arma::vec old_beta;
   do{
@@ -84,8 +81,9 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
 
       for(arma::uword i = 0; i < r_set.n_elem; ++i){
         offsets(n_elements + i) +=
-          T().time_offset(std::min(p_data->tstop(r_set(i)), bin_stop)
-                            - std::max(p_data->tstart(r_set(i)), bin_start));
+          updater::family::time_offset(
+            std::min(p_data->tstop(r_set(i)), bin_stop)
+              - std::max(p_data->tstart(r_set(i)), bin_start));
       }
 
       n_elements += n_elements_to_take;
@@ -93,7 +91,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
       if(n_elements == chunk_size){ // we have reached the chunk_size
 
         arma::vec eta = fixed_terms.t() * p_data->fixed_parems;
-        updater.update(qr, fixed_terms, eta, offsets, y, w);
+        updater::update(qr, fixed_terms, eta, offsets, y, w);
 
         n_elements = 0;
       } else if(it == --p_data->risk_sets.end()){ // there is no more bins to process
@@ -104,7 +102,7 @@ void estimate_fixed_effects(problem_data * const p_data, const int chunk_size,
         offsets = offsets.subvec(0, n_elements - 1);
 
         arma::vec eta =  fixed_terms.t() * p_data->fixed_parems;
-        updater.update(qr, fixed_terms, eta, offsets, y, w);
+        updater::update(qr, fixed_terms, eta, offsets, y, w);
       }
 
       if(cursor_risk_set + n_elements_to_take < r_set_size){ // there are still elements left in the bin
@@ -464,12 +462,12 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       arma::vec old = p_data->fixed_parems;
 
       if(model == "logit"){
-        bigglm_updateQR_logit  updater;
-        estimate_fixed_effects(p_data.get(), fixed_effect_chunk_size, updater);
+        estimate_fixed_effects<bigglm_updateQR_logit>(
+          p_data.get(), fixed_effect_chunk_size);
 
       } else if(is_exponential_model(model)){
-        bigglm_updateQR_poisson updater;
-        estimate_fixed_effects(p_data.get(), fixed_effect_chunk_size, updater);
+        estimate_fixed_effects<bigglm_updateQR_poisson>(
+          p_data.get(), fixed_effect_chunk_size);
 
       } else
         Rcpp::stop("Fixed effects is not implemented for '" + model  +"'");
@@ -558,6 +556,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
 
 
 // Exported for test only
+// It is here for the definition of the is_exponential_model function
 // [[Rcpp::export]]
 void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
                           double &ss, bool &checked, arma::vec &tol,
@@ -575,8 +574,8 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
   qr.tol = std::shared_ptr<arma::vec>(&tol, [](arma::vec*x) -> void { });
 
   if(model == "logit"){
-    return(bigglm_updateQR_logit().update(qr, X, eta, offset, y, w));
+    return(bigglm_updateQR_logit::update(qr, X, eta, offset, y, w));
   } else if (is_exponential_model(model)){
-    return(bigglm_updateQR_poisson().update(qr, X, eta, offset, y, w));
+    return(bigglm_updateQR_poisson::update(qr, X, eta, offset, y, w));
   }
 }

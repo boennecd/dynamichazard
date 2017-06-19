@@ -419,6 +419,12 @@ get_pbc2_data <- function(){
   status <- NULL
   edema <- NULL
   age <- NULL
+  event <- NULL
+  tdc <- NULL
+  day <- NULL
+  albumin <- NULL
+  protime <- NULL
+  bili <- NULL
 
   temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))
   pbc2 <- survival::tmerge(

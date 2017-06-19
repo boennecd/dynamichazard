@@ -51,7 +51,7 @@ arma::vec bigglm_updateQR<T>::linkinv(const arma::vec &eta){
   arma::vec out(eta.n_elem);
 
   for(arma::uword i = 0; i < eta.n_elem; i++)
-    out[i] = t.link_func_inv(eta[i]);
+    out[i] = T::link_func_inv(eta[i]);
 
   return(out);
 }
@@ -61,7 +61,7 @@ arma::vec bigglm_updateQR<T>::d_mu_d_eta(const arma::vec &eta){
   arma::vec out(eta.n_elem);
 
   for(arma::uword i = 0; i < eta.n_elem; i++)
-    out[i] = t.d_mu_d_eta(eta[i]);
+    out[i] = T::d_mu_d_eta(eta[i]);
 
   return(out);
 }
@@ -71,7 +71,7 @@ arma::vec bigglm_updateQR<T>::variance(const arma::vec &mu){
   arma::vec out(mu.n_elem);
 
   for(arma::uword i = 0; i < mu.n_elem; i++)
-    out[i] = t.variance(mu[i]);
+    out[i] = T::variance(mu[i]);
 
   return(out);
 }
