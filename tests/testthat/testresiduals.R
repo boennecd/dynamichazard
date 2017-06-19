@@ -1,14 +1,4 @@
-if(interactive()){
-  library(testthat)
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-}
-
-# Had issues with win builder. Thus, these lines
-test_name <- "residuals"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing residuals functions")
 
 ###############
 # Simple test that methods calls succeds
@@ -261,7 +251,3 @@ test_that("Get prevoius residuals with whas500", {
   # save_to_test(pearson, "whas_pearson")
   expect_equal(pearson, read_to_test("whas_pearson"))
 })
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

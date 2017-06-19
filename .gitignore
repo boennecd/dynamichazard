@@ -8,7 +8,6 @@ src/*.so
 src/*.dll
 *.log
 
-.pdf
 vignettes/figures
 revdep
 .commit
@@ -17,19 +16,21 @@ revdep
 **/*.txt
 
 **/tex2pdf*/
+**/Rplots.pdf
 
 vignettes/*_cache/
 vignettes/Prebuild/*_cache/
 vignettes/pandoc*.pdf
 vignettes/Prebuild/figure/
 vignettes/Prebuild/cache/
-vignettes/jss/cache/
-vignettes/jss/figure/
-vignettes/jss/sim_env.Rds
-vignettes/jss/results_from_simulation.Rds
-vignettes/jss/jss*
-vignettes/jss/jss*
+vignettes/figure/
+vignettes/.jss/cache/
+vignettes/.jss/figure/
+vignettes/.jss/sim_env.Rds
+vignettes/.jss/results_from_simulation.Rds
+vignettes/.jss/jss*
+vignettes/.jss/jss*
 
 sandbox/*
-Rprof.out
-Sweave.sty
+**/Rprof.out
+**/Sweave.sty

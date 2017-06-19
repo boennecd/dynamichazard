@@ -1,17 +1,4 @@
-# Had issues with win builder. Thus, these lines
-test_name <- "fixed_effects_like_recursive_least_squares"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
-
-if(interactive()){
-  library(testthat); library(survival)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-}
-
-
+context("Testing fixed_effects_like_recursive_least_squares")
 
 test_that("Works with EKF and logit model and with one fixed and one non-fixed", {
           fit <- ddhazard(survival::Surv(start, stop, event) ~ ddFixed(group),
@@ -183,6 +170,3 @@ test_that("posterior_approx gives previous found values with fixed effects in E-
 
   expect_equal(f1, read_to_test("posterior_approx_logit_fixed_E"), tolerance = 1.490116e-08)
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

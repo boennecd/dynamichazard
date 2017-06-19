@@ -1,17 +1,4 @@
-if(interactive()){
-  library(testthat);
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-}
-
-
-
-# Had issues with win builder. Thus, these lines
-test_name <- "plot"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
-
+context("Testing plot functions")
 
 # Test first order
 test_that("Expecting plot calls to succed with first order model", {
@@ -103,11 +90,3 @@ test_that("Alters mfcol and sets it back", {
     expect_equal(getOption("mfcol"), NULL)
   }
 })
-
-
-
-
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

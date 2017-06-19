@@ -1,15 +1,4 @@
-if(interactive()){
-  library(survival); library(dynamichazard); library(testthat)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-}
-
-# Had issues with win builder. Thus, these lines
-test_name <- "print"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing print function")
 
 test_that("Print yields the expected results for object returned by ddhazard", {
   result <-  ddhazard(
@@ -92,11 +81,3 @@ test_that("print.ddhazard_boot gives the expected output", {
               prints_text("Bootstrap Statistics :\n                original   bias    bias (truncated)  std. error\n(Intercept):t0   -2.9719  0.02795           0.02795      0.2005\n(Intercept):t1   -2.9719  0.02795           0.02795      0.2005\n(Intercept):t2   -2.8892  0.04089           0.04089      0.2095\n(Intercept):t3   -2.7887  0.04762           0.04762      0.2260\n(Intercept):t4   -2.6945  0.05911           0.05911      0.2422\n(Intercept):t5   -2.6002  0.07923           0.07923      0.2670\n(Intercept):t6   -2.6097  0.07752           0.07752      0.2526\n(Intercept):t7   -2.7021  0.06988           0.06988      0.2366\n(Intercept):t8   -2.7803  0.06150           0.06150      0.2231\n(Intercept):t9   -2.8512  0.05553           0.05553      0.2116\n(Intercept):t10  -2.9209  0.04826           0.04826      0.2004\n(Intercept):t11  -2.9957  0.03659           0.03659      0.1967\n(Intercept):t12  -3.0515  0.02811           0.02811      0.1956\n(Intercept):t13  -3.0913  0.02760           0.02760      0.1950\n(Intercept):t14  -3.1005  0.02842           0.02842      0.1976\n(Intercept):t15  -3.1262  0.03090           0.03090      0.1926\n(Intercept):t16  -3.1567  0.03245           0.03245      0.1951\n(Intercept):t17  -3.1789  0.03214           0.03214      0.2008\n(Intercept):t18  -3.1779  0.03299           0.03299      0.2100\n(Intercept):t19  -3.1851  0.03352           0.03352      0.2168\n(Intercept):t20  -3.1730  0.03506           0.03506      0.2275\nddFixed(group)1   0.5247 -0.05077          -0.05077      0.2536",
                           fixed = T))
 })
-
-
-
-
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

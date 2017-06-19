@@ -1,19 +1,4 @@
-if(interactive()){
-  library(testthat); library(survival); library(parallel)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-
-  library(dynamichazard)
-  exp_model_names <- with(environment(ddhazard), exp_model_names)
-}
-
-
-# Had issues with win builder. Thus, these lines
-test_name <- "loglike"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing loglike")
 
 test_that("verbose prints log likelihood",{
   for(method in c("EKF", "UKF")){
@@ -300,9 +285,5 @@ test_that("logLik for simulated data versus old results", {
                    df = 4 + 4 * (1 + 4) / 2 + 2)
   expect_equal(log_like, old, tolerance = 1e-6)
 })
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")
 
 

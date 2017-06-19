@@ -1,17 +1,4 @@
-# Had issues with win builder. Thus, these lines
-test_name <- "test_GMA"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
-
-if(interactive()){
-  library(survival); library(dynamichazard); library(testthat)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("R/test_utils.R")
-
-  exp_model_names <- with(environment(ddhazard), exp_model_names)
-}
+context("Running tests for GMA")
 
 test_that("Gives same results w/ 1. order logit model", {
   result = ddhazard(
@@ -193,6 +180,3 @@ test_that("GAM works w/ weights", {
 
   expect_equal(f2$state_vecs, f3$state_vecs, 1e-3)
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

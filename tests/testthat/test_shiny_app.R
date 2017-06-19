@@ -1,6 +1,4 @@
-# Had issues with win builder. Thus, these lines
-test_name <- "shiny app"
-cat("\nRunning", test_name, "\n")
+context("Testing shiny app")
 
 if(require(shiny, quietly = T)){
   test_that("Shiny app starts when no arguments are passed", {
@@ -25,6 +23,3 @@ if(require(shiny, quietly = T)){
       GMA_NR_eps = 4, more_options = F)
   })
 }
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

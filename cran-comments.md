@@ -60,3 +60,6 @@ Sorry for violating the CRAN policies with the rule and wasting your time. Sorry
 Removed the __thread to make the package build on r-patched-solaris-sparc.
 Reduced the size of the vignettes.
 Minor small changes to decrease the computation speed.
+
+## Resubmission
+Fixed issues with r-patched-solaris-x86. I added $(SHLIB_OPENMP_CXXFLAGS) in last submission which triggered armadillo to use OpenMP with C++11 code which caused the error

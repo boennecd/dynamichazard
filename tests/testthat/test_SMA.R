@@ -1,7 +1,4 @@
-# Had issues with win builder. Thus, these lines
-test_name <- "test_SMA"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing SMA")
 
 if(interactive()){
   library(survival); library(dynamichazard); library(testthat)
@@ -290,6 +287,3 @@ test_that("Exponential model yields the same results for all the method inputs w
     expect_equal(f1$state_vecs, f2$state_vecs)
   }
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

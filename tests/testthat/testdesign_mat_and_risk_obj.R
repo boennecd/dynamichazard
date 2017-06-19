@@ -1,24 +1,4 @@
-if(interactive()){
-  library(survival); library(testthat); library(dynamichazard)
-  exp_model_names <- with(environment(ddhazard), exp_model_names)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-
-  get_permu_data_exp <-  with(environment(ddhazard), get_permu_data_exp)
-  get_permu_data_rev_exp <- with(environment(ddhazard), get_permu_data_rev_exp)
-
-  get_order_data_exp <-  with(environment(ddhazard), get_order_data_exp)
-  get_order_data_rev_exp <- with(environment(ddhazard), get_order_data_rev_exp)
-}
-
-# Had issues with cran buil. Thus, these lines
-test_name <- "design_mat_..."
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
-
-get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
+context("Testing design_mat_and_risk_obj")
 
 # Simulate data
 set.seed(11111)
@@ -698,10 +678,3 @@ test_that("Parallel and non-parallel version gives the same for get_risk_set", {
 
   expect_equal(p1[-1], p2[-1])
 })
-
-
-
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

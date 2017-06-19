@@ -1,21 +1,4 @@
-library(biglm)
-
-# Had issues with win builder. Thus, these lines
-test_name <- "bigglm_wrapper"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
-
-bigqr.init <- with(environment(bigglm), bigqr.init)
-
-bigglm_updateQR_rcpp <- with(environment(ddhazard), bigglm_updateQR_rcpp)
-bigglm_regcf_rcpp <- with(environment(ddhazard), bigglm_regcf_rcpp)
-
-if(interactive()){
-  library(survival); library(dynamichazard); library(testthat); library(biglm)
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-}
+context("Testing bigglm_wrapper")
 
 # From bigglm.function()
 biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12,
@@ -334,6 +317,3 @@ test_that("bigglm and my c++ version yields similar with weights", {
     expect_equal(unname(coef(bigglm_res)), c(b))
   }
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

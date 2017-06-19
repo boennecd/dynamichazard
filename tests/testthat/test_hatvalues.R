@@ -1,7 +1,4 @@
-# Had issues with win builder. Thus, these lines
-test_name <- "hatvalues"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Running tests for hatvalues")
 
 #####
 # Load data
@@ -77,6 +74,3 @@ test_that("hatvalues works with dynamic and fixed effects and gives previous res
 
   expect_equal(hats, read_to_test("hats_dym_n_fixed_whas500"), tolerance = 1.490116e-08)
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

@@ -1,18 +1,4 @@
-if(interactive()){
-  chol_rank_one_update <- with(environment(ddhazard), chol_rank_one_update)
-
-  square_tri_inv <- with(environment(ddhazard), square_tri_inv)
-
-  symmetric_mat_chol <- with(environment(ddhazard), symmetric_mat_chol)
-
-  tri_mat_times_vec <- with(environment(ddhazard), tri_mat_times_vec)
-
-  sym_mat_rank_one_update <- with(environment(ddhazard), sym_mat_rank_one_update)
-}
-
-test_name <- "Testing LAPACK wrapper functions"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing LAPACK wrapper functions")
 
 set.seed(3144)
 
@@ -177,6 +163,3 @@ test_that("Symmetric matrix rank one update works",{
                  d1[upper.tri(d1, diag = TRUE)])
   }
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

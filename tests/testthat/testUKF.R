@@ -1,18 +1,4 @@
-if(interactive()){
-  library(dynamichazard); library(testthat); library(survival)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-
-  exp_model_names <- with(environment(ddhazard), exp_model_names)
-}
-
-
-# Had issues with win builder. Thus, these lines
-test_name <- "UKF"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing UKF")
 
 test_that("UKF throws error when first sigm points weight is zero", {
   expect_error({
@@ -318,6 +304,3 @@ test_that("UKF and exp models give previous computed results for head_neck",{
 
   expect_equal(result_exp, read_to_test("UKF_exp_head_neck"))
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

@@ -1,19 +1,4 @@
-if(interactive()){
-  library(dynamichazard)
-  library(testthat)
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-  get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
-}
-
-
-# Had issues with win builder. Thus, these lines
-test_name <- "static_glm"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
-
-
+context("Testing static_glm")
 
 set.seed(615015)
 sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
@@ -170,6 +155,3 @@ test_that("Gets same with speedglm with only_coef = TRUE", {
     }
   }
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

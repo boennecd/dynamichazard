@@ -1,17 +1,4 @@
-if(interactive()){
-  rm(list = ls())
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-  library(testthat)
-}
-
-
-# Had issues with win builder. Thus, these lines
-test_name <- "test_utils"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
-
+context("Testing test_utils")
 
 set.seed(101010)
 
@@ -69,12 +56,6 @@ test_that("Testing util functions to sim series for tests", {
   }
 })
 
-test_that("The head_neck_cancer must be defined for the ddhazard tests",
-          expect_true(exists("head_neck_cancer")))
-
-test_that("The pbc2 must be defined for the ddhazard tests",
-          expect_true(exists("pbc2")))
-
 
 test_that("Covs are fixed or not depends on is fixed argument", {
   set.seed(1999293)
@@ -104,6 +85,3 @@ test_that("Sim functions gives previous results", {
   expect_equal(sim_logit, read_to_test("util_sim_logit"), tolerance = 1.490116e-08)
   expect_equal(sim_exp, read_to_test("util_sim_exp"), tolerance = 1.490116e-08)
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

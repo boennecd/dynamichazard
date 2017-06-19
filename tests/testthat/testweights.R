@@ -1,17 +1,4 @@
-if(interactive()){
-  library(survival); library(dynamichazard); library(testthat)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-
-  exp_model_names <- with(environment(ddhazard), exp_model_names)
-}
-
-# Had issues with win builder. Thus, these lines
-test_name <- "weights"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing weights in fit")
 
 test_that("Passing fewer weigths than rows in design mat throws error",{
 
@@ -111,10 +98,3 @@ test_that("Making large design mat and using weights yield the same with UKF",{
     expect_equal(f1$state_vars, f2$state_vars, info = info, tolerance = 1e-5)
   }
 })
-
-
-
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

@@ -1,17 +1,4 @@
-if(interactive()){
-  library(survival); library(dynamichazard); library(testthat)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-
-  get_frac_n_weights <- with(environment(ddhazard), get_frac_n_weights)
-}
-
-# Had issues with win builder. Thus, these lines
-test_name <- "boot"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing boot")
 
 test_that("Throws error when risk_set or data is not saved",{
   for(tmp in list(c(T, F),
@@ -157,6 +144,3 @@ test_that("Weights are as expected", {
                 label = lbl)
   }
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

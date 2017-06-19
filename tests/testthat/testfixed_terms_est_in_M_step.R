@@ -1,17 +1,4 @@
-library(biglm)
-
-if(interactive()){
-  library(survival); library(dynamichazard); library(testthat)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-}
-
-# Had issues with win builder. Thus, these lines
-test_name <- "testfixed_terms_est_in_M_step"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing testfixed_terms_est_in_M_step")
 
 set.seed(548237)
 sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
@@ -207,7 +194,3 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
   expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects))
                , tolerance = 1e-05)
 })
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

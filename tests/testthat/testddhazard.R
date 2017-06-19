@@ -1,15 +1,4 @@
-if(interactive()){
-  library(survival); library(dynamichazard); library(testthat)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-}
-
-# Had issues with win builder. Thus, these lines
-test_name <- "ddhazard"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing ddhazard function")
 
 # Test on data set that is one of Farhmiers papers
 result = ddhazard(
@@ -345,8 +334,5 @@ test_that("Permutating data does not makes a big difference", {
     all.equal(r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
 
 })
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")
 
 

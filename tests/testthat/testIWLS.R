@@ -1,9 +1,4 @@
-IWLS_logit <- with(environment(ddhazard), IWLS_logit)
-
-# Had issues with win builder. Thus, these lines
-test_name <- "IWLS"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing IWLS")
 
 # Use the example here
 test_data <- if(grepl("testthat", getwd()))
@@ -80,9 +75,3 @@ for(is_random_offset in c(F, T)){
     expect_equal(unname(glm_fit$coefficients), c(IWLS_fit))
   })
 }
-
-
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")

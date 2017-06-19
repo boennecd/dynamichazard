@@ -1,16 +1,4 @@
-if(interactive()){
-  rm(list = ls())
-  library(testthat); library(survival); library(dynamichazard); library(parallel)
-
-  if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("./R/test_utils.R")
-}
-
-# Had issues with win builder. Thus, these lines
-test_name <- "predict"
-cat("\nRunning", test_name, "\n")
-options(ddhazard_use_speedglm = F)
+context("Testing predict")
 
 suppressMessages(result <- ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
@@ -317,7 +305,3 @@ test_that("Terms from predict with exponential outcome are correct", {
     expect_equal(unname(respone_pred$fits[rand_indicies[j]]), c(1 - p_survival), info = "")
   }
 })
-
-
-# Had issues with win builder. Thus, these lines
-cat("\nFinished", test_name, "\n")
