@@ -46,7 +46,7 @@ reset_dir <- bquote(setwd(.(getwd())))
 
 set_dir <- bquote(
   setwd(.(paste0(
-    stringr::str_match(getwd(), ".+dynamichazard"), "/vignettes/jss/HDs/"))))
+    stringr::str_match(getwd(), ".+dynamichazard"), "/vignettes/.jss/HDs/"))))
 
 conn_exp <- expression({
   sqlite <- dbDriver("SQLite")
@@ -461,6 +461,21 @@ tryCatch({
   rm(list = ls()[!ls() %in% cur_ls])
 })
 
+
+#####
+# "VACUUM" the db to decrease the size
+# See http://www.tutorialspoint.com/sqlite/sqlite_vacuum.htm
+tryCatch({
+  eval(set_dir)
+  options(warn = 1)
+
+  eval(conn_exp)
+
+  dbSendQuery(conn, "VACUUM;")
+}, finally = {
+  if(!is.null(conn))
+    dbDisconnect(conn)
+})
 
 # dbGetQuery(
 #   conn,

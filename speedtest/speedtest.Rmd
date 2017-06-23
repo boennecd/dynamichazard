@@ -12,7 +12,7 @@ options(digits = 3, width = 80)
 
 # Setup
 
-```{r cars}
+```{r load_libs}
 library(dynamichazard); library(microbenchmark)
 ```
 
@@ -22,7 +22,7 @@ matplot(fit$state_vecs, type = "l", lty = 2, add = TRUE)
 ```
 
 
-```{r}
+```{r func_setup}
 sim_func <- function(n, p){
   func <- asNamespace("dynamichazard")$test_sim_func_logit
   set.seed(101)
@@ -111,7 +111,7 @@ get_rune_time_summary <- function(n, p){
 
 # Test
 
-```{r}
+```{r tests}
 grid_vals <- expand.grid(
   n = c(250, 1000, 10000),
   p = c(5, 10, 15))
@@ -122,7 +122,7 @@ invisible(
 
 # Session info
 
-```{r, results='asis', echo=FALSE}
+```{r session_info, results='asis', echo=FALSE}
 toLatex(sessionInfo())
 ```
 

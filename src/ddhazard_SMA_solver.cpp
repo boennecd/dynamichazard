@@ -180,6 +180,8 @@ void SMA<T>::solve(){
         const double offset = (p_dat.any_fixed_in_M_step) ?
           arma::dot(p_dat.fixed_parems, p_dat.fixed_terms.col(*it)) : 0.;
 
+        // TODO: is there a BLAS dsymv for non-square but symetric matrix
+        // vector product?
         const arma::vec inter_vec =
           V(arma::span::all, *p_dat.span_current_cov) * x_;
 

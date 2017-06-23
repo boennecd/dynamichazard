@@ -1,5 +1,6 @@
 Sys.setenv(GS_CMD="C:/Program Files/gs/gs9.20/bin/gswin64c.exe")
 devtools::build(args = c("--compact-vignettes=gs+qpdf"), quiet = F)
+devtools::build(args = c("--compact-vignettes=gs+qpdf"), quiet = F, vignettes = FALSE)
 
 Sys.setenv(GS_CMD="C:/Program Files/gs/gs9.20/bin/gswin64c.exe")
 # devtools::submit_cran(args = c("--compact-vignettes=gs+qpdf"))
