@@ -226,7 +226,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       eps_fixed_parems, max_it_fixed_params, weights,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-      criteria, EKF_batch_size));
+      criteria));
 
     if(model == "logit"){
       solver.reset(new UKF_logit(*p_data.get(), kappa, alpha, beta));
@@ -256,7 +256,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       weights,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-      criteria, EKF_batch_size));
+      criteria));
 
     if(p_data->any_fixed_in_M_step)
       Rcpp::stop("Fixed effects is not implemented with UKF");
@@ -273,7 +273,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         weights,
         n_max, eps, verbose,
         order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-        criteria, EKF_batch_size));
+        criteria));
 
     if(model == "logit"){
       solver.reset(new SMA_logit(*p_data.get(), posterior_version));
@@ -292,7 +292,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         weights,
         n_max, eps, verbose,
         order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-        criteria, EKF_batch_size));
+        criteria));
 
     if(model == "logit"){
       solver.reset(new GMA_logit(*p_data.get(), GMA_max_rep, GMA_NR_eps));
@@ -313,12 +313,14 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   }
 
   arma::mat varying_only_F = p_data->F_;
-
-  if(p_data->any_fixed_terms_in_state_vec){
-    varying_only_F.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
-    varying_only_F.shed_cols(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
+  if(p_data->any_fixed_in_E_step){
+    if(p_data->any_fixed_in_E_step){
+      varying_only_F.shed_rows(p_data->span_fixed_params->a, p_data->span_fixed_params->b);
+      varying_only_F.shed_cols(p_data->span_fixed_params->a, p_data->span_fixed_params->b);
+    } else{
+      varying_only_F = arma::mat();
+    }
   }
-
 
   do
   {
@@ -416,9 +418,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Q /= p_data->d;
 
 
-      if(p_data->any_fixed_terms_in_state_vec){
-        Q.rows(p_data->span_fixed_params).zeros();
-        Q.cols(p_data->span_fixed_params).zeros();
+      if(p_data->any_fixed_in_E_step){
+        Q.rows(*p_data->span_fixed_params).zeros();
+        Q.cols(*p_data->span_fixed_params).zeros();
       }
 
       if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) > Q_warn_eps){
@@ -440,9 +442,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
       if(order_ > 1){
-        arma::mat tmp_Q = Q(p_data->span_current_cov, p_data->span_current_cov);
+        arma::mat tmp_Q = Q(*p_data->span_current_cov, *p_data->span_current_cov);
         Q.zeros();
-        Q(p_data->span_current_cov , p_data->span_current_cov) = tmp_Q;
+        Q(*p_data->span_current_cov, *p_data->span_current_cov) = tmp_Q;
       }
     }
 
@@ -451,10 +453,10 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     }
 
     if(p_data->criteria == "delta_coef"){
-      if(p_data->any_fixed_terms_in_state_vec ||
+      if(p_data->any_fixed_in_E_step ||
          p_data->any_dynamic){
-        conv_values.push_back(conv_criteria(a_prev(p_data->span_current_cov, arma::span::all),
-                                            p_data->a_t_t_s(p_data->span_current_cov, arma::span::all)));
+        conv_values.push_back(conv_criteria(a_prev(*p_data->span_current_cov, arma::span::all),
+                                            p_data->a_t_t_s(*p_data->span_current_cov, arma::span::all)));
       } else
         conv_values.push_back(0.0);
     }
@@ -486,12 +488,12 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       if(p_data->any_fixed_in_M_step){
         fixed_effects_offsets = p_data->fixed_terms.t() * p_data->fixed_parems;
 
-      } else if(p_data->any_fixed_terms_in_state_vec){
+      } else if(p_data->any_fixed_in_E_step){
         fixed_effects_offsets =
-          p_data->X(p_data->span_fixed_params, arma::span::all).t() *
-          p_data->a_t_t_s(p_data->span_fixed_params, arma::span::all).col(0);
+          p_data->X(*p_data->span_fixed_params, arma::span::all).t() *
+          p_data->a_t_t_s(*p_data->span_fixed_params, arma::span::all).col(0);
 
-        varying_only_a.shed_rows(p_data->span_fixed_params.a, p_data->span_fixed_params.b);
+        varying_only_a.shed_rows(p_data->span_fixed_params->a, p_data->span_fixed_params->b);
 
       } else{
         fixed_effects_offsets = arma::vec(p_data->X.n_cols, arma::fill::zeros);
@@ -499,11 +501,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       }
 
       log_like =
-        logLike_cpp(p_data->X(p_data->span_current_cov_varying, arma::span::all),
+        logLike_cpp(p_data->X(*p_data->span_current_cov_varying, arma::span::all),
                     risk_obj,
                     varying_only_F,
-                    Q_0(p_data->span_current_cov_varying, p_data->span_current_cov_varying),
-                    Q(p_data->span_current_cov_varying, p_data->span_current_cov_varying),
+                    Q_0(*p_data->span_current_cov_varying, *p_data->span_current_cov_varying),
+                    Q(*p_data->span_current_cov_varying, *p_data->span_current_cov_varying),
                     varying_only_a,
                     p_data->tstart, p_data->tstop,
                     fixed_effects_offsets, order_, model)[0];

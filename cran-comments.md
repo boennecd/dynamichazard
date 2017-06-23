@@ -63,3 +63,5 @@ Minor small changes to decrease the computation speed.
 
 ## Resubmission
 Fixed issues with r-patched-solaris-x86. I added $(SHLIB_OPENMP_CXXFLAGS) in last submission which triggered armadillo to use OpenMP with C++11 code which caused the error
+
+Decreased the size of the R code in the final package.

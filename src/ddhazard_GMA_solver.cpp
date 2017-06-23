@@ -102,7 +102,7 @@ void GMA<T>::solve(){
       arma::mat X_tilde = X_t;
       arma::vec a_old = a;
 
-      arma::vec eta = (a(p_dat.span_current_cov).t() * X_t).t() + offsets;
+      arma::vec eta = (a(*p_dat.span_current_cov).t() * X_t).t() + offsets;
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) num_threads(std::min(p_dat.n_threads, (int)std::ceil(r_set.n_elem / 1000.)))
@@ -127,7 +127,7 @@ void GMA<T>::solve(){
 
       {
         arma::mat tmp = V_t_less_inv;
-        tmp(p_dat.span_current_cov, p_dat.span_current_cov) += X_tilde;
+        tmp(*p_dat.span_current_cov, *p_dat.span_current_cov) += X_tilde;
         inv_sympd(V, tmp, p_dat.use_pinv,
                   "ddhazard_fit_cpp estimation error: Failed to invert Hessian");
       }
@@ -135,12 +135,12 @@ void GMA<T>::solve(){
       {
         arma::vec tmp = grad_term;
         if(1. - 1e-15 < p_dat.LR && p_dat.LR < 1. + 1e-15){
-          tmp(p_dat.span_current_cov) +=
-            X_tilde * a(p_dat.span_current_cov) + X_t * h_1d;
+          tmp(*p_dat.span_current_cov) +=
+            X_tilde * a(*p_dat.span_current_cov) + X_t * h_1d;
 
         } else {
-          tmp(p_dat.span_current_cov) +=
-            X_tilde * a(p_dat.span_current_cov) + X_t * (h_1d * p_dat.LR);
+          tmp(*p_dat.span_current_cov) +=
+            X_tilde * a(*p_dat.span_current_cov) + X_t * (h_1d * p_dat.LR);
 
           tmp += V_t_less_inv * ((1 - p_dat.LR) * a);
         }

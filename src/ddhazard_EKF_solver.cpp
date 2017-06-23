@@ -36,12 +36,12 @@ void EKF_filter_worker::operator()(){
   // Update shared variable
   {
     std::lock_guard<std::mutex> lk(dat.m_U);
-    dat.U(dat.span_current_cov, dat.span_current_cov) +=  U_;
+    dat.U(*dat.span_current_cov, *dat.span_current_cov) +=  U_;
   }
 
   {
     std::lock_guard<std::mutex> lk(dat.m_u);
-    dat.u(dat.span_current_cov) += u_;
+    dat.u(*dat.span_current_cov) += u_;
   }
 };
 
@@ -73,7 +73,7 @@ private:
 
     if(compute_z_and_H){
       dat.H_diag_inv(i) = pow(var, -1);
-      dat.z_dot(dat.span_current_cov, i) = x_ *  var;
+      dat.z_dot(*dat.span_current_cov, i) = x_ *  var;
     }
   }
 
@@ -118,7 +118,7 @@ private:
       // Compute terms from waiting time
       dat.H_diag_inv(i) = exp_model_funcs::inv_var_chance_die(v, expect_chance_die);
 
-      dat.z_dot(dat.span_current_cov, i) =  x_ * (inv_exp_v * v);
+      dat.z_dot(*dat.span_current_cov, i) =  x_ * (inv_exp_v * v);
     }
   }
 
@@ -167,7 +167,7 @@ private:
       // Compute terms from waiting time
       dat.H_diag_inv(i) = exp_model_funcs::inv_var_wait_time(v, exp_eta, inv_exp_v);
 
-      dat.z_dot(dat.span_current_cov, i) =  x_ * (inv_exp_eta*inv_exp_v*(1 - exp_v + v));
+      dat.z_dot(*dat.span_current_cov, i) =  x_ * (inv_exp_eta*inv_exp_v*(1 - exp_v + v));
     }
   }
 
@@ -217,7 +217,7 @@ private:
       dat.H_diag_inv(i) =
         1 / exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, inv_exp_v);
 
-      dat.z_dot(dat.span_current_cov, i) =  x_ * (
+      dat.z_dot(*dat.span_current_cov, i) =  x_ * (
         -inv_exp_eta + at_risk_length*inv_exp_v - pow(at_risk_length,2)*exp_eta*inv_exp_v + inv_exp_eta*inv_exp_v
       );
     }
@@ -305,7 +305,7 @@ void EKF_solver::solve(){
         Rcpp::stop("EKF is not implemented for model '" + model  +"'");
 
       helper->parallel_filter_step(
-        r_set.begin(), r_set.end(), i_a_t(p_dat.span_current_cov),
+        r_set.begin(), r_set.end(), i_a_t(*p_dat.span_current_cov),
         t == p_dat.d, t - 1, bin_tstart, bin_tstop);
 
       if(p_dat.debug){

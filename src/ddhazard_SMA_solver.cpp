@@ -181,10 +181,10 @@ void SMA<T>::solve(){
           arma::dot(p_dat.fixed_parems, p_dat.fixed_terms.col(*it)) : 0.;
 
         const arma::vec inter_vec =
-          V(arma::span::all, p_dat.span_current_cov) * x_;
+          V(arma::span::all, *p_dat.span_current_cov) * x_;
 
         const double f1 =
-          std::max(1./arma::dot(x_, inter_vec(p_dat.span_current_cov)), 1e-10);
+          std::max(1./arma::dot(x_, inter_vec(*p_dat.span_current_cov)), 1e-10);
         const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
@@ -230,7 +230,7 @@ void SMA<T>::solve(){
         a -=  (p_dat.LR * (f2 - c) * f1) * inter_vec;
 
         arma::vec rank_1_update_vec(p_dat.space_dim_in_arrays, arma::fill::zeros);
-        rank_1_update_vec(p_dat.span_current_cov) = x_ * sqrt(neg_second_d);
+        rank_1_update_vec(*p_dat.span_current_cov) = x_ * sqrt(neg_second_d);
         chol_rank_one_update(L, rank_1_update_vec);
         square_tri_inv(L, L_inv);
       }

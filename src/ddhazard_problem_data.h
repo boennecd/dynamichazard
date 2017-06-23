@@ -6,7 +6,11 @@
 
 class problem_data{
 public:
-  // Initalize constants
+  // Constants
+  const bool any_dynamic;         // Any time-varying coefficients?
+  const bool any_fixed_in_E_step;
+  const bool any_fixed_in_M_step;
+
   const int d;
   const Rcpp::List risk_sets;
 
@@ -15,15 +19,16 @@ public:
   const int n_params_state_vec;         // NB: not including order
   const int space_dim_in_arrays;
 
-  const arma::span span_current_cov;         // indicies for dot product for linear predictor
-  const arma::span span_current_cov_varying; // indicies for varying parameters in dot product
-  const arma::span span_fixed_params;        // indicies of fixed terms in state vector
+  // indicies for dot product for linear predictor. Includes both time-varying
+  // effects and fixed effects estimated in the E-step
+  const std::unique_ptr<const arma::span> span_current_cov;
+  // indicies for varying parameters in dot product
+  const std::unique_ptr<const arma::span> span_current_cov_varying;
+  // indicies of fixed terms in state vector
+  const std::unique_ptr<const arma::span> span_fixed_params;
 
   const arma::mat &F_;
   const arma::mat T_F_;
-
-  const bool any_dynamic;
-  const bool any_fixed_in_M_step;
 
   arma::mat X;
   arma::mat fixed_terms; // used if fixed terms are estimated in the M-step
@@ -48,11 +53,8 @@ public:
   const bool debug;
   const double LR;
 
-  const bool any_fixed_terms_in_state_vec;
   const bool use_pinv;
   const std::string criteria;
-
-  const int EKF_batch_size;
 
   // Declare non constants. Some are intialize
   arma::vec fixed_parems;
@@ -95,8 +97,11 @@ public:
                const int n_threads_,
                const double denom_term_,
                const bool use_pinv_,
-               const std::string criteria_,
-               const int EKF_batch_size_):
+               const std::string criteria_):
+    any_dynamic(X_.n_elem > 0),
+    any_fixed_in_E_step(n_fixed_terms_in_state_vec_ > 0),
+    any_fixed_in_M_step(fixed_terms_.n_elem > 0),
+
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
 
@@ -105,15 +110,26 @@ public:
     n_params_state_vec(n_params_state_vec_fixed + n_params_state_vec_varying),
     space_dim_in_arrays(n_params_state_vec_varying * order_ + n_params_state_vec_fixed),
 
-    span_current_cov(0, n_params_state_vec - 1),
-    span_current_cov_varying(0, n_params_state_vec_varying - 1),
-    span_fixed_params(n_params_state_vec_varying, n_params_state_vec - 1),
+    // Seems like there is no empty span for arma
+    // See: armadillo-code/include/armadillo_bits/span.hpp
+    //      and https://stackoverflow.com/q/38155952/5861244
+    // Thus, I decided to use const std::unique_ptr<const> and set it to
+    // nullptr when the span should not be used
+    span_current_cov(
+      (any_dynamic || any_fixed_in_E_step) ?
+        new arma::span(0, n_params_state_vec - 1) :
+        nullptr),
+    span_current_cov_varying(
+      any_dynamic ?
+        new arma::span(0, n_params_state_vec_varying - 1) :
+        nullptr),
+    span_fixed_params(
+      any_fixed_in_E_step ?
+        new arma::span(n_params_state_vec_varying, n_params_state_vec - 1) :
+        nullptr),
 
     F_(F__),
-    T_F_(F_.t()),
-
-    any_dynamic(X_.n_elem > 0),
-    any_fixed_in_M_step(fixed_terms_.n_elem > 0),
+    T_F_((any_dynamic || any_fixed_in_E_step) ? F_.t() : arma::mat()),
 
     X(X_.begin(), X_.n_rows, X_.n_cols, false),
     fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols, false),
@@ -136,25 +152,24 @@ public:
     debug(debug_),
     LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
 
-    any_fixed_terms_in_state_vec(n_fixed_terms_in_state_vec_ > 0),
     use_pinv(use_pinv_),
     criteria(criteria_),
 
-    EKF_batch_size(EKF_batch_size_),
-
-    fixed_parems(fixed_parems_start.begin(), fixed_parems_start.n_elem),
+    fixed_parems(fixed_parems_start),
     Q(Q_),
     Q_0(Q_0_)
   {
-    a_t_t_s = arma::mat(space_dim_in_arrays, d + 1);
-    a_t_less_s = arma::mat(space_dim_in_arrays, d);
-    V_t_t_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d + 1);
-    V_t_less_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
-    B_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
+    if(any_dynamic || any_fixed_in_E_step){
+      a_t_t_s = arma::mat(space_dim_in_arrays, d + 1);
+      a_t_less_s = arma::mat(space_dim_in_arrays, d);
+      V_t_t_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d + 1);
+      V_t_less_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
+      B_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
 
-    a_t_t_s.col(0) = a_0;
+      a_t_t_s.col(0) = a_0;
 
-    lag_one_cov = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
+      lag_one_cov = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
+    }
 
     if(debug)
       Rcpp::Rcout << "Using " << n_threads << " threads" << std::endl;
@@ -177,6 +192,9 @@ public:
   const bool is_mult_NR;
   const double NR_eps;
   const unsigned int NR_it_max;
+
+  // Other EKF parameters
+  const int EKF_batch_size;
 
   // Vector for score and information matrix
   arma::colvec u;
@@ -221,18 +239,21 @@ public:
                  order_, est_Q_0, debug_,
                  LR_,
                  n_threads_, denom_term_,
-                 use_pinv_, criteria_, EKF_batch_size_),
+                 use_pinv_, criteria_),
 
                  n_in_last_set(Rcpp::as<arma::uvec>(risk_sets[d - 1]).size()),
                  is_mult_NR(NR_eps_.isNotNull()),
                  NR_eps(is_mult_NR ? Rcpp::as< Rcpp::NumericVector >(NR_eps_)[0] : 0.0),
-                 NR_it_max(NR_it_max_)
+                 NR_it_max(NR_it_max_),
+                 EKF_batch_size(EKF_batch_size_)
   {
-    u = arma::colvec(space_dim_in_arrays);
-    U = arma::mat(space_dim_in_arrays, space_dim_in_arrays);
+    if(any_dynamic || any_fixed_in_E_step){
+      u = arma::colvec(space_dim_in_arrays);
+      U = arma::mat(space_dim_in_arrays, space_dim_in_arrays);
 
-    z_dot = arma::mat(space_dim_in_arrays, n_in_last_set * (is_cont_time + 1));
-    H_diag_inv = arma::vec(n_in_last_set * (is_cont_time + 1));
+      z_dot = arma::mat(space_dim_in_arrays, n_in_last_set * (is_cont_time + 1));
+      H_diag_inv = arma::vec(n_in_last_set * (is_cont_time + 1));
+    }
   }
 
   problem_data_EKF & operator=(const problem_data_EKF&) = delete;

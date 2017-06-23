@@ -202,7 +202,7 @@ void UKF_solver_New<T>::solve(){
     arma::vec sqrt_weights_to_sds(n_risk, arma::fill::zeros);
     arma::vec y_bar(n_risk, arma::fill::zeros);
 
-    arma::mat O = (sigma_points.rows(p_dat.span_current_cov).t() * p_dat.X.cols(r_set)).t();
+    arma::mat O = (sigma_points.rows(*p_dat.span_current_cov).t() * p_dat.X.cols(r_set)).t();
     O.each_col() += offsets(r_set);
     O = arma::trunc_exp(O);
 
