@@ -24,3 +24,7 @@ out <- devtools::revdep_check(
   pkg = ".",
   recursive = TRUE,
   threads = 4)
+
+
+
+# rhub::check_with_sanitizers()

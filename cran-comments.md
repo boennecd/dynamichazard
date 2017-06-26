@@ -62,6 +62,6 @@ Reduced the size of the vignettes.
 Minor small changes to decrease the computation speed.
 
 ## Resubmission
-Fixed issues with r-patched-solaris-x86. I added $(SHLIB_OPENMP_CXXFLAGS) in last submission which triggered armadillo to use OpenMP with C++11 code which caused the error
-
+Fixed issues with r-patched-solaris-x86. I figure it was due to the $(SHLIB_OPENMP_CXXFLAGS) flag in last submission which triggered armadillo to use OpenMP with C++11 code which caused the error. 
 Decreased the size of the R code in the final package.
+Fixed the clang-UBSAN errors in https://www.stats.ox.ac.uk/pub/bdr/memtests/clang-UBSAN/dynamichazard/tests/testthat.Rout. I tested the new version on Ubuntu 17.04 with clang-3.9. However, I got a lot of errors from Rcpp/include/Rcpp/routines.h as in https://www.stats.ox.ac.uk/pub/bdr/memtests/clang-UBSAN/Rcpp/build_vignettes.log (checked on 24/06/2017 at 2 pm). I gather these can be disregared from Kurt Hornik's mail on 	26. June 2017 at 14.53. 
