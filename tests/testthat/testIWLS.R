@@ -12,22 +12,20 @@ y <- model.response(model.frame(form, data = test_data))
 beta_0 <- rep(0, ncol(X))
 
 # Compare fits
-for(is_random_offset in c(F, T)){
-  offsets <- if(is_random_offset)
-    rexp(nrow(test_data), 1) else
-      rep(0, nrow(test_data))
+test_that("glm.fit and IWLS return the same for binomial model", {
+  for(is_random_offset in c(F, T)){
+    offsets <- if(is_random_offset)
+      rexp(nrow(test_data), 1) else rep(0, nrow(test_data))
 
-  glm_fit <- glm.fit(x = X, y = y, start = beta_0, offset = offsets, family = binomial())
+    glm_fit <- glm.fit(x = X, y = y, start = beta_0, offset = offsets, family = binomial())
+
+    IWLS_fit <-
+      IWLS_logit(X = X, y = y, beta = rep(0, ncol(X)), offsets = offsets, it_max = 1e2,
+                 eps = glm.control()$epsilon)
 
 
-  IWLS_fit <-
-    IWLS_logit(X = X, y = y, beta = rep(0, ncol(X)), offsets = offsets, it_max = 1e2,
-               eps = glm.control()$epsilon)
-
-  test_that("glm.fit and IWLS return the same for binomial model",{
     expect_equal(unname(glm_fit$coefficients), c(IWLS_fit))
-  })
-}
+}})
 
 # Do the same for poisson models
 # data from http://www.theanalysisfactor.com/generalized-linear-models-in-r-part-6-poisson-regression-count-variables/

@@ -1,5 +1,5 @@
 #include "ddhazard.h"
-#include "bigglm_wrapper.h"
+#include "estimate_fixed_effects_M_step.h"
 
 using uword = arma::uword;
 using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
@@ -22,121 +22,12 @@ inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &n
 }
 double (*conv_criteria)(const arma::mat&, const arma::mat&) = relative_norm_change;
 
-
 extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
                                        const arma::mat&, const arma::mat&,
                                        arma::mat Q, const arma::mat&,
                                        const arma::vec&, const arma::vec&,
                                        const arma::vec &,
                                        const int, const std::string);
-
-// Method to estimate fixed effects like in biglm::bigglm
-template <class updater>
-void estimate_fixed_effects(problem_data * const p_data, const int chunk_size){
-  int it_outer = 0;
-  arma::vec old_beta;
-  do{
-    int cursor_risk_set = 0;
-    int n_elements = 0;
-
-    // Set up look variables
-    int t = 1; // start looping at one to be consistent with other implementations
-    arma::mat fixed_terms(p_data->fixed_parems.n_elem, chunk_size, arma::fill::none);
-    arma::vec offsets(chunk_size, arma::fill::zeros);
-    arma::vec y(chunk_size);
-    arma::vec eta;
-    arma::vec w(chunk_size);
-    qr_obj qr(p_data->fixed_parems.n_elem);
-    auto it = p_data->risk_sets.begin();
-    double bin_stop = p_data->min_start;
-
-    for(; it != p_data->risk_sets.end(); ++it, ++t){
-
-      double bin_start = bin_stop;
-      double delta_t = p_data->I_len[t - 1]; // I_len is std::vector and thus uses zero index
-      bin_stop += delta_t;
-
-      // Find the risk set and the number of elements to take
-      arma::uvec r_set = Rcpp::as<arma::uvec>(*it) - 1;
-      int r_set_size = r_set.n_elem;
-      int n_elements_to_take = std::min(chunk_size - n_elements, r_set_size - cursor_risk_set);
-      r_set = r_set.subvec(cursor_risk_set, cursor_risk_set + n_elements_to_take - 1);
-
-      // Find the outcomes, fixed terms and compute the offsets
-      y.subvec(n_elements, n_elements + n_elements_to_take - 1) =
-        arma::conv_to<arma::vec>::from(p_data->is_event_in_bin.elem(r_set) == (t - 1));
-
-      w.subvec(n_elements, n_elements + n_elements_to_take - 1) =
-        p_data->weights(r_set);
-
-      fixed_terms.cols(n_elements, n_elements + n_elements_to_take - 1) =
-        p_data->fixed_terms.cols(r_set);
-
-      if(p_data->any_dynamic){
-        offsets.subvec(n_elements, n_elements + n_elements_to_take - 1) =
-		  // .col(t) and not .col(t - 1) this is a_(0 | d)
-          p_data->X.cols(r_set).t() * p_data->a_t_t_s.col(t).head(p_data->n_params_state_vec);
-      } else {
-        offsets.subvec(n_elements, n_elements + n_elements_to_take - 1).fill(0.);
-      }
-
-      for(arma::uword i = 0; i < r_set.n_elem; ++i){
-        offsets(n_elements + i) +=
-          updater::family::time_offset(
-            std::min(p_data->tstop(r_set(i)), bin_stop)
-              - std::max(p_data->tstart(r_set(i)), bin_start));
-      }
-
-      n_elements += n_elements_to_take;
-
-      if(n_elements == chunk_size){ // we have reached the chunk_size
-
-        arma::vec eta = fixed_terms.t() * p_data->fixed_parems;
-        updater::update(qr, fixed_terms, eta, offsets, y, w);
-
-        n_elements = 0;
-      } else if(it == --p_data->risk_sets.end()){ // there is no more bins to process
-
-        y = y.subvec(0, n_elements - 1);
-        w = w.subvec(0, n_elements - 1);
-        fixed_terms = fixed_terms.cols(0, n_elements - 1);
-        offsets = offsets.subvec(0, n_elements - 1);
-
-        arma::vec eta =  fixed_terms.t() * p_data->fixed_parems;
-        updater::update(qr, fixed_terms, eta, offsets, y, w);
-      }
-
-      if(cursor_risk_set + n_elements_to_take < r_set_size){ // there are still elements left in the bin
-        cursor_risk_set += n_elements_to_take;
-        --it;
-        --t;
-        bin_stop -= delta_t;
-      } else
-        cursor_risk_set = 0;
-    }
-
-    old_beta = p_data->fixed_parems;
-    p_data->fixed_parems = bigglm_regcf(qr);
-
-    if(p_data->debug){
-      my_debug_logger(*p_data) << "Iteration " << it_outer + 1 << " of estimating fixed effects in M-step";
-      my_print(*p_data, old_beta, "Fixed effects before update");
-      my_print(*p_data, p_data->fixed_parems, "Fixed effects after update");
-    }
-
-  } while(++it_outer < p_data->max_it_fixed_params && // Key that this the first condition we check when we use &&
-    arma::norm(p_data->fixed_parems - old_beta, 2) / (arma::norm(old_beta, 2) + 1e-8) > p_data->eps_fixed_parems);
-
-  static bool failed_to_converge_once = false;
-  if(it_outer == p_data->max_it_fixed_params && !failed_to_converge_once){
-    failed_to_converge_once = true;
-    std::stringstream msg;
-    msg << "Failed to estimate fixed effects in " << p_data->max_it_fixed_params << " iterations at least once" << std::endl;
-    Rcpp::warning(msg.str());
-  }
-}
-
-
 
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assumed to have observations in the columns for performance due to column-major storage
@@ -465,11 +356,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       arma::vec old = p_data->fixed_parems;
 
       if(model == "logit"){
-        estimate_fixed_effects<bigglm_updateQR_logit>(
+        estimate_fixed_effects_M_step<bigglm_updateQR_logit>(
           p_data.get(), fixed_effect_chunk_size);
 
       } else if(is_exponential_model(model)){
-        estimate_fixed_effects<bigglm_updateQR_poisson>(
+        estimate_fixed_effects_M_step<bigglm_updateQR_poisson>(
           p_data.get(), fixed_effect_chunk_size);
 
       } else

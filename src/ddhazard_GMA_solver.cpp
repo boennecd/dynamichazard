@@ -114,9 +114,7 @@ void GMA<T>::solve(){
         X_tilde.col(i) *= h_2d_neg;
       }
 
-      /* TODO: This can be faster
-       *  1) Do as with EKF use the thread_pool
-       */
+      /* TODO: This can be faster I do as with EKF use the thread_pool */
 
       X_tilde = arma::symmatu(out_mat_prod(X_tilde));
 
@@ -169,11 +167,11 @@ void GMA<T>::solve(){
     }
 
     if(a.has_inf() || a.has_nan()){
-      Rcpp::stop("State vector in correction step has nan or inf elements in in bin " +
+      Rcpp::stop("ddhazard_fit_cpp estimation error: State vector in correction step has nan or inf elements in in bin " +
         std::to_string(t) + ". Try decreasing the learning rate");
 
     } else if(V.has_inf() || V.has_nan()){
-      Rcpp::stop("Covariance matrix in correction step had inf or nan elements in bin " +
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Covariance matrix in correction step had inf or nan elements in bin " +
         std::to_string(t) + ". Try decreasing the learning rate");
 
     }

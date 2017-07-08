@@ -245,11 +245,11 @@ void SMA<T>::solve(){
 #endif
 
     if(a.has_inf() || a.has_nan()){
-      Rcpp::stop("State vector in correction step has nan or inf elements in in bin " +
+      Rcpp::stop("ddhazard_fit_cpp estimation error: State vector in correction step has nan or inf elements in in bin " +
         std::to_string(t) + ". Try decreasing the learning rate");
 
     } else if(V.has_inf() || V.has_nan()){
-      Rcpp::stop("Covariance matrix in correction step had inf or nan elements in bin " +
+      Rcpp::stop("ddhazard_fit_cpp estimation error: Covariance matrix in correction step had inf or nan elements in bin " +
         std::to_string(t) + ". Try decreasing the learning rate");
 
     }

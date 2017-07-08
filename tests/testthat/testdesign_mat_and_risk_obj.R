@@ -33,11 +33,11 @@ test_that("Fixed terms works as expected",{
                check.attributes = F)
 })
 
-test_that("Different forms of fixing the intercept gives same results",{
+test_that("Different forms of fixing the intercept gives same results", {
   set.seed(11111)
   sims = as.data.frame(test_sim_func_exp(n_series = 5e2, n_vars = 3, beta_start = 1,
                                          intercept_start = - 5, sds = c(sqrt(.1), rep(1, 3)),
-                                         x_range = 1, x_mean = .5)$res)
+                                         x_range = 1, x_mean = 0)$res)
 
   for(m in c("logit", exp_model_names)){
     m1 <- suppressWarnings(suppressMessages(

@@ -48,7 +48,7 @@ extern int openblas_get_num_threads();
 // from armadillo config.hpp:
 //// Comment out the above line if you don't want errors and warnings printed (eg. failed decompositions)
 
-#include <RcppArmadillo.h> // has to come after defines: http://artax.karlin.mff.cuni.cz/r-help/library/RcppArmadillo/html/RcppArmadillo-package.html
+#include <RcppArmadillo.h>
 // [[Rcpp::depends("RcppArmadillo")]]
 
 // Print function to print out vectors as rows
@@ -83,8 +83,6 @@ my_print(const T &X, std::string msg = "", std::string prefix = "")
 
   Rcpp::Rcout << os.str();
 }
-
-
 
 // Inversion methods
 template<typename eT, typename T2>

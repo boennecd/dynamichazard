@@ -4,19 +4,21 @@ context("Testing residuals functions")
 # Simple test that methods calls succeds
 
 arg_list <- list(
-  formula = survival::Surv(start, stop, event) ~ group,
-  data = head_neck_cancer,
-  by = 1, max_T = 40,
+  formula = survival::Surv(tstart, tstop, event) ~ x1,
+  data = logit_sim_200$res,
+  id = logit_sim_200$res$id,
+  by = 1, max_T = 10,
   a_0 = rep(0, 2), Q_0 = diag(1, 2),
   Q = diag(1e-2, 2))
 
 result = do.call(ddhazard, arg_list)
+result_ekf <- result
 
-test_that("Calls to residuals should succed",{
+test_that("Calls to residuals should succed", {
   expect_no_error(residuals(result, "std_space_error"))
   expect_no_error(residuals(result, "space_error"))
-  expect_no_error(residuals(result, type = "pearson", data = head_neck_cancer))
-  expect_no_error(residuals(result, type = "raw", data = head_neck_cancer))
+  expect_no_error(residuals(result, type = "pearson", data = logit_sim_200))
+  expect_no_error(residuals(result, type = "raw", data = logit_sim_200))
 })
 
 arg_list$control <- list(method = "UKF")
@@ -25,8 +27,8 @@ result = do.call(ddhazard, arg_list)
 test_that("residuals functions throws error for some types when method is UKF",{
   expect_error(residuals(result, "std_space_error"))
   expect_error(residuals(result, "space_error"))
-  expect_no_error(residuals(result, type = "pearson", data = head_neck_cancer))
-  expect_no_error(residuals(result, type = "raw", data = head_neck_cancer))
+  expect_no_error(residuals(result, type = "pearson", data = logit_sim_200))
+  expect_no_error(residuals(result, type = "raw", data = logit_sim_200))
 })
 
 arg_list$control <- NULL
@@ -43,7 +45,7 @@ test_that("Residuals work when data is saved on the fit",{
 
     expect_true(is.null(fit_not_saved_data$data))
     expect_error(residuals(fit_not_saved_data, type = ty))
-    fit_not_saved_data$res <- residuals(fit_not_saved_data, type = ty, data = head_neck_cancer)
+    fit_not_saved_data$res <- residuals(fit_not_saved_data, type = ty, data = logit_sim_200$res)
 
     for(i in seq_len(max(length(fit_saved_data$res$residuals),
                          length(fit_not_saved_data$residuals))))
@@ -54,9 +56,12 @@ test_that("Residuals work when data is saved on the fit",{
 
 test_that("Residuals work when data is saved on the fit and fixed effects are present", {
   arg_list_new <- list(
-    formula = formula(survival::Surv(start, stop, event) ~ ddFixed(group)),
-    data = head_neck_cancer,
-    by = 1, a_0 = 0, Q_0 = as.matrix(1))
+    formula = survival::Surv(tstart, tstop, event) ~ ddFixed(x1),
+    data = logit_sim_200$res,
+    id = logit_sim_200$res$id,
+    by = 1, max_T = 10,
+    a_0 = 0, Q_0 = 1,
+    Q = 1)
 
   for(ty in c("pearson", "raw")){
     arg_list_new$control = list(save_data = T)
@@ -70,7 +75,7 @@ test_that("Residuals work when data is saved on the fit and fixed effects are pr
 
     expect_true(is.null(fit_not_saved_data$data))
     expect_error(residuals(fit_not_saved_data, type = ty))
-    fit_not_saved_data$res <- residuals(fit_not_saved_data, type = ty, data = head_neck_cancer)
+    fit_not_saved_data$res <- residuals(fit_not_saved_data, type = ty, data = logit_sim_200$res)
 
     for(i in seq_len(max(length(fit_saved_data$res$residuals),
                          length(fit_not_saved_data$residuals))))
@@ -82,8 +87,7 @@ test_that("Residuals work when data is saved on the fit and fixed effects are pr
 ########
 # Test state space errors
 
-arg_list$control <- list(method = "EKF")
-result = do.call(ddhazard, arg_list)
+result <-  result_ekf
 
 test_that("State space error match whether standarized or not for logit model", {
   std_res <- residuals(result, "std_space_error")

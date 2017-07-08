@@ -36,15 +36,13 @@ all: $(SHLIB)
 		@echo "Found $(OPEN_BLAS_DIR) and will compile with openBlas"
 endif
 
-$(SHLIB): $(OBJECTS)
-
 loglike.o: arma_n_rcpp.h loglike.cpp
 
 Cdqrls_wrapper.o: $(BIGGLM_DEPS) Cdqrls_wrapper.cpp
 
 bigglm_wrapper.o: $(BIGGLM_DEPS) bigglm_wrapper.cpp
 
-ddhazard.o: $(DD_DEPS) $(BIGGLM_DEPS) thread_pool.h ddhazard.cpp
+ddhazard.o: $(DD_DEPS) $(BIGGLM_DEPS) thread_pool.h estimate_fixed_effects_M_step.h ddhazard.cpp
 
 ddhazard_EKF_solver.o: $(DD_DEPS) exp_model_funcs.h thread_pool.h ddhazard_EKF_solver.cpp
 

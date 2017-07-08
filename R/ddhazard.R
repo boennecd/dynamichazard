@@ -51,7 +51,8 @@
 #' @return
 #' A list with class \code{fahrmeier_94}. The list contains:
 #' \describe{
-#' \item{\code{formula}}{The passed formula }
+#' \item{\code{formula}}{The passed formula}
+#' \item{\code{call}}{The matched call}
 #' \item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin }
 #' \item{\code{state_vars}}{3D array with smoothed variance estimates for each state vector }
 #' \item{\code{lag_one_cov}}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF }
@@ -446,8 +447,7 @@ ddhazard = function(formula, data,
   if(model == "logit") {
     res <- list(
       hazard_func =  function(eta, ...){
-        exp_ = exp(eta)
-        exp_/(1 + exp_)
+        1/(1 + exp(-eta))
       },
       hazard_first_deriv = function(beta, x_, ...){
         exp_ = exp(beta %*% x_)
@@ -473,6 +473,7 @@ ddhazard = function(formula, data,
   structure(c(
     res, list(
     formula = formula,
+    call = match.call(),
     state_vecs = result$a_t_d_s,
     state_vars = result$V_t_d_s,
     lag_one_cov = result$lag_one_cov,

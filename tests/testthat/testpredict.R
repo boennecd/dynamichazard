@@ -117,7 +117,8 @@ for(use_parallel in c(T, F)){
                    use.names = F, check.attributes = F)
     }
 
-    suppressWarnings(result <- ddhazard(
+    # ddhazard throws a warning when static_glm could be used instead
+    result <- suppressWarnings(ddhazard(
       formula = survival::Surv(start, stop, event) ~ -1 + ddFixed(group),
       data = head_neck_cancer, by = 1))
 

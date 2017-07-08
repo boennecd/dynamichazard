@@ -27,7 +27,6 @@ test_that("UKF throws error when one tries 'exp_combined'", {
   }, regexp = "'exp_combined' is not supported since version 0.3.0")
 })
 
-
 test_that("UKF on head_neck works with logit model", {
   suppressMessages(result <- ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
@@ -50,13 +49,9 @@ test_that("UKF on head_neck works with logit model", {
   expect_equal(result, read_to_test("UKF1"))
 })
 
-
-set.seed(2972)
-sims <- test_sim_func_logit(n_series = 5e2, n_vars = 3, t_0 = 0, t_max = 10,
-                            x_range = 1, x_mean = -.5, re_draw = T, beta_start = 1,
-                            intercept_start = -1, sds = c(.1, rep(1, 3)))
-
 test_that("UKF does not fail and both methods give the same",{
+  sims <- logit_sim_200
+
   res_new <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                   by = 1,
                   data = sims$res,
@@ -82,6 +77,8 @@ test_that("UKF does not fail and both methods give the same",{
 })
 
 test_that("Chaning time scale in UKF does no change results when other parems are changed accoridngly",{
+  sims <- logit_sim_200
+
   arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                    by = 1,
                    data = sims$res,
@@ -113,6 +110,8 @@ test_that("Chaning time scale in UKF does no change results when other parems ar
 })
 
 test_that("Testing UKF against prev computed values",{
+  sims <- logit_sim_200
+
   arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                    by = 1,
                    data = sims$res,
@@ -128,8 +127,8 @@ test_that("Testing UKF against prev computed values",{
 
   res <- do.call(ddhazard, arg_list)
 
-  # matplot(sims$betas, type = "l")
-  # matplot(res$state_vecs, add = T, type = "l")
+  # matplot(sims$betas, type = "l", lty = 1, ylim = range(sims$betas, res$state_vecs))
+  # matplot(res$state_vecs, add = T, type = "l", lty = 2)
   res <- res[c("state_vars", "state_vec", "Q")]
   # save_to_test(res, "UKF2")
 
@@ -137,6 +136,8 @@ test_that("Testing UKF against prev computed values",{
 })
 
 test_that("Altering UKF alpha, beta and kappa change the results",{
+  sims <- logit_sim_200
+
   arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                    by = 1,
                    data = sims$res,
@@ -174,25 +175,21 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
   expect_true(class(all.equal(m3$state_vars, m4$state_vars)) == "character")
 })
 
-
 test_that("UKF on simulated data works with exponential models with only one of the variables", {
-  set.seed(9997)
-  sims <- test_sim_func_exp(n_series = 1e3, n_vars = 10, t_0 = 0, t_max = 10,
-                            x_range = 1, x_mean = 0, re_draw = T, beta_start = (1:10 - 5) / 2.5,
-                            intercept_start = -5, sds = c(.1, rep(1, 10)))
+  sims <- exp_sim_200
 
-  suppressMessages(result_exp <- ddhazard(
+  result_exp <- ddhazard(
     formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     data = sims$res,
     by = (by_ <- 1),
     Q_0 = diag(1, 11),
     Q = diag(1e-1, 11),
-    control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3, method = "UKF",
+    control = list(eps = 10^-2, method = "UKF",
                    debug = F, beta = 0, save_data = F, save_risk_set = F),
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exp_bin"))
+    model = "exp_bin")
 
   # matplot(sims$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, type = "l", lty = 2, add = T)
@@ -201,7 +198,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
 
   expect_equal(result_exp, read_to_test("UKF4"))
 
-  suppressMessages(result_exp <- ddhazard(
+  result_exp <- ddhazard(
     formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     data = sims$res,
     by = (by_ <- 1),
@@ -212,7 +209,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exp_clip_time"))
+    model = "exp_clip_time")
 
   # matplot(sims$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, type = "l", lty = 2, add = T)
@@ -221,7 +218,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
 
   expect_equal(result_exp, read_to_test("UKF5"))
 
-  suppressMessages(result_exp <- ddhazard(
+  result_exp <- ddhazard(
     formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     data = sims$res,
     by = (by_ <- 1),
@@ -232,7 +229,7 @@ test_that("UKF on simulated data works with exponential models with only one of 
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exp_clip_time_w_jump"))
+    model = "exp_clip_time_w_jump")
 
   # matplot(sims$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, type = "l", lty = 2, add = T)
@@ -242,65 +239,36 @@ test_that("UKF on simulated data works with exponential models with only one of 
   expect_equal(result_exp, read_to_test("UKF6"))
 })
 
-test_that("UKF second order model works", {
+test_that("UKF second order model works (that is, gives no errors...)", {
+  # TODO: make a better test. Change the description if you do
   for(m in c("logit", exp_model_names)){
     expect_no_error(result <- ddhazard(
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, Q_0 = diag(1, 4),
       Q = diag(1e-1, 2),
-      control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-3,
-                     method = "UKF", save_data = F, save_risk_set = F,
-                     beta = 0),
+      control = list(est_Q_0 = F, method = "UKF", beta = 0),
       max_T = 30,
       id = head_neck_cancer$id, order = 2,
       verbose = F,
       model = m
     ))
 
-    set.seed(9999)
-    sim_f <- if(m == "logit") test_sim_func_logit else test_sim_func_exp
-    sims <- sim_f(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 20,
-                  lambda = 1/4,
-                  x_range = 1, x_mean = 0.5, re_draw = T, beta_start = rep(0, 3),
-                  intercept_start = -3, sds = c(.1, rep(.25, 3)),
-                  tstart_sampl_func = function(...) max(0, runif(1, min = -4, max = 20 - 1)))
-
-    expect_no_error(suppressWarnings(result_sim <-
+    sims <- if(m == "logit") logit_sim_200 else exp_sim_200
+    expect_no_error(result_sim <-
                       ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                                by = 1,
                                data = sims$res,
-                               Q_0 = diag(c(rep(.25, ncol(sims$res) + 1 - 4), rep(.25, ncol(sims$res) + 1 - 4))),
-                               Q = diag(rep(.1, ncol(sims$res) + 1 - 4)),
-                               control = list(est_Q_0 = F, method = "UKF", eps = 1e-1,
-                                              denom_term = 1e-3),
+                               Q_0 = diag(c(
+                                 rep(.1,  ncol(sims$res) + 1 - 4),
+                                 rep(.1, ncol(sims$res) + 1 - 4))),
+                               Q = diag(.01, ncol(sims$res) + 1 - 4),
+                               control = list(est_Q_0 = F, method = "UKF",
+                                              eps = .1 # Just want see the a few iterations passes
+                                              ),
                                id = sims$res$id,
-                               verbose = F, model = m,
+                               model = m,
                                order = 2,
-                               max_T = 20)))
+                               max_T = 10))
   }
-})
-
-#############
-# Test ukf for exponential model
-test_that("UKF and exp models give previous computed results for head_neck",{
-  suppressMessages(result_exp <- ddhazard(
-    formula = survival::Surv(start, stop, event) ~ group,
-    data = head_neck_cancer,
-    by = 1,
-    Q_0 = diag(1, 2),
-    Q = diag(1e-1, 2),
-    control = list(est_Q_0 = F,
-                   method = "UKF", beta = 0, alpha = 1, save_risk_set = F,
-                   save_data = F),
-    max_T = 30,
-    id = head_neck_cancer$id, order = 1,
-    verbose = F,
-    model = "exp_clip_time_w_jump"))
-
-  # plot(result_exp)
-  result_exp <- result_exp[c("state_vecs", "state_vars", "Q")]
-  # save_to_test(result_exp, "UKF_exp_head_neck")
-
-  expect_equal(result_exp, read_to_test("UKF_exp_head_neck"))
 })

@@ -43,5 +43,3 @@ vignettes/.jss/HDs/*
 sandbox/*
 **/Rprof.out
 **/Sweave.sty
-
-tests/profile.R

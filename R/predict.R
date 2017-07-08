@@ -156,31 +156,46 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
   # Make function to predict for each observations
   # assume that covariates do not change
   hazard_func = object$hazard_func
-  tmp_func = function(x_, istart, istop, tstart, tstop, offset){
-    i <- 0
-    i_max <- istop - istart
+  environment(hazard_func) <- baseenv()
+  apply_func = eval(bquote(
+    function(row_){
+      ######
+      # Setup
+      x_ = row_[-(1:5)]
+      istart = row_[1]
+      istop = row_[2]
+      tstart =  row_[3]
+      tstop =  row_[4]
+      offset = row_[5]
+      hazard_func <- .(hazard_func)
+      i <- 0
+      i_max <- istop - istart
 
-    survival_probs = 1 - sapply(istart:istop, function(t){
-      tart <- if(i == 0) tstart else times[t]
-      ttop <- if(i == i_max) tstop else times[t + 1]
-      i <<- i + 1
+      #####
+      # Compute
+      survival_probs = 1 - sapply(istart:istop, function(t){
+        tart <- if(i == 0) tstart else times[t]
+        ttop <- if(i == i_max) tstop else times[t + 1]
+        i <<- i + 1
 
-      hazard_func(parems[t, ] %*% x_ + offset, tstart = tart, tstop = ttop)
-    })
+        hazard_func(parems[t, ] %*% x_ + offset, tstart = tart, tstop = ttop)
+      })
 
-    1 - prod(survival_probs)
-  }
+      1 - prod(survival_probs)
+    }))
+  .env <- new.env(parent = baseenv())
+  .env$times <- times
+  .env$parems <- parems
+  environment(apply_func) <- .env
 
   # Compute hazard
-  apply_func <- function(row_)
-    tmp_func(x_ = row_[-(1:5)], istart = row_[1], istop = row_[2],
-             tstart =  row_[3], tstop =  row_[4], offset = row_[5])
   apply_data_frame <- data.frame(istart = int_start, istop = int_stop_,
                                  tstart = start, tstop = stop_,
                                  offset = if(length(object$fixed_effects) == 0)
                                    rep(0, length(tstart)) else fixed_terms %*% object$fixed_effects,
-                                 x_ = m)
-
+                                 x_ = m,
+                                 check.names = FALSE,
+                                 fix.empty.names = FALSE)
 
   if(use_parallel){
     no_cores <- parallel::detectCores()
@@ -193,9 +208,6 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
       no_cores = min(no_cores, max_threads)
 
     cl <- parallel::makeCluster(no_cores)
-    parallel::clusterExport(cl, c("parems", "hazard_func", "times"),
-                            envir = environment())
-
     tryCatch({
       fits = parallel::parRapply(cl = cl, apply_data_frame, apply_func)
     }, finally = { parallel::stopCluster(cl)})

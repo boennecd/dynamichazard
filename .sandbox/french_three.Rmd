@@ -1,0 +1,60 @@
+---
+title: "ddhazard"
+output: 
+  pdf_document: 
+    fig_caption: yes
+date: "`r Sys.Date()`"
+author: "Benjamin Christoffersen"
+header-includes:
+   - \usepackage{bm}
+bibliography: bibliography.bib
+csl: bib_style.csl
+vignette: >
+  %\VignetteIndexEntry{ddhazard}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::knit_hooks$set(default_opts = function(before, options, envir) {
+    if (before){
+      options(digist = 4)
+    }
+})
+options(digist = 4)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, dpi = 36)
+knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
+```
+
+
+```{r, echo=False}
+french_dat <- read.table(
+  "Residuals/frtcs.dat", stringsAsFactors = F,
+   col.names = c(
+     "id" , "age" , "sex" , "date0" , "sbp0" , "dbp0" , "antihyp0" , "date1" , 
+     "sbp1" , "dbp1" , "antihyp1" , "date2" , "sbp2" , "dbp2" , "antihyp2" , 
+     "date_event" , "censor"
+   ), 
+  na.strings = ".")
+```
+
+```{r}
+# Format dates
+for(c_name in c("date0", "date1", "date2", "date_event"))
+  french_dat[[c_name]] <- as.Date(french_dat[[c_name]], "%d%b%y")
+
+# Add time values
+new_cols <- c(t1 = "date1", t2 = "date2", exit = "date_event")
+for(i in 1:3)
+  french_dat[[names(new_cols)[i]]] <- 
+  as.integer(french_dat[[new_cols[i]]] - french_dat$date0)
+
+```
+
+
+[@cyceron03]
+
+> Objective: To describe the baseline characteristics of the participants in the Three-City (3C) Study, a study aiming to evaluate the risk of dementia and cognitive impairment attributable to vascular factors. Methods: Between 1999 and 2001, 9,693 persons aged 65 years and over, noninstitutionalized, were recruited from the electoral rolls of three French cities, i.e. Bordeaux, Dijon and Montpellier. Health-related data were collected during face-to-face interviews using standardized questionnaires. The baseline examination included cognitive testing and diagnosis of dementia, and assessment of vascular risk factors, including blood pressure measurements, ultrasound examination of the carotid arteries, and measurement of biological parameters (glycemia, total, high-density lipoprotein and low-density lipoprotein cholesterol, triglycerides, creatinemia); 3,442 magnetic resonance imaging (MRI) examinations were performed in subjects aged 65–79. Measurements of ultrasound, blood, and MRI parameters were centralized. Two follow-up examinations (at 2 and 4 years) were planned. Results: After exclusion of the participants who had subsequently refused the medical interview, the 3C Study sample consisted of 3,649 men (39.3%) and 5,645 women, mean age 74.4 years, with a relatively high level of education and income. Forty-two percent of the participants reported to be followed up for hypertension, about one third for hypercholesterolemia, and 8% for diabetes; 65% had elevated blood pressure measures (systolic blood pressure ≧140 or diastolic blood pressure ≧90). The proportion of Mini-Mental State Examination scores below 24 was 7% and dementia was diagnosed in 2.2% of the participants. Conclusion: Distribution of baseline characteristics of the 3C Study participants suggests that this study will provide a unique opportunity to estimate the risk of dementia attributable to vascular factors.
+
+
+

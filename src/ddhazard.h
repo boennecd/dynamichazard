@@ -5,8 +5,6 @@
 #include "ddhazard_problem_data.h"
 #include "arma_n_rcpp.h"
 
-
-
 inline bool is_exponential_model(std::string model){
   return(model == "exp_bin" ||
          model == "exp_clip_time" ||

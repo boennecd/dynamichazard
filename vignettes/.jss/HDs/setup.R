@@ -161,7 +161,7 @@ tryCatch({
     all(tapply(surv_tbl$model, surv_tbl$serial_number, function(x) all(x[1] == x)))
   ))
 
-  cat("Thus, we focus on the manufacturer:\n")
+  cat("Thus, we focus on the manufacturer in this script:\n")
   surv_tbl$manufacturer <- str_extract(surv_tbl$model, "^([A-z]+(?=\ ))|(ST)")
 
   # "As noted in the BackBlaze article, models listed as HGST or Hitachi should be under the same label"
@@ -361,7 +361,7 @@ tryCatch({
   # TODO: Are failures also when they change HDs due to some of the covariates? If so, which?
   # TODO: what is the scan errors in 'Failure Trends in a Large Disk Drive Population'
   # TODO: fill in the a zero dummy value for those w/ first observation that end within the first week of running
-  # TODO: Some HDs seems to jump in time (like W300R8HJ). Smart_12 though seems consistent with smart_9 (and not the date)
+  # TODO: Some HDs seems to jump in time (like W300R8HJ). Smart_12 though seems consistent with date (and not the smart_9). Though, there is a jump
 
   # Add binary features and cum sums
   for(n in covs[covs %in% c("smart_197")]){
@@ -388,7 +388,7 @@ tryCatch({
       "'", ids, "'", collapse = ", "
     ), ")"))
 
-  raw_data <- raw_data[order(raw_data$serial_number, raw_data$smart_9_raw), ]
+  raw_data <- raw_data[order(raw_data$serial_number, raw_data$date), ]
 
   n <- nrow(raw_data)
   keep <- c(
@@ -405,36 +405,41 @@ tryCatch({
       raw_data$smart_198[-n] != raw_data$smart_198[-1])
 
   raw_data <- raw_data[keep, ]
+  cols_keep <- colnames(final_tbl)[grepl(
+    "^smart_\\d+$", colnames(final_tbl))]
+  cols_keep <- paste0(cols_keep, "_raw")
+  cols_keep <- c("serial_number", "smart_9_raw", cols_keep)
+  raw_data <- raw_data[, cols_keep]
+
   final_tbl_sub <- final_tbl[final_tbl$serial_number %in% ids, ]
   final_tbl_sub$serial_number <- as.character(final_tbl_sub$serial_number)
-  final_tbl_sub <- final_tbl_sub[order(final_tbl_sub$serial_number), ]
-
-  raw_data[, -1] <- apply(
-    raw_data[, -1], 2, function(x){
-      if(is.character(x)){
-        x[x == ""] <- NA_character_
-        x <- as.numeric(x)
-        return(x)
-      }
-      x
-    })
 
   row.names(raw_data) <- NULL
   row.names(final_tbl_sub) <- NULL
 
+  is_attr <- grepl("_raw$", colnames(raw_data))
+  raw_data[is_attr] <- lapply(raw_data[is_attr], as.integer)
+
+  raw_data <- raw_data[
+    order(raw_data$serial_number, raw_data$smart_9_raw), ]
+  final_tbl_sub <- final_tbl_sub[
+    order(final_tbl_sub$serial_number, final_tbl_sub$tstart), ]
+
   test_that("Table in R match with final survival table", {
-    expect_equal(nrow(raw_data), nrow(final_tbl_sub))
-    expect_equal(raw_data$serial_number,
-                 as.character(final_tbl_sub$serial_number))
+    tmp_names <- colnames(final_tbl_sub)[
+      grepl("^smart_\\d+$", colnames(final_tbl_sub))]
 
-    expect_equal(raw_data$smart_9_raw, final_tbl_sub$tstart)
+    for(s in unique(final_tbl_sub$serial_number)){
+      expect_equal(nrow(raw_data[raw_data$serial_number == s, ]),
+                   nrow(final_tbl_sub[final_tbl_sub$serial_number == s, ]))
 
-    tmp_names <- colnames(final_tbl_sub)[grepl(
-      "^smart_\\d+$", colnames(final_tbl_sub))]
-    expect_equal(raw_data[, paste0(tmp_names, "_raw")],
-                 final_tbl_sub[, tmp_names])
+      expect_equal(raw_data[raw_data$serial_number == s, "smart_9_raw"],
+                   final_tbl_sub[final_tbl_sub$serial_number == s, "tstart"])
+      expect_equal(raw_data[raw_data$serial_number == s, paste0(tmp_names, "_raw")],
+                   final_tbl_sub[final_tbl_sub$serial_number == s, tmp_names],
+                   check.attributes = FALSE, use.names = FALSE)
+    }
   })
-
 }, finally = {
   if(!is.null(conn))
     dbDisconnect(conn)
@@ -462,20 +467,20 @@ tryCatch({
 })
 
 
-#####
-# "VACUUM" the db to decrease the size
-# See http://www.tutorialspoint.com/sqlite/sqlite_vacuum.htm
-tryCatch({
-  eval(set_dir)
-  options(warn = 1)
-
-  eval(conn_exp)
-
-  dbSendQuery(conn, "VACUUM;")
-}, finally = {
-  if(!is.null(conn))
-    dbDisconnect(conn)
-})
+# #####
+# # "VACUUM" the db to decrease the size
+# # See http://www.tutorialspoint.com/sqlite/sqlite_vacuum.htm
+# tryCatch({
+#   eval(set_dir)
+#   options(warn = 1)
+#
+#   eval(conn_exp)
+#
+#   dbSendQuery(conn, "VACUUM;")
+# }, finally = {
+#   if(!is.null(conn))
+#     dbDisconnect(conn)
+# })
 
 # dbGetQuery(
 #   conn,

@@ -318,6 +318,14 @@ void EKF_solver::solve(){
       openblas_set_num_threads(p_dat.n_threads);
 #endif
 
+      if(p_dat.u.has_inf() || p_dat.u.has_nan()){
+        Rcpp::stop("ddhazard_fit_cpp estimation error: score vector had inf or nan elements. Try decreasing the learning rate");
+
+      } else if(p_dat.U.has_inf() || p_dat.U.has_nan()){
+        Rcpp::stop("ddhazard_fit_cpp estimation error: information matrix had inf or nan elements. Try decreasing the learning rate");
+
+      }
+
       // E-step: scoring step: update values
       inv_sympd(p_dat.V_t_t_s.slice(t) , V_t_less_s_inv + p_dat.U, p_dat.use_pinv,
                 "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");

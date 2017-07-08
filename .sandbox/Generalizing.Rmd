@@ -1,0 +1,265 @@
+---
+title: "Generalizing ddhazard"
+author: "Benjamin Christoffersen"
+date: "`r format(Sys.time(), 'Updated on %B %d, %Y')`"
+output: html_document
+---
+
+```{r set-options, echo=FALSE, cache=FALSE}
+options(width = 200)
+```
+
+```{r func_def, include=FALSE}
+#####
+# Print method
+print.ddterms <- function(x, type_msg = "Not specified"){
+  cat("Dynamic term(s):", type_msg, "\n")
+  
+  if(inherits(x, "data.frame")) 
+    print.data.frame(x) else str(unclass(x), give.attr = F)
+  cat("\n")
+  
+  state_dim <- attr(x, "state_dim")
+  
+  cat("Parameters to be estimated in transition matrix are:\n")
+  to_print <- array("", dim = state_dim)
+  to_print[c(attr(x, "unkown_params"))] <- names(
+    attr(x, "unkown_params_values"))
+  print(to_print, quote = FALSE)
+  cat("\n")
+  
+  cat("Fixed non-zero elements of transition matrix are:\n")
+  to_print[] <- ""
+  to_print[c(attr(x, "fixed_params"))] <- attr(x, "fixed_params_values")
+  print(to_print, quote = FALSE)
+  cat("\n")
+  
+  cat("Vector(s) mapping to coefficient(s):\n")
+  print(attr(x, "coef_map"))
+  
+  invisible()
+}
+
+#####
+# ddterm_ARMA
+
+print.ddterm_ARMA <- function(x)
+  print.ddterms(x, paste0("ARMA(", attr(x, "p"), ", ", attr(x, "q"), ")"))
+
+ddARMA <- function(x, p, q){
+  x_name <- as.character(substitute(x))
+  
+  if(p <= 0 && q <= 0)
+    stop("Both p and q are <= 0")
+  if(p <= 0)
+    return(ddMA(x, q))
+  if(q <=0)
+    return(ddAR(x, p))
+  
+  # Define block diagonal matrix' dimensions
+  m <- max(p, q)
+  attr(x, "state_dim") <- state_dim <- c(m + 1, m + 1)
+  attr(x, "p") <- p
+  attr(x, "q") <- q
+  
+  # Define boolean for the parameters indicies to estimate
+  attr(x, "unkown_params") <- 
+    1:(1 + m)^2 %in% c(1 + c(1:m), (m + 1) * (1 + (m + 1 - p):m))
+  dim(attr(x, "unkown_params")) <- state_dim
+  
+  # Define starting values of unkown parameters 
+  attr(x, "unkown_params_values") <- rep(0, sum(attr(x, "unkown_params")))
+  names(attr(x, "unkown_params_values")) <- c(
+    paste0(x_name, "_psi", 1:m), paste0(x_name, "_phi", 1:p))
+  
+  # Define boolean for the fixed parameters indicies
+  attr(x, "fixed_params") <- 1:(1 + m)^2 %in% (((1 + m) + 1) * 2:m)
+  dim(attr(x, "fixed_params")) <- state_dim
+  
+  # Define value of the fixed parameters indicies
+  attr(x, "fixed_params_values") <- rep(1, sum(attr(x, "fixed_params")))
+  
+  # Vector for dot product to get the current coefficient estimate
+  attr(x, "coef_map") <- c(1, 1, rep(0, m - 1))
+  
+  class(x) <- c("ddterm_ARMA", "ddterms")
+  x
+}
+
+
+#####
+# ddterm_AR
+
+print.ddterm_AR <- function(x)
+  print.ddterms(x, paste0("AR(", attr(x, "p"), ")"))
+
+ddAR <- function(x, p){
+  x_name <- as.character(substitute(x))
+  
+  # See ddARMA for comments
+  attr(x, "state_dim") <- state_dim <- c(p, p)
+  
+  attr(x, "p") <- p
+  
+  attr(x, "unkown_params") <- 1:p^2 %in% c(1 + p * (1:p - 1))
+  dim(attr(x, "unkown_params")) <- state_dim
+  
+  attr(x, "unkown_params_values") <- rep(0, sum(attr(x, "unkown_params")))
+  names(attr(x, "unkown_params_values")) <- paste0(x_name, "_phi", 1:p)
+  
+  attr(x, "fixed_params") <- 1:p^2 %in% ((p + 1) * 0:(p - 2) + 2)
+  dim(attr(x, "fixed_params")) <- state_dim
+  
+  attr(x, "fixed_params_values") <- rep(1, sum(attr(x, "fixed_params")))
+  
+  attr(x, "coef_map") <- c(1, rep(0, p - 1))
+  
+  class(x) <- c("ddterm_AR", "ddterms")
+  x
+}
+
+#####
+# ddterm_MA
+
+print.ddterm_MA <- function(x)
+  print.ddterms(x, paste0("MA(", attr(x, "q"), ")"))
+
+ddMA <- function(x, q){
+  x_name <- as.character(substitute(x))
+  
+  # See ddARMA for comments
+  m <- c(q + 1)
+  attr(x, "state_dim") <- state_dim <- c(m, m)
+  
+  attr(x, "q") <- q
+  
+  attr(x, "unkown_params") <- 1:m^2 %in% c(1 + m * (2:m - 1))
+  dim(attr(x, "unkown_params")) <- state_dim
+  
+  attr(x, "unkown_params_values") <- rep(0, sum(attr(x, "unkown_params")))
+  names(attr(x, "unkown_params_values")) <- paste0(x_name, "_neg_theta", 1:q)
+  
+  attr(x, "fixed_params") <- 1:m^2 %in% ((m + 1) * 1:(q + 1) + 1)
+  dim(attr(x, "fixed_params")) <- state_dim
+  
+  attr(x, "fixed_params_values") <- rep(1, sum(attr(x, "fixed_params")))
+  
+  attr(x, "coef_map") <- c(1, rep(0, q))
+  
+  class(x) <- c("ddterm_MA", "ddterms")
+  x
+}
+
+#####
+# dd_data.frame
+
+print.dd_data.frame <- function(x)
+  print.ddterms(x, paste0("dd_data.frame"))
+
+dd_model.frame <- function(formula, ...){
+  mf <- model.frame(formula, ...)
+  
+  if(!all(sapply(mf, inherits, what = "ddterms")))
+    stop("All terms must be class ddterms")
+  
+  m <- sum(sapply(mf, function(x) attr(x, "state_dim")[1]))
+  attr(mf, "state_dim") <- c(m, m)
+  
+  attr(mf, "fixed_params") <- attr(mf, "unkown_params") <- matrix(F, m, m)
+  
+  attr(mf, "coef_map") <- matrix(0L, nrow = ncol(mf), ncol = m)
+  j <- 1
+  for(i in 1:ncol(mf)){
+    term <- mf[[i]]
+    t_m <- attr(term, "state_dim")[1]
+    
+    attr(mf, "unkown_params")[j:(j + t_m - 1), j:(j + t_m - 1)] <- 
+      attr(term, "unkown_params")
+    
+    attr(mf, "fixed_params")[j:(j + t_m - 1), j:(j + t_m - 1)] <- 
+      attr(term, "fixed_params")
+    
+     attr(mf, "coef_map")[i, j:(j + t_m - 1)] <- attr(term, "coef_map")
+    
+    j <- j + t_m
+  }
+  
+  for(s in c("unkown_params_values", "fixed_params_values"))
+    attr(mf, s) <- do.call(c, unname(sapply(mf, attr, which = s, USE.NAMES = F, simplify = F)))
+  
+  class(mf) <- c("dd_data.frame", "ddterms", class(mf)) 
+  
+  mf
+}
+```
+
+# Intro 
+This note will build on the `Generalizing_ddhazard.pdf`. Thus, the former should be read first in order to make sense of this note. The conclusion of the `Generalizing_ddhazard.pdf` is that we need:
+
+- To have a generic way to setup $F_1,F_2,\dots,F_s$ and $\mathcal{m}_1,\mathcal{m}_2,\dots,\mathcal{m}_s$
+- To find the identity matrix vectors in $\mathbf{D}_b$ and non-zero entries of $\mathbf{f}_b$ given $F_1,F_2,\dots,F_s$
+
+An approach to do so is shown in this note
+
+# Example
+First we simulate a random 3D data set:
+
+```{r}
+# Simulate random data
+dummy_frame <- rnorm(60)
+dim(dummy_frame) <- c(20, 3)
+colnames(dummy_frame) <- paste0("x", 1:3)
+dummy_frame <- data.frame(dummy_frame)
+```
+
+Then we call the method `dd_model.frame` function to get the data frame for estimation. The definition of all the custom functions will be printed at the end:
+
+```{r}
+mf <- dd_model.frame(~ ddAR(x1, 4) + ddMA(x2, 3) + ddARMA(x3, 3, 3), dummy_frame)
+```
+
+The above select an $\text{AR}(4)$ model for $x_1$, $\text{MA}(3)$ for $x_2$ and $\text{ARMA}(3,3)$ for $x_3$. Each of these terms will have a class `ddterms`:
+
+```{r}
+class(mf$`ddAR(x1, 4)`)
+```
+
+Each of the terms will the following additional attributes:
+
+- `unkown_params_values`: The unknown parameters for the coefficient. The names will match the notation used in `Generalizing_ddhazard.pdf`
+- `unkown_params`: True/False value for the indices of the block diagonal matrix of $F_l$ which is true for the indices where `unkown_params_values` appears in column-by-column order
+- `fixed_params` and `fixed_params_values` are the same but for the fixed effects
+- `coef_map` is the $\mathcal{m}_l$ vector
+
+We use the `print.default` method to show the attributes:
+
+```{r}
+print.default(mf$`ddAR(x1, 4)`)
+```
+
+The reason we use the `print.default` is that we have defined a print method which gives an easier overview of the attributes:
+
+```{r}
+mf$`ddAR(x1, 4)`
+mf$`ddMA(x2, 3)`
+mf$`ddARMA(x3, 3, 3)`
+```
+
+The final data frame has similar attributes and print method:
+
+```{r}
+mf
+```
+
+Hence, we see that we have $\mathcal{m}_1,\mathcal{m}_2,\dots,\mathcal{m}_s$. Further, we can get the indices for $\mathbf{D}_b$ and $\mathbf{f}_b$ as follows:
+
+```{r}
+(D_b <- which(attr(mf, "unkown_params")))
+(f_b <- which(attr(mf, "fixed_params")))
+```
+
+# Function definitions
+The function definitions for the functions used above are printed below:
+
+```{r func_def, eval=FALSE}
+```

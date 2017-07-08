@@ -2,14 +2,12 @@
 ^\.Rproj\.user$
 \.log$
 ^\.git
-^tests/benchmarking\.R$
 
 ^\.commit$
+^\.sandbox
 
 \.o$
 \.txt$
-profile\.R$
-benchmarking\.R$
 Rplots\.pdf$
 dynamichazard\.dll$
 useful_scripts$

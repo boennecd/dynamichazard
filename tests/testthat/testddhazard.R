@@ -81,6 +81,7 @@ suppressMessages(
 test_that("Result of exponential model on head_neck_data match previous results", {
   # plot(result_exp)
   result_exp$control <- NULL
+  result_exp$call <- NULL
   # save_to_test(result_exp, "head_neck_exp")
 
   expect_equal(result_exp, read_to_test("head_neck_exp"))
@@ -156,17 +157,11 @@ test_that("Chaning by argument gives previous results for the exp_clp_w_jump met
 
   # plot(result_exp)
   result_exp$control <- NULL
+  result_exp$call <- NULL
   # save_to_test(result_exp, "ddhazard_changed_by")
 
   expect_equal(result_exp, read_to_test("ddhazard_changed_by"))
 })
-
-########
-# Test on simulated data
-set.seed(599479)
-sims <- test_sim_func_exp(n_series = 1e3, n_vars = 10, t_0 = 0, t_max = 10,
-                          x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(10),
-                          intercept_start = -5, sds = c(.1, rep(1, 10)))
 
 test_that("Unmacthed control variable throw error",
           expect_error({
@@ -180,18 +175,21 @@ test_that("Unmacthed control variable throw error",
               control = list(None_existing_parem = 1)
             )}, regexp = "These control parameters are not recognized"))
 
+########
+# Test on simulated data
+
 test_that("speedglm and glm both works and gives (roughly) the same", {
   if(requireNamespace("speedglm", quietly = T)){
     m_args <- list(
       formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-      data = sims$res,
+      data = exp_sim_200$res,
       by = (by_ <- 1),
       Q_0 = diag(1e-2, 11),
       Q = diag(1000000, 11),
       control = list(est_Q_0 = F, eps = 10^-2,
                      save_data = F, save_risk_set = F),
       max_T = 10,
-      id = sims$res$id, order = 1,
+      id = exp_sim_200$res$id, order = 1,
       verbose = F,
       model = "exp_clip_time_w_jump")
 
@@ -205,62 +203,44 @@ test_that("speedglm and glm both works and gives (roughly) the same", {
   }
 })
 
-
 test_that("Result of exponential model with only binary or right clipped time yield previous results", {
-  suppressMessages(result_exp <- ddhazard(
+  args <- list(
     formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-    data = sims$res,
-    by = (by_ <- 1),
+    data = exp_sim_200$res,
+    by = 1,
     Q_0 = diag(10000, 11),
     Q = diag(1e-2, 11),
-    control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3,
-                   save_data = F, save_risk_set = F),
+    control = list(
+      est_Q_0 = F, eps = 10^-2,
+      save_data = F, save_risk_set = F,
+      method = "EKF"),
     max_T = 10,
-    id = sims$res$id, order = 1,
-    verbose = F,
-    model = "exp_bin"))
+    id = exp_sim_200$res$id, order = 1,
+    model = "exp_bin")
 
-  # matplot(sims$betas, type = "l", lty = 1)
+  result_exp <- do.call(ddhazard, args)
+
+  # matplot(exp_sim_200$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, lty = 2, type = "l", add = T)
   result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
   # save_to_test(result_exp, "ddhazard_exp_bin")
 
-  expect_equal(result_exp, read_to_test("ddhazard_exp_bin"), tolerance = 1e-04)
+  expect_equal(result_exp, read_to_test("ddhazard_exp_bin"), tolerance = 1e-5)
 
-  suppressMessages(result_exp <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-    data = sims$res,
-    by = (by_ <- 1),
-    Q_0 = diag(1000000, 11),
-    Q = diag(1e-2, 11),
-    control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3,
-                   save_data = F, save_risk_set = F, denom_term = 1e-4),
-    max_T = 10,
-    id = sims$res$id, order = 1,
-    verbose = F,
-    model = "exp_clip_time"))
+  args$model <- "exp_clip_time"
+  result_exp <- do.call(ddhazard, args)
 
-  # matplot(sims$betas, type = "l", lty = 1)
+  # matplot(exp_sim_200$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, lty = 2, type = "l", add = T)
 
   result_exp <- result_exp[c("state_vecs", "state_vars", "Q")]
   # save_to_test(result_exp, file_name = "ddhazard_exp_clip", tolerance = 1e-4)
   expect_equal(result_exp, read_to_test("ddhazard_exp_clip"), tolerance = 1e-04)
 
-  suppressMessages(result_exp <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-    data = sims$res,
-    by = (by_ <- 1),
-    Q_0 = diag(1e-2, 11),
-    Q = diag(1000000, 11),
-    control = list(est_Q_0 = F, eps = 10^-2,
-                   save_data = F, save_risk_set = F),
-    max_T = 10,
-    id = sims$res$id, order = 1,
-    verbose = F,
-    model = "exp_clip_time_w_jump"))
+  args$model <- "exp_clip_time_w_jump"
+  result_exp <- do.call(ddhazard, args)
 
-  # matplot(sims$betas, type = "l", lty = 1)
+  # matplot(exp_sim_200$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, lty = 2, type = "l", add = T)
 
   result_exp <- result_exp[c("state_vecs", "state_vars", "Q")]

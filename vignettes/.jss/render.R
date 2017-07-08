@@ -1,8 +1,10 @@
 devtools::reload("knitr")
 rm(list = ls())
 
+options(ddhazard_max_threads = 7)
+
 setwd(dir = paste0(
-  stringr::str_extract(getwd(), "^.+/dynamichazard"), "/vignettes/jss"))
+  stringr::str_extract(getwd(), "^.+/dynamichazard"), "/vignettes/.jss"))
 knitr::knit("dynamichazard.Rnw", output = "jss.tex")
 
 tools::texi2pdf("jss.tex")
