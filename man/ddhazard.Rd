@@ -37,7 +37,8 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 \value{
 A list with class \code{fahrmeier_94}. The list contains:
 \describe{
-\item{\code{formula}}{The passed formula }
+\item{\code{formula}}{The passed formula}
+\item{\code{call}}{The matched call}
 \item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin }
 \item{\code{state_vars}}{3D array with smoothed variance estimates for each state vector }
 \item{\code{lag_one_cov}}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF }

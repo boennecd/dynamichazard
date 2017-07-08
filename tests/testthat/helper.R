@@ -58,6 +58,10 @@ head_neck_cancer <- get_head_neck_cancer_data()
 pbc2 <- get_pbc2_data()
 options(ddhazard_use_speedglm = F)
 
+data("pbc", package = "survival")
+pbc <- pbc[, c("id", "time", "status", "age", "edema", "bili", "protime")]
+pbc <- pbc[complete.cases(pbc), ]
+
 # testbigglm_wrapper.R
 library(biglm)
 bigqr.init <- asNamespace("biglm")$bigqr.init

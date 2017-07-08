@@ -11,6 +11,17 @@ arg_list <- list(
   a_0 = rep(0, 2), Q_0 = diag(1, 2),
   Q = diag(1e-2, 2))
 
+args_sim_logit <-
+  m_args <- list(
+    formula = survival::Surv(tstart, tstop, event) ~ x1 + x2,
+    data = logit_sim_200$res,
+    by = (by_ <- 1),
+    Q_0 = diag(1e-2, 3),
+    Q = diag(1000000, 3),
+    control = list(est_Q_0 = F, eps = .1), # Just want a fit
+    max_T = 10,
+    id = logit_sim_200$res$id)
+
 result = do.call(ddhazard, arg_list)
 result_ekf <- result
 
@@ -31,17 +42,18 @@ test_that("residuals functions throws error for some types when method is UKF",{
   expect_no_error(residuals(result, type = "raw", data = logit_sim_200))
 })
 
-arg_list$control <- NULL
-test_that("Residuals work when data is saved on the fit",{
+test_that("Residuals work when data is saved on the fit", {
+
   for(ty in c("pearson", "raw")){
-    arg_list$control = list(save_data = T)
-    fit_saved_data <- do.call(ddhazard, arg_list)
+    cur_args <- args_sim_logit
+    cur_args$control = list(save_data = T)
+    fit_saved_data <- do.call(ddhazard, cur_args)
 
     expect_true(!is.null(fit_saved_data$data))
     fit_saved_data$res <- residuals(fit_saved_data, type = ty)
 
-    arg_list$control = list(save_data = F)
-    fit_not_saved_data <- do.call(ddhazard, arg_list)
+    cur_args$control = list(save_data = F)
+    fit_not_saved_data <- do.call(ddhazard, cur_args)
 
     expect_true(is.null(fit_not_saved_data$data))
     expect_error(residuals(fit_not_saved_data, type = ty))
@@ -55,13 +67,10 @@ test_that("Residuals work when data is saved on the fit",{
 })
 
 test_that("Residuals work when data is saved on the fit and fixed effects are present", {
-  arg_list_new <- list(
-    formula = survival::Surv(tstart, tstop, event) ~ ddFixed(x1),
-    data = logit_sim_200$res,
-    id = logit_sim_200$res$id,
-    by = 1, max_T = 10,
-    a_0 = 0, Q_0 = 1,
-    Q = 1)
+  arg_list_new <- args_sim_logit
+  arg_list_new$formula <- update(arg_list_new$formula, . ~ . - x1 + ddFixed(x1))
+  arg_list_new$Q_0 <- diag(1e8, 2)
+  arg_list_new$Q <- diag(.1, 2)
 
   for(ty in c("pearson", "raw")){
     arg_list_new$control = list(save_data = T)
@@ -88,7 +97,6 @@ test_that("Residuals work when data is saved on the fit and fixed effects are pr
 # Test state space errors
 
 result <-  result_ekf
-
 test_that("State space error match whether standarized or not for logit model", {
   std_res <- residuals(result, "std_space_error")
 
@@ -124,19 +132,16 @@ test_that("State space error gives correct dimension with fixed effects", {
   expect_null(std_res)
 })
 
-# PBC dataset described in Fleming & Harrington (1991)
-library(timereg)
-# status at endpoint, 0/1/2 for censored, transplant, dead
 
-pbc <- pbc[, c("id", "time", "status", "age", "edema", "bili", "protime")]
-pbc <- pbc[complete.cases(pbc), ]
-max(pbc$time[pbc$status == 2])
-suppressMessages(fit <- ddhazard(
-  formula = survival::Surv(rep(0, length(status)), time, status == 2) ~
-    age + edema + log(bili) + log(protime),
-  data = pbc, Q_0 = diag(rep(1e3, 5)), by = 100,
-  Q = diag(rep(1e-2, 5)), max_T = 3600,
-  control = list(est_Q_0 = F)))
+######
+# Data sets used in vignettes
+
+# PBC dataset described in Fleming & Harrington (1991)
+fit <- ddhazard(
+  formula = survival::Surv(time, status == 2) ~ log(protime),
+  data = pbc, Q_0 = diag(rep(1e8, 2)), by = 100,
+  Q = diag(rep(1e-2, 2)), max_T = 3600,
+  control = list(est_Q_0 = F, eps = .1))
 
 test_that("Pearson residuals and raw residuals for logistic model are consistent with each other", {
   pearson_res <- residuals(object = fit, type = "pearson", data = pbc)
@@ -155,38 +160,36 @@ test_that("Pearson residuals and raw residuals for logistic model are consistent
 })
 
 test_that("Cases in residuals match cases in data", {
-    is_case <- pbc$status == 2 & pbc$time <= 3600
-    pearson_res <- residuals(object = fit, type = "pearson", data = pbc)
+  is_case <- pbc$status == 2 & pbc$time <= 3600
+  pearson_res <- residuals(object = fit, type = "pearson", data = pbc)
 
-    is_case_residuals <- rep(0, nrow(pbc))
-    for(i in seq_along(pearson_res$residuals)){
-      y_n_index <- data.frame(pearson_res$residuals[[i]][, c("residuals", "Y", "row_num")])
+  is_case_residuals <- rep(0, nrow(pbc))
+  for(i in seq_along(pearson_res$residuals)){
+    y_n_index <- data.frame(pearson_res$residuals[[i]][, c("residuals", "Y", "row_num")])
 
-      is_case_residuals[y_n_index$row_num[y_n_index$Y == 1]] =
-        is_case_residuals[y_n_index$row_num[y_n_index$Y == 1]] + 1
+    is_case_residuals[y_n_index$row_num[y_n_index$Y == 1]] =
+      is_case_residuals[y_n_index$row_num[y_n_index$Y == 1]] + 1
 
-      expect_equal(sum(y_n_index$residuals[y_n_index$Y == 1] > 0),
-                   sum(y_n_index$Y == 1))
-      expect_equal(sum(y_n_index$residuals[y_n_index$Y == 0] < 0),
-                   sum(y_n_index$Y == 0))
-    }
+    expect_equal(sum(y_n_index$residuals[y_n_index$Y == 1] > 0),
+                 sum(y_n_index$Y == 1))
+    expect_equal(sum(y_n_index$residuals[y_n_index$Y == 0] < 0),
+                 sum(y_n_index$Y == 0))
+  }
 
-    expect_equal(is_case_residuals, is_case + 0)
+  expect_equal(is_case_residuals, is_case + 0)
 })
 
 
 ##################
 # Exponential model
-pbc2_l <- pbc2
-pbc2_l$tstart <- pbc2_l$tstart / 100
-pbc2_l$tstop <- pbc2_l$tstop / 100
 
-suppressMessages(fit <- ddhazard(
-  formula = survival::Surv(tstart, tstop, death == 2) ~
-    age + log(bili) + log(protime),
-  data = pbc2_l, Q_0 = diag(rep(1e3, 4)), by = 1,
-  Q = diag(rep(1e-2, 4)), max_T = 36,
-  model = "exp_clip_time", control = list(est_Q_0 = F, LR = .1)))
+fit <- ddhazard(
+  Surv(tstart, tstop, event) ~ x1,
+  by = 1, data = exp_sim_200$res,
+  id = exp_sim_200$res$id,
+  model = "exp_clip_time_w_jump",
+  max_T = 10, Q_0 = diag(1e8, 2), Q = diag(.1, 2),
+  control = list(eps = .1))
 
 test_that("Calls to residuals should fail for exponential model and state space error",{
   expect_error(residuals(fit, "std_space_error", regexp = "Functions for with model 'exponential' is not implemented"))
@@ -194,27 +197,18 @@ test_that("Calls to residuals should fail for exponential model and state space 
   expect_error(residuals(fit, "pearson", regexp = "Pearsons residuals is not implemented for model 'exp_clip_time'"))
 })
 
-# test_that("pearson and raw residuals for exponential corresponds", {
-#   res_pearson <- residuals(fit, type = "pearson", data = pbc2_l)
-#   res_raw <- residuals(fit, type = "raw", data = pbc2_l)
-#
-#   for(i in seq_along(res_pearson$residuals))
-#     expect_equal(res_pearson$residuals[[i]][, "residuals"],
-#                  res_raw$residuals[[i]][, "residuals"]/
-#                    sqrt(res_raw$residuals[[i]][, "p_est"] * (1 - res_raw$residuals[[i]][, "p_est"])))
-# })
-
-
 #####
 # Test previous result for examples in diagnostics vignette
 
-if(interactive()){
-  diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
-} else{
-  diag_data_path <- "."
-}
-
 test_that("Get previous results with Rossi", {
+  skip_on_cran()
+
+  if(interactive()){
+    diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+  } else{
+    diag_data_path <- "."
+  }
+
   load(paste0(diag_data_path, "/Rossi.RData"))
 
   suppressMessages(
@@ -236,6 +230,14 @@ test_that("Get previous results with Rossi", {
 })
 
 test_that("Get prevoius residuals with whas500", {
+  skip_on_cran()
+
+  if(interactive()){
+    diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+  } else{
+    diag_data_path <- "."
+  }
+
   load(paste0(diag_data_path, "/whas500.RData"))
 
   suppressMessages(

@@ -10,11 +10,9 @@ test_that("Testing util functions to sim for test", {
     new_func <- test_pairs[i, 1][[1]]
     func <- test_pairs[i, 2][[1]]
 
-    tmp <- unlist(replicate(10^3, new_func(1000)))
-    expect_equal(length(unique(tmp)), length(tmp))
-
     expect_equal(length(new_func(1)), 1)
     expect_equal(length(new_func(10)), 10)
+    expect_equal(length(new_func(100)), 100)
 
     seed <- 101
     set.seed(seed)
@@ -26,11 +24,13 @@ test_that("Testing util functions to sim for test", {
   }
 })
 
-set.seed(4321)
-n_series <- 1e4
-t_max <- 10
-
 test_that("Testing util functions to sim series for tests", {
+  skip_on_cran()
+
+  set.seed(4321)
+  n_series <- 1e4
+  t_max <- 10
+
   for(func in c(test_sim_func_logit, test_sim_func_exp)){
     tmp = func(n_series, t_max = t_max)$res
 
@@ -57,12 +57,12 @@ test_that("Testing util functions to sim series for tests", {
 })
 
 
-test_that("Covs are fixed or not depends on is fixed argument", {
+test_that("Whether covs are fixed or not depends on is fixed argument", {
   set.seed(1999293)
   inter_start <- rnorm(1)
   beta_start <- rnorm(10)
   for(func in c(test_sim_func_logit, test_sim_func_exp)){
-    sims <- func(n_series = 1e2, n_vars = 10, beta_start = beta_start,
+    sims <- func(n_series = 1e1, n_vars = 10, beta_start = beta_start,
                  intercept_start = inter_start, t_max = 10)
 
     expect_true(all(apply(sims$betas, 2, function(x) sum(duplicated(x)) == 0)))

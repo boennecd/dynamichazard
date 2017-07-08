@@ -154,39 +154,47 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
     warning("Some stop times are rounded up")
 
   # Make function to predict for each observations
-  # assume that covariates do not change
+  # The function was slow on smaller data sets do to compilation. Thus, the
+  # solution below which should only yeild to calls to compile
+  .env <- new.env(parent = baseenv())
   hazard_func = object$hazard_func
-  environment(hazard_func) <- baseenv()
-  apply_func = eval(bquote(
-    function(row_){
-      ######
-      # Setup
-      x_ = row_[-(1:5)]
-      istart = row_[1]
-      istop = row_[2]
-      tstart =  row_[3]
-      tstop =  row_[4]
-      offset = row_[5]
-      hazard_func <- .(hazard_func)
-      i <- 0
-      i_max <- istop - istart
+  environment(hazard_func) <- .env
 
-      #####
-      # Compute
-      survival_probs = 1 - sapply(istart:istop, function(t){
+  apply_func = eval(bquote(with(
+    .env, {
+      hazard_func <- .(hazard_func)
+      times <- .(times)
+      parems <- .(parems)
+
+      FUN <- function(t, i, i_max, tstart, tstop, x_, offset){
         tart <- if(i == 0) tstart else times[t]
         ttop <- if(i == i_max) tstop else times[t + 1]
-        i <<- i + 1
 
         hazard_func(parems[t, ] %*% x_ + offset, tstart = tart, tstop = ttop)
-      })
+      }
 
-      1 - prod(survival_probs)
-    }))
-  .env <- new.env(parent = baseenv())
-  .env$times <- times
-  .env$parems <- parems
-  environment(apply_func) <- .env
+      function(row_){
+        ######
+        # Setup
+        istart = row_[1]
+        istop = row_[2]
+
+        #####
+        # Compute
+        ts = istart:istop
+        is = seq_along(ts) - 1
+        i_max <- istop - istart
+        survival_probs = 1 - mapply(
+          FUN,
+          t = ts,
+          i = is,
+          i_max = i_max,
+          x_ = list(row_[-(1:5), drop = FALSE]),
+          tstart =  row_[3],
+          tstop =  row_[4],
+          offset = row_[5])
+        1 - prod(survival_probs)
+      }})))
 
   # Compute hazard
   apply_data_frame <- data.frame(istart = int_start, istop = int_stop_,

@@ -16,6 +16,8 @@ test_that("Throws error when risk_set or data is not saved",{
 })
 
 test_that("boot yields previously computed values with pbc", {
+  skip_on_cran()
+
   suppressMessages(
     fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                       log(albumin) + log(protime) + log(bili), pbc2,

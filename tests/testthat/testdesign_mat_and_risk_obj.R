@@ -1,11 +1,7 @@
 context("Testing design_mat_and_risk_obj")
 
 # Simulate data
-set.seed(11111)
-sims = as.data.frame(test_sim_func_logit(n_series = 5e2, n_vars = 3, beta_start = 1,
-                                         intercept_start = - 5, sds = c(sqrt(.1), rep(1, 3)),
-                                         x_range = 1, x_mean = .5)$res)
-
+sims = logit_sim_200$res
 
 #######
 # Test design mat
@@ -34,10 +30,7 @@ test_that("Fixed terms works as expected",{
 })
 
 test_that("Different forms of fixing the intercept gives same results", {
-  set.seed(11111)
-  sims = as.data.frame(test_sim_func_exp(n_series = 5e2, n_vars = 3, beta_start = 1,
-                                         intercept_start = - 5, sds = c(sqrt(.1), rep(1, 3)),
-                                         x_range = 1, x_mean = 0)$res)
+  sims = exp_sim_200$res
 
   for(m in c("logit", exp_model_names)){
     m1 <- suppressWarnings(suppressMessages(
@@ -92,7 +85,6 @@ test_that("Fixed terms works as expected",{
 
 ############
 # test rcpp get risk set function
-
 
 ids_to_row_indicies <- tapply(seq_len(nrow(sims)), sims$id, identity, simplify = F)
 for(do_truncate in c(F, T)){
@@ -265,58 +257,58 @@ test_that("dimension are correct with get_design_matrix with different combinati
   # Only time varying w/ no intercept
   dsng_mat <- get_design_matrix(
     Surv(tstart, tstop, event) ~
-      -1 + as.factor(x1 > .5) + as.factor(x2 > .5) + as.factor(x3 > .5), sims)
+      -1 + as.factor(x1 > 0) + as.factor(x2 > 0) + as.factor(x3 > 0), sims)
 
   expect_equal(ncol(dsng_mat$fixed_terms), 0)
   expect_equal(ncol(dsng_mat$X), 4)
   expect_equal(colnames(dsng_mat$X),
-               c("as.factor(x1 > 0.5)FALSE", "as.factor(x1 > 0.5)TRUE",
-                 "as.factor(x2 > 0.5)TRUE", "as.factor(x3 > 0.5)TRUE"))
+               c("as.factor(x1 > 0)FALSE", "as.factor(x1 > 0)TRUE",
+                 "as.factor(x2 > 0)TRUE", "as.factor(x3 > 0)TRUE"))
 
   #####
   # Only time varying w/ intercept
   dsng_mat <- get_design_matrix(
     Surv(tstart, tstop, event) ~
-      as.factor(x1 > .5) + as.factor(x2 > .5) + as.factor(x3 > .5), sims)
+      as.factor(x1 > 0) + as.factor(x2 > 0) + as.factor(x3 > 0), sims)
 
   expect_equal(ncol(dsng_mat$fixed_terms), 0)
   expect_equal(ncol(dsng_mat$X), 4)
   expect_equal(colnames(dsng_mat$X),
-               c("(Intercept)", "as.factor(x1 > 0.5)TRUE",
-                 "as.factor(x2 > 0.5)TRUE", "as.factor(x3 > 0.5)TRUE"))
+               c("(Intercept)", "as.factor(x1 > 0)TRUE",
+                 "as.factor(x2 > 0)TRUE", "as.factor(x3 > 0)TRUE"))
 
   #####
   # No intercept w/ mixed fixed and time-varying effects
   dsng_mat <- get_design_matrix(
     Surv(tstart, tstop, event) ~
-      -1 + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5), sims)
+      -1 + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0), sims)
 
   expect_equal(ncol(dsng_mat$fixed_terms), 2)
   expect_equal(colnames(dsng_mat$fixed_terms),
-               c("ddFixed(as.factor(x1 > 0.5))FALSE", "ddFixed(as.factor(x1 > 0.5))TRUE"))
+               c("ddFixed(as.factor(x1 > 0))FALSE", "ddFixed(as.factor(x1 > 0))TRUE"))
   expect_equal(ncol(dsng_mat$X), 2)
   expect_equal(colnames(dsng_mat$X),
-               c("as.factor(x2 > 0.5)TRUE", "as.factor(x3 > 0.5)TRUE"))
+               c("as.factor(x2 > 0)TRUE", "as.factor(x3 > 0)TRUE"))
 
   #####
   # Fixed intercept w/ mixed fixed and time-varying effects
   dsng_mat <- get_design_matrix(
     Surv(tstart, tstop, event) ~
-      ddFixed(1) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5), sims)
+      ddFixed(1) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0), sims)
   expect_equal(ncol(dsng_mat$fixed_terms), 2)
   expect_equal(colnames(dsng_mat$fixed_terms),
-               c("ddFixed((Intercept))", "ddFixed(as.factor(x1 > 0.5))TRUE"))
+               c("ddFixed((Intercept))", "ddFixed(as.factor(x1 > 0))TRUE"))
   expect_equal(ncol(dsng_mat$X), 2)
   expect_equal(colnames(dsng_mat$X),
-               c("as.factor(x2 > 0.5)TRUE", "as.factor(x3 > 0.5)TRUE"))
+               c("as.factor(x2 > 0)TRUE", "as.factor(x3 > 0)TRUE"))
 
   # all these formulas should give the same
   for(frm in list(
-    Surv(tstart, tstop, event) ~ -1 + ddFixed(1) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5),
-    Surv(tstart, tstop, event) ~ ddFixed(rep(1, nrow(data))) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5),
-    Surv(tstart, tstop, event) ~ -1 + ddFixed(rep(1, nrow(data))) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5),
-    Surv(tstart, tstop, event) ~ ddFixed_intercept(nrow(data)) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5),
-    Surv(tstart, tstop, event) ~ -1 + ddFixed_intercept(nrow(data)) + ddFixed(as.factor(x1 > .5)) + as.factor(x2 > .5) + as.factor(x3 > .5))){
+    Surv(tstart, tstop, event) ~ -1 + ddFixed(1) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0),
+    Surv(tstart, tstop, event) ~ ddFixed(rep(1, nrow(data))) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0),
+    Surv(tstart, tstop, event) ~ -1 + ddFixed(rep(1, nrow(data))) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0),
+    Surv(tstart, tstop, event) ~ ddFixed_intercept(nrow(data)) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0),
+    Surv(tstart, tstop, event) ~ -1 + ddFixed_intercept(nrow(data)) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0))){
     new_dsng_mat <- get_design_matrix(frm, sims)
 
     expect_equal(dsng_mat$X, new_dsng_mat$X)

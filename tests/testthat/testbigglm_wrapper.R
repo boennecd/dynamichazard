@@ -222,13 +222,8 @@ make.data<-function(urlname, chunksize,...){
   }
 }
 
-set.seed(72343)
-sims <- test_sim_func_exp(n_series = 1e3, n_vars = 10, t_0 = 0, t_max = 10,
-                          x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
-                          intercept_start = -5, sds = c(.1, rep(1, 10)))
-
-
-chunksize <- 3e2
+sims <- exp_sim_200
+chunksize <- 100
 get_data_func <- with(new.env(), {
   n <- nrow(sims$res)
   cursor <- 0
@@ -250,11 +245,11 @@ get_data_func <- with(new.env(), {
 
 test_that("I did not mess up with get_data_func", {
   get_data_func(T)
-  expect_equal(sims$res[1:300, ], get_data_func())
-  expect_equal(sims$res[301:600, ], get_data_func())
+  expect_equal(sims$res[1:chunksize, ], get_data_func())
+  expect_equal(sims$res[1:chunksize + chunksize, ], get_data_func())
   get_data_func(T)
-  expect_equal(sims$res[1:300, ], get_data_func())
-  expect_equal(sims$res[301:600, ], get_data_func())
+  expect_equal(sims$res[1:chunksize, ], get_data_func())
+  expect_equal(sims$res[1:chunksize + chunksize, ], get_data_func())
 })
 
 test_that("bigglm and my c++ version yields similar results", {
@@ -293,13 +288,12 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
   }
 })
 
-
-set.seed(888572)
-ws <- runif(nrow(sims$res))
-ws <- ws * (nrow(sims$res) / sum(ws))
-sims$res <- cbind(sims$res, ws = ws)
-
 test_that("bigglm and my c++ version yields similar with weights", {
+  set.seed(888572)
+  ws <- runif(nrow(sims$res))
+  ws <- ws * (nrow(sims$res) / sum(ws))
+  sims$res <- cbind(sims$res, ws = ws)
+
   sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 

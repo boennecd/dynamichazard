@@ -165,8 +165,10 @@ test_that("Chaning the learning changes the result for the posterior approx meth
 
   f1$control <- NULL
   f1$LR <- NULL
+  f1$call <- NULL
   f2$control <- NULL
   f2$LR <- NULL
+  f2$call <- NULL
   expect_true(is.character(all.equal(f1, f2)))
   expect_equal(f1, f2, tolerance = .2)
 })
