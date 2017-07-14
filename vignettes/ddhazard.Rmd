@@ -257,7 +257,7 @@ $$\begin{aligned}
 		\log L \Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} = & 
 		- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
 	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top\mat{R}^\top\psi_t^{-1}\mat{Q}^{-1}\mat{R}\Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  - \frac{1}{2} \log \deter{\mat{Q}_0} - \frac{1}{2d} \log \deter{\mat{Q}} \\
+	&  - \frac{1}{2} \log \deter{\mat{Q}_0} - \frac{d}{2} \log \deter{\mat{Q}} \\
 	&  + \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t})
 \end{aligned}$$
 
@@ -855,7 +855,7 @@ This is the update equation in the EKF. Taking multiple steps give us:
 		\mat{U}_t (\vec{a}^{(k-1)})\vec{a}^{(k-1)} + \emNotee{\mat{V}}{t}{t - 1}^{-1}\emNotee{\vec{a}}{t}{t - 1} + \vec{u}_t (\vec{a}^{(k-1)})}
 \end{equation}
 
-The above may give ideas to different implementation of the EKF that are more numerically stable and/or where we can easily check for singularity. A review of numerical method for least square problems and numerical examples is in e.g. [@Leary90] 
+The above may give ideas to different implementation of the EKF.
 
 ## Pros and cons
 The pros of the GMA presented in this section are:
@@ -940,7 +940,7 @@ $$\begin{aligned}
 		\log L \Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} = & 
 		- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
 	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top\mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  - \frac{1}{2} \log \deter{\mat{Q}_0} - \frac{1}{2d} \log \deter{\mat{Q}} \\
+	&  - \frac{1}{2} \log \deter{\mat{Q}_0} - \frac{d}{2} \log \deter{\mat{Q}} \\
 	&  + \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t})
 \end{aligned}$$
 
@@ -964,7 +964,7 @@ $$\begin{aligned}
   \xyzp{\widetilde{E}_k}{\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}} = & 
     \widetilde{E}_k \left(- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \right.\\
 	&  \hspace{20pt} - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top \mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  \hspace{20pt} \left. - \frac{1}{2} \deter{\mat{Q}_0} - \frac{1}{2d} \deter{\mat{Q}} \right) \\
+	&  \hspace{20pt} \left. - \frac{1}{2} \deter{\mat{Q}_0} - \frac{d}{2} \deter{\mat{Q}} \right) \\
 	&  + \xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t})}
 \end{aligned}$$
 
@@ -1114,7 +1114,7 @@ $$\begin{aligned}
 \mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =&
   - \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
 	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top \mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  - \frac{1}{2} \log\deter{\mat{Q}_0} - \log\frac{1}{2d} \deter{\mat{Q}} \\
+	&  - \frac{1}{2} \log\deter{\mat{Q}_0} - \log\frac{d}{2} \deter{\mat{Q}} \\
   &+ \sum_{t=1}^d\sum_{(i,j) \in \mathcal{R}_t} l_{ijt}(\vec{\alpha}_t) \\
 %
   l_{ijt}(\vec{\alpha}_t) =& y_{ijt}\vec{x}_{ij}^\top\vec{\alpha}_t -\exp\Lparen{\vec{x}_{ij}^\top\vec{\alpha}_t}

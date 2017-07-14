@@ -41,9 +41,6 @@ if(interactive()){
   get_order_data_rev_exp <- with(environment(ddhazard), get_order_data_rev_exp)
   get_design_matrix <- environment(ddhazard)$get_design_matrix
 
-  # testIWLS.R
-  IWLS_logit <- with(environment(ddhazard), IWLS_logit)
-
   # teststatic_glm.R
   get_design_matrix <- environment(ddhazard)$get_design_matrix
 }

@@ -1,4 +1,4 @@
-devtools::reload("knitr")
+dev.off()
 rm(list = ls())
 
 options(ddhazard_max_threads = 7)

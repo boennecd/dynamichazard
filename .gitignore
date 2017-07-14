@@ -25,6 +25,7 @@ vignettes/Prebuild/figure/
 vignettes/Prebuild/cache/
 vignettes/Prebuild/logit_sim_*.RDS
 vignettes/figure/
+
 vignettes/.jss/cache/
 vignettes/.jss/figure/
 vignettes/.jss/sim_env.Rds

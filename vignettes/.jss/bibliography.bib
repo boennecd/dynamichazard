@@ -6,7 +6,7 @@
 
 @article {Shumway82,
 author = {Shumway, R. H. and Stoffer, D. S.},
-title = {An Approach to Time Series Smoothing and Forecasting Using the Em Algorithm},
+title = {An Approach to Time Series Smoothing and Forecasting Using the EM Algorithm},
 journal = {Journal of Time Series Analysis},
 volume = {3},
 number = {4},
@@ -21,7 +21,7 @@ year = {1982},
 
 @article{Harvey79,
 author = {Harvey, A. C. and Phillips, G. D. A.},
-title = {Maximum Likelihood Estimation of Regression Models with Autoregressive-Moving Average Disturbances},
+title = {Maximum Likelihood Estimation of Regression Models with Autoregressive-moving Average Disturbances},
 journal = {Biometrika},
 volume = {66},
 number = {1},
@@ -34,7 +34,7 @@ eprint = {/oup/backfile/Content_public/Journal/biomet/66/1/10.1093/biomet/66.1.4
 
 @ARTICLE{Holmes13,
    author = {Holmes, E.~E.},
-    title = {Derivation of an EM algorithm for constrained and unconstrained multivariate autoregressive state-space (\pkg{MARSS}) models},
+    title = {Derivation of an EM algorithm for Constrained and Unconstrained Multivariate Autoregressive State-space (\pkg{MARSS}) Models},
   journal = {ArXiv e-prints},
 archivePrefix = "arXiv",
    eprint = {1302.3919},
@@ -59,7 +59,7 @@ archivePrefix = "arXiv",
 
 @INPROCEEDINGS{Angelosante09,
 author={D. Angelosante and S. I. Roumeliotis and G. B. Giannakis},
-booktitle={2009 Conference Record of the Forty-Third Asilomar Conference on Signals, Systems and Computers},
+booktitle={2009 Conference Record of the Forty-third Asilomar Conference on Signals, Systems and Computers},
 title={Lasso-Kalman Smoother for Tracking Sparse Signals},
 year={2009},
 pages={181-185},
@@ -179,7 +179,7 @@ abstract = "The performance of the modified unscented Kalman filter (UKF) for no
 @Article{Fahrmeir91,
 author="Fahrmeir, L.
 and Kaufmann, H.",
-title="On kalman Filtering, Posterior Mode Estimation and Fisher Scoring in Dynamic Exponential Family Regression",
+title="On Kalman Filtering, Posterior Mode Estimation and Fisher Scoring in Dynamic Exponential Family Regression",
 journal="Metrika",
 year="1991",
 volume="38",
@@ -218,15 +218,11 @@ doi = {10.1080/01621459.1992.10475232},
 URL = {
         http://amstat.tandfonline.com/doi/abs/10.1080/01621459.1992.10475232
 
-},
-eprint = {
-        http://amstat.tandfonline.com/doi/pdf/10.1080/01621459.1992.10475232
-
 }}
 
 @article{Fahrmeir96,
 author = { Ludwig   Fahrmeir  and  Stefan   Wagenpfeil },
-title = {Smoothing Hazard Functions and Time-Varying Effects in Discrete Duration and Competing Risks Models},
+title = {Smoothing Hazard Functions and Time-varying Effects in Discrete Duration and Competing Risks Models},
 journal = {Journal of the American Statistical Association},
 volume = {91},
 number = {436},
@@ -237,13 +233,7 @@ doi = {10.1080/01621459.1996.10476726},
 URL = {
         http://amstat.tandfonline.com/doi/abs/10.1080/01621459.1996.10476726
 
-},
-eprint = {
-        http://amstat.tandfonline.com/doi/pdf/10.1080/01621459.1996.10476726
-
-}
-
-}
+}}
 
 %%%%%%%%%%%
 % Software
@@ -263,8 +253,8 @@ eprint = {
 
 @Manual{baseR16,
   title = {\proglang{R}: A Language and Environment for Statistical Computing},
-  author = {{R Core Team}},
-  organization = {R Foundation for Statistical Computing},
+  author = {{\proglang{R} Core Team}},
+  organization = {\proglang{R} Foundation for Statistical Computing},
   address = {Vienna, Austria},
   year = {2016},
   url = {https://www.R-project.org/},
@@ -280,11 +270,11 @@ eprint = {
       PUBLISHER = {Society for Industrial and Applied Mathematics},
       YEAR = {1999},
       ADDRESS = {Philadelphia, PA},
-      ISBN = {0-89871-447-8 (paperback)}}
+      ISBN = {0-89871-447-8}}
 
 @online{LAPACKThread,
   author = {Nicolas Cellier},
-  title = {Thread Titled: Cholseski Update of Rank One on \pkg{LAPACK}-forum},
+  title = {Thread Titled: Cholseski Update of Rank One on \pkg{LAPACK}-Forum},
   year = 2011,
   url = {http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646},
   urldate = {2017-05-04}
@@ -323,6 +313,11 @@ month={Dec},}
 %%%%%%%%%%%
 % State space models
 
+@MISC{Hartikainen11,
+    author = {Jouni Hartikainen and Arno Solin and Simo Särkkä},
+    title = {Optimal Filtering with Kalman Filters and Smoothers. a Manual for the Matlab toolbox EKF/UKF. Version 1.3},
+    year = {2011}}
+
 @article{So03,
  ISSN = {10170405, 19968507},
  URL = {http://www.jstor.org/stable/24307107},
@@ -332,7 +327,7 @@ month={Dec},}
  number = {1},
  pages = {255-274},
  publisher = {Institute of Statistical Science, Academia Sinica},
- title = {POSTERIOR MODE ESTIMATION FOR NONLINEAR AND NON-GAUSSIAN STATE SPACE MODELS},
+ title = {Posterior Mode Estimation for Nonlinear and Non-gaussian State Space Models},
  volume = {13},
  year = {2003}
 }
@@ -352,7 +347,7 @@ month={Dec},}
 }
 
 @book{rigatos17,
-  title={State-Space Approaches for Modelling and Control in Financial Engineering, Systems Theory and Machie Learning Methods},
+  title={State-space Approaches for Modelling and Control in Financial Engineering, Systems Theory and Machie Learning Methods},
   author={Rigatos, G},
   year={2017},
   publisher={Springer, New York}
@@ -392,12 +387,12 @@ month={Dec},}
     title = {\pkg{KFAS}: Kalman Filter and Smoother for Exponential Family State Space Models},
     author = {Helske, Jouni},
     year = {2016},
-    note = {R package version 1.2.5},
+    note = {\proglang{R} package version 1.2.5},
     url = {https://cran.r-project.org/package=KFAS},
   }
 
 @article{helske16,
-  title={\pkg{KFAS}: Exponential family state space models in \proglang{R}},
+  title={\pkg{KFAS}: Exponential Family State Space Models in \proglang{R}},
   author={Helske, Jouni},
   journal={arXiv preprint arXiv:1612.01907},
   year={2016}
@@ -419,7 +414,7 @@ month={Dec},}
 }
 
 @Misc{rstan,
-    title = {\pkg{RStan}: the \proglang{R} Interface to \proglang{Stan}},
+    title = {\pkg{RStan}: the \proglang{R} Interface to \pkg{Stan}},
     author = {{Stan Development Team}},
     note = {\proglang{R} package version 2.14.1},
     year = {2016},
@@ -433,7 +428,7 @@ month={Dec},}
     title = {\pkg{speedglm}: Fitting Linear and Generalized Linear Models to Large Data Sets},
     author = {Marco Enea},
     year = {2017},
-    note = {R package version 0.3-2},
+    note = {\proglang{R} package version 0.3-2},
     url = {https://CRAN.R-project.org/package=speedglm},
   }
 
@@ -575,7 +570,7 @@ abstract = "A new method of data augmentation for binary and multinomial logit m
 
 @article{Thomas14,
    author = {Laine Thomas and Eric Reyes},
-   title = {Tutorial: Survival Estimation for Cox Regression  Models with Time-Varying coefficients Using \proglang{SAS}  and \proglang{R}},
+   title = {Tutorial: Survival Estimation for Cox Regression  Models with Time-varying coefficients Using \proglang{SAS}  and \proglang{R}},
    journal = {Journal of Statistical Software},
    volume = {61},
    number = {1},
@@ -620,9 +615,7 @@ doi = {10.1137/0611032},
 URL = {
         http://dx.doi.org/10.1137/0611032
 
-},
-eprint = {http://dx.doi.org/10.1137/0611032}
-}
+}}
 
 @article{Rebora14,
   author = {Paola Rebora and Agus Salim and Marie Reilly},
@@ -668,11 +661,7 @@ doi = {10.1056/NEJM199403103301001},
 URL = {
         http://dx.doi.org/10.1056/NEJM199403103301001
 
-},
-eprint = {
-        http://dx.doi.org/10.1056/NEJM199403103301001
-}
-}
+}}
 
 
 @inproceedings{pinheiro07,

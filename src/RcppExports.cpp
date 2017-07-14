@@ -80,38 +80,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// IWLS_logit
-arma::vec IWLS_logit(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
-RcppExport SEXP dynamichazard_IWLS_logit(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type offsets(offsetsSEXP);
-    Rcpp::traits::input_parameter< const arma::uword >::type it_max(it_maxSEXP);
-    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
-    rcpp_result_gen = Rcpp::wrap(IWLS_logit(X, y, beta, offsets, it_max, eps));
-    return rcpp_result_gen;
-END_RCPP
-}
-// IWLS_poisson
-arma::vec IWLS_poisson(const arma::mat& X, const arma::vec& y, arma::vec beta, const arma::vec offsets, const arma::uword it_max, const double eps);
-RcppExport SEXP dynamichazard_IWLS_poisson(SEXP XSEXP, SEXP ySEXP, SEXP betaSEXP, SEXP offsetsSEXP, SEXP it_maxSEXP, SEXP epsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec >::type offsets(offsetsSEXP);
-    Rcpp::traits::input_parameter< const arma::uword >::type it_max(it_maxSEXP);
-    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
-    rcpp_result_gen = Rcpp::wrap(IWLS_poisson(X, y, beta, offsets, it_max, eps));
-    return rcpp_result_gen;
-END_RCPP
-}
 // ddhazard_fit_cpp
 Rcpp::List ddhazard_fit_cpp(arma::mat& X, arma::mat& fixed_terms, const arma::vec& weights, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, const arma::vec& fixed_parems_start, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const double eps_fixed_parems, const int max_it_fixed_params, const arma::uword n_max, const double eps, const arma::uword verbose, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, Rcpp::Nullable<Rcpp::NumericVector> NR_eps, Rcpp::Nullable<Rcpp::NumericVector> LR, const std::string model, const std::string M_step_formulation, const int fixed_effect_chunk_size, const bool debug, const unsigned int NR_it_max, const int n_threads, const double denom_term, const int n_fixed_terms_in_state_vec, const bool use_pinv, const std::string criteria, const std::string posterior_version, const signed int GMA_max_rep, const double GMA_NR_eps, const int EKF_batch_size);
 RcppExport SEXP dynamichazard_ddhazard_fit_cpp(SEXP XSEXP, SEXP fixed_termsSEXP, SEXP weightsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP fixed_parems_startSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP eps_fixed_paremsSEXP, SEXP max_it_fixed_paramsSEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP NR_epsSEXP, SEXP LRSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP, SEXP fixed_effect_chunk_sizeSEXP, SEXP debugSEXP, SEXP NR_it_maxSEXP, SEXP n_threadsSEXP, SEXP denom_termSEXP, SEXP n_fixed_terms_in_state_vecSEXP, SEXP use_pinvSEXP, SEXP criteriaSEXP, SEXP posterior_versionSEXP, SEXP GMA_max_repSEXP, SEXP GMA_NR_epsSEXP, SEXP EKF_batch_sizeSEXP) {
@@ -287,8 +255,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"dynamichazard_tri_mat_times_vec", (DL_FUNC) &dynamichazard_tri_mat_times_vec, 4},
     {"dynamichazard_sym_mat_rank_one_update", (DL_FUNC) &dynamichazard_sym_mat_rank_one_update, 3},
     {"dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &dynamichazard_bigglm_regcf_rcpp, 6},
-    {"dynamichazard_IWLS_logit", (DL_FUNC) &dynamichazard_IWLS_logit, 6},
-    {"dynamichazard_IWLS_poisson", (DL_FUNC) &dynamichazard_IWLS_poisson, 6},
     {"dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &dynamichazard_ddhazard_fit_cpp, 38},
     {"dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &dynamichazard_bigglm_updateQR_rcpp, 12},
     {"dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &dynamichazard_SMA_hepler_logit_compute_length, 5},

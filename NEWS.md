@@ -1,6 +1,3 @@
-# dynamichazard 0.4.0
-No major changes.
-
 # dynamichazard 0.3.0
 The following has been changed or added:
 
