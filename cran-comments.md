@@ -65,3 +65,10 @@ Minor small changes to decrease the computation speed.
 Fixed issues with r-patched-solaris-x86. I figure it was due to the $(SHLIB_OPENMP_CXXFLAGS) flag in last submission which triggered armadillo to use OpenMP with C++11 code which caused the error. 
 Decreased the size of the R code in the final package.
 Fixed the clang-UBSAN errors in https://www.stats.ox.ac.uk/pub/bdr/memtests/clang-UBSAN/dynamichazard/tests/testthat.Rout. I tested the new version on Ubuntu 17.04 with clang-3.9. However, I got a lot of errors from Rcpp/include/Rcpp/routines.h as in https://www.stats.ox.ac.uk/pub/bdr/memtests/clang-UBSAN/Rcpp/build_vignettes.log (checked on 24/06/2017 at 2 pm). I gather these can be disregared from Kurt Hornik's mail on 	26. June 2017 at 14.53. 
+
+## Resubmission
+I removed the function mentioned in the E-mail from Kurt Hornik on 5/7/2017.
+
+I changed the test that cause the error in https://www.r-project.org/nosvn/R.check/r-patched-solaris-x86/dynamichazard-00check.html. I do not have access to a Solaris machine but the updated test is more numerical stable.
+
+Decreased the computation time of the tests. The tests run in less than 60 seconds on my pc. 

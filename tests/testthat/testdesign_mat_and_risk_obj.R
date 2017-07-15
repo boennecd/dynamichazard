@@ -52,6 +52,10 @@ test_that("Different forms of fixing the intercept gives same results", {
                control = list(eps = .1, method = "GMA",
                               fixed_terms_method = "M_step"))))
 
+    # matplot(exp_sim_200$betas, lty = 1, type = "l", main = m)
+    # matplot(m1$state_vecs, col = 2:3, lty = 2, add = TRUE, type = "l")
+    # abline(h = m1$fixed_effects, lty = 2, col = 1)
+
     expect_equal(m1$state_vecs, m2$state_vecs, tolerance = 1e-5)
     expect_equal(m1$fixed_effects, m2$fixed_effects, tolerance = 1e-5)
 
