@@ -9,3 +9,6 @@ knitr::knit("dynamichazard.Rnw", output = "jss.tex")
 
 tools::texi2pdf("jss.tex")
 tools::texi2pdf("jss.tex")
+
+
+knitr::purl("dynamichazard.Rnw", output = "reproducible_script.R")

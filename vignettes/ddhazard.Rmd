@@ -206,7 +206,7 @@ $$y_{ijt} = 1_{\left\{T_i \in (t_{i,j-1}, t_{ij}] \wedge t - 1 < t_{ij} \leq t \
 
 which denotes whether individual $i$ has event with the $j$’th covariate vector in interval $t$. Next, the *risk set* in interval $t$ is given by:
 
-$$R_t = \Lbrace{(i,j)\in \mathbb{Z}^2_+:\, t_{i,j-1} \leq t - 1 \leq t_{i,j}}$$
+$$R_t = \Lbrace{(i,j)\in \mathbb{Z}_+\times \mathbb{Z}:\, t_{i,j-1} \leq t - 1 \leq t_{i,j}}$$
 where $\mathbb{Z}$ are the natural number $1,2,\dots$. We will refer to this as the *discrete risk set* as we later introduce a continuous version. For simplicity we assume that we have removed all observation that are strictly inside an interval. I.e. those where:
 $$\exists t\in\mathbb{Z}_+:  t - 1 < t_{i,j-1} < t_{ij} < t$$
 
@@ -1127,7 +1127,7 @@ $$\log\Lparen{\proppCond{t_i}{\vec{\alpha}_0,\dots,\vec{\alpha}_d}} =
   -\int_0^{t_i}\exp\Lparen{\vec{x}_i(u)^\top\vec{\alpha}(u)}\, du$$
   
 which simplifies into the terms of $l_{ijt}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}(t)$ are piecewise constant. Further, $\mathcal{R}_t$ is the continuous risk set given by:
-$$\mathcal{R}_t = \Lbrace{(i,j) \in \mathbb{Z}^2_+:\, t_{i,j-1} < t \wedge t_{ij} > t - 1}$$
+$$\mathcal{R}_t = \Lbrace{(i,j) \in \mathbb{Z}_+\times\mathbb{Z}:\, t_{i,j-1} < t + 1 \wedge t_{ij} > t}$$
 In words, this is that the $j$'th observation of individual $i$ is in the risk set if the observations 1) starts before the intervals ends and 2) ends after the interval starts. When  we use the continuous time model we change the risk sets $R_t$ and the likelihoods:
 
 $$l_{ijt}(\vec{\alpha}_t) = y_{ijt} \log h(\vec{x}_{ijt}^\top \vec{\alpha}_t) + (1 - y_{ijt}) 
