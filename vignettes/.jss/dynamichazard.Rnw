@@ -166,20 +166,14 @@ State space models can provide a computational efficient way to model time-varyi
 \newcommand\embParallel{
   Embarrassingly parallel & The most computational expensive part is easily computed in parallel.}
 
-% See Extended Citation Commands in natbib documentation
-\newcommand\citeXtra[2]{%
-	\citeauthor*{#1}~(\citeyear{#1}, #2)%
-% \cite[#2]{#1}
-}
-
 \begin{document}
 
-<<setup, echo=FALSE, cache=FALSE>>=
+<<setup_knitr, echo=FALSE, cache=FALSE>>=
 knitr::render_sweave()
 
+#####
+# Hook to set par
 with(new.env(), {
-  knitr_par <- par(no.readonly = TRUE)
-
   par_default <- function(cex_mult = 1, ...){
     cex <- .75 * cex_mult
 
@@ -220,35 +214,8 @@ with(new.env(), {
     })
 })
 
-hook_output <- knitr::knit_hooks$get("output")
-knitr::knit_hooks$set(
-  output = function(x, options) {
-   print_n_tail <- options$print_n_tail
-   abbreviate_after <- options$abbreviate_after
-
-   x <- unlist(strsplit(x, "\n"))
-   is_longer <- sapply(x, nchar) > abbreviate_after
-   x <- sapply(x, substring, first = 0, last = abbreviate_after)
-   x <- mapply(function(x, b) if(b) paste0(x, "...") else x,
-               x = x, b = is_longer)
-
-   if (is.null(print_n_tail)) {
-     x <- paste(c(x, ""), collapse = "\n")
-     return(hook_output(x, options))  # pass to default hook
-   }
-
-   more <- "... output abbreviated ..."
-   x <- c(more, tail(x, print_n_tail))
-
-   x <- paste(c(x, ""), collapse = "\n")
-   hook_output(paste(c(x, ""), collapse = "\n"), options)
-  },
-  inline = function(x) {
-  if (is.numeric(x)) {
-    format(x, digits = 4)
-  } else x
-})
-
+######
+# Chunk options
 knitr::opts_chunk$set(
   echo = TRUE, warning = F, message = F, dpi = 144,
   cache = T,
@@ -259,8 +226,8 @@ knitr::opts_chunk$set(
   # See opts_hooks definition
   fig.height = -1, fig.width = -1)
 
-options(digits = 3, scipen=7, width = 60)
-
+#####
+# Alter width and height of figures
 knitr::opts_hooks$set(
   fig.height = function(options) {
     if(options$fig.height > 0)
@@ -285,27 +252,16 @@ knitr::opts_hooks$set(
 
     options
   })
+@
 
-library(xtable)
-print.xtable <- with(new.env(), {
-  org_fun <- print.xtable
-  function(..., comment = FALSE)
-    org_fun(..., comment = comment)
-})
 
-library(zoo, quietly = T, warn.conflicts = FALSE)
-
-# #####
-# # Set the color palette
-# # See http://geog.uoregon.edu/datagraphics/color_scales.htm
-# library(dichromat)
-# palette(c(
-#   "black",
-#   colorschemes$Categorical.12[c(2, 6, 8, 10, 12)],
-#   "darkgray"))
+<<setup_other, echo=FALSE, cache=FALSE>>=
+#####
+# R options
+options(digits = 3, scipen=7, width = 60)
 
 #####
-# I went with these colors instead
+# Define colors that are good for red-green colorblinds
 cols <-cbind(
   r=c(91,0,23,255,8,255,4,0,0,255,255),
   g=c(0,255,169,232,0,208,255,0,79,21,0),
@@ -316,18 +272,30 @@ cols <- apply(cols, 1, function(x)
 # barplot(rep(1, length(cols)), col = cols)
 palette(c("black", cols, "darkgray"))
 
-library(splines)
-library(stringr)
-library(splines)
-library(plotrix)
-library(grDevices)
-library(mvtnorm)
-library(tcltk)
+#####
+# Load and attach libaries
+library("splines")
+library("stringr")
+library("splines")
+library("plotrix")
+library("grDevices")
+library("mvtnorm")
+library("tcltk")
+library("xtable")
+library("zoo", quietly = T, warn.conflicts = FALSE)
+
+#####
+# Remove comments from xtable
+print.xtable <- with(new.env(), {
+  org_fun <- print.xtable
+  function(..., comment = FALSE)
+    org_fun(..., comment = comment)
+})
 @
 
 The focus of the \pkg{dynamichazard} package is on survival analysis with time-varying parameters using state space models with estimation methods that are fast and scale well. The contribution of this paper and the package is to give an overview of computationally fast non-linear estimation methods for state space models that scale well in the dimension of the observational equation, provide an easy interface to use for such methods in survival analysis and illustrate the use of the methods.
 
-Time-varying parameters is a common part of survival analysis. Splines are often used to model the time-varying parameters. Various package in \proglang{R} \citep{baseR16} on the Comprehensive R Archive Network (CRAN) take this approach. An example is \code{splineCox} from the \pkg{dynsurv} package \citep{dynsurv} which also includes a non-spline based Bayesian approach with piecewise constant parameters and a transformation based approach. Another example is the \pkg{rstpm2} package \citep{rstpm2}. An L2 penalized B-spline intercept is implemented in the \pkg{bshazard} package \citep{Rebora14}. Further, penalized time-varying parameters can be estimated by using any of the regularization methods in packages like \pkg{glmnet} \citep{Simon11}, \pkg{glmpath} \citep{glmpath}, \pkg{mgcv} \citep{wood06} and \pkg{penalized} \citep{Goeman10} combined with the method described by~\cite{Thomas14}.
+Time-varying parameters is a common part of survival analysis. Splines are often used to model the time-varying parameters. Various package in \proglang{R} \citep{baseR16} on the comprehensive \proglang{R} archive network (CRAN) take this approach. An example is \code{splineCox} from the \pkg{dynsurv} package \citep{dynsurv} which also includes a non-spline based Bayesian approach with piecewise constant parameters and a transformation based approach. Another example is the \pkg{rstpm2} package \citep{rstpm2}. An L2 penalized B-spline intercept is implemented in the \pkg{bshazard} package \citep{Rebora14}. Further, penalized time-varying parameters can be estimated by using any of the regularization methods in packages like \pkg{glmnet} \citep{Simon11}, \pkg{glmpath} \citep{glmpath}, \pkg{mgcv} \citep{wood06} and \pkg{penalized} \citep{Goeman10} combined with the method described by~\cite{Thomas14}.
 
 A non-spline based approaches is used in the \pkg{timereg} package \citep{martinussen07} for both the Cox regression model and the additive hazards models. Similarly, the \code{aareg} function in the package \pkg{survival} \citep{survival} included with \proglang{R} can estimate the non-parametric Aalen model with time-varying parameters. The \pkg{pch} package \citep{pch} fits time-varying parameters by dividing the time into periods and making separate Poisson regressions in each period. \pkg{concreg} \citep{concreg} uses conditional logistic regression to estimate the time-varying parameters.
 
@@ -347,7 +315,7 @@ The rest of this paper is structured as follows. Section~\ref{sec:notation} intr
   All methods scales linearly in computation time with the number of observations. The reported computational complexity in the rest of the paper is based on a single iteration of the EM-algorithm.
 \end{itemize}
 
-The inspiration for the package is from \cite{Fahrmeir92} and \cite{Fahrmeir94}. The current implementation uses the EM-algorithm from these papers. The reader may want further resources on the filters covered later as they are only briefly introduced. \citeXtra{durbin12}{chapter 4} covers the Kalman filter which provides a basis for understanding all the filters in the package. \cite{Fahrmeir92,Fahrmeir94} cover the extended Kalman filter used in this package while \citeXtra{durbin12}{section 10.2} cover the more common form of the extended Kalman filter. \citeXtra{durbin12}{section 10.3} and \cite{Wan00} provide an introduction to the unscented Kalman filter. Another resource is \cite{Hartikainen11} who introduce the Kalman filter, extended Kalman filter and unscented Kalman filter.
+The inspiration for the package is from \cite{Fahrmeir92} and \cite{Fahrmeir94}. The current implementation uses the EM-algorithm from these papers. The reader may want further resources on the filters covered later as they are only briefly introduced. \citet[chapter 4]{durbin12} covers the Kalman filter which provides a basis for understanding all the filters in the package. \cite{Fahrmeir92,Fahrmeir94} cover the extended Kalman filter used in this package while \citet[section 10.2]{durbin12} cover the more common form of the extended Kalman filter. \citet[section 10.3]{durbin12} and \cite{Wan00} provide an introduction to the unscented Kalman filter. Another resource is \cite{Hartikainen11} who introduce the Kalman filter, extended Kalman filter and unscented Kalman filter.
 
 \section{Notation and problem}\label{sec:notation}
 
@@ -410,7 +378,7 @@ The state equation is implemented with a 1. and 2. order random walk. The first 
 \mat{R} = \begin{pmatrix} \mat{I}_m \\ \mat{0}_m \end{pmatrix}
 \end{equation}
 
-where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The vector in the state equation is ordered as $\vec{\alpha}_t = (\tvec{\alpha}_t^\top, \tvec{\alpha}_{t-1}^\top)^\top$ to match the definition of $\mat{F}$ and $\mat{R}$ where the tilde on the alphas is added to indicate the parameters used when computing the linear predictor in equation~\eqref{eqn:condProb}. Notice that the dimension of the state vector is $q = 2m$ which affects the computational cost. The likelihood of the model where state vectors are observed can be written as follows by application of the markovian property of the model:
+where $\mat{0}_m$ is a $m\times m$ matrix with zeros in all entries. The vector in the state equation is ordered as $\vec{\alpha}_t = (\tvec{\alpha}_t^\top, \tvec{\alpha}_{t-1}^\top)^\top$ to match the definition of $\mat{F}$ and $\mat{R}$ where the tilde on the alphas is added to indicate the parameters used when computing the linear predictor in Equation~\eqref{eqn:condProb}. Notice that the dimension of the state vector is $q = 2m$ which affects the computational cost. The likelihood of the model where state vectors are observed can be written as follows by application of the markovian property of the model:
 
 \begin{equation}
 L(\mat{Q},\mat{Q}_0, \vec{a}_0)
@@ -439,7 +407,7 @@ This completes the notation I will need for the discrete model. I continue with 
 
 \section{Methods}\label{sec:meth}
 
-The estimation function in \pkg{dynamichazard} is the \code{ddhazard} function. All the methods implemented in the current version of \code{ddhazard} use the EM-algorithm described in \cite{Fahrmeir94} and \cite{Fahrmeir92}. The EM-algorithm is similar to the method in \cite{Shumway82} but for a non-linear observational equation. The unknown hyperparameters in the state equation~\eqref{eqn:stateEqn} are the covariance matrices $\mat{Q}$ and $\mat{Q}_0$ and the initial state mean  $\vec{a}_0$. $\mat{Q}$ and $\vec{a}_0$ will be estimated in the M-step of the EM-algorithm. It is common practice with Kalman filters to set the diagonal elements of $\mat{Q}_0$ to large values yielding an information matrix which has almost zero in all entries. Another approach is diffuse initialization. The idea to set $\mat{Q}_0 = c\mat{I} + \tmat{Q}_0$ for a given matrix $\tmat{Q}_0$ and derive the various formulas in the limit $c\rightarrow\infty$. See~\citeXtra{durbin12}{chapter 5}. I use the following notation for the conditional means and covariance matrix:
+The estimation function in \pkg{dynamichazard} is the \code{ddhazard} function. All the methods implemented in the current version of \code{ddhazard} use the EM-algorithm described in \cite{Fahrmeir94} and \cite{Fahrmeir92}. The EM-algorithm is similar to the method in \cite{Shumway82} but for a non-linear observational equation. The unknown hyperparameters in the state Equation~\eqref{eqn:stateEqn} are the covariance matrices $\mat{Q}$ and $\mat{Q}_0$ and the initial state mean  $\vec{a}_0$. $\mat{Q}$ and $\vec{a}_0$ will be estimated in the M-step of the EM-algorithm. It is common practice with Kalman filters to set the diagonal elements of $\mat{Q}_0$ to large values yielding an information matrix which has almost zero in all entries. Another approach is diffuse initialization. The idea to set $\mat{Q}_0 = c\mat{I} + \tmat{Q}_0$ for a given matrix $\tmat{Q}_0$ and derive the various formulas in the limit $c\rightarrow\infty$. See~\citet[chapter 5]{durbin12}. I use the following notation for the conditional means and covariance matrix:
 
 \begin{equation}
   \emNotee{\vec{a}}{t}{s} = \expecpCond{\vec{\alpha}_t}{\vec{y}_1,\dots,\vec{y}_s},  \qquad
@@ -487,13 +455,13 @@ Notice that the letter 'a' is used for the mean estimates while 'alpha' is used 
 \end{algorithmic}
 \end{algorithm}
 
-The matrices $\mat{X}_1,\mat{X}_2,\dots,\mat{X}_d$ are the design matrices given by the risk set $R_1,R_2\dots,R_d$ and the covariate vectors. The only unspecified part is the filter in \citeAlgLine{alg:EM:filter}{alg:EM}. Notice that the other lines only involves product of matrices and vectors of dimension equal to the state space vector dimension, $q$. Moreover, the computational cost is independent of the size of the risk sets for the specified parts of algorithm~\ref{alg:EM}. Thus, the computational complexity so far is $\bigO{q^3d}$ where $d$ is the number of intervals. The threshold for convergence is determined by the \code{eps} element of the list passed to the \code{control} argument of \code{ddhazard} (e.g. \code{list(eps = 0.01, ...)}). The EM-algorithm tends to converge slowly towards the end. However, a tolerance of $0.01$ or $0.001$ is quickly satisfied with minor differences compared to smaller tolerance from my experience. The filters implemented for \citeAlgLine{alg:EM:filter}{alg:EM} are an Extended Kalman filter (EKF), an Unscented Kalman filter (UKF), sequential approximation of the posterior modes and estimation of posterior modes. I will covers these in the respective order.
+The matrices $\mat{X}_1,\mat{X}_2,\dots,\mat{X}_d$ are the design matrices given by the risk set $R_1,R_2\dots,R_d$ and the covariate vectors. The only unspecified part is the filter in \citeAlgLine{alg:EM:filter}{alg:EM}. Notice that the other lines only involves product of matrices and vectors of dimension equal to the state space vector dimension, $q$. Moreover, the computational cost is independent of the size of the risk sets for the specified parts of algorithm~\ref{alg:EM}. Thus, the computational complexity so far is $\bigO{q^3d}$ where $d$ is the number of intervals. The threshold for convergence is determined by the \code{eps} element of the list passed to the \code{control} argument of \code{ddhazard} (e.g., \code{list(eps = 0.01, ...)}). The EM-algorithm tends to converge slowly towards the end. However, a tolerance of $0.01$ or $0.001$ is quickly satisfied with minor differences compared to smaller tolerance from my experience. The filters implemented for \citeAlgLine{alg:EM:filter}{alg:EM} are an extended Kalman filter, an unscented Kalman filter, sequential approximation of the posterior modes and estimation of posterior modes. I will covers these in the respective order.
 
 \subsection{The Extended Kalman filter}\label{subsec:EKF}
-The Extended Kalman Filter (EKF) is an approximation for non-linear state spaces where we make a given order Taylor expansion around the state vector. The first order Taylor expansion is most commonly used. One of the advantages of the EKF is that we end with formulas close to the Kalman filter. The EKF presented here in algorithm~\ref{alg:EKF} is due to \cite{Fahrmeir94}. It can be derived by applying the Woodbury Matrix identity to the usual EKF. Commonly, the prediction step is also referred to as the time update and the correction step is also referred to as the measurement update. A few points is worth making. Firstly, the largest computational burden is in \citeAlgLine{alg:EKF:scoreMat}{alg:EKF} when the dimension of the state vector, $q$, is low compared to the number of observations at time $t$ which I denote by $n_t = \vert R_t \vert$. However, the computation here is what is commonly referred to as embarrassingly parallel. That is, it can easily be computed in parallel since there is little communication required between the parallel tasks. This is exploited in the current version of \code{ddhazard} where the computation of \citeAlgLineTwo{alg:EKF:scoreVec}{alg:EKF:scoreMat}{alg:EKF} is done in parallel using the \proglang{C++} library \pkg{thread}. All the matrices and vectors are of dimension $q\times q$ and $q$ so it is easy to confirm that the filter is $\bigO{q^2n_t + q^3}$ in computational complexity.
+The extended Kalman filter (EKF) is an approximation for non-linear state spaces where we make a given order Taylor expansion around the state vector. The first order Taylor expansion is most commonly used. One of the advantages of the EKF is that we end with formulas close to the Kalman filter. The EKF presented here in algorithm~\ref{alg:EKF} is due to \cite{Fahrmeir94}. It can be derived by applying the Woodbury Matrix identity to the usual EKF. Commonly, the prediction step is also referred to as the time update and the correction step is also referred to as the measurement update. A few points is worth making. Firstly, the largest computational burden is in \citeAlgLine{alg:EKF:scoreMat}{alg:EKF} when the dimension of the state vector, $q$, is low compared to the number of observations at time $t$ which I denote by $n_t = \vert R_t \vert$. However, the computation here is what is commonly referred to as embarrassingly parallel. That is, it can easily be computed in parallel since there is little communication required between the parallel tasks. This is exploited in the current version of \code{ddhazard} where the computation of \citeAlgLineTwo{alg:EKF:scoreVec}{alg:EKF:scoreMat}{alg:EKF} is done in parallel using the \proglang{C++} library \pkg{thread}. All the matrices and vectors are of dimension $q\times q$ and $q$ so it is easy to confirm that the filter is $\bigO{q^2n_t + q^3}$ in computational complexity.
 
 \begin{algorithm}
-\caption{Extended Kalman Filter (EKF).}\label{alg:EKF}
+\caption{Extended Kalman filter (EKF).}\label{alg:EKF}
 \begin{algorithmic}[1]\raggedright
 \INPUT
 \Statex $\mat{Q},\mat{Q}_0, \vec{a}_0,$ $\mat{X}_1,\dots,\mat{X}_d,$ $\vec{y}_1,\dots,\vec{y}_d,$ $R_1,\dots,R_d$
@@ -545,9 +513,9 @@ Extra correction steps are not taken by default. They will be taken if the eleme
 \subsubsection{Hard disk failures}
 
 <<load_hd_dat, echo = FALSE>>=
-fname <- gsub(
-  "(^.+dynamichazard)(.*)$", "\\1/vignettes/.jss/HDS/HDs.RDS", getwd())
-hd_dat <- readRDS(fname)
+#####
+# Load hd data from sub folder
+hd_dat <- readRDS("HDS/HDs.RDS")
 
 # Few have data from time zero so we set a few days in as time zero
 new_start <- 24 * 4
@@ -558,10 +526,9 @@ hd_dat$tstop <- hd_dat$tstop - new_start
 # We need to remove the records that ends before or at the starting time
 # sum(hd_dat$tstart >= hd_dat$tstop) # Number of rows thrown away
 hd_dat <- hd_dat[hd_dat$tstart < hd_dat$tstop, ]
-
 hd_dat$serial_number <- droplevels(hd_dat$serial_number)
 
-# Re-scale time
+# Re-scale time to months
 tmp <- 24 * 30
 hd_dat$tstart  <- hd_dat$tstart / tmp
 hd_dat$tstop <- hd_dat$tstop / tmp
@@ -569,14 +536,12 @@ hd_dat$tstop <- hd_dat$tstop / tmp
 # Make sure that data is sorted
 hd_dat <- hd_dat[order(hd_dat$serial_number, hd_dat$tstart), ]
 
+#####
 # Fill in blanks with carry the last observation forward
 # Define function to fill in the blanks
-# TODO: Check with BackBlaze if this is a good choice
-library(zoo, quietly = T)
-
+library("zoo", quietly = T)
 func <- function(x)
   na.locf0(c(0, x))[-1]
-func <- compiler::cmpfun(func)
 
 # Use the function
 for(n in colnames(hd_dat)["smart_12" == colnames(hd_dat)]){
@@ -586,7 +551,9 @@ for(n in colnames(hd_dat)["smart_12" == colnames(hd_dat)]){
 }
 @
 
-<<winsorize, echo = FALSE>>=
+<<remove_versions_w_few_and_winsorize, echo = FALSE>>=
+#####
+# Remove version with few unique disks
 n_per_model <-
   xtabs(~ model, hd_dat, subset = !duplicated(serial_number))
 
@@ -596,25 +563,27 @@ models_to_keep <- names(n_per_model)[n_per_model >= factor_cut]
 hd_dat <- hd_dat[hd_dat$model %in% models_to_keep, ]
 hd_dat$model <- droplevels(hd_dat$model)
 
+#####
 # Winsorize
 win_lvl <- .99
 hd_dat$smart_12 <- pmin(hd_dat$smart_12, quantile(
   hd_dat$smart_12, win_lvl))
 @
 
-I will look at time till failure for hard drives as an example through-out this paper. Predicting when a hard disk is going to fail is important for any firm who manages large amounts of data stored locally in order to replace the hard disks before they fail. Self-Monitoring, Analysis and Reporting Technology (SMART) is one tool used to predict future failure of a hard disk. The dataset I will use is from BackBlaze which is publicly available at~\cite{backblazestats}. Backblaze is a data storage provider and currently manages more than 65,000 hard disks. They have a daily snapshot of the SMART attributes for all their hard disks going back to April 2013. The final data set I use have $\Sexpr{length(unique(hd_dat$serial_number))}$ unique hard disks. It has $\Sexpr{nrow(hd_dat)}$ rows in start-stop format for survival analysis after removing redundant rows.
+I will look at time till failure for hard drives as an example through-out this paper. Predicting when a hard disk is going to fail is important for any firm who manages large amounts of data stored locally in order to replace the hard disks before they fail. Self-monitoring, analysis and reporting technology (SMART) is one tool used to predict future failure of a hard disk. The dataset I will use is from BackBlaze which is publicly available at~\cite{backblazestats}. Backblaze is a data storage provider and currently manages more than 65,000 hard disks. They have a daily snapshot of the SMART attributes for all their hard disks going back to April 2013. The final data set I use have $\Sexpr{length(unique(hd_dat$serial_number))}$ unique hard disks. It has $\Sexpr{nrow(hd_dat)}$ rows in start-stop format for survival analysis after removing redundant rows.
 
 A hard disk is marked as a failure if: "... the drive will not spin up or connect to the OS, the drive will not sync, or stay synced, in a RAID Array ... [or] the Smart Stats we [BackBlaze] use show values above our [BackBlaze's] thresholds" \citep{backblaze2016Q1}. A hard drive with a failure is removed. I will not use the SMART attributes that BackBlaze uses as covariates due to the third condition. These are SMART attributes 5, 187, 188, 197 and 198 \citep{backblazesmartstatuse}.
 
-I will use the power-on hours (SMART attribute number 9) as the time scale in the model we estimate. The hard disks run 24 hours a day unless they are shut down due to e.g. maintenance. BackBlaze have stated that: "If one of the drives in a Storage Pod fails, we cycle down the entire Storage Pod to replace the failed drive. This only takes a few minutes and then power is reapplied and everything cycles back up. Occasionally we power cycle a Storage Pod for maintenance and on rare occasions we’ve had power failures, but generally, the drives just stay up" \citep{backblazesmartstatuse}. The quote refers to the storage pods in which the hard disk are placed. BackBlaze uses storage pods with 45 to 60 hard disk in each \citep{backblazepods}.
+I will use the power-on hours (SMART attribute number 9) as the time scale in the model we estimate. The hard disks run 24 hours a day unless they are shut down due to e.g., maintenance. BackBlaze have stated that: "If one of the drives in a Storage Pod fails, we cycle down the entire Storage Pod to replace the failed drive. This only takes a few minutes and then power is reapplied and everything cycles back up. Occasionally we power cycle a Storage Pod for maintenance and on rare occasions we’ve had power failures, but generally, the drives just stay up" \citep{backblazesmartstatuse}. The quote refers to the storage pods in which the hard disk are placed. BackBlaze uses storage pods with 45 to 60 hard disk in each \citep{backblazepods}.
 
 The SMART attribute I will look at as a predictor is the power cycle count (SMART attribute number 12). This counts the number of times a hard disk have had a full hard disk power on/off cycle. I will include a factor level for the hard disk version as the differences in failure rates between hard disk versions are large. Particularly, one version of 3 terabyte hard disks from Seagate (denoted by ST3000DM001) have had a high failure rate \citep{backblazest3tb}. I remove versions with less than $\Sexpr{factor_cut}$ unique hard disk. These have either few cases and/or few observations. This leaves us with $\Sexpr{length(unique(hd_dat$serial_number))}$ unique hard disks. I winsorize at the $\Sexpr{win_lvl}$ quantile for the power cycle count. That is, I set values above the $\Sexpr{win_lvl}$ quantile to the $\Sexpr{win_lvl}$ quantile.
 
 % The Pearson correlation and Spearman's rank correlation coefficient is low (less than $0.4$) between the power cycle count and the other SMART statistic that BackBlaze uses. Thus, we may expect to be looking at actual failures.
 
 <<define_get_pretty_model_factors, echo = FALSE>>=
-# Make factor level shorter
-library(stringr)
+#####
+# Define function to make factor levels shorter
+library("stringr")
 get_pretty_model_factors <- function(x){
   f <- function(lvls){
     lvls <- str_replace(lvls, "^model", "")
@@ -635,7 +604,7 @@ get_pretty_model_factors <- function(x){
 <<model_stats, echo = FALSE, results='asis', cache=FALSE>>=
 #####
 # Make data frame to find stats
-library(dynamichazard)
+library("dynamichazard")
 tmp_dat <- get_survival_case_weights_and_data(
   Surv(tstart, tstop, fails) ~ model,
   data = hd_dat, by = 1, max_T = 60, use_weights = F,
@@ -665,12 +634,12 @@ tbl_dat <- lapply(1:length(.names[[2]]), function(i){
 tbl_dat <- do.call(cbind, tbl_dat)
 tbl_dat <- tbl_dat[order(tbl_dat[, 1], decreasing = TRUE), ]
 
-# convert to string
+# Convert to string
 tbl_dat <- structure(
   apply(tbl_dat, 2, sprintf, fmt = "%d"),
   dimnames = dimnames(tbl_dat))
 
-# Format 2 row header
+# Format second row header
 # See https://stackoverflow.com/a/32490565/5861244
 tmp_lvls <- paste0("$t\\in", levels(tmp_dat$X$t_cut), "$")
 headers_lvl1 <- paste(
@@ -679,18 +648,15 @@ headers_lvl2 <- paste(substr(colnames(tbl_dat), 0, 2), collapse = " & ")
 
 #####
 # Find first observation and first failure and add to table
-tbl_xtra <- by(hd_dat, hd_dat$model, function(x)
-  c("First failure time" = min(x$tstop[x$fails == 1])),
-  simplify = FALSE)
+tbl_xtra <- by(hd_dat, hd_dat$model, function(x) min(x$tstop[x$fails == 1]), simplify = FALSE)
 tbl_xtra <- do.call(rbind, tbl_xtra)
-
-tbl_xtra[, ] <- cbind(sprintf(tbl_xtra[, 1], fmt = "%.3f"))
+tbl_xtra[] <- sprintf(tbl_xtra, fmt = "%.3f")
 
 rmatch <- match(row.names(tbl_dat), row.names(tbl_xtra))
 
-tbl_dat <- cbind(tbl_xtra[rmatch, ], tbl_dat)
+tbl_dat <- cbind(tbl_xtra[rmatch], tbl_dat)
 
-# Format headers
+# Set header of final tabel
 headers_lvl1 <- paste(
   paste(rep(" & ", ncol(tbl_xtra)), # Not -1 as we have the row.names
         collapse = ""),
@@ -741,14 +707,14 @@ cat(print_out)
 rm(tmp_dat, stats, tbl_dat, tbl_xtra)
 
 #####
-# Note: You can check the figures agianst https://www.backblaze.com/blog/hard-drive-failure-rates-q2-2016/
+# Note: You can check the figures against https://www.backblaze.com/blog/hard-drive-failure-rates-q2-2016/
 @
 
 Information about each of the hard disk versions are shown in table~\ref{tab:modelDat}. We see from table~\ref{tab:modelDat} that we only have data for some of the hard disk versions in parts of the 60 month period. Thus, some of the curves shown later will partly be extrapolation. I fit the model using the EKF with a single iteration in the correction step. I use a natural cubic spline basis for the number of power cycles to capture potential non-linear effects. The code is shown below:
 
 <<first_hd_fit>>=
-library(splines)
-library(dynamichazard)
+library("splines")
+library("dynamichazard")
 # Assign model formula
 frm <- Surv(tstart, tstop, fails) ~
       -1 +              # I remove the intercept to not get a reference level
@@ -774,7 +740,6 @@ system.time(           # Used to get the computation time
 @
 
 <<ddfit_change_fac_lvls, echo = FALSE>>=
-# Make factor level shorter
 ddfit <- get_pretty_model_factors(ddfit)
 @
 
@@ -803,6 +768,7 @@ is_ns <- grepl(
 preds$lbs <- preds$terms[,, is_ns]  - 1.96 * preds$sds[,, is_ns]
 preds$ubs <- preds$terms[,, is_ns] + 1.96 * preds$sds[,, is_ns]
 
+# Plot
 cols <- rev(1:3)
 xs <- ddfit$times
 plot(range(xs), range(preds$lbs, preds$ubs), type = "n",
@@ -811,6 +777,7 @@ abline(h = 0, lty = 2)
 matplot(xs, preds$terms[,, is_ns], type = "l", add = T, lty = 1,
         col = cols)
 
+# Add confidence bounds
 for(i in 1:dim(preds$terms)[2]){
   icol <- adjustcolor(cols[i], alpha.f = 0.1)
   polygon(c(xs, rev(xs)), c(preds$ubs[,i], rev(preds$lbs[,i])),
@@ -819,6 +786,7 @@ for(i in 1:dim(preds$terms)[2]){
   lines(xs, preds$lbs[,i], lty = 2, col = cols[i])
 }
 
+# Add legend
 legend(
   "bottomright", bty = "n",
   legend = paste0(tmp$smart_12, " Cycles"),
@@ -827,7 +795,7 @@ legend(
   cex = par()$cex * 2.5)
 @
 
-<<echo=FALSE>>=
+<<setup_for_smart_12_illu, echo=FALSE>>=
 min_obs <- 50
 quant <- .1
 smart_12_illu_cap <- paste0("Plot showing the mean and ", quant * 100, "\\% quantile of the SMART 12 attribute for each version with those hard disk at risk at the start of each interval. The dashed lines are the quantile curves. Values for a given version in a given interval is excluded if there are less than ", min_obs, " hard disk at risk at the start of the interval. The circle radiuses are proportional to the fraction of hard disk that fail in the month. The transparency of the cirles are inversely log proportional to the number of hard disks at risk.")
@@ -835,8 +803,10 @@ smart_12_illu_cap <- paste0("Plot showing the mean and ", quant * 100, "\\% quan
 
 
 <<smart_12_illu,echo = FALSE, fig.cap=paste(smart_12_illu_cap), par_1x1=TRUE,cache=FALSE>>=
-library(plotrix)
-library(grDevices)
+#####
+# Compute figures for the plot
+library("plotrix")
+library("grDevices")
 tmp_dat <- get_survival_case_weights_and_data(
   Surv(tstart, tstop, fails) ~ smart_12 + model,
   data = hd_dat, by = 1, max_T = 60, use_weights = F,
@@ -861,6 +831,8 @@ n_fails <- by(
 
 fail_ratios <- mapply("/", n_fails, n_obs)
 
+#####
+# Make plot
 plot(c(1, 60), c(0, max(unlist(smart_12_mean))), type = "n",
      xlab = "Month", ylab = "Number of power cycles")
 
@@ -889,14 +861,16 @@ for(i in seq_along(smart_12_mean)){
   }
 }
 
-rm(tmp_dat, smart_12_mean, n_obs)
+#####
+# Cleanup
+rm(tmp_dat)
 @
 
 % CHECK: claim about curves
 
 Figure~\ref{fig:smart_12_plot} shows how the effect of the number of power cycles evolves over time for three specific choices of the power cycle count. At a first glance, it seems odd that the risk of failure is not monotone in the number of power cycles. We could expect that turning off the hard disk is either good or bad for the hard disk. Moreover, the sharp turns does not seem seems reasonable in the period from time 20 to time 30 in figure~\ref{fig:otherfaclvl1} and~\ref{fig:smart_12_plot}. This may be due to the ST3000DM001 version. Figure~\ref{fig:smart_12_illu} shows the mean number of power cycles for each hard disk version in each month. The dashed lines are the $\Sexpr{quant * 100}$ pct. quantile where $\Sexpr{quant * 100}$ is selected to give an idea of the lower values for the given hard disk version. The ST3000DM001 versions is shown in red. Both the mean and the quantile stands out for ST3000DM001. Thus, the higher level of power cycle counts in the period from month 20 to 30 is primarily the ST3000DM001 hard disks. For this reason, I refit the model without ST3000DM001. The plot for the new model is shown in figure~\ref{fig:subset_smart_12_plot}. The new plot shows a close to monotone effect of the SMART 12 attribute. The pointwise confidence bounds are though rather wide despite the large data set. The parameters in new model for the hard disk version is shown in figure~\ref{fig:subset_EKF_xtra_vs_wo} in black. The parameters have less sharp turns than in figure~\ref{fig:otherfaclvl1}.
 
-<<ddfit_check_cond_number, eval = FALSE, echo = FALSE>>=
+<<ddfit_check_cond_number, eval = FALSE, echo = FALSE, purl=FALSE>>=
 # Run the code here to check the conditioning number in the file tmp.txt
 tmp <- ddfit$call
 ctrl <- ddfit$control
@@ -911,10 +885,15 @@ sink()
 % CHECK: arguments match
 
 <<refit_ddfit_on_subset, echo = FALSE>>=
+#####
+# Take subset
 hd_dat_sub <- hd_dat
+rm(hd_dat)
 hd_dat_sub <- hd_dat_sub[hd_dat_sub$model != "ST3000DM001", ]
 hd_dat_sub$model <- droplevels(hd_dat_sub$model)
 
+#####
+# Re-fit model
 new_call <- ddfit$call
 new_call$data <- as.name(quote(hd_dat_sub))
 new_call$id <- as.call(quote(hd_dat_sub$serial_number))
@@ -922,7 +901,6 @@ new_call$Q_0 <- as.call(quote(diag(1, 23)))
 new_call$Q <- as.call(quote(diag(.01, 23)))
 
 ddfit <- eval(new_call)
-
 ddfit <- get_pretty_model_factors(ddfit)
 @
 
@@ -968,7 +946,7 @@ add_hist <- with(new.env(), {
   xright <- as.numeric(colnames(n_obs))
   xleft <- xright - 1
 
-  # Clean up
+  # Cleanup
   rm(tmp_dat)
 
   # Define function to plot histogram in background
@@ -1009,15 +987,15 @@ c(one_it = ddfit$n_iter, more_its = ddfit_xtr$n_iter)
 @
 
 <<EKF_cleanup, echo = FALSE>>=
-rm(ddfit_xtr, hd_dat)
+rm(ddfit_xtr)
 @
 
 
 \subsection{Unscented Kalman filter}\label{subsec:UKF}
-The Unscented Kalman Filter (UKF) is similar to Monte Carlo methods but uses deterministically selected state vectors and weights instead of random draws. The vectors and weights are respectively referred to as \emph{sigma points} and \emph{sigma weights}. The advantages of using an UKF is a potentially better approximation of the non-linear dynamics than the linear approximation used in the EKF. The UKF has a lower computational cost than Monte Carlo methods. Further, the UKF does not require computation of the Jacobian. The first two advantages are useful in this package while the third is not a great advantage since deriving and computing the Jacobian are not complicated for the models. The UKF was introduced in \cite{Julier97}. The method is shown in algorithm~\ref{alg:UKF}.
+The unscented Kalman filter (UKF) is similar to Monte Carlo methods but uses deterministically selected state vectors and weights instead of random draws. The vectors and weights are respectively referred to as \emph{sigma points} and \emph{sigma weights}. The advantages of using an UKF is a potentially better approximation of the non-linear dynamics than the linear approximation used in the EKF. The UKF has a lower computational cost than Monte Carlo methods. Further, the UKF does not require computation of the Jacobian. The first two advantages are useful in this package while the third is not a great advantage since deriving and computing the Jacobian are not complicated for the models. The UKF was introduced in \cite{Julier97}. The method is shown in algorithm~\ref{alg:UKF}.
 
 \begin{algorithm}
-\caption{The Unscented Kalman Filter (UKF) where $\displaystyle\emNotee{\mat{V}}{t}{t - 1}^{1/2}$ denotes the square root matrix of $\emNotee{\mat{V}}{t}{t - 1}$ and $\left(\displaystyle\emNotee{\mat{V}}{t}{t - 1}^{1/2}\right)_j$ denotes the $j$'th column of the square root matrix. $\diag{\cdot}$ gives a diagonal matrix with the entries of the argument vector in the diagonal. $q$ is the dimension of the state vector. $\vec{W}^{(\cdot)}$ is the vector with elements $W^{(\cdot)}_0,W^{(\cdot)}_1,\dots,W^{(\cdot)}_{2q}$.}\label{alg:UKF}
+\caption{The unscented Kalman filter (UKF) where $\displaystyle\emNotee{\mat{V}}{t}{t - 1}^{1/2}$ denotes the square root matrix of $\emNotee{\mat{V}}{t}{t - 1}$ and $\left(\displaystyle\emNotee{\mat{V}}{t}{t - 1}^{1/2}\right)_j$ denotes the $j$'th column of the square root matrix. $\diag{\cdot}$ gives a diagonal matrix with the entries of the argument vector in the diagonal. $q$ is the dimension of the state vector. $\vec{W}^{(\cdot)}$ is the vector with elements $W^{(\cdot)}_0,W^{(\cdot)}_1,\dots,W^{(\cdot)}_{2q}$.}\label{alg:UKF}
 \begin{algorithmic}[1]\raggedright
 \INPUT
 \Statex $\mat{Q},\mat{Q}_0, \vec{a}_0,$ $\mat{X}_1,\dots,\mat{X}_d,$ $\vec{y}_1,\dots,\vec{y}_d,$ $R_1,\dots,R_d$
@@ -1083,8 +1061,10 @@ Then the following hyperparameters leads to the following weights:
 
 % CHECK: Parameters above match with code
 
-<<sigma_pts,echo=FALSE, par_1x1=TRUE, fig.cap = "Illustration of sigma points in the example from equation~\\eqref{eqn:UKFEx}. The dashed lines are the contours of the density given by $\\emNotee{\\vec{a}}{t}{t - 1}$ and $\\emNotee{\\mat{V}}{t}{t - 1}$. The full lines are the direction given by the columns of the Cholesky decomposition. The filled circles are sigma points with $(\\alpha,\\beta,\\kappa) = (1,0,1)$ and the open circles are the sigma points with $(\\alpha,\\beta,\\kappa) = (1/3,0,1)$. The point at $(0,0)$ is a sigma point for both sets for hyperparameters.",cache=FALSE>>=
-library(mvtnorm)
+<<sigma_pts,echo=FALSE, par_1x1=TRUE, fig.cap = "Illustration of sigma points in the example from Equation~\\eqref{eqn:UKFEx}. The dashed lines are the contours of the density given by $\\emNotee{\\vec{a}}{t}{t - 1}$ and $\\emNotee{\\mat{V}}{t}{t - 1}$. The full lines are the direction given by the columns of the Cholesky decomposition. The filled circles are sigma points with $(\\alpha,\\beta,\\kappa) = (1,0,1)$ and the open circles are the sigma points with $(\\alpha,\\beta,\\kappa) = (1/3,0,1)$. The point at $(0,0)$ is a sigma point for both sets for hyperparameters.",cache=FALSE>>=
+#####
+# Draw points
+library("mvtnorm")
 set.seed(7912351)
 x.points <- seq(-3, 3,length.out=100)
 y.points <- x.points
@@ -1096,7 +1076,8 @@ for (i in 1:100) {for (j in 1:100) {
                     mean=mu,sigma=sigma)
 }}
 
-
+#####
+# Plot contours
 plot(c(-3, 3), c(-3, 3), xlab = "", ylab = "", type = "n",
      xlim = c(-3, 3), ylim = c(-3, 3))
 contour(x.points, y.points, z, nlevels = 10,
@@ -1104,12 +1085,13 @@ contour(x.points, y.points, z, nlevels = 10,
         frame.plot = FALSE, add = TRUE,
         lty = 3)
 
-
-# Compute Cholesky decomposition
+#####
+# Compute Cholesky decomposition and add lines
 decomp <- chol(sigma)
 abline(h = 0)
 abline(a = 0, b = decomp[1, 2] / decomp[2, 2])
 
+#####
 # Add two sets of sigma points
 q <- 2
 l1 <- 1
@@ -1170,6 +1152,8 @@ plot(ddfit_ukf, cov_index = 1:9)
 @
 
 <<ukf_small_Q_0_est, echo = FALSE>>=
+#####
+# Re-fit with lower Q_0 entries
 new_call <- ddfit_ukf$call
 new_call$Q_0 <- diag(ukf_ex_Q_0, 23)
 ctrl <- eval(new_call$control)
@@ -1216,21 +1200,21 @@ rm(ddfit_large_Q_0, ddfit_ukf)
 @
 
 \subsection{Sequential approximation of the posterior modes}\label{subsec:postApprox}
-Another idea is to replace the means in the filters with the modes in each correction step. That is, we are still looking for a method for~\citeAlgLine{alg:EM:filter}{alg:EM}. We perform the same prediction step as with the EKF and UKF. Though, we change the correction step from finding the mean to finding the mode. Making this replacement, we need to find the minimum of equation~\eqref{eqn:modeExact} followed by an update of the covariance matrix.
+Another idea is to replace the means in the filters with the modes in each correction step. That is, we are still looking for a method for~\citeAlgLine{alg:EM:filter}{alg:EM}. We perform the same prediction step as with the EKF and UKF. Though, we change the correction step from finding the mean to finding the mode. Making this replacement, we need to find the minimum of Equation~\eqref{eqn:modeExact} followed by an update of the covariance matrix.
 \begin{equation}\label{eqn:modeExact}
 \emNotee{\vec{a}}{t}{t} = \argminu{\vec{\alpha}}
   - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
     -\sum_{i \in R_t} \log\proppCond{y_{it}}{\vec{\alpha}}
 \end{equation}
 
-One way of finding an approximate minimum is to replace the equation~\eqref{eqn:modeExact} with $n_t = \vert R_t \vert$ rank-one updates of the form in equation~\eqref{eqn:modeApprox} and an update of the covariance matrix. I will use a superscript to indicate the previous result from the rank-one update.
+One way of finding an approximate minimum is to replace the Equation~\eqref{eqn:modeExact} with $n_t = \vert R_t \vert$ rank-one updates of the form in Equation~\eqref{eqn:modeApprox} and an update of the covariance matrix. I will use a superscript to indicate the previous result from the rank-one update.
 \begin{equation}\label{eqn:modeApprox}
 \emNote{\vec{a}}{t}{t}{k} = \argminu{\vec{\alpha}}
   -\log \proppCond{\vec{\alpha}}{\emNote{\vec{a}}{t}{t}{k-1}, \emNote{\mat{V}}{t}{t}{k-1}}
   -\log\proppCond{y_{it}}{\vec{\alpha}}
 \end{equation}
 
-I will refer to this method as the Sequential Mode Approximation (SMA). Two algorithms for doing this are shown in algorithm~\ref{alg:approxMode} and~\ref{alg:approxModeChol}. The latter replaces the correction step in the former by propagating a Cholesky decomposition of the information matrix but is otherwise identical. The advantage of using the Cholesky decomposition in algorithm~\ref{alg:approxModeChol} is that we ensure that the covariance matrix is positive semi definite. \CiteAlgLine{alg:approxModeChol:LInvUpdate}{alg:approxModeChol} can be inverted in $\bigO{q^2}$ since $\mat{L}$ is a triangular matrix. Further, the rank-one update of the Cholesky decomposition in~\citeAlgLine{alg:approxModeChol:LUpdate}{alg:approxModeChol} is done using the Fortran code from~\cite{LAPACKThread} which implements the method described in~\cite{seeger04} with a time complexity of~$\bigO{q^2}$. Lastly, I exploit that $\tmat{L}$ is a triangular matrix to reduce the computational cost of the matrix and vector products. Still the correction step with algorithm~\ref{alg:approxModeChol} is slower. The constant $v$ in \citeAlgLine{alg:approxMode:findConst}{alg:approxMode} and \citeAlgLine{alg:approxModeChol:findConst}{alg:approxModeChol} is solved by the Newton Raphson method. $\proppCond{y_{it}}{\vec{\alpha}_t^\top \vec{x}_{it} = b}$ is log concave in $b$ with a finite upper bound for the models currently implemented in \code{ddhazard} so the Newton Raphson method finds the unique minimum. Both methods are $\bigO{n_tq^2}$ in each prediction and correction step.
+I will refer to this method as the sequential mode approximation (SMA). Two algorithms for doing this are shown in algorithm~\ref{alg:approxMode} and~\ref{alg:approxModeChol}. The latter replaces the correction step in the former by propagating a Cholesky decomposition of the information matrix but is otherwise identical. The advantage of using the Cholesky decomposition in algorithm~\ref{alg:approxModeChol} is that we ensure that the covariance matrix is positive semi definite. \CiteAlgLine{alg:approxModeChol:LInvUpdate}{alg:approxModeChol} can be inverted in $\bigO{q^2}$ since $\mat{L}$ is a triangular matrix. Further, the rank-one update of the Cholesky decomposition in~\citeAlgLine{alg:approxModeChol:LUpdate}{alg:approxModeChol} is done using the Fortran code from~\cite{LAPACKThread} which implements the method described in~\cite{seeger04} with a time complexity of~$\bigO{q^2}$. Lastly, I exploit that $\tmat{L}$ is a triangular matrix to reduce the computational cost of the matrix and vector products. Still the correction step with algorithm~\ref{alg:approxModeChol} is slower. The constant $v$ in \citeAlgLine{alg:approxMode:findConst}{alg:approxMode} and \citeAlgLine{alg:approxModeChol:findConst}{alg:approxModeChol} is solved by the Newton Raphson method. $\proppCond{y_{it}}{\vec{\alpha}_t^\top \vec{x}_{it} = b}$ is log concave in $b$ with a finite upper bound for the models currently implemented in \code{ddhazard} so the Newton Raphson method finds the unique minimum. Both methods are $\bigO{n_tq^2}$ in each prediction and correction step.
 
 \begin{algorithm}
 \caption{Sequential approximation of the posterior mode. Left-arrow, $\leftarrow$, indicates an update instead of an equality.}\label{alg:approxMode}
@@ -1283,7 +1267,7 @@ A disadvantage of SMA is that it is sequential and all matrix and vector product
 \end{algorithm}
 
 \subsection{Global mode approximation}\label{subsec:GMA}
-We can also minimize equation~\eqref{eqn:modeExact} directly. I denote this as the Global Mode Approximation (GMA). This is equivalent to an L2 penalized Generalized Linear Models (GLM) since we only use models from the exponential family. This can be done with the usual iteratively reweighed ridge regression. Every iteration can be done in $\bigO{n_tq^2 + q^3}$. I will show the estimation in the following paragraphs with a Newton method. First, let:
+We can also minimize Equation~\eqref{eqn:modeExact} directly. I denote this as the global mode approximation (GMA). This is equivalent to an L2 penalized generalized linear models (GLM) since we only use models from the exponential family. This can be done with the usual iteratively reweighed ridge regression. Every iteration can be done in $\bigO{n_tq^2 + q^3}$. I will show the estimation in the following paragraphs with a Newton method. First, let:
 
 \begin{equation}
 \tilde h(\vec{\alpha}) =  - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
@@ -1356,7 +1340,7 @@ where $\vec{b}$ is the working responses, $\vec{h}$ temporarily denotes the inve
 
 Algorithm~\ref{alg:GlobalMA} is sensitive to the choice of $\mat{Q}_0$. An extreme example is if we have no events in the first interval and only an intercept. Then setting $\mat{Q}_0$ to a diagonal matrix with large entries (in this case $\mat{Q}_0$ is a scalar) implies almost no restrictions on the intercept. Thus, it will be optimal to select a value tending towards minus infinity. Only $c''(\vec{\alpha})$ and $c'(\vec{\alpha})$ in algorithm~\ref{alg:GlobalMA} are computed in parallel with \code{OpenMP}. Building with a multithreaded \pkg{BLAS} can decrease the computation time of $\mat{X}_t^\top c''(\vec{\alpha}) \mat{X}_t$ along with the other matrix and vector products.
 
-The global mode approximation is somewhat similar to~\citeXtra{durbin12}{Section 10.6}. The major difference is that \cite{durbin12} make the Taylor expansion \emph{before} running the filter using the current estimate of $\vec{\alpha}_0,\vec{\alpha}_1\dots,\vec{\alpha}_d$. In contrast, the GMA method makes the expansion at each correction step \emph{within} the filter using the current estimate of $\emNotee{\vec{a}}{t}{t-1}$. The package \pkg{KFAS} implements the method in~\citeXtra{durbin12}{Section 10.6}. They further ease the computation in \pkg{KFAS} by using the sequential method for the correction step for the Kalman filter described in~\cite{Koopman00}. % Lastly, if the negative value under the minimization operator in equation~\eqref{eqn:modeExact} is not log-concave then the global instead of sequential optimization can be done by the second method in~\cite{Durbin00} or by the methods in~\cite{So03}. Similar changes can be made to the GMA method presented here.
+The global mode approximation is somewhat similar to~\citet[Section 10.6]{durbin12}. The major difference is that \cite{durbin12} make the Taylor expansion \emph{before} running the filter using the current estimate of $\vec{\alpha}_0,\vec{\alpha}_1\dots,\vec{\alpha}_d$. In contrast, the GMA method makes the expansion at each correction step \emph{within} the filter using the current estimate of $\emNotee{\vec{a}}{t}{t-1}$. The package \pkg{KFAS} implements the method in~\citet[Section 10.6]{durbin12}. They further ease the computation in \pkg{KFAS} by using the sequential method for the correction step for the Kalman filter described in~\cite{Koopman00}. % Lastly, if the negative value under the minimization operator in Equation~\eqref{eqn:modeExact} is not log-concave then the global instead of sequential optimization can be done by the second method in~\cite{Durbin00} or by the methods in~\cite{So03}. Similar changes can be made to the GMA method presented here.
 
 \subsubsection{Examples with SMA and GMA}
 I will use the hard disk failures data set to compare the SMA and GMA methods with the EKF with a single iteration in the correction step. I illustrate this below by estimating the model with the SMA method, the GMA method and the EKF method. I use the correction step with the Cholesky decomposition in algorithm~\ref{alg:approxModeChol} by setting the \code{posterior_version = "cholesky"} in the list passed to the \code{control} argument.
@@ -1490,10 +1474,10 @@ Hyperparameters & Additional hyperparameters $(\alpha,\beta,\kappa)$ have to be 
 In some applications it may be relevant to have constant (time-invariant) parameters. Two methods are implemented to estimate such parameters: one which makes the estimation in the E-step and one that estimates the parameters by a zero order Taylor expansion in the M-step.
 
 \subsubsection{E-step method}
-A common way of estimating fixed parameters in filtering (see e.g. \cite{Harvey79}) is to set the entries of the rows and columns of $\mat{Q}$ for the fixed parameters to zero and the corresponding diagonal entries of $\mat{Q}_0$ to large values. This approach is also used by~\cite{Fahrmeir92} with the EKF.
+A common way of estimating fixed parameters in filtering (see e.g., \cite{Harvey79}) is to set the entries of the rows and columns of $\mat{Q}$ for the fixed parameters to zero and the corresponding diagonal entries of $\mat{Q}_0$ to large values. This approach is also used by~\cite{Fahrmeir92} with the EKF.
 
 \subsubsection{M-step method}
-The other method is to estimate the fixed parameters in the M-step. For this section, I define $\vec{\gamma}$ as the fixed parameters, $\vec{x}_{(\alpha)it}$ as the covariates corresponding to the time-varying parameters and $\vec{x}_{(\gamma)it}$ the covariates corresponding to the fixed parameters. The fixed parameters times the corresponding covariates acts as offsets in the filters since the linear predictor is $\vec{x}_{(\alpha)it}^\top \vec{\alpha}_t + \vec{x}_{(\gamma)it}^\top \vec{\gamma}$ where $\vec{\gamma}$ is fixed. Moreover, the formulas for $\vec{a}_0$ and $\mat{Q}$ in the M-step are not affected since the only relevant terms for fixed effects in the M-step is the last line of the log likelihood in equation~\eqref{eqn:logLikeFirst}. However, the optimization is not easily solved exactly in the M-step for the fixed parameters. The log likelihood we need to maximize in the M-step is:
+The other method is to estimate the fixed parameters in the M-step. For this section, I define $\vec{\gamma}$ as the fixed parameters, $\vec{x}_{(\alpha)it}$ as the covariates corresponding to the time-varying parameters and $\vec{x}_{(\gamma)it}$ the covariates corresponding to the fixed parameters. The fixed parameters times the corresponding covariates acts as offsets in the filters since the linear predictor is $\vec{x}_{(\alpha)it}^\top \vec{\alpha}_t + \vec{x}_{(\gamma)it}^\top \vec{\gamma}$ where $\vec{\gamma}$ is fixed. Moreover, the formulas for $\vec{a}_0$ and $\mat{Q}$ in the M-step are not affected since the only relevant terms for fixed effects in the M-step is the last line of the log likelihood in Equation~\eqref{eqn:logLikeFirst}. However, the optimization is not easily solved exactly in the M-step for the fixed parameters. The log likelihood we need to maximize in the M-step is:
 
 \begin{equation}\label{eqn:fixedWithExpec}
 \argmaxu{\vec{\gamma}}\expecpCond{
@@ -1572,6 +1556,7 @@ plot(x_org, spline_E,
 Figure~\ref{fig:order_2_plot} shows the predicted factor levels for the hard disk version and figure~\ref{fig:order_2_plot_fixed} plots the spline estimate. The spline estimate seems consistent with figure~\ref{fig:subset_smart_12_plot}. First, there is a steeper increase followed by a more gradual increase. I also tried the M-step estimation method. It gave quite different result for the data set which did not seems sensible. An explanation for the difference between the methods could be the time dependence of the SMART 12 attribute values shown in figure~\ref{fig:smart_12_through_time}. It is my experience that the difference between the two methods of estimating fixed effects is not as big as in this example in most cases. As an example, you can run the shiny app with the package by calling \code{ddhazard_app}. This provides a simulation example where, among other things, you can estimate with the two methods for fixed effects.
 
 <<smart_12_through_time, echo = FALSE, par_1x1 = TRUE, fig.cap="Quantiles of the SMART 12 attribute through time. The quantiles are at 5\\%, 10\\%, \\ldots, 95\\%. This is the data set without the ST3000DM001 version.",cache=FALSE>>=
+#####
 # Find quantiles through time
 tmp_dat <- get_survival_case_weights_and_data(
   Surv(tstart, tstop, fails) ~ smart_12,
@@ -1581,6 +1566,7 @@ quants <- tapply(
   tmp_dat$X$smart_12, tmp_dat$X$t, quantile, probs = (1:19)/20)
 quants <- do.call(cbind, quants)
 
+#####
 # Plot
 x <- as.numeric(colnames(quants))
 plot(range(x), range(quants), type = "n", xlab = "Month", ylab = "SMART 12 attribute")
@@ -1591,6 +1577,7 @@ for(i in 1:floor(nrow(quants) / 2)){
   polygon(c(x, rev(x)), c(ub, rev(lb)), col = col, border = NA)
 }
 
+#####
 # Cleanup
 rm(tmp_dat)
 @
@@ -1599,9 +1586,11 @@ rm(tmp_dat)
 \section{Continuous time model}\label{sec:mod}
 
 \subsection{Dynamic discrete time model}\label{subsec:logi}
-The dynamic discrete time model is where we use the log likelihood terms, $l_{it}(\vec{\alpha}_t)$, as shown in equation~\eqref{eqn:binModelLikeliFirst} where $h$ is the inverse logistic function, $h(x) = \exp (x) / (1 + \exp(x))$. This model is suited for situations where the events occur at discrete times and the covariates change at discrete times. An example is corporate default prediction where covariates are values from the financial statements which are reported on yearly or quarterly basis. However, this is not the case for the hard disk data set. The hard disk data is not reported on monthly precision but on hourly precision. I print the first 10 rows to illustrate this:
+The dynamic discrete time model is where we use the log likelihood terms, $l_{it}(\vec{\alpha}_t)$, as shown in Equation~\eqref{eqn:binModelLikeliFirst} where $h$ is the inverse logistic function, $h(x) = \exp (x) / (1 + \exp(x))$. This model is suited for situations where the events occur at discrete times and the covariates change at discrete times. An example is corporate default prediction where covariates are values from the financial statements which are reported on yearly or quarterly basis. However, this is not the case for the hard disk data set. The hard disk data is not reported on monthly precision but on hourly precision. I print the first 10 rows to illustrate this:
 
 <<hd_dat_ex_setup, echo = FALSE>>=
+#####
+# Alter digits for the next print
 old_digits <- getOption("digits")
 options(digits = 5)
 @
@@ -1629,34 +1618,56 @@ l_{ijt}(\vec{\alpha}_t) = y_{it} \log h(\vec{x}_{ij}^\top \vec{\alpha}_t) + (1 -
 	\log \Lparen{1 - h(\vec{x}_{ij}^\top \vec{\alpha}_t)}
 \end{equation}
 
-The methods have to be updated to loop over $(i,j)\in R_t$ and use $\vec{x}_{ij}$ instead of $\vec{x}_{it}$ but are otherwise identical. I will make the following example to illustrate the impact of discrete risk set in equation~\eqref{eqn:discreteRiskSetReDef}. Suppose we look at interval $d - 1$ and $d$ (the last two intervals) in a model with time-varying covariates. Further, let both the event times and the point in which we observe new covariates happen at continuous points in time. Figure~\ref{fig:binning_fig} illustrates such a situation. Each horizontal line represent an individual. A cross represents when the covariate values change for the individual and a filled circle represents an event has happened for the individual. Lines that ends with an open circle are right censored. The vertical dashed lines in the figure represents the time interval borders. The first vertical line from the left is the start of interval $d - 1$, the second vertical line is where interval $d - 1$ ends and interval $d$ starts and the third vertical line is where interval $d$ ends.
+The methods have to be updated to loop over $(i,j)\in R_t$ and use $\vec{x}_{ij}$ instead of $\vec{x}_{it}$ but are otherwise identical. I will make the following example to illustrate the impact of discrete risk set in Equation~\eqref{eqn:discreteRiskSetReDef}. Suppose we look at interval $d - 1$ and $d$ (the last two intervals) in a model with time-varying covariates. Further, let both the event times and the point in which we observe new covariates happen at continuous points in time. Figure~\ref{fig:binning_fig} illustrates such a situation. Each horizontal line represent an individual. A cross represents when the covariate values change for the individual and a filled circle represents an event has happened for the individual. Lines that ends with an open circle are right censored. The vertical dashed lines in the figure represents the time interval borders. The first vertical line from the left is the start of interval $d - 1$, the second vertical line is where interval $d - 1$ ends and interval $d$ starts and the third vertical line is where interval $d$ ends.
 
 <<binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of a data set with 7 individuals with time-varying covariates. Each horizontal line represents an individual. Each number indicates a start time and/or stop time in the initial data. A cross indicates that new covariates are observed while a filled circle indicates that the individual has an event. An open circle indicates that the individual is right censored. Vertical dashed lines are time interval borders. The symbols for the covariate vectors and stop times are shown for observation a.", fig.height=3.5, fig.width=6, par_1x1 = TRUE,cache=FALSE>>=
+# Alter par values
 par(mar = c(1, 5, 1, 2), cex = par()$cex * 1.33, xpd=TRUE)
+
+# Make dummy plot
 plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = F)
 
+# Add interval lines and interval text
 abline(v = c(0.5, 1.5, 2.5), lty = 2)
 
 text(1, 0.01, expression(paste("Interval ", d - 1)), adj = .5)
 text(2, 0.01, expression(paste("Interval ", d)), adj = .5)
 
+#####
+# Setup for the observations
 n_series = 7
 y_pos = seq(0, 1, length.out = n_series + 2)[-c(1, n_series +2)]
 
+# Each element is an observation
+# First column is the x coordinates
+# Second column is the pch values
 x_vals_and_point_codes <-
-  list(structure(c(0.017182620242238, 1.3, 4, 1), .Dim = c(2L,
-2L)), structure(c(0.0665940539911389, 0.8, 1.9, 2.20536063500913,
-4, 4, 4, 16), .Dim = c(4L, 2L)), structure(c(0.406624712632038,
-1.13612816265784, 4, 16), .Dim = c(2L, 2L)), structure(c(0.092221238068305,
-0.8, 2.2, 3, 3.7, 4, 4, 4, 4, 1), .Dim = c(5L, 2L)), structure(c(0.285507099120878,
-1, 2.12480141618289, 4, 4, 16), .Dim = c(3L, 2L)), structure(c(2.15463116460014,
-2.33, 4, 16), .Dim = c(2L, 2L)), structure(c(0.254905348294415,
-1.4, 2.1, 3.68174365991727, 4, 4, 4, 16), .Dim = c(4L, 2L)))
+  list(
+    structure(c(0.017182620242238, 1.3,
+                4, 1),
+              .Dim = c(2L, 2L)),
+    structure(c(0.0665940539911389, 0.8, 1.9, 2.20536063500913,
+                4, 4, 4, 16),
+              .Dim = c(4L, 2L)),
+    structure(c(0.406624712632038, 1.13612816265784,
+                4, 16),
+              .Dim = c(2L, 2L)),
+    structure(c(0.092221238068305, 0.8, 2.2, 3, 3.7,
+                4, 4, 4, 4, 1),
+              .Dim = c(5L, 2L)),
+    structure(c(0.285507099120878, 1, 2.12480141618289,
+                4, 4, 16),
+              .Dim = c(3L, 2L)),
+    structure(c(2.15463116460014,2.33,
+                4, 16), .Dim = c(2L, 2L)),
+    structure(c(0.254905348294415,1.4, 2.1, 3.68174365991727,
+                4, 4, 4, 16),
+              .Dim = c(4L, 2L)))
 
+# Add the observations to the plot
 for(i in seq_along(x_vals_and_point_codes)){
   vals <- x_vals_and_point_codes[[i]]
   y = y_pos[i]
-
   xs = vals[, 1]
   n_xs = length(xs)
 
@@ -1683,7 +1694,7 @@ for(i in seq_along(x_vals_and_point_codes)){
   }
 }
 
-# add letters
+# Add letters
 x <- sapply(x_vals_and_point_codes, "[", 1, 1)
 x <- pmin(x - .1, .4)
 text(rev(x), rev(y_pos), letters[1:n_series], cex = par()$cex * 1.5)
@@ -1691,15 +1702,15 @@ text(rev(x), rev(y_pos), letters[1:n_series], cex = par()$cex * 1.5)
 
 % CHECK: Text here match with text in the start
 
-I will use observation a in figure~\ref{fig:binning_fig} to illustrate the risk set in equation~\eqref{eqn:discreteRiskSetReDef}. The covariate vector used in interval $d-1$ is $\vec{x}_{a1}$ as $t_{a0} < d - 1 < t_{a1}$. By similar arguments, the covariate vector in interval $d$ is $\vec{x}_{a2}$. One consequence is that we use covariates from 1 for individuals a, c, d and f  for the entire period of interval $d - 1$ even though the covariates change at 2. Furthermore, g is not in either intervals as we only know that he survives parts of interval $d - 1$. Lastly, we never include b as we do not know his covariate vector at the start of interval $d$.
+I will use observation a in figure~\ref{fig:binning_fig} to illustrate the risk set in Equation~\eqref{eqn:discreteRiskSetReDef}. The covariate vector used in interval $d-1$ is $\vec{x}_{a1}$ as $t_{a0} < d - 1 < t_{a1}$. By similar arguments, the covariate vector in interval $d$ is $\vec{x}_{a2}$. One consequence is that we use covariates from 1 for individuals a, c, d and f  for the entire period of interval $d - 1$ even though the covariates change at 2. Furthermore, g is not in either intervals as we only know that he survives parts of interval $d - 1$. Lastly, we never include b as we do not know his covariate vector at the start of interval $d$.
 
 \subsection{Continuous time model}\label{subsec:contTime}
 The continuous  time model implemented in \code{ddhazard} assumes that:
 
 \begin{itemize}
 \item We have instantaneous hazards given by $\exp(\vec{x}_{i}(t)^\top\vec{\alpha}(t))$.
-\item Parameters change at the end of time intervals. I.e. $\vec{\alpha}(t) = \vec{\alpha}_{\lceil t\rceil}$ where $\lceil t\rceil$ gives the ceiling of $t$. This is the same as for the dynamic discrete time model as illustrated in figure~\ref{fig:binning_fig} where the parameters change at the vertical lines.
-\item The individuals covariates change at discrete times. I.e. $\vec{x}_{i}(t) = \vec{x}_{ij}$ where $j = \{ k:\  t_{i,k-1} < t \leq t_{i,k}  \}$. In figure~\ref{fig:binning_fig}, the covariates change at the crosses.
+\item Parameters change at the end of time intervals. I.e., $\vec{\alpha}(t) = \vec{\alpha}_{\lceil t\rceil}$ where $\lceil t\rceil$ gives the ceiling of $t$. This is the same as for the dynamic discrete time model as illustrated in figure~\ref{fig:binning_fig} where the parameters change at the vertical lines.
+\item The individuals covariates change at discrete times. I.e., $\vec{x}_{i}(t) = \vec{x}_{ij}$ where $j = \{ k:\  t_{i,k-1} < t \leq t_{i,k}  \}$. In figure~\ref{fig:binning_fig}, the covariates change at the crosses.
 \end{itemize}
 
 The instantaneous hazard change when either the individual's covariates change or the parameters change. Thus, an individual's event time is piecewise constant exponential distributed given the state vectors. The log likelihood of individual $i$ having an event at time $t_i$ is:
@@ -1710,7 +1721,7 @@ The instantaneous hazard change when either the individual's covariates change o
   -\int_0^{t_i}\exp\Lparen{\vec{x}_i(u)^\top\vec{\alpha}(u)}\, du
 \end{equation}
 
-where $\likep{\cdot}$ denotes the likelihood. Due to our assumptions, the complete data log likelihood in equation~\eqref{eqn:logLikeFirst} simplifies to:
+where $\likep{\cdot}$ denotes the likelihood. Due to our assumptions, the complete data log likelihood in Equation~\eqref{eqn:logLikeFirst} simplifies to:
 
 \begin{equation}
 \begin{aligned}
@@ -1734,7 +1745,7 @@ where:
 \end{aligned}
 \end{equation}
 
-The $l_{ijt}$ terms are a simplification of equation~\eqref{eqn:condPropEvent} where I use that both the covariates $\vec{x}_i(t)$ and parameters $\vec{\alpha}(t)$ are piecewise constant. $y_{ijt}$ is a generalization of equation~\eqref{eqn:binFirst}. It is an indicator for whether individual $i$ experiences an event with \emph{the $j$’th covariate vector} in interval $t$. Further, $\mathcal{R}_t$ is the \emph{continuous risk set} given by:
+The $l_{ijt}$ terms are a simplification of Equation~\eqref{eqn:condPropEvent} where I use that both the covariates $\vec{x}_i(t)$ and parameters $\vec{\alpha}(t)$ are piecewise constant. $y_{ijt}$ is a generalization of Equation~\eqref{eqn:binFirst}. It is an indicator for whether individual $i$ experiences an event with \emph{the $j$’th covariate vector} in interval $t$. Further, $\mathcal{R}_t$ is the \emph{continuous risk set} given by:
 
 \begin{equation}
 \mathcal{R}_t = \Lbrace{(i,j) \in \{1,\dots,n\}\times \mathbb{Z} :\, t_{i,j-1} < t + 1 \wedge t_{ij} \geq t \wedge D_{it} = 0}
@@ -1782,7 +1793,7 @@ The above is easily implemented with the SMA and GMA as we work directly with th
 %
 % %where $\lceil \cdot \rceil$ is the ceiling function.
 %
-% Next, I will motivate why I use the jump term with the following example. Suppose that we observe event times in a period from $0$ to $100$ and we set the interval lengths (the \code{by} argument) to $10$. Let the events time be reported as integers (e.g. says days). Say individual $i$ has a single covariate vector and an event at $T_i = 30$. We then get $(\Lambda_{i1,1} = 10, \Lambda_{i1,2} = 10, \Lambda_{i1,3} = 0)$. However, if I remove the jump term and instead set $\Lambda_{iji}$ to zero in case of no event then we get $(\tilde\Lambda_{i1,1} = 0, \tilde\Lambda_{i1,2} = 0, \tilde\Lambda_{i1,3} = 0)$. The tilde have been added to stress the different definition. There is no difference in the latter case between no events and an event occurring on the boundary or change of covariate vector. Thus, I use the jump term. This is only an issue when the reported time scale is not exactly continuous.
+% Next, I will motivate why I use the jump term with the following example. Suppose that we observe event times in a period from $0$ to $100$ and we set the interval lengths (the \code{by} argument) to $10$. Let the events time be reported as integers (e.g., says days). Say individual $i$ has a single covariate vector and an event at $T_i = 30$. We then get $(\Lambda_{i1,1} = 10, \Lambda_{i1,2} = 10, \Lambda_{i1,3} = 0)$. However, if I remove the jump term and instead set $\Lambda_{iji}$ to zero in case of no event then we get $(\tilde\Lambda_{i1,1} = 0, \tilde\Lambda_{i1,2} = 0, \tilde\Lambda_{i1,3} = 0)$. The tilde have been added to stress the different definition. There is no difference in the latter case between no events and an event occurring on the boundary or change of covariate vector. Thus, I use the jump term. This is only an issue when the reported time scale is not exactly continuous.
 
 \subsubsection{Example with continuous model}
 As mentioned in section~\ref{subsec:logi}, the start and stop times in the hard disk failure data set are in factions of months with an hourly hourly precision. Thus, I can use the continuous model. I fit the model below using the right clipped time variable with a jump term outcome variable. The plot of the first estimated factor levels is shown in figure~\ref{fig:cont_plot}.
@@ -1808,35 +1819,33 @@ ddfit_cont <- ddhazard(
 
 <<cont_plot, echo=FALSE, par_3x3 = TRUE, fig.cap="Predicted factor levels parameters with the model using the right clipped time variable with a jump term.",cache=FALSE>>=
 ddfit_cont <- get_pretty_model_factors(ddfit_cont)
-plot(ddfit_cont)
+plot(ddfit_cont, cov_index = 1:9)
 @
 
 <<cont_cleanup, echo = FALSE>>=
 rm(ddfit_cont)
 @
 
-The results are comparable to what we have seen previously. E.g. see figure~\ref{fig:subset_EKF_xtra_vs_wo} where I also used the EKF with extra iterations in the correction step but with the discrete time model.
+The results are comparable to what we have seen previously. E.g., see figure~\ref{fig:subset_EKF_xtra_vs_wo} where I also used the EKF with extra iterations in the correction step but with the discrete time model.
 
 \section{Simulations}\label{sec:sims}
-<<echo = FALSE,cache = FALSE>>=
-# Although caching is used, we also make an additional copy of the results
+<<run_sim_exp, echo = FALSE,cache = FALSE>>=
+# Although caching is used, I also make an additional copy of the results
 # as this part takes a while and to avoid re-computations in case of some
 # minor change in the code here or similar
- library(tcltk)
+library("tcltk")
 
-tmp_path <- stringr::str_extract(getwd(), ".+/dynamichazard")
-tmp_path <- paste0(tmp_path, "/vignettes/.jss/")
-
-result_file <- paste0(tmp_path, "results_from_simulation.Rds")
-sim_env_file <- paste0(tmp_path, "sim_env.Rds")
-already_computed <-
+# Check if results are already computed
+result_file <- "results_from_simulation.Rds"
+sim_env_file <- "sim_env.Rds"
+do_not_compute <-
   file.exists(result_file) &&
   file.exists(sim_env_file) &&
   (!tclvalue(tkmessageBox(
     title = "Rerun", message = "Want to rerun the simulation?",
     type = "yesno")) == "yes")
 
-if(!already_computed){
+if(!do_not_compute){
   with(sim_env <- new.env(), {
     #####
     # Function to make sampling go quicker
@@ -1852,8 +1861,10 @@ if(!already_computed){
       sds = rep(1, n_vars + 1), run_n = 1){
       # Make output matrix
       n_row_max <- n_row_inc <- 10^5
-      res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
-                    dimnames = list(NULL, c("id", "tstart", "tstop", "event", paste0("x", 1:n_vars))))
+      res <- matrix(
+        NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
+        dimnames = list(NULL, c("id", "tstart", "tstop", "event",
+                                paste0("x", 1:n_vars))))
       cur_row <- 1
 
       if(re_draw){
@@ -1875,6 +1886,7 @@ if(!already_computed){
       # covariate sim expression
       cov_exp <- expression(cov_params * get_norm_draw(n_vars))
 
+      #####
       # Simulate
       for(id in 1:n_series){
         interval_start <- tstart <- tstop <-
@@ -1885,11 +1897,14 @@ if(!already_computed){
             tstop <- t_max
 
           x_vars <- eval(cov_exp)
-          l_x_vars <- c(1, x_vars)
+          l_x_vars <- c(1, x_vars) # add intercept
 
           tmp_t <- tstart
           while(tmp_t <= interval_start &&  interval_start < tstop){
-            exp_eta <- exp(.Internal(drop(betas[interval_start + 2, ] %*% l_x_vars)))
+            # Plus 2 for the coefficient vector at time zero and interval_start
+            # is t - 1
+            exp_eta <- exp(.Internal(drop(
+              betas[interval_start + 2, ] %*% l_x_vars)))
             event <- exp_eta / (1 + exp_eta) > get_unif_draw(1)
 
             interval_start <- interval_start + 1L
@@ -1904,6 +1919,7 @@ if(!already_computed){
           res[cur_row, ] <- c(id, tstart, tstop, event, x_vars)
 
           if(cur_row == n_row_max){
+            # We need to add more rows to the ouput matrix
             n_row_max <- n_row_max + n_row_inc
             res = rbind(res, matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars))
           }
@@ -1923,6 +1939,9 @@ if(!already_computed){
 
     #####
     # Define parameters
+    # Some have to elements; one for each simulation experiment
+
+    # General parameters
     n_series <- 2^(9:20)
     n_vars <- c(20, 20)
     t_max <- 30L
@@ -1937,14 +1956,17 @@ if(!already_computed){
     eps <- 0.01
     cov_params <- list(c("sigma" = 1), c("sigma" = .33))
 
+    # SMA and EKF parameters
     NR_eps = 0.1
     SMA_meth = "woodbury"
     Q_0_small <- 1
 
+    # Number of trials and seeds
     n_sims <- 11
     set.seed(4368560)
     seeds <- sample.int(n_sims)
 
+    # UKF parameters
     ukf_alpha <- 1
     ukf_w0 <- 0.0001
     ukf_beta <- 0
@@ -1958,9 +1980,11 @@ if(!already_computed){
     stopifnot(all.equal(lambda / (m + lambda), rep(ukf_w0, 2)))
     rm(m, lambda)
 
+    # Number of threads to use
     n_threads <- max(parallel::detectCores() - 1, 2)
     options(ddhazard_max_threads = n_threads)
 
+    # Define result array
     results <- array(
       NA_real_, dim = c(2, length(seeds), length(n_series), 5, 3),
       dimnames = list(
@@ -2008,7 +2032,7 @@ if(!already_computed){
     # Function to get MSE
     mse_func <- function(betas, fit)
       mean((betas[-1, ] - fit$state_vecs[-1, ])^2) # remove the first entry which
-                                                   # cannot is just a same as period
+                                                   # is just a same as period
                                                    # one estimate
 
     ######
@@ -2080,9 +2104,9 @@ if(!already_computed){
     }
   })
 
-  # Take copy of results and clean up enviroment
+  # Take copy of results and cleanup
   results <- sim_env$results
-  rm(results, i, j, s, get_fit, mse_func, envir = sim_env)
+  rm(i, j, s, get_fit, mse_func, envir = sim_env)
 
   # Save for later
   saveRDS(sim_env, file = sim_env_file)
@@ -2096,10 +2120,11 @@ if(!already_computed){
 In this section, I will simulate data using the first order random walk model and illustrate the computation time and mean square error of the predicted parameters as the number of individuals increases. The simulation is done as follows. I use a first order random walk for the parameters with \Sexpr{sim_env$n_vars[1] + 1} parameters. The intercept starts at \Sexpr{sim_env$intercept_start} and the other parameters start at points drawn from the standard normal distribution. I set the intercept to a low value to decrease the baseline likelihood of an event in every interval. I let covariance matrix $\mat{Q}$ be a diagonal matrix which first diagonal entry is equal to $\Sexpr{sim_env$intercept_sd}^2$ (the intercept) and $\Sexpr{sim_env$beta_sd[1]}^2$ for rest of the diagonal entries. The standard deviation is chosen lower for the intercept ensure that the intercept does not change too much with high probability. An example of a draw of parameters is given in figure~\ref{fig:sim_coefficients_ex}.
 
 <<sim_coefficients_ex, echo=FALSE, results="hide", fig.cap = "Example of parameters in the simulation experiment. The black curve is the intercept and the gray curves are the parameters for the covariates.", par_1x1 = TRUE, cache = FALSE>>=
+# Plot one example
+set.seed(50044010)
 with(sim_env, {
-  n <- 100
   sims <- sim_func(
-          n_series = n, n_vars = n_vars[1], t_max = t_max,
+          n_series = 100, n_vars = n_vars[1], t_max = t_max,
           intercept_start = intercept_start,
           sds = c(intercept_sd, rep(beta_sd[1], n_vars[1])))
 
@@ -2116,26 +2141,24 @@ Each individual has time-varying covariates which change after five periods. Thu
 
 % CHECK: comment below
 
-<<results='asis',echo=FALSE,cache=FALSE>>=
-# # Check that all runs did succeed
-# is_complete <- t(apply(results, c(1, 4), complete.cases)[,, 1])
-# stopifnot(all(is_complete))
-
+<<tbl_sim_stats, results='asis',echo=FALSE,cache=FALSE>>=
 # Compute means and medians
 medians <- apply(results, c(1, 3:5), median, na.rm = T)
 means <- apply(results, c(1, 3:5), mean, na.rm = T)
 
+# Define output table
 tbl_sum <- matrix(
   NA_real_, nrow = 2, ncol = dim(results)[4],
   dimnames = list(
     c("Run time", "Log-log slope"),
     dimnames(results)[[4]]))
 
+# Enter run times
 tbl_sum["Run time", ] <-
   apply(medians[1, , , "elapsed"], 2, max, na.rm = T)
 
+# Compute log-log regression slope
 log_reg_cut_off <- 2^14
-
 for(n in dimnames(tbl_sum)[[2]]){
   tmp <- results[1, , , n, "elapsed"]
   tbl_sum["Log-log slope", n] <-
@@ -2144,8 +2167,10 @@ for(n in dimnames(tbl_sum)[[2]]){
                sim_env$n_sims)))$coefficient[2]
 }
 
+# Change column name for EKFx
 colnames(tbl_sum)[colnames(tbl_sum) == "EKFx"] <- "EKF with extra iterations"
 
+# Make table and print
 xtable(tbl_sum, digits = getOption("digits"),
        caption = paste0("Summary information of the computation time in the simulation study. The first row prints the median run time for largest number of individuals. The UKF is only up to $n=",
                         sim_env$ukf_max, "$. The second row shows the slope of the log computation time regressed on the log number of individuals for $n\\geq ",
@@ -2155,7 +2180,7 @@ xtable(tbl_sum, digits = getOption("digits"),
 
 The simulations are run on a laptop running Windows 10 with an Intel\textregistered~core\texttrademark~i7-6700hq cpu @ 2.60ghz processor and with 16 GB ram. The 64 bit Rtools 34 is used to build \proglang{R} and the \pkg{dynamichazard} package. The medians and means of the computation time are shown in figure~\ref{fig:sim_comp_time}. The median computation time for the largest value of $n$ is printed in table~\ref{tab:runSummaryStats} along with the regression slope of the log computation time regressed on the log number of individuals. All methods have a slope at or below 1 reflecting the $\bigO{n_t}$ computation time. The slope for the EKF may be lower due to the overhead of the parallel computation. All computation times are including the time of setting up the data frame and running a weighted GLM to get starting values for $\vec{\alpha}_0$. This takes over $1/2$ of the computation time reported with the EKF. The setup time is equal for all methods.
 
-The SMA and GMA are comparable in computation time. This may be explained by a Floating-Point Operations (FLOP) count of the matrix and vector product effected by the number of observation. I use the method derived by the Woodbury matrix identity in algorithm~\ref{alg:approxMode} for the SMA in the simulation study. The FLOP count for this algorithm is $(6q + 4q^2)n_t$ at each correction step. In contrast, the GMA method shown in algorithm~\ref{alg:GlobalMA} has a count of $(6q + 2q^2)n_t$ for a single iteration in the correction step. Thus, the computation time of the GMA and SMA should be roughly equal for large $q$ if we only make two iterations with the GMA in the correction step. A second explanation may be the additional search for the step length in~\citeAlgLine{alg:approxMode:findConst}{alg:approxMode}. A third explanation may be that $\mat{X}_t$ is never formed in continuous memory with the SMA. Instead the matrix with all data rows is used where only a subset of entries are accessed one at a time. If the latter is important then similar conclusion applies for the EKF method. The two EKF methods are almost equal in computation time due to additional iterations of the EM-algorithm when only one iteration step is taken in the correction step. This is can be seen from figure~\ref{fig:n_iter_plot} which shows the median number of iterations of the EM-algorithm.
+The SMA and GMA are comparable in computation time. This may be explained by a floating-point operations (FLOP) count of the matrix and vector product effected by the number of observation. I use the method derived by the Woodbury matrix identity in algorithm~\ref{alg:approxMode} for the SMA in the simulation study. The FLOP count for this algorithm is $(6q + 4q^2)n_t$ at each correction step. In contrast, the GMA method shown in algorithm~\ref{alg:GlobalMA} has a count of $(6q + 2q^2)n_t$ for a single iteration in the correction step. Thus, the computation time of the GMA and SMA should be roughly equal for large $q$ if we only make two iterations with the GMA in the correction step. A second explanation may be the additional search for the step length in~\citeAlgLine{alg:approxMode:findConst}{alg:approxMode}. A third explanation may be that $\mat{X}_t$ is never formed in continuous memory with the SMA. Instead the matrix with all data rows is used where only a subset of entries are accessed one at a time. If the latter is important then similar conclusion applies for the EKF method. The two EKF methods are almost equal in computation time due to additional iterations of the EM-algorithm when only one iteration step is taken in the correction step. This is can be seen from figure~\ref{fig:n_iter_plot} which shows the median number of iterations of the EM-algorithm.
 
 A plot of the mean square error for the parameters is shown in figure~\ref{fig:sim_MSE}. The EKF with one iteration in the correction step does not improve much as $n$ increases. Hence, more iterations seems preferable in this example. It is interesting that the UKF flatlines after a given number of observations. There are some points worth stressing. Firstly, the computation time of the UKF and GMA can be reduced by using a multithreaded \pkg{BLAS} library. I have seen a reduction up to a factor $2$ for larger datasets on the setup used in the simulation when \pkg{OpenBLAS} \citep{Xianyi12} is used. From experience with \pkg{OpenBLAS}, the SMA and EKF benefits less from a multithreaded \pkg{BLAS} library probably because the matrix and vector products are only in a dimension equal to the dimension of the state vector, $q$. Moreover, one can do more tuning (especially with the UKF) for each data set which is not done in the present setup.
 
@@ -2184,19 +2209,18 @@ draw_legend <- function(x, y = NULL)
 # fig.cap
 sim_fig_cap <-
   "The EKF is the filled squares, the EKF with extra iteration is the crosses, the UKF is the circles, the SMA is the triangles and the GMA is the open square."
-
-# CHECK: cap match with symbols
 @
 
+% CHECK: cap match with symbols
 
 <<sim_comp_time, echo=FALSE, results="hide", fig.cap = paste("Median computation times of the simulations for each method for different values of $n$. The gray symbols to the right are the means.", sim_fig_cap, "The scales are logarithmic so a linear trend indicates that computation time is a power of $n$."), par_1x1 = TRUE, cache = FALSE>>=
-# Plot parameters
-
 # Plot for computation time
+# I save it as an epxression to re-use it
 marg <- 1
 time_plot_exp <- expression({
   par(xpd=TRUE)
   with(sim_env, {
+    # Medians points
     matplot(
       n_series, medians[marg,,, "elapsed"], log  = "xy", col = col_medians,
       pch = pchs, type = "p", xaxt='n',
@@ -2204,7 +2228,10 @@ time_plot_exp <- expression({
     axis(1, at = sim_env$n_series)
     draw_legend("topleft")
 
+    # Lines between points
     matlines(n_series, medians[marg,,, "elapsed"], lty = 2, col = col_medians)
+
+    # Mean points
     matplot(
       n_series * 1.15, means[marg,,, "elapsed"], col = col_means,
       pch = pchs, type = "p", add = T)
@@ -2220,6 +2247,7 @@ marg <- 1
 plot_exp <- expression({
   par(xpd=TRUE, yaxs = "i")
   with(sim_env, {
+    # Median points
     matplot(
       n_series, medians[marg,,, "MSE"], log  = "xy", col = col_medians,
       pch = pchs, xaxt='n',
@@ -2227,7 +2255,11 @@ plot_exp <- expression({
       ylim = c(min(medians[marg,,, "MSE"], na.rm = T),
                max(medians[marg,,, "MSE"], na.rm = T)))
     axis(1, at = sim_env$n_series)
+
+    # Lines between points
     matlines(n_series,medians[marg,,, "MSE"], lty = 2, col = col_medians)
+
+    # Mean points
     matplot(
       n_series * 1.15, means[marg,,, "MSE"], col = col_means,
       pch = pchs, type = "p", add = T)
@@ -2243,12 +2275,15 @@ eval(plot_exp)
 par(xpd=TRUE)
 
 with(sim_env, {
+  # Median points
   matplot(n_series, medians[1,,, "niter"],
           pch = pchs, xaxt='n',
           ylim = c(0, 10.5), log  = "x",
           col = col_medians,
           xlab = "Number of individuals", ylab = "Iterations of the EM")
   axis(1, at = sim_env$n_series)
+
+  # Lines between points
   matplot(n_series, medians[1,,, "niter"],
           type = "l", lty = 2,
           col = col_medians, add = T)
@@ -2259,7 +2294,6 @@ with(sim_env, {
 
 <<hist_of_lp_dens, echo = FALSE, par_1x1=TRUE, fig.cap="Estimated density for the linear predictor in the last interval in the first simulation experiment.">>=
 # The density is not Gaussian. See https://math.stackexchange.com/a/42761/253239
-
 tmp_env <- new.env(parent = sim_env)
 with(tmp_env,{
   set.seed(6339855)
@@ -2288,6 +2322,7 @@ with(tmp_env,{
        main = "", xlab = "Linear predictor", xlim = range(dens$x), yaxs="i")
 })
 
+# Cleanup
 rm(tmp_env)
 @
 
@@ -2295,7 +2330,7 @@ The simulation here is "extreme" in that the linear predictor can take large abs
 
 For the above reason, I perform a second simulation where I draw the covariates from a normal distribution with zero mean and variance $\Sexpr{sim_env$cov_params[[2]]["sigma"]}^2$. The mean square errors are shown in figure~\ref{fig:sim_MSE_altered}. The difference between the filters is small in terms mean square error. Still, it seems that EKF with extra iterations and GMA are preferred given the running times which are similar to the previous example as shown in figure~\ref{fig:sim_comp_time_altered}. I have found it easier to get what seems like sensible results (smooth parameters curves in a reasonable range) with the EKF with extra iteration in the correction step and the GMA method when you alter the learning rate. Thus, the result of the simulation study give further arguments to use the EKF with extra iteration in the correction step and the GMA method.
 
-<<echo = FALSE>>=
+<<define_altered_plot_text, echo = FALSE>>=
 altered_plot_text <- paste0(
   "but where each element of the covariate vectors are drawn from $N\\Lparen{0, ", sim_env$cov_params[[2]]["sigma"], "^2}$.")
 @
@@ -2317,7 +2352,7 @@ I have not covered all the \code{S3} methods that are provided in the \pkg{dynam
 
 \subsection{Further developments}
 
-I will summarize some potential future developments of the \pkg{dynamichazard} in this section. Firstly, we could replace the random walk model with a parametric model like an ARMA process for each parameter. This will require additional parameter to be estimated the matrix $\mat{F}$ in equation~\eqref{eqn:stateEqn}. This can be done in the M-step of the EM-algorithm. The constrained EM-algorithm in \pkg{MARSS} \citep{Holmes13} package can be used here. The details of the EM-algorithm may be found in~\cite{Holmes13}. The structure of the equations in the constrained algorithm can be used to avoid the Kronecker products, vectorization etc. to get an implementation that has cubic complexity in the number of parameters to be estimated. Further, we could extend the model to allow the user to specify that certain entries of the covariance matrix $\mat{Q}$ are restricted to zero by using the same formulas.
+I will summarize some potential future developments of the \pkg{dynamichazard} in this section. Firstly, we could replace the random walk model with a parametric model like an ARMA process for each parameter. This will require additional parameter to be estimated the matrix $\mat{F}$ in Equation~\eqref{eqn:stateEqn}. This can be done in the M-step of the EM-algorithm. The constrained EM-algorithm in \pkg{MARSS} \citep{Holmes13} package can be used here. The details of the EM-algorithm may be found in~\cite{Holmes13}. The structure of the equations in the constrained algorithm can be used to avoid the Kronecker products, vectorization etc. to get an implementation that has cubic complexity in the number of parameters to be estimated. Further, we could extend the model to allow the user to specify that certain entries of the covariance matrix $\mat{Q}$ are restricted to zero by using the same formulas.
 
 We can extend the methods to sparse time series for the parameters. This have received some attention in the Signal Processing literature. An example is given by~\cite{Charles11} who explore different penalties in the transition of the state vector for the linear Gaussian observational observational equation and non-linear Gaussian state equation. The penalties includes $L1$, $L2$ and a combination of the two (elastic net). Another example is given by~\cite{Angelosante09} who apply the group-Lasso to the linear Gaussian state space models.
 
@@ -2325,15 +2360,15 @@ The starting value for $\vec{a}_0$ is found with one Fisher scoring step with a 
 
 Mixture models can be implemented to model heterogeneity. The mixture probabilities could be estimated in the M-step. Moreover, both the filters and each iteration of the EM-algorithm could stay at computational complexity of $\bigO{q^3}$ if we assume that the parameter vectors in the mixtures in the state vector are independent of each other between the mixture densities. As an example, see the interacting multiple model filter and smoother in \cite{Hartikainen11}.
 
-Other models can be implemented in survival analysis like recurrent events and competing risk (see \cite{Fahrmeir96}). Furthermore, the methods can also be used a outside survival analysis. For instance, we could observe real valued outcomes, multinomial outcomes, ordinal outcome etc. for each individual in each interval. The underlying time can depend on the context. E.g. it could be calender time or time since enrollment.
+Other models can be implemented in survival analysis like recurrent events and competing risk (see \cite{Fahrmeir96}). Furthermore, the methods can also be used a outside survival analysis. For instance, we could observe real valued outcomes, multinomial outcomes, ordinal outcome etc. for each individual in each interval. The underlying time can depend on the context. E.g., it could be calender time or time since enrollment.
 
-The current implementation of parallel computation for the EKF is based on shared memory. However, it can be extended to a distributed network instead. Different ways of approaching this are introduced in~\citeXtra{rigatos17}{chapter 3}. Two approaches are either to distribute the work in each step of the filter or to run separate filters and aggregate the filters at the end.
+The current implementation of parallel computation for the EKF is based on shared memory. However, it can be extended to a distributed network instead. Different ways of approaching this are introduced in~\citet[chapter 3]{rigatos17}. Two approaches are either to distribute the work in each step of the filter or to run separate filters and aggregate the filters at the end.
 
-An alternative to the filters in the E-step is to use the linearisation method described in~\citeXtra{durbin12}{Section 10.6} mentioned in subsection~\ref{subsec:GMA}. It would be interesting to also implement this approach in the package. A similar idea to the linearisation method in~\citeXtra{durbin12}{Section 10.6} is covered in  ~\cite{Fahrmeir91} where the authors show a Gauss-Newton and Fisher scoring method.
+An alternative to the filters in the E-step is to use the linearisation method described in~\citet[Section 10.6]{durbin12} mentioned in section~\ref{subsec:GMA}. It would be interesting to also implement this approach in the package. A similar idea to the linearisation method in~\citet[Section 10.6]{durbin12} is covered in~\cite{Fahrmeir91} where the authors show a Gauss-Newton and Fisher scoring method.
 
 The methods here can be used as the initial input to the importance sampler with use of antithetic variables and control variables shown in~\cite{Durbin00}. This can extend the methods to cover state vectors with heavy-tailed distribution. This approach is implemented in the package \pkg{KFAS} \citep{kfas}.
 
-<<echo = FALSE, comment = "%", results = "asis", cache = FALSE>>=
+<<echo = FALSE, comment = "%", results = "asis", cache = FALSE, purl=FALSE>>=
 # Log session info to tex file
 cat(paste("%", capture.output(sessionInfo())), sep = "\n")
 
