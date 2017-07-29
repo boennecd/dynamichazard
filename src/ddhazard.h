@@ -18,12 +18,31 @@ public:
 };
 
 // Classes for EKF method
+template<typename T>
+class EKF_solver : public Solver{
+  problem_data_EKF &p_dat;
+  const std::string model;
+  unsigned long const max_threads;
+
+  void parallel_filter_step(
+      arma::uvec::const_iterator first, arma::uvec::const_iterator last,
+      const arma::vec &i_a_t,
+      const bool compute_H_and_z,
+      const int bin_number,
+      const double bin_tstart, const double bin_tstop);
+
+public:
+  EKF_solver(problem_data_EKF &p_, const std::string model_);
+
+  void solve();
+};
+
+template<typename T>
 class EKF_filter_worker{
-protected:
-  virtual void do_comps(const arma::uvec::const_iterator it, int i,
-                        const arma::vec &i_a_t, const bool compute_z_and_H,
-                        const int bin_number,
-                        const double bin_tstart, const double bin_tstop) = 0; // abstact method to be implemented
+  void do_comps(const arma::uvec::const_iterator it, int i,
+                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const int bin_number,
+                const double bin_tstart, const double bin_tstop);
   // Variables for computations
   problem_data_EKF &dat;
   arma::uvec::const_iterator first;
@@ -50,42 +69,41 @@ public:
   void operator()();
 };
 
-class EKF_helper_base{
-public:
-  virtual void parallel_filter_step(
-      arma::uvec::const_iterator first, arma::uvec::const_iterator last,
-      const arma::vec &i_a_t,
-      const bool compute_H_and_z,
-      const int bin_number,
-      const double bin_tstart, const double bin_tstop) = 0;
+struct EKF_filter_worker_calculations {
+  /* (y_{it} - h(eta)) |_{\eta = x_{it}^T \alpha_{t}} */
+  const double Y_residual;
+  /* \frac{ \dot{h}(\eta) }{ Var(\eta)+ \xi } |_{\eta = x_{it}^T \alpha_{t}} */
+  const double score_factor;
+  /* \frac{ \dot{h}(\eta)^2 }{ Var(\eta)+ \xi } |_{\eta = x_{it}^T \alpha_{t}} */
+  const double hessian_factor;
+  /* \dot{h}(\eta) */
+  const double var_inv;
+  const double z_dot_factor;
 };
 
-template<class T>
-class EKF_helper : public EKF_helper_base {
-  unsigned long const max_threads;
-  problem_data_EKF &p_data;
-
-public:
-  EKF_helper(problem_data_EKF &p_data_);
-
-  void parallel_filter_step(
-      arma::uvec::const_iterator first, arma::uvec::const_iterator last,
-      const arma::vec &i_a_t,
-      const bool compute_H_and_z,
-      const int bin_number,
-      const double bin_tstart, const double bin_tstop);
+struct EKF_logit_cals{
+  static EKF_filter_worker_calculations cal(
+      const bool do_die, const double time_outcome, const double at_risk_length,
+      const double eta, const double denom_term);
 };
 
-class EKF_solver : public Solver{
-  problem_data_EKF &p_dat;
-  const std::string model;
-
-public:
-  EKF_solver(problem_data_EKF &p_, const std::string model_);
-
-  void solve();
+struct EKF_exp_bin_cals {
+  static EKF_filter_worker_calculations cal(
+      const bool do_die, const double time_outcome, const double at_risk_length,
+      const double eta, const double denom_term);
 };
 
+struct EKF_exp_clip_cals {
+  static EKF_filter_worker_calculations  cal(
+      const bool do_die, const double time_outcome, const double at_risk_length,
+      const double eta, const double denom_term);
+};
+
+struct EKF_exp_clip_w_jump_cals{
+  static EKF_filter_worker_calculations cal(
+      const bool do_die, const double time_outcome, const double at_risk_length,
+      const double eta, const double denom_term);
+};
 
 
 

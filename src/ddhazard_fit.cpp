@@ -103,7 +103,24 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       n_max, eps, verbose,
       order_, est_Q_0, model != "logit", NR_it_max, debug, n_threads,
       denom_term, use_pinv, criteria, EKF_batch_size));
-    solver.reset(new EKF_solver(static_cast<problem_data_EKF &>(*p_data.get()), model));
+    if(model == "logit"){
+      solver.reset(new EKF_solver<EKF_logit_cals>(
+          static_cast<problem_data_EKF &>(*p_data.get()), model));
+
+    } else if (model == "exp_bin"){
+      solver.reset(new EKF_solver<EKF_exp_bin_cals>(
+          static_cast<problem_data_EKF &>(*p_data.get()), model));
+
+    } else if(model == "exp_clip_time"){
+      solver.reset(new EKF_solver<EKF_exp_clip_cals>(
+          static_cast<problem_data_EKF &>(*p_data.get()), model));
+
+    } else if(model == "exp_clip_time_w_jump"){
+      solver.reset(new EKF_solver<EKF_exp_clip_w_jump_cals>(
+          static_cast<problem_data_EKF &>(*p_data.get()), model));
+
+    } else
+      Rcpp::stop("EKF is not implemented for model '" + model  +"'");
 
   } else if (method == "UKF"){
     if(model != "logit" &&

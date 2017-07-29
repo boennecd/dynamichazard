@@ -2,58 +2,58 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 chol_rank_one_update <- function(R, x) {
-    invisible(.Call(dynamichazard_chol_rank_one_update, R, x))
+    invisible(.Call(`_dynamichazard_chol_rank_one_update`, R, x))
 }
 
 square_tri_inv <- function(R, out) {
-    invisible(.Call(dynamichazard_square_tri_inv, R, out))
+    invisible(.Call(`_dynamichazard_square_tri_inv`, R, out))
 }
 
 symmetric_mat_chol <- function(A, out) {
-    invisible(.Call(dynamichazard_symmetric_mat_chol, A, out))
+    invisible(.Call(`_dynamichazard_symmetric_mat_chol`, A, out))
 }
 
 tri_mat_times_vec <- function(A, x, out, is_transpose) {
-    invisible(.Call(dynamichazard_tri_mat_times_vec, A, x, out, is_transpose))
+    invisible(.Call(`_dynamichazard_tri_mat_times_vec`, A, x, out, is_transpose))
 }
 
 sym_mat_rank_one_update <- function(alpha, x, A) {
-    invisible(.Call(dynamichazard_sym_mat_rank_one_update, alpha, x, A))
+    invisible(.Call(`_dynamichazard_sym_mat_rank_one_update`, alpha, x, A))
 }
 
 bigglm_regcf_rcpp <- function(D, rbar, thetab, ss, checked, tol) {
-    .Call(dynamichazard_bigglm_regcf_rcpp, D, rbar, thetab, ss, checked, tol)
+    .Call(`_dynamichazard_bigglm_regcf_rcpp`, D, rbar, thetab, ss, checked, tol)
 }
 
 ddhazard_fit_cpp <- function(X, fixed_terms, weights, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_params, n_max = 100L, eps = 0.001, verbose = 0L, order_ = 1L, est_Q_0 = TRUE, method = "EKF", kappa = NULL, alpha = NULL, beta = NULL, NR_eps = NULL, LR = NULL, model = "logit", M_step_formulation = "Fahrmier94", fixed_effect_chunk_size = 2e4L, debug = FALSE, NR_it_max = 100L, n_threads = -1L, denom_term = .0001, n_fixed_terms_in_state_vec = 0L, use_pinv = FALSE, criteria = "delta_coef", posterior_version = "cholesky", GMA_max_rep = 10L, GMA_NR_eps = 0.1, EKF_batch_size = 5000L) {
-    .Call(dynamichazard_ddhazard_fit_cpp, X, fixed_terms, weights, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_params, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation, fixed_effect_chunk_size, debug, NR_it_max, n_threads, denom_term, n_fixed_terms_in_state_vec, use_pinv, criteria, posterior_version, GMA_max_rep, GMA_NR_eps, EKF_batch_size)
+    .Call(`_dynamichazard_ddhazard_fit_cpp`, X, fixed_terms, weights, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_params, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation, fixed_effect_chunk_size, debug, NR_it_max, n_threads, denom_term, n_fixed_terms_in_state_vec, use_pinv, criteria, posterior_version, GMA_max_rep, GMA_NR_eps, EKF_batch_size)
 }
 
 bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w) {
-    invisible(.Call(dynamichazard_bigglm_updateQR_rcpp, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
+    invisible(.Call(`_dynamichazard_bigglm_updateQR_rcpp`, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
 }
 
 SMA_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
-    .Call(dynamichazard_SMA_hepler_logit_compute_length, offset, coef1, coef2, w, y)
+    .Call(`_dynamichazard_SMA_hepler_logit_compute_length`, offset, coef1, coef2, w, y)
 }
 
 SMA_hepler_logit_second_d <- function(c, offset) {
-    .Call(dynamichazard_SMA_hepler_logit_second_d, c, offset)
+    .Call(`_dynamichazard_SMA_hepler_logit_second_d`, c, offset)
 }
 
 SMA_hepler_exp_compute_length <- function(offset, coef1, coef2, w, y, length) {
-    .Call(dynamichazard_SMA_hepler_exp_compute_length, offset, coef1, coef2, w, y, length)
+    .Call(`_dynamichazard_SMA_hepler_exp_compute_length`, offset, coef1, coef2, w, y, length)
 }
 
 SMA_hepler_exp_second_d <- function(c, offset, length) {
-    .Call(dynamichazard_SMA_hepler_exp_second_d, c, offset, length)
+    .Call(`_dynamichazard_SMA_hepler_exp_second_d`, c, offset, length)
 }
 
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {
-    .Call(dynamichazard_logLike_cpp, X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
+    .Call(`_dynamichazard_logLike_cpp`, X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }
 
 get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model = TRUE) {
-    .Call(dynamichazard_get_risk_obj_rcpp, start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model)
+    .Call(`_dynamichazard_get_risk_obj_rcpp`, start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model)
 }
 

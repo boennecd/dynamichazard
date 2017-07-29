@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // chol_rank_one_update
 void chol_rank_one_update(arma::mat& R, arma::vec x);
-RcppExport SEXP dynamichazard_chol_rank_one_update(SEXP RSEXP, SEXP xSEXP) {
+RcppExport SEXP _dynamichazard_chol_rank_one_update(SEXP RSEXP, SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type R(RSEXP);
@@ -19,7 +19,7 @@ END_RCPP
 }
 // square_tri_inv
 void square_tri_inv(const arma::mat& R, arma::mat& out);
-RcppExport SEXP dynamichazard_square_tri_inv(SEXP RSEXP, SEXP outSEXP) {
+RcppExport SEXP _dynamichazard_square_tri_inv(SEXP RSEXP, SEXP outSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
@@ -30,7 +30,7 @@ END_RCPP
 }
 // symmetric_mat_chol
 void symmetric_mat_chol(const arma::mat& A, arma::mat& out);
-RcppExport SEXP dynamichazard_symmetric_mat_chol(SEXP ASEXP, SEXP outSEXP) {
+RcppExport SEXP _dynamichazard_symmetric_mat_chol(SEXP ASEXP, SEXP outSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
@@ -41,7 +41,7 @@ END_RCPP
 }
 // tri_mat_times_vec
 void tri_mat_times_vec(arma::mat& A, const arma::vec& x, arma::vec& out, bool is_transpose);
-RcppExport SEXP dynamichazard_tri_mat_times_vec(SEXP ASEXP, SEXP xSEXP, SEXP outSEXP, SEXP is_transposeSEXP) {
+RcppExport SEXP _dynamichazard_tri_mat_times_vec(SEXP ASEXP, SEXP xSEXP, SEXP outSEXP, SEXP is_transposeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat& >::type A(ASEXP);
@@ -54,7 +54,7 @@ END_RCPP
 }
 // sym_mat_rank_one_update
 void sym_mat_rank_one_update(const double alpha, const arma::vec& x, arma::mat& A);
-RcppExport SEXP dynamichazard_sym_mat_rank_one_update(SEXP alphaSEXP, SEXP xSEXP, SEXP ASEXP) {
+RcppExport SEXP _dynamichazard_sym_mat_rank_one_update(SEXP alphaSEXP, SEXP xSEXP, SEXP ASEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
@@ -66,7 +66,7 @@ END_RCPP
 }
 // bigglm_regcf_rcpp
 arma::vec bigglm_regcf_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol);
-RcppExport SEXP dynamichazard_bigglm_regcf_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP) {
+RcppExport SEXP _dynamichazard_bigglm_regcf_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -82,7 +82,7 @@ END_RCPP
 }
 // ddhazard_fit_cpp
 Rcpp::List ddhazard_fit_cpp(arma::mat& X, arma::mat& fixed_terms, const arma::vec& weights, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, const arma::vec& fixed_parems_start, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const double eps_fixed_parems, const int max_it_fixed_params, const arma::uword n_max, const double eps, const arma::uword verbose, const int order_, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, Rcpp::Nullable<Rcpp::NumericVector> NR_eps, Rcpp::Nullable<Rcpp::NumericVector> LR, const std::string model, const std::string M_step_formulation, const int fixed_effect_chunk_size, const bool debug, const unsigned int NR_it_max, const int n_threads, const double denom_term, const int n_fixed_terms_in_state_vec, const bool use_pinv, const std::string criteria, const std::string posterior_version, const signed int GMA_max_rep, const double GMA_NR_eps, const int EKF_batch_size);
-RcppExport SEXP dynamichazard_ddhazard_fit_cpp(SEXP XSEXP, SEXP fixed_termsSEXP, SEXP weightsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP fixed_parems_startSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP eps_fixed_paremsSEXP, SEXP max_it_fixed_paramsSEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP NR_epsSEXP, SEXP LRSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP, SEXP fixed_effect_chunk_sizeSEXP, SEXP debugSEXP, SEXP NR_it_maxSEXP, SEXP n_threadsSEXP, SEXP denom_termSEXP, SEXP n_fixed_terms_in_state_vecSEXP, SEXP use_pinvSEXP, SEXP criteriaSEXP, SEXP posterior_versionSEXP, SEXP GMA_max_repSEXP, SEXP GMA_NR_epsSEXP, SEXP EKF_batch_sizeSEXP) {
+RcppExport SEXP _dynamichazard_ddhazard_fit_cpp(SEXP XSEXP, SEXP fixed_termsSEXP, SEXP weightsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP fixed_parems_startSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP eps_fixed_paremsSEXP, SEXP max_it_fixed_paramsSEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP order_SEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP NR_epsSEXP, SEXP LRSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP, SEXP fixed_effect_chunk_sizeSEXP, SEXP debugSEXP, SEXP NR_it_maxSEXP, SEXP n_threadsSEXP, SEXP denom_termSEXP, SEXP n_fixed_terms_in_state_vecSEXP, SEXP use_pinvSEXP, SEXP criteriaSEXP, SEXP posterior_versionSEXP, SEXP GMA_max_repSEXP, SEXP GMA_NR_epsSEXP, SEXP EKF_batch_sizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -130,7 +130,7 @@ END_RCPP
 }
 // bigglm_updateQR_rcpp
 void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, arma::vec& y, const arma::vec& w);
-RcppExport SEXP dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP ySEXP, SEXP wSEXP) {
+RcppExport SEXP _dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP ySEXP, SEXP wSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec& >::type D(DSEXP);
@@ -151,7 +151,7 @@ END_RCPP
 }
 // SMA_hepler_logit_compute_length
 double SMA_hepler_logit_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y);
-RcppExport SEXP dynamichazard_SMA_hepler_logit_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP) {
+RcppExport SEXP _dynamichazard_SMA_hepler_logit_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -166,7 +166,7 @@ END_RCPP
 }
 // SMA_hepler_logit_second_d
 double SMA_hepler_logit_second_d(const double c, const double offset);
-RcppExport SEXP dynamichazard_SMA_hepler_logit_second_d(SEXP cSEXP, SEXP offsetSEXP) {
+RcppExport SEXP _dynamichazard_SMA_hepler_logit_second_d(SEXP cSEXP, SEXP offsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -178,7 +178,7 @@ END_RCPP
 }
 // SMA_hepler_exp_compute_length
 double SMA_hepler_exp_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y, const double length);
-RcppExport SEXP dynamichazard_SMA_hepler_exp_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP, SEXP lengthSEXP) {
+RcppExport SEXP _dynamichazard_SMA_hepler_exp_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP, SEXP lengthSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -194,7 +194,7 @@ END_RCPP
 }
 // SMA_hepler_exp_second_d
 double SMA_hepler_exp_second_d(const double c, const double offset, const double length);
-RcppExport SEXP dynamichazard_SMA_hepler_exp_second_d(SEXP cSEXP, SEXP offsetSEXP, SEXP lengthSEXP) {
+RcppExport SEXP _dynamichazard_SMA_hepler_exp_second_d(SEXP cSEXP, SEXP offsetSEXP, SEXP lengthSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -207,7 +207,7 @@ END_RCPP
 }
 // logLike_cpp
 std::vector<double> logLike_cpp(const arma::mat& X, const Rcpp::List& risk_obj, const arma::mat& F, const arma::mat& Q_0, arma::mat Q, const arma::mat& a_t_d_s, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_effects_offsets, const int order_, const std::string model);
-RcppExport SEXP dynamichazard_logLike_cpp(SEXP XSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP a_t_d_sSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_effects_offsetsSEXP, SEXP order_SEXP, SEXP modelSEXP) {
+RcppExport SEXP _dynamichazard_logLike_cpp(SEXP XSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP a_t_d_sSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_effects_offsetsSEXP, SEXP order_SEXP, SEXP modelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -228,7 +228,7 @@ END_RCPP
 }
 // get_risk_obj_rcpp
 Rcpp::List get_risk_obj_rcpp(const Rcpp::NumericVector& start, const Rcpp::NumericVector& stop, const Rcpp::LogicalVector& event, const double& by, const Rcpp::IntegerVector& start_order, const double& max_T, const Rcpp::IntegerVector& order_by_id_and_rev_start, const Rcpp::IntegerVector& id, const double min_start, const Rcpp::NumericVector& event_times_in, const bool& is_for_discrete_model);
-RcppExport SEXP dynamichazard_get_risk_obj_rcpp(SEXP startSEXP, SEXP stopSEXP, SEXP eventSEXP, SEXP bySEXP, SEXP start_orderSEXP, SEXP max_TSEXP, SEXP order_by_id_and_rev_startSEXP, SEXP idSEXP, SEXP min_startSEXP, SEXP event_times_inSEXP, SEXP is_for_discrete_modelSEXP) {
+RcppExport SEXP _dynamichazard_get_risk_obj_rcpp(SEXP startSEXP, SEXP stopSEXP, SEXP eventSEXP, SEXP bySEXP, SEXP start_orderSEXP, SEXP max_TSEXP, SEXP order_by_id_and_rev_startSEXP, SEXP idSEXP, SEXP min_startSEXP, SEXP event_times_inSEXP, SEXP is_for_discrete_modelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -249,20 +249,20 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"dynamichazard_chol_rank_one_update", (DL_FUNC) &dynamichazard_chol_rank_one_update, 2},
-    {"dynamichazard_square_tri_inv", (DL_FUNC) &dynamichazard_square_tri_inv, 2},
-    {"dynamichazard_symmetric_mat_chol", (DL_FUNC) &dynamichazard_symmetric_mat_chol, 2},
-    {"dynamichazard_tri_mat_times_vec", (DL_FUNC) &dynamichazard_tri_mat_times_vec, 4},
-    {"dynamichazard_sym_mat_rank_one_update", (DL_FUNC) &dynamichazard_sym_mat_rank_one_update, 3},
-    {"dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &dynamichazard_bigglm_regcf_rcpp, 6},
-    {"dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &dynamichazard_ddhazard_fit_cpp, 38},
-    {"dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &dynamichazard_bigglm_updateQR_rcpp, 12},
-    {"dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &dynamichazard_SMA_hepler_logit_compute_length, 5},
-    {"dynamichazard_SMA_hepler_logit_second_d", (DL_FUNC) &dynamichazard_SMA_hepler_logit_second_d, 2},
-    {"dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &dynamichazard_SMA_hepler_exp_compute_length, 6},
-    {"dynamichazard_SMA_hepler_exp_second_d", (DL_FUNC) &dynamichazard_SMA_hepler_exp_second_d, 3},
-    {"dynamichazard_logLike_cpp", (DL_FUNC) &dynamichazard_logLike_cpp, 11},
-    {"dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &dynamichazard_get_risk_obj_rcpp, 11},
+    {"_dynamichazard_chol_rank_one_update", (DL_FUNC) &_dynamichazard_chol_rank_one_update, 2},
+    {"_dynamichazard_square_tri_inv", (DL_FUNC) &_dynamichazard_square_tri_inv, 2},
+    {"_dynamichazard_symmetric_mat_chol", (DL_FUNC) &_dynamichazard_symmetric_mat_chol, 2},
+    {"_dynamichazard_tri_mat_times_vec", (DL_FUNC) &_dynamichazard_tri_mat_times_vec, 4},
+    {"_dynamichazard_sym_mat_rank_one_update", (DL_FUNC) &_dynamichazard_sym_mat_rank_one_update, 3},
+    {"_dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &_dynamichazard_bigglm_regcf_rcpp, 6},
+    {"_dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &_dynamichazard_ddhazard_fit_cpp, 38},
+    {"_dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &_dynamichazard_bigglm_updateQR_rcpp, 12},
+    {"_dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_compute_length, 5},
+    {"_dynamichazard_SMA_hepler_logit_second_d", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_second_d, 2},
+    {"_dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_compute_length, 6},
+    {"_dynamichazard_SMA_hepler_exp_second_d", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_second_d, 3},
+    {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
+    {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {NULL, NULL, 0}
 };
 
