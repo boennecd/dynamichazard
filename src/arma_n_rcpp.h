@@ -34,7 +34,7 @@ extern int openblas_get_num_threads();
 #define ARMA_DEFAULT_OSTREAM Rcpp::Rcout
 #endif
 
-#define ARMA_NO_DEBUG
+// #define ARMA_NO_DEBUG // TODO: comment back
 // Note: This also disables the check in inv(A, B) for whether inversion is succesfull it seems http://arma.sourceforge.net/docs.html#inv
 // from armadillo config.hpp
 //// Uncomment the above line if you want to disable all run-time checks.
@@ -44,7 +44,7 @@ extern int openblas_get_num_threads();
 //// We recommend that run-time checks be disabled _only_ for the shipped version of your program.
 
 
-#define ARMA_DONT_PRINT_ERRORS
+// #define ARMA_DONT_PRINT_ERRORS // TODO: comment back
 // from armadillo config.hpp:
 //// Comment out the above line if you don't want errors and warnings printed (eg. failed decompositions)
 
