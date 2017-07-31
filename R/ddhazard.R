@@ -209,19 +209,11 @@ ddhazard = function(formula, data,
 
   } else if((missing_a_0 <- missing(a_0)) |
             (missing_fixed <- (is.null(control$fixed_parems_start)))){
-    if(getOption("ddhazard_use_speedglm")){
-      glm_func <- function(fam)
-        suppressWarnings( # Get warning due to convergence failures when maxit = 1
-          static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
-                     maxit = 1, family = fam, speedglm = T,
-                     only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms)))
-    } else {
-      glm_func <- function(fam)
+    glm_func <- function(fam)
         static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
                    epsilon = Inf, family = fam,
                    speedglm = F,
                    only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms))
-    }
 
     if(model == "logit"){
       coefs = glm_func("binomial")

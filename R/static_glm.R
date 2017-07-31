@@ -143,9 +143,11 @@ get_survival_case_weights_and_data = function(
 #' @param family \code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
 #' @param weights weights if a skewed sample or similar is used
-#' @param speedglm \code{TRUE} if \code{speedglm} should be used.
+#' @param speedglm Depreciated.
 #' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm.wfit} or \code{\link{glm.fit}} which will be faster.
-#' @param mf model frame for regression. Needed when \code{only_coef = TRUE}
+#' @param mf model matrix for regression. Needed when \code{only_coef = TRUE}
+#' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link{speedglm}} uses \code{\link{speedglm::speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.
+#' @param nthreads number of threads to use when \code{method_use} is \code{"parallelglm"}.
 #'
 #' @details
 #' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
@@ -156,12 +158,19 @@ get_survival_case_weights_and_data = function(
 #' @export
 static_glm = function(
   formula, data, by, max_T, ..., id, family = "logit", model = F, weights, risk_obj = NULL,
-  speedglm = F, only_coef = FALSE, mf){
+  speedglm = F, only_coef = FALSE, mf, method_use = c("glm", "speedglm", "parallelglm"),
+  nthreads = getOption("ddhazard_max_threads")){
   if(only_coef && missing(mf))
     stop("mf must be supplied when only_coef = TRUE")
 
   if(!missing(mf) && nrow(mf) != nrow(data))
     stop("data and mf must have the same number of rows")
+
+  if(speedglm)
+    warning(sQuote("speedglm"), " have been depreciated. Use ", sQuote("method_use"))
+
+  if(length(method_use) > 1)
+    method_use <- method_use[1]
 
   if(only_coef){
     # We mark the row numbers as some may be removed and the order may be
@@ -217,10 +226,12 @@ static_glm = function(
     mf <- mf[new_order, , drop = FALSE]
   }
 
-  if(speedglm && requireNamespace("speedglm", quietly = T)){
+  offset <- if(family$family == "poisson")
+    data$log_delta_time else rep(0, nrow(data))
+
+  if(method_use == "speedglm" && requireNamespace("speedglm", quietly = T)){
     if(only_coef){
-      offset <- if(family$family == "poisson")
-        data$log_delta_time else rep(0, nrow(mf))
+
 
       fit <- speedglm::speedglm.wfit(
         X = mf, y = data$Y, weights = data$weights,
@@ -229,22 +240,34 @@ static_glm = function(
       return(fit$coefficients)
     }
 
-    return(speedglm::speedglm(
+    return(drop(speedglm::speedglm(
       formula = formula, data = data, family = family, model = model,
-      weights = data$weights, ...))
-  }
+      weights = data$weights, ...)))
 
-  if(only_coef){
-    ctrl <- do.call(glm.control, list(...))
+  } else if(method_use == "glm"){
+    if(only_coef){
+      ctrl <- do.call(glm.control, list(...))
 
-    offset <- if(family$family == "poisson")
-      data$log_delta_time else rep(0, nrow(mf))
+      fit <- glm.fit(x = mf, y = data$Y, weights = data$weights,
+                     family = family, control = ctrl, offset = offset)
 
-    fit <- glm.fit(x = mf, y = data$Y, weights = data$weights,
-                   family = family, control = ctrl, offset = offset)
+      return(fit$coefficients)
+    }
 
-    return(fit$coefficients)
-  }
+    return(glm(formula = formula, data = data, family = family, model = model, weights = weights, ...))
 
-  glm(formula = formula, data = data, family = family, model = model, weights = weights, ...)
+  } else if(method_use == "parallelglm" && only_coef){
+    epsilon <- list(...)$epsilon
+    if(is.null(epsilon))
+      epsilon <- glm.control()$epsilon
+
+    return(drop(
+      parallelglm(X = t(mf), Ys = data$Y,
+                  weights = data$weights, offsets = offset, beta0 = numeric(),
+                  family = family$family,
+                  tol = epsilon, nthreads = nthreads)))
+
+  } else
+    stop(sQuote("method_use"), " not implemented with ", sQuote("only_coef"),
+         " = ", only_coef)
 }

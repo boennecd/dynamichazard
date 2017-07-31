@@ -215,9 +215,6 @@ Below, we define a function to fit a first order random walk model with a given 
 ```{r est_true_fit_ddhazrd_out_of_box}
 library(survival); library(dynamichazard)
 
-# We will use glm.fit for the starting value
-options(ddhazard_use_speedglm = FALSE)
-
 # Set up function ddhazard fit function for convenience
 # LR:       learning rate in correction step
 # NR_eps:   tolerance in correction step. NULL yields no extra iterations

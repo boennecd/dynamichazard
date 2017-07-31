@@ -1,6 +1,68 @@
 context("Testing parallelglm vs. glm")
 
-# irls_qrnewton =
+test_that("glm and parallelglm gives the same", {
+  set.seed(4611691)
+  parallelglm <- asNamespace("dynamichazard")$parallelglm
+
+  grid_vals <- expand.grid(
+    family = c("binomial", "poisson"),
+    use_offset = c(TRUE, FALSE),
+    use_weights = c(TRUE, FALSE))
+  grid_vals$family <- as.character(grid_vals$family)
+
+  test_expr <- expression({
+    for(i in 1:nrow(grid_vals)){
+      vals <- grid_vals[i, ]
+      with(vals, {
+          sim_func <- switch(
+            family,
+            binomial =function(eta)
+              1 / (1 + exp(-eta)) >  runif(length(eta)),
+            poisson = function(eta) rpois(n = n, exp(eta)))
+
+          X <<- structure(
+            c(rep(1, n), runif(n*q, -1, 1)), dim = c(n, q + 1))
+          .beta <<- c(0, runif(q, -1, 1))
+          eta <<- drop(X %*% .beta)
+          y <<- sim_func(eta)
+
+          offset <- if(use_offset)
+            offset = runif(n, -1, 1) else rep(0, n)
+
+          if(use_weights){
+            weights <- runif(n)
+            .weights <<- weights / (sum(weights) / n)
+          } else
+            .weights <<- rep(1, n)
+
+          glm_out <<- suppressWarnings( # glm gives warnings with non-integer weights
+            glm.fit(
+              X, y, family = match.fun(family)(),
+              weights = .weights, offset = offset,
+              control = glm.control())$coefficients)
+
+          out <<- parallelglm(X = t(X), Ys = y,
+                              weights = .weights, offsets = offset, beta0 = numeric(),
+                              family = family,
+                              tol = 1e-8, nthreads = getOption("ddhazard_max_threads"))
+      })
+      expect_equal(glm_out, drop(out), tolerance = 1e-5)
+    }})
+
+  n <- 200; q <- 3
+  eval(test_expr)
+
+  n <- 2e3
+  eval(test_expr)
+
+  skip_on_cran()
+
+  n <- 1e5; q <- 10
+  eval(test_expr)
+})
+
+
+# irls_newton =
 #   function(A, b, family=binomial, maxit=25, tol=1e-08)
 #   {
 #     s  = rep(0, ncol(A))
@@ -30,41 +92,5 @@ context("Testing parallelglm vs. glm")
 #     }
 #     list(coefficients=s,iterations=j)
 #   }
-
-n <- 1e5
-q <- 3
-X <- structure(
-  c(rep(1, n), rnorm(n*q)), dim = c(n, q + 1))
-beta <- c(0, runif(q, -1, 1))
-eta <- drop(X %*% beta)
-
-y <- 1 / (1 + exp(-eta)) >  runif(n)
-glm_out <- glm.fit(X, y, family = binomial(), control = glm.control(trace = TRUE))
-glm_out$coefficients
-beta
-
-parallelglm <- asNamespace("dynamichazard")$parallelglm
-sink("tmp.txt")
-out <- parallelglm(X = t(X), Ys = y,
-                   weights = numeric(), offsets = numeric(), beta0 = numeric(),
-                   family = "binomial",
-                   tol = 1e-8)
-sink()
-
-mean((out - beta)^2)
-mean((glm_out$coefficients - beta)^2)
-rbind(
-  drop(out),
-  glm_out$coefficients)
-
-# speedglm::speedglm.wfit(y, X, family = binomial())$coefficients
 #
-# sink("tmptmp.txt")
-# drop(irls_qrnewton(X, y)$coefficients)
-# sink()
-
-microbenchmark::microbenchmark(
-  glm.fit(X, y, family = binomial()),
-  parallelglm(X = t(X), beta0 = rep(0, q + 1), Ys = y, weights = rep(1, n), family = "binomial",
-              offsets = rep(0, n), nthreads = 7),
-  times = 10)
+# irls_qrnewton

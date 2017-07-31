@@ -14,7 +14,7 @@ class parallelglm_class {
 
   /* data holder class */
   struct data_holder {
-    const arma::mat &X;
+    arma::mat &X;
     arma::vec *beta;
     const arma::vec &Ys;
     const arma::vec &weights;
@@ -29,7 +29,7 @@ class parallelglm_class {
     std::mutex m_XtopWz;
 
     data_holder(
-      const arma::mat &X, const arma::vec &Ys, const arma::vec &weights,
+      arma::mat &X, const arma::vec &Ys, const arma::vec &weights,
       const arma::vec &offsets, const uword max_threads,
       uword p, uword n):
       X(X), Ys(Ys), weights(weights), offsets(offsets), max_threads(max_threads),
@@ -49,7 +49,9 @@ class parallelglm_class {
     void operator()(){
 
       arma::span my_span(i_start, i_end);
-      arma::mat my_X = data.X(arma::span::all, my_span);
+      arma::mat my_X(data.X.begin() + i_start * data.p,
+                     data.p, i_end - i_start + 1,
+                     false /* dont take copy */);
       arma::vec etas = (data.beta->t() * my_X).t() + data.offsets(my_span);
 
       arma::mat my_XtopWX(data.p, data.p, arma::fill::zeros);
@@ -69,11 +71,11 @@ class parallelglm_class {
         double varmu  = family::variance(mu);
         double mu_eta_val = family::mu_eta(*eta);
 
-        if(mu_eta_val == 0.)
+        if(std::abs(mu_eta_val) < sqrt(std::numeric_limits<double>::epsilon()))
           continue;
 
         double z = (*eta - *offset) + (*y - mu)/mu_eta_val;
-        double w = (*weight * pow(mu_eta_val, 2))/varmu;
+        double w = (*weight * mu_eta_val * mu_eta_val)/varmu;
 
         /* TODO: delete
         Rcpp::Rcout << "eta "<< *eta << "\t offset " << *offset << "\t g "<< mu << "\t gprime "<< mu_eta_val << "\t var "<< varmu << "\t z "<<
@@ -131,13 +133,15 @@ class parallelglm_class {
 
 public:
   static arma::vec compute(
-      const arma::mat &X, arma::vec &beta0, const arma::vec &Ys,
+      arma::mat &X, arma::vec &beta0, const arma::vec &Ys,
       const arma::vec &weights, const arma::vec &offsets,
-      double tol, int nthreads, int it_max){
+      double tol, int nthreads, int it_max, bool trace){
 #if defined(USE_OPEN_BLAS)
     int openblas_nthread = openblas_get_num_threads();
     openblas_set_num_threads(1);
 #endif
+
+    /* TODO: make QR decomp of X? */
 
     uword p = X.n_rows;
     uword n = X.n_cols;
@@ -154,10 +158,20 @@ public:
 
       compute_hessian_n_score(data);
 
+      /* TODO: replace with other LINPACK method to solve? */
       beta = arma::solve(
-        data.XtopWX, data.XtopWz, arma::solve_opts::no_approx);
+        data.XtopWX, data.XtopWz, arma::solve_opts::no_approx + arma::solve_opts::equilibrate);
 
-      if(sqrt(arma::norm(beta - beta_old, 2)) < tol) break;
+      if(trace){
+        Rcpp::Rcout << data.XtopWX << std::endl;
+        Rcpp::Rcout << data.XtopWz << std::endl;
+        Rcpp::Rcout << "it " << i << "\n"
+                    << "beta_old:\t" << beta_old.t()
+                    << "beta:    \t" << beta.t()
+                    << "Delta norm is: " << arma::norm(beta - beta_old, 2) << std::endl;
+      }
+
+      if(arma::norm(beta - beta_old, 2) < tol) break;
     }
 
     if(i == it_max)
@@ -172,30 +186,49 @@ public:
 };
 
 namespace glm_families {
-  struct binomial{
-    static inline double linkinv(double eta){
-      return 1 / (1 + exp(-eta));
-    }
 
-    static inline double variance(double mu){
-      return mu * (1 - mu);
-    }
+struct binomial {
+  static inline double linkinv(double eta){
+    return 1 / (1 + exp(-eta));
+  }
 
-    static inline double mu_eta(double eta){
-      double exp_eta = exp(-eta);
-      return (eta < -30 || eta > 30) ?
-        std::numeric_limits<double>::epsilon() :
-        exp_eta /((1 + exp_eta) * (1 + exp_eta));
-    }
-  };
+  static inline double variance(double mu){
+    return mu * (1 - mu);
+  }
+
+  static inline double mu_eta(double eta){
+    double exp_eta = exp(-eta);
+    return (eta < -30 || eta > 30) ?
+      std::numeric_limits<double>::epsilon() :
+      exp_eta /((1 + exp_eta) * (1 + exp_eta));
+  }
+};
+
+struct poisson {
+  static inline double linkinv(double eta){
+    return std::max(exp(eta), std::numeric_limits<double>::epsilon());
+  }
+
+  static inline double variance(double mu){
+    return mu;
+  }
+
+  static inline double mu_eta(double eta){
+    return std::max(exp(eta), std::numeric_limits<double>::epsilon());
+  }
+};
+
+
 }
 
 // [[Rcpp::export]]
 arma::vec parallelglm(
-    const arma::mat &X, const arma::vec &Ys,
+    arma::mat &X, /* Not const but will not be touched */
+    const arma::vec &Ys,
     std::string family,
     arma::vec beta0, arma::vec weights, arma::vec offsets,
-    double tol = 1e-8, int nthreads = 1, int it_max = 25){
+    double tol = 1e-8, int nthreads = 1, int it_max = 25,
+    bool trace = false){
   arma::vec result;
 
   if(beta0.n_elem == 0)
@@ -209,7 +242,10 @@ arma::vec parallelglm(
 
   if(family == "binomial"){
     result = parallelglm_class<glm_families::binomial>::compute(
-      X, beta0, Ys, weights, offsets, tol, nthreads, it_max);
+      X, beta0, Ys, weights, offsets, tol, nthreads, it_max, trace);
+  } else if(family == "poisson"){
+    result = parallelglm_class<glm_families::poisson>::compute(
+      X, beta0, Ys, weights, offsets, tol, nthreads, it_max, trace);
   } else
     Rcpp::stop("'family' not implemented");
 

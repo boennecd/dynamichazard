@@ -178,31 +178,6 @@ test_that("Unmacthed control variable throw error",
 ########
 # Test on simulated data
 
-test_that("speedglm and glm both works and gives (roughly) the same", {
-  if(requireNamespace("speedglm", quietly = T)){
-    m_args <- list(
-      formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-      data = exp_sim_200$res,
-      by = (by_ <- 1),
-      Q_0 = diag(1e-2, 11),
-      Q = diag(1000000, 11),
-      control = list(est_Q_0 = F, eps = 10^-2,
-                     save_data = F, save_risk_set = F),
-      max_T = 10,
-      id = exp_sim_200$res$id, order = 1,
-      verbose = F,
-      model = "exp_clip_time_w_jump")
-
-    options(ddhazard_use_speedglm = F)
-    f1 <- do.call(ddhazard, m_args)
-    options(ddhazard_use_speedglm = T)
-    f2 <- do.call(ddhazard, m_args)
-    options(ddhazard_use_speedglm = F)
-
-    expect_equal(f1, f2, tolerance = 1e-4)
-  }
-})
-
 test_that("Result of exponential model with only binary or right clipped time yield previous results", {
   args <- list(
     formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,

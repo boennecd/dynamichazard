@@ -100,58 +100,50 @@ test_that("Gets error with only_coef = TRUE and no mf",{
     "^mf must be supplied when only_coef = TRUE$")
 })
 
-test_that("Gets same with glm with only_coef = TRUE", {
-  set.seed(3946519)
-  sims <-
-    test_sim_func_logit(
-      n_series = 5e2, n_vars = 4, beta_start = rnorm(4),
-      intercept_start = - 5, sds = c(sqrt(.1), rep(.3, 4)),
-      x_range = 2, x_mean = .5)$res
+test_that("Gives depreciated warning about speedglm argument", {
+  sims <- logit_sim_200$res
 
-  # We include a transformation which will affect the final model.frame so that
-  # it does not just include the linear terms
-  frm <- Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id + x1^2
-
-  for(m in c("logit", "exponential")){
-    tmp <- get_design_matrix(frm, sims)
-
-    f1 <- static_glm(
-      frm, data = sims, by = 1, max_T = 10, family = m,
-      id = sims$id, only_coef = T, mf = cbind(tmp$X, tmp$fixed_terms))
-    f2 <- static_glm(
-      frm, data = sims, by = 1, max_T = 10, family = m,
-      id = sims$id, only_coef = F)
-
-    expect_equal(f1, f2$coefficients)
-  }
+  expect_warning(
+    static_glm(
+      Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+      data = sims, by = 1, max_T = 10, family = "logit",
+      id = sims$id, only_coef = FALSE,
+      speedglm = TRUE # should give warning
+      ),
+    "‘speedglm’ have been depreciated. Use ‘method_use’",
+    fixed = TRUE)
 })
 
-test_that("Gets same with speedglm with only_coef = TRUE", {
-  if(requireNamespace("speedglm", quietly = T)){
-    set.seed(3946519)
-    sims <-
-      test_sim_func_logit(
-        n_series = 5e2, n_vars = 4, beta_start = rnorm(4),
-        intercept_start = - 5, sds = c(sqrt(.1), rep(.3, 4)),
-        x_range = 2, x_mean = .5)$res
+test_that("Gets same with different methods", {
+  frm <- Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id + x1^2
 
-    # We include a transformation which will affect the final model.frame so that
-    # it does not just include the linear terms
-    frm <- Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id + x1^2
+  for(fam in c("logit", "exponential")){
+    sims <- if(fam == "logit")
+      logit_sim_200$res else exp_sim_200$res
 
-    for(m in c("logit", "exponential")){
-      tmp <- get_design_matrix(frm, sims)
+    get_fit <- function(method_use)
+      static_glm(
+        frm, data = sims, by = 1, max_T = 10, family = fam,
+        id = sims$id, only_coef = FALSE, method_use = method_use)
 
-      f1 <- static_glm(
-        frm, data = sims, by = 1, max_T = 10, family = m,
-        id = sims$id, only_coef = T, mf = cbind(tmp$X, tmp$fixed_terms),
-        speedglm = T)
-      f2 <- static_glm(
-        frm, data = sims, by = 1, max_T = 10, family = m,
-        id = sims$id, only_coef = F,
-        speedglm = T)
+    f1 <- get_fit("glm")
+    f2 <- get_fit("speedglm")
 
-      expect_equal(f1, f2$coefficients)
-    }
+    expect_equal(f1$coefficients, f2$coefficients)
+
+    tmp <- get_design_matrix(frm, sims)
+    get_fit <- function(method_use)
+      static_glm(
+        frm, data = sims, by = 1, max_T = 10, family = fam,
+        id = sims$id, only_coef = TRUE, method_use = method_use,
+        mf = cbind(tmp$X, tmp$fixed_terms))
+
+    f3 <- get_fit("glm")
+    f4 <- get_fit("speedglm")
+    f5 <- get_fit("parallelglm")
+
+    expect_equal(f1$coefficients, f3)
+    expect_equal(f3, f4, check.attributes = FALSE)
+    expect_equal(f4, f5, check.attributes = FALSE)
   }
 })

@@ -227,13 +227,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // parallelglm
-arma::vec parallelglm(const arma::mat& X, const arma::vec& Ys, std::string family, arma::vec beta0, arma::vec weights, arma::vec offsets, double tol, int nthreads, int it_max);
-RcppExport SEXP _dynamichazard_parallelglm(SEXP XSEXP, SEXP YsSEXP, SEXP familySEXP, SEXP beta0SEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP tolSEXP, SEXP nthreadsSEXP, SEXP it_maxSEXP) {
+arma::vec parallelglm(arma::mat& X, /* Not const but will not be touched */     const arma::vec& Ys, std::string family, arma::vec beta0, arma::vec weights, arma::vec offsets, double tol, int nthreads, int it_max, bool trace);
+RcppExport SEXP _dynamichazard_parallelglm(SEXP XSEXP, SEXP YsSEXP, SEXP familySEXP, SEXP beta0SEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP tolSEXP, SEXP nthreadsSEXP, SEXP it_maxSEXP, SEXP traceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type Ys(YsSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< /* Not const but will not be touched */     const arma::vec& >::type Ys(YsSEXP);
     Rcpp::traits::input_parameter< std::string >::type family(familySEXP);
     Rcpp::traits::input_parameter< arma::vec >::type beta0(beta0SEXP);
     Rcpp::traits::input_parameter< arma::vec >::type weights(weightsSEXP);
@@ -241,7 +241,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
     Rcpp::traits::input_parameter< int >::type it_max(it_maxSEXP);
-    rcpp_result_gen = Rcpp::wrap(parallelglm(X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max));
+    Rcpp::traits::input_parameter< bool >::type trace(traceSEXP);
+    rcpp_result_gen = Rcpp::wrap(parallelglm(X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -281,7 +282,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_compute_length, 6},
     {"_dynamichazard_SMA_hepler_exp_second_d", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_second_d, 3},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
-    {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 9},
+    {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 10},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {NULL, NULL, 0}
 };
