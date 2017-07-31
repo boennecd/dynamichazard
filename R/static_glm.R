@@ -147,7 +147,7 @@ get_survival_case_weights_and_data = function(
 #' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm.wfit} or \code{\link{glm.fit}} which will be faster.
 #' @param mf model matrix for regression. Needed when \code{only_coef = TRUE}
 #' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link{speedglm}} uses \code{\link{speedglm::speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.
-#' @param nthreads number of threads to use when \code{method_use} is \code{"parallelglm"}.
+#' @param n_threads number of threads to use when \code{method_use} is \code{"parallelglm"}.
 #'
 #' @details
 #' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
@@ -159,7 +159,7 @@ get_survival_case_weights_and_data = function(
 static_glm = function(
   formula, data, by, max_T, ..., id, family = "logit", model = F, weights, risk_obj = NULL,
   speedglm = F, only_coef = FALSE, mf, method_use = c("glm", "speedglm", "parallelglm"),
-  nthreads = getOption("ddhazard_max_threads")){
+  n_threads = getOption("ddhazard_max_threads")){
   if(only_coef && missing(mf))
     stop("mf must be supplied when only_coef = TRUE")
 
@@ -261,11 +261,13 @@ static_glm = function(
     if(is.null(epsilon))
       epsilon <- glm.control()$epsilon
 
-    return(drop(
+    out <- drop(
       parallelglm(X = t(mf), Ys = data$Y,
                   weights = data$weights, offsets = offset, beta0 = numeric(),
                   family = family$family,
-                  tol = epsilon, nthreads = nthreads)))
+                  tol = epsilon, nthreads = n_threads))
+
+    return(structure(out, names = dimnames(mf)[[2]]))
 
   } else
     stop(sQuote("method_use"), " not implemented with ", sQuote("only_coef"),

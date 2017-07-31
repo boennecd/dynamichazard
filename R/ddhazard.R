@@ -211,9 +211,11 @@ ddhazard = function(formula, data,
             (missing_fixed <- (is.null(control$fixed_parems_start)))){
     glm_func <- function(fam)
         static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
-                   epsilon = Inf, family = fam,
+                   epsilon = .Machine$double.xmax, family = fam,
                    speedglm = F,
-                   only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms))
+                   only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms),
+                   method_use = "parallelglm",
+                   n_threads = control$n_threads)
 
     if(model == "logit"){
       coefs = glm_func("binomial")

@@ -7,7 +7,8 @@ test_that("glm and parallelglm gives the same", {
   grid_vals <- expand.grid(
     family = c("binomial", "poisson"),
     use_offset = c(TRUE, FALSE),
-    use_weights = c(TRUE, FALSE))
+    use_weights = c(TRUE, FALSE),
+    one_it = c(TRUE, FALSE))
   grid_vals$family <- as.character(grid_vals$family)
 
   test_expr <- expression({
@@ -35,16 +36,18 @@ test_that("glm and parallelglm gives the same", {
           } else
             .weights <<- rep(1, n)
 
+          epsilon <- if(one_it) .Machine$double.xmax else 1e-8
+
           glm_out <<- suppressWarnings( # glm gives warnings with non-integer weights
             glm.fit(
               X, y, family = match.fun(family)(),
               weights = .weights, offset = offset,
-              control = glm.control())$coefficients)
+              control = glm.control(epsilon = epsilon))$coefficients)
 
           out <<- parallelglm(X = t(X), Ys = y,
                               weights = .weights, offsets = offset, beta0 = numeric(),
                               family = family,
-                              tol = 1e-8, nthreads = getOption("ddhazard_max_threads"))
+                              tol = epsilon, nthreads = getOption("ddhazard_max_threads"))
       })
       expect_equal(glm_out, drop(out), tolerance = 1e-5)
     }})

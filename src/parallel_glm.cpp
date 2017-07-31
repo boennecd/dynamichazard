@@ -41,10 +41,11 @@ class parallelglm_class {
   class worker{
     const uword i_start, i_end;
     data_holder &data;
+    const bool first_it;
 
   public:
-    worker(uword i_start, uword i_end, data_holder &data):
-    i_start(i_start), i_end(i_end), data(data) {}
+    worker(uword i_start, uword i_end, data_holder &data, bool first_it):
+    i_start(i_start), i_end(i_end), data(data), first_it(first_it) {}
 
     void operator()(){
 
@@ -52,7 +53,17 @@ class parallelglm_class {
       arma::mat my_X(data.X.begin() + i_start * data.p,
                      data.p, i_end - i_start + 1,
                      false /* dont take copy */);
-      arma::vec etas = (data.beta->t() * my_X).t() + data.offsets(my_span);
+      arma::vec etas;
+      if(first_it){
+        etas = arma::vec(i_end - i_start + 1);
+        double *eta = etas.begin();
+        const double *y = data.Ys.begin() + i_start;
+        const double *weight = data.weights.begin() + i_start;
+        for(uword i = 0; i < etas.n_elem; ++i, ++eta, ++weight, ++y)
+          *eta = family::initialize(*y, *weight);
+
+      } else
+        etas = (data.beta->t() * my_X).t() + data.offsets(my_span);
 
       arma::mat my_XtopWX(data.p, data.p, arma::fill::zeros);
       arma::vec my_XtopWz = arma::vec(data.p, arma::fill::zeros);
@@ -99,7 +110,7 @@ class parallelglm_class {
     }
   };
 
-  static inline void compute_hessian_n_score(data_holder &data){
+  static inline void compute_hessian_n_score(data_holder &data, bool first_it){
     uword n = data.X.n_cols;
     uword p = data.X.n_rows;
     data.XtopWz = arma::vec(p, arma::fill::zeros);
@@ -116,12 +127,12 @@ class parallelglm_class {
     // declare outsite of loop to ref after loop
     uword i_start = 0;
     for(uword i = 0; i < num_blocks - 1; ++i, i_start += block_size){
-      workers.emplace_back(i_start, i_start + block_size - 1, data);
+      workers.emplace_back(i_start, i_start + block_size - 1, data, first_it);
 
       futures[i] = pool.submit(workers.back());
     }
     // compute last enteries on this thread
-    worker(i_start, n - 1, data)();
+    worker(i_start, n - 1, data,first_it)();
 
     for(unsigned long i = 0; i < num_blocks - 1; ++i)
     {
@@ -156,11 +167,11 @@ public:
       arma::vec beta_old = beta;
       data.beta = &beta;
 
-      compute_hessian_n_score(data);
+      compute_hessian_n_score(data, i == 0);
 
       /* TODO: replace with other LINPACK method to solve? */
       beta = arma::solve(
-        data.XtopWX, data.XtopWz, arma::solve_opts::no_approx + arma::solve_opts::equilibrate);
+        data.XtopWX, data.XtopWz, arma::solve_opts::no_approx);
 
       if(trace){
         Rcpp::Rcout << data.XtopWX << std::endl;
@@ -188,6 +199,10 @@ public:
 namespace glm_families {
 
 struct binomial {
+  static inline double linkfun(double mu){
+    return log(mu / (1 - mu));
+  }
+
   static inline double linkinv(double eta){
     return 1 / (1 + exp(-eta));
   }
@@ -202,9 +217,17 @@ struct binomial {
       std::numeric_limits<double>::epsilon() :
       exp_eta /((1 + exp_eta) * (1 + exp_eta));
   }
+
+  static inline double initialize(double y, double weight){
+    return linkfun((weight * y + 0.5)/(weight + 1));
+  }
 };
 
 struct poisson {
+  static inline double linkfun(double mu){
+    return log(mu);
+  }
+
   static inline double linkinv(double eta){
     return std::max(exp(eta), std::numeric_limits<double>::epsilon());
   }
@@ -216,9 +239,11 @@ struct poisson {
   static inline double mu_eta(double eta){
     return std::max(exp(eta), std::numeric_limits<double>::epsilon());
   }
+
+  static inline double initialize(double y, double weight){
+    return linkfun(y + 0.1);
+  }
 };
-
-
 }
 
 // [[Rcpp::export]]

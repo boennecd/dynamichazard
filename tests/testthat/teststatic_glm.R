@@ -110,7 +110,7 @@ test_that("Gives depreciated warning about speedglm argument", {
       id = sims$id, only_coef = FALSE,
       speedglm = TRUE # should give warning
       ),
-    "‘speedglm’ have been depreciated. Use ‘method_use’",
+    "'speedglm' have been depreciated. Use 'method_use'",
     fixed = TRUE)
 })
 
