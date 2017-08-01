@@ -41,10 +41,10 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
   if(object$est_Q_0)
     warning("parameters for Q_0 are not included in attribute df")
 
-  n_parems <- ncol(object$state_vecs) / object$order
-  attr(val, "df") <- n_parems * object$order +  # from a_0
-    n_parems * (n_parems + 1) / 2 +  # from Q
-    length(object$fixed_effects) # from fixed effects
+  # n_parems <- ncol(object$state_vecs) / object$order
+  # attr(val, "df") <- n_parems * object$order +  # from a_0
+  #   n_parems * (n_parems + 1) / 2 +  # from Q
+  #   length(object$fixed_effects) # from fixed effects
   class(val) <- "logLik"
 
   val

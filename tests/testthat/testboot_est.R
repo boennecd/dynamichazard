@@ -27,7 +27,7 @@ test_that("boot yields previously computed values with pbc", {
 
   #####
   set.seed(993)
-  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = F, R = 99))
+  tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = F, R = 99)
 
   expect_no_error(plot(fit, ddhazard_boot = tmp))
 
@@ -39,7 +39,7 @@ test_that("boot yields previously computed values with pbc", {
 
   #####
   set.seed(994)
-  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = T, do_stratify_with_event = F, R = 99))
+  tmp <- ddhazard_boot(fit, do_sample_weights = T, do_stratify_with_event = F, R = 99)
 
   expect_no_error(plot(fit, ddhazard_boot = tmp))
 
@@ -51,7 +51,7 @@ test_that("boot yields previously computed values with pbc", {
 
   #####
   set.seed(995)
-  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = T, R = 99))
+  tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = T, R = 99)
 
   expect_no_error(plot(fit, ddhazard_boot = tmp))
 
@@ -80,11 +80,12 @@ test_that("Boot works with posterior_approx and gives previous found results", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(method = "SMA"),
+    control = list(method = "SMA",
+                   eps = 1e-2), # large to decrease comp time
     Q_0 = diag(1e5, 2), Q = diag(0.01, 2),
     max_T = 45)
 
-  suppressWarnings(tmp <- ddhazard_boot(fit, R = 99))
+  tmp <- ddhazard_boot(fit, R = 99)
 
   expect_no_error(plot(fit, ddhazard_boot = tmp))
 

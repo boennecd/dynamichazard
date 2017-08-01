@@ -30,7 +30,7 @@ start_args <- list(
   order = 1, denom_term = 1, fixed_terms_method = "M_step",
   use_extra_correction = F, beta = 0, alpha = 1,
   SMA_version = "woodbury", GMA_max_rep = 25,
-  GMA_NR_eps = 4, more_options = F, debug = FALSE)
+  GMA_NR_eps = 2, more_options = F, debug = FALSE)
 
 if(exists("input_args")){
   if(any(is.na(arg_match <- match(names(input_args), names(start_args)))))
@@ -466,7 +466,7 @@ server <- function(input, output) {
 
     }
 
-    control_list <- list(eps = 10^-2, n_max = 10,
+    control_list <- list(eps = 1e-3, n_max = 10,
                          method = input$est_with_method)
 
     if(input$est_with_method == "UKF"){
@@ -478,7 +478,7 @@ server <- function(input, output) {
       control_list$denom_term <- denom_term()
       if(input$use_extra_correction)
         control_list <- c(control_list,
-                          list(NR_eps = .001))
+                          list(NR_eps = 1e-5))
 
     } else if(input$est_with_method == "SMA"){
       control_list$posterior_version = input$SMA_version

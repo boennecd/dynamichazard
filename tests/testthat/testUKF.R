@@ -51,7 +51,6 @@ test_that("UKF on head_neck works with logit model", {
 
 test_that("UKF does not fail and both methods give the same",{
   sims <- logit_sim_200
-
   res_new <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
                   by = 1,
                   data = sims$res,
@@ -76,7 +75,7 @@ test_that("UKF does not fail and both methods give the same",{
   expect_equal(res_new$state_vars, res_old$state_vars)
 })
 
-test_that("Chaning time scale in UKF does no change results when other parems are changed accoridngly",{
+test_that("Changing time scale in UKF does no change results when other parems are changed accoridngly",{
   sims <- logit_sim_200
 
   arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,

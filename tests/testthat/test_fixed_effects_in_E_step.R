@@ -1,4 +1,4 @@
-context("Testing fixed_effects_like_recursive_least_squares")
+context("Testing fixed_effects_in_E_step")
 
 test_that("Works with EKF and logit model and with one fixed and one non-fixed", {
           fit <- ddhazard(survival::Surv(start, stop, event) ~ ddFixed(group),
@@ -94,7 +94,7 @@ test_that("Works with second order random walk and logit model", {
 test_that("Get loglike to work so you can use verbose with E-step fixed effects", {
   # There was a bug - thus this test is added
   expect_output(
-    fit <- ddhazard(form, Q_0 = diag(c(rep(1, 3), rep(.1, 3))), Q = diag(.1, 3),
+    fit <- ddhazard(form, Q_0 = diag(c(rep(1, 3), rep(.1, 3))), Q = diag(1e-4, 3),
                     data = sims_logit$res, id = sims_logit$res$id,
                     by = 1, order = 2,
                     control = list(fixed_terms_method = "E_step",
@@ -114,7 +114,7 @@ sims_exp <- test_sim_func_exp(n_series = 4e2, n_vars = 3, x_range = 1, t_max = 1
 form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed(1) + ddFixed(x1) + x2 + x3)
 
 test_that("Works with UKF and continous time model", {
-  fit <- suppressWarnings(ddhazard(form, Q_0 = diag(10, 2), Q = diag(1, 2),
+  fit <- suppressWarnings(ddhazard(form, Q_0 = diag(1, 2), Q = diag(1, 2),
                   data = sims_exp$res, id = sims_exp$res$id,
                   by = 1, model = "exp_bin", max_T = 10,
                   control = list(fixed_terms_method = "E_step",

@@ -44,8 +44,7 @@ test_that("logLik for head_neck_cancer data set match previous results", {
     a_0 = rep(0, 2), Q_0 = diag(1e5, 2),
     Q = diag(1e-2, 2),
     max_T = 45,
-    id = head_neck_cancer$id, order = 1,
-    verbose = F)
+    id = head_neck_cancer$id, order = 1)
 
   log_like <- logLik(object = result)
   result$data <- NULL
@@ -55,9 +54,8 @@ test_that("logLik for head_neck_cancer data set match previous results", {
   # plot(result)
   # print(log_like, digits = 16)
 
-  old <- structure(-149.0302744634669,
-                   class = "logLik",
-                   df = 2 + 3)
+  old <- structure(-182.0072469079185,
+                   class = "logLik")
 
   expect_equal(log_like, old)
 })
@@ -95,13 +93,11 @@ test_that("logLik for head_neck_cancer data set with second order model", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    a_0 = rep(0, 4), Q_0 = diag(1000000, 4),
-    Q = diag(1e-2, 2),
-    control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-2),
+    Q_0 = diag(10, 4),
+    Q = diag(1e-3, 2),
+    control = list(est_Q_0 = F, eps = 2e-3),
     max_T = 45,
-    id = head_neck_cancer$id, order = 2,
-    verbose = F
-  )
+    id = head_neck_cancer$id, order = 2)
 
   log_like <- logLik(object = result, data_ = head_neck_cancer, id =  head_neck_cancer$id)
 
@@ -109,32 +105,30 @@ test_that("logLik for head_neck_cancer data set with second order model", {
   # plot(result)
   # print(log_like, digits = 16)
 
-  old <- structure(-129.1952699930929,
-                   class = "logLik",
-                   df = 2 * 2 + 3)
+  old <- structure(-59.32922017545229,
+                   class = "logLik")
 
   expect_equal(log_like, old, tolerance = 1e-4)
 })
 
 test_that("logLik for head_neck_cancer data set match previous results with fixed effects", {
-  suppressWarnings(result <- ddhazard(
+  result <- ddhazard(
     formula = survival::Surv(start, stop, event) ~ ddFixed(group),
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, LR = .8,
+    control = list(est_Q_0 = F,
                    fixed_terms_method = "M_step"),
-    a_0 = 0, Q_0 = 1e5, Q = 1e-1,
+    a_0 = 0, Q_0 = 1e5, Q = 1e-2,
     max_T = 45,
-    id = head_neck_cancer$id, order = 1))
+    id = head_neck_cancer$id, order = 1)
 
   # plot(result)
   log_like <- logLik(result, data = head_neck_cancer)
 
   # print(log_like, digits = 16)
 
-  old <- structure(-247.0969775644861,
-                   class = "logLik",
-                   df = 1 + 1 + 1)
+  old <- structure(-254.7652723920431,
+                   class = "logLik")
 
   expect_equal(log_like, old)
 })
@@ -160,6 +154,7 @@ test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
   tmp <- logLik(glm_fit)
   attributes(tmp)
   attr(tmp, "nobs") <- NULL
+  attr(tmp, "df") <- NULL
 
   expect_equal(c(unname(result$fixed_effects)), unname(glm_fit$coefficients))
   expect_equal(logLik(result), tmp)
@@ -169,20 +164,14 @@ test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
 ##############
 
 test_that("logLik for simulated data versus old results", {
-  set.seed(21280)
-  sims <- test_sim_func_logit(n_series = 2e3, n_vars = 5, t_0 = 0, t_max = 10,
-                              x_range = 1, x_mean = -.2, re_draw = T)
-  sims$res <- as.data.frame(sims$res)
-
+  sims <- logit_sim_200
   result = ddhazard(
-    survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event - 1,
+    survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     sims$res,
-    by = 1, Q = diag(1e-1, 5),
-    a_0 = rep(0, 5), Q_0 = diag(1e5, 5),
+    by = 1, Q = diag(1e-2, 11),
+    Q_0 = diag(1e5, 11),
     max_T = 10,
-    id = sims$res$id, order = 1,
-    verbose = F
-  )
+    id = sims$res$id, order = 1)
 
   # matplot(sims$betas, lty = 1, type = "l")
   # matplot(result$state_vecs, type = "l", lty = 2, add = T)
@@ -191,25 +180,19 @@ test_that("logLik for simulated data versus old results", {
 
   # print(log_like, digits = 16)
 
-  old <- structure(-2413.726305652656,
-                   class = "logLik",
-                   df = 5 + 5 * (1 + 5) / 2)
+  old <- structure(-136.706189501914,
+                   class = "logLik")
   expect_equal(log_like, old)
 
-
-  set.seed(35374)
-  sims <- test_sim_func_exp(n_series = 1e3, n_vars = 5, t_0 = 0, t_max = 10,
-                            x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
-                            intercept_start = -3, sds = c(.1, rep(1, 5)))
-
-  suppressMessages(result <- ddhazard(
+  sims <- exp_sim_200
+  result <- ddhazard(
     survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     sims$res,
-    by = 1, Q = diag(1e-1, 6),
-    a_0 = rep(0, 6), Q_0 = diag(1e5, 6),
+    by = 1, Q = diag(1e-2, 11),
+    Q_0 = diag(1e5, 11),
     max_T = 10,
     id = sims$res$id, order = 1,
-    verbose = F, model = "exp_clip_time_w_jump"))
+    verbose = F, model = "exp_clip_time_w_jump")
 
   # matplot(sims$betas, lty = 1, type = "l")
   # matplot(result$state_vecs, type = "l", lty = 2, add = T)
@@ -218,71 +201,56 @@ test_that("logLik for simulated data versus old results", {
 
   # print(log_like, digits = 16)
 
-  old <- structure(-1524.079893572609,
-                   class = "logLik",
-                   df = 6 + 6 * (1 + 6) / 2)
+  old <- structure(-193.3489503557651,
+                   class = "logLik")
   expect_equal(log_like, old, tolerance = 1e-3)
 
 
-
-
-
-  set.seed(4578234)
-  sims <- test_sim_func_logit(n_series = 2e3, n_vars = 5, t_0 = 0, t_max = 10,
-                              x_range = 1, x_mean = -.2, re_draw = T)
-
+  sims <- logit_sim_200
   result <- ddhazard(
-    survival::Surv(tstart, tstop, event) ~ ddFixed(x1) + ddFixed(x2) + x3 + x4 + x5,
+    survival::Surv(tstart, tstop, event) ~ ddFixed(x1) + ddFixed(x2) + . - id - x1 - x2,
     sims$res,
     by = 1,
     control = list(n_max = 10^4, eps = 10^-2, est_Q_0 = F,
                    fixed_terms_method = "M_step"),
-    a_0 = rep(0, 4), Q_0 = diag(1e5, 4),
-    Q = diag(1e-1, 4),
+    Q_0 = diag(1e5, 9),
+    Q = diag(1e-2, 9),
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F)
 
-
-
   log_like <- logLik(result)
 
+  # matplot(sims$betas, lty = 1, type = "l")
+  # matplot(result$state_vecs, type = "l", lty = 2, add = T, col = c(1, 4:11))
+  # abline(h = result$fixed_effects, col = 2:3, lty = 2)
   # print(log_like, digits = 16)
 
-  old <- structure(-2705.108805931662,
-                   class = "logLik",
-                   df = 4 + 4 * (1 + 4) / 2 + 2)
+  old <- structure(-180.8480151206968,
+                   class = "logLik")
   expect_equal(log_like, old, tolerance = 1e-6)
 
-
-
-
-  set.seed(4578234)
-  sims <- test_sim_func_exp(n_series = 5e2, n_vars = 5, t_0 = 0, t_max = 10,
-                            beta_start = (seq_len(5) - 4) / 2, intercept_start = -3,
-                            x_range = 2, x_mean = 0, re_draw = T, is_fixed = c(1:2))
-
-  suppressMessages(result <- ddhazard(
-    survival::Surv(tstart, tstop, event) ~ ddFixed(1) + ddFixed(x1) + x2 + x3 + x4 + x5,
+  sims <- exp_sim_200
+  result <- ddhazard(
+    survival::Surv(tstart, tstop, event) ~ ddFixed(x1) + ddFixed(x2) + . - id - x1 - x2,
     sims$res,
     by = 1,
     control = list(fixed_terms_method = "E_step"),
-    Q_0 = diag(1e5, 4),
-    Q = diag(1e-2, 4),
+    Q_0 = diag(1e5, 9),
+    Q = diag(1e-2, 9),
     max_T = 10, model = "exp_clip_time_w_jump",
     id = sims$res$id, order = 1,
-    verbose = F))
+    verbose = F)
 
   log_like <- logLik(result)
 
+  # matplot(sims$betas, lty = 1, type = "l")
+  # matplot(result$state_vecs, type = "l", lty = 2, add = T, col = c(1, 4:11))
+  # abline(h = result$fixed_effects, col = 2:3, lty = 2)
   # print(log_like, digits = 16)
-  # matplot(sims$betas, type = "l", lty = 1)
-  # matplot(result$state_vecs, type = "l", lty = 2, col = 3:6, add = T)
-  # abline(h = result$fixed_effects, lty = 2, col = 1:2)
 
-  old <- structure(-297.9617536565842,
-                   class = "logLik",
-                   df = 4 + 4 * (1 + 4) / 2 + 2)
+  old <- structure(-228.63504443729,
+                   class = "logLik")
   expect_equal(log_like, old, tolerance = 1e-6)
 })
 

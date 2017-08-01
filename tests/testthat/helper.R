@@ -115,7 +115,8 @@ exp_sim_500 <- get_sim(500)
 # })
 #
 # time_taken <- t(time_taken)
-# time_taken[order(time_taken[, "user.self"], decreasing = TRUE), ]
+# time_taken[order(time_taken[, "elapsed"], decreasing = TRUE), ]
+# sum(time_taken[, "elapsed"])
 
 # ######
 # # To test a particular file

@@ -5,9 +5,8 @@ test_that("Gives same results w/ 1. order logit model", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(method = "GMA",
-                   save_data = F, save_risk_set = F),
-    a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(0.01, 2),
+    control = list(method = "GMA"),
+    Q_0 = diag(1, 2), Q = diag(0.01, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1)
 
@@ -48,26 +47,13 @@ test_that("GMA works w/ second order random walk", {
     data = pbc2,
     order = 2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA"),
+    control = list(method = "GMA", LR = .33, GMA_NR_eps = 1e-3),
     Q_0 = diag(rep(1, 10)), Q = diag(rep(1e-4, 5)))
 
   # plot(f1)
-  f1 <- f1[c("state_vars", "state_vars")]
+  f1 <- f1[c("state_vecs", "state_vars", "Q")]
   # save_to_test(f1, "GMA_pbc_o2_logit")
   expect_equal(f1, read_to_test("GMA_pbc_o2_logit"), tolerance = 1.490116e-08)
-
-  f1 <- ddhazard(
-    formula = Surv(tstart, tstop, death == 2) ~ edema + log(albumin) + log(bili) + log(protime),
-    data = pbc2,
-    order = 2,
-    id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA", LR = .5),
-    Q_0 = diag(rep(1, 10)), Q = diag(rep(1e-4, 5)))
-
-  # plot(f1)
-  f1 <- f1[c("state_vars", "state_vars")]
-  # save_to_test(f1, "GMA_pbc_o2_logit_lower_LR")
-  expect_equal(f1, read_to_test("GMA_pbc_o2_logit_lower_LR"), tolerance = 1.490116e-08)
 })
 
 test_that("GMA works w/ fixed effects in E-step", {
@@ -81,19 +67,20 @@ test_that("GMA works w/ fixed effects in E-step", {
 
   # plot(fit)
   # fit$fixed_effects
-  fit <- fit[c("state_vecs", "state_vars", "fixed_effects")]
+  fit <- fit[c("state_vecs", "state_vars", "fixed_effects", "Q")]
   # save_to_test(fit, "GMA_pbc_fixed_E_step")
   expect_equal(fit, read_to_test("GMA_pbc_fixed_E_step"), tolerance = 1.490116e-08)
 })
 
 test_that("GMA works w/ fixed effects in M-step", {
   fit <- ddhazard(
-    formula = Surv(tstart, tstop, death == 2) ~ edema + ddFixed(age) + log(albumin) + log(bili) + log(protime),
+    formula = Surv(tstart, tstop, death == 2) ~
+      edema + ddFixed(age) + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA",
+    control = list(method = "GMA", eps = 1e-3, criteria = "delta_likeli",
                    fixed_terms_method = 'M_step'),
-    Q_0 = diag(rep(1, 5)), Q = diag(rep(1e-4, 5)))
+    Q_0 = diag(rep(1, 5)), Q = diag(1e-4, 5))
 
   # plot(fit)
   # fit$fixed_effects
@@ -123,15 +110,15 @@ test_that("GMA makes one mesasge when global scoring did not succed within given
     formula = Surv(tstart, tstop, death == 2) ~ edema + age + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA"),
+    control = list(method = "GMA", LR = .5),
     Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6)))
 
   args$control$GMA_max_rep <- 1
   expect_warning(
     f1 <- do.call(ddhazard, args),
-    "Failed once to make correction step within 1 iterations and a tolerance of relative change in coefficients of 0.1")
+    "^Failed once to make correction step")
 
-  args$control$GMA_max_rep <- 10
+  args$control$GMA_max_rep <- 25
   expect_silent(suppressMessages(f1 <- do.call(ddhazard, args)))
 })
 
@@ -140,11 +127,11 @@ test_that("Changing learning rates changes the result w/ GMA", {
     formula = Surv(tstart, tstop, death == 2) ~ edema + age + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA"),
+    control = list(method = "GMA", LR =.75),
     Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6)))
 
   f1 <- do.call(ddhazard, args)
-  args$control$LR <- .75
+  args$control$LR <- .5
   f2 <- do.call(ddhazard, args)
 
   expect_true(is.character(all.equal(f1$state_vecs, f2$state_vecs)))
@@ -155,8 +142,7 @@ test_that("GAM works w/ weights", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, method = "GMA",
-                   save_data = F, save_risk_set = F),
+    control = list(est_Q_0 = F, method = "GMA"),
     Q_0 = diag(1, 2), Q = diag(0.01, 2),
     max_T = 45, order = 1)
 

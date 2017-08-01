@@ -18,7 +18,8 @@ test_that("hatvalues works with dynamic effects only and gives previous results"
   dd_fit <- ddhazard(
     Surv(start, stop, event) ~ fin + age + prio + employed.cumsum,
     data = Rossi, id = Rossi$id, by = 1, max_T = 52,
-    Q_0 = diag(10000, 5), Q = diag(.1, 5))
+    Q_0 = diag(1000, 5), Q = diag(1e-2, 5),
+    control = list(eps = 2e-3))
 
   # plot(dd_fit)
 
@@ -47,7 +48,8 @@ test_that("hatvalues works with dynamic and fixed effects and gives previous res
   dd_fit <- ddhazard(
     Surv(start, stop, event) ~ ddFixed(fin) + age + prio + employed.cumsum,
     data = Rossi, id = Rossi$id, by = 1, max_T = 52,
-    Q_0 = diag(10000, 4), Q = diag(.1, 4))
+    Q_0 = diag(1000, 4), Q = diag(.01, 4),
+    control = list(fixed_terms_method = "E_step"))
 
   # dd_fit$fixed_effects
   # plot(dd_fit)
@@ -63,7 +65,7 @@ test_that("hatvalues works with dynamic and fixed effects and gives previous res
     Surv(lenfol, fstat) ~ ddFixed(gender) + ddFixed(age) + bmi + hr + cvd,
     data = whas500, by = 100, max_T = 1800,
     Q_0 = diag(10000, 4), Q = diag(.1, 4),
-    control = list(fixed_terms_method =  'E_step'))
+    control = list(fixed_terms_method =  'M_step', eps = 5e-3))
 
   # dd_fit$fixed_effects
   # plot(dd_fit)

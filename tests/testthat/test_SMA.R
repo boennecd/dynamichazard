@@ -165,10 +165,12 @@ test_that("Chaning the learning changes the result for the posterior approx meth
 
   f1$control <- NULL
   f1$LR <- NULL
+  f1$n_iter <- NULL
   f1$call <- NULL
   f2$control <- NULL
   f2$LR <- NULL
   f2$call <- NULL
+  f2$n_iter <- NULL
   expect_true(is.character(all.equal(f1, f2)))
   expect_equal(f1, f2, tolerance = .2)
 })
@@ -182,7 +184,7 @@ test_that("Second order model gives previous found result for posterior approx",
     control = list(est_Q_0 = F,
                    save_data = F, save_risk_set = F,
                    method = "SMA"),
-    Q_0 = diag(1e5, 4), Q = diag(0.01, 2),
+    Q_0 = diag(1, 4), Q = diag(0.01, 2),
     max_T = 30, order = 2)
 
   # plot(f1)
@@ -198,7 +200,7 @@ test_that("Posterior gives previous found results with large by length for pbc d
                   log(albumin) + log(protime) + log(bili), pbc2,
                  id = pbc2$id, by = 300, max_T = 3600,
                  control = list(method = "SMA"),
-                 Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
+                 Q_0 = diag(rep(100000, 6)), Q = diag(rep(1e-3, 6)))
 
   # plot(f1)
   f1 <- f1[c("state_vecs", "state_vecs")]
@@ -259,7 +261,7 @@ args <- list(Surv(tstart, tstop, death == 2) ~ age + edema +
                log(albumin) + log(protime) + log(bili), pbc2,
              id = pbc2$id, by = 100, max_T = 3600,
              model = "exp_clip_time_w_jump",
-             control = list(method = "SMA"),
+             control = list(method = "SMA", eps = 1e-2),
              Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.001, 6)))
 
 test_that("Exponential model for posterior_approx gives previous found values", {

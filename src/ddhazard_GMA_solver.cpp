@@ -42,7 +42,6 @@ inline double GMA_hepler_exp::d2(
 
 template<class T>
 void GMA<T>::solve(){
-  bool have_failed_once = false;
   double bin_tstop = p_dat.min_start;
 
   for (int t = 1; t < p_dat.d + 1; t++){

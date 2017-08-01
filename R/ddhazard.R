@@ -133,22 +133,22 @@ ddhazard = function(formula, data,
     stop("Model '", model, "' is not implemented")
 
   control_default <- list(kappa = NULL, alpha = 1, beta = 0,
-                          NR_eps = NULL, LR = 1, n_max = 10^2, eps = .01,
+                          NR_eps = NULL, LR = 1, n_max = 10^2, eps = 1e-3,
                           est_Q_0 = F, method = "EKF", save_risk_set = T,
-                          save_data = T, eps_fixed_parems = 1e-3,
-                          max_it_fixed_params = 10, fixed_effect_chunk_size = 1e4,
+                          save_data = T, eps_fixed_parems = 1e-4,
+                          max_it_fixed_params = 25, fixed_effect_chunk_size = 1e4,
                           debug = F, fixed_parems_start = NULL, LR_max_try = 10,
                           LR_decrease_fac = 0.9,
                           n_threads = getOption("ddhazard_max_threads"),
-                          denom_term = .0001,
+                          denom_term = 1e-5,
                           fixed_terms_method = "E_step",
                           Q_0_term_for_fixed_E_step = NULL,
-                          use_pinv = T, criteria = "delta_coef",
+                          use_pinv = FALSE, criteria = "delta_coef",
                           permu = if(!is.null(control$method))
                             control$method == "SMA" else F,
                           posterior_version = "cholesky",
-                          GMA_max_rep = 10,
-                          GMA_NR_eps = 0.1,
+                          GMA_max_rep = 25,
+                          GMA_NR_eps = 1e-4,
                           EKF_batch_size = 2000L)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
@@ -211,7 +211,8 @@ ddhazard = function(formula, data,
             (missing_fixed <- (is.null(control$fixed_parems_start)))){
     glm_func <- function(fam)
         static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
-                   epsilon = .Machine$double.xmax, family = fam,
+                   epsilon = sqrt(.Machine$double.eps) * 1e1,
+                   family = fam,
                    speedglm = F,
                    only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms),
                    method_use = "parallelglm",

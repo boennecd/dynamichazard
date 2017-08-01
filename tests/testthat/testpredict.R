@@ -132,20 +132,10 @@ for(use_parallel in c(T, F)){
   })
 }
 
-# Check for second order
-result = ddhazard(
-  formula = survival::Surv(start, stop, event) ~ group,
-  data = head_neck_cancer,
-  by = 1,
-  a_0 = rep(0, 2 * 2), Q_0 = diag(10, 2 * 2),
-  Q = diag(c(1.0e-4, 1.0e-4)),
-  control = list(n_max = 1e3, save_risk_set = T, est_Q_0 = F),
-  order = 2
-)
+
 
 test_that("get_survival_case_weights_and_data and predict yields consistent result with ids", {
   set.seed(1992)
-
   s <- test_sim_func_logit(
     n_series = 1e3,
     n_vars = 5,
@@ -218,6 +208,17 @@ test_that("get_survival_case_weights_and_data and predict yields consistent resu
 })
 
 test_that("Calls with second order models do not throw errors", {
+  # Check for second order
+  result = ddhazard(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    a_0 = rep(0, 2 * 2), Q_0 = diag(10, 2 * 2),
+    Q = diag(c(1.0e-4, 1.0e-4)),
+    control = list(n_max = 1e3, save_risk_set = T, est_Q_0 = F),
+    order = 2
+  )
+
   for(g in c(0, 1))
     for(use_parallel in c(T, F))
       expect_no_error(bquote(
@@ -225,32 +226,29 @@ test_that("Calls with second order models do not throw errors", {
                 use_parallel = .(use_parallel))))
 })
 
-dum <- structure(list(model = "exp_combined"), "class" = class(result))
-
 test_that("predict functions throws error when model it is exponential",{
+  dum <- structure(list(model = "exp_combined"), "class" = class(result))
+
   expect_error(predict(dum))
 })
 
 test_that("Term predict work with second order random walk", {
   f1 <- ddhazard(
-    formula = Surv(tstart, tstop, death == 2) ~ edema + log(albumin) + log(bili) + log(protime),
+    formula = Surv(tstart, tstop, death == 2) ~ log(bili),
     data = pbc2,
     order = 2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA"),
-    Q_0 = diag(1, 10), Q = diag(rep(1e-4, 5)))
+    control = list(method = "GMA", LR = .33),
+    Q_0 = diag(1, 4), Q = diag(rep(1e-4, 2)))
 
   dum <- data.frame(
-    edema = 1,
-    albumin = exp(1),
-    bili = exp(1),
-    protime = exp(1))
+    bili = exp(1))
 
   preds <- predict(f1, new_data = dum, type = "term", sds = T)
 
   # plot(f1)
-  expect_equal(preds$terms[, 1,], f1$state_vecs[, 1:5])
-  expect_equal(preds$sds[, 1, ], sqrt(t(apply(f1$state_vars, 3, diag))[, 1:5]))
+  expect_equal(preds$terms[, 1,], f1$state_vecs[, 1:2])
+  expect_equal(preds$sds[, 1, ], sqrt(t(apply(f1$state_vars, 3, diag))[, 1:2]))
 })
 
 ######
