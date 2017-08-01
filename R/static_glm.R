@@ -144,9 +144,9 @@ get_survival_case_weights_and_data = function(
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
 #' @param weights weights if a skewed sample or similar is used
 #' @param speedglm Depreciated.
-#' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm.wfit} or \code{\link{glm.fit}} which will be faster.
+#' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{\link[speedglm]{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.
 #' @param mf model matrix for regression. Needed when \code{only_coef = TRUE}
-#' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link{speedglm}} uses \code{\link{speedglm::speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.
+#' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm::speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.
 #' @param n_threads number of threads to use when \code{method_use} is \code{"parallelglm"}.
 #'
 #' @details

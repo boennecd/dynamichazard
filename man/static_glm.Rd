@@ -7,7 +7,7 @@
 static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
   weights, risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
   method_use = c("glm", "speedglm", "parallelglm"),
-  nthreads = getOption("ddhazard_max_threads"))
+  n_threads = getOption("ddhazard_max_threads"))
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
@@ -32,13 +32,13 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 
 \item{speedglm}{Depreciated.}
 
-\item{only_coef}{\code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm.wfit} or \code{\link{glm.fit}} which will be faster.}
+\item{only_coef}{\code{TRUE} if only coefficients should be returned. This will only call the \code{\link[speedglm]{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.}
 
-\item{mf}{model frame for regression. Needed when \code{only_coef = TRUE}}
+\item{mf}{model matrix for regression. Needed when \code{only_coef = TRUE}}
 
-\item{method_use}{Method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link{speedglm}} uses \code{\link{speedglm::speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.}
+\item{method_use}{method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm::speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.}
 
-\item{nthreads}{Number of threads to use when \code{method_use} is \code{"parallelglm"}.}
+\item{n_threads}{number of threads to use when \code{method_use} is \code{"parallelglm"}.}
 }
 \value{
 The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}
