@@ -1,0 +1,599 @@
+\RequirePackage{filecontents}
+
+\begin{filecontents*}{mybib.bib}
+@article{doucet09,
+  title={A tutorial on particle filtering and smoothing: Fifteen years later},
+  author={Doucet, Arnaud and Johansen, Adam M},
+  journal={Handbook of nonlinear filtering},
+  volume={12},
+  number={656-704},
+  pages={3},
+  year={2009}
+}
+
+@article{kitagawa96,
+  title={Monte Carlo filter and smoother for non-Gaussian nonlinear state space models},
+  author={Kitagawa, Genshiro},
+  journal={Journal of computational and graphical statistics},
+  volume={5},
+  number={1},
+  pages={1--25},
+  year={1996},
+  publisher={Taylor \& Francis}
+}
+
+@inproceedings{douc05,
+  title={Comparison of resampling schemes for particle filtering},
+  author={Douc, Randal and Capp{\'e}, Olivier},
+  booktitle={Image and Signal Processing and Analysis, 2005. ISPA 2005. Proceedings of the 4th International Symposium on},
+  pages={64--69},
+  year={2005},
+  organization={IEEE}
+}
+
+@article{carpenter99,
+  title={Improved particle filter for nonlinear problems},
+  author={Carpenter, James and Clifford, Peter and Fearnhead, Paul},
+  journal={IEE Proceedings-Radar, Sonar and Navigation},
+  volume={146},
+  number={1},
+  pages={2--7},
+  year={1999},
+  publisher={IET}
+}
+
+@article{pitt99,
+  title={Filtering via simulation: Auxiliary particle filters},
+  author={Pitt, Michael K and Shephard, Neil},
+  journal={Journal of the American statistical association},
+  volume={94},
+  number={446},
+  pages={590--599},
+  year={1999},
+  publisher={Taylor \& Francis}
+}
+
+@incollection{pitt01,
+  title={Auxiliary variable based particle filters},
+  author={Pitt, Michael K and Shephard, Neil},
+  booktitle={Sequential Monte Carlo methods in practice},
+  pages={273--293},
+  year={2001},
+  publisher={Springer}
+}
+
+@article{andrieu02,
+  title={Particle filtering for partially observed Gaussian state space models},
+  author={Andrieu, Christophe and Doucet, Arnaud},
+  journal={Journal of the Royal Statistical Society: Series B (Statistical Methodology)},
+  volume={64},
+  number={4},
+  pages={827--836},
+  year={2002},
+  publisher={Wiley Online Library}
+}
+
+@article{fearnhead10,
+  title={A sequential smoothing algorithm with linear computational cost},
+  author={Fearnhead, Paul and Wyncoll, David and Tawn, Jonathan},
+  journal={Biometrika},
+  volume={97},
+  number={2},
+  pages={447--464},
+  year={2010},
+  publisher={Oxford University Press}
+}
+
+@inproceedings{briers05,
+  title={Sequential auxiliary particle belief propagation},
+  author={Briers, Mark and Doucet, Arnaud and Singh, Sumeetpal S},
+  booktitle={Information Fusion, 2005 8th International Conference on},
+  volume={1},
+  pages={8--pp},
+  year={2005},
+  organization={IEEE}
+}
+
+@article{de97,
+  title={The scan sampler for time series models},
+  author={De Jong, Piet},
+  journal={Biometrika},
+  volume={84},
+  number={4},
+  pages={929--937},
+  year={1997},
+  publisher={Oxford University Press}
+}
+
+@article{briers10,
+  title={Smoothing algorithms for state--space models},
+  author={Briers, Mark and Doucet, Arnaud and Maskell, Simon},
+  journal={Annals of the Institute of Statistical Mathematics},
+  volume={62},
+  number={1},
+  pages={61--89},
+  year={2010},
+  publisher={Springer}
+}
+\end{filecontents*}
+
+\documentclass{article}
+
+\usepackage[round]{natbib}
+\usepackage{amsmath} \usepackage{bm} \usepackage{amsfonts}
+\usepackage{algorithm} \usepackage{algpseudocode} \usepackage{hyperref}
+
+% algorithm and algpseudocode definitions
+\newcommand\StateX{\Statex\hspace{\algorithmicindent}}
+\newcommand\StateXX{\Statex\hspace{\algorithmicindent}\hspace{\algorithmicindent}}
+\newcommand\StateXXX{\Statex\hspace{\algorithmicindent}\hspace{\algorithmicindent}\hspace{\algorithmicindent}}
+
+\algnewcommand{\UntilElse}[2]{\Until{#1\ \algorithmicelse\ #2}}
+
+\algtext*{EndFor} \algtext*{EndProcedure}
+
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\INPUT{\item[\algorithmicinput]}
+
+\newcommand{\citeAlgLine}[2]{line~\ref{#1} of algorithm~\ref{#2}}
+\newcommand{\citeAlgLineTwo}[3]{line~\ref{#1} and~\ref{#2} of algorithm~\ref{#3}}
+\newcommand{\citeAlgLineTo}[3]{lines~\ref{#1}-\ref{#2} of algorithm~\ref{#3}}
+
+% Math commands
+\renewcommand{\vec}[1]{\bm{#1}}
+\newcommand{\vect}[1]{\widetilde{\vec{#1}}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+
+\newcommand{\Lbrace}[1]{\left\{ #1\right\}}
+\newcommand{\Lparen}[1]{\left( #1\right)}
+\newcommand{\Cond}[2]{\left. #1 \vphantom{#2} \right\vert  #2}
+
+% Operators
+\newcommand{\Prob}{P}
+\newcommand{\VAR}{Var}
+\newcommand{\E}{E}
+
+\newcommand{\optor}[2]{#1\Lparen{#2}}
+\newcommand{\optorC}[3]{\optor{#1}{\Cond{#2}{#3}}}
+
+\newcommand{\prop}[1]{\optor{\Prob}{#1}}
+\newcommand{\propC}[2]{\optorC{\Prob}{#1}{#2}}
+
+\newcommand{\expec}[1]{\optor{\E}{#1}}
+\newcommand{\expecC}[2]{\optorC{\E}{#1}{#2}}
+
+\newcommand{\varp}[1]{\optor{\VAR}{#1}}
+\newcommand{\varpC}[2]{\optorC{\VAR}{#1}{#2}}
+
+\newcommand{\propAproxC}[2]{\optorC{\widetilde{p}}{#1}{#2}}
+
+% Normal distribution
+\newcommand{\normal}[2]{\optor{N}{#1,#2}}
+\newcommand{\normalC}[3]{\optorC{N}{#1}{#2,#3}}
+
+% ID: Importance density 
+\newcommand{\IDC}[2]{\optorC{q}{#1}{#2}}
+\newcommand{\IDAproxC}[2]{\optorC{\widetilde{q}}{#1}{#2}}
+
+% KF notation
+\newcommand{\KF}[3]{#1_{\left. #2 \right\vert #3}}
+\newcommand{\KFSup}[4]{#1_{\left. #2 \right\vert #3}^{(#4)}}
+
+% PF notation
+\newcommand{\partic}[3]{#1_{#2}^{\Lparen{#3}}}
+% B for backwards
+\newcommand{\particB}[3]{\widetilde{#1}_{#2}^{\Lparen{#3}}}
+% S for smoothed
+\newcommand{\particS}[3]{\widehat{#1}_{#2}^{\Lparen{#3}}}
+
+\newcommand{\bigO}[1]{\mathcal{O}\Lparen{#1}}
+
+\begin{document}
+This is note covers ideas for using a particle filter for the \verb|dynamichazard| package in R. See \url{https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf} for more information of the package. At this point, the estimation method includes the following (crude) approximations: an Extended Kalman filters, unscented Kalman filter and a mode approximations. You can run \verb|dynamichazard::ddhazard_app()| after installing the package to see the performance and computation time of the methods.
+
+\section{Method}
+\subsection*{Model}
+The model is:
+
+\begin{equation}
+\begin{array}{ll}
+ 	y_{it} \sim \propC{y_{it}}{\theta_{it}} & \\
+%
+ 	\vec{\theta}_{t} = \mat{X}_t\vec{\alpha}_t \\
+% 
+ 	\vec{\alpha}_t = \mat{F}\vec{\alpha}_{t - 1} + \mat{R}\vec{\eta}_t &
+ 		\vec{\eta}_t \sim N\Lparen{\vec{0}, \mat{Q}} \\
+%
+	&	\vec{\alpha}_0 \sim N\Lparen{\vec{a}_0, \mat{Q}_0}
+ \end{array}
+\end{equation}%
+%
+where we denote the conditional densities as $\vec{y}_t \sim \optorC{g}{\cdot}{\vec{\alpha}_t}$ and $\vec{\alpha}_t \sim \optorC{f}{\cdot}{\vec{\alpha}_{t-1}}$. An alternative here could be to add noise to $\vec{\theta}_{t}$ and use the methods in \cite{andrieu02}.
+
+For each $t$ we have risk set given by $R_t \subseteq \Lbrace{1,2,\dots,n}$. The observed outcomes are given by $\vec{y}_t = \Lbrace{y_{it}}_{i \in R_t}$. We are in a survival analysis setting where the simplest model has an indicator of death of individual $i$ in time $t$ such that $y_{it} \in \Lbrace{0, 1}$ where $\theta_{it}$ is the linear predictor where we use the logistic function as the link function. $\mat{X}_t$ is the matrix of the covariates and $\vec{\alpha}_t \in \mathbb{R}^p$ is the time-varying coefficients. The problems we are looking at have $n >> p$ (e.g. $n = 100000$ and $p = 20$). 
+
+ I am planning to use a first order random walk for $\vec{\alpha}_t$ so I could drop $\mat{F}$. Further, I will need to estimate $\mat{Q}, \vec{\alpha}_0$ and fix $\mat{Q}_0$. To do so, I will use a particle filter to get smoothed estimates of $\vec{\alpha}_1, \dots, \vec{\alpha}_d$ and use an EM-algorithm.
+
+To me, the most relevant smoothers seems to be those in \cite{fearnhead10} and \cite{briers10}. I have included the $\bigO{N}$ smoother in \cite{fearnhead10} shown in algorithm~\ref{alg:ONsmoother}. I will use this throughout the rest of this note.
+
+
+
+\subsection*{Considerations}
+Algorithm~\ref{alg:ONsmoother} requires that we specify the following importance densities and re-sampling weights (optimal values are given as the right hand side):
+
+\begin{equation}\begin{matrix}
+	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} = \propC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} \\
+	\partic{\beta}{t}{j} \propto \propC{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}\partic{w}{t-1}{j} \\
+%
+	\IDAproxC{\vec{\alpha}_t}{\vec{y}_t, \particB{\vec{\alpha}}{t + 1}{k}}\particB{\beta}{t}{k} \approx %
+		\gamma_t\Lparen{\vec{\alpha}_t}
+		\propC{\vec{y}_t}{\vec{\alpha}_t}
+		\propC{\particB{\vec{\alpha}}{t + 1}{k}}{\vec{\alpha}_t}
+		\frac{\particB{w}{t + 1}{k}}{\gamma_{t + 1}\Lparen{\particB{\vec{\alpha}}{t + 1}{k}}} \\
+%
+	\IDAproxC{\particS{\alpha}{t}{i}}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}} = 
+		\propC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}}
+\end{matrix}\end{equation}
+
+Further, we need to define a backwards filter distribution approximation:
+
+\begin{equation}
+	\propAproxC{\vec{\alpha}_t}{\vec{y}_{t:T}} \propto \gamma_t \Lparen{\vec{\alpha}_t}\propC{\vec{y}_{t:T}}{\vec{\alpha}_t}
+\end{equation}% 
+%
+with an artificial prior distribution $\gamma_t \Lparen{\vec{\alpha}_t}$. See \cite{briers10} for how to select $\gamma_t$ and examples hereof. \cite{fearnhead10} also provides examples. 
+
+Given the models of interest we have that:
+
+\begin{itemize}
+	\item Evaluating $\propC{\vec{y}_t}{\vec{\alpha}_t}$ is expensive operation as $n >> p$ and it has a $\bigO{np}$ computational cost. In general, any $\bigO{n^l}$ with $l \geq 1$ is going to take considerable time if it needed in any steps of the algorithms. 
+	\item Evaluating $\propC{\vec{\alpha}_t}{\vec{\alpha}_{t -1}}$ and $\propC{\vec{\alpha}_t}{\vec{\alpha}_{t + 1}}$ is cheap and can be done in closed form.
+	\item The second example in \cite{fearnhead10} is close to the model here though with $n = 1$ and $p = 2$. 
+\end{itemize}
+
+\subsubsection*{Forward filter (algorithm~\ref{alg:forward}}
+Let $\normalC{\cdot}{\cdot}{\cdot}$ denote a (multivariate) normal distribution. Then we can select the proposal density as:
+\begin{equation}
+	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} = %
+		\normalC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}}{\mat{Q}}
+\end{equation}%
+%
+which we can sample from in $\bigO{p^2}$ time. Another option is to use normal approximation of $\vec{y}_t$:
+
+\begin{equation}\begin{array}{cl}
+	\vec{y}_t & \simeq  \optorC{\widetilde{g}}{\cdot}{\vec{\alpha}_t, \partic{\vec{\alpha}}{t-1}{j}} \\ &= %
+		\normalC{
+			\mat{X}_t\vec{\vec{\alpha}_t}
+		}{ % end of arg1 \normalC
+			\mat{X}_t\partic{\vec{\alpha}}{t-1}{j} - 
+			\optorC{g''}{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}
+			\optorC{g'}{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}			
+		}{ % end of arg2 \normalC
+			- \optorC{g''}{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}
+		}
+\end{array}\end{equation}
+%
+%
+to get:
+
+\begin{equation}
+	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} \propto %
+		\normalC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}}{\mat{Q}}
+		\optorC{\widetilde{g}}{\vec{y}_t}{\vec{\alpha}_t, \partic{\vec{\alpha}}{t-1}{j}}
+\end{equation}
+%
+where we can analytically integrate out $\widetilde{g}$. This is similar to the second order random walk example in \cite{fearnhead10}. The downside is an $\bigO{np^2}$ computational cost. Next, we have the re-sampling weights. A simple solution is not to use an auxiliary particle filter and set:
+
+\begin{equation}
+	\partic{\beta}{t}{j} \propto \partic{w}{t-1}{j}
+\end{equation}
+%
+which is an $\bigO{1}$ operation. Another options is to set:
+
+\begin{equation}
+	\partic{\beta}{t}{j} \propto  \optorC{g}{\vec{y}_t}{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}\partic{w}{t-1}{j}
+\end{equation}
+%
+%
+which is an $\bigO{np}$ operation.
+
+The computational cost of re-weighting the particles in~\eqref{eqn:forwardWeight} depend on the above choices. It is at least an $\bigO{np}$ operation due to $\propC{\vec{y}_t}{\partic{\vec{\alpha}}{t}{i}}$.
+
+\subsubsection*{Backward filter (algorithm~\ref{alg:backward}}
+We need to specify $\gamma_t\Lparen{\vec{\alpha}_t}$. \citet[page 69 and 70]{briers10} provides recommendation on the selection. This leads to:
+\begin{equation}\begin{matrix}
+	\gamma_t\Lparen{\vec{\alpha}_t} =
+		\normalC{\vec{\alpha}_t}{\vec{a}_0}{\mat{P}_t} \\
+%
+	\mat{P}_t = \left\{
+		\begin{matrix} \mat{Q}_0 & t = 0 \\ \mat{F}\mat{P}_{t - 1}\mat{F}^\top + \mat{Q} & t > 0   \end{matrix} \right.
+\end{matrix}\end{equation}
+
+The considerations regarding $\IDAproxC{\vec{\alpha}_t}{\vec{y}_t, \particB{\vec{\alpha}}{t + 1}{k}}$ and $\particB{\beta}{t}{k}$ are similar to those of the forward filter. We can select the importance density as:
+
+\begin{equation}\begin{array}{cl}
+	\IDAproxC{\vec{\alpha}_t}{\vec{y}_t, \particB{\vec{\alpha}}{t + 1}{k}}  &= %
+		\propC{\particB{\vec{\alpha}}{t + 1}{k}}{\vec{\alpha}_t}
+		\frac{\gamma_t\Lparen{\vec{\alpha}_t}}{\gamma_{t + 1}\Lparen{\particB{\vec{\alpha}}{t + 1}{k}}} \\
+	& = \normalC{\particB{\vec{\alpha}}{t + 1}{k}}{\vec{\alpha}_t}{\mat{Q}}
+		\frac{
+			\normalC{\vec{\alpha}_t}{\vec{a}_0}{\mat{P}_t}
+		}{ % ednd \frac arg1 
+			\normalC{\particB{\vec{\alpha}}{t + 1}{k}}{\vec{a}_0}{\mat{P}_{t + 1}}
+		}
+\end{array}\end{equation}
+
+We can add a normal approximation of $\propC{\vec{y}_t}{\vec{\alpha}_t}$ factor as with the forward filter. This again leads to an $\bigO{np^2}$ computational cost. The considerations regarding the re-sampling weights, $\particB{\beta}{t}{k}$, are very close to those of $\partic{\beta}{t}{k}$.
+
+\subsubsection*{Combining / smoothing (algorithm~\ref{alg:ONsmoother}}
+We need to specify the importance density $\IDAproxC{\cdot}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}}$ (see \citet[page 453] {fearnhead10}). We can select:
+
+\begin{equation}
+	\IDAproxC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}} \propto %
+%
+	\propC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t - 1}{j}}
+	\frac{
+		\propC{\particB{\vec{\alpha}}{t + 1}{k}}{\vec{\alpha}_t}
+	}{
+		\gamma_{t + 1}\Lparen{\particB{\vec{\alpha}}{t + 1}{k}}
+	}
+\end{equation}
+
+Again, we can add a normal approximation of the $\propC{\vec{y}_t}{\vec{\alpha}_t}$ factor.
+
+\subsubsection*{Conclusion}
+Add the least, all methods will end up being $\bigO{np}$ due to computation of the weights in equation~\eqref{eqn:combineWeight},~\eqref{eqn:forwardWeight} and~\eqref{eqn:backwardWeight} as we end up with $2N + N_s$ evaluations of $\propC{\vec{y}_t}{\vec{\alpha}_t}$.
+
+We can add (crude) estimate for the $\propC{\vec{y}_t}{\vec{\alpha}_{t - 1}}$ and $\propC{\vec{y}_t}{\vec{\alpha}_{t + 1}}$ at  $2N$ evaluations of  $\propC{\vec{y}_t}{\vec{\alpha}_t}$.
+
+We can make a normal approximation of  $\propC{\vec{y}_t}{\vec{\alpha}_t}$ in any of the importance densities but this will give at an $\bigO{np^2}$ cost per particle.
+
+% TODO: Change some P's to f's and g's?
+
+\begin{algorithm}
+\caption{$\bigO{N}$ two filter smoother using the method in \cite{fearnhead10}.}\label{alg:ONsmoother}
+\begin{algorithmic}[1]\raggedright
+\INPUT
+\Statex $\mat{Q},\mat{Q}_0,\vec{a}_0,\mat{X}_1,\dots,\mat{X}_d,\vec{y}_1,\dots,\vec{y}_d,R_1,\dots,R_d,\mat{S}$
+%
+\Statex Let $\partic{\vec{\alpha}}{t}{i}$ denote particle $i$ at time $t$, $\partic{w}{t}{i}$ denote the weight of the particle and $\partic{\beta}{t}{i}$ denote the re-sampling weight.
+%
+\Statex Importance density which optimally is: 
+\Statex \begin{equation}
+	\IDAproxC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}} = 
+%
+	\propC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}}
+\end{equation}
+%
+\Procedure{Filter forward}{}
+\State Run a forward particle filter to get a particle swarm % 
+	$\Lbrace{\partic{\vec{\alpha}}{t}{j}, \partic{w}{t}{j}, \partic{\beta}{t}{j}}_{j=1,\dots,N}$ %
+	approximating $\propC{\vec{\alpha}_t}{\vec{y}_{1:t}}$ for $t = 0, 1, \dots, d$. See algorithm~\ref{alg:forward}.
+\EndProcedure
+%
+\Procedure{Filter backwards}{}
+\State Run a similar backward filter to get %
+	$\Lbrace{\particB{\vec{\alpha}}{t}{k}, \particB{w}{t}{k}, \particB{\beta}{t}{k}}_{k=1,\dots,N}$  %
+	approximating $\propC{\vec{\alpha}_t}{\vec{y}_{t:d}}$ for $t = d, d-1, \dots , 2$. See algorithm~\ref{alg:backward}.
+\EndProcedure
+% 
+\Procedure{Smooth (combine)}{}
+\For{$t=1,\dots, d - 1$}
+\StateXX \emph{Re-sample:}
+\State $i=1,2,\dots,N_s$ pairs of $\Lparen{j_i, k_i}$ where each component is independently sampled using re-sampling weights $\partic{\beta}{t}{j}$ and $\particB{\beta}{t}{k}$
+%
+\StateXX \emph{Propagate:} 
+\State Sample particles $\particS{\vec{\alpha}}{t}{i}$ from importance density %
+	$\IDAproxC{\cdot}{\partic{\vec{\alpha}}{t-1}{j_i},\vec{y}_t, \particB{\vec{\alpha}}{t + 1}{k_i}}$
+.%
+\StateXX \emph{Re-weight:}
+\State Assign each particle weights:
+\StateXX \begin{equation}\label{eqn:combineWeight}
+ \particS{w}{t}{i} \propto \frac{
+ 	\propC{\particS{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j_i}}
+ 	\propC{\vec{y}_t}{\particS{\vec{\alpha}}{t}{i}}
+ 	\propC{\particS{\vec{\alpha}}{t}{i}}{\particB{\vec{\alpha}}{t + 1}{k_i}}
+ 	\partic{w}{t - 1}{j_i}\particB{w}{t + 1}{k_i}
+ 	}{ % end of first argument of \frac
+ 	\IDAproxC{\particS{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t-1}{j_i},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k_i}}
+ 	\partic{\beta}{t}{j_i}\particB{\beta}{t}{k_i}\gamma_{t +1}\Lparen{\particB{\vec{\alpha}}{t+1}{k_i}}
+ 	} % end of frac
+\end{equation}
+\EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+
+
+\begin{algorithm}
+\caption{Forward filter due to \cite{pitt99}. You can compare with \citet[page 20 and 25]{doucet09}. The version and notation below is from \citet[page 449]{fearnhead10}.}\label{alg:forward}
+\begin{algorithmic}[1]\raggedright
+\INPUT
+\State Importance density and specification of weights are optimally given by: 
+\Statex \begin{equation}\begin{matrix}
+	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} = \propC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} \\
+	\partic{\beta}{t}{j} \propto \propC{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}\partic{w}{t-1}{j}
+\end{matrix}\end{equation}
+\For{$t=1,\dots, d$}
+\Procedure{Resample}{}
+\State Compute re-sampling weights $\partic{\beta}{t}{j}$ and re-sample according to $\partic{\beta}{t}{j}$ to get indices $j_1,\dots j_N$.
+\EndProcedure
+%
+\Procedure{Propagate}{}
+\State Sample new particles $\partic{\vec{\alpha}}{t}{i}$ using importance density $\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j_i}, \vec{y}_t}$.
+\EndProcedure
+%
+\Procedure{Re-weight}{}
+\State Re-weight particles using:
+\StateX \begin{equation}\label{eqn:forwardWeight}
+	\partic{w}{t}{i} \propto \frac{
+		\propC{\vec{y}_t}{\partic{\vec{\alpha}}{t}{i}}
+		\propC{\partic{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t-1}{j_i}}
+		\partic{w}{t-1}{j_i}
+	}{ % \frag arg1 end
+		\IDC{\partic{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t-1}{j_i}, \vec{y}_t}
+		\partic{\beta}{t}{j_i}
+	}
+\end{equation}
+\EndProcedure
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+
+
+\begin{algorithm}
+\caption{Backwards filter.}\label{alg:backward}
+\begin{algorithmic}[1]\raggedright
+\INPUT
+\Statex A backwards filter distribution approximation:
+\begin{equation}
+	\propAproxC{\vec{\alpha}_t}{\vec{y}_{t:T}} \propto \gamma_t \Lparen{\vec{\alpha}_t}\propC{\vec{y}_{t:T}}{\vec{\alpha}_t}
+\end{equation} 
+\Statex with an  artificial prior distribution $\gamma_t \Lparen{\vec{\alpha}_t}$. This is introduced as $\propC{\vec{y}_{t:T}}{\vec{\alpha}_t}$ is not a density function in $\vec{\alpha}_t$.
+\Statex Importance density and specification of weights {\footnotesize (\citet[page 451  -- maybe look in the example in the appendix]{fearnhead10})}:
+\Statex\begin{equation}
+	\IDAproxC{\vec{\alpha}_t}{\vec{y}_t, \particB{\vec{\alpha}}{t + 1}{k}}\particB{\beta}{t}{k} \approx %
+		\gamma_t\Lparen{\vec{\alpha}_t}
+		\propC{\vec{y}_t}{\vec{\alpha}_t}
+		\propC{\particB{\vec{\alpha}}{t + 1}{k}}{\vec{\alpha}_t}
+		\frac{\particB{w}{t + 1}{k}}{\gamma_{t + 1}\Lparen{\particB{\vec{\alpha}}{t + 1}{k}}}
+\end{equation}
+\Statex where I figure that we want {\footnotesize (the first follows from \citet[page 74]{briers10})}:
+\Statex\begin{equation}\begin{matrix}
+	\IDAproxC{\vec{\alpha}_t}{\vec{y}_t, \particB{\vec{\alpha}}{t + 1}{k}} \propto %
+		\propC{\vec{y}_t}{\vec{\alpha}_t}
+		\propC{\particB{\vec{\alpha}}{t + 1}{k}}{\vec{\alpha}_t}
+		\frac{\gamma_t\Lparen{\vec{\alpha}_t}}{\gamma_{t + 1}\Lparen{\particB{\vec{\alpha}}{t + 1}{k}}} \\
+	\particB{\beta}{t}{k} \propto %
+		 \propAproxC{\vec{y}_t}{\particB{\vec{\alpha}}{t + 1}{k}}\particB{w}{t + 1}{k}
+\end{matrix}\end{equation}
+\For{$t=d - 1,\dots, 1$}
+\Procedure{Resample}{}
+\State Compute re-sampling weights $\particB{\beta}{t}{k}$ and re-sample according to $\particB{\beta}{t}{k}$ to get indices $k_1,\dots k_N$.
+\EndProcedure
+%
+\Procedure{Propagate}{}
+\State Sample new particles $\partic{\vec{\alpha}}{t}{i}$ using importance density $\IDAproxC{\vec{\alpha}_t}{\particB{\vec{\alpha}}{t + 1}{k_i}, \vec{y}_t}$.
+\EndProcedure
+%
+\Procedure{Re-weight}{}
+\State Re-weight particles using:
+\StateX \begin{equation}\label{eqn:backwardWeight}
+	\particB{w}{t}{i} \propto \frac{
+		\propC{\vec{y}_t}{\partic{\vec{\alpha}}{t}{i}}
+		\propC{\partic{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t + 1}{k_i}}
+		\partic{w}{t + 1}{k_i}
+	}{ % \frag arg1 end
+		\IDC{\partic{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t + 1}{k_i}, \vec{y}_t}
+		\partic{\beta}{t}{k_i}
+	}
+\end{equation}
+\EndProcedure
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Literature review}
+\subsubsection*{\cite{doucet09}}
+\begin{itemize}
+	\item Do re-sample and likely use \emph{Systematic Resampling} from \cite{kitagawa96}. If you use it, then read up on \cite{douc05}.
+	\item Use threshold on \emph{effective sample size} to deside when to re-sample.
+	\item Use \emph{Auxiliary Particle Filtering}. That is, use the information from the $t + 1$ outcome when re-computing the weights (\textit{sample before re-sampling}). See \cite{carpenter99}, \cite{pitt01} and \cite{pitt99}.
+	\item Likely use MCMC Moves (re-sample moves) or block sampling limit degeneracy problem. See text for references.
+	\item Rao-Blackwellised Particle Filtering: always exploit when you can have closed form solutions like when parts of the problem is (conditional) multivariate Gaussian. See the text and \cite{andrieu02} for examples. 
+	\item Two filter smother is likely the way to go. It may be better `\textit{the support of the smoothed estimate differs substantially from that of the filtering estimate}`. The cost is $\bigO{N^2T}$ but can be reduced to $\bigO{NT}$ using the methods in \cite{fearnhead10} and \cite{briers05}.
+\end{itemize}
+
+\subsubsection*{\cite{andrieu02}}
+Covers a Rao–Blackwellized particle filtering where the state is linear and Gaussian and observations are (potentially) non-linear and non-Gaussian. 
+
+\begin{itemize}
+	\item The filter exploits closed form solutions from Gaussian part.
+	\item It is not an auxiliary particle filter so w likely want to change this.
+	\item Has a low memory requirement as we do not need to store a smooth covariance matrix for each particle.
+	\item Mentions a MCMC move approach for sampling to deal with degeneracy. See \cite{de97}.
+\end{itemize}
+
+\subsubsection*{\cite{fearnhead10}}
+Covers a two filter smoother:
+\begin{itemize}
+	\item Run an \emph{auxiliary particle filtering} forward and backward filter.
+	\item The backwards filter uses samples from `\textit{marginal smoothing densities directl than reweight those drawn from another distribution}`. This solves egeneracy problems  like those that ocours for a second order random walk. They use that the forward and backwards sets of particle clouds (or swarms) are independent. Then we sample in the combination step using particles from $t-1$ from the forward filter and particles from $t + 1$ from the backwards filter. The computational cost in $\bigO{N^2T}$.
+	\item Get an $\bigO{NT}$ filter by sampling a forward particle and backward particle pair at each time $t$ while combining.
+	\item Shows examples which are fully or partially linear Gaussian models. Derivations are in the appendix.
+	\item Points out in the discussion that we likely want more particles in smoothing/combination step than in the forward and backwards filters.
+\end{itemize}
+
+
+
+\iffalse
+Our model is:
+
+\begin{equation}
+\begin{array}{ll}
+ 	y_{it} \sim \propC{y_{it}}{\theta_{it}} & \\
+%
+ 	\vec{\theta}_{t} = \mat{X}_t\vec{\alpha}_t + \vec{\epsilon}_t & 
+  		\vec{\epsilon}_t \sim N\Lparen{\vec{0}, \mat{G}_t} \\
+% 
+ 	\vec{\alpha}_t = \mat{F}\vec{\alpha}_{t - 1} + \mat{R}\vec{\eta}_t &
+ 		\vec{\eta}_t \sim N\Lparen{\vec{0}, \mat{Q}} \\
+%
+	&	\vec{\alpha}_0 \sim N\Lparen{\vec{a}_0, \mat{Q}_0}
+ \end{array}
+\end{equation}
+
+where $y_{it}$ and $y_{jt}$ with $i\neq j$ are conditionally independent given $\theta_{it}$ and $\theta_{jt}$. This is the setup in \cite{andrieu02}. For each $t$ we have risk set given by $R_t \subseteq \Lbrace{1,2,\dots,n}$.
+
+Next, we define:
+
+\begin{equation}
+\begin{matrix}
+\KF{\vec{a}}{t}{s} = \expecC{\vec{\alpha}_t}{\vec{\theta}_{s}} \\
+\KF{\mat{P}}{t}{s} = \varpC{\vec{\alpha}_t}{\vec{\theta}_{s}} \\
+%
+\KF{\vec{t}}{t}{s} = \expecC{\vec{\theta}_t}{\vec{\theta}_{s}} \\
+\KF{\mat{S}}{t}{s} = \varpC{\vec{\alpha}_t}{\vec{\theta}_{s}}
+\end{matrix}
+\end{equation}
+
+where it follows from Standard Kalman filtering that: 
+\begin{equation}
+\begin{matrix}
+\KF{\vec{a}}{t}{1:(t - 1)} = \mat{F}\KF{\vec{a}}{t - 1}{1:(t - 1)} \\
+\KF{\mat{P}}{t}{1:(t - 1)} = \mat{F}\KF{\mat{P}}{t - 1}{1:(t - 1)}\mat{F}^\top + \mat{Q} \\
+\KF{\vec{\theta}}{t}{1:(t - 1)} = \mat{X}_t \KF{\vec{a}}{t}{1:(t - 1)} \\
+\KF{\mat{S}}{t}{1:(t - 1)} = \mat{X}_t \KF{\mat{P}}{t}{1:(t - 1)} \mat{X}_t^\top + \mat{G}_t \\
+%
+\KF{\vec{a}}{t}{1:t} = \KF{\vec{a}}{t}{1:(t - 1)} + \KF{\mat{P}}{t}{1:(t - 1)} \mat{X}_t^\top %
+	\KF{\mat{S}}{t}{1:(t - 1)}^{-1}\Lparen{ \vec{\theta}_t - \KF{\vec{\theta}}{t}{1:(t - 1)} } \\
+\KF{\mat{P}}{t}{1:t} = \KF{\mat{P}}{t}{1:(t - 1)} - \KF{\mat{P}}{t}{1:(t - 1)} \mat{X}_t^\top \KF{\mat{S}}{t}{1:(t - 1)}^{-1} %
+	\mat{X}_t\KF{\mat{P}}{t}{1:(t - 1)}
+\end{matrix}
+\end{equation}
+
+We will use the forward filter in \cite{andrieu02} in we add superscripts fot he particle index and the above formulas become:
+\fi
+
+\newpage
+\bibliographystyle{plainnat}
+\bibliography{mybib}
+
+\end{document} 

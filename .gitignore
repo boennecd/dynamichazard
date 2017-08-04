@@ -41,6 +41,12 @@ vignettes/.jss/HDs/*
 !vignettes/.jss/HDs/create_surv_table.sql
 !vignettes/.jss/HDs/sandbox.Rmd
 
+# Ignore everything
+.sandbox/Particle_filtering/*
+# But not these files...
+!.sandbox/Particle_filtering/Particle_filtering.pdf
+!.sandbox/Particle_filtering/Particle_filtering.tex
+
 sandbox/*
 **/Rprof.out
 **/Sweave.sty
