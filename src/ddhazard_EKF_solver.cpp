@@ -6,7 +6,7 @@
 // worker class for parallel computation
 template<typename T>
 EKF_filter_worker<T>::EKF_filter_worker(
-  problem_data_EKF &p_data,
+  ddhazard_data_EKF &p_data,
   arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
   const arma::vec &i_a_t_, const bool compute_z_and_H_,
   const int i_start_, const int bin_number_,
@@ -190,7 +190,7 @@ EKF_filter_worker_calculations EKF_exp_clip_w_jump_cals::cal(
 
 
 template<typename T>
-EKF_solver<T>::EKF_solver(problem_data_EKF &p_, const std::string model_):
+EKF_solver<T>::EKF_solver(ddhazard_data_EKF &p_, const std::string model_):
   p_dat(p_), model(model_),
   max_threads((p_.n_threads > 1) ? p_.n_threads - 1 : 1)
   {};

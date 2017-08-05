@@ -89,11 +89,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   // Intialize the solver for the E-step
-  std::unique_ptr<problem_data> p_data;
+  std::unique_ptr<ddhazard_data> p_data;
   std::unique_ptr<Solver> solver;
 
   if(method == "EKF"){
-    p_data.reset(new problem_data_EKF(
+    p_data.reset(new ddhazard_data_EKF(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -105,19 +105,19 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       denom_term, use_pinv, criteria, EKF_batch_size));
     if(model == "logit"){
       solver.reset(new EKF_solver<EKF_logit_cals>(
-          static_cast<problem_data_EKF &>(*p_data.get()), model));
+          static_cast<ddhazard_data_EKF &>(*p_data.get()), model));
 
     } else if (model == "exp_bin"){
       solver.reset(new EKF_solver<EKF_exp_bin_cals>(
-          static_cast<problem_data_EKF &>(*p_data.get()), model));
+          static_cast<ddhazard_data_EKF &>(*p_data.get()), model));
 
     } else if(model == "exp_clip_time"){
       solver.reset(new EKF_solver<EKF_exp_clip_cals>(
-          static_cast<problem_data_EKF &>(*p_data.get()), model));
+          static_cast<ddhazard_data_EKF &>(*p_data.get()), model));
 
     } else if(model == "exp_clip_time_w_jump"){
       solver.reset(new EKF_solver<EKF_exp_clip_w_jump_cals>(
-          static_cast<problem_data_EKF &>(*p_data.get()), model));
+          static_cast<ddhazard_data_EKF &>(*p_data.get()), model));
 
     } else
       Rcpp::stop("EKF is not implemented for model '" + model  +"'");
@@ -126,7 +126,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(model != "logit" &&
        !is_exponential_model(model))
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
-    p_data.reset(new problem_data(
+    p_data.reset(new ddhazard_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -155,7 +155,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     if(model != "logit")
       Rcpp::stop("UKF is not implemented for model '" + model  +"'");
 
-    p_data.reset(new problem_data(
+    p_data.reset(new ddhazard_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -172,7 +172,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     solver.reset(new UKF_solver_Org(*p_data.get(), kappa));
 
   } else if (method == "SMA"){
-    p_data.reset(new problem_data(
+    p_data.reset(new ddhazard_data(
         n_fixed_terms_in_state_vec,
         X, fixed_terms, tstart, tstop, is_event_in_bin,
         a_0, fixed_parems_start, Q_0, Q,
@@ -191,7 +191,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
 
   } else if (method == "GMA"){
-    p_data.reset(new problem_data(
+    p_data.reset(new ddhazard_data(
         n_fixed_terms_in_state_vec,
         X, fixed_terms, tstart, tstop, is_event_in_bin,
         a_0, fixed_parems_start, Q_0, Q,

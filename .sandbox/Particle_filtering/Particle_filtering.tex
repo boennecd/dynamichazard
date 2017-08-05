@@ -535,7 +535,7 @@ Covers a Rao–Blackwellized particle filtering where the state is linear and Ga
 Covers a two filter smoother:
 \begin{itemize}
 	\item Run an \emph{auxiliary particle filtering} forward and backward filter.
-	\item The backwards filter uses samples from `\textit{marginal smoothing densities directl than reweight those drawn from another distribution}`. This solves egeneracy problems  like those that ocours for a second order random walk. They use that the forward and backwards sets of particle clouds (or swarms) are independent. Then we sample in the combination step using particles from $t-1$ from the forward filter and particles from $t + 1$ from the backwards filter. The computational cost in $\bigO{N^2T}$.
+	\item The backwards filter uses samples from `\textit{marginal smoothing densities direct than re-weight those drawn from another distribution}`. This solves degeneracy problems  like those that occurs for a second order random walk. They use that the forward and backwards sets of particle clouds (or swarms) are independent. Then we sample in the combination step using particles from $t-1$ from the forward filter and particles from $t + 1$ from the backwards filter. The computational cost in $\bigO{N^2T}$.
 	\item Get an $\bigO{NT}$ filter by sampling a forward particle and backward particle pair at each time $t$ while combining.
 	\item Shows examples which are fully or partially linear Gaussian models. Derivations are in the appendix.
 	\item Points out in the discussion that we likely want more particles in smoothing/combination step than in the forward and backwards filters.

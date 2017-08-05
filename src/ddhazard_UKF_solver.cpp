@@ -14,7 +14,7 @@
 // observational equation. Hence, it does not scale well in the number of
 // observation per bin. The code is kept to test against
 
-UKF_solver_Org::UKF_solver_Org(problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_):
+UKF_solver_Org::UKF_solver_Org(ddhazard_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_):
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
   k(!k_.isNull() ?
@@ -116,7 +116,7 @@ void UKF_solver_Org::solve(){
 // riemannian manifolds." (2016).
 template<class T>
 UKF_solver_New<T>::UKF_solver_New(
-  problem_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
+  ddhazard_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
   Rcpp::Nullable<Rcpp::NumericVector> &alpha,
   Rcpp::Nullable<Rcpp::NumericVector> &beta):
   p_dat(p_),
