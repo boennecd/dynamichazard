@@ -5,9 +5,6 @@
 #include <future>
 
 class problem_data {
-};
-
-class ddhazard_data : problem_data {
 public:
   // Constants
   const bool any_dynamic;         // Any time-varying coefficients?
@@ -35,10 +32,8 @@ public:
 
   arma::mat X;
   arma::mat fixed_terms; // used if fixed terms are estimated in the M-step
-  const arma::vec &weights;
 
   const std::vector<double> I_len;
-  const double event_eps; // something small
 
   const int n_threads;
 
@@ -48,6 +43,79 @@ public:
 
   const double min_start;
 
+  // non-constants
+  arma::mat &Q;
+  arma::mat &Q_0;
+
+  problem_data(const int n_fixed_terms_in_state_vec_,
+               arma::mat &X_,
+               arma::mat &fixed_terms_,
+               const arma::vec &tstart_,
+               const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
+               const arma::colvec &a_0,
+               arma::mat &Q_0_,
+               arma::mat &Q_,
+               const Rcpp::List &risk_obj,
+               const arma::mat &F__,
+               const int n_max,
+               const int order_,
+               const int n_threads_):
+    any_dynamic(X_.n_elem > 0),
+    any_fixed_in_E_step(n_fixed_terms_in_state_vec_ > 0),
+    any_fixed_in_M_step(fixed_terms_.n_elem > 0),
+
+    d(Rcpp::as<int>(risk_obj["d"])),
+    risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
+
+    n_params_state_vec_fixed(n_fixed_terms_in_state_vec_),
+    n_params_state_vec_varying((a_0.size() - n_fixed_terms_in_state_vec_) / order_),
+    n_params_state_vec(n_params_state_vec_fixed + n_params_state_vec_varying),
+    space_dim_in_arrays(n_params_state_vec_varying * order_ + n_params_state_vec_fixed),
+
+    // Seems like there is no empty span for arma
+    // See: armadillo-code/include/armadillo_bits/span.hpp
+    //      and https://stackoverflow.com/q/38155952/5861244
+    // Thus, I decided to use const std::unique_ptr<const> and set it to
+    // nullptr when the span should not be used
+    span_current_cov(
+      (any_dynamic || any_fixed_in_E_step) ?
+        new arma::span(0, n_params_state_vec - 1) : nullptr),
+    span_current_cov_varying(
+      any_dynamic ?
+        new arma::span(0, n_params_state_vec_varying - 1) : nullptr),
+    span_fixed_params(
+      any_fixed_in_E_step ?
+        new arma::span(n_params_state_vec_varying, n_params_state_vec - 1) : nullptr),
+
+    F_(F__),
+    T_F_((any_dynamic || any_fixed_in_E_step) ? F_.t() : arma::mat()),
+
+    X(X_.begin(), X_.n_rows, X_.n_cols, false),
+    fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols, false),
+    I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
+
+    n_threads((n_threads_ > 0) ? n_threads_ : std::thread::hardware_concurrency()),
+
+    tstart(tstart_),
+    tstop(tstop_),
+    is_event_in_bin(is_event_in_bin_),
+    min_start(Rcpp::as<double>(risk_obj["min_start"])),
+
+    Q(Q_),
+    Q_0(Q_0_)
+  { }
+
+  problem_data & operator=(const problem_data&) = delete;
+  problem_data(const problem_data&) = delete;
+  problem_data() = delete;
+};
+
+class ddhazard_data : public problem_data {
+public:
+  // constants
+  const arma::vec &weights;
+
+  const double event_eps; // something small
   const double eps_fixed_parems;
   const int max_it_fixed_params;
 
@@ -61,10 +129,6 @@ public:
 
   // Declare non constants. Some are intialize
   arma::vec fixed_parems;
-
-  arma::mat &Q;
-  arma::mat &Q_0;
-
   arma::mat a_t_t_s;
   arma::mat a_t_less_s;
 
@@ -101,53 +165,23 @@ public:
                 const double denom_term_,
                 const bool use_pinv_,
                 const std::string criteria_):
-    any_dynamic(X_.n_elem > 0),
-    any_fixed_in_E_step(n_fixed_terms_in_state_vec_ > 0),
-    any_fixed_in_M_step(fixed_terms_.n_elem > 0),
-
-    d(Rcpp::as<int>(risk_obj["d"])),
-    risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
-
-    n_params_state_vec_fixed(n_fixed_terms_in_state_vec_),
-    n_params_state_vec_varying((a_0.size() - n_fixed_terms_in_state_vec_) / order_),
-    n_params_state_vec(n_params_state_vec_fixed + n_params_state_vec_varying),
-    space_dim_in_arrays(n_params_state_vec_varying * order_ + n_params_state_vec_fixed),
-
-    // Seems like there is no empty span for arma
-    // See: armadillo-code/include/armadillo_bits/span.hpp
-    //      and https://stackoverflow.com/q/38155952/5861244
-    // Thus, I decided to use const std::unique_ptr<const> and set it to
-    // nullptr when the span should not be used
-    span_current_cov(
-      (any_dynamic || any_fixed_in_E_step) ?
-        new arma::span(0, n_params_state_vec - 1) :
-        nullptr),
-    span_current_cov_varying(
-      any_dynamic ?
-        new arma::span(0, n_params_state_vec_varying - 1) :
-        nullptr),
-    span_fixed_params(
-      any_fixed_in_E_step ?
-        new arma::span(n_params_state_vec_varying, n_params_state_vec - 1) :
-        nullptr),
-
-    F_(F__),
-    T_F_((any_dynamic || any_fixed_in_E_step) ? F_.t() : arma::mat()),
-
-    X(X_.begin(), X_.n_rows, X_.n_cols, false),
-    fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols, false),
+    problem_data(
+      n_fixed_terms_in_state_vec_,
+      X_,
+      fixed_terms_,
+      tstart_,
+      tstop_, is_event_in_bin_,
+      a_0,
+      Q_0_,
+      Q_,
+      risk_obj,
+      F__,
+      n_max,
+      order_,
+      n_threads_),
     weights(weights_),
-    I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
 
     event_eps(d * std::numeric_limits<double>::epsilon()),
-
-    n_threads((n_threads_ > 0) ? n_threads_ : std::thread::hardware_concurrency()),
-
-    tstart(tstart_),
-    tstop(tstop_),
-    is_event_in_bin(is_event_in_bin_),
-    min_start(Rcpp::as<double>(risk_obj["min_start"])),
-
     eps_fixed_parems(eps_fixed_parems_),
     max_it_fixed_params(max_it_fixed_params_),
     denom_term(denom_term_),
@@ -157,11 +191,11 @@ public:
 
     use_pinv(use_pinv_),
     criteria(criteria_),
-
-    fixed_parems(fixed_parems_start),
-    Q(Q_),
-    Q_0(Q_0_)
+    fixed_parems(fixed_parems_start)
   {
+    if(debug)
+      Rcpp::Rcout << "Using " << n_threads << " threads" << std::endl;
+
     if(any_dynamic || any_fixed_in_E_step){
       a_t_t_s = arma::mat(space_dim_in_arrays, d + 1);
       a_t_less_s = arma::mat(space_dim_in_arrays, d);
@@ -173,9 +207,6 @@ public:
 
       lag_one_cov = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
     }
-
-    if(debug)
-      Rcpp::Rcout << "Using " << n_threads << " threads" << std::endl;
   }
 
   ddhazard_data & operator=(const ddhazard_data&) = delete;

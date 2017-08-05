@@ -61,3 +61,11 @@ get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_
     .Call(`_dynamichazard_get_risk_obj_rcpp`, start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model)
 }
 
+sample_indices <- function(probs) {
+    .Call(`_dynamichazard_sample_indices`, probs)
+}
+
+mvrnorm <- function(mu, sigma_chol) {
+    .Call(`_dynamichazard_mvrnorm`, mu, sigma_chol)
+}
+

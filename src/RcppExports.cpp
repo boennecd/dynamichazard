@@ -267,6 +267,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sample_indices
+arma::uvec sample_indices(arma::vec probs);
+RcppExport SEXP _dynamichazard_sample_indices(SEXP probsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type probs(probsSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_indices(probs));
+    return rcpp_result_gen;
+END_RCPP
+}
+// mvrnorm
+arma::vec mvrnorm(const arma::vec mu, const arma::mat sigma_chol);
+RcppExport SEXP _dynamichazard_mvrnorm(SEXP muSEXP, SEXP sigma_cholSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type sigma_chol(sigma_cholSEXP);
+    rcpp_result_gen = Rcpp::wrap(mvrnorm(mu, sigma_chol));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_chol_rank_one_update", (DL_FUNC) &_dynamichazard_chol_rank_one_update, 2},
@@ -284,6 +307,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 10},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
+    {"_dynamichazard_sample_indices", (DL_FUNC) &_dynamichazard_sample_indices, 1},
+    {"_dynamichazard_mvrnorm", (DL_FUNC) &_dynamichazard_mvrnorm, 2},
     {NULL, NULL, 0}
 };
 

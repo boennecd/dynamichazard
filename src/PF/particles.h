@@ -4,15 +4,17 @@
 #include "../arma_n_rcpp.h"
 
 struct particle {
-  particle *const parent;
+  const arma::vec state;
+  const particle *const parent;
   const int cloud_idx;
-  particle *const child;
-  arma::vec state;
+  const particle *const child;
   /* log-scale */
   double log_weight;
   double log_resampling_weight;
 
-  particle(particle *parent, const int cloud_idx, particle *child = nullptr);
+  particle(
+    const arma::vec state, const particle *parent,
+    const int cloud_idx, const particle *child = nullptr);
 };
 
 class cloud {
@@ -22,7 +24,8 @@ class cloud {
   std::vector<particle> particles;
 
 public:
-  particle New_particle(particle *parent, particle *child = nullptr);
+  particle New_particle(
+      arma::vec state, const particle *parent, const particle *child = nullptr);
   iterator begin();
   iterator end();
   particle operator[](size_type pos);

@@ -10,7 +10,7 @@ else
 	BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
-SOURCES_CPP = RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp LAPACK_BLAS_wrapper.cpp arma_utils.cpp ddhazard_SMA_solver.cpp ddhazard_GMA_solver.cpp parallel_glm.cpp thread_pool.cpp PF/particles.cpp
+SOURCES_CPP = RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp LAPACK_BLAS_wrapper.cpp arma_utils.cpp ddhazard_SMA_solver.cpp ddhazard_GMA_solver.cpp parallel_glm.cpp thread_pool.cpp PF/particles.cpp sample_funcs.cpp
 SOURCES_F = biglm/boundedQRf.f dchur.f
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o) $(SOURCES_F:.f=.o)
@@ -24,9 +24,6 @@ else
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS_USE) $(FLIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS) $(SHLIB_OPENMP_CXXFLAGS)
 endif
 
-DD_DEPS = arma_n_rcpp.h problem_data.h ddhazard.h
-BIGGLM_DEPS = arma_n_rcpp.h bigglm_wrapper.h
-
 ifeq "$(wildcard $(OPEN_BLAS_DIR))" ""
 all: $(SHLIB)
 		@echo "Did not find $(OPEN_BLAS_DIR) and will compile with BLAS used by R"
@@ -34,21 +31,3 @@ else
 all: $(SHLIB)
 		@echo "Found $(OPEN_BLAS_DIR) and will compile with openBlas"
 endif
-
-loglike.o: arma_n_rcpp.h loglike.cpp
-
-Cdqrls_wrapper.o: $(BIGGLM_DEPS) Cdqrls_wrapper.cpp
-
-bigglm_wrapper.o: $(BIGGLM_DEPS) bigglm_wrapper.cpp
-
-ddhazard.o: $(DD_DEPS) $(BIGGLM_DEPS) thread_pool.h estimate_fixed_effects_M_step.h ddhazard.cpp
-
-ddhazard_EKF_solver.o: $(DD_DEPS) exp_model_funcs.h thread_pool.h ddhazard_EKF_solver.cpp
-
-ddhazard_UKF_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_UKF_solver.cpp
-
-ddhazard_posterior_approx_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_posterior_approx_solver.cpp
-
-ddhazard_posterior_approx_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_posterior_approx_solver.cpp
-
-particles.o: arma_n_rcpp.h particles.h particles.cpp
