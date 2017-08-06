@@ -143,15 +143,17 @@
 \renewcommand{\vec}[1]{\bm{#1}}
 \newcommand{\vect}[1]{\widetilde{\vec{#1}}}
 \newcommand{\mat}[1]{\mathbf{#1}}
+\newcommand{\matt}[1]{\widetilde{\mat{#1}}}
 
 \newcommand{\Lbrace}[1]{\left\{ #1\right\}}
 \newcommand{\Lparen}[1]{\left( #1\right)}
 \newcommand{\Cond}[2]{\left. #1 \vphantom{#2} \right\vert  #2}
 
 % Operators
-\newcommand{\Prob}{P}
-\newcommand{\VAR}{Var}
-\newcommand{\E}{E}
+\newcommand{\Prob}{\text{P}}
+\newcommand{\VAR}{\text{Var}}
+\newcommand{\E}{\text{E}}
+\newcommand{\COV}{\text{E}}
 
 \newcommand{\optor}[2]{#1\Lparen{#2}}
 \newcommand{\optorC}[3]{\optor{#1}{\Cond{#2}{#3}}}
@@ -164,6 +166,9 @@
 
 \newcommand{\varp}[1]{\optor{\VAR}{#1}}
 \newcommand{\varpC}[2]{\optorC{\VAR}{#1}{#2}}
+
+\newcommand{\covp}[1]{\optor{\COV}{#1}}
+\newcommand{\covpC}[2]{\optorC{\COV}{#1}{#2}}
 
 \newcommand{\propAproxC}[2]{\optorC{\widetilde{p}}{#1}{#2}}
 
@@ -348,7 +353,9 @@ We can add (crude) estimate for the $\propC{\vec{y}_t}{\vec{\alpha}_{t - 1}}$ an
 
 We can make a normal approximation of  $\propC{\vec{y}_t}{\vec{\alpha}_t}$ in any of the importance densities but this will give at an $\bigO{np^2}$ cost per particle.
 
-% TODO: Change some P's to f's and g's?
+TODO: Change some P's to f's and g's?
+
+TODO: add what to do on time 0 and $d$.
 
 \begin{algorithm}
 \caption{$\bigO{N}$ two filter smoother using the method in \cite{fearnhead10}.}\label{alg:ONsmoother}
@@ -358,7 +365,7 @@ We can make a normal approximation of  $\propC{\vec{y}_t}{\vec{\alpha}_t}$ in an
 %
 \Statex Let $\partic{\vec{\alpha}}{t}{i}$ denote particle $i$ at time $t$, $\partic{w}{t}{i}$ denote the weight of the particle and $\partic{\beta}{t}{i}$ denote the re-sampling weight.
 %
-\Statex Importance density which optimally is: 
+\Statex Importance density which optimally is (see \citet[page 453]{fearnhead10}): 
 \Statex \begin{equation}
 	\IDAproxC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}} = 
 %
@@ -479,15 +486,17 @@ We can make a normal approximation of  $\propC{\vec{y}_t}{\vec{\alpha}_t}$ in an
 \EndProcedure
 %
 \Procedure{Re-weight}{}
-\State Re-weight particles using:
+\State Re-weight particles using {\footnotesize (see \citet[page 72]{briers10} and add the ratios of weights and re-sampling weights)}:
 \StateX \begin{equation}\label{eqn:backwardWeight}
 	\particB{w}{t}{i} \propto \frac{
 		\propC{\vec{y}_t}{\partic{\vec{\alpha}}{t}{i}}
 		\propC{\partic{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t + 1}{k_i}}
 		\partic{w}{t + 1}{k_i}
+		\gamma_t\Lparen{\partic{\vec{\alpha}}{t}{i}}
 	}{ % \frag arg1 end
 		\IDC{\partic{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t + 1}{k_i}, \vec{y}_t}
 		\partic{\beta}{t}{k_i}
+		\gamma_{t + 1}\Lparen{\partic{\vec{\alpha}}{t + 1}{k_i}}
 	}
 \end{equation}
 \EndProcedure
@@ -495,10 +504,38 @@ We can make a normal approximation of  $\propC{\vec{y}_t}{\vec{\alpha}_t}$ in an
 \end{algorithmic}
 \end{algorithm}
 
+\begin{equation}\begin{array}{c}
+	\matt{F} = \begin{pmatrix}
+		\mat{R} & \mat{0} & \mat{0} \\
+		\mat{F}\mat{R} &\mat{R} & \mat{0} \\
+		\mat{F}^2\mat{R} & \mat{F}\mat{R} & \mat{R}
+	\end{pmatrix} \\
+%
+	\matt{Q} = \matt{F}\begin{pmatrix}
+		\mat{Q} & \mat{0} & \mat{0} \\
+		\mat{0} & \mat{Q} &  \mat{0} \\
+		\mat{0} & \mat{0} & \mat{Q}
+	\end{pmatrix}\matt{F}^\top \\
+%
+	\vect{a}_0 = \begin{pmatrix}
+		\expec{\vec{a}_{t - 1}} \\ \mat{F}\expec{\vec{a}_{t - 1}} \\ \mat{F}^{2}\expec{\vec{a}_{t - 1}}
+	\end{pmatrix} = 
+	\begin{pmatrix}
+		\mat{F}^{-2}\expec{\vec{a}_{t + 1}} \\ \mat{F}^{-1}\expec{\vec{a}_{t + 1}} \\ \expec{\vec{a}_{t + 1}}
+	\end{pmatrix} \\
+%
+	\begin{pmatrix}
+		\vec{\alpha}_{t-1} \\ \vec{\alpha}_{t} \\ \vec{\alpha}_{t+1}
+	\end{pmatrix} \sim \normal{\vect{a}_0}{\matt{Q}}
+\end{array}\end{equation}
 
-
-
-
+\begin{equation}\begin{array}{cl}
+	\expecC{\vec{\alpha}_t}{\vec{\alpha}_{1:(t - 1)}, \vec{\alpha}_{(t + 1):d}} \hspace{-50pt}& \\ 
+%
+ 	& =  \Lparen{\vect{a}_0}_2 + \covp{\Lparen{\vect{a}_0}_2, \Lparen{\vect{a}_0}_{\{1, 3\}}} % 
+ 		\varp{\Lparen{\Lparen{\vect{a}_0}_{1, 3}}}^{-1} %
+ 		\Lparen{\begin{pmatrix} \vec{\alpha}_{t - 1} \\ \vec{\alpha}_{t + 1}\end{pmatrix} - \Lparen{\vect{a}_0}_{\{1, 3\}}}
+\end{array}\end{equation}
 
 
 

@@ -1,12 +1,16 @@
 #include "sample_funcs.h"
 #include <RcppArmadilloExtensions/sample.h>
 
+arma::uvec sample_indices(arma::vec probs){
+  return sample_indices(probs.n_elem, probs);
+}
+
 // Exported for tests
 // [[Rcpp::export]]
-arma::uvec sample_indices(arma::vec probs){
+arma::uvec sample_indices(int size, arma::vec probs){
   arma::uvec idx = arma::linspace<arma::uvec>(0, probs.n_elem - 1, probs.n_elem);
 
-  return Rcpp::RcppArmadillo::sample(idx, probs.n_elem, true, probs);
+  return Rcpp::RcppArmadillo::sample(idx, size, true, probs);
 }
 
 arma::mat mvrnorm(arma::uword n, const arma::vec mu, const arma::mat sigma_chol){

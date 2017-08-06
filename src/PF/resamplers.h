@@ -18,14 +18,13 @@
  set:
   beta_j = w_{j - 1}
 */
-template<typename densities>
+template<typename densities, bool is_forward>
 class None_AUX_resampler {
 public:
   inline static arma::uvec resampler(PF_data &data, cloud &PF_cloud, unsigned int t){
-
     /* Compute effective sample size (ESS) */
-    arma::vec weights(data.N_AUX);
-    double ESS;
+    arma::vec weights(data.N_fw_n_bw);
+    double ESS = 0;
     auto w = weights.begin();
     for(auto it = PF_cloud.begin(); it != PF_cloud.end(); ++it, ++w){
       /* No need to update weights */
@@ -40,7 +39,7 @@ public:
       return(sample_indices(weights));
     }
 
-    return(arma::linspace<arma::uvec>(0, data.N_AUX - 1, data.N_AUX));
+    return(arma::linspace<arma::uvec>(0, data.N_fw_n_bw - 1, data.N_fw_n_bw));
   }
 };
 

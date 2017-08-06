@@ -12,6 +12,16 @@
 arma::uvec sample_indices(arma::vec probs);
 
 /*
+  Samples with replacement using probs. Like running this R-code:
+    n = 100
+    probs <- runif(10); probs <- probs / sum(probs)
+    -1 + sample.int(length(probs), n, replace = TRUE, prob = probs)
+
+ See http://gallery.rcpp.org/articles/using-the-Rcpp-based-sample-implementation/
+ */
+arma::uvec sample_indices(int size, arma::vec probs);
+
+/*
   n draws from N(mu, Sigma). See
     http://gallery.rcpp.org/articles/simulate-multivariate-normal/
 */

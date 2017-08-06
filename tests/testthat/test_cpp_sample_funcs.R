@@ -13,7 +13,17 @@ test_that("sample_indices give the same as R with same seed", {
     R_res <- sample.int(length(probs), replace = TRUE, prob = probs)
 
     .Random.seed <<- x
-    cpp_res <- sample_indices(probs)
+    cpp_res <- sample_indices(length(probs), probs)
+
+    expect_equal(R_res - 1, drop(cpp_res))
+  }
+
+  for(i in 1:1e2){
+    x <- .Random.seed
+    R_res <- sample.int(length(probs), size = 2 * length(probs),replace = TRUE, prob = probs)
+
+    .Random.seed <<- x
+    cpp_res <- sample_indices(2 * length(probs), probs)
 
     expect_equal(R_res - 1, drop(cpp_res))
   }

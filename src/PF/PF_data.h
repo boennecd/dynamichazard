@@ -8,10 +8,16 @@
 class PF_data : public problem_data {
 public:
   /* Number of paprticles in forward and/or backward filter */
-  const arma::uword N_AUX;
+  const arma::uword N_fw_n_bw;
+  const arma::uword N_smooth;
   const double forward_backward_ESS_threshold;
 
+  const arma::vec &a_0;
+
   const arma::mat Q_chol;
+  const arma::mat Q_half_chol;
+  const arma::mat Q_chol_inv;
+  const arma::mat Q_half_chol_inv;
 
   PF_data(const int n_fixed_terms_in_state_vec_,
           arma::mat &X_,
@@ -28,7 +34,8 @@ public:
           const int n_threads_,
 
           // new arguments
-          const arma::uword N_AUX,
+          const arma::uword N_fw_n_bw,
+          const arma::uword N_smooth,
           const double forward_backward_ESS_threshold):
     problem_data(
       n_fixed_terms_in_state_vec_,
@@ -45,9 +52,16 @@ public:
       order_,
       n_threads_),
 
-      N_AUX(N_AUX),
+      N_fw_n_bw(N_fw_n_bw),
+      N_smooth(N_smooth),
       forward_backward_ESS_threshold(forward_backward_ESS_threshold),
-      Q_chol(arma::chol(Q))
+
+      a_0(a_0),
+
+      Q_chol(arma::chol(Q)),
+      Q_half_chol(Q_half_chol / sqrt(2.)),
+      Q_chol_inv(arma::inv(arma::trimatu(Q_chol))),
+      Q_half_chol_inv(arma::inv(arma::trimatu(Q_half_chol)))
     {}
 
   PF_data & operator=(const PF_data&) = delete;

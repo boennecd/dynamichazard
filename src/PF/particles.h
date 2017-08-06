@@ -20,15 +20,19 @@ struct particle {
 class cloud {
   using size_type = std::vector<particle>::size_type;
   using iterator = std::vector<particle>::iterator;
+  using reverse_iterator = std::vector<particle>::reverse_iterator;
 
   std::vector<particle> particles;
 
 public:
-  particle New_particle(
-      arma::vec state, const particle *parent, const particle *child = nullptr);
+  particle New_particle(arma::vec state, const particle *parent, const particle *child);
+  particle New_particle(arma::vec state, const particle *parent);
   iterator begin();
   iterator end();
-  particle operator[](size_type pos);
+  reverse_iterator rbegin();
+  reverse_iterator rend();
+  particle& operator[](size_type pos);
+  void reserve (size_type n);
 };
 
 #endif

@@ -1,72 +1,204 @@
 #ifndef AUX_PF_H
 #define AUX_PF_H
 
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 #include "PF_data.h"
+#include "particles.h"
+#include "../sample_funcs.h"
+
+/*
+  Auxiliary particle filter as described in:
+    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
+*/
 
 template<
-    template <typename> class T_resampler,
-    template <typename> class T_importance_dens,
-    class densities
+    template <typename, bool> class T_resampler,
+    template <typename, bool> class T_importance_dens,
+    class densities,
+    bool is_forward
 >
 class AUX_PF {
-  using resampler = T_resampler<densities>;
-  using importance_dens = T_importance_dens<densities>;
-
-  std::vector<cloud> clouds;
-  PF_data &data;
+  using resampler = T_resampler<densities, is_forward>;
+  using importance_dens = T_importance_dens<densities, is_forward>;
 
 public:
-  AUX_PF(PF_data &data): data(data) {}
+  static std::vector<cloud> compute(PF_data &data){
+    std::vector<cloud> clouds;
 
-  void compute(){
-    /* TODO: what to do at time 0? */
-    clouds.push_back(new cloud());
-    cloud *current_cloud = clouds.back();
+    /* TODO: what to do at time 0 or d + 1 */
+    if(is_forward){
+      clouds.push_back(importance_dens::sample_state_zero_n_set_weights(data));
+    } else {
+      clouds.push_back(importance_dens::sample_d_plus_1_state_n_set_weights(data));
+    }
 
-    for(unsigned int t = 0; t < data.d; ++t){
+    int t = is_forward ? 1 : data.d;
+    for(int iter = 1; iter <= data.d; ++iter){
       /* re-sample indicies */
-      arma::uvec resample_idx =
-        resampler::resampler(data, clouds.back(), t);
+      arma::uvec resample_idx = resampler::resampler(data, clouds.back(), t);
 
       /* sample new cloud */
-      cloud new_cloud =
-        importance_dens::sample(data, clouds.back(), resample_idx, t);
+      cloud new_cloud = importance_dens::sample(data, clouds.back(), resample_idx, t);
 
       /* update weights */
-      double max_Weigths =  std::numeric_limits<double>::min();
-      for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
-        double log_prob_y_given_state =
-          densities::log_prob_y_given_state(data, *it, t);
-        double log_prob_state_given_parent =
-          densities::log_prob_state_given_previous(data, *it, t);
-        double log_importance_dens =
-          importance_dens::log_importance_dens(data, *it, t);
+      {
+          densities dens_calc = densities();
+          double max_Weigths =  std::numeric_limits<double>::min();
+          for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+            double log_prob_y_given_state =
+              dens_calc.log_prob_y_given_state(data, *it, t);
+            double log_prob_state_given_parent =
+              is_forward ?
+              dens_calc.log_prob_state_given_previous(data, *it, t) :
+              dens_calc.log_prob_state_given_next(data, *it, t);
+            double log_importance_dens =
+              importance_dens::log_importance_dens(data, *it, t);
 
-        it->log_weight =
-          /* nominator */
-          (log_prob_y_given_state + log_prob_state_given_parent + it->parent->log_weight)
-          /* denoninator */
-          - (log_importance_dens + it->parent->log_resampling_weight);
+            it->log_weight =
+              /* nominator */
+              (log_prob_y_given_state + log_prob_state_given_parent + it->parent->log_weight)
+              /* denoninator */
+              - (log_importance_dens + it->parent->log_resampling_weight);
 
-        max_Weigths = std::max(it->log_weight, max_Weigths);
-      }
+            if(!is_forward){
+              it->log_weight += dens_calc.log_artificial_prior(data, *it, t);
+              it->log_weight -= dens_calc.log_artificial_prior(data, *it->parent, t + 1);
+            }
 
-      double norm_constant = 0;
-      for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
-        /* back transform weights */
-        it->log_weight = exp(it->log_weight - max_Weigths);
-        norm_constant += it->log_weight;
-      }
+            max_Weigths = MAX(it->log_weight, max_Weigths);
+          }
 
-      for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
-        /* Re-scale and take log */
-        it->log_weight = log(it->log_weight / norm_constant);
+          double norm_constant = 0;
+          for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+            /* back transform weights */
+            it->log_weight = exp(it->log_weight - max_Weigths);
+            norm_constant += it->log_weight;
+          }
+
+          for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+            /* Re-scale and take log */
+            it->log_weight = log(it->log_weight / norm_constant);
+          }
       }
 
       /* Add cloud  */
       clouds.push_back(std::move(new_cloud));
+
+      if(is_forward){
+        ++t;
+      } else
+        --t;
     }
+
+    return(clouds);
   }
 };
+
+/*
+  O(N) smoother from:
+    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
+*/
+
+template<
+  template <typename, bool> class T_resampler,
+  template <typename, bool> class T_importance_dens,
+  class densities
+>
+class PF_smoother {
+  using uword = arma::uword;
+  using forward_filter =
+    AUX_PF<T_resampler, T_importance_dens, densities, true>;
+  using backward_filter =
+    AUX_PF<T_resampler, T_importance_dens, densities, false>;
+  using importance_dens = T_importance_dens<densities, false /* arg should not matter*/>;
+
+  inline static arma::uvec sample_idx(PF_data &data, cloud &cl){
+    arma::vec fw_probs(data.N_fw_n_bw);
+
+    auto pr = fw_probs.begin();
+    auto part = cl.begin();
+    for(uword j = 0; j < data.N_fw_n_bw; ++j, ++pr, ++part)
+      *pr = exp(part->log_resampling_weight);
+
+    return sample_indices(data.N_smooth, fw_probs);
+  }
+
+public:
+  static std::vector<cloud> compute(PF_data &data){
+    std::vector<cloud> forward_clouds = forward_filter::compute(data);
+    std::vector<cloud> backward_clouds = backward_filter::compute(data);
+    std::vector<cloud> smoothed_clouds;
+
+    /* TODO: add time 0 and time d particles */
+    smoothed_clouds.push_back(backward_clouds.back());
+
+    auto fw_cloud = forward_clouds.begin();
+    fw_cloud += 1; // first index is time zero
+    auto bw_cloud = backward_clouds.rbegin();
+    bw_cloud += 2; // first index is time 1
+
+    for(int t = 2  /* note starting point */;
+        t < data.d /* note strictly less */; ++t, ++fw_cloud, ++bw_cloud){
+      /* re-sample */
+      arma::uvec fw_idx = sample_idx(data, *fw_cloud); // sample forward particles
+      arma::uvec bw_idx = sample_idx(data, *bw_cloud); // sample backward particle
+
+      /* sample states */
+      cloud new_cloud = importance_dens::sample_smooth(
+        data, *fw_cloud, fw_idx, *bw_cloud, bw_idx, t);
+
+      /* update weight */
+      {
+          densities dens_calc = densities();
+          double max_Weigths =  std::numeric_limits<double>::min();
+          for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+            double log_prob_y_given_state =
+              dens_calc.log_prob_y_given_state(data, *it, t);
+            double log_prob_state_given_previous =
+              dens_calc.log_prob_state_given_previous(data, *it, t);
+            double log_prob_state_given_next =
+              dens_calc.log_prob_state_given_next(data, *it, t);
+            double log_importance_dens_smooth =
+              importance_dens::log_importance_dens_smooth(data, *it, t);
+            double log_artificial_prior =
+              dens_calc.log_artificial_prior(data, *it->child /* note child */, t + 1 /* note t + 1 */);
+
+            it->log_weight =
+              /* nominator */
+              (log_prob_y_given_state + log_prob_state_given_previous + log_prob_state_given_next +
+                it->parent->log_weight + it->child->log_weight)
+              /* denoninator */
+              - (log_importance_dens_smooth + it->parent->log_resampling_weight +
+                  it->child->log_resampling_weight + log_artificial_prior);
+
+            max_Weigths = MAX(it->log_weight, max_Weigths);
+          }
+
+          double norm_constant = 0;
+          for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+            /* back transform weights */
+            it->log_weight = exp(it->log_weight - max_Weigths);
+            norm_constant += it->log_weight;
+          }
+
+          for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+            /* Re-scale and take log */
+            it->log_weight = log(it->log_weight / norm_constant);
+          }
+      }
+
+      /* Add cloud  */
+      smoothed_clouds.push_back(std::move(new_cloud));
+    }
+
+    // TODO: add cloud at time d
+    smoothed_clouds.push_back(forward_clouds.back());
+
+    return smoothed_clouds;
+  }
+};
+
+#undef MAX
 
 #endif
