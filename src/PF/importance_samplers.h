@@ -17,10 +17,8 @@
       Returns sample given past and next state
     log_importance_dens_smooth:
       Returns the log importance density for state smoothing
-    sample_state_zero_n_set_weights:
-      Returns a particle cloud for time zero with weights set
-    sample_d_plus_1_state_n_set_weights:
-      Returns a particle cloud for time d + 1 with weights set
+    sample_first_state_n_set_weights:
+      Returns a particle cloud for time zero or d + 1 with weights set
 */
 
 /*
@@ -66,7 +64,7 @@ public:
     ans.reserve(data.N_smooth);
 
     auto it_fw = fw_idx.begin();
-    auto it_bw = fw_idx.begin();
+    auto it_bw = bw_idx.begin();
     for(arma::uword i = 0; i < data.N_smooth; ++i, ++it_fw, ++it_bw){
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
@@ -84,30 +82,27 @@ public:
     return dmvnrm_log(p.state, 1/2 * (p.parent->state + p.child->state), data.Q_half_chol_inv);
   }
 
-  static cloud sample_state_zero_n_set_weights(const PF_data &data){
+  static cloud sample_first_state_n_set_weights(const PF_data &data){
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-    double log_weight = log(data.N_fw_n_bw);
-    for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
-      // Do not sample but set to a_0 with equal weight on each
-      ans.New_particle(data.a_0, nullptr);
-      ans[i].log_weight = log_weight;
-    }
+    if(is_forward){
+      double log_weight = log(1. / data.N_fw_n_bw);
+      for(arma::uword i = 0; i < data.N_fw_n_bw; ++i) {
+        // Do not sample but set to a_0 with equal weight on each
+        ans.New_particle(data.a_0, nullptr);
+        ans[i].log_weight = log_weight;
+      }
 
-    return(ans);
-  }
+    } else {
+      const arma::mat Q_d_chol = data.Q_chol * sqrt(data.d + 1);
+      const arma::mat Q_chol_inv = arma::inv(arma::trimatu(Q_d_chol));
+      for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
+        arma::vec new_state = mvrnorm(data.a_0, Q_d_chol);
+        ans.New_particle(new_state, nullptr);
+        ans[i].log_weight = dmvnrm_log(new_state, data.a_0, Q_chol_inv);
+      }
 
-  static cloud sample_d_plus_1_state_n_set_weights(const PF_data &data){
-    cloud ans;
-    ans.reserve(data.N_fw_n_bw);
-
-    const arma::mat Q_d_chol = data.Q_chol * sqrt(data.d + 1);
-    const arma::mat Q_chol_inv = arma::inv(arma::trimatu(Q_d_chol));
-    for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
-      arma::vec new_state = mvrnorm(data.a_0, Q_d_chol);
-      ans.New_particle(new_state, nullptr);
-      ans[i].log_weight = dmvnrm_log(new_state, data.a_0, Q_chol_inv);
     }
 
     return(ans);

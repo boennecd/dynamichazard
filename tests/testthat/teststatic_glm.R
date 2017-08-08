@@ -115,6 +115,8 @@ test_that("Gives depreciated warning about speedglm argument", {
 })
 
 test_that("Gets same with different methods", {
+  skip_if_not_installed("speedglm")
+
   frm <- Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id + x1^2
 
   for(fam in c("logit", "exponential")){

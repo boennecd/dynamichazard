@@ -43,7 +43,7 @@ public:
       const PF_data &data, const particle &p, int t){
     const arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
     arma::vec eta = p.state * data.X.cols(r_set);
-    const arma::uvec is_event = data.is_event_in_bin(r_set) == t;
+    const arma::uvec is_event = data.is_event_in_bin(r_set) == t - 1; /* zero indexed while t is not */
 
     auto it_eta = eta.begin();
     auto it_is_event = is_event.begin();

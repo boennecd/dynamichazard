@@ -31,3 +31,4 @@ else
 all: $(SHLIB)
 		@echo "Found $(OPEN_BLAS_DIR) and will compile with openBlas"
 endif
+

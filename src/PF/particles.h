@@ -6,7 +6,7 @@
 struct particle {
   const arma::vec state;
   const particle *const parent;
-  const int cloud_idx;
+  const arma::uword cloud_idx; /* zero based */
   const particle *const child;
   /* log-scale */
   double log_weight;
@@ -14,7 +14,7 @@ struct particle {
 
   particle(
     const arma::vec state, const particle *parent,
-    const int cloud_idx, const particle *child = nullptr);
+    const arma::uword cloud_idx, const particle *child = nullptr);
 };
 
 class cloud {
@@ -33,6 +33,7 @@ public:
   reverse_iterator rend();
   particle& operator[](size_type pos);
   void reserve (size_type n);
+  size_type size();
 };
 
 #endif

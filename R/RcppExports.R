@@ -57,8 +57,12 @@ parallelglm <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthr
     .Call(`_dynamichazard_parallelglm`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace)
 }
 
-PF_smooth <- function(n_fixed_terms_in_state_vec_, X_, fixed_terms_, tstart_, tstop_, is_event_in_bin_, a_0, Q_0_, Q_, risk_obj, F__, n_max, order_, n_threads_, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold) {
-    .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec_, X_, fixed_terms_, tstart_, tstop_, is_event_in_bin_, a_0, Q_0_, Q_, risk_obj, F__, n_max, order_, n_threads_, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold)
+FW_filter <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug) {
+    .Call(`_dynamichazard_FW_filter`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug)
+}
+
+PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug) {
+    .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug)
 }
 
 dmvnrm_log_test <- function(x, mean, sigma_chol_inv) {

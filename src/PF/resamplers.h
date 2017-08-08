@@ -21,7 +21,7 @@
 template<typename densities, bool is_forward>
 class None_AUX_resampler {
 public:
-  inline static arma::uvec resampler(PF_data &data, cloud &PF_cloud, unsigned int t){
+  inline static arma::uvec resampler(const PF_data &data, cloud &PF_cloud, unsigned int t){
     /* Compute effective sample size (ESS) */
     arma::vec weights(data.N_fw_n_bw);
     double ESS = 0;
@@ -36,8 +36,15 @@ public:
     ESS = 1/ ESS;
 
     if(ESS < data.forward_backward_ESS_threshold){
+      if(data.debug > 1)
+        data.log(2) << "ESS is below threshold (" << ESS << " < "
+                    << data.forward_backward_ESS_threshold << "). Re-sampling";
       return(sample_indices(weights));
     }
+
+    if(data.debug > 1)
+      data.log(2) << "ESS is greater than threshold (" << ESS << " >= "
+                  << data.forward_backward_ESS_threshold << "). No re-sampling needed";
 
     return(arma::linspace<arma::uvec>(0, data.N_fw_n_bw - 1, data.N_fw_n_bw));
   }

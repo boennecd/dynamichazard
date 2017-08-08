@@ -1,6 +1,7 @@
 #ifndef AUX_PF_H
 #define AUX_PF_H
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 #include "PF_data.h"
@@ -10,6 +11,9 @@
 /*
   Auxiliary particle filter as described in:
     Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
+
+  The forward filter returns a particle cloud for time 0, 1, ..., d
+  The backward filter returns a particle cloud for time d + 1, d, ..., 1
 */
 
 template<
@@ -23,28 +27,35 @@ class AUX_PF {
   using importance_dens = T_importance_dens<densities, is_forward>;
 
 public:
-  static std::vector<cloud> compute(PF_data &data){
+  static std::vector<cloud> compute(const PF_data &data){
     std::vector<cloud> clouds;
+    std::string direction_str = (is_forward) ? "forward" : "backward";
 
     /* TODO: what to do at time 0 or d + 1 */
-    if(is_forward){
-      clouds.push_back(importance_dens::sample_state_zero_n_set_weights(data));
-    } else {
-      clouds.push_back(importance_dens::sample_d_plus_1_state_n_set_weights(data));
-    }
+    if(data.debug > 0)
+      data.log(1) << "Running " << direction_str << " filter"
+                  << "\nSampling first particle at time "
+                  << static_cast<std::string>(is_forward ? "0" : "d + 1");
+    clouds.push_back(importance_dens::sample_first_state_n_set_weights(data));
 
     int t = is_forward ? 1 : data.d;
     for(int iter = 1; iter <= data.d; ++iter){
       /* re-sample indicies */
+      if(data.debug > 0)
+        data.log(1) << "Starting iteration " << t << ". Re-sampling weights";
       arma::uvec resample_idx = resampler::resampler(data, clouds.back(), t);
 
       /* sample new cloud */
+      if(data.debug > 0)
+        data.log(1) << "Sampling states";
       cloud new_cloud = importance_dens::sample(data, clouds.back(), resample_idx, t);
 
       /* update weights */
+      if(data.debug > 0)
+        data.log(1) << "Updating weights";
       {
           densities dens_calc = densities();
-          double max_Weigths =  std::numeric_limits<double>::min();
+          double max_weight =  -std::numeric_limits<double>::max();
           for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
             double log_prob_y_given_state =
               dens_calc.log_prob_y_given_state(data, *it, t);
@@ -66,13 +77,13 @@ public:
               it->log_weight -= dens_calc.log_artificial_prior(data, *it->parent, t + 1);
             }
 
-            max_Weigths = MAX(it->log_weight, max_Weigths);
+            max_weight = MAX(it->log_weight, max_weight);
           }
 
           double norm_constant = 0;
           for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
             /* back transform weights */
-            it->log_weight = exp(it->log_weight - max_Weigths);
+            it->log_weight = exp(it->log_weight - max_weight);
             norm_constant += it->log_weight;
           }
 
@@ -80,6 +91,17 @@ public:
             /* Re-scale and take log */
             it->log_weight = log(it->log_weight / norm_constant);
           }
+      }
+      if(data.debug > 1){
+        double max_w =  -std::numeric_limits<double>::max();
+        double min_w = std::numeric_limits<double>::max();
+        for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+          max_w = MAX(max_w, it->log_weight);
+          min_w = MIN(min_w, it->log_weight);
+        }
+
+        data.log(2) << "(min, max) log weights are: ("
+                    << min_w  << ", " << max_w  <<  ")";
       }
 
       /* Add cloud  */
@@ -113,24 +135,27 @@ class PF_smoother {
     AUX_PF<T_resampler, T_importance_dens, densities, false>;
   using importance_dens = T_importance_dens<densities, false /* arg should not matter*/>;
 
-  inline static arma::uvec sample_idx(PF_data &data, cloud &cl){
-    arma::vec fw_probs(data.N_fw_n_bw);
+  inline static arma::uvec sample_idx(const PF_data &data, cloud &cl){
+    arma::vec probs(data.N_fw_n_bw);
 
-    auto pr = fw_probs.begin();
+    auto pr = probs.begin();
     auto part = cl.begin();
     for(uword j = 0; j < data.N_fw_n_bw; ++j, ++pr, ++part)
       *pr = exp(part->log_resampling_weight);
 
-    return sample_indices(data.N_smooth, fw_probs);
+    return sample_indices(data.N_smooth, probs);
   }
 
 public:
-  static std::vector<cloud> compute(PF_data &data){
+  static std::vector<cloud> compute(const PF_data &data){
     std::vector<cloud> forward_clouds = forward_filter::compute(data);
     std::vector<cloud> backward_clouds = backward_filter::compute(data);
     std::vector<cloud> smoothed_clouds;
 
-    /* TODO: add time 0 and time d particles */
+    if(data.debug > 0)
+      data.log(1) << "Finished finding forward and backward clouds. Started smoothing";
+
+    /* Add time 1 particle cloud */
     smoothed_clouds.push_back(backward_clouds.back());
 
     auto fw_cloud = forward_clouds.begin();
@@ -141,14 +166,21 @@ public:
     for(int t = 2  /* note starting point */;
         t < data.d /* note strictly less */; ++t, ++fw_cloud, ++bw_cloud){
       /* re-sample */
+      if(data.debug > 0)
+        data.log(1) << "Started smoothing at time " << t
+                    << "\nRe-sampling indices of previous and next state";
       arma::uvec fw_idx = sample_idx(data, *fw_cloud); // sample forward particles
       arma::uvec bw_idx = sample_idx(data, *bw_cloud); // sample backward particle
 
       /* sample states */
+      if(data.debug > 0)
+        data.log(1) << "Sampling states of previous and next state";
       cloud new_cloud = importance_dens::sample_smooth(
         data, *fw_cloud, fw_idx, *bw_cloud, bw_idx, t);
 
       /* update weight */
+      if(data.debug > 0)
+        data.log(1) << "Weighting particles";
       {
           densities dens_calc = densities();
           double max_Weigths =  std::numeric_limits<double>::min();
@@ -192,13 +224,14 @@ public:
       smoothed_clouds.push_back(std::move(new_cloud));
     }
 
-    // TODO: add cloud at time d
+    /* Add time d particle cloud */
     smoothed_clouds.push_back(forward_clouds.back());
 
     return smoothed_clouds;
   }
 };
 
+#undef MIN
 #undef MAX
 
 #endif

@@ -4,6 +4,49 @@
 #include "../arma_n_rcpp.h"
 #include "../problem_data.h"
 
+/* Logger class for debug information */
+class PF_logger {
+  bool log;
+  unsigned int level;
+  std::ostringstream  os;
+
+public:
+  PF_logger(const bool log, const unsigned int level):
+  log(log), level(level) {}
+
+  template<typename T>
+  std::ostringstream & operator<<(const T &obj){
+    if(log){
+      for(unsigned int i = 0; i < level - 1; ++i)
+        os << "   ";
+      os << obj;
+    }
+
+    return os;
+  }
+
+  // move constructor, takes a rvalue reference &&
+  PF_logger (PF_logger&& other)
+  {
+    // does not work with some GCC versions https://stackoverflow.com/a/27152585
+    // os = std::move(other.os);
+    os << other.os.str();
+    log = other.log;
+    level = other.level;
+    other.log = false;
+  }
+
+  ~PF_logger(){
+    if(log){
+      os << std::endl;
+      Rcpp::Rcout << os.str();
+    }
+  }
+
+  PF_logger(const PF_logger&) = delete;
+  PF_logger& operator=(const PF_logger&) = delete;
+};
+
 // data holder for particle filtering
 class PF_data : public problem_data {
 public:
@@ -13,56 +56,67 @@ public:
   const double forward_backward_ESS_threshold;
 
   const arma::vec &a_0;
+  const unsigned int debug;
 
+  /* pre-computed factorization */
   const arma::mat Q_chol;
   const arma::mat Q_half_chol;
   const arma::mat Q_chol_inv;
   const arma::mat Q_half_chol_inv;
 
-  PF_data(const int n_fixed_terms_in_state_vec_,
-          arma::mat &X_,
-          arma::mat &fixed_terms_,
-          const arma::vec &tstart_,
-          const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
+  PF_data(const int n_fixed_terms_in_state_vec,
+          arma::mat &X,
+          arma::mat &fixed_terms,
+          const arma::vec &tstart,
+          const arma::vec &tstop, const arma::ivec &is_event_in_bin,
           const arma::colvec &a_0,
-          arma::mat &Q_0_,
-          arma::mat &Q_,
+          arma::mat &Q_0,
+          arma::mat &Q,
           const Rcpp::List &risk_obj,
-          const arma::mat &F__,
+          const arma::mat &F,
           const int n_max,
-          const int order_,
-          const int n_threads_,
+          const int order,
+          const int n_threads,
 
           // new arguments
           const arma::uword N_fw_n_bw,
           const arma::uword N_smooth,
-          const double forward_backward_ESS_threshold):
+          Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
+          const unsigned int debug /* < 1 is no info and greater values yields more info */):
     problem_data(
-      n_fixed_terms_in_state_vec_,
-      X_,
-      fixed_terms_,
-      tstart_,
-      tstop_, is_event_in_bin_,
+      n_fixed_terms_in_state_vec,
+      X,
+      fixed_terms,
+      tstart,
+      tstop, is_event_in_bin,
       a_0,
-      Q_0_,
-      Q_,
+      Q_0,
+      Q,
       risk_obj,
-      F__,
+      F,
       n_max,
-      order_,
-      n_threads_),
+      order,
+      n_threads),
 
       N_fw_n_bw(N_fw_n_bw),
       N_smooth(N_smooth),
-      forward_backward_ESS_threshold(forward_backward_ESS_threshold),
+      forward_backward_ESS_threshold(
+        forward_backward_ESS_threshold.isNotNull() ?
+          Rcpp::as<Rcpp::NumericVector>(forward_backward_ESS_threshold)[0] :
+          N_fw_n_bw / 2.),
 
       a_0(a_0),
+      debug(debug),
 
       Q_chol(arma::chol(Q)),
-      Q_half_chol(Q_half_chol / sqrt(2.)),
+      Q_half_chol(Q_chol / sqrt(2.)),
       Q_chol_inv(arma::inv(arma::trimatu(Q_chol))),
       Q_half_chol_inv(arma::inv(arma::trimatu(Q_half_chol)))
     {}
+
+  PF_logger log(const unsigned int level) const{
+    return PF_logger(level <= debug, level);
+  }
 
   PF_data & operator=(const PF_data&) = delete;
   PF_data(const PF_data&) = delete;
