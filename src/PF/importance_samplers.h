@@ -38,6 +38,7 @@
  See page 461-462 of:
   Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
+
 template<typename densities, bool is_forward>
 class importance_dens_no_y_dependence {
 public:
@@ -103,9 +104,9 @@ public:
 
   static cloud sample_first_state_n_set_weights(const PF_data &data){
     cloud ans;
-    ans.reserve(data.N_fw_n_bw);
 
     if(is_forward){
+      ans.reserve(data.N_fw_n_bw);
       double log_weight = log(1. / data.N_fw_n_bw);
       for(arma::uword i = 0; i < data.N_fw_n_bw; ++i) {
         // Do not sample but set to a_0 with equal weight on each
@@ -114,10 +115,11 @@ public:
       }
 
     } else {
+      ans.reserve(data.N_first);
       const arma::mat Q_d_chol = data.Q.chol * data.d + 1;
       const arma::mat Q_chol_inv = arma::inv(arma::trimatu(Q_d_chol));
       double max_weight =  -std::numeric_limits<double>::max();
-      for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
+      for(arma::uword i = 0; i < data.N_first; ++i){
         arma::vec new_state = mvrnorm(data.a_0, Q_d_chol);
         ans.New_particle(new_state, nullptr);
         ans[i].log_weight = dmvnrm_log(new_state, data.a_0, Q_chol_inv);
@@ -129,6 +131,41 @@ public:
     }
 
     return(ans);
+  }
+};
+
+
+/*
+  Sampler which makes a normal approximation for the observed outcome
+*/
+
+template<typename densities, bool is_forward>
+class importance_dens_normal_approx {
+public:
+  static cloud sample(const PF_data &data, cloud &cl, const arma::uvec &resample_idx, const unsigned int t){
+    arma::vec
+
+    /* Compute eta */
+    /* Compute G */
+    /* Compute G_prime */
+    /* Compute sampling mean and sampling variance */
+    /* Store  */
+  }
+
+  static double log_importance_dens(const PF_data &data, const particle &p, int t){
+  }
+
+  static cloud sample_smooth(
+      const PF_data &data,
+      cloud &fw_cloud, const arma::uvec &fw_idx,
+      cloud &bw_cloud, const arma::uvec &bw_idx, const unsigned int t){
+  }
+
+  static double log_importance_dens_smooth(
+      const PF_data &data, const particle &p, int t){
+  }
+
+  static cloud sample_first_state_n_set_weights(const PF_data &data){
   }
 };
 

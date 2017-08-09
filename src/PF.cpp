@@ -3,11 +3,18 @@
 #include "PF/resamplers.h"
 #include "PF/densities.h"
 
-using simple_smoother = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
+
+using PF_fw = AUX_PF<None_AUX_resampler, importance_dens_no_y_dependence, binary, true>;
+using PF_bw = AUX_PF<None_AUX_resampler, importance_dens_no_y_dependence, binary, false>;
+using PF_sm = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
+
+using AUX_fw = AUX_PF<AUX_resampler, importance_dens_no_y_dependence, binary, true>;
+using AUX_bw = AUX_PF<AUX_resampler, importance_dens_no_y_dependence, binary, false>;
+using AUX_sm = PF_smoother<AUX_resampler, importance_dens_no_y_dependence, binary>;
 
 /* Function to turn a clouds of particles into an Rcpp::List */
-template <bool reverse>
-Rcpp::List get_rcpp_out_list(const PF_data &data, std::vector<cloud> clouds){
+Rcpp::List get_rcpp_out_list(
+    const PF_data &data, std::vector<cloud> clouds, const bool reverse){
   if(data.debug > 0)
     data.log(1) << "Creating output list";
 
@@ -71,7 +78,8 @@ Rcpp::List FW_filter(
     const int N_fw_n_bw,
     const int N_smooth,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
-    const int debug){
+    const int debug,
+    const int N_first){
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   PF_data data(
@@ -93,14 +101,14 @@ Rcpp::List FW_filter(
       N_fw_n_bw,
       N_smooth,
       forward_backward_ESS_threshold,
-      debug);
+      debug,
+      N_first);
 
   /* Get the smoothed particles at time 1, 2, ..., d */
-  std::vector<cloud> clouds = AUX_PF<
-    None_AUX_resampler, importance_dens_no_y_dependence, binary, true>::compute(data);
+  std::vector<cloud> clouds = AUX_bw::compute(data);
 
   /* Create output list */
-  return(get_rcpp_out_list<false>(data, clouds));
+  return(get_rcpp_out_list(data, clouds, false));
 }
 
 // TODO: want to export?
@@ -123,7 +131,8 @@ Rcpp::List BW_filter(
     const int N_fw_n_bw,
     const int N_smooth,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
-    const int debug){
+    const int debug,
+    const int N_first){
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   PF_data data(
@@ -145,14 +154,14 @@ Rcpp::List BW_filter(
       N_fw_n_bw,
       N_smooth,
       forward_backward_ESS_threshold,
-      debug);
+      debug,
+      N_first);
 
   /* Get the smoothed particles at time 1, 2, ..., d */
-  std::vector<cloud> clouds = AUX_PF<
-    None_AUX_resampler, importance_dens_no_y_dependence, binary, false>::compute(data);
+  std::vector<cloud> clouds = AUX_bw::compute(data);
 
   /* Create output list */
-  return(get_rcpp_out_list<true>(data, clouds));
+  return(get_rcpp_out_list(data, clouds, true));
 }
 
 // TODO: want to export?
@@ -175,7 +184,9 @@ Rcpp::List PF_smooth(
     const int N_fw_n_bw,
     const int N_smooth,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
-    const int debug){
+    const int debug,
+    const int N_first,
+    const std::string method){
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   PF_data data(
@@ -197,17 +208,25 @@ Rcpp::List PF_smooth(
       N_fw_n_bw,
       N_smooth,
       forward_backward_ESS_threshold,
-      debug);
+      debug,
+      N_first);
 
   /* Get the smoothed particles at time 1, 2, ..., d */
-  smoother_output result = simple_smoother::compute(data);
+  smoother_output result;
+  if(method == "AUX"){
+    result = AUX_sm::compute(data);
+  } else if (method == "PF") {
+    result = PF_sm::compute(data);
+  } else
+    Rcpp::stop("'method' not implemented");
+
 
   /* Create output list */
   return Rcpp::List::create(
     Rcpp::Named("forward_clouds") =
-      get_rcpp_out_list<false>(data, result.forward_clouds),
+      get_rcpp_out_list(data, result.forward_clouds, false),
     Rcpp::Named("backward_clouds") =
-      get_rcpp_out_list<true>(data, result.backward_clouds),
+      get_rcpp_out_list(data, result.backward_clouds, true),
     Rcpp::Named("smoothed_clouds") =
-      get_rcpp_out_list<false>(data, result.smoothed_clouds));
+      get_rcpp_out_list(data, result.smoothed_clouds, false));
 }

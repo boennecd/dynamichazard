@@ -14,8 +14,15 @@
 
   See http://gallery.rcpp.org/articles/using-the-Rcpp-based-sample-implementation/
 */
-arma::uvec sample_indices(arma::vec probs);
-arma::uvec sample_indices(int size, arma::vec probs);
+arma::uvec sample_indices(arma::vec &probs);
+arma::uvec sample_indices(const arma::uword size, arma::vec &probs);
+
+/*
+  Systematic resampling function from from:
+    Kitagawa, G. (1996). Monte Carlo filter and smoother for non-Gaussian nonlinear state space models. Journal of computational and graphical statistics, 5(1), 1-25.
+*/
+arma::uvec systematic_resampling(arma::vec &probs);
+arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs);
 
 /*
   n draws from N(mu, Sigma). See

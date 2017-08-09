@@ -2,6 +2,7 @@ context("Testing cpp sampling functions")
 
 sample_indices <- asNamespace("dynamichazard")$sample_indices_test
 mvrnorm <- asNamespace("dynamichazard")$mvrnorm_test
+systematic_resampling_test <- asNamespace("dynamichazard")$systematic_resampling_test
 
 test_that("sample_indices give the same as R with same seed", {
   probs <- 1:20 / sum(1:20)
@@ -62,5 +63,34 @@ test_that("mvrnorm gives expected sample mean and variance", {
 
     expect_equal(colMeans(samp), mu, tolerance = .1)
     expect_equal(cov(samp), Sigma, tolerance = .25)
+  }
+})
+
+test_that("cpp systematic_resampling function gives the same as R version", {
+  test_func <- function(n, probs){
+    n_probs <- length(probs)
+    u <- runif(1, 0, 1/n)
+    u <- c(u, u + ((2:n) - 1) / n)
+    p_cum_next <- cumsum(probs)
+    p_cum <- c(0, head(p_cum_next, -1))
+    sapply(
+      u, function(x) which(p_cum <= x & x < p_cum_next))
+  }
+
+  for(n in c(10, 100, 1000)) {
+    for(dum in 1:10){
+
+      probs <- runif(100, 0, 1); probs <- probs / sum(probs)
+      seed <- .Random.seed
+      out <- test_func(n, probs)
+      seed_after <- .Random.seed
+
+      .Random.seed <<- seed
+      out_cpp <- systematic_resampling_test(n, probs)
+
+      expect_equal(seed_after, .Random.seed)
+      expect_equal(out - 1, drop(out_cpp))
+
+    }
   }
 })

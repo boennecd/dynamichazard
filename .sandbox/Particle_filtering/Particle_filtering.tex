@@ -180,6 +180,9 @@
 \newcommand{\IDC}[2]{\optorC{q}{#1}{#2}}
 \newcommand{\IDAproxC}[2]{\optorC{\widetilde{q}}{#1}{#2}}
 
+% Diagonal operator
+\newcommand{\diag}[1]{\optor{\text{diag}}{#1}}
+
 % KF notation
 \newcommand{\KF}[3]{#1_{\left. #2 \right\vert #3}}
 \newcommand{\KFSup}[4]{#1_{\left. #2 \right\vert #3}^{(#4)}}
@@ -266,28 +269,66 @@ Let $\normalC{\cdot}{\cdot}{\cdot}$ denote a (multivariate) normal distribution.
 which we can sample from in $\bigO{p^2}$ time. Another option is to use normal approximation of $\vec{y}_t$:
 
 \begin{equation}\begin{array}{cl}
-	\vec{y}_t & \simeq  \optorC{\widetilde{g}}{\cdot}{\vec{\alpha}_t, \partic{\vec{\alpha}}{t-1}{j}} \\ &= %
+	\vec{y}_t & \simeq  \optorC{\widetilde{g}_t}{\cdot}{\vec{\alpha}_t} \\ &= %
 		\normalC{
-			\mat{X}_t\vec{\vec{\alpha}_t}
+			\cdot
 		}{ % end of arg1 \normalC
-			\mat{X}_t\partic{\vec{\alpha}}{t-1}{j} - 
-			\optorC{g''}{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}
-			\optorC{g'}{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}			
+			\mat{X}_t\vec{\alpha}_t - 
+			\mat{G}_t\Lparen{\vec{\alpha}_t}^{-1}
+			\vec{g}_t\Lparen{\vec{\alpha}_t}		
 		}{ % end of arg2 \normalC
-			- \optorC{g''}{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}
+			- \mat{G}_t\Lparen{\vec{\alpha}_t}
 		}
+\end{array}\end{equation}
+%
+% 
+where:
+\begin{equation}\begin{array}{c}
+\mat{g}_t\Lparen{\vec{\alpha}} = 
+		\Lbrace{\left.\frac{
+		\partial \log \propC{y_{it}}{\theta_{it}}
+	}{
+		\partial\theta_{it}
+	}\right|_{\theta_{it} = \vec{x}_{it}^\top\vec{\alpha}} }_{i \in R_t} \\
+%
+	\mat{G}_t\Lparen{\vec{\alpha}} = 
+		\diag{\Lbrace{\left.\frac{
+		\partial^2 \log \propC{y_{it}}{\theta_{it}}
+	}{
+		\partial\theta_{it}^2
+	}\right|_{\theta_{it} = \vec{x}_{it}^\top\vec{\alpha}} }_{i \in R_t}}
 \end{array}\end{equation}
 %
 %
 to get:
-
 \begin{equation}
 	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} \propto %
-		\normalC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}}{\mat{Q}}
-		\optorC{\widetilde{g}}{\vec{y}_t}{\vec{\alpha}_t, \partic{\vec{\alpha}}{t-1}{j}}
+		\normalC{\vec{\alpha}_t}{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}{\mat{Q}}
+		\optorC{\widetilde{g}}{\vec{y}_t}{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}
 \end{equation}
 %
-where we can analytically integrate out $\widetilde{g}$. This is similar to the second order random walk example in \cite{fearnhead10}. The downside is an $\bigO{np^2}$ computational cost. Next, we have the re-sampling weights. A simple solution is not to use an auxiliary particle filter and set:
+where we can analytically integrate out $\widetilde{g}$ to get:
+%
+%
+\begin{equation}\begin{array}{rcl}
+	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} &=&  %
+		\normalC{\vec{\alpha}_t}{\vec{\mu}_t}{\mat{\Sigma}_t} \\
+%
+	\mat{\Sigma}_t^{-1} &=& \mat{X}_t^\top \mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}^{-1}\mat{X}_t + \mat{Q}^{-1}  \\
+%
+	\vec{\mu}_t &=& \mat{\Sigma}_t\Lparen{
+		\mat{Q}^{-1}\mat{F}\partic{\vec{\alpha}}{t-1}{j} + 
+		\mat{X}_t^\top \mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}^{-1}
+		\Lparen{
+			\mat{X}_t\mat{F}\partic{\vec{\alpha}}{t-1}{j} - 
+			\mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}^{-1}
+			\vec{g}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}
+		}
+	}
+\end{array}\end{equation}
+
+
+This is similar to the second order random walk example in \cite{fearnhead10}. The downside is an $\bigO{np^2}$ computational cost. Next, we have the re-sampling weights. A simple solution is not to use an auxiliary particle filter and set:
 
 \begin{equation}
 	\partic{\beta}{t}{j} \propto \partic{w}{t-1}{j}
@@ -503,6 +544,11 @@ TODO: add what to do on time 0 and $d$.
 \EndFor
 \end{algorithmic}
 \end{algorithm}
+
+
+
+
+
 
 \begin{equation}\begin{array}{c}
 	\matt{F} = \begin{pmatrix}

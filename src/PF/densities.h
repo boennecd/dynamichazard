@@ -20,6 +20,11 @@
       Computes log(P(alpha_t | alpha_{t - 1}, alpha_{t + 1}))
     log_artificial_prior
       Returns the log density of of artificial prior gamma_t(alpha_t)
+    log_p_prime
+      Returns the first deriative of the log likelihood given outcome and the
+      state for a given individual
+    log_p_prime_prime
+      Same as log_p_prime for the second derivative
 */
 
 /*
@@ -82,6 +87,26 @@ public:
   double log_artificial_prior(
       const PF_data &data, const particle &p, int t){
     return(dmvnrm_log(p.state, data.a_0 /* note a_o */, get_Q_t(data, t)));
+  }
+
+  static double log_p_prime(double y, double eta, int t){
+    if(eta < 0){
+      double exp_eta = exp(eta);
+      return (exp_eta * (y - 1) + y) / (exp_eta + 1);
+    }
+
+    double exp_neg_eta = exp(-eta);
+    return ((y - 1) + y * exp_neg_eta) / (1 + exp_neg_eta);
+  }
+
+  static double log_p_prime(double y, double eta, int t){
+    if(eta < 0){
+      double exp_eta = exp(eta);
+      return - exp_eta / ((1 + exp_eta) * (1 + exp_eta));
+    }
+
+    double exp_neg_eta = exp(-eta);
+    return - exp_neg_eta / ((1 + exp_neg_eta) * (1 + exp_neg_eta));
   }
 };
 

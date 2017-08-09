@@ -7,6 +7,11 @@ arma::uvec sample_indices_test(int size, arma::vec probs){
 }
 
 // [[Rcpp::export]]
+arma::uvec systematic_resampling_test(const int size, arma::vec probs){
+  return systematic_resampling(size, probs);
+}
+
+// [[Rcpp::export]]
 arma::vec mvrnorm_test(const arma::vec mu, const arma::mat sigma_chol){
   return mvrnorm(mu, sigma_chol);
 }

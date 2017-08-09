@@ -55,8 +55,10 @@ public:
   const arma::uword N_smooth;
   const double forward_backward_ESS_threshold;
 
+  /* Inital state, number of particles to draw at time 0 and d + 1 and debug level */
   const arma::vec &a_0;
-  const unsigned int debug;
+  const unsigned int debug; /* < 1 is no info and greater values yields more info */
+  const arma::uword N_first;
 
   /* pre-computed factorization */
   struct covarmat{
@@ -92,7 +94,8 @@ public:
           const arma::uword N_fw_n_bw,
           const arma::uword N_smooth,
           Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
-          const unsigned int debug /* < 1 is no info and greater values yields more info */):
+          const unsigned int debug,
+          const arma::uword N_first):
     problem_data(
       n_fixed_terms_in_state_vec,
       X,
@@ -117,6 +120,7 @@ public:
 
       a_0(a_0),
       debug(debug),
+      N_first(N_first),
 
       Q(Q),
       Q_proposal(Q + Q_tilde),
