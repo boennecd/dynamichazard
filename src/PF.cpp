@@ -6,29 +6,34 @@
 using simple_smoother = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
 
 /* Function to turn a clouds of particles into an Rcpp::List */
+template <bool reverse>
 Rcpp::List get_rcpp_out_list(const PF_data &data, std::vector<cloud> clouds){
   if(data.debug > 0)
     data.log(1) << "Creating output list";
 
   auto n_clouds = clouds.size();
   Rcpp::List ans(n_clouds);
-  auto it = clouds.begin();
-  for(std::vector<cloud>::size_type j = 0; j < n_clouds; ++j, ++it){
+  std::vector<cloud>::iterator it =
+    reverse ? clouds.end() - 1 : clouds.begin();
+  for(std::vector<cloud>::size_type j = 0;
+      j < n_clouds;
+      ++j, it += 1 - 2 * reverse){
     auto n_elem = it->size();
     arma::uvec parent_idx(n_elem);
+    arma::uvec child_idx(n_elem);
     arma::vec weights(n_elem);
     arma::mat states(data.a_0.n_elem, n_elem);
 
-    auto idx = parent_idx.begin();
+    auto idx_pr = parent_idx.begin();
+    auto idx_ch = child_idx.begin();
     auto w = weights.begin();
     auto pr = it->begin();
-    for(arma::uword i = 0; i < n_elem; ++i, ++idx, ++w, ++pr){
+    for(arma::uword i = 0; i < n_elem; ++i, ++w, ++idx_pr, ++idx_ch, ++pr){
+      *idx_pr = (pr->parent) ?
+        pr->parent->cloud_idx + 1 /* want non-zero based */ : 0;
 
-      if(j > 0) {
-        *idx = pr->parent->cloud_idx + 1; /* want non-zero based */
-      } else {
-        *idx = 0;
-      }
+      *idx_ch = (pr->child) ?
+        pr->child->cloud_idx + 1 /* want non-zero based */ : 0;
 
       *w = exp(pr->log_weight);
       states.col(i) = pr->state;
@@ -37,6 +42,7 @@ Rcpp::List get_rcpp_out_list(const PF_data &data, std::vector<cloud> clouds){
     ans[j] =
       Rcpp::List::create(
         Rcpp::Named("parent_idx") = Rcpp::wrap(parent_idx),
+        Rcpp::Named("child_idx") = Rcpp::wrap(child_idx),
         Rcpp::Named("weights") = Rcpp::wrap(weights),
         Rcpp::Named("states") = Rcpp::wrap(states)
       );
@@ -56,6 +62,7 @@ Rcpp::List FW_filter(
     const arma::colvec &a_0,
     arma::mat &Q_0,
     arma::mat &Q,
+    const arma::mat Q_tilde,
     const Rcpp::List &risk_obj,
     const arma::mat &F,
     const int n_max,
@@ -82,6 +89,7 @@ Rcpp::List FW_filter(
       n_max,
       order,
       n_threads,
+      Q_tilde,
       N_fw_n_bw,
       N_smooth,
       forward_backward_ESS_threshold,
@@ -92,7 +100,59 @@ Rcpp::List FW_filter(
     None_AUX_resampler, importance_dens_no_y_dependence, binary, true>::compute(data);
 
   /* Create output list */
-  return(get_rcpp_out_list(data, clouds));
+  return(get_rcpp_out_list<false>(data, clouds));
+}
+
+// TODO: want to export?
+// [[Rcpp::export]]
+Rcpp::List BW_filter(
+    const int n_fixed_terms_in_state_vec,
+    arma::mat &X,
+    arma::mat &fixed_terms,
+    const arma::vec &tstart,
+    const arma::vec &tstop,
+    const arma::colvec &a_0,
+    arma::mat &Q_0,
+    arma::mat &Q,
+    const arma::mat Q_tilde,
+    const Rcpp::List &risk_obj,
+    const arma::mat &F,
+    const int n_max,
+    const int order,
+    const int n_threads,
+    const int N_fw_n_bw,
+    const int N_smooth,
+    Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
+    const int debug){
+  const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
+
+  PF_data data(
+      n_fixed_terms_in_state_vec,
+      X,
+      fixed_terms,
+      tstart,
+      tstop,
+      is_event_in_bin,
+      a_0,
+      Q_0,
+      Q,
+      risk_obj,
+      F,
+      n_max,
+      order,
+      n_threads,
+      Q_tilde,
+      N_fw_n_bw,
+      N_smooth,
+      forward_backward_ESS_threshold,
+      debug);
+
+  /* Get the smoothed particles at time 1, 2, ..., d */
+  std::vector<cloud> clouds = AUX_PF<
+    None_AUX_resampler, importance_dens_no_y_dependence, binary, false>::compute(data);
+
+  /* Create output list */
+  return(get_rcpp_out_list<true>(data, clouds));
 }
 
 // TODO: want to export?
@@ -106,6 +166,7 @@ Rcpp::List PF_smooth(
     const arma::colvec &a_0,
     arma::mat &Q_0,
     arma::mat &Q,
+    const arma::mat Q_tilde,
     const Rcpp::List &risk_obj,
     const arma::mat &F,
     const int n_max,
@@ -132,21 +193,21 @@ Rcpp::List PF_smooth(
       n_max,
       order,
       n_threads,
+      Q_tilde,
       N_fw_n_bw,
       N_smooth,
       forward_backward_ESS_threshold,
       debug);
 
   /* Get the smoothed particles at time 1, 2, ..., d */
-  std::vector<cloud> smoothed_clouds = simple_smoother::compute(data);
+  smoother_output result = simple_smoother::compute(data);
 
   /* Create output list */
-  return(get_rcpp_out_list(data, smoothed_clouds));
-}
-
-// exported for test
-// [[Rcpp::export]]
-double dmvnrm_log_test(
-    const arma::vec x, const arma::vec mean, const arma::mat sigma_chol_inv){
-  return(dmvnrm_log(x, mean, sigma_chol_inv));
+  return Rcpp::List::create(
+    Rcpp::Named("forward_clouds") =
+      get_rcpp_out_list<false>(data, result.forward_clouds),
+    Rcpp::Named("backward_clouds") =
+      get_rcpp_out_list<true>(data, result.backward_clouds),
+    Rcpp::Named("smoothed_clouds") =
+      get_rcpp_out_list<false>(data, result.smoothed_clouds));
 }

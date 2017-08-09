@@ -29,10 +29,6 @@ ddhazard_fit_cpp <- function(X, fixed_terms, weights, tstart, tstop, a_0, fixed_
     .Call(`_dynamichazard_ddhazard_fit_cpp`, X, fixed_terms, weights, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_params, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation, fixed_effect_chunk_size, debug, NR_it_max, n_threads, denom_term, n_fixed_terms_in_state_vec, use_pinv, criteria, posterior_version, GMA_max_rep, GMA_NR_eps, EKF_batch_size)
 }
 
-bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w) {
-    invisible(.Call(`_dynamichazard_bigglm_updateQR_rcpp`, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
-}
-
 SMA_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
     .Call(`_dynamichazard_SMA_hepler_logit_compute_length`, offset, coef1, coef2, w, y)
 }
@@ -49,6 +45,22 @@ SMA_hepler_exp_second_d <- function(c, offset, length) {
     .Call(`_dynamichazard_SMA_hepler_exp_second_d`, c, offset, length)
 }
 
+sample_indices_test <- function(size, probs) {
+    .Call(`_dynamichazard_sample_indices_test`, size, probs)
+}
+
+mvrnorm_test <- function(mu, sigma_chol) {
+    .Call(`_dynamichazard_mvrnorm_test`, mu, sigma_chol)
+}
+
+dmvnrm_log_test <- function(x, mean, sigma_chol_inv) {
+    .Call(`_dynamichazard_dmvnrm_log_test`, x, mean, sigma_chol_inv)
+}
+
+bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w) {
+    invisible(.Call(`_dynamichazard_bigglm_updateQR_rcpp`, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
+}
+
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {
     .Call(`_dynamichazard_logLike_cpp`, X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }
@@ -57,27 +69,19 @@ parallelglm <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthr
     .Call(`_dynamichazard_parallelglm`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace)
 }
 
-FW_filter <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug) {
-    .Call(`_dynamichazard_FW_filter`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug)
+FW_filter <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug) {
+    .Call(`_dynamichazard_FW_filter`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug)
 }
 
-PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug) {
-    .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug)
+BW_filter <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug) {
+    .Call(`_dynamichazard_BW_filter`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug)
 }
 
-dmvnrm_log_test <- function(x, mean, sigma_chol_inv) {
-    .Call(`_dynamichazard_dmvnrm_log_test`, x, mean, sigma_chol_inv)
+PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug) {
+    .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug)
 }
 
 get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model = TRUE) {
     .Call(`_dynamichazard_get_risk_obj_rcpp`, start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model)
-}
-
-sample_indices <- function(size, probs) {
-    .Call(`_dynamichazard_sample_indices`, size, probs)
-}
-
-mvrnorm <- function(mu, sigma_chol) {
-    .Call(`_dynamichazard_mvrnorm`, mu, sigma_chol)
 }
 

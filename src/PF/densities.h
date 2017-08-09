@@ -33,7 +33,7 @@ class binary {
 
   const arma::mat& get_Q_t(const PF_data &data, arma::uword t){
     if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end())
-      Q_t_chol_inv.insert(std::make_pair(t, data.Q_chol_inv / sqrt(t)));
+      Q_t_chol_inv.insert(std::make_pair(t, data.Q.chol_inv / sqrt(t)));
 
     return Q_t_chol_inv[t];
   }
@@ -42,7 +42,7 @@ public:
   static double log_prob_y_given_state(
       const PF_data &data, const particle &p, int t){
     const arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
-    arma::vec eta = p.state * data.X.cols(r_set);
+    arma::vec eta =  p.state.t() * data.X.cols(r_set);
     const arma::uvec is_event = data.is_event_in_bin(r_set) == t - 1; /* zero indexed while t is not */
 
     auto it_eta = eta.begin();
@@ -58,17 +58,25 @@ public:
         log(1 / (1 + exp(-*it_eta))) : log(1 - 1 / (1 + exp(-*it_eta)));
     }
 
+    if(data.debug > 4){
+      data.log(5) << "Computing log(P(y_t|alpha_t)) at time " << t
+                  << " with " << eta.n_elem << " observations. "
+                  << "The log likelihood is " << log_like
+                  << " and the state is:";
+      data.log(5) << p.state.t();
+    }
+
     return log_like;
   }
 
   static double log_prob_state_given_previous(
       const PF_data &data, const particle &p, int t){
-    return(dmvnrm_log(p.state, p.parent->state, data.Q_chol_inv));
+    return(dmvnrm_log(p.state, p.parent->state, data.Q.chol_inv));
   }
 
   static double log_prob_state_given_next(
       const PF_data &data, const particle &p, int t){
-    return(dmvnrm_log(p.state, p.parent->state, data.Q_chol_inv));
+    return(dmvnrm_log(p.state, p.parent->state, data.Q.chol_inv));
   }
 
   double log_artificial_prior(

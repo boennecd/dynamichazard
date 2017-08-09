@@ -59,10 +59,19 @@ public:
   const unsigned int debug;
 
   /* pre-computed factorization */
-  const arma::mat Q_chol;
-  const arma::mat Q_half_chol;
-  const arma::mat Q_chol_inv;
-  const arma::mat Q_half_chol_inv;
+  struct covarmat{
+    const arma::mat mat;
+    const arma::mat chol;
+    const arma::mat chol_inv;
+
+    covarmat(const arma::mat Q):
+      mat(Q), chol(arma::chol(mat)), chol_inv(arma::inv(arma::trimatu(chol)))
+      {}
+  };
+
+  const covarmat Q;
+  const covarmat Q_proposal;
+  const covarmat Q_proposal_smooth;
 
   PF_data(const int n_fixed_terms_in_state_vec,
           arma::mat &X,
@@ -79,6 +88,7 @@ public:
           const int n_threads,
 
           // new arguments
+          const arma::mat Q_tilde,
           const arma::uword N_fw_n_bw,
           const arma::uword N_smooth,
           Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
@@ -108,10 +118,9 @@ public:
       a_0(a_0),
       debug(debug),
 
-      Q_chol(arma::chol(Q)),
-      Q_half_chol(Q_chol / sqrt(2.)),
-      Q_chol_inv(arma::inv(arma::trimatu(Q_chol))),
-      Q_half_chol_inv(arma::inv(arma::trimatu(Q_half_chol)))
+      Q(Q),
+      Q_proposal(Q + Q_tilde),
+      Q_proposal_smooth((Q + Q_tilde) * .5)
     {}
 
   PF_logger log(const unsigned int level) const{

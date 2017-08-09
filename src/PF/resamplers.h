@@ -5,6 +5,35 @@
 #include "particles.h"
 #include "../sample_funcs.h"
 
+class sample_wo_replacement{
+protected:
+  inline static arma::uvec sample(
+      const PF_data &data, const arma::vec &probs, const double ESS){
+    if(ESS < data.forward_backward_ESS_threshold){
+
+      if(data.debug > 1){
+        data.log(2) << "ESS is below threshold (" << ESS << " < "
+                    << data.forward_backward_ESS_threshold << "). Re-sampling";
+      }
+
+      if(data.debug > 2){
+        data.log(3) << "Re-sampling " << data.N_fw_n_bw << " indices "
+                    << " from " <<  probs.n_elem << " elements "
+                    << " with " <<  arma::max(probs) << " as the higest probability";
+      }
+
+      return(sample_indices(data.N_fw_n_bw, probs));
+    }
+
+    if(data.debug > 1){
+      data.log(2) << "ESS is greater than threshold (" << ESS << " >= "
+                  << data.forward_backward_ESS_threshold << "). No re-sampling needed";
+    }
+
+    return(arma::linspace<arma::uvec>(0, data.N_fw_n_bw - 1, data.N_fw_n_bw));
+  }
+};
+
 /*
  Each "resampler" has a static function which:
     1) computes log re-sampling weights assuming that weights are computed
@@ -18,8 +47,9 @@
  set:
   beta_j = w_{j - 1}
 */
+
 template<typename densities, bool is_forward>
-class None_AUX_resampler {
+class None_AUX_resampler : private sample_wo_replacement {
 public:
   inline static arma::uvec resampler(const PF_data &data, cloud &PF_cloud, unsigned int t){
     /* Compute effective sample size (ESS) */
@@ -35,18 +65,7 @@ public:
     }
     ESS = 1/ ESS;
 
-    if(ESS < data.forward_backward_ESS_threshold){
-      if(data.debug > 1)
-        data.log(2) << "ESS is below threshold (" << ESS << " < "
-                    << data.forward_backward_ESS_threshold << "). Re-sampling";
-      return(sample_indices(weights));
-    }
-
-    if(data.debug > 1)
-      data.log(2) << "ESS is greater than threshold (" << ESS << " >= "
-                  << data.forward_backward_ESS_threshold << "). No re-sampling needed";
-
-    return(arma::linspace<arma::uvec>(0, data.N_fw_n_bw - 1, data.N_fw_n_bw));
+    return(sample(data, weights, ESS));
   }
 };
 

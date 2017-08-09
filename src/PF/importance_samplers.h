@@ -1,10 +1,13 @@
 #ifndef IMPORTANCE_SAMPLERS
 #define IMPORTANCE_SAMPLERS
 
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 #include "PF_data.h"
 #include "particles.h"
 #include "../sample_funcs.h"
 #include "dmvnrm.h"
+#include "PF_utils.h"
 
 /*
   Each "importance_sampler" has two static functions:
@@ -42,9 +45,14 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
+    if(data.debug > 2){
+      data.log(3) << "Sampling new cloud from normal distribution with chol(Q) given by";
+      data.log(3) << data.Q_proposal.chol;
+    }
+
     auto it = resample_idx.begin();
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
-      arma::vec new_state = mvrnorm(cl[*it].state, data.Q_chol);
+      arma::vec new_state = mvrnorm(cl[*it].state, data.Q_proposal.chol);
       ans.New_particle(new_state, &cl[*it]);
     }
 
@@ -53,7 +61,7 @@ public:
 
   static double log_importance_dens(const PF_data &data, const particle &p, int t){
     /* independent of is_forward for first order random walk */
-    return dmvnrm_log(p.state, p.parent->state, data.Q_chol_inv);
+    return dmvnrm_log(p.state, p.parent->state, data.Q_proposal.chol_inv);
   }
 
   static cloud sample_smooth(
@@ -63,14 +71,22 @@ public:
     cloud ans;
     ans.reserve(data.N_smooth);
 
+    if(data.debug > 2){
+      data.log(3) << "Sampling new cloud from normal distribution with chol(Q) given by";
+      data.log(3) << data.Q_proposal_smooth.chol;
+    }
+
     auto it_fw = fw_idx.begin();
     auto it_bw = bw_idx.begin();
     for(arma::uword i = 0; i < data.N_smooth; ++i, ++it_fw, ++it_bw){
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
+      arma::vec mean = fw_p.state + bw_p.state;
+      mean *= .5;
+
       arma::vec new_state = mvrnorm(
-        1/2 * (fw_p.state + bw_p.state), data.Q_half_chol);
+        mean, data.Q_proposal_smooth.chol);
       ans.New_particle(new_state, &fw_p, &bw_p);
     }
 
@@ -79,7 +95,10 @@ public:
 
   static double log_importance_dens_smooth(
       const PF_data &data, const particle &p, int t){
-    return dmvnrm_log(p.state, 1/2 * (p.parent->state + p.child->state), data.Q_half_chol_inv);
+    arma::vec mean = p.parent->state + p.child->state;
+    mean *= .5;
+
+    return dmvnrm_log(p.state, mean, data.Q_proposal_smooth.chol_inv);
   }
 
   static cloud sample_first_state_n_set_weights(const PF_data &data){
@@ -95,19 +114,23 @@ public:
       }
 
     } else {
-      const arma::mat Q_d_chol = data.Q_chol * sqrt(data.d + 1);
+      const arma::mat Q_d_chol = data.Q.chol * data.d + 1;
       const arma::mat Q_chol_inv = arma::inv(arma::trimatu(Q_d_chol));
+      double max_weight =  -std::numeric_limits<double>::max();
       for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
         arma::vec new_state = mvrnorm(data.a_0, Q_d_chol);
         ans.New_particle(new_state, nullptr);
         ans[i].log_weight = dmvnrm_log(new_state, data.a_0, Q_chol_inv);
+
+        max_weight = MAX(ans[i].log_weight, max_weight);
       }
 
+      normalize_log_weights(ans, max_weight);
     }
 
     return(ans);
   }
-
 };
 
+#undef MAX
 #endif

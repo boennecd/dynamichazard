@@ -1,7 +1,7 @@
 context("Testing cpp sampling functions")
 
-sample_indices <- asNamespace("dynamichazard")$sample_indices
-mvrnorm <- asNamespace("dynamichazard")$mvrnorm
+sample_indices <- asNamespace("dynamichazard")$sample_indices_test
+mvrnorm <- asNamespace("dynamichazard")$mvrnorm_test
 
 test_that("sample_indices give the same as R with same seed", {
   probs <- 1:20 / sum(1:20)
@@ -11,21 +11,25 @@ test_that("sample_indices give the same as R with same seed", {
   for(i in 1:1e2){
     x <- .Random.seed
     R_res <- sample.int(length(probs), replace = TRUE, prob = probs)
+    .new <- .Random.seed
 
     .Random.seed <<- x
     cpp_res <- sample_indices(length(probs), probs)
 
     expect_equal(R_res - 1, drop(cpp_res))
+    expect_equal(.new, .Random.seed)
   }
 
   for(i in 1:1e2){
     x <- .Random.seed
     R_res <- sample.int(length(probs), size = 2 * length(probs),replace = TRUE, prob = probs)
+    .new <- .Random.seed
 
     .Random.seed <<- x
     cpp_res <- sample_indices(2 * length(probs), probs)
 
     expect_equal(R_res - 1, drop(cpp_res))
+    expect_equal(.new, .Random.seed)
   }
 })
 
@@ -37,10 +41,12 @@ test_that("mvrnorm gives the same results with same seed", {
 
   x <- .Random.seed
   r1 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
+  .new <- .Random.seed
   .Random.seed <<- x
   r2 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
 
   expect_equal(r1, r2)
+  expect_equal(.new, .Random.seed)
 })
 
 test_that("mvrnorm gives expected sample mean and variance", {

@@ -5,8 +5,6 @@ arma::uvec sample_indices(arma::vec probs){
   return sample_indices(probs.n_elem, probs);
 }
 
-// Exported for tests
-// [[Rcpp::export]]
 arma::uvec sample_indices(int size, arma::vec probs){
   arma::uvec idx = arma::linspace<arma::uvec>(0, probs.n_elem - 1, probs.n_elem);
 
@@ -19,8 +17,7 @@ arma::mat mvrnorm(arma::uword n, const arma::vec mu, const arma::mat sigma_chol)
   return arma::repmat(mu, 1, n).t() + Y * sigma_chol;
 }
 
-// Exported for tests
-// [[Rcpp::export]]
 arma::vec mvrnorm(const arma::vec mu, const arma::mat sigma_chol){
   return mvrnorm(1, mu, sigma_chol).row(0);
 }
+
