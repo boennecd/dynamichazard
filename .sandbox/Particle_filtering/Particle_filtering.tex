@@ -269,15 +269,15 @@ Let $\normalC{\cdot}{\cdot}{\cdot}$ denote a (multivariate) normal distribution.
 which we can sample from in $\bigO{p^2}$ time. Another option is to use normal approximation of $\vec{y}_t$:
 
 \begin{equation}\begin{array}{cl}
-	\vec{y}_t & \simeq  \optorC{\widetilde{g}_t}{\cdot}{\vec{\alpha}_t} \\ &= %
+	\optorC{g}{\vec{y}_t}{\vec{\alpha}_t} & \simeq  \optorC{\widetilde{g}_t}{\vec{y}_t}{\vec{\alpha}_t} \\ &= %
 		\normalC{
-			\cdot
+			\mat{X}_t\vec{\alpha}_t
 		}{ % end of arg1 \normalC
-			\mat{X}_t\vec{\alpha}_t - 
-			\mat{G}_t\Lparen{\vec{\alpha}_t}^{-1}
-			\vec{g}_t\Lparen{\vec{\alpha}_t}		
+			\mat{X}_t\mat{F}\partic{\vec{\alpha}}{t-1}{j}- 
+			\mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}^{-1}
+			\vec{g}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}		
 		}{ % end of arg2 \normalC
-			- \mat{G}_t\Lparen{\vec{\alpha}_t}
+			- \mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}
 		}
 \end{array}\end{equation}
 %

@@ -9,6 +9,7 @@ struct particle {
   const arma::uword cloud_idx; /* zero based */
   const particle *const child;
   /* log-scale */
+  double log_importance_dens;
   double log_weight;
   double log_resampling_weight;
 

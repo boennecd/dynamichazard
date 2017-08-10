@@ -99,7 +99,7 @@ public:
     return ((y - 1) + y * exp_neg_eta) / (1 + exp_neg_eta);
   }
 
-  static double log_p_prime(double y, double eta, int t){
+  static double log_p_2prime(double y, double eta, int t){
     if(eta < 0){
       double exp_eta = exp(eta);
       return - exp_eta / ((1 + exp_eta) * (1 + exp_eta));

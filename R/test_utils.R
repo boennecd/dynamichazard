@@ -249,8 +249,6 @@ test_sim_func_logit <- function(n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x
   list(res = as.data.frame(res[1:(cur_row - 1), ]), betas = betas)
 }
 
-test_sim_func_logit = compiler::cmpfun(test_sim_func_logit)
-
 # tmp_file <- tempfile()
 # Rprof(tmp_file)
 # tmp <- test_sim_func_logit(10^5)
@@ -337,70 +335,6 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
   }
 
   list(res = as.data.frame(res[1:(cur_row - 1), ]), betas = betas)
-}
-
-test_sim_func_exp = compiler::cmpfun(test_sim_func_exp)
-
-# hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by
-# as search for '(?<=\d)\s+(?=\d)' and replace with ','
-# or be lazy and use this function
-str_func <- function(x, n_digist = 16){
-  tmp <- capture.output(print(unname(c(x)), digits = n_digist))
-  tmp <- sapply(tmp, gsub, pattern = "\\s*\\[1\\]\\s", replacement = "", USE.NAMES = F)
-  tmp <- sapply(tmp, gsub, pattern = "\\s*\\[\\d+\\]\\s", replacement = ",\\ ", USE.NAMES = F)
-  tmp <- sapply(tmp, gsub, pattern = "(?<=(\\d)|(NA))\\s+(?=(\\d)|-|(NA))", replacement = ",\\ ", perl = T, USE.NAMES = F)
-
-  tmp <- paste0(c("c(", tmp, " )"), collapse = "")
-
-  max_lengt <- floor(8191 * .75)
-  n_nums_before_break = floor(max_lengt / (n_digist + 4))
-  gsub(pattern = paste0("((\\d,\\ .*?){", n_nums_before_break - 1, "})(,\\ )"), replacement = "\\1,\n\\ ",
-       x = tmp, perl = T)
-}
-
-get_expect_equal <- function(x, eps, file = ""){
-  op_old <- options()
-  on.exit(options(op_old))
-  options(max.print = 1e7)
-
-  arg_name <- deparse(substitute(x))
-  expects <- unlist(lapply(x, str_func))
-  tol_string = if(!missing(eps)) paste0("\n, tolerance = " , eval(bquote(.(eps)))) else ""
-  expects <- mapply(function(e, index_name)
-    paste0("expect_equal(unname(c(", arg_name, "$", index_name, ")),\n", e,
-           tol_string, ")", collapse = ""),
-    e = expects, index_name = names(expects))
-
-  out <- paste0(c("{", paste0(expects, collapse = "\n\n"), "}\n"), collapse = "\n")
-  cat(out, file = file)
-  invisible()
-}
-
-# And we may aswell just save it to a file
-save_to_test <- function(obj, file_name, tolerance = sqrt(.Machine$double.eps)){
-  if(!interactive())
-    stop("save_to_test called not in interactive mode. Likely an error")
-
-  if(getOption("ddhazard_max_threads") != 2)
-    warning("getOption('ddhazard_max_threads') is not 2. You likeli dont want this so call\noptions(ddhazard_max_threads = 2)")
-
-  cat("Largest sizes:\n")
-  if(is.list(obj))
-    print(head(sort(unlist(lapply(obj, object.size)), decreasing = T))) else
-      print(object.size(obj))
-
-  saveRDS(obj, compress = T, paste0(
-    stringr::str_match(getwd(), ".+dynamichazard"), "/tests/testthat/previous_results/", file_name, ".RDS"))
-
-  cat("Call 'expect_equal(", deparse(substitute(obj)), ", read_to_test(\"",  file_name, "\"), tolerance = ",
-      tolerance, ")' to test\n", sep = "")
-}
-
-read_to_test <- function(file_name){
-  path <- if(!interactive()) "./previous_results/" else
-    paste0(stringr::str_match(getwd(), ".+dynamichazard"), "/tests/testthat/previous_results/")
-
-  readRDS(paste0(path, file_name, ".RDS"))
 }
 
 ########

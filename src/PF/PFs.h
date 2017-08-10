@@ -87,8 +87,7 @@ public:
               is_forward ?
               dens_calc.log_prob_state_given_previous(data, *it, t) :
               dens_calc.log_prob_state_given_next(data, *it, t);
-            double log_importance_dens =
-              importance_dens::log_importance_dens(data, *it, t);
+            double log_importance_dens = it->log_importance_dens;
 
             it->log_weight =
               /* nominator */
@@ -123,7 +122,7 @@ public:
 };
 
 /*
-  Output class for smoothers 
+  Output class for smoothers
 */
 
 struct smoother_output {
@@ -167,7 +166,7 @@ public:
     std::vector<cloud> &forward_clouds = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
     std::vector<cloud> &smoothed_clouds = result.smoothed_clouds;
-    
+
     forward_clouds = forward_filter::compute(data);
     backward_clouds = backward_filter::compute(data);
 
@@ -211,8 +210,7 @@ public:
               dens_calc.log_prob_state_given_previous(data, *it, t);
             double log_prob_state_given_next =
               dens_calc.log_prob_state_given_next(data, *it, t);
-            double log_importance_dens_smooth =
-              importance_dens::log_importance_dens_smooth(data, *it, t);
+            double log_importance_dens = it->log_importance_dens;
             double log_artificial_prior =
               dens_calc.log_artificial_prior(data, *it->child /* note child */, t + 1 /* note t + 1 */);
 
@@ -221,7 +219,7 @@ public:
               (log_prob_y_given_state + log_prob_state_given_previous + log_prob_state_given_next +
                 it->parent->log_weight + it->child->log_weight)
               /* denoninator */
-              - (log_importance_dens_smooth + it->parent->log_resampling_weight +
+              - (log_importance_dens + it->parent->log_resampling_weight +
                   it->child->log_resampling_weight + log_artificial_prior);
 
             max_weight = MAX(it->log_weight, max_weight);

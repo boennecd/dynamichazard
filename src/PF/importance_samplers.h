@@ -13,9 +13,8 @@
   Each "importance_sampler" has two static functions:
     sample:
       Returns a new cloud of particles with sampled states. The states are
-      sampled acording to the specific importance density
-    log_importance_dens:
-      Returns the log importance density
+      sampled acording to the specific importance density. The function also
+      sets log_importance_dens on each particle
     sample_smooth:
       Returns sample given past and next state
     log_importance_dens_smooth:
@@ -41,6 +40,19 @@
 
 template<typename densities, bool is_forward>
 class importance_dens_no_y_dependence {
+  static double log_importance_dens(const PF_data &data, const particle &p, int t){
+    /* independent of is_forward for first order random walk */
+    return dmvnrm_log(p.state, p.parent->state, data.Q_proposal.chol_inv);
+  }
+
+  static double log_importance_dens_smooth(
+      const PF_data &data, const particle &p, int t){
+    arma::vec mean = p.parent->state + p.child->state;
+    mean *= .5;
+
+    return dmvnrm_log(p.state, mean, data.Q_proposal_smooth.chol_inv);
+  }
+
 public:
   static cloud sample(const PF_data &data, cloud &cl, const arma::uvec &resample_idx, const unsigned int t){
     cloud ans;
@@ -55,14 +67,12 @@ public:
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
       arma::vec new_state = mvrnorm(cl[*it].state, data.Q_proposal.chol);
       ans.New_particle(new_state, &cl[*it]);
+
+      particle &p = ans[i];
+      p.log_importance_dens = log_importance_dens(data, p, t);
     }
 
     return ans;
-  }
-
-  static double log_importance_dens(const PF_data &data, const particle &p, int t){
-    /* independent of is_forward for first order random walk */
-    return dmvnrm_log(p.state, p.parent->state, data.Q_proposal.chol_inv);
   }
 
   static cloud sample_smooth(
@@ -89,17 +99,12 @@ public:
       arma::vec new_state = mvrnorm(
         mean, data.Q_proposal_smooth.chol);
       ans.New_particle(new_state, &fw_p, &bw_p);
+
+      particle &p = ans[i];
+      p.log_importance_dens = log_importance_dens_smooth(data, p, t);
     }
 
     return ans;
-  }
-
-  static double log_importance_dens_smooth(
-      const PF_data &data, const particle &p, int t){
-    arma::vec mean = p.parent->state + p.child->state;
-    mean *= .5;
-
-    return dmvnrm_log(p.state, mean, data.Q_proposal_smooth.chol_inv);
   }
 
   static cloud sample_first_state_n_set_weights(const PF_data &data){
@@ -139,35 +144,52 @@ public:
   Sampler which makes a normal approximation for the observed outcome
 */
 
-template<typename densities, bool is_forward>
-class importance_dens_normal_approx {
-public:
-  static cloud sample(const PF_data &data, cloud &cl, const arma::uvec &resample_idx, const unsigned int t){
-    arma::vec
-
-    /* Compute eta */
-    /* Compute G */
-    /* Compute G_prime */
-    /* Compute sampling mean and sampling variance */
-    /* Store  */
-  }
-
-  static double log_importance_dens(const PF_data &data, const particle &p, int t){
-  }
-
-  static cloud sample_smooth(
-      const PF_data &data,
-      cloud &fw_cloud, const arma::uvec &fw_idx,
-      cloud &bw_cloud, const arma::uvec &bw_idx, const unsigned int t){
-  }
-
-  static double log_importance_dens_smooth(
-      const PF_data &data, const particle &p, int t){
-  }
-
-  static cloud sample_first_state_n_set_weights(const PF_data &data){
-  }
-};
-
+// template<typename densities, bool is_forward>
+// class importance_dens_normal_approx {
+// public:
+//   static cloud sample(const PF_data &data, cloud &cl, const arma::uvec &resample_idx, const unsigned int t){
+//     arma::vec current_mu =
+//     arma::mat current_covar =
+//
+//     get_risk_set
+//
+//     arma::vec mu
+//     arma::mat covar
+//
+//     for(r in risk_set){
+//       compute G
+//       compute g
+//       update mu
+//       update covar
+//     }
+//
+//     store mu
+//     store covar
+//
+//     sample
+//
+//     /* Compute eta */
+//     /* Compute G */
+//     /* Compute G_prime */
+//     /* Compute sampling mean and sampling variance */
+//     /* Store  */
+//   }
+//
+//   static double log_importance_dens(const PF_data &data, const particle &p, int t){
+//   }
+//
+//   static cloud sample_smooth(
+//       const PF_data &data,
+//       cloud &fw_cloud, const arma::uvec &fw_idx,
+//       cloud &bw_cloud, const arma::uvec &bw_idx, const unsigned int t){
+//   }
+//
+//   static double log_importance_dens_smooth(
+//       const PF_data &data, const particle &p, int t){
+//   }
+//
+//   static cloud sample_first_state_n_set_weights(const PF_data &data){
+//   }
+// };
 #undef MAX
 #endif
