@@ -65,9 +65,10 @@ public:
     const arma::mat mat;
     const arma::mat chol;
     const arma::mat chol_inv;
+    const arma::mat inv;
 
     covarmat(const arma::mat Q):
-      mat(Q), chol(arma::chol(mat)), chol_inv(arma::inv(arma::trimatu(chol)))
+      mat(Q), chol(arma::chol(mat)), chol_inv(arma::inv(arma::trimatu(chol))), inv(arma::inv(Q))
       {}
   };
 

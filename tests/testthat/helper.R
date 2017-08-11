@@ -16,6 +16,7 @@ if(interactive()){
   symmetric_mat_chol <- with(environment(ddhazard), symmetric_mat_chol)
   tri_mat_times_vec <- with(environment(ddhazard), tri_mat_times_vec)
   sym_mat_rank_one_update <- with(environment(ddhazard), sym_mat_rank_one_update)
+  solve_w_precomputed_chol_test <- with(environment(ddhazard), solve_w_precomputed_chol_test)
 
   # test_SMA.R
   SMA_hepler_logit_compute_length <-

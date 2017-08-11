@@ -237,7 +237,7 @@ test_that("PF_smooth gives same results", {
   expect_equal(result, read_to_test("PF_smooth_simple"), tolerance = 1.49e-08)
 
   #####
-  # AUX filter
+  # Simple AUX fillter
   runif(1) # for seed test
   old_seed <- .Random.seed
   sink("tmp.txt") # TODO: remove

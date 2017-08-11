@@ -1,5 +1,5 @@
-#include "arma_utils.h"
-#include "LAPACK_BLAS_wrapper.h"
+#include "BLAS_and_LAPACK/arma_utils.h"
+#include "BLAS_and_LAPACK/LAPACK_BLAS_wrapper.h"
 
 // Exported for tests
 // [[Rcpp::export]]
@@ -88,6 +88,27 @@ arma::mat out_mat_prod(const arma::mat &A){
   arma::mat out(n, n, arma::fill::zeros);
 
   symmetric_rank_k_update(&n, &k, A.memptr(), out.memptr());
+
+  return out;
+}
+
+/*
+  solve_w_precomputed_chol computes
+    A X = B
+  where D = chol_decomp is a Cholesky decomposition such that D^T D = A
+
+ Maybe use BLAS DTRSM as backsolve and forward solve in R (see
+ r-source/src/main/array.c)
+*/
+template<>
+arma::vec solve_w_precomputed_chol(const arma::mat &chol_decomp, const arma::vec& B){
+  arma::vec out = B; /* take copy */
+  int n = out.n_elem;
+
+  triangular_sys_solve(
+    chol_decomp.memptr(), out.memptr(), true, true  /* transpose */, n, 1);
+  triangular_sys_solve(
+    chol_decomp.memptr(), out.memptr(), true, false /* don't transpose */, n, 1);
 
   return out;
 }

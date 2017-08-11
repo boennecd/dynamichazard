@@ -18,3 +18,7 @@ void sym_mat_vec_mult(const int *n, const double *x, const double *A, double *y)
 // wrapper for DSYRK
 void symmetric_rank_k_update(
     const int *n, const int *k, const double *A, double *C);
+
+// wrapper for dtrtrs
+void triangular_sys_solve(
+    const double*, double*, const bool, const bool, const int , const int);

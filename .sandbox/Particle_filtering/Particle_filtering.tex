@@ -278,7 +278,7 @@ which we can sample from in $\bigO{p^2}$ time. Another option is to use normal a
 			\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
 			\vec{g}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}		
 		}{ % end of arg2 \normalC
-			- \mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}
+			- \mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
 		}
 \end{array}\end{equation}
 %
@@ -314,14 +314,26 @@ where we can analytically integrate out $\widetilde{g}$ to get:
 	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} &=&  %
 		\normalC{\vec{\alpha}_t}{\vec{\mu}_t}{\mat{\Sigma}_t} \\
 %
-	\mat{\Sigma}_t^{-1} &=& \mat{X}_t^\top \mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}\mat{X}_t + \mat{Q}^{-1}  \\
+	\mat{\Sigma}_t^{-1} &=& \mat{X}_t^\top 
+		\Lparen{-\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}}
+		\mat{X}_t + \mat{Q}^{-1}  \\
 %
 	\vec{\mu}_t &=& \mat{\Sigma}_t\Lparen{
-		\mat{Q}^{-1}\mat{F}\vecb{\alpha}_{t - 1} + 
-		\mat{X}_t^\top \mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
+		\mat{Q}^{-1}\mat{F}\partic{\vec{\alpha}}{t-1}{j} + 
+		\mat{X}_t^\top \Lparen{-\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}}
 		\Lparen{
 			\mat{X}_t\mat{F}\partic{\vec{\alpha}}{t-1}{j} - 
 			\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
+			\vec{g}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}
+		}
+	} \\
+%
+	 &=& \mat{\Sigma}_t\Lparen{
+		\mat{Q}^{-1}\mat{F}\partic{\vec{\alpha}}{t-1}{j} + 
+		\mat{X}_t^\top
+		\Lparen{
+			\Lparen{-\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}}
+			\mat{X}_t\mat{F}\partic{\vec{\alpha}}{t-1}{j} - 
 			\vec{g}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}
 		}
 	}

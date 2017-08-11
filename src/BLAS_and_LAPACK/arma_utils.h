@@ -1,4 +1,4 @@
-#include "arma_n_rcpp.h"
+#include "../arma_n_rcpp.h"
 
 void symmetric_mat_chol(const arma::mat&, arma::mat &);
 
@@ -15,3 +15,6 @@ void sym_mat_rank_one_update(const double, const arma::vec&, arma::mat&);
 arma::vec sym_mat_times_vec(const arma::vec&, const arma::mat&);
 
 arma::mat out_mat_prod(const arma::mat &);
+
+template<class T>
+arma::vec solve_w_precomputed_chol(const arma::mat&, const T&);

@@ -2,7 +2,7 @@
 #ifdef _OPENMP
 #include "omp.h"
 #endif
-#include "arma_utils.h"
+#include "BLAS_and_LAPACK/arma_utils.h"
 
 inline double GMA_hepler_logit::d1(
     const double eta, const bool is_event, const double at_risk_length){

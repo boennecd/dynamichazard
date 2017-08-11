@@ -254,6 +254,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// solve_w_precomputed_chol_test
+arma::vec solve_w_precomputed_chol_test(const arma::mat& chol_decomp, const arma::vec& B);
+RcppExport SEXP _dynamichazard_solve_w_precomputed_chol_test(SEXP chol_decompSEXP, SEXP BSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type chol_decomp(chol_decompSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type B(BSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_w_precomputed_chol_test(chol_decomp, B));
+    return rcpp_result_gen;
+END_RCPP
+}
 // logLike_cpp
 std::vector<double> logLike_cpp(const arma::mat& X, const Rcpp::List& risk_obj, const arma::mat& F, const arma::mat& Q_0, arma::mat Q, const arma::mat& a_t_d_s, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_effects_offsets, const int order_, const std::string model);
 RcppExport SEXP _dynamichazard_logLike_cpp(SEXP XSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP a_t_d_sSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_effects_offsetsSEXP, SEXP order_SEXP, SEXP modelSEXP) {
@@ -422,6 +434,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_mvrnorm_test", (DL_FUNC) &_dynamichazard_mvrnorm_test, 2},
     {"_dynamichazard_dmvnrm_log_test", (DL_FUNC) &_dynamichazard_dmvnrm_log_test, 3},
     {"_dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &_dynamichazard_bigglm_updateQR_rcpp, 12},
+    {"_dynamichazard_solve_w_precomputed_chol_test", (DL_FUNC) &_dynamichazard_solve_w_precomputed_chol_test, 2},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 10},
     {"_dynamichazard_FW_filter", (DL_FUNC) &_dynamichazard_FW_filter, 19},

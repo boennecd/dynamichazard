@@ -52,3 +52,12 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
     return(bigglm_updateQR_poisson::update(qr, X, eta, offset, y, w));
   }
 }
+
+// -------------------------------------------------- //
+
+#include "BLAS_and_LAPACK/arma_utils.h"
+
+// [[Rcpp::export]]
+arma::vec solve_w_precomputed_chol_test(const arma::mat &chol_decomp, const arma::vec& B){
+  return(solve_w_precomputed_chol(chol_decomp, B));
+}

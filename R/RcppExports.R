@@ -65,6 +65,10 @@ bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, et
     invisible(.Call(`_dynamichazard_bigglm_updateQR_rcpp`, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
 }
 
+solve_w_precomputed_chol_test <- function(chol_decomp, B) {
+    .Call(`_dynamichazard_solve_w_precomputed_chol_test`, chol_decomp, B)
+}
+
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {
     .Call(`_dynamichazard_logLike_cpp`, X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }

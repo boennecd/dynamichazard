@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include <R_ext/BLAS.h>
 #include <R_ext/Lapack.h>
+#include "LAPACK_BLAS_wrapper.h"
 
 extern "C"
 {
@@ -164,4 +165,34 @@ void symmetric_rank_k_update(
       n, k, &dum_d,
       A, n,
       &dum_d, C, n);
+}
+
+void triangular_sys_solve(
+    const double *A, double *B, const bool is_upper, const bool trans, const int n,
+    const int nrhs){
+  /*
+     DTRTRS solves a triangular system of the form
+
+     A * X = B  or  A**T * X = B,
+
+     where A is a triangular matrix of order N, and B is an N-by-NRHS
+     matrix.  A check is made to verify that A is nonsingular.
+   */
+
+  int info;
+
+  F77_NAME(dtrtrs)(
+      is_upper ? "U" : "L",
+      trans ? "T" : "N",
+      "N",
+      &n, &nrhs,
+      A, &n,
+      B, &n,
+      &info);
+
+  if(info != 0){
+    std::stringstream str;
+    str << "Got error code '" << info << "' when using LAPACK dtrtrs";
+    Rcpp::stop(str.str());
+  }
 }

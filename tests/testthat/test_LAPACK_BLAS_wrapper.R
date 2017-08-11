@@ -163,3 +163,45 @@ test_that("Symmetric matrix rank one update works",{
                  d1[upper.tri(d1, diag = TRUE)])
   }
 })
+
+#####
+
+test_that("solve_w_precomputed_chol_test gives solve solution", {
+  for(n in c(5, 10, 50, 100)){
+    r_mat <- get_random_sym_post_def_mat(n)
+    B <- rnorm(n)
+    .chol <- chol(r_mat)
+
+    B_copy <- B
+    B_copy[1] <- B_copy[1] - 1
+    B_copy[1] <- B_copy[1] + 1
+
+    cpp_out <- solve_w_precomputed_chol_test(.chol, B)
+    R_out <- solve(r_mat, B)
+
+    expect_equal(B, B_copy)
+    expect_equal(drop(cpp_out), R_out, check.attributes = FALSE)
+  }
+})
+
+
+test_func <- function(n){
+  r_mat <- get_random_sym_post_def_mat(n)
+  B <- rnorm(n)
+  .chol <- chol(r_mat)
+
+  out <- microbenchmark::microbenchmark(
+    solve = .solve <- solve(r_mat, B),
+    fw_bw = fw_bw <- backsolve(
+      .chol, forwardsolve(.chol, B, upper.tri = TRUE, transpose = TRUE)),
+    cpp = cpp_out <- solve_w_precomputed_chol_test(.chol, B))
+
+  expect_equal(.solve, fw_bw)
+  expect_equal(.solve, drop(cpp_out))
+
+  out
+}
+
+# test_func(10)
+# test_func(100)
+# test_func(250)

@@ -4,13 +4,20 @@
 #include "PF/densities.h"
 
 
-using PF_fw = AUX_PF<None_AUX_resampler, importance_dens_no_y_dependence, binary, true>;
-using PF_bw = AUX_PF<None_AUX_resampler, importance_dens_no_y_dependence, binary, false>;
-using PF_sm = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
+using PF_easy_fw = AUX_PF<None_AUX_resampler, importance_dens_no_y_dependence, binary, true>;
+using PF_easy_bw = AUX_PF<None_AUX_resampler, importance_dens_no_y_dependence, binary, false>;
+using PF_easy_sm = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
 
-using AUX_fw = AUX_PF<AUX_resampler, importance_dens_no_y_dependence, binary, true>;
-using AUX_bw = AUX_PF<AUX_resampler, importance_dens_no_y_dependence, binary, false>;
-using AUX_sm = PF_smoother<AUX_resampler, importance_dens_no_y_dependence, binary>;
+using AUX_scale_weights_fw = AUX_PF<AUX_resampler, importance_dens_no_y_dependence, binary, true>;
+using AUX_scale_weights_bw = AUX_PF<AUX_resampler, importance_dens_no_y_dependence, binary, false>;
+using AUX_scale_weights_sm = PF_smoother<AUX_resampler, importance_dens_no_y_dependence, binary>;
+
+using AUX_scale_weights_n_normal_approx_fw =
+  AUX_PF<AUX_resampler, importance_dens_normal_approx, binary, true>;
+using AUX_scale_weights_n_normal_approx_bw =
+  AUX_PF<AUX_resampler, importance_dens_normal_approx, binary, false>;
+using AUX_scale_weights_n_normal_approx_sm =
+  PF_smoother<AUX_resampler, importance_dens_normal_approx, binary>;
 
 /* Function to turn a clouds of particles into an Rcpp::List */
 Rcpp::List get_rcpp_out_list(
@@ -105,7 +112,7 @@ Rcpp::List FW_filter(
       N_first);
 
   /* Get the smoothed particles at time 1, 2, ..., d */
-  std::vector<cloud> clouds = AUX_bw::compute(data);
+  std::vector<cloud> clouds = AUX_scale_weights_fw::compute(data);
 
   /* Create output list */
   return(get_rcpp_out_list(data, clouds, false));
@@ -158,7 +165,7 @@ Rcpp::List BW_filter(
       N_first);
 
   /* Get the smoothed particles at time 1, 2, ..., d */
-  std::vector<cloud> clouds = AUX_bw::compute(data);
+  std::vector<cloud> clouds = AUX_scale_weights_bw::compute(data);
 
   /* Create output list */
   return(get_rcpp_out_list(data, clouds, true));
@@ -214,10 +221,12 @@ Rcpp::List PF_smooth(
   /* Get the smoothed particles at time 1, 2, ..., d */
   smoother_output result;
   if(method == "AUX"){
-    result = AUX_sm::compute(data);
+    result = AUX_scale_weights_sm::compute(data);
   } else if (method == "PF") {
-    result = PF_sm::compute(data);
-  } else
+    result = PF_easy_sm::compute(data);
+  } else if (method == "normal_approx"){
+    result = AUX_scale_weights_n_normal_approx_sm::compute(data);
+  }else
     Rcpp::stop("'method' not implemented");
 
 
