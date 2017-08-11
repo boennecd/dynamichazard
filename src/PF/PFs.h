@@ -1,13 +1,13 @@
 #ifndef AUX_PF_H
 #define AUX_PF_H
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
-
 #include "PF_data.h"
 #include "particles.h"
 #include "../sample_funcs.h"
 #include "PF_utils.h"
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 class PF_base {
 protected:
@@ -103,7 +103,7 @@ public:
             max_weight = MAX(it->log_weight, max_weight);
           }
 
-          normalize_log_weights(new_cloud, max_weight);
+          normalize_log_weights<false, true>(new_cloud, max_weight);
       }
 
       debug_msg_after_weighting(data, new_cloud);
@@ -225,7 +225,7 @@ public:
             max_weight = MAX(it->log_weight, max_weight);
           }
 
-          normalize_log_weights(new_cloud, max_weight);
+          normalize_log_weights<false, true>(new_cloud, max_weight);
       }
 
       debug_msg_after_weighting(data, new_cloud);

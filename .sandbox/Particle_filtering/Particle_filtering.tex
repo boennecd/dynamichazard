@@ -142,6 +142,7 @@
 % Math commands
 \renewcommand{\vec}[1]{\bm{#1}}
 \newcommand{\vect}[1]{\widetilde{\vec{#1}}}
+\newcommand{\vecb}[1]{\bar{\vec{#1}}}
 \newcommand{\mat}[1]{\mathbf{#1}}
 \newcommand{\matt}[1]{\widetilde{\mat{#1}}}
 
@@ -273,11 +274,11 @@ which we can sample from in $\bigO{p^2}$ time. Another option is to use normal a
 		\normalC{
 			\mat{X}_t\vec{\alpha}_t
 		}{ % end of arg1 \normalC
-			\mat{X}_t\mat{F}\partic{\vec{\alpha}}{t-1}{j}- 
-			\mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}^{-1}
-			\vec{g}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}		
+			\mat{X}_t\mat{F}\vecb{\alpha}_{t - 1} - 
+			\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
+			\vec{g}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}		
 		}{ % end of arg2 \normalC
-			- \mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}
+			- \mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}
 		}
 \end{array}\end{equation}
 %
@@ -307,28 +308,28 @@ to get:
 		\optorC{\widetilde{g}}{\vec{y}_t}{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}
 \end{equation}
 %
+%
 where we can analytically integrate out $\widetilde{g}$ to get:
-%
-%
 \begin{equation}\begin{array}{rcl}
 	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} &=&  %
 		\normalC{\vec{\alpha}_t}{\vec{\mu}_t}{\mat{\Sigma}_t} \\
 %
-	\mat{\Sigma}_t^{-1} &=& \mat{X}_t^\top \mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}^{-1}\mat{X}_t + \mat{Q}^{-1}  \\
+	\mat{\Sigma}_t^{-1} &=& \mat{X}_t^\top \mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}\mat{X}_t + \mat{Q}^{-1}  \\
 %
 	\vec{\mu}_t &=& \mat{\Sigma}_t\Lparen{
-		\mat{Q}^{-1}\mat{F}\partic{\vec{\alpha}}{t-1}{j} + 
-		\mat{X}_t^\top \mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}^{-1}
+		\mat{Q}^{-1}\mat{F}\vecb{\alpha}_{t - 1} + 
+		\mat{X}_t^\top \mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
 		\Lparen{
 			\mat{X}_t\mat{F}\partic{\vec{\alpha}}{t-1}{j} - 
-			\mat{G}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}^{-1}
-			\vec{g}_t\Lparen{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}
+			\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
+			\vec{g}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}
 		}
 	}
 \end{array}\end{equation}
+%
+%
 
-
-This is similar to the second order random walk example in \cite{fearnhead10}. The downside is an $\bigO{np^2}$ computational cost. Next, we have the re-sampling weights. A simple solution is not to use an auxiliary particle filter and set:
+We can select  $\vecb{\alpha}_{t - 1}$ as the mode or mean given the cloud at time $t-1$. This is similar to the second order random walk example in \cite{fearnhead10}. The downside is an $\bigO{np^2}$ computational cost though independent of the number of particles. Next, we have the re-sampling weights. A simple solution is not to use an auxiliary particle filter and set:
 
 \begin{equation}
 	\partic{\beta}{t}{j} \propto \partic{w}{t-1}{j}
@@ -341,7 +342,7 @@ which is an $\bigO{1}$ operation. Another options is to set:
 \end{equation}
 %
 %
-which is an $\bigO{np}$ operation.
+which is an $\bigO{np}$ operation per particle.
 
 The computational cost of re-weighting the particles in~\eqref{eqn:forwardWeight} depend on the above choices. It is at least an $\bigO{np}$ operation due to $\propC{\vec{y}_t}{\partic{\vec{\alpha}}{t}{i}}$.
 
@@ -393,6 +394,10 @@ Add the least, all methods will end up being $\bigO{np}$ due to computation of t
 We can add (crude) estimate for the $\propC{\vec{y}_t}{\vec{\alpha}_{t - 1}}$ and $\propC{\vec{y}_t}{\vec{\alpha}_{t + 1}}$ at  $2N$ evaluations of  $\propC{\vec{y}_t}{\vec{\alpha}_t}$.
 
 We can make a normal approximation of  $\propC{\vec{y}_t}{\vec{\alpha}_t}$ in any of the importance densities but this will give at an $\bigO{np^2}$ cost per particle.
+
+We can do as in the second example in \citet[page~462 and 463]{fearnhead10} to get an algorithm with $\bigO{d\Lparen{\Lparen{N + N_s}np + np^2}}$ computational cost.
+
+\newpage
 
 TODO: Change some P's to f's and g's?
 

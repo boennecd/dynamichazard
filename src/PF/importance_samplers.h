@@ -132,7 +132,7 @@ public:
         max_weight = MAX(ans[i].log_weight, max_weight);
       }
 
-      normalize_log_weights(ans, max_weight);
+      normalize_log_weights<false, true>(ans, max_weight);
     }
 
     return(ans);
@@ -148,6 +148,9 @@ public:
 // class importance_dens_normal_approx {
 // public:
 //   static cloud sample(const PF_data &data, cloud &cl, const arma::uvec &resample_idx, const unsigned int t){
+//     /* Find mean */
+//
+//
 //     arma::vec current_mu =
 //     arma::mat current_covar =
 //
@@ -191,5 +194,8 @@ public:
 //   static cloud sample_first_state_n_set_weights(const PF_data &data){
 //   }
 // };
+
+
+
 #undef MAX
 #endif

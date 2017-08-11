@@ -238,6 +238,7 @@ test_that("PF_smooth gives same results", {
 
   #####
   # AUX filter
+  runif(1) # for seed test
   old_seed <- .Random.seed
   sink("tmp.txt") # TODO: remove
   set.seed(30302129)

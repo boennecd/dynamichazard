@@ -1,11 +1,13 @@
 #ifndef RESAMPLERS
 #define RESAMPLERS
 
-#define MAX(a,b) (((a)>(b))?(a):(b))
-
 #include "PF_data.h"
 #include "particles.h"
 #include "../sample_funcs.h"
+#include "PF_utils.h"
+
+
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 /* base class for common functions*/
 
@@ -109,26 +111,9 @@ public:
       max_weight = MAX(it->log_resampling_weight, max_weight);
     }
 
-    double norm_constant = 0;
-    for(auto it = PF_cloud.begin(); it != PF_cloud.end(); ++it){
-      /* back transform weights */
-      it->log_resampling_weight = exp(it->log_resampling_weight - max_weight);
-      norm_constant += it->log_resampling_weight;
-    }
+    auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
 
-    /* Find ESS and log transform after normalizing */
-    double ESS = 0;
-    auto w = weights.begin();
-    for(auto it = PF_cloud.begin(); it != PF_cloud.end(); ++it, ++w){
-      it->log_resampling_weight /= norm_constant;
-      *w = it->log_resampling_weight;
-      ESS += *w * *w;
-
-      it->log_resampling_weight = log(it->log_resampling_weight);
-    }
-    ESS = 1/ ESS;
-
-    return(sample(data, weights, ESS));
+    return(sample(data, norm_out.weights, norm_out.ESS));
   }
 };
 
