@@ -98,7 +98,7 @@ public:
 */
 
 template<typename densities, bool is_forward, bool scale_w_proposal>
-class AUX_resampler_tp : private resampler_base<systematic_resampling> {
+class AUX_resampler_crude_y_dependence_tp : private resampler_base<systematic_resampling> {
 public:
   inline static nothing resampler(
       const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome){
@@ -124,7 +124,6 @@ public:
     }
 
     auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
-
     outcome = sample(data, norm_out.weights, norm_out.ESS);
 
     return nothing();
@@ -132,7 +131,7 @@ public:
 };
 
 template<typename densities, bool is_forward>
-using AUX_resampler_no_proposal_scaling = AUX_resampler_tp<densities, is_forward, false>;
+using AUX_resampler_crude_y_dependence_no_proposal_scaling = AUX_resampler_crude_y_dependence_tp<densities, is_forward, false>;
 
 /*
  Auxiliary particle filter where we use the weights times the next period
@@ -145,7 +144,52 @@ using AUX_resampler_no_proposal_scaling = AUX_resampler_tp<densities, is_forward
 */
 
 template<typename densities, bool is_forward>
-using AUX_resampler_with_proposal_scaling = AUX_resampler_tp<densities, is_forward, true>;
+using AUX_resampler_crude_y_dependence_with_proposal_scaling = AUX_resampler_crude_y_dependence_tp<densities, is_forward, true>;
+
+/*
+  Auxiliary particle filter with weights as in the end of page 462 of:
+    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
+*/
+
+template<typename densities, bool is_forward>
+class AUX_resampler_normal_approx : private resampler_base<systematic_resampling> {
+public:
+  inline static input_for_normal_approximation resampler(
+      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome){
+    /* Find weighted mean estimate */
+    arma::vec alpha_bar = PF_cloud.get_weigthed_mean();
+
+    /* compute parts of the terms for the mean and covariance */
+    auto &Q = data.Q_proposal;
+    auto ans = compute_mu_n_Sigma_from_normal_approximation<densities>(
+      data, t, Q, alpha_bar, PF_cloud);
+
+    /* Compute sampling weights*/
+    double max_weight =  -std::numeric_limits<double>::max();
+    auto it_cl = PF_cloud.begin();
+    auto it_mu_j = ans.mu_js.begin();
+    unsigned int n_elem = PF_cloud.size();
+    for(unsigned int i = 0; i != n_elem; ++i, ++it_cl, ++it_mu_j){
+      double log_prob_y_given_state = densities::log_prob_y_given_state(
+        data, *it_mu_j, t);
+      double log_prop_transition = dmvnrm_log(
+        *it_mu_j, it_cl->state /* Notice previous */, data.Q.chol_inv /* Notice Q */);
+      double log_prop_proposal = dmvnrm_log(
+        *it_mu_j, *it_mu_j /* Notice same */, ans.sigma_chol_inv /* Notice Sigma*/);
+
+      it_cl->log_resampling_weight =
+        it_cl->log_weight + log_prop_transition + log_prob_y_given_state
+        - log_prop_proposal;
+
+      max_weight = MAX(it_cl->log_resampling_weight, max_weight);
+    }
+
+    auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
+    outcome = sample(data, norm_out.weights, norm_out.ESS);
+
+    return ans;
+  }
+};
 
 #undef MAX
 #endif

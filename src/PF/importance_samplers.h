@@ -197,6 +197,13 @@ public:
     auto inter_output = compute_mu_n_Sigma_from_normal_approximation<densities>(
       data, t, Q, alpha_bar, cl);
 
+    return(sample(data, cl, resample_idx, t, inter_output));
+  }
+
+  static cloud sample(
+      const PF_data &data, cloud &cl, const arma::uvec &resample_idx,
+      const unsigned int t,
+      input_for_normal_approximation &inter_output){
     /* Sample */
     debug_msg_before_sampling(data, inter_output);
 

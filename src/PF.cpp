@@ -8,10 +8,13 @@ using PF_easy_fw = PF_easy_sm::forward_filter;
 using PF_easy_bw = PF_easy_sm::backward_filter;
 
 using AUX_scale_weights_sm =
-  PF_smoother<AUX_resampler_no_proposal_scaling, importance_dens_no_y_dependence, binary>;
+  PF_smoother<AUX_resampler_crude_y_dependence_no_proposal_scaling, importance_dens_no_y_dependence, binary>;
 
 using PF_w_normal_approx_sm =
   PF_smoother<None_AUX_resampler, importance_dens_normal_approx, binary>;
+
+using AUX_w_normal_approx_sm =
+  PF_smoother<AUX_resampler_normal_approx, importance_dens_normal_approx, binary>;
 
 /* Function to turn a clouds of particles into an Rcpp::List */
 Rcpp::List get_rcpp_out_list(
@@ -214,14 +217,17 @@ Rcpp::List PF_smooth(
 
   /* Get the smoothed particles at time 1, 2, ..., d */
   smoother_output result;
-  if(method == "AUX"){
-    result = AUX_scale_weights_sm::compute(data);
-
-  } else if (method == "PF") {
+  if (method == "PF_simple") {
     result = PF_easy_sm::compute(data);
 
-  } else if (method == "normal_approx"){
+  } else if(method == "AUX_crude"){
+    result = AUX_scale_weights_sm::compute(data);
+
+  } else if (method == "PF_normal_approx"){
     result = PF_w_normal_approx_sm::compute(data);
+
+  } else if (method == "AUX_normal_approx"){
+    result = AUX_w_normal_approx_sm::compute(data);
 
   } else {
     std::stringstream stream;

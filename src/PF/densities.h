@@ -46,8 +46,13 @@ class binary {
 public:
   static double log_prob_y_given_state(
       const PF_data &data, const particle &p, int t){
+    return(log_prob_y_given_state(data, p.state, t));
+  }
+
+  static double log_prob_y_given_state(
+      const PF_data &data, const arma::vec &coefs, int t){
     const arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
-    arma::vec eta =  p.state.t() * data.X.cols(r_set);
+    arma::vec eta =  coefs.t() * data.X.cols(r_set);
     const arma::uvec is_event = data.is_event_in_bin(r_set) == t - 1; /* zero indexed while t is not */
 
     auto it_eta = eta.begin();
@@ -68,7 +73,7 @@ public:
                   << " with " << eta.n_elem << " observations. "
                   << "The log likelihood is " << log_like
                   << " and the state is:";
-      data.log(5) << p.state.t();
+      data.log(5) << coefs.t();
     }
 
     return log_like;
