@@ -54,14 +54,13 @@ public:
       const PF_data &data, const arma::vec &coefs, int t){
     /* Find risk set */
     arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
-    auto jobs = get_work_blocks(
-      r_set.begin(), r_set.end(), data.work_block_size);
+    auto jobs = get_work_blocks(r_set.begin(), r_set.end(), data.work_block_size);
     unsigned int n_jobs = jobs.size();
 
     /* compute log likelihood */
     double log_like = 0;
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(std::min(data.n_threads, (int)std::ceil(n_jobs / 5.)))
+#pragma omp parallel for schedule(static) num_threads(std::min(data.n_threads, (int)std::ceil(n_jobs / 2.)))
 #endif
     for(unsigned int i = 0; i < n_jobs; ++i){
       auto &job = jobs[i];
