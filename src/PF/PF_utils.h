@@ -76,6 +76,8 @@ inline normalize_weights_output normalize_log_resampling_weight(
   return normalize_weights<normalize_log_resampling_weight_F, compute_ESS, update_particles>(cl, max_weight);
 }
 
+struct nothing {};
+
 
 
 #undef MAX

@@ -93,7 +93,9 @@ class importance_dens_no_y_dependence :
   }
 
 public:
-  static cloud sample(const PF_data &data, cloud &cl, const arma::uvec &resample_idx, const unsigned int t){
+  static cloud sample(
+      const PF_data &data, cloud &cl, const arma::uvec &resample_idx,
+      const unsigned int t, nothing unused){
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
@@ -241,7 +243,9 @@ class importance_dens_normal_approx  :
   }
 
 public:
-  static cloud sample(const PF_data &data, cloud &cl, const arma::uvec &resample_idx, const unsigned int t){
+  static cloud sample(
+      const PF_data &data, cloud &cl, const arma::uvec &resample_idx,
+      const unsigned int t, nothing unused){
     /* Find weighted mean estimate */
     arma::uword p = cl[0].state.n_elem;
     arma::vec alpha_bar(p, arma::fill::zeros);

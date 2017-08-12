@@ -67,12 +67,14 @@ public:
       /* re-sample indicies */
       if(data.debug > 0)
         data.log(1) << "Starting iteration " << t << ". Re-sampling weights";
-      arma::uvec resample_idx = resampler::resampler(data, clouds.back(), t);
+      arma::uvec resample_idx;
+      auto additional_resampler_out = resampler::resampler(data, clouds.back(), t, resample_idx);
 
       /* sample new cloud */
       if(data.debug > 0)
         data.log(1) << "Sampling states";
-      cloud new_cloud = importance_dens::sample(data, clouds.back(), resample_idx, t);
+      cloud new_cloud = importance_dens::sample(
+        data, clouds.back(), resample_idx, t, additional_resampler_out);
 
       /* update weights */
       if(data.debug > 0)
@@ -143,11 +145,6 @@ template<
 >
 class PF_smoother : private PF_base {
   using uword = arma::uword;
-  using forward_filter =
-    AUX_PF<T_resampler, T_importance_dens, densities, true>;
-  using backward_filter =
-    AUX_PF<T_resampler, T_importance_dens, densities, false>;
-  using importance_dens = T_importance_dens<densities, false /* arg should not matter*/>;
 
   inline static arma::uvec sample_idx(const PF_data &data, cloud &cl){
     arma::vec probs(data.N_fw_n_bw);
@@ -239,6 +236,12 @@ public:
 
     return result;
   }
+
+  using forward_filter =
+    AUX_PF<T_resampler, T_importance_dens, densities, true>;
+  using backward_filter =
+    AUX_PF<T_resampler, T_importance_dens, densities, false>;
+  using importance_dens = T_importance_dens<densities, false /* arg should not matter*/>;
 };
 
 #undef MIN

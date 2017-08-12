@@ -67,7 +67,8 @@ protected:
 template<typename densities, bool is_forward>
 class None_AUX_resampler : private resampler_base<systematic_resampling> {
 public:
-  inline static arma::uvec resampler(const PF_data &data, cloud &PF_cloud, unsigned int t){
+  inline static nothing resampler(
+      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome){
     /* Compute effective sample size (ESS) */
     arma::vec weights(PF_cloud.size());
     double ESS = 0;
@@ -81,7 +82,9 @@ public:
     }
     ESS = 1/ ESS;
 
-    return(sample(data, weights, ESS));
+    outcome = sample(data, weights, ESS);
+
+    return nothing();
   }
 };
 
@@ -97,7 +100,8 @@ public:
 template<typename densities, bool is_forward, bool scale_w_proposal>
 class AUX_resampler_tp : private resampler_base<systematic_resampling> {
 public:
-  inline static arma::uvec resampler(const PF_data &data, cloud &PF_cloud, unsigned int t){
+  inline static nothing resampler(
+      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome){
     /* Compute effective sample size (ESS) */
     arma::vec weights(PF_cloud.size());
 
@@ -121,7 +125,9 @@ public:
 
     auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
 
-    return(sample(data, norm_out.weights, norm_out.ESS));
+    outcome = sample(data, norm_out.weights, norm_out.ESS);
+
+    return nothing();
   }
 };
 
