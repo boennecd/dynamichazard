@@ -56,11 +56,16 @@ public:
     arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
     auto jobs = get_work_blocks(
       r_set.begin(), r_set.end(), data.work_block_size);
+    unsigned int n_jobs = jobs.size();
 
     /* compute log likelihood */
     double log_like = 0;
-    for(auto job = jobs.begin(); job != jobs.end(); ++job){
-      arma::uvec my_r_set(job->start, job->block_size, false /* don't copy */);
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) num_threads(std::min(data.n_threads, (int)std::ceil(n_jobs / 5.)))
+#endif
+    for(unsigned int i = 0; i < n_jobs; ++i){
+      auto &job = jobs[i];
+      arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
       arma::vec eta =  coefs.t() * data.X.cols(my_r_set);
       const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
@@ -75,8 +80,14 @@ public:
         my_log_like += (*it_is_event == 1) ?
           log(1 / (1 + exp(-*it_eta))) : log(1 - 1 / (1 + exp(-*it_eta)));
       }
-
+#ifdef _OPENMP
+#pragma omp critical
+{
+#endif
       log_like += my_log_like;
+#ifdef _OPENMP
+}
+#endif
     }
 
     if(data.debug > 4){

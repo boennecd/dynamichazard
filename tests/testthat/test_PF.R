@@ -218,112 +218,123 @@ test_that("PF_smooth gives same results", {
     debug = 2, # TODO: remove
     method = "PF")
 
+  get_test_expr <- function(fit_quote, test_file_name){
+    bquote({
+      result <- .(fit_quote)
+
+      expect_false(all(old_seed == .Random.seed))
+      for(r in result){
+        expect_equal(
+          rep(1, length(r)), sapply(sapply(r, "[", "weights"), sum),
+          check.attributes = FALSE)
+      }
+      # save_to_test(result, file_name = .(test_file_name))
+      expect_equal(result, read_to_test(.(test_file_name)), tolerance = 1.49e-08)
+
+      old_args <- args
+      args$n_threads <- 7
+
+      result_multi <- .(fit_quote)
+      expect_equal(result_multi, result)
+
+      args <- old_args
+    })
+  }
+
   #####
   # Simple PF
-  old_seed <- .Random.seed
-  sink("tmp.txt") # TODO: remove
-  set.seed(30302129)
-  args$method <- "PF_simple"
-  result <- do.call(PF_smooth, args)
-  sink() # TODO: remove
+  eval(get_test_expr(
+    quote({
+      sink("tmp.txt") # TODO: remove
+      set.seed(30302129)
+      old_seed <- .Random.seed
+      args$method <- "PF_simple"
+      result <- do.call(PF_smooth, args)
+      sink() # TODO: remove
 
-  expect_false(all(old_seed == .Random.seed))
-  for(r in result){
-    expect_equal(
-      rep(1, length(r)), sapply(sapply(r, "[", "weights"), sum),
-      check.attributes = FALSE)
-  }
-  # save_to_test(result, file_name = "PF_smooth_simple")
-  expect_equal(result, read_to_test("PF_smooth_simple"), tolerance = 1.49e-08)
+      result
+    }),
+    test_file_name = "PF_smooth_simple"),
 
-  sapply(result, function(x){
-    ws <- lapply(x, "[[", "weights")
-    sapply(ws, function(z) 1 / sum(z^2))
-  })
+    envir = environment())
 
   #####
   # Simple AUX filter
-  sink("tmp.txt") # TODO: remove
-  set.seed(30302129)
-  old_seed <- .Random.seed
-  args$method <- "AUX_crude"
-  result <- do.call(PF_smooth, args)
-  sink() # TODO: remove
+  eval(get_test_expr(
+    quote({
+      sink("tmp.txt") # TODO: remove
+      set.seed(30302129)
+      old_seed <- .Random.seed
+      args$method <- "AUX_crude"
+      result <- do.call(PF_smooth, args)
+      sink() # TODO: remove
 
-  expect_false(all(old_seed == .Random.seed))
-  for(r in result){
-    expect_equal(
-      rep(1, length(r)), sapply(sapply(r, "[", "weights"), sum),
-      check.attributes = FALSE)
-  }
-  # save_to_test(result, file_name = "AUX_smooth_simple")
-  expect_equal(result, read_to_test("AUX_smooth_simple"), tolerance = 1.49e-08)
+      result
+    }),
+    test_file_name = "AUX_smooth_simple"),
 
-  sapply(result, function(x){
-    ws <- lapply(x, "[[", "weights")
-    sapply(ws, function(z) 1 / sum(z^2))
-  })
+    envir = environment())
 
   #####
   # Normal approximation in proposal density
-  sink("tmp.txt") # TODO: remove
-  set.seed(30302129)
-  old_seed <- .Random.seed
-  args$method <- "PF_normal_approx"
-  result <- do.call(PF_smooth, args)
-  sink() # TODO: remove
+  eval(get_test_expr(
+    quote({
+      sink("tmp.txt") # TODO: remove
+      set.seed(30302129)
+      old_seed <- .Random.seed
+      args$method <- "PF_normal_approx"
+      result <- do.call(PF_smooth, args)
+      sink() # TODO: remove
 
-  # save_to_test(result, file_name = "PF_normal_approx")
-  expect_equal(result, read_to_test("PF_normal_approx"), tolerance = 1.49e-08)
+      result
+    }),
+    test_file_name = "PF_normal_approx"),
 
-  sapply(result, function(x){
-    ws <- lapply(x, "[[", "weights")
-    sapply(ws, function(z) 1 / sum(z^2))
-  })
+    envir = environment())
 
   #####
   # Normal approximation in with AUX filter
-  sink("tmp.txt") # TODO: remove
-  set.seed(30302129)
-  old_seed <- .Random.seed
-  args$method <- "AUX_normal_approx"
-  result <- do.call(PF_smooth, args)
-  sink() # TODO: remove
+  eval(get_test_expr(
+    quote({
+      sink("tmp.txt") # TODO: remove
+      set.seed(30302129)
+      old_seed <- .Random.seed
+      args$method <- "AUX_normal_approx"
+      result <- do.call(PF_smooth, args)
+      sink() # TODO: remove
 
-  # save_to_test(result, file_name = "AUX_normal_approx")
-  expect_equal(result, read_to_test("AUX_normal_approx"), tolerance = 1.49e-08)
+      result
+    }),
+    test_file_name = "AUX_normal_approx"),
 
-  sapply(result, function(x){
-    ws <- lapply(x, "[[", "weights")
-    sapply(ws, function(z) 1 / sum(z^2))
-  })
+    envir = environment())
 
-
-
-
-
-
-  matplot(0:10, sims$betas, lty = 1, type = "l", ylim = c(-5, 5), xlim = c(0, 11))
-  for(i in 1:3){
-    state_est <- t(sapply(result[[i]], function(row){
-      colSums(t(row$states) * drop(row$weights))
-    }))
-
-    idx <- switch(i, "1" = 0:10, "2" = 1:11, "3" = 1:10)
-    matplot(idx, state_est, lty = i + 1, type = "l", add = TRUE)
-    matplot(idx, state_est, lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
-  }
-  # matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
+  # sapply(result, function(x){
+  #   ws <- lapply(x, "[[", "weights")
+  #   sapply(ws, function(z) 1 / sum(z^2))
+  # })
   #
-  sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
-         function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])
-  sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
-         function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])
-
-  sapply(lapply(result$smoothed_clouds, "[[", "weights"),
-         function(x) sort(x, decreasing = TRUE)[1:10])
-  ord <- sapply(lapply(result$smoothed_clouds, "[[", "weights"),
-              function(x) order(x, decreasing = TRUE)[1:10])
+  # matplot(0:10, sims$betas, lty = 1, type = "l", ylim = c(-5, 5), xlim = c(0, 11))
+  # for(i in 1:3){
+  #   state_est <- t(sapply(result[[i]], function(row){
+  #     colSums(t(row$states) * drop(row$weights))
+  #   }))
+  #
+  #   idx <- switch(i, "1" = 0:10, "2" = 1:11, "3" = 1:10)
+  #   matplot(idx, state_est, lty = i + 1, type = "l", add = TRUE)
+  #   matplot(idx, state_est, lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
+  # }
+  # # matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
+  # #
+  # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
+  #        function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])
+  # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
+  #        function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])
+  #
+  # sapply(lapply(result$smoothed_clouds, "[[", "weights"),
+  #        function(x) sort(x, decreasing = TRUE)[1:10])
+  # ord <- sapply(lapply(result$smoothed_clouds, "[[", "weights"),
+  #             function(x) order(x, decreasing = TRUE)[1:10])
   #
   # # result$smoothed_clouds[[8]]$states[, 1556]
   # # result$smoothed_clouds[[8]]$states[, 5740]
