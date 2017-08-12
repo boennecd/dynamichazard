@@ -22,7 +22,8 @@ inline normalize_weights_output normalize_weights(cloud &cl, const double max_we
   double norm_constant = 0;
   for(auto it = cl.begin(); it != cl.end(); ++it, ++w){
     /* back transform weights */
-    *w = exp(F(*it) - max_weight);
+    *w = MAX(exp(F(*it) - max_weight), std::numeric_limits<double>::epsilon());
+
     norm_constant += *w;
   }
 
@@ -49,7 +50,7 @@ inline normalize_weights_output normalize_weights(cloud &cl, const double max_we
 
 template<double& (*F)(particle&), bool compute_ESS, bool update_particles>
 inline normalize_weights_output normalize_weights(cloud &cl){
-  double max_weight =  -std::numeric_limits<double>::max();
+  double max_weight = -std::numeric_limits<double>::max();
   for(auto it = cl.begin(); it != cl.end(); ++it){
     max_weight = MAX(F(*it), max_weight);
   }

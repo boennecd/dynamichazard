@@ -159,8 +159,6 @@ test_that("BW_filter gives gives same results", {
 test_that("PF_smooth gives same results", {
   skip_on_cran()
 
-  # TODO: test that multi threaded gives the same
-
   PF_smooth <- asNamespace("dynamichazard")$PF_smooth
 
   n_vars <- 2
@@ -177,17 +175,6 @@ test_that("PF_smooth gives same results", {
 
   # sum(sims$res$event)
   # matplot(sims$beta, type = "l", lty = 1)
-
-  # TODO: clean up
-  # ddfit <- ddhazard(
-  #   Surv(tstart, tstop, event) ~ . - id,
-  #   data = sims$res,
-  #   max_T = 10,
-  #   by = 1,
-  #   id = sims$res$id,
-  #   Q_0 = diag(1, 3),
-  #   Q = diag(1e-1, 3),
-  #   a_0 = sims$betas[1, ])
 
   Q <- diag(sqrt(.33), 3)
   Q_0 <- diag(1, 3)
@@ -309,6 +296,17 @@ test_that("PF_smooth gives same results", {
 
     envir = environment())
 
+  # #TODO: clean up
+  # ddfit <- ddhazard(
+  #   Surv(tstart, tstop, event) ~ . - id,
+  #   data = sims$res,
+  #   max_T = 10,
+  #   by = 1,
+  #   id = sims$res$id,
+  #   Q_0 = diag(1, 3),
+  #   Q = diag(1e-1, 3),
+  #   a_0 = sims$betas[1, ])
+  #
   # sapply(result, function(x){
   #   ws <- lapply(x, "[[", "weights")
   #   sapply(ws, function(z) 1 / sum(z^2))
@@ -324,7 +322,7 @@ test_that("PF_smooth gives same results", {
   #   matplot(idx, state_est, lty = i + 1, type = "l", add = TRUE)
   #   matplot(idx, state_est, lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
   # }
-  # # matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
+  # matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
   # #
   # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
   #        function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])

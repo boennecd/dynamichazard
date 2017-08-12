@@ -199,7 +199,7 @@ public:
         data.log(1) << "Weighting particles";
       {
           densities dens_calc = densities();
-          double max_weight =  std::numeric_limits<double>::min();
+          double max_weight = -std::numeric_limits<double>::max();
           for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
             double log_prob_y_given_state =
               dens_calc.log_prob_y_given_state(data, *it, t);
