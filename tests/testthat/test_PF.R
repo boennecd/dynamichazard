@@ -242,11 +242,10 @@ test_that("PF_smooth gives same results", {
   })
 
   #####
-  # Simple AUX fillter
-  runif(1) # for seed test
-  old_seed <- .Random.seed
+  # Simple AUX filter
   sink("tmp.txt") # TODO: remove
   set.seed(30302129)
+  old_seed <- .Random.seed
   args$method <- "AUX_crude"
   result <- do.call(PF_smooth, args)
   sink() # TODO: remove
@@ -267,16 +266,15 @@ test_that("PF_smooth gives same results", {
 
   #####
   # Normal approximation in proposal density
-  runif(1) # for seed test
-  old_seed <- .Random.seed
   sink("tmp.txt") # TODO: remove
-  # set.seed(30302129)
+  set.seed(30302129)
+  old_seed <- .Random.seed
   args$method <- "PF_normal_approx"
   result <- do.call(PF_smooth, args)
   sink() # TODO: remove
 
-  # save_to_test(result, file_name = "AUX_w_IS_normal_approx")
-  expect_equal(result, read_to_test("AUX_w_IS_normal_approx"), tolerance = 1.49e-08)
+  # save_to_test(result, file_name = "PF_normal_approx")
+  expect_equal(result, read_to_test("PF_normal_approx"), tolerance = 1.49e-08)
 
   sapply(result, function(x){
     ws <- lapply(x, "[[", "weights")
@@ -285,13 +283,15 @@ test_that("PF_smooth gives same results", {
 
   #####
   # Normal approximation in with AUX filter
-  runif(1) # for seed test
-  old_seed <- .Random.seed
   sink("tmp.txt") # TODO: remove
-  # set.seed(30302129)
+  set.seed(30302129)
+  old_seed <- .Random.seed
   args$method <- "AUX_normal_approx"
   result <- do.call(PF_smooth, args)
   sink() # TODO: remove
+
+  # save_to_test(result, file_name = "AUX_normal_approx")
+  expect_equal(result, read_to_test("AUX_normal_approx"), tolerance = 1.49e-08)
 
   sapply(result, function(x){
     ws <- lapply(x, "[[", "weights")
