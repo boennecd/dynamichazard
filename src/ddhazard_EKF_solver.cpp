@@ -344,10 +344,9 @@ void EKF_solver<T>::parallel_filter_step(
 
   // declare outsite of loop to ref after loop
   arma::uvec::const_iterator block_start = first;
-  auto it = workers.begin();
   int i_start = 0;
 
-  for(unsigned long i = 0; i < num_blocks - 1; ++i, ++it){
+  for(unsigned long i = 0; i < num_blocks - 1; ++i){
     arma::uvec::const_iterator block_end = block_start;
     std::advance(block_end, block_size);
 

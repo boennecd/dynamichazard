@@ -1,12 +1,13 @@
 #ifndef DENSITIES
 #define DENSITIES
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
-
 #include "PF_data.h"
 #include "particles.h"
 #include "dmvnrm.h"
+#include "PF_utils.h"
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 /*
   Each class has the following static functions:
@@ -51,26 +52,36 @@ public:
 
   static double log_prob_y_given_state(
       const PF_data &data, const arma::vec &coefs, int t){
-    const arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
-    arma::vec eta =  coefs.t() * data.X.cols(r_set);
-    const arma::uvec is_event = data.is_event_in_bin(r_set) == t - 1; /* zero indexed while t is not */
+    /* Find risk set */
+    arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
+    auto jobs = get_work_blocks(
+      r_set.begin(), r_set.end(), data.work_block_size);
 
-    auto it_eta = eta.begin();
-    auto it_is_event = is_event.begin();
-    auto n = eta.n_elem;
-
+    /* compute log likelihood */
     double log_like = 0;
-    for(arma::uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
-      /* Truncate */
-      *it_eta = MIN(MAX(*it_eta, -15), 15);
+    for(auto job = jobs.begin(); job != jobs.end(); ++job){
+      arma::uvec my_r_set(job->start, job->block_size, false /* don't copy */);
+      arma::vec eta =  coefs.t() * data.X.cols(my_r_set);
+      const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
-      log_like += (*it_is_event == 1) ?
-        log(1 / (1 + exp(-*it_eta))) : log(1 - 1 / (1 + exp(-*it_eta)));
+      auto it_eta = eta.begin();
+      auto it_is_event = is_event.begin();
+      auto n = eta.n_elem;
+      double my_log_like = 0;
+      for(arma::uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
+        /* Truncate */
+        *it_eta = MIN(MAX(*it_eta, -15), 15);
+
+        my_log_like += (*it_is_event == 1) ?
+          log(1 / (1 + exp(-*it_eta))) : log(1 - 1 / (1 + exp(-*it_eta)));
+      }
+
+      log_like += my_log_like;
     }
 
     if(data.debug > 4){
       data.log(5) << "Computing log(P(y_t|alpha_t)) at time " << t
-                  << " with " << eta.n_elem << " observations. "
+                  << " with " << r_set.n_elem << " observations. "
                   << "The log likelihood is " << log_like
                   << " and the state is:";
       data.log(5) << coefs.t();

@@ -46,6 +46,7 @@ public:
   const arma::vec &a_0;
   const unsigned int debug; /* < 1 is no info and greater values yields more info */
   const arma::uword N_first;
+  const unsigned long work_block_size;
 
   /* pre-computed factorization */
   struct covarmat{
@@ -109,6 +110,7 @@ public:
       a_0(a_0),
       debug(debug),
       N_first(N_first),
+      work_block_size(100),
 
       Q(Q),
       Q_proposal(Q + Q_tilde),
