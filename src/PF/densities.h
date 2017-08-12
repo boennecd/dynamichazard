@@ -23,7 +23,7 @@
     log_p_prime
       Returns the first deriative of the log likelihood given outcome and the
       state for a given individual
-    log_p_prime_prime
+    log_p_2prime
       Same as log_p_prime for the second derivative
 */
 

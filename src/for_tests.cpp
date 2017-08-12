@@ -1,3 +1,9 @@
+/*
+  Rcpp does not search for attributes in sub directories which is why some
+  functions are in here. See:
+    http://lists.r-forge.r-project.org/pipermail/rcpp-devel/2015-March/008473.html
+*/
+
 #include "sample_funcs.h"
 #include "PF/densities.h"
 

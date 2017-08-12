@@ -94,20 +94,28 @@ public:
   where t depends on the direction
 */
 
-template<typename densities, bool is_forward>
-class AUX_resampler : private resampler_base<systematic_resampling> {
+template<typename densities, bool is_forward, bool scale_w_proposal>
+class AUX_resampler_tp : private resampler_base<systematic_resampling> {
 public:
   inline static arma::uvec resampler(const PF_data &data, cloud &PF_cloud, unsigned int t){
     /* Compute effective sample size (ESS) */
     arma::vec weights(PF_cloud.size());
 
     /* compute non-normalized log weights */
+    bool parent_has_log_importance_dens =
+      !((t == 1 && is_forward) || (t == (unsigned)data.d && !is_forward));
     double max_weight =  -std::numeric_limits<double>::max();
     for(auto it = PF_cloud.begin(); it != PF_cloud.end(); ++it){
       double log_prob_y_given_state = densities::log_prob_y_given_state(
         data, *it /* will either be state from t - 1 or t + 1*/, t);
 
       it->log_resampling_weight = it->log_weight + log_prob_y_given_state;
+      if(scale_w_proposal){
+        if(parent_has_log_importance_dens){
+          it->log_resampling_weight -= it->log_importance_dens;
+        }
+      }
+
       max_weight = MAX(it->log_resampling_weight, max_weight);
     }
 
@@ -116,6 +124,22 @@ public:
     return(sample(data, norm_out.weights, norm_out.ESS));
   }
 };
+
+template<typename densities, bool is_forward>
+using AUX_resampler_no_proposal_scaling = AUX_resampler_tp<densities, is_forward, false>;
+
+/*
+ Auxiliary particle filter where we use the weights times the next period
+ outcome where we just use the previous state and we devide by the propsal
+ likelihood. I.e.:
+  beta_j = w_{j - 1} * P(y_t|alpha_{t - 1}) / q(alpah_{j - 1} | alpha_{t - 2}, y_{t - 1})
+ or
+  beta_j = w_{j - 1} * P(y_t|alpha_{t + 1}) / q(alpah_{j + 1} | alpha_{t + 2}, y_{t + 1})
+ where t depends on the direction
+*/
+
+template<typename densities, bool is_forward>
+using AUX_resampler_with_proposal_scaling = AUX_resampler_tp<densities, is_forward, true>;
 
 #undef MAX
 #endif

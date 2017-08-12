@@ -3,19 +3,27 @@
 
 #include "../arma_n_rcpp.h"
 #include "../problem_data.h"
+#include <mutex>
 
 /* Logger class for debug information */
 class PF_logger {
+  static std::mutex mx;
   bool log;
   unsigned int level;
   std::ostringstream  os;
 
 public:
-  PF_logger(const bool log, const unsigned int level):
-  log(log), level(level) {}
+  PF_logger(const bool log, const unsigned int level);
+
+  PF_logger(PF_logger&& other);
+
+  ~PF_logger();
+
+  PF_logger(const PF_logger&) = delete;
+  PF_logger& operator=(const PF_logger&) = delete;
 
   template<typename T>
-  std::ostringstream & operator<<(const T &obj){
+  std::ostringstream& operator<<(const T &obj){
     if(log){
       for(unsigned int i = 0; i < level - 1; ++i)
         os << "   ";
@@ -24,27 +32,6 @@ public:
 
     return os;
   }
-
-  // move constructor, takes a rvalue reference &&
-  PF_logger (PF_logger&& other)
-  {
-    // does not work with some GCC versions https://stackoverflow.com/a/27152585
-    // os = std::move(other.os);
-    os << other.os.str();
-    log = other.log;
-    level = other.level;
-    other.log = false;
-  }
-
-  ~PF_logger(){
-    if(log){
-      os << std::endl;
-      Rcpp::Rcout << os.str();
-    }
-  }
-
-  PF_logger(const PF_logger&) = delete;
-  PF_logger& operator=(const PF_logger&) = delete;
 };
 
 // data holder for particle filtering

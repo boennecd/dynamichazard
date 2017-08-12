@@ -5,7 +5,8 @@ particle::particle(
   const arma::uword cloud_idx, const particle *child):
   state(state), parent(parent), cloud_idx(cloud_idx), child(child)
   {
-    log_weight = log_resampling_weight = std::numeric_limits<double>::quiet_NaN();
+    log_importance_dens = log_weight = log_resampling_weight =
+      std::numeric_limits<double>::quiet_NaN();
   }
 
 particle cloud::New_particle(

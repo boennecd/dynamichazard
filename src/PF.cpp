@@ -8,16 +8,19 @@ using PF_easy_fw = AUX_PF<None_AUX_resampler, importance_dens_no_y_dependence, b
 using PF_easy_bw = AUX_PF<None_AUX_resampler, importance_dens_no_y_dependence, binary, false>;
 using PF_easy_sm = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
 
-using AUX_scale_weights_fw = AUX_PF<AUX_resampler, importance_dens_no_y_dependence, binary, true>;
-using AUX_scale_weights_bw = AUX_PF<AUX_resampler, importance_dens_no_y_dependence, binary, false>;
-using AUX_scale_weights_sm = PF_smoother<AUX_resampler, importance_dens_no_y_dependence, binary>;
+using AUX_scale_weights_fw =
+  AUX_PF<AUX_resampler_no_proposal_scaling, importance_dens_no_y_dependence, binary, true>;
+using AUX_scale_weights_bw =
+  AUX_PF<AUX_resampler_no_proposal_scaling, importance_dens_no_y_dependence, binary, false>;
+using AUX_scale_weights_sm =
+  PF_smoother<AUX_resampler_no_proposal_scaling, importance_dens_no_y_dependence, binary>;
 
 using AUX_scale_weights_n_normal_approx_fw =
-  AUX_PF<AUX_resampler, importance_dens_normal_approx, binary, true>;
+  AUX_PF<None_AUX_resampler, importance_dens_normal_approx, binary, true>;
 using AUX_scale_weights_n_normal_approx_bw =
-  AUX_PF<AUX_resampler, importance_dens_normal_approx, binary, false>;
+  AUX_PF<None_AUX_resampler, importance_dens_normal_approx, binary, false>;
 using AUX_scale_weights_n_normal_approx_sm =
-  PF_smoother<AUX_resampler, importance_dens_normal_approx, binary>;
+  PF_smoother<None_AUX_resampler, importance_dens_normal_approx, binary>;
 
 /* Function to turn a clouds of particles into an Rcpp::List */
 Rcpp::List get_rcpp_out_list(
@@ -222,13 +225,18 @@ Rcpp::List PF_smooth(
   smoother_output result;
   if(method == "AUX"){
     result = AUX_scale_weights_sm::compute(data);
+
   } else if (method == "PF") {
     result = PF_easy_sm::compute(data);
+
   } else if (method == "normal_approx"){
     result = AUX_scale_weights_n_normal_approx_sm::compute(data);
-  }else
-    Rcpp::stop("'method' not implemented");
 
+  } else {
+    std::stringstream stream;
+    stream << "method '" << method << "' is not implemented";
+    Rcpp::stop(stream.str());
+  }
 
   /* Create output list */
   return Rcpp::List::create(

@@ -322,7 +322,7 @@ where we can analytically integrate out $\widetilde{g}$ to get:
 		\mat{Q}^{-1}\mat{F}\partic{\vec{\alpha}}{t-1}{j} + 
 		\mat{X}_t^\top \Lparen{-\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}}
 		\Lparen{
-			\mat{X}_t\mat{F}\partic{\vec{\alpha}}{t-1}{j} - 
+			\mat{X}_t\mat{F}\vecb{\alpha}_{t - 1} - 
 			\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
 			\vec{g}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}
 		}
@@ -333,7 +333,7 @@ where we can analytically integrate out $\widetilde{g}$ to get:
 		\mat{X}_t^\top
 		\Lparen{
 			\Lparen{-\mat{G}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}}
-			\mat{X}_t\mat{F}\partic{\vec{\alpha}}{t-1}{j} - 
+			\mat{X}_t\mat{F}\vecb{\alpha}_{t - 1} +
 			\vec{g}_t\Lparen{\mat{F}\vecb{\alpha}_{t - 1}}
 		}
 	}

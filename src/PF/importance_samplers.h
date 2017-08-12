@@ -24,9 +24,7 @@
       Returns a particle cloud for time zero or d + 1 with weights set
 */
 
-/*
-  base class importance samplers
-*/
+/* base class importance samplers */
 
 template<typename densities, bool is_forward>
 class importance_dens_base {
@@ -74,7 +72,7 @@ public:
     N(alpha | (1/2)Q(Q^-1 alpha_{t + 1}^{j} + alpha_{t + 1}^{k}), (1/2)Q) =
     N(alpha | (1/2)alpha_{t + 1}^{j} + (1/2)alpha_{t + 1}^{k}), (1/2)Q)
 
- See page:
+ See:
   Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
 
@@ -167,6 +165,13 @@ class importance_dens_normal_approx  :
 
   static intermediate_output compute_mu_n_Sigma(
       const PF_data &data, const unsigned int t, const PF_data::covarmat &Q, const arma::vec &alpha_bar){
+    if(data.debug > 2){
+      data.log(3) << "Computing normal approximation with mean vector:";
+      data.log(3) << alpha_bar.t();
+      data.log(3) << "and covaraince matrix:";
+      data.log(3) << Q.mat;
+    }
+
     intermediate_output ans;
 
     /* Compute the terms that does not depend on the outcome */
@@ -177,7 +182,7 @@ class importance_dens_normal_approx  :
 
     /* Add the terms that does depend on the outcome */
     const arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
-    arma::vec eta =  mu.t() * data.X.cols(r_set);
+    arma::vec eta =  alpha_bar.t() * data.X.cols(r_set);
     const arma::uvec is_event = data.is_event_in_bin(r_set) == t - 1; /* zero indexed while t is not */
 
     auto it_eta = eta.begin();
@@ -195,7 +200,7 @@ class importance_dens_normal_approx  :
 
       sym_mat_rank_one_update(neg_G, data.X.col(*it_r), Sigma_inv);
 
-      mu += data.X.col(*it_r) * ((*it_eta * neg_G) - g);
+      mu += data.X.col(*it_r) * ((*it_eta * neg_G) + g);
     }
 
     /* copy to lower */
@@ -207,6 +212,32 @@ class importance_dens_normal_approx  :
     ans.sigma_chol_inv = arma::inv(arma::trimatu(ans.Sigma_chol));
 
     return ans;
+  }
+
+  inline static void debug_msg_before_sampling(const PF_data &data, const intermediate_output &inter_output){
+    if(data.debug > 2){
+      data.log(3) << "Sampling new cloud from normal distribution with chol(Sigma) given by";
+      data.log(3) << inter_output.Sigma_chol;
+      data.log(3) << "The mean before accounting for the parent (and child) particle is:";
+      data.log(3) << solve_w_precomputed_chol(inter_output.Sigma_inv_chol, inter_output.mu).t();
+    }
+  }
+
+  inline static void debug_msg_while_sampling(
+      const PF_data &data, const particle &p, const arma::vec &mu){
+    if(data.debug > 4){
+      data.log(5) << "Sampled particle:";
+      data.log(5) << p.state.t();
+      data.log(5) << "from normal distribution with mean:";
+      data.log(5) << mu.t();
+      data.log(5) << "The parent had state:";
+      data.log(5) << p.parent->state.t();
+
+      if(p.child){
+        data.log(5) << "and the child had state";
+        data.log(5) << p.child->state.t();
+      }
+    }
   }
 
 public:
@@ -223,12 +254,14 @@ public:
     auto inter_output = compute_mu_n_Sigma(data, t, Q, alpha_bar);
 
     /* Sample */
+    debug_msg_before_sampling(data, inter_output);
+
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
     auto it = resample_idx.begin();
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
-      arma::vec mu_j = solve_w_precomputed_chol(Q.chol, cl[*it].state);
+      arma::vec mu_j = solve_w_precomputed_chol(Q.chol, cl[*it].state) + inter_output.mu;
       mu_j = solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mu_j);
 
       arma::vec new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
@@ -236,6 +269,8 @@ public:
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(p.state, mu_j, inter_output.sigma_chol_inv);
+
+      debug_msg_while_sampling(data, p, mu_j);
     }
 
     return(ans);
@@ -260,6 +295,8 @@ public:
     auto inter_output = compute_mu_n_Sigma(data, t, Q, alpha_bar);
 
     /* Sample */
+    debug_msg_before_sampling(data, inter_output);
+
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
@@ -271,7 +308,7 @@ public:
 
       arma::vec mu_j = fw_p.state + bw_p.state;
       mu_j *= .5;
-      mu_j = solve_w_precomputed_chol(Q.chol, mu_j);
+      mu_j = solve_w_precomputed_chol(Q.chol, mu_j) + inter_output.mu;
       mu_j = solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mu_j);
 
       arma::vec new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
@@ -279,6 +316,8 @@ public:
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(p.state, mu_j, inter_output.sigma_chol_inv);
+
+      debug_msg_while_sampling(data, p, mu_j);
     }
 
     return(ans);
