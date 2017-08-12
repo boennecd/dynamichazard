@@ -42,7 +42,7 @@ public:
 
     } else {
       ans.reserve(data.N_first);
-      const arma::mat Q_d_chol = data.Q.chol * data.d + 1;
+      const arma::mat Q_d_chol = data.Q.chol * sqrt(data.d + 1);
       const arma::mat Q_chol_inv = arma::inv(arma::trimatu(Q_d_chol));
       double max_weight =  -std::numeric_limits<double>::max();
       for(arma::uword i = 0; i < data.N_first; ++i){
