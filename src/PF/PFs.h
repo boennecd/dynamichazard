@@ -64,6 +64,9 @@ public:
 
     int t = is_forward ? 1 : data.d;
     for(int iter = 1; iter <= data.d; ++iter){
+      if((iter + 1) % 3 == 0)
+        Rcpp::checkUserInterrupt();
+
       /* re-sample indicies */
       if(data.debug > 0)
         data.log(1) << "Starting iteration " << t << ". Re-sampling weights";

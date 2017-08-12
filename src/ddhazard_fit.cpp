@@ -239,7 +239,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       my_debug_logger(*p_data)
         << "##########################################";
       my_debug_logger(*p_data)
-        <<"Starting iteration " << it << " with the following values";
+        << "Starting iteration " << it << " with the following values";
       my_print(*p_data, p_data->a_t_t_s.col(0), "a_0");
       my_print(*p_data, p_data->Q, "Q");
     }

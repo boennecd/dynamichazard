@@ -37,7 +37,7 @@ class binary {
   using chol_map = std::map<uword /* time */, const arma::mat /* inv chol cov matrix */>;
   chol_map Q_t_chol_inv;
 
-  const arma::mat& get_Q_t(const PF_data &data, arma::uword t){
+  const arma::mat& get_Q_t_chol_inv(const PF_data &data, arma::uword t){
     if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end())
       Q_t_chol_inv.insert(std::make_pair(t, data.Q.chol_inv / sqrt(t)));
 
@@ -112,7 +112,7 @@ public:
 
   double log_artificial_prior(
       const PF_data &data, const particle &p, int t){
-    return(dmvnrm_log(p.state, data.a_0 /* note a_o */, get_Q_t(data, t)));
+    return(dmvnrm_log(p.state, data.a_0 /* note a_o */, get_Q_t_chol_inv(data, t)));
   }
 
   static double log_p_prime(double y, double eta, int t){
