@@ -48,3 +48,19 @@ std::vector<particle>::size_type cloud::size(){
   return particles.size();
 }
 
+/*
+  Returns the weighted mean using cloud weights. Assumes that weights are
+  scaled
+*/
+arma::vec cloud::get_weigthed_mean(){
+  if(particles.size() == 0)
+    return arma::vec();
+
+  arma::vec out(particles[0].state.n_elem, arma::fill::zeros);
+  for(auto it = particles.begin(); it != particles.end(); ++it){
+    out += (it->state * exp(it->log_weight));
+  }
+
+  return out;
+}
+

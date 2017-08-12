@@ -35,6 +35,8 @@ public:
   particle& operator[](size_type pos);
   void reserve (size_type n);
   size_type size();
+
+  arma::vec get_weigthed_mean();
 };
 
 #endif
