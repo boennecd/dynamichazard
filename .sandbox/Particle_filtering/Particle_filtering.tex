@@ -457,7 +457,7 @@ TODO: add what to do on time 0 and $d$.
  \particS{w}{t}{i} \propto \frac{
  	\propC{\particS{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j_i}}
  	\propC{\vec{y}_t}{\particS{\vec{\alpha}}{t}{i}}
- 	\propC{\particS{\vec{\alpha}}{t}{i}}{\particB{\vec{\alpha}}{t + 1}{k_i}}
+ 	\propC{\particB{\vec{\alpha}}{t + 1}{k_i}}{\particS{\vec{\alpha}}{t}{i}}
  	\partic{w}{t - 1}{j_i}\particB{w}{t + 1}{k_i}
  	}{ % end of first argument of \frac
  	\IDAproxC{\particS{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t-1}{j_i},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k_i}}
@@ -548,7 +548,7 @@ TODO: add what to do on time 0 and $d$.
 \StateX \begin{equation}\label{eqn:backwardWeight}
 	\particB{w}{t}{i} \propto \frac{
 		\propC{\vec{y}_t}{\partic{\vec{\alpha}}{t}{i}}
-		\propC{\partic{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t + 1}{k_i}}
+		\propC{\partic{\vec{\alpha}}{t + 1}{k_i}}{\partic{\vec{\alpha}}{t}{i}}
 		\partic{w}{t + 1}{k_i}
 		\gamma_t\Lparen{\partic{\vec{\alpha}}{t}{i}}
 	}{ % \frag arg1 end
