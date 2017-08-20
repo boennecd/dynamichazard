@@ -61,6 +61,7 @@ public:
   };
 
   const covarmat Q;
+  const covarmat Q_0;
   const covarmat Q_proposal;
   const covarmat Q_proposal_smooth;
 
@@ -113,6 +114,7 @@ public:
       work_block_size(100),
 
       Q(Q),
+      Q_0(Q_0),
       Q_proposal(Q + Q_tilde),
       Q_proposal_smooth((Q + Q_tilde) * .5)
     {}

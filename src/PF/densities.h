@@ -34,8 +34,11 @@ class binary {
   chol_map Q_t_chol_inv;
 
   const arma::mat& get_Q_t_chol_inv(const PF_data &data, arma::uword t){
-    if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end())
-      Q_t_chol_inv.insert(std::make_pair(t, data.Q.chol_inv / sqrt(t)));
+    if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end()){
+      Q_t_chol_inv.insert(std::make_pair(
+          t,
+          arma::inv(arma::trimatu(arma::chol(data.Q.mat * t + data.Q_0.mat)))));
+    }
 
     return Q_t_chol_inv[t];
   }

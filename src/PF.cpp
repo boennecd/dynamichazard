@@ -3,12 +3,9 @@
 #include "PF/resamplers.h"
 #include "PF/densities.h"
 
-using PF_easy_sm = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
-using PF_easy_fw = PF_easy_sm::forward_filter;
-using PF_easy_bw = PF_easy_sm::backward_filter;
-
-using AUX_scale_weights_sm =
-  PF_smoother<AUX_resampler_crude_y_dependence_no_proposal_scaling, importance_dens_no_y_dependence, binary>;
+using bootstrap_filter_sm = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
+using bootstrap_filter_fw = bootstrap_filter_sm::forward_filter;
+using bootstrap_filter_bw = bootstrap_filter_sm::backward_filter;
 
 using PF_w_normal_approx_sm =
   PF_smoother<None_AUX_resampler, importance_dens_normal_approx, binary>;
@@ -109,7 +106,7 @@ Rcpp::List FW_filter(
       N_first);
 
   /* Get the smoothed particles at time 1, 2, ..., d */
-  std::vector<cloud> clouds = PF_easy_fw::compute(data);
+  std::vector<cloud> clouds = bootstrap_filter_fw::compute(data);
 
   /* Create output list */
   return(get_rcpp_out_list(data, clouds, false));
@@ -162,7 +159,7 @@ Rcpp::List BW_filter(
       N_first);
 
   /* Get the smoothed particles at time 1, 2, ..., d */
-  std::vector<cloud> clouds = PF_easy_bw::compute(data);
+  std::vector<cloud> clouds = bootstrap_filter_bw::compute(data);
 
   /* Create output list */
   return(get_rcpp_out_list(data, clouds, true));
@@ -217,11 +214,8 @@ Rcpp::List PF_smooth(
 
   /* Get the smoothed particles at time 1, 2, ..., d */
   smoother_output result;
-  if (method == "PF_simple") {
-    result = PF_easy_sm::compute(data);
-
-  } else if(method == "AUX_crude"){
-    result = AUX_scale_weights_sm::compute(data);
+  if (method == "bootstrap_filter") {
+    result = bootstrap_filter_sm::compute(data);
 
   } else if (method == "PF_normal_approx"){
     result = PF_w_normal_approx_sm::compute(data);

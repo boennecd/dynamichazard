@@ -15,13 +15,14 @@ template <arma::uvec (*sample_func)(const arma::uword, arma::vec&)>
 class resampler_base {
 protected:
   inline static arma::uvec sample(
-      const PF_data &data, arma::vec &probs, const double ESS){
+      const PF_data &data, arma::vec &probs, const double ESS, bool &did_resample){
     if(probs.n_elem != data.N_fw_n_bw){
       if(data.debug > 1){
         data.log(2) << "Subsampling " << probs.n_elem << " to get "
                     << data.N_fw_n_bw <<  " using re-sampling weights";
       }
 
+      did_resample = true;
       return(sample_func(data.N_fw_n_bw, probs));
     }
 
@@ -38,6 +39,7 @@ protected:
                     << " with " <<  arma::max(probs) << " as the higest probability";
       }
 
+      did_resample = true;
       return(sample_func(data.N_fw_n_bw, probs));
     }
 
@@ -46,6 +48,7 @@ protected:
                   << data.forward_backward_ESS_threshold << "). No re-sampling needed";
     }
 
+    did_resample = false;
     return(arma::linspace<arma::uvec>(0, data.N_fw_n_bw - 1, data.N_fw_n_bw));
   }
 };
@@ -55,7 +58,8 @@ protected:
     1) computes log re-sampling weights assuming that weights are computed
     2) samples according to re-sampling weights
     3) returns re-sampled indices if effective sample size is low. Otherwise
-       return an index for each element in the cloud
+       return an index for each element in the cloud. A boolean argument is
+       used to indicate if sampling is made
 */
 
 /*
@@ -68,7 +72,8 @@ template<typename densities, bool is_forward>
 class None_AUX_resampler : private resampler_base<systematic_resampling> {
 public:
   inline static nothing resampler(
-      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome){
+      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome,
+      bool &did_resample){
     /* Compute effective sample size (ESS) */
     arma::vec weights(PF_cloud.size());
     double ESS = 0;
@@ -82,69 +87,11 @@ public:
     }
     ESS = 1/ ESS;
 
-    outcome = sample(data, weights, ESS);
+    outcome = sample(data, weights, ESS, did_resample);
 
     return nothing();
   }
 };
-
-/*
-  Auxiliary particle filter where we use the weights times the next period
-  outcome where we just use the previous state. I.e.:
-    beta_j = w_{j - 1} * P(y_t|alpha_{t - 1})
-  or
-    beta_j = w_{j - 1} * P(y_t|alpha_{t + 1})
-  where t depends on the direction
-*/
-
-template<typename densities, bool is_forward, bool scale_w_proposal>
-class AUX_resampler_crude_y_dependence_tp : private resampler_base<systematic_resampling> {
-public:
-  inline static nothing resampler(
-      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome){
-    /* Compute effective sample size (ESS) */
-    arma::vec weights(PF_cloud.size());
-
-    /* compute non-normalized log weights */
-    bool parent_has_log_importance_dens =
-      !((t == 1 && is_forward) || (t == (unsigned)data.d && !is_forward));
-    double max_weight =  -std::numeric_limits<double>::max();
-    for(auto it = PF_cloud.begin(); it != PF_cloud.end(); ++it){
-      double log_prob_y_given_state = densities::log_prob_y_given_state(
-        data, *it /* will either be state from t - 1 or t + 1*/, t);
-
-      it->log_resampling_weight = it->log_weight + log_prob_y_given_state;
-      if(scale_w_proposal){
-        if(parent_has_log_importance_dens){
-          it->log_resampling_weight -= it->log_importance_dens;
-        }
-      }
-
-      max_weight = MAX(it->log_resampling_weight, max_weight);
-    }
-
-    auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
-    outcome = sample(data, norm_out.weights, norm_out.ESS);
-
-    return nothing();
-  }
-};
-
-template<typename densities, bool is_forward>
-using AUX_resampler_crude_y_dependence_no_proposal_scaling = AUX_resampler_crude_y_dependence_tp<densities, is_forward, false>;
-
-/*
- Auxiliary particle filter where we use the weights times the next period
- outcome where we just use the previous state and we devide by the propsal
- likelihood. I.e.:
-  beta_j = w_{j - 1} * P(y_t|alpha_{t - 1}) / q(alpah_{j - 1} | alpha_{t - 2}, y_{t - 1})
- or
-  beta_j = w_{j - 1} * P(y_t|alpha_{t + 1}) / q(alpah_{j + 1} | alpha_{t + 2}, y_{t + 1})
- where t depends on the direction
-*/
-
-template<typename densities, bool is_forward>
-using AUX_resampler_crude_y_dependence_with_proposal_scaling = AUX_resampler_crude_y_dependence_tp<densities, is_forward, true>;
 
 /*
   Auxiliary particle filter with weights as in the end of page 462 of:
@@ -155,7 +102,8 @@ template<typename densities, bool is_forward>
 class AUX_resampler_normal_approx : private resampler_base<systematic_resampling> {
 public:
   inline static input_for_normal_approximation resampler(
-      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome){
+      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome,
+      bool &did_resample){
     /* Find weighted mean estimate */
     arma::vec alpha_bar = PF_cloud.get_weigthed_mean();
 
@@ -185,7 +133,7 @@ public:
     }
 
     auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
-    outcome = sample(data, norm_out.weights, norm_out.ESS);
+    outcome = sample(data, norm_out.weights, norm_out.ESS, did_resample);
 
     return ans;
   }

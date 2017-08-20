@@ -30,30 +30,33 @@ class importance_dens_base {
 public:
   static cloud sample_first_state_n_set_weights(const PF_data &data){
     cloud ans;
+    ans.reserve(data.N_first);
+    arma::mat m1;
+    const arma::mat *Q_chol;
+    const arma::vec *mean = &data.a_0;
 
     if(is_forward){
-      ans.reserve(data.N_fw_n_bw);
-      double log_weight = log(1. / data.N_fw_n_bw);
-      for(arma::uword i = 0; i < data.N_fw_n_bw; ++i) {
-        // Do not sample but set to a_0 with equal weight on each
-        ans.New_particle(data.a_0, nullptr);
-        ans[i].log_weight = log_weight;
-      }
+      Q_chol = &data.Q_0.chol;
 
     } else {
-      ans.reserve(data.N_first);
-      const arma::mat Q_d_chol = data.Q.chol * sqrt(data.d + 1);
-      const arma::mat Q_chol_inv = arma::inv(arma::trimatu(Q_d_chol));
-      double max_weight =  -std::numeric_limits<double>::max();
-      for(arma::uword i = 0; i < data.N_first; ++i){
-        arma::vec new_state = mvrnorm(data.a_0, Q_d_chol);
-        ans.New_particle(new_state, nullptr);
-        ans[i].log_weight = dmvnrm_log(new_state, data.a_0, Q_chol_inv);
+      m1 = arma::chol(data.Q.mat * data.d + data.Q_0.mat);
+      Q_chol = &m1;
+    }
 
-        max_weight = MAX(ans[i].log_weight, max_weight);
-      }
+    if(data.debug > 1){
+      data.log(2) << "Sampling "
+                  << (is_forward ? "first" : "state d + 1")
+                  << " with chol(covariance matrix):";
+      data.log(2) << *Q_chol;
+      data.log(2) << "and mean:";
+      data.log(2) << mean->t();
+    }
 
-      normalize_log_weights<false, true>(ans, max_weight);
+    double log_weight = log(1. / data.N_first);
+    for(arma::uword i = 0; i < data.N_first; ++i){
+      arma::vec new_state = mvrnorm(*mean, *Q_chol);
+      ans.New_particle(new_state, nullptr);
+      ans[i].log_weight = log_weight;
     }
 
     return(ans);

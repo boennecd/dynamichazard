@@ -21,140 +21,6 @@ test_that("dmvnrm_log_test gives correct likelihood", {
   }
 })
 
-test_that("FW_filter gives gives same results", {
-  skip_on_cran()
-
-  FW_filter <- asNamespace("dynamichazard")$FW_filter
-
-  n_vars <- 2
-  set.seed(78095324)
-  sims <- test_sim_func_logit(
-    n_series = 100, n_vars = n_vars, t_0 = 0, t_max = 10,
-    x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
-    intercept_start = -3, sds = c(.1, rep(.5, n_vars)))
-
-  # sum(sims$res$event)
-  # matplot(sims$beta, type = "l", lty = 1)
-
-  X_Y = get_design_matrix(Surv(tstart, tstop, event) ~ . - id, sims$res)
-
-  risk_set <-
-    get_risk_obj(Y = X_Y$Y, by = 1, max_T = 10,
-                 id = sims$res$id, is_for_discrete_model = TRUE)
-
-  old_seed <- .Random.seed
-  sink("tmp.txt") # TODO: remove
-  result <- FW_filter(
-    n_fixed_terms_in_state_vec = 0,
-    X = t(X_Y$X),
-    fixed_terms = t(X_Y$fixed_terms),
-    tstart = X_Y$Y[1, ],
-    tstop = X_Y$Y[2, ],
-    a_0 = sims$betas[1, ],
-    Q_0 = diag(1, n_vars + 1),
-    Q = diag(1, n_vars + 1),
-    Q_tilde = diag(1, n_vars + 1),
-    risk_obj = risk_set,
-    F = diag(1, n_vars + 1),
-    n_max = 10,
-    order = 1,
-    n_threads = 1,
-    N_fw_n_bw = 1000,
-    N_smooth = 1000,
-    N_first = 1000,
-    forward_backward_ESS_threshold = NULL,
-    debug = 2) # TODO: remove
-  sink() # TODO: remove
-
-  expect_false(all(old_seed == .Random.seed))
-
-  expect_equal(
-    rep(1, 11), sapply(sapply(result, "[", "weights"), sum),
-    check.attributes = FALSE)
-
-  state_est <- t(sapply(result, function(row){
-    colSums(t(row$states) * drop(row$weights))
-  }))
-
-  # View(cbind(t(result[[2]]$states), result[[2]]$weights))
-
-  matplot(sims$betas, lty = 1, type = "l")
-  matplot(state_est, lty = 2, type = "l", add = TRUE)
-
-  expect_true(FALSE) # TODO: cleanup
-})
-
-
-
-
-
-
-test_that("BW_filter gives gives same results", {
-  skip_on_cran()
-
-  BW_filter <- asNamespace("dynamichazard")$BW_filter
-
-  n_vars <- 2
-  set.seed(78095324)
-  sims <- test_sim_func_logit(
-    n_series = 100, n_vars = n_vars, t_0 = 0, t_max = 10,
-    x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
-    intercept_start = -3, sds = c(.1, rep(.5, n_vars)))
-
-  # sum(sims$res$event)
-  # matplot(sims$beta, type = "l", lty = 1)
-
-  X_Y = get_design_matrix(Surv(tstart, tstop, event) ~ . - id, sims$res)
-
-  risk_set <-
-    get_risk_obj(Y = X_Y$Y, by = 1, max_T = 10,
-                 id = sims$res$id, is_for_discrete_model = TRUE)
-
-  old_seed <- .Random.seed
-  sink("tmp.txt") # TODO: remove
-  result <- BW_filter(
-    n_fixed_terms_in_state_vec = 0,
-    X = t(X_Y$X),
-    fixed_terms = t(X_Y$fixed_terms),
-    tstart = X_Y$Y[1, ],
-    tstop = X_Y$Y[2, ],
-    a_0 = sims$betas[1, ],
-    Q_0 = diag(1, n_vars + 1),
-    Q = diag(1, n_vars + 1),
-    Q_tilde = diag(1, n_vars + 1),
-    risk_obj = risk_set,
-    F = diag(1, n_vars + 1),
-    n_max = 10,
-    order = 1,
-    n_threads = 1,
-    N_fw_n_bw = 1000,
-    N_smooth = 1000,
-    N_first = 10000,
-    forward_backward_ESS_threshold = NULL,
-    debug = 2) # TODO: remove
-  sink() # TODO: remove
-
-  expect_false(all(old_seed == .Random.seed))
-
-  expect_equal(
-    rep(1, 11), sapply(sapply(result, "[", "weights"), sum),
-    check.attributes = FALSE)
-
-  state_est <- t(sapply(result, function(row){
-    colSums(t(row$states) * drop(row$weights))
-  }))
-
-  # View(cbind(t(result[[2]]$states), result[[2]]$weights))
-
-  matplot(sims$betas, lty = 1, type = "l", ylim = range(sims$betas, state_est))
-  matplot(2:12, state_est, lty = 2, type = "l", add = TRUE)
-
-  expect_true(FALSE) # TODO: cleanup
-})
-
-
-
-
 
 test_that("PF_smooth gives same results", {
   skip_on_cran()
@@ -164,7 +30,7 @@ test_that("PF_smooth gives same results", {
   n_vars <- 2
   set.seed(78095324)
   sims <- test_sim_func_logit(
-    n_series = 1000, n_vars = n_vars, t_0 = 0, t_max = 10,
+    n_series = 1e3, n_vars = n_vars, t_0 = 0, t_max = 10,
     x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
     intercept_start = -3, sds = c(.1, rep(.5, n_vars)))
 
@@ -192,7 +58,7 @@ test_that("PF_smooth gives same results", {
     a_0 = a_0,
 
 
-    Q_tilde = diag(sqrt(.5), n_vars + 1),
+    Q_tilde = diag(sqrt(.25), n_vars + 1),
     risk_obj = risk_set,
     F = diag(1, n_vars + 1),
     n_max = 10,
@@ -202,7 +68,7 @@ test_that("PF_smooth gives same results", {
     N_smooth = 1000,
     N_first = 10000,
     forward_backward_ESS_threshold = NULL,
-    debug = 2, # TODO: remove
+    debug = 3, # TODO: remove
     method = "PF")
 
   get_test_expr <- function(fit_quote, test_file_name){
@@ -235,30 +101,13 @@ test_that("PF_smooth gives same results", {
       sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
-      args$method <- "PF_simple"
+      args$method <- "bootstrap_filter"
       result <- do.call(PF_smooth, args)
       sink() # TODO: remove
 
       result
     }),
-    test_file_name = "PF_smooth_simple"),
-
-    envir = environment())
-
-  #####
-  # Simple AUX filter
-  eval(get_test_expr(
-    quote({
-      sink("tmp.txt") # TODO: remove
-      set.seed(30302129)
-      old_seed <- .Random.seed
-      args$method <- "AUX_crude"
-      result <- do.call(PF_smooth, args)
-      sink() # TODO: remove
-
-      result
-    }),
-    test_file_name = "AUX_smooth_simple"),
+    test_file_name = "bootstrap_filter"),
 
     envir = environment())
 
@@ -307,21 +156,21 @@ test_that("PF_smooth gives same results", {
   #   Q = diag(1e-1, 3),
   #   a_0 = sims$betas[1, ])
   #
-  # sapply(result, function(x){
-  #   ws <- lapply(x, "[[", "weights")
-  #   sapply(ws, function(z) 1 / sum(z^2))
-  # })
-  #
-  # matplot(0:10, sims$betas, lty = 1, type = "l", ylim = c(-5, 5), xlim = c(0, 11))
-  # for(i in 1:3){
-  #   state_est <- t(sapply(result[[i]], function(row){
-  #     colSums(t(row$states) * drop(row$weights))
-  #   }))
-  #
-  #   idx <- switch(i, "1" = 0:10, "2" = 1:11, "3" = 1:10)
-  #   matplot(idx, state_est, lty = i + 1, type = "l", add = TRUE)
-  #   matplot(idx, state_est, lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
-  # }
+  sapply(result, function(x){
+    ws <- lapply(x, "[[", "weights")
+    sapply(ws, function(z) 1 / sum(z^2))
+  })
+
+  matplot(0:10, sims$betas, lty = 1, type = "l", ylim = c(-5, 5), xlim = c(0, 11))
+  for(i in 1:3){
+    state_est <- t(sapply(result[[i]], function(row){
+      colSums(t(row$states) * drop(row$weights))
+    }))
+
+    idx <- switch(i, "1" = 0:10, "2" = 1:11, "3" = 1:10)
+    matplot(idx, state_est, lty = i + 1, type = "l", add = TRUE)
+    matplot(idx, state_est, lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
+  }
   # matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
   # #
   # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
@@ -338,6 +187,4 @@ test_that("PF_smooth gives same results", {
   # # result$smoothed_clouds[[8]]$states[, 5740]
   #
   # result <- result$smoothed_clouds
-
-  expect_true(FALSE) # TODO: cleanup
 })

@@ -71,7 +71,15 @@ public:
       if(data.debug > 0)
         data.log(1) << "Starting iteration " << t << ". Re-sampling weights";
       arma::uvec resample_idx;
-      auto additional_resampler_out = resampler::resampler(data, clouds.back(), t, resample_idx);
+      bool did_resample;
+      auto additional_resampler_out = resampler::resampler(data, clouds.back(), t, resample_idx, did_resample);
+
+      if(data.debug > 0){
+        if(did_resample){
+          data.log(1) << "Did resample";
+        } else
+          data.log(1) << "Did not re-sample";
+      }
 
       /* sample new cloud */
       if(data.debug > 0)
@@ -95,13 +103,17 @@ public:
               /* Notice different order and t + 1 */
               dens_calc.log_prob_state_given_previous(
                 data, it->parent->state, it->state, t + 1);
-            double log_importance_dens = it->log_importance_dens;
 
             it->log_weight =
               /* nominator */
-              (log_prob_y_given_state + log_prob_state_given_previous + it->parent->log_weight)
+              log_prob_y_given_state + log_prob_state_given_previous
               /* denoninator */
-              - (log_importance_dens + it->parent->log_resampling_weight);
+              - it->log_importance_dens;
+
+            if(did_resample){
+              it->log_weight +=
+                it->parent->log_weight - it->parent->log_resampling_weight;
+            }
 
             if(!is_forward){
               it->log_weight += dens_calc.log_artificial_prior(data, *it, t);
