@@ -7,11 +7,6 @@
 
 /* Logger class for debug information */
 class PF_logger {
-  static std::mutex mx;
-  bool log;
-  unsigned int level;
-  std::ostringstream  os;
-
 public:
   PF_logger(const bool log, const unsigned int level);
 
@@ -22,16 +17,65 @@ public:
   PF_logger(const PF_logger&) = delete;
   PF_logger& operator=(const PF_logger&) = delete;
 
-  template<typename T>
-  std::ostringstream& operator<<(const T &obj){
-    if(log){
-      for(unsigned int i = 0; i < level - 1; ++i)
-        os << "   ";
-      os << obj;
+  /*
+    Class to prefix stream. See:
+      https://stackoverflow.com/a/27336473
+  */
+
+  class prefixbuf : public std::streambuf
+  {
+    std::string     prefix;
+    std::streambuf* sbuf;
+    bool            need_prefix;
+
+    int sync() {
+      return this->sbuf->pubsync();
     }
 
-    return os;
+    int overflow(int c) {
+      if (c != std::char_traits<char>::eof()) {
+        if (this->need_prefix
+              && !this->prefix.empty()
+              && this->prefix.size() != (unsigned int)this->sbuf->sputn(&this->prefix[0], this->prefix.size())) {
+              return std::char_traits<char>::eof();
+        }
+        this->need_prefix = c == '\n';
+      }
+      return this->sbuf->sputc(c);
+    }
+
+  public:
+    prefixbuf(std::string const& prefix, std::streambuf* sbuf)
+      : prefix(prefix), sbuf(sbuf) , need_prefix(true) {}
+  };
+
+  class oprefixstream
+    : private virtual prefixbuf, public std::ostream
+  {
+  public:
+    oprefixstream(std::string const& prefix, std::ostream& out)
+      : prefixbuf(prefix, out.rdbuf())
+    , std::ios(static_cast<std::streambuf*>(this))
+    , std::ostream(static_cast<std::streambuf*>(this)) {}
+  };
+
+  template<typename T>
+  std::ostream& operator<<(const T &obj){
+    if(log){
+      return os_w_prefix << obj;
+    }
+
+    return os_w_prefix;
   }
+
+private:
+  static std::mutex mx;
+  bool log;
+  unsigned int level;
+  std::ostringstream os;
+  oprefixstream os_w_prefix;
+
+  const static unsigned int n_spaces = 3;
 };
 
 // data holder for particle filtering

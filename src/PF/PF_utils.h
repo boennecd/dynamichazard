@@ -3,6 +3,7 @@
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#include <tuple>
 #include "particles.h"
 #include "../BLAS_and_LAPACK/arma_utils.h"
 
@@ -120,27 +121,24 @@ std::vector<work_block<iterator>> get_work_blocks(
 
 /* ------------------------------------------- */
 
-struct input_for_normal_approximation {
+struct input_for_normal_apprx {
   arma::vec mu;
   arma::mat Sigma_inv_chol;
   arma::mat Sigma_chol;
   arma::mat sigma_chol_inv;
-
-  /* the conditional means for each of the particles given their parents */
-  std::vector<arma::vec> mu_js;
 };
 
-template<typename densities>
-static input_for_normal_approximation compute_mu_n_Sigma_from_normal_approximation(
+template<typename densities, unsigned int debug_lvl, bool multi_thread>
+static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     const PF_data &data, const unsigned int t, const PF_data::covarmat &Q, const arma::vec &alpha_bar){
-  if(data.debug > 2){
-    data.log(3) << "Computing normal approximation with mean vector:";
-    data.log(3) << alpha_bar.t();
-    data.log(3) << "and covaraince matrix:";
-    data.log(3) << Q.mat;
+  if(data.debug > debug_lvl){
+    data.log(debug_lvl) << "Computing normal approximation with mean vector:" << std::endl
+                        << alpha_bar.t();
+                        << "and covaraince matrix:"  << std::endl;
+                        << Q.mat;
   }
 
-  input_for_normal_approximation ans;
+  input_for_normal_apprx ans;
 
   /* Compute the terms that does not depend on the outcome */
   /* Sigma^-1 = (Q + \tilde{Q})^{-1} */
@@ -155,7 +153,8 @@ static input_for_normal_approximation compute_mu_n_Sigma_from_normal_approximati
   unsigned int n_jobs = jobs.size();
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(std::min(data.n_threads, (int)std::ceil(n_jobs / 2.)))
+#pragma omp parallel for schedule(static) \
+  num_threads(multi_thread ? std::min(data.n_threads, (int)std::ceil(n_jobs / 2.)) : 1)
 #endif
   for(unsigned int i = 0; i < n_jobs; ++i){
     auto &job = jobs[i];
@@ -164,32 +163,32 @@ static input_for_normal_approximation compute_mu_n_Sigma_from_normal_approximati
     arma::vec eta =  alpha_bar.t() * data.X.cols(my_r_set);
     const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
-    auto it_eta = eta.begin();
-    auto it_is_event = is_event.begin();
-    auto it_r = my_r_set.begin();
-    arma::uword n_elem = eta.n_elem;
-    /*
-      Update with:
-        Signa = ... + X^T (-G) X
-        mu = X^T (-G) X \bar{alpha} + X^T (-g)
-    */
-    arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
-    arma::vec my_mu(p, arma::fill::zeros);
-    for(arma::uword i = 0; i < n_elem; ++i, ++it_eta, ++it_is_event, ++it_r){
-      double g = densities::log_p_prime(*it_is_event, *it_eta, t);
-      double neg_G = - densities::log_p_2prime(*it_is_event, *it_eta, t);
+  auto it_eta = eta.begin();
+  auto it_is_event = is_event.begin();
+  auto it_r = my_r_set.begin();
+  arma::uword n_elem = eta.n_elem;
+  /*
+  Update with:
+  Signa = ... + X^T (-G) X
+  mu = X^T (-G) X \bar{alpha} + X^T (-g)
+  */
+  arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
+  arma::vec my_mu(p, arma::fill::zeros);
+  for(arma::uword i = 0; i < n_elem; ++i, ++it_eta, ++it_is_event, ++it_r){
+    double g = densities::log_p_prime(*it_is_event, *it_eta, t);
+    double neg_G = - densities::log_p_2prime(*it_is_event, *it_eta, t);
 
-      sym_mat_rank_one_update(neg_G, data.X.col(*it_r), my_Sigma_inv);
+    sym_mat_rank_one_update(neg_G, data.X.col(*it_r), my_Sigma_inv);
 
-      my_mu += data.X.col(*it_r) * ((*it_eta * neg_G) + g);
-    }
+    my_mu += data.X.col(*it_r) * ((*it_eta * neg_G) + g);
+  }
 
 #ifdef _OPENMP
 #pragma omp critical
 {
 #endif
-    Sigma_inv += my_Sigma_inv;
-    mu += my_mu;
+  Sigma_inv += my_Sigma_inv;
+  mu += my_mu;
 #ifdef _OPENMP
 }
 #endif
@@ -206,12 +205,23 @@ static input_for_normal_approximation compute_mu_n_Sigma_from_normal_approximati
   return ans;
 }
 
+/* ------------------------------------------- */
+
+struct input_for_normal_apprx_w_cloud_mean : public input_for_normal_apprx {
+  /* the conditional means for each of the particles given their parents */
+  std::vector<arma::vec> mu_js;
+
+  input_for_normal_apprx_w_cloud_mean(input_for_normal_apprx &&other):
+    input_for_normal_apprx(other) {}
+};
+
 template<typename densities>
-static input_for_normal_approximation compute_mu_n_Sigma_from_normal_approximation(
+static input_for_normal_apprx_w_cloud_mean
+  compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean(
     const PF_data &data, const unsigned int t, const PF_data::covarmat &Q, const arma::vec &alpha_bar,
     cloud &cl /* set mu_js when cloud is passed to */){
-  auto ans = compute_mu_n_Sigma_from_normal_approximation<densities>(
-    data, t, Q, alpha_bar);
+  input_for_normal_apprx_w_cloud_mean ans =
+    compute_mu_n_Sigma_from_normal_apprx<densities, 2, true>(data, t, Q, alpha_bar);
 
   auto n_elem = cl.size();
   ans.mu_js = std::vector<arma::vec>(n_elem);
@@ -226,6 +236,80 @@ static input_for_normal_approximation compute_mu_n_Sigma_from_normal_approximati
   }
 
   return ans;
+}
+
+/* ------------------------------------------- */
+
+struct input_for_normal_apprx_w_particle_mean_element {
+  arma::vec mu;
+  arma::mat sigma_chol_inv;
+  arma::mat Sigma_chol;
+};
+
+using input_for_normal_apprx_w_particle_mean =
+  std::vector<input_for_normal_apprx_w_particle_mean_element>;
+
+template<typename densities, typename mu_iterator, typename Func>
+static input_for_normal_apprx_w_particle_mean
+compute_mu_n_Sigma_from_normal_apprx_w_particles(
+  const PF_data &data, const unsigned int t, const PF_data::covarmat &Q,
+  mu_iterator begin, const unsigned int size){
+
+  input_for_normal_apprx_w_particle_mean ans(size);
+
+  mu_iterator b = begin;
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) num_threads(std::min(data.n_threads, (int)std::ceil(size / 10.)))
+#endif
+  for(unsigned int i = 0; i < size; ++i){
+    mu_iterator iter = b + i;
+    arma::vec mu = Func::get_elem(iter);
+    auto inter = compute_mu_n_Sigma_from_normal_apprx
+      <densities, 5, false>(data, t, Q, mu);
+
+    mu = solve_w_precomputed_chol(Q.chol, mu) + inter.mu;
+    mu = solve_w_precomputed_chol(inter.Sigma_inv_chol, mu);
+
+    ans[i].mu = std::move(mu);
+    ans[i].sigma_chol_inv = std::move(inter.sigma_chol_inv);
+    ans[i].Sigma_chol = std::move(inter.Sigma_chol);
+  }
+
+  return ans;
+}
+
+template<typename densities>
+static input_for_normal_apprx_w_particle_mean
+compute_mu_n_Sigma_from_normal_apprx_w_particles(
+  const PF_data &data, const unsigned int t, const PF_data::covarmat &Q,
+  cloud &cl){
+  struct Func{
+    static inline const arma::vec get_elem(cloud::iterator &it){
+      return it->state;
+    }
+  };
+
+  return(
+    compute_mu_n_Sigma_from_normal_apprx_w_particles
+    <densities, cloud::iterator, Func>(
+        data, t, Q, cl.begin(), cl.size()));
+}
+
+template<typename densities>
+static input_for_normal_apprx_w_particle_mean
+compute_mu_n_Sigma_from_normal_apprx_w_particles(
+  const PF_data &data, const unsigned int t, const PF_data::covarmat &Q,
+  std::vector<arma::vec> &mus){
+  struct Func{
+    static inline arma::vec& get_elem(std::vector<arma::vec>::iterator &it){
+      return *it;
+    }
+  };
+
+  return(
+    compute_mu_n_Sigma_from_normal_apprx_w_particles
+    <densities, std::vector<arma::vec>::iterator, Func>(
+      data, t, Q, mus.begin(), mus.size()));
 }
 
 

@@ -89,11 +89,12 @@ public:
     }
 
     if(data.debug > 4){
-      data.log(5) << "Computing log(P(y_t|alpha_t)) at time " << t
-                  << " with " << r_set.n_elem << " observations. "
-                  << "The log likelihood is " << log_like
-                  << " and the state is:";
-      data.log(5) << coefs.t();
+      auto log = data.log(5);
+      log << "Computing log(P(y_t|alpha_t)) at time " << t
+          << " with " << r_set.n_elem << " observations. "
+          << "The log likelihood is " << log_like
+          << " and the state is:" << std::endl
+          << coefs.t();
     }
 
     return log_like;

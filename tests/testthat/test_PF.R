@@ -129,7 +129,7 @@ test_that("PF_smooth gives same results", {
     envir = environment())
 
   #####
-  # Normal approximation in with AUX filter
+  # Normal approximation in with AUX filter arround mean previous cloud
   eval(get_test_expr(
     quote({
       sink("tmp.txt") # TODO: remove
@@ -145,17 +145,35 @@ test_that("PF_smooth gives same results", {
 
     envir = environment())
 
+  #####
+  # TODO: enter description
+  eval(get_test_expr(
+    quote({
+      sink("tmp.txt") # TODO: remove
+      set.seed(30302129)
+      old_seed <- .Random.seed
+      args$method <- "AUX_temp"
+      result <- do.call(PF_smooth, args)
+      sink() # TODO: remove
+
+      result
+    }),
+    test_file_name = "AUX_temp"),
+
+    envir = environment())
+
   # #TODO: clean up
-  # ddfit <- ddhazard(
-  #   Surv(tstart, tstop, event) ~ . - id,
-  #   data = sims$res,
-  #   max_T = 10,
-  #   by = 1,
-  #   id = sims$res$id,
-  #   Q_0 = diag(1, 3),
-  #   Q = diag(1e-1, 3),
-  #   a_0 = sims$betas[1, ])
-  #
+  ddfit <- ddhazard(
+    Surv(tstart, tstop, event) ~ . - id,
+    data = sims$res,
+    max_T = 10,
+    by = 1,
+    id = sims$res$id,
+    Q_0 = diag(1, 3),
+    Q = diag(1e-1, 3),
+    a_0 = sims$betas[1, ],
+    control = list(NR_eps = 1e-5))
+
   sapply(result, function(x){
     ws <- lapply(x, "[[", "weights")
     sapply(ws, function(z) 1 / sum(z^2))
@@ -171,7 +189,7 @@ test_that("PF_smooth gives same results", {
     matplot(idx, state_est, lty = i + 1, type = "l", add = TRUE)
     matplot(idx, state_est, lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
   }
-  # matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
+  matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
   # #
   # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
   #        function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])

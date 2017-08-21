@@ -3,7 +3,7 @@ PF_smooth <- asNamespace("dynamichazard")$PF_smooth
 n_vars <- 3
 set.seed(78095325)
 sims <- test_sim_func_logit(
-  n_series = 1e5, n_vars = n_vars, t_0 = 0, t_max = 10,
+  n_series = 1e4, n_vars = n_vars, t_0 = 0, t_max = 10,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
   intercept_start = -3, sds = c(.1, rep(.5, n_vars)))
 
@@ -39,15 +39,15 @@ args <- list(
   n_threads = 7,
   N_fw_n_bw = 1e3,
   N_smooth = 1e3,
-  N_first = 1e3,
+  N_first = 1e4,
   forward_backward_ESS_threshold = NULL,
-  debug = 3, # TODO: remove
+  debug = 5, # TODO: remove
   method = "PF")
 
 sink("tmp.txt") # TODO: remove
 set.seed(30302129)
 old_seed <- .Random.seed
-args$method <- "AUX_normal_approx"
+args$method <- "AUX_temp"
 result <- do.call(PF_smooth, args)
 sink() # TODO: remove
 

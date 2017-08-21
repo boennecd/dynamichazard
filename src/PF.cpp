@@ -3,15 +3,36 @@
 #include "PF/resamplers.h"
 #include "PF/densities.h"
 
-using bootstrap_filter_sm = PF_smoother<None_AUX_resampler, importance_dens_no_y_dependence, binary>;
+using bootstrap_filter_sm = PF_smoother<
+  None_AUX_resampler,
+  importance_dens_no_y_dependence,
+  binary>;
 using bootstrap_filter_fw = bootstrap_filter_sm::forward_filter;
 using bootstrap_filter_bw = bootstrap_filter_sm::backward_filter;
 
 using PF_w_normal_approx_sm =
-  PF_smoother<None_AUX_resampler, importance_dens_normal_approx, binary>;
+  PF_smoother<
+    None_AUX_resampler,
+    importance_dens_normal_approx_w_cloud_mean,
+    binary>;
 
 using AUX_w_normal_approx_sm =
-  PF_smoother<AUX_resampler_normal_approx, importance_dens_normal_approx, binary>;
+  PF_smoother<
+    AUX_resampler_normal_approx_w_cloud_mean,
+    importance_dens_normal_approx_w_cloud_mean,
+    binary>;
+
+using PF_tmp_sm =
+  PF_smoother<
+    None_AUX_resampler,
+    importance_dens_normal_approx_w_particles,
+    binary>;
+
+using AUX_tmp_sm =
+  PF_smoother<
+    AUX_resampler_normal_approx_w_particles,
+    importance_dens_normal_approx_w_particles,
+    binary>;
 
 /* Function to turn a clouds of particles into an Rcpp::List */
 Rcpp::List get_rcpp_out_list(
@@ -222,6 +243,12 @@ Rcpp::List PF_smooth(
 
   } else if (method == "AUX_normal_approx"){
     result = AUX_w_normal_approx_sm::compute(data);
+
+  } else if (method == "temp"){
+    result = PF_tmp_sm::compute(data);
+
+  }  else if (method == "AUX_temp"){
+    result = AUX_tmp_sm::compute(data);
 
   } else {
     std::stringstream stream;

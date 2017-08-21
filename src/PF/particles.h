@@ -19,13 +19,13 @@ struct particle {
 };
 
 class cloud {
+  std::vector<particle> particles;
+
+public:
   using size_type = std::vector<particle>::size_type;
   using iterator = std::vector<particle>::iterator;
   using reverse_iterator = std::vector<particle>::reverse_iterator;
 
-  std::vector<particle> particles;
-
-public:
   particle New_particle(arma::vec state, const particle *parent, const particle *child);
   particle New_particle(arma::vec state, const particle *parent);
   iterator begin();
