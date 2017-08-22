@@ -47,7 +47,7 @@ args <- list(
 sink("tmp.txt") # TODO: remove
 set.seed(30302129)
 old_seed <- .Random.seed
-args$method <- "AUX_temp"
+args$method <-  "AUX_normal_approx"  # "AUX_temp"
 result <- do.call(PF_smooth, args)
 sink() # TODO: remove
 

@@ -4,6 +4,10 @@
 #include "arma_n_rcpp.h"
 #include <future>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 class problem_data {
 public:
   // Constants
@@ -103,7 +107,12 @@ public:
 
     Q(Q_),
     Q_0(Q_0_)
-  { }
+  {
+#ifdef _OPENMP
+    omp_set_num_threads(n_threads);
+    omp_set_nested(0);
+#endif
+  }
 
   problem_data & operator=(const problem_data&) = delete;
   problem_data(const problem_data&) = delete;

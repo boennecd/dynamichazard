@@ -59,7 +59,7 @@ public:
     /* compute log likelihood */
     double log_like = 0;
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(std::min(data.n_threads, (int)std::ceil(n_jobs / 2.)))
+#pragma omp parallel for schedule(static, 3)
 #endif
     for(unsigned int i = 0; i < n_jobs; ++i){
       auto &job = jobs[i];

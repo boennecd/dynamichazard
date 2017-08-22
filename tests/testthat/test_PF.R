@@ -57,7 +57,6 @@ test_that("PF_smooth gives same results", {
     Q = Q,
     a_0 = a_0,
 
-
     Q_tilde = diag(sqrt(.25), n_vars + 1),
     risk_obj = risk_set,
     F = diag(1, n_vars + 1),
@@ -107,90 +106,107 @@ test_that("PF_smooth gives same results", {
 
       result
     }),
-    test_file_name = "bootstrap_filter"),
+    test_file_name = "local_tests/bootstrap_filter"),
 
     envir = environment())
 
   #####
-  # Normal approximation in proposal density
+  # Normal approximation in importance density with mean from previous cloud
   eval(get_test_expr(
     quote({
       sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
-      args$method <- "PF_normal_approx"
+      args$method <- "PF_normal_approx_w_cloud_mean"
       result <- do.call(PF_smooth, args)
       sink() # TODO: remove
 
       result
     }),
-    test_file_name = "PF_normal_approx"),
+    test_file_name = "local_tests/PF_normal_approx_w_cloud_mean"),
 
     envir = environment())
 
   #####
-  # Normal approximation in with AUX filter arround mean previous cloud
+  # Normal approximation in AUX filter with mean from previous cloud
   eval(get_test_expr(
     quote({
       sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
-      args$method <- "AUX_normal_approx"
+      args$method <- "AUX_normal_approx_w_cloud_mean"
       result <- do.call(PF_smooth, args)
       sink() # TODO: remove
 
       result
     }),
-    test_file_name = "AUX_normal_approx"),
+    test_file_name = "local_tests/AUX_normal_approx_w_cloud_mean"),
 
     envir = environment())
 
   #####
-  # TODO: enter description
+  # Normal approximation in importance density with mean from parent and child particle
   eval(get_test_expr(
     quote({
       sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
-      args$method <- "AUX_temp"
+      args$method <- "PF_normal_approx_w_particles"
       result <- do.call(PF_smooth, args)
       sink() # TODO: remove
 
       result
     }),
-    test_file_name = "AUX_temp"),
+    test_file_name = "local_tests/PF_normal_approx_w_particles"),
 
     envir = environment())
 
-  # #TODO: clean up
-  ddfit <- ddhazard(
-    Surv(tstart, tstop, event) ~ . - id,
-    data = sims$res,
-    max_T = 10,
-    by = 1,
-    id = sims$res$id,
-    Q_0 = diag(1, 3),
-    Q = diag(1e-1, 3),
-    a_0 = sims$betas[1, ],
-    control = list(NR_eps = 1e-5))
+  #####
+  # Normal approximation in AUX filter with mean from parent and child particle
+  eval(get_test_expr(
+    quote({
+      sink("tmp.txt") # TODO: remove
+      set.seed(30302129)
+      old_seed <- .Random.seed
+      args$method <- "AUX_normal_approx_w_particles"
+      result <- do.call(PF_smooth, args)
+      sink() # TODO: remove
 
-  sapply(result, function(x){
-    ws <- lapply(x, "[[", "weights")
-    sapply(ws, function(z) 1 / sum(z^2))
-  })
+      result
+    }),
+    test_file_name = "local_tests/AUX_normal_approx_w_particles"),
 
-  matplot(0:10, sims$betas, lty = 1, type = "l", ylim = c(-5, 5), xlim = c(0, 11))
-  for(i in 1:3){
-    state_est <- t(sapply(result[[i]], function(row){
-      colSums(t(row$states) * drop(row$weights))
-    }))
+    envir = environment())
 
-    idx <- switch(i, "1" = 0:10, "2" = 1:11, "3" = 1:10)
-    matplot(idx, state_est, lty = i + 1, type = "l", add = TRUE)
-    matplot(idx, state_est, lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
-  }
-  matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
-  # #
+  # # #TODO: clean up
+  # ddfit <- ddhazard(
+  #   Surv(tstart, tstop, event) ~ . - id,
+  #   data = sims$res,
+  #   max_T = 10,
+  #   by = 1,
+  #   id = sims$res$id,
+  #   Q_0 = diag(1, 3),
+  #   Q = diag(1e-1, 3),
+  #   a_0 = sims$betas[1, ],
+  #   control = list(NR_eps = 1e-5))
+  #
+  # sapply(result, function(x){
+  #   ws <- lapply(x, "[[", "weights")
+  #   sapply(ws, function(z) 1 / sum(z^2))
+  # })
+  #
+  # matplot(0:10, sims$betas, lty = 1, type = "l", ylim = c(-5, 5), xlim = c(0, 11))
+  # for(i in 1:3){
+  #   state_est <- t(sapply(result[[i]], function(row){
+  #     colSums(t(row$states) * drop(row$weights))
+  #   }))
+  #
+  #   idx <- switch(i, "1" = 0:10, "2" = 1:11, "3" = 1:10)
+  #   matplot(idx, state_est, lty = i + 1, type = "l", add = TRUE)
+  #   matplot(idx, state_est, lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
+  # }
+  # matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
+  # # #
   # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
   #        function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])
   # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
@@ -201,8 +217,8 @@ test_that("PF_smooth gives same results", {
   # ord <- sapply(lapply(result$smoothed_clouds, "[[", "weights"),
   #             function(x) order(x, decreasing = TRUE)[1:10])
   #
-  # # result$smoothed_clouds[[8]]$states[, 1556]
-  # # result$smoothed_clouds[[8]]$states[, 5740]
+  # result$smoothed_clouds[[8]]$states[, 1556]
+  # result$smoothed_clouds[[8]]$states[, 5740]
   #
   # result <- result$smoothed_clouds
 })

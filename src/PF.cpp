@@ -238,16 +238,16 @@ Rcpp::List PF_smooth(
   if (method == "bootstrap_filter") {
     result = bootstrap_filter_sm::compute(data);
 
-  } else if (method == "PF_normal_approx"){
+  } else if (method == "PF_normal_approx_w_cloud_mean"){
     result = PF_w_normal_approx_sm::compute(data);
 
-  } else if (method == "AUX_normal_approx"){
+  } else if (method == "AUX_normal_approx_w_cloud_mean"){
     result = AUX_w_normal_approx_sm::compute(data);
 
-  } else if (method == "temp"){
+  } else if (method == "PF_normal_approx_w_particles"){
     result = PF_tmp_sm::compute(data);
 
-  }  else if (method == "AUX_temp"){
+  }  else if (method == "AUX_normal_approx_w_particles"){
     result = AUX_tmp_sm::compute(data);
 
   } else {

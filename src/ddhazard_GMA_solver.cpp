@@ -104,7 +104,7 @@ void GMA<T>::solve(){
       arma::vec eta = (a(*p_dat.span_current_cov).t() * X_t).t() + offsets;
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(std::min(p_dat.n_threads, (int)std::ceil(r_set.n_elem / 1000.)))
+#pragma omp parallel for schedule(static, 1000)
 #endif
       for(arma::uword i = 0; i < r_set.n_elem; i++){
         double w_i = w[i];

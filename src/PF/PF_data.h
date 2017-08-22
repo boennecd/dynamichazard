@@ -3,11 +3,19 @@
 
 #include "../arma_n_rcpp.h"
 #include "../problem_data.h"
-#include <mutex>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 /* Logger class for debug information */
 class PF_logger {
 public:
+#ifdef _OPENMP
+  static omp_lock_t lock; /* NOTICE: have to call omp_init_lock somewhere
+                             before usage!                                */
+#endif
+
   PF_logger(const bool log, const unsigned int level);
 
   PF_logger(PF_logger&& other);
@@ -69,13 +77,22 @@ public:
   }
 
 private:
-  static std::mutex mx;
   bool log;
   unsigned int level;
   std::ostringstream os;
   oprefixstream os_w_prefix;
 
   const static unsigned int n_spaces = 3;
+  static std::string get_prefix(const unsigned int level){
+    std::stringstream ss;
+
+#ifdef _OPENMP
+    ss << "Thread:" << std::setw(3) << omp_get_thread_num() << "\t";
+#endif
+
+    ss << std::string(n_spaces * (level - 1), ' ');
+    return ss.str();
+  }
 };
 
 // data holder for particle filtering
@@ -161,7 +178,12 @@ public:
       Q_0(Q_0),
       Q_proposal(Q + Q_tilde),
       Q_proposal_smooth((Q + Q_tilde) * .5)
-    {}
+    {
+#ifdef _OPENMP
+#include <omp.h>
+    omp_init_lock(&PF_logger::lock);
+#endif
+    }
 
   PF_logger log(const unsigned int level) const{
     return PF_logger(level <= debug, level);

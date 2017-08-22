@@ -128,13 +128,38 @@ struct input_for_normal_apprx {
   arma::mat sigma_chol_inv;
 };
 
-template<typename densities, unsigned int debug_lvl, bool multi_thread>
+template<typename densities, unsigned int debug_lvl, bool multithread>
 static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
-    const PF_data &data, const unsigned int t, const PF_data::covarmat &Q, const arma::vec &alpha_bar){
+    const PF_data &data,
+    const unsigned int t,
+    const PF_data::covarmat &Q,
+    const arma::vec &alpha_bar){
+  /*
+    Had similar issues as posted here:
+      http://lists.r-forge.r-project.org/pipermail/rcpp-devel/2013-June/005968.html
+
+    Thus, I made this overload
+  */
+
+  arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
+
+  return(
+    compute_mu_n_Sigma_from_normal_apprx
+    <densities, debug_lvl, multithread>
+    (data, t, Q, alpha_bar, r_set));
+}
+
+template<typename densities, unsigned int debug_lvl, bool multithread>
+static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
+    const PF_data &data,
+    const unsigned int t,
+    const PF_data::covarmat &Q,
+    const arma::vec &alpha_bar,
+    arma::uvec &r_set){
   if(data.debug > debug_lvl){
     data.log(debug_lvl) << "Computing normal approximation with mean vector:" << std::endl
-                        << alpha_bar.t();
-                        << "and covaraince matrix:"  << std::endl;
+                        << alpha_bar.t()
+                        << "and covaraince matrix:"  << std::endl
                         << Q.mat;
   }
 
@@ -148,13 +173,18 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
   arma::vec &mu = ans.mu;
 
   /* Add the terms that does depend on the outcome */
-  arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
   auto jobs = get_work_blocks(r_set.begin(), r_set.end(), data.work_block_size);
   unsigned int n_jobs = jobs.size();
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) \
-  num_threads(multi_thread ? std::min(data.n_threads, (int)std::ceil(n_jobs / 2.)) : 1)
+  /*
+    Use lock as critical section will not do if this function is called in
+    nested parallel setup. See https://stackoverflow.com/a/20447843
+  */
+  omp_lock_t lock;
+  if(multithread)
+    omp_init_lock(&lock);
+#pragma omp parallel for schedule(static, 3)
 #endif
   for(unsigned int i = 0; i < n_jobs; ++i){
     auto &job = jobs[i];
@@ -163,36 +193,44 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     arma::vec eta =  alpha_bar.t() * data.X.cols(my_r_set);
     const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
-  auto it_eta = eta.begin();
-  auto it_is_event = is_event.begin();
-  auto it_r = my_r_set.begin();
-  arma::uword n_elem = eta.n_elem;
-  /*
-  Update with:
-  Signa = ... + X^T (-G) X
-  mu = X^T (-G) X \bar{alpha} + X^T (-g)
-  */
-  arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
-  arma::vec my_mu(p, arma::fill::zeros);
-  for(arma::uword i = 0; i < n_elem; ++i, ++it_eta, ++it_is_event, ++it_r){
-    double g = densities::log_p_prime(*it_is_event, *it_eta, t);
-    double neg_G = - densities::log_p_2prime(*it_is_event, *it_eta, t);
+    auto it_eta = eta.begin();
+    auto it_is_event = is_event.begin();
+    auto it_r = my_r_set.begin();
+    arma::uword n_elem = eta.n_elem;
+    /*
+      Update with:
+        Signa = ... + X^T (-G) X
+        mu = X^T (-G) X \bar{alpha} + X^T (-g)
+    */
+    arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
+    arma::vec my_mu(p, arma::fill::zeros);
+    for(arma::uword i = 0; i < n_elem; ++i, ++it_eta, ++it_is_event, ++it_r){
+      double g = densities::log_p_prime(*it_is_event, *it_eta, t);
+      double neg_G = - densities::log_p_2prime(*it_is_event, *it_eta, t);
 
-    sym_mat_rank_one_update(neg_G, data.X.col(*it_r), my_Sigma_inv);
+      sym_mat_rank_one_update(neg_G, data.X.col(*it_r), my_Sigma_inv);
 
-    my_mu += data.X.col(*it_r) * ((*it_eta * neg_G) + g);
+      my_mu += data.X.col(*it_r) * ((*it_eta * neg_G) + g);
+    }
+
+#ifdef _OPENMP
+    if(multithread)
+      omp_set_lock(&lock);
+
+#endif
+    Sigma_inv += my_Sigma_inv;
+    mu += my_mu;
+
+#ifdef _OPENMP
+    if(multithread)
+      omp_unset_lock(&lock);
+#endif
   }
 
 #ifdef _OPENMP
-#pragma omp critical
-{
+  if(multithread)
+    omp_destroy_lock(&lock);
 #endif
-  Sigma_inv += my_Sigma_inv;
-  mu += my_mu;
-#ifdef _OPENMP
-}
-#endif
-  }
 
   /* copy to lower */
   Sigma_inv = arma::symmatu(Sigma_inv);
@@ -226,7 +264,7 @@ static input_for_normal_apprx_w_cloud_mean
   auto n_elem = cl.size();
   ans.mu_js = std::vector<arma::vec>(n_elem);
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(std::min(data.n_threads, (int)std::ceil(n_elem / 10.)))
+#pragma omp  parallel for schedule(static, 10)
 #endif
   for(unsigned int i = 0; i < n_elem; ++i){
     arma::vec mu_j = solve_w_precomputed_chol(Q.chol, cl[i].state) + ans.mu;
@@ -258,14 +296,15 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
   input_for_normal_apprx_w_particle_mean ans(size);
 
   mu_iterator b = begin;
+  arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(std::min(data.n_threads, (int)std::ceil(size / 10.)))
+#pragma omp parallel for schedule(static, 10)
 #endif
   for(unsigned int i = 0; i < size; ++i){
     mu_iterator iter = b + i;
     arma::vec mu = Func::get_elem(iter);
     auto inter = compute_mu_n_Sigma_from_normal_apprx
-      <densities, 5, false>(data, t, Q, mu);
+      <densities, 5, false>(data, t, Q, mu, r_set);
 
     mu = solve_w_precomputed_chol(Q.chol, mu) + inter.mu;
     mu = solve_w_precomputed_chol(inter.Sigma_inv_chol, mu);
