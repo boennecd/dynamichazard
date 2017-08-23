@@ -366,7 +366,7 @@ Next, we have the re-sampling weights. A simple solution is not to use an auxili
 %
 which has an $\bigO{N}$ cost of sampling. Another options is to set:
 
-\begin{equation}
+\begin{equation}\label{eqn:FWWeights}
 \begin{split}
 	\partic{\beta}{t}{j} &\propto  \propC{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}\partic{w}{t-1}{j} \\
 %
@@ -488,7 +488,7 @@ which is (/should be) an approximation of:
 		}
 \end{split}\end{equation}
 
-The weights are computed similarly to the forward filter using the backward proposal density if an equivelent version of we use an auxiliary particle filter. We can also use a bootstrap like filter with the importance density: 
+The weights are computed similarly to the forward filter using the backward proposal density if an equivelent version of we use an auxiliary particle filter. We should though maybe change the normal distribution term in~\eqref{eqn:FWWeights} to account for the prior. We can also use a bootstrap like filter with the importance density: 
 
 \begin{equation}
 	\IDC{\vec{\alpha}_t}{\particB{\vec{\alpha}}{t + 1}{k}, \vec{y}_t} = %
@@ -550,6 +550,7 @@ We can also use a bootstrap like filter by sampling from:
 \newpage
 
 TODO: add what to do on time 0 and $d$.
+TODO: write about what is and is not included in the BW filter
 
 \begin{algorithm}
 \caption{$\bigO{N}$ two filter smoother using the method in \cite{fearnhead10}.}\label{alg:ONsmoother}
@@ -579,7 +580,7 @@ TODO: add what to do on time 0 and $d$.
 \EndProcedure
 % 
 \Procedure{Smooth (combine)}{}
-\For{$t=1,\dots, d - 1$}
+\For{$t=1,\dots, d$}
 \StateXX \emph{Re-sample:}
 \State $i=1,2,\dots,N_s$ pairs of $\Lparen{j_i, k_i}$ where each component is independently sampled using re-sampling weights $\partic{\beta}{t}{j}$ and $\particB{\beta}{t}{k}$
 %

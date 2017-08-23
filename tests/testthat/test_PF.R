@@ -43,7 +43,7 @@ test_that("PF_smooth gives same results", {
   # matplot(sims$beta, type = "l", lty = 1)
 
   Q <- diag(sqrt(.33), 3)
-  Q_0 <- diag(1, 3)
+  Q_0 <- diag(.5, 3)
   a_0 <- sims$betas[1, ]
 
   args <- list(
@@ -57,13 +57,13 @@ test_that("PF_smooth gives same results", {
     Q = Q,
     a_0 = a_0,
 
-    Q_tilde = diag(sqrt(.25), n_vars + 1),
+    Q_tilde = diag(1e-2, n_vars + 1),
     risk_obj = risk_set,
     F = diag(1, n_vars + 1),
     n_max = 10,
     order = 1,
     n_threads = 1,
-    N_fw_n_bw = 1000,
+    N_fw_n_bw = 500,
     N_smooth = 1000,
     N_first = 10000,
     forward_backward_ESS_threshold = NULL,

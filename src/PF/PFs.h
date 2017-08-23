@@ -169,11 +169,12 @@ class PF_smoother : private PF_base {
   using uword = arma::uword;
 
   inline static arma::uvec sample_idx(const PF_data &data, cloud &cl){
-    arma::vec probs(data.N_fw_n_bw);
+    auto size = cl.size();
+    arma::vec probs(size);
 
     auto pr = probs.begin();
     auto part = cl.begin();
-    for(uword j = 0; j < data.N_fw_n_bw; ++j, ++pr, ++part)
+    for(uword j = 0; j < size; ++j, ++pr, ++part)
       *pr = exp(part->log_resampling_weight);
 
     return systematic_resampling(data.N_smooth, probs);
@@ -192,16 +193,11 @@ public:
     if(data.debug > 0)
       data.log(1) << "Finished finding forward and backward clouds. Started smoothing";
 
-    /* Add time 1 particle cloud */
-    smoothed_clouds.push_back(backward_clouds.back());
-
-    auto fw_cloud = forward_clouds.begin();
-    fw_cloud += 1; // first index is time zero
+    auto fw_cloud = /* first index is time 0 */ forward_clouds.begin();
     auto bw_cloud = backward_clouds.rbegin();
-    bw_cloud += 2; // first index is time 1
+    bw_cloud += 1; // first index is time 1 -- we need index 2 to start with
 
-    for(int t = 2  /* note starting point */;
-        t < data.d /* note strictly less */; ++t, ++fw_cloud, ++bw_cloud){
+    for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){
       /* re-sample */
       if(data.debug > 0)
         data.log(1) << "Started smoothing at time " << t
@@ -255,9 +251,6 @@ public:
       /* Add cloud  */
       smoothed_clouds.push_back(std::move(new_cloud));
     }
-
-    /* Add time d particle cloud */
-    smoothed_clouds.push_back(forward_clouds.back());
 
     return result;
   }
