@@ -80,6 +80,10 @@ Rcpp::List get_rcpp_out_list(
   return ans;
 }
 
+/* Function to turn an Rcpp::List into a clouds of particles */
+
+
+
 // TODO: want to export?
 // [[Rcpp::export]]
 Rcpp::List FW_filter(
