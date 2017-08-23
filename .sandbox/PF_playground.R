@@ -31,7 +31,7 @@ args <- list(
   a_0 = a_0,
 
 
-  Q_tilde = diag(1e-2, n_vars + 1),
+  Q_tilde = diag(0, n_vars + 1),
   risk_obj = risk_set,
   F = diag(1, n_vars + 1),
   n_max = 10,
@@ -41,13 +41,13 @@ args <- list(
   N_smooth = 1e3,
   N_first = 1e4,
   forward_backward_ESS_threshold = NULL,
-  debug = 5, # TODO: remove
+  debug = 2, # TODO: remove
   method = "PF")
 
 sink("tmp.txt") # TODO: remove
 set.seed(30302129)
 old_seed <- .Random.seed
-args$method <-  "AUX_normal_approx"  # "AUX_temp"
+args$method <-  "AUX_normal_approx_w_particles"  # "AUX_temp"
 result <- do.call(PF_smooth, args)
 sink() # TODO: remove
 
@@ -82,6 +82,9 @@ for(i in 2:3){
   matplot(idx, state_est[, b_idx], lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
 }
 matplot(0:10, ddfit$state_vecs[, b_idx], lty = 1, col = "brown", type = "l", add = TRUE)
+
+sum((state_est - sims$betas[-1, ])^2)
+sum((ddfit$state_vecs[-1, ] - sims$betas[-1, ])^2)
 
 options(digits = 3)
 sapply(lapply(result$smoothed_clouds, "[[", "weights"),

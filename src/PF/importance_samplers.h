@@ -199,8 +199,9 @@ public:
 
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
-    auto inter_output = compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean<densities>(
-      data, t, Q, alpha_bar, cl);
+    auto inter_output = compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean
+      <densities, is_forward>
+      (data, t, Q, alpha_bar, cl);
 
     return(sample(data, cl, resample_idx, t, inter_output));
   }
@@ -313,7 +314,8 @@ public:
     auto &Q = data.Q_proposal;
     auto inter_output =
       compute_mu_n_Sigma_from_normal_apprx_w_particles
-      <densities>(data, t, Q, cl);
+      <densities, is_forward>
+      (data, t, Q, cl);
 
     return(sample(data, cl, resample_idx, t, inter_output));
   }
@@ -349,14 +351,16 @@ public:
     /* Compute means before accounting for outcomes */
     std::vector<arma::vec> mus(data.N_smooth);
 
-    // TODO: can be done in parallel
-    auto it_fw = fw_idx.begin();
-    auto it_bw = bw_idx.begin();
-    auto mu_it = mus.begin();
-    for(arma::uword i = 0; i < data.N_smooth; ++i, ++it_fw, ++it_bw, ++mu_it){
-      arma::vec &mu_j = *mu_it;
-      const particle &fw_p = fw_cloud[*it_fw];
-      const particle &bw_p = bw_cloud[*it_bw];
+    auto begin_fw = fw_idx.begin();
+    auto begin_bw = bw_idx.begin();
+    auto begin_mu = mus.begin();
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 20)
+#endif
+    for(arma::uword i = 0; i < data.N_smooth; ++i){
+      arma::vec &mu_j = *(begin_mu + i);
+      const particle &fw_p = fw_cloud[*(begin_fw + i)];
+      const particle &bw_p = bw_cloud[*(begin_bw + i)];
 
       mu_j = fw_p.state + bw_p.state;
       mu_j *= .5;
@@ -366,14 +370,15 @@ public:
     auto &Q = data.Q_proposal_smooth;
     auto inter_output =
       compute_mu_n_Sigma_from_normal_apprx_w_particles
-      <densities>(data, t, Q, mus);
+      <densities, is_forward>
+      (data, t, Q, mus);
 
     /* Sample */
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-    it_fw = fw_idx.begin();
-    it_bw = bw_idx.begin();
+    auto it_fw = fw_idx.begin();
+    auto it_bw = bw_idx.begin();
     auto it_inter = inter_output.begin();
     for(arma::uword i = 0; i < data.N_smooth; ++i, ++it_fw, ++it_bw, ++it_inter){
       const particle &fw_p = fw_cloud[*it_fw];

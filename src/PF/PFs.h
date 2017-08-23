@@ -113,6 +113,10 @@ public:
             if(did_resample){
               it->log_weight +=
                 it->parent->log_weight - it->parent->log_resampling_weight;
+
+            } else {
+              it->log_weight += it->parent->log_weight;
+
             }
 
             if(!is_forward){
@@ -172,7 +176,7 @@ class PF_smoother : private PF_base {
     for(uword j = 0; j < data.N_fw_n_bw; ++j, ++pr, ++part)
       *pr = exp(part->log_resampling_weight);
 
-    return sample_indices(data.N_smooth, probs);
+    return systematic_resampling(data.N_smooth, probs);
   }
 
 public:

@@ -95,6 +95,20 @@ private:
   }
 };
 
+/* data class for pre-computed factorization */
+class covarmat {
+public:
+  const arma::mat mat;
+  const arma::mat chol;
+  const arma::mat chol_inv;
+  const arma::mat inv;
+
+  template<typename T>
+  covarmat(T Q):
+    mat(Q), chol(arma::chol(mat)), chol_inv(arma::inv(arma::trimatu(chol))), inv(arma::inv(Q))
+  {}
+};
+
 // data holder for particle filtering
 class PF_data : public problem_data {
 public:
@@ -110,17 +124,6 @@ public:
   const unsigned long work_block_size;
 
   /* pre-computed factorization */
-  struct covarmat{
-    const arma::mat mat;
-    const arma::mat chol;
-    const arma::mat chol_inv;
-    const arma::mat inv;
-
-    covarmat(const arma::mat Q):
-      mat(Q), chol(arma::chol(mat)), chol_inv(arma::inv(arma::trimatu(chol))), inv(arma::inv(Q))
-      {}
-  };
-
   const covarmat Q;
   const covarmat Q_0;
   const covarmat Q_proposal;
@@ -180,10 +183,15 @@ public:
       Q_proposal_smooth((Q + Q_tilde) * .5)
     {
 #ifdef _OPENMP
-#include <omp.h>
     omp_init_lock(&PF_logger::lock);
 #endif
     }
+
+  ~PF_data(){
+#ifdef _OPENMP
+    omp_destroy_lock(&PF_logger::lock);
+#endif
+  }
 
   PF_logger log(const unsigned int level) const{
     return PF_logger(level <= debug, level);

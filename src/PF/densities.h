@@ -17,6 +17,8 @@
       Computes log(P(alpha_t | alpha_{t - 1}))
     log_artificial_prior
       Returns the log density of of artificial prior gamma_t(alpha_t)
+    get_artificial_prior_covar
+      Returns the artificial prior covariance matrix at time t
     log_p_prime
       Returns the first deriative of the log likelihood given outcome and the
       state for a given individual
@@ -37,7 +39,8 @@ class binary {
     if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end()){
       Q_t_chol_inv.insert(std::make_pair(
           t,
-          arma::inv(arma::trimatu(arma::chol(data.Q.mat * t + data.Q_0.mat)))));
+          arma::inv(arma::trimatu(arma::chol(get_artificial_prior_covar(
+            data, t))))));
     }
 
     return Q_t_chol_inv[t];
@@ -108,6 +111,11 @@ public:
   double log_artificial_prior(
       const PF_data &data, const particle &p, int t){
     return(dmvnrm_log(p.state, data.a_0 /* note a_o */, get_Q_t_chol_inv(data, t)));
+  }
+
+  static arma::mat get_artificial_prior_covar(
+      const PF_data &data, int t){
+    return data.Q.mat * t + data.Q_0.mat;
   }
 
   static double log_p_prime(double y, double eta, int t){

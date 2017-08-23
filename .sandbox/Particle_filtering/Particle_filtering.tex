@@ -498,19 +498,6 @@ The weights are computed similarly to the forward filter using the backward prop
 \subsubsection*{Combining / smoothing (algorithm~\ref{alg:ONsmoother}}
 We need to specify the importance density $\IDAproxC{\cdot}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}}$ (see \citet[page 453] {fearnhead10}). Again, we can use a similar idea to those in the appendix of \cite{fearnhead10} and choose:
 
-\begin{equation}\begin{split}
-	\IDAproxC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}} \propto %
-%
-	\propC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t - 1}{j}}
-	\frac{
-		\propC{\particB{\vec{\alpha}}{t + 1}{k}}{\vec{\alpha}_t}
-	}{
-		\gamma_{t + 1}\Lparen{\particB{\vec{\alpha}}{t + 1}{k}}
-	}
-%
-	\propto {x}
-\end{split}\end{equation}
-
 \begin{equation}\label{eqn:TaylorProposalForward}\begin{split}
 	\IDAproxC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}}  &=   %
 		\normalC{\vec{\alpha}_t}{\vecLRarrow{\mu}_t}{\matLRarrow{\Sigma}_t} \\
@@ -693,7 +680,7 @@ TODO: add what to do on time 0 and $d$.
 \EndProcedure
 %
 \Procedure{Re-weight}{}
-\State Re-weight particles using {\footnotesize (see \citet[page 72]{briers10} and add the ratios of weights and re-sampling weights)}:
+\State Re-weight particles using {\footnotesize (see \citet[page 72]{briers10} and add the ratio of prior probability and re-sampling weight)}:
 \StateX \begin{equation}\label{eqn:backwardWeight}
 	\particB{w}{t}{i} \propto \frac{
 		\propC{\vec{y}_t}{\partic{\vec{\alpha}}{t}{i}}
