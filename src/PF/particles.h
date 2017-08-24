@@ -18,25 +18,26 @@ struct particle {
     const arma::uword cloud_idx, const particle *child = nullptr);
 };
 
-class cloud {
-  std::vector<particle> particles;
+class cloud : private std::vector<particle> {
+  using Base = std::vector<particle>;
 
 public:
-  using size_type = std::vector<particle>::size_type;
-  using iterator = std::vector<particle>::iterator;
-  using reverse_iterator = std::vector<particle>::reverse_iterator;
+  using Base::size_type;
+  using Base::iterator;
+  using Base::const_iterator;
+  using Base::reverse_iterator;
 
-  particle New_particle(arma::vec state, const particle *parent, const particle *child);
-  particle New_particle(arma::vec state, const particle *parent);
-  iterator begin();
-  iterator end();
-  reverse_iterator rbegin();
-  reverse_iterator rend();
-  particle& operator[](size_type pos);
-  void reserve (size_type n);
-  size_type size();
-
+  particle& New_particle(arma::vec state, const particle *parent, const particle *child);
+  particle& New_particle(arma::vec state, const particle *parent);
   arma::vec get_weigthed_mean();
+
+  using Base::begin;
+  using Base::end;
+  using Base::rbegin;
+  using Base::rend;
+  using Base::operator[];
+  using Base::reserve;
+  using Base::size;
 };
 
 #endif

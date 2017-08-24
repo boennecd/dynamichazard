@@ -175,7 +175,7 @@ public:
       a_0(a_0),
       debug(debug),
       N_first(N_first),
-      work_block_size(100),
+      work_block_size(50),
 
       Q(Q),
       Q_0(Q_0),

@@ -130,18 +130,30 @@ public:
                   << data.Q_proposal_smooth.chol;
     }
 
-    auto it_fw = fw_idx.begin();
-    auto it_bw = bw_idx.begin();
-    for(arma::uword i = 0; i < data.N_smooth; ++i, ++it_fw, ++it_bw){
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 10) ordered \
+  num_threads(std::min(2, omp_get_thread_num()))
+#endif
+    for(arma::uword i = 0; i < data.N_smooth; ++i){
+      auto it_fw = fw_idx.begin() + i;
+      auto it_bw = bw_idx.begin() + i;
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
       arma::vec mean = fw_p.state + bw_p.state;
       mean *= .5;
 
-      arma::vec new_state = mvrnorm(
+      arma::vec new_state;
+#ifdef _OPENMP
+{
+#pragma omp ordered
+#endif
+      new_state = mvrnorm(
         mean, data.Q_proposal_smooth.chol);
-      ans.New_particle(new_state, &fw_p, &bw_p);
+#ifdef _OPENMP
+}
+#endif
+      ans.New_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens = log_importance_dens_smooth(data, p, t);
@@ -216,12 +228,24 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-    auto it = resample_idx.begin();
-    for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 10) ordered \
+    num_threads(std::min(2, omp_get_thread_num()))
+#endif
+    for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
+      auto it = resample_idx.begin() + i;
       arma::vec &mu_j = inter_output.mu_js[*it];
 
-      arma::vec new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
-      ans.New_particle(new_state, &cl[*it]);
+      arma::vec new_state;
+#ifdef _OPENMP
+{
+#pragma omp ordered
+#endif
+      new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
+#ifdef _OPENMP
+}
+#endif
+      ans.New_particle(std::move(new_state), &cl[*it]);
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(p.state, mu_j, inter_output.sigma_chol_inv);
@@ -252,9 +276,13 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-    auto it_fw = fw_idx.begin();
-    auto it_bw = bw_idx.begin();
-    for(arma::uword i = 0; i < data.N_smooth; ++i, ++it_fw, ++it_bw){
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 10) ordered \
+    num_threads(std::min(4, omp_get_thread_num()))
+#endif
+    for(arma::uword i = 0; i < data.N_smooth; ++i){
+      auto it_fw = fw_idx.begin() + i;
+      auto it_bw = bw_idx.begin() + i;
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
@@ -263,8 +291,16 @@ public:
       mu_j = solve_w_precomputed_chol(Q.chol, mu_j) + inter_output.mu;
       mu_j = solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mu_j);
 
-      arma::vec new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
-      ans.New_particle(new_state, &fw_p, &bw_p);
+      arma::vec new_state;
+#ifdef _OPENMP
+{
+#pragma omp ordered
+#endif
+      new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
+#ifdef _OPENMP
+}
+#endif
+      ans.New_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(p.state, mu_j, inter_output.sigma_chol_inv);
@@ -328,12 +364,25 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-    auto it = resample_idx.begin();
-    for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 10) ordered \
+    num_threads(std::min(2, omp_get_thread_num()))
+#endif
+    for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
+      auto it = resample_idx.begin() + i;
       auto &inter_o = inter_output[*it];
 
-      arma::vec new_state = mvrnorm(inter_o.mu, inter_o.Sigma_chol);
-      ans.New_particle(new_state, &cl[*it]);
+      arma::vec new_state;
+#ifdef _OPENMP
+{
+#pragma omp ordered
+#endif
+      new_state = mvrnorm(inter_o.mu, inter_o.Sigma_chol);
+#ifdef _OPENMP
+}
+#endif
+
+      ans.New_particle(std::move(new_state), &cl[*it]);
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(p.state, inter_o.mu, inter_o.sigma_chol_inv);
@@ -377,15 +426,27 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-    auto it_fw = fw_idx.begin();
-    auto it_bw = bw_idx.begin();
-    auto it_inter = inter_output.begin();
-    for(arma::uword i = 0; i < data.N_smooth; ++i, ++it_fw, ++it_bw, ++it_inter){
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 10) ordered \
+    num_threads(std::min(2, omp_get_thread_num()))
+#endif
+    for(arma::uword i = 0; i < data.N_smooth; ++i){
+      auto it_fw = fw_idx.begin() + i;
+      auto it_bw = bw_idx.begin() + i;
+      auto it_inter = inter_output.begin() + i;
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
-      arma::vec new_state = mvrnorm(it_inter->mu, it_inter->Sigma_chol);
-      ans.New_particle(new_state, &fw_p, &bw_p);
+      arma::vec new_state;
+#ifdef _OPENMP
+{
+#pragma omp ordered
+#endif
+      new_state = mvrnorm(it_inter->mu, it_inter->Sigma_chol);
+#ifdef _OPENMP
+}
+#endif
+      ans.New_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(p.state, it_inter->mu, it_inter->sigma_chol_inv);

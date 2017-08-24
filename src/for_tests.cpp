@@ -67,3 +67,14 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
 arma::vec solve_w_precomputed_chol_test(const arma::mat &chol_decomp, const arma::vec& B){
   return(solve_w_precomputed_chol(chol_decomp, B));
 }
+
+// -------------------------------------------------- //
+
+#include "PF/PF_utils.h"
+
+// [[Rcpp::export]]
+Rcpp::List PF_cloud_to_rcpp_and_back(const Rcpp::List &rcpp_list){
+  auto cpp_result = get_clouds_from_rcpp_list(rcpp_list);
+
+  return get_rcpp_list_from_cloud(cpp_result);
+}

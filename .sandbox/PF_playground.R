@@ -1,6 +1,6 @@
 PF_smooth <- asNamespace("dynamichazard")$PF_smooth
 
-set.seed(1)
+set.seed(2)
 n_vars <- 3
 sims <- test_sim_func_logit(
   n_series = 1e4, n_vars = n_vars, t_0 = 0, t_max = 20,
@@ -13,10 +13,11 @@ risk_set <-
                id = sims$res$id, is_for_discrete_model = TRUE)
 
 sum(sims$res$event)
+xtabs(~ sims$res$tstop[sims$res$event == 1])
 matplot(sims$beta, type = "l", lty = 1)
 
-Q <- diag(c(.05, rep(.2, n_vars)))
-Q_0 <- diag(1, n_vars + 1)
+Q <- diag(sqrt(c(.05, rep(.2, n_vars))))
+Q_0 <- diag(.1, n_vars + 1)
 a_0 <- sims$betas[1, ]
 
 args <- list(
@@ -29,7 +30,6 @@ args <- list(
 
   Q = Q,
   a_0 = a_0,
-
 
   Q_tilde = diag(0, n_vars + 1),
   risk_obj = risk_set,
@@ -44,6 +44,16 @@ args <- list(
   debug = 2, # TODO: remove
   method = "PF")
 
+ddfit <- ddhazard(
+  Surv(tstart, tstop, event) ~ . - id,
+  data = sims$res,
+  max_T = 20,
+  by = 1,
+  id = sims$res$id,
+  Q_0 = Q_0,
+  Q = Q,
+  a_0 = sims$betas[1, ])
+
 sink("tmp.txt") # TODO: remove
 set.seed(30302129)
 old_seed <- .Random.seed
@@ -56,18 +66,34 @@ sapply(result, function(x){
   sapply(ws, function(z) 1 / sum(z^2))
 })
 
+options(digits = 3)
+compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
 
+sts <- compute_summary_stats(result)
+sapply(lapply(sts, "[[", "E_x_less_x_less_one_outers"), diag)
 
+a_0 <- drop(sts[[1]]$E_xs)
+Q <- matrix(0., length(a_0), length(a_0))
+for(i in 2:length(sts)){
+  Q <- Q + sts[[i]]$E_x_less_x_less_one_outers
+}
+Q <- Q / (length(sts) - 1)
 
-ddfit <- ddhazard(
-  Surv(tstart, tstop, event) ~ . - id,
-  data = sims$res,
-  max_T = 20,
-  by = 1,
-  id = sims$res$id,
-  Q_0 = Q_0,
-  Q = Q,
-  a_0 = sims$betas[1, ])
+args$a_0 <- a_0
+args$Q <- Q
+
+a_0  - ddfit$state_vecs[1, ]
+diag(Q) - diag(ddfit$Q)
+
+sink("tmp.txt") # TODO: remove
+set.seed(30302129)
+result <- do.call(PF_smooth, args)
+sink() # TODO: remove
+
+sapply(result, function(x){
+  ws <- lapply(x, "[[", "weights")
+  sapply(ws, function(z) 1 / sum(z^2))
+})
 
 
 b_idx <- 1:4 #1:5

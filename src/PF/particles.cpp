@@ -9,43 +9,16 @@ particle::particle(
       std::numeric_limits<double>::quiet_NaN();
   }
 
-particle cloud::New_particle(
+particle& cloud::New_particle(
     arma::vec state, const particle *parent, const particle *child){
-  particles.emplace_back(state, parent, particles.size(), child);
-  return particles.back();
+  emplace_back(state, parent, size(), child);
+  return back();
 }
 
-particle cloud::New_particle(
+particle& cloud::New_particle(
     arma::vec state, const particle *parent){
-  particles.emplace_back(state, parent, particles.size(), nullptr);
-  return particles.back();
-}
-
-std::vector<particle>::iterator cloud::begin(){
-  return particles.begin();
-}
-
-std::vector<particle>::iterator cloud::end(){
-  return particles.end();
-}
-
-std::vector<particle>::reverse_iterator cloud::rbegin(){
-  return particles.rbegin();
-}
-
-std::vector<particle>::reverse_iterator cloud::rend(){
-  return particles.rend();
-}
-
-particle& cloud::operator[](size_type pos){
-  return particles[pos];
-}
-void cloud::reserve (size_type n){
-  particles.reserve(n);
-}
-
-std::vector<particle>::size_type cloud::size(){
-  return particles.size();
+  emplace_back(state, parent, size(), nullptr);
+  return back();
 }
 
 /*
@@ -53,11 +26,11 @@ std::vector<particle>::size_type cloud::size(){
   scaled
 */
 arma::vec cloud::get_weigthed_mean(){
-  if(particles.size() == 0)
+  if(size() == 0)
     return arma::vec();
 
-  arma::vec out(particles[0].state.n_elem, arma::fill::zeros);
-  for(auto it = particles.begin(); it != particles.end(); ++it){
+  arma::vec out(front().state.n_elem, arma::fill::zeros);
+  for(auto it = begin(); it != end(); ++it){
     out += (it->state * exp(it->log_weight));
   }
 

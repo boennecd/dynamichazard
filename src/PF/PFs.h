@@ -146,16 +146,6 @@ public:
 };
 
 /*
-  Output class for smoothers
-*/
-
-struct smoother_output {
-  std::vector<cloud> forward_clouds;
-  std::vector<cloud> backward_clouds;
-  std::vector<cloud> smoothed_clouds;
-};
-
-/*
   O(N) smoother from:
     Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */

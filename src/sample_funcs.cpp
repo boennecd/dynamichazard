@@ -53,7 +53,7 @@ arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs){
 arma::mat mvrnorm(arma::uword n, const arma::vec mu, const arma::mat sigma_chol){
   int ncols = sigma_chol.n_cols;
   arma::mat Y = arma::randn(n, ncols);
-  return arma::repmat(mu, 1, n).t() + Y * sigma_chol;
+  return arma::repmat(mu, 1, n).t() + Y * sigma_chol /* TODO can be replaced by BLAS dtrmv */;
 }
 
 arma::vec mvrnorm(const arma::vec mu, const arma::mat sigma_chol){

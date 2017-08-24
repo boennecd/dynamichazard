@@ -400,6 +400,26 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
     (data, t, Q, mus.begin(), mus.size()));
 }
 
+/* ------------------------------------------- */
+
+/*
+ Output class for smoothers
+ */
+
+struct smoother_output {
+  std::vector<cloud> forward_clouds;
+  std::vector<cloud> backward_clouds;
+  std::vector<cloud> smoothed_clouds;
+};
+
+Rcpp::List get_rcpp_list_from_cloud(
+    const smoother_output &sm_output, const PF_data *data = nullptr);
+
+Rcpp::List get_rcpp_list_from_cloud(
+    const std::vector<cloud> &clouds, const bool reverse,
+    unsigned int state_dim, const PF_data *data = nullptr);
+
+smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list);
 
 #undef MAX
 #endif

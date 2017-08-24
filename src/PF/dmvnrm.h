@@ -17,6 +17,7 @@ inline double dmvnrm_log(const arma::vec x, const arma::vec mean, const arma::ma
   double rootisum = arma::sum(log(sigma_chol_inv.diag()));
   double constants = -(static_cast<double>(xdim)/2.0) * log2pi;
 
+  // TODO: can be replaced by dtrmv function from BLAS
   arma::vec z = sigma_chol_inv.t() * (x - mean);
   return(constants - 0.5 * arma::sum(z % z) + rootisum);
 }
