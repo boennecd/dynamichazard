@@ -226,7 +226,7 @@ test_that("PF_smooth gives same results", {
 test_that("Import and export PF cloud from Rcpp gives the same", {
   skip_on_cran()
 
-  PF_clouds_to_rcpp_and_back <- asNamespace("dynamichazard")$PF_clouds_to_rcpp_and_back
+  PF_cloud_to_rcpp_and_back <- asNamespace("dynamichazard")$PF_cloud_to_rcpp_and_back
   cloud_example <- read_to_test("local_tests/cloud_example")
 
   result <- PF_cloud_to_rcpp_and_back(cloud_example)

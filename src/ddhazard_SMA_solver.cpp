@@ -164,7 +164,7 @@ void SMA<T>::solve(){
     openblas_set_num_threads(1);
 #endif
 
-    arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
+    arma::uvec r_set = p_dat.get_risk_set(t);
     arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim_in_arrays, false);
     arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim_in_arrays,
                 p_dat.space_dim_in_arrays, false);

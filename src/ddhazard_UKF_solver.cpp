@@ -59,7 +59,7 @@ void UKF_solver_Org::solve(){
 
       // E-step: correction-step
       // First, we compute the mean of the outcome
-      arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
+      arma::uvec r_set = p_dat.get_risk_set(t);
 
       arma::mat Z_t = (sigma_points.t() * p_dat.X.cols(r_set)).t(); // we transpose due to the column-major
       Z_t = arma::trunc_exp(Z_t);
@@ -195,7 +195,7 @@ void UKF_solver_New<T>::solve(){
     }
 
     // E-step: correction-step
-    arma::uvec r_set = Rcpp::as<arma::uvec>(p_dat.risk_sets[t - 1]) - 1;
+    arma::uvec r_set = p_dat.get_risk_set(t);
 
     // ** 1: compute means and variances **
     arma::uword n_risk = r_set.n_elem;

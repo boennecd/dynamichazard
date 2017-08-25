@@ -5,6 +5,9 @@
 #include "particles.h"
 #include "dmvnrm.h"
 #include "PF_utils.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -52,17 +55,25 @@ public:
     return(log_prob_y_given_state(data, p.state, t));
   }
 
-  static double log_prob_y_given_state(
-      const PF_data &data, const arma::vec &coefs, int t){
-    /* Find risk set */
-    arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
+  static double log_prob_y_given_state
+  (const PF_data &data, const arma::vec &coefs,
+   int t, arma::uvec &r_set, const bool multithreaded = true){
     auto jobs = get_work_blocks(r_set.begin(), r_set.end(), data.work_block_size);
     unsigned int n_jobs = jobs.size();
 
     /* compute log likelihood */
     double log_like = 0;
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static, 3)
+    /*
+      Use lock as critical section will not do if this function is called in
+      nested parallel setup. See https://stackoverflow.com/a/20447843
+    */
+    omp_lock_t *lock;
+    if(multithreaded){
+      lock = new omp_lock_t;
+      omp_init_lock(lock);
+    }
+#pragma omp parallel for schedule(static) if(multithreaded)
 #endif
     for(unsigned int i = 0; i < n_jobs; ++i){
       auto &job = jobs[i];
@@ -82,25 +93,41 @@ public:
           log(1 / (1 + exp(-*it_eta))) : log(1 - 1 / (1 + exp(-*it_eta)));
       }
 #ifdef _OPENMP
-#pragma omp critical
-{
+      if(multithreaded)
+        omp_set_lock(lock);
 #endif
+
       log_like += my_log_like;
+
 #ifdef _OPENMP
-}
+      if(multithreaded)
+        omp_unset_lock(lock);
 #endif
     }
+#ifdef _OPENMP
+    if(multithreaded){
+      omp_destroy_lock(lock);
+      delete lock;
+    }
+#endif
 
     if(data.debug > 4){
-      auto log = data.log(5);
-      log << "Computing log(P(y_t|alpha_t)) at time " << t
-          << " with " << r_set.n_elem << " observations. "
-          << "The log likelihood is " << log_like
-          << " and the state is:" << std::endl
-          << coefs.t();
+      data.log(5) << "Computing log(P(y_t|alpha_t)) at time " << t
+                  << " with " << r_set.n_elem << " observations. "
+                  << "The log likelihood is " << log_like
+                  << " and the state is:" << std::endl
+                  << coefs.t();
     }
 
     return log_like;
+  }
+
+  static double log_prob_y_given_state
+  (const PF_data &data, const arma::vec &coefs,
+   int t, const bool multithreaded = true){
+    arma::uvec r_set = data.get_risk_set(t);
+
+    return log_prob_y_given_state(data, coefs, t, r_set, multithreaded);
   }
 
   static double log_prob_state_given_previous(

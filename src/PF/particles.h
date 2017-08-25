@@ -11,6 +11,7 @@ struct particle {
   /* log-scale */
   double log_importance_dens;
   double log_weight;
+  double log_unnormalized_weight;
   double log_resampling_weight;
 
   particle(

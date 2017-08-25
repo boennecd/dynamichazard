@@ -28,7 +28,7 @@ void estimate_fixed_effects_M_step(ddhazard_data * const p_data, arma::uword chu
     bin_stop += delta_t;
 
     // Find the risk set
-    arma::uvec r_set = Rcpp::as<arma::uvec>(*it) - 1;
+    arma::uvec r_set = p_data->get_risk_set(t);
 
     // Compute offsets from dynamic effects if needed
     arma::vec offsets;

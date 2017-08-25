@@ -3,6 +3,8 @@
 
 #include "../arma_n_rcpp.h"
 #include "../problem_data.h"
+#include <chrono>
+#include <ctime>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -70,17 +72,26 @@ public:
   template<typename T>
   std::ostream& operator<<(const T &obj){
     if(log){
-      return os_w_prefix << obj;
+      if(!os_w_prefix){
+        os_w_prefix.reset(new oprefixstream(get_prefix(level), os));
+      }
+
+      return *os_w_prefix << obj;
     }
 
-    return os_w_prefix;
+    std::ostringstream tmp;
+    if(!oprefixstream_dummy){
+      oprefixstream_dummy.reset(new oprefixstream("", tmp));
+    }
+    return *oprefixstream_dummy;
   }
 
 private:
   bool log;
   unsigned int level;
   std::ostringstream os;
-  oprefixstream os_w_prefix;
+  std::unique_ptr<oprefixstream> os_w_prefix;
+  std::unique_ptr<oprefixstream> oprefixstream_dummy;
 
   const static unsigned int n_spaces = 3;
   static std::string get_prefix(const unsigned int level){
@@ -90,8 +101,42 @@ private:
     ss << "Thread:" << std::setw(3) << omp_get_thread_num() << "\t";
 #endif
 
+    ss << "delta T: " << std::setw(10) << std::setprecision(6)
+       << get_elapsed_seconds_n_set_last_message_time() << "\t";
+
     ss << std::string(n_spaces * (level - 1), ' ');
     return ss.str();
+  }
+
+  using tp = std::chrono::time_point<std::chrono::system_clock>;
+  using tp_pointer =std::unique_ptr<tp>;
+
+  static tp_pointer last_message_time;
+
+  static double get_elapsed_seconds_n_set_last_message_time(){
+    double elapsed_seconds;
+
+#ifdef _OPENMP
+    omp_set_lock(&lock);
+#endif
+    tp_pointer now(new tp());
+    *now = std::chrono::system_clock::now();
+
+    if(last_message_time){
+      std::chrono::duration<double> tmp = *now - *last_message_time;
+      elapsed_seconds = tmp.count();
+    } else{
+      elapsed_seconds = std::numeric_limits<double>::quiet_NaN();
+
+    }
+
+    last_message_time.reset(now.release());
+
+#ifdef _OPENMP
+    omp_unset_lock(&lock);
+#endif
+
+    return elapsed_seconds;
   }
 };
 
@@ -175,7 +220,7 @@ public:
       a_0(a_0),
       debug(debug),
       N_first(N_first),
-      work_block_size(50),
+      work_block_size(500),
 
       Q(Q),
       Q_0(Q_0),

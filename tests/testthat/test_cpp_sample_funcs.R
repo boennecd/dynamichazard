@@ -37,8 +37,8 @@ test_that("sample_indices give the same as R with same seed", {
 test_that("mvrnorm gives the same results with same seed", {
   n <- 5
   mu <- -2:2
-  A <- matrix(runif(n^2)*2-1, ncol=n)
-  Sigma <- t(A) %*% A
+  Sigma <- matrix(.5, ncol=n, nrow = n)
+  diag(Sigma) <- 1:n
 
   x <- .Random.seed
   r1 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
@@ -51,6 +51,7 @@ test_that("mvrnorm gives the same results with same seed", {
 })
 
 test_that("mvrnorm gives expected sample mean and variance", {
+  skip_on_cran()
   n <- 3
   mu <- -1:1
 

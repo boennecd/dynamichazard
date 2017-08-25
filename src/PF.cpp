@@ -20,13 +20,13 @@ using AUX_w_normal_approx_sm =
     importance_dens_normal_approx_w_cloud_mean,
     binary>;
 
-using PF_tmp_sm =
+using PF_w_particles_sm =
   PF_smoother<
     None_AUX_resampler,
     importance_dens_normal_approx_w_particles,
     binary>;
 
-using AUX_tmp_sm =
+using AUX_w_particles_sm =
   PF_smoother<
     AUX_resampler_normal_approx_w_particles,
     importance_dens_normal_approx_w_particles,
@@ -49,14 +49,18 @@ Rcpp::List get_rcpp_list_from_cloud(
     auto n_elem = it->size();
     arma::uvec parent_idx(n_elem);
     arma::uvec child_idx(n_elem);
+    arma::vec log_unnormalized_weights(n_elem);
     arma::vec weights(n_elem);
     arma::mat states(state_dim, n_elem);
 
     auto idx_pr = parent_idx.begin();
     auto idx_ch = child_idx.begin();
+    auto un_w = log_unnormalized_weights.begin();
     auto w = weights.begin();
     auto pr = it->begin();
-    for(arma::uword i = 0; i < n_elem; ++i, ++w, ++idx_pr, ++idx_ch, ++pr){
+    for(arma::uword i = 0;
+        i < n_elem;
+        ++i, ++w, ++idx_pr, ++idx_ch, ++pr, ++un_w){
       *idx_pr = (pr->parent) ?
         pr->parent->cloud_idx + 1 /* want non-zero based */ : 0;
 
@@ -64,6 +68,8 @@ Rcpp::List get_rcpp_list_from_cloud(
         pr->child->cloud_idx + 1 /* want non-zero based */ : 0;
 
       *w = exp(pr->log_weight);
+      *un_w = pr->log_unnormalized_weight;
+
       states.col(i) = pr->state;
     }
 
@@ -72,7 +78,8 @@ Rcpp::List get_rcpp_list_from_cloud(
         Rcpp::Named("parent_idx") = Rcpp::wrap(parent_idx),
         Rcpp::Named("child_idx") = Rcpp::wrap(child_idx),
         Rcpp::Named("weights") = Rcpp::wrap(weights),
-        Rcpp::Named("states") = Rcpp::wrap(states)
+        Rcpp::Named("states") = Rcpp::wrap(states),
+        Rcpp::Named("log_unnormalized_weights") = Rcpp::wrap(log_unnormalized_weights)
       );
   }
 
@@ -117,13 +124,16 @@ static std::vector<cloud> get_clouds_from_rcpp_list_util
       arma::uvec parent_idx = Rcpp::as<arma::uvec>(cloud_list["parent_idx"]);
       arma::uvec child_idx = Rcpp::as<arma::uvec>(cloud_list["child_idx"]);
       arma::vec weights = Rcpp::as<arma::vec>(cloud_list["weights"]);
+      arma::vec log_unnormalized_weights = Rcpp::as<arma::vec>(
+        cloud_list["log_unnormalized_weights"]);
       arma::mat states = Rcpp::as<arma::mat>(cloud_list["states"]);
 
       auto n_states = weights.n_elem;
       auto it_par = parent_idx.begin();
       auto it_child = child_idx.begin();
       auto it_w = weights.begin();
-      for(unsigned j = 0; j < n_states; ++j, ++it_w, ++it_par, ++it_child){
+      auto it_un_w = log_unnormalized_weights.begin();
+      for(unsigned j = 0; j < n_states; ++j, ++it_w, ++it_par, ++it_child, ++it_un_w){
         const particle *parent;
         if (*it_par == 0){
           parent = nullptr;
@@ -140,6 +150,7 @@ static std::vector<cloud> get_clouds_from_rcpp_list_util
 
         particle &p = it_ans->New_particle(states.col(j), parent, child);
         p.log_weight = log(*it_w);
+        p.log_unnormalized_weight = *it_un_w;
       }
 
       if(reverse && i == 0) break;
@@ -223,10 +234,10 @@ Rcpp::List PF_smooth(
     result = AUX_w_normal_approx_sm::compute(data);
 
   } else if (method == "PF_normal_approx_w_particles"){
-    result = PF_tmp_sm::compute(data);
+    result = PF_w_particles_sm::compute(data);
 
   }  else if (method == "AUX_normal_approx_w_particles"){
-    result = AUX_tmp_sm::compute(data);
+    result = AUX_w_particles_sm::compute(data);
 
   } else {
     std::stringstream stream;
@@ -268,7 +279,7 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
       double weight = exp(p.log_weight);
 
       E_x += weight * p.state;
-      // TODO: use BLAS outer product increament
+      // TODO: use BLAS outer product rank one update
       arma::vec inter = sqrt(weight) * (p.state - p.parent->state);
       E_x_less_x_less_one_outer += inter * inter.t();
     }

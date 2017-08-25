@@ -164,12 +164,18 @@ public:
 
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
-    auto it_cl = PF_cloud.begin();
-    auto it_ans = ans.begin();
+
     unsigned int n_elem = PF_cloud.size();
-    for(unsigned int i = 0; i != n_elem; ++i, ++it_cl, ++it_ans){
+    auto r_set = data.get_risk_set(t);
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+    for(unsigned int i = 0; i < n_elem; ++i){
+      auto it_cl = &PF_cloud[i];
+      auto it_ans = &ans[i];
+
       double log_prob_y_given_state = densities::log_prob_y_given_state(
-        data, it_ans->mu, t);
+        data, it_ans->mu, t, r_set, false);
       double log_prop_transition = dmvnrm_log(
         it_ans->mu, it_cl->state /* Notice previous */, data.Q.chol_inv /* Notice Q */);
       double log_prop_proposal = dmvnrm_log(
@@ -178,9 +184,16 @@ public:
       it_cl->log_resampling_weight =
       it_cl->log_weight + log_prop_transition + log_prob_y_given_state
         - log_prop_proposal;
-
+#ifdef _OPENMP
+#pragma omp critical(aux_norm_particle_lock)
+{
+#endif
       max_weight = MAX(it_cl->log_resampling_weight, max_weight);
+#ifdef _OPENMP
+}
+#endif
     }
+
 
     auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
     outcome = sample(data, norm_out.weights, norm_out.ESS, did_resample);

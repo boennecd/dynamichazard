@@ -1,12 +1,10 @@
 #include "PF_data.h"
 
 PF_logger::PF_logger(const bool log, const unsigned int level):
-  log(log), level(level),
-  os_w_prefix(get_prefix(level), os) {}
+  log(log), level(level) {}
 
 PF_logger::PF_logger(PF_logger&& other):
-  log(other.log), level(other.level),
-  os_w_prefix(get_prefix(level), os)
+  log(other.log), level(other.level)
 {
   // does not work with some GCC versions https://stackoverflow.com/a/27152585
   // os = std::move(other.os);
@@ -29,6 +27,10 @@ PF_logger::~PF_logger(){
 #endif
   }
 }
+
+std::unique_ptr
+  <std::chrono::time_point<std::chrono::system_clock>>
+    PF_logger::last_message_time;
 
 #ifdef _OPENMP
 omp_lock_t PF_logger::lock;

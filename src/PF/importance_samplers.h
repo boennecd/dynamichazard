@@ -39,7 +39,7 @@ public:
       Q_chol = &data.Q_0.chol;
 
     } else {
-      m1 = arma::chol(data.Q.mat * data.d + data.Q_0.mat);
+      m1 = arma::chol(densities::get_artificial_prior_covar(data, data.d));
       Q_chol = &m1;
     }
 
@@ -130,10 +130,6 @@ public:
                   << data.Q_proposal_smooth.chol;
     }
 
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static, 10) ordered \
-  num_threads(std::min(2, omp_get_thread_num()))
-#endif
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       auto it_fw = fw_idx.begin() + i;
       auto it_bw = bw_idx.begin() + i;
@@ -143,16 +139,8 @@ public:
       arma::vec mean = fw_p.state + bw_p.state;
       mean *= .5;
 
-      arma::vec new_state;
-#ifdef _OPENMP
-{
-#pragma omp ordered
-#endif
-      new_state = mvrnorm(
+      arma::vec new_state = mvrnorm(
         mean, data.Q_proposal_smooth.chol);
-#ifdef _OPENMP
-}
-#endif
       ans.New_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];
@@ -228,23 +216,11 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static, 10) ordered \
-    num_threads(std::min(2, omp_get_thread_num()))
-#endif
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
       auto it = resample_idx.begin() + i;
       arma::vec &mu_j = inter_output.mu_js[*it];
 
-      arma::vec new_state;
-#ifdef _OPENMP
-{
-#pragma omp ordered
-#endif
-      new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
-#ifdef _OPENMP
-}
-#endif
+      arma::vec new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
       ans.New_particle(std::move(new_state), &cl[*it]);
 
       particle &p = ans[i];
@@ -276,10 +252,6 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static, 10) ordered \
-    num_threads(std::min(4, omp_get_thread_num()))
-#endif
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       auto it_fw = fw_idx.begin() + i;
       auto it_bw = bw_idx.begin() + i;
@@ -292,14 +264,7 @@ public:
       mu_j = solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mu_j);
 
       arma::vec new_state;
-#ifdef _OPENMP
-{
-#pragma omp ordered
-#endif
       new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
-#ifdef _OPENMP
-}
-#endif
       ans.New_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];
@@ -364,24 +329,12 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static, 10) ordered \
-    num_threads(std::min(2, omp_get_thread_num()))
-#endif
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
       auto it = resample_idx.begin() + i;
       auto &inter_o = inter_output[*it];
 
       arma::vec new_state;
-#ifdef _OPENMP
-{
-#pragma omp ordered
-#endif
       new_state = mvrnorm(inter_o.mu, inter_o.Sigma_chol);
-#ifdef _OPENMP
-}
-#endif
-
       ans.New_particle(std::move(new_state), &cl[*it]);
 
       particle &p = ans[i];
@@ -404,7 +357,7 @@ public:
     auto begin_bw = bw_idx.begin();
     auto begin_mu = mus.begin();
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static, 20)
+#pragma omp parallel for schedule(static)
 #endif
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       arma::vec &mu_j = *(begin_mu + i);
@@ -426,10 +379,6 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static, 10) ordered \
-    num_threads(std::min(2, omp_get_thread_num()))
-#endif
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       auto it_fw = fw_idx.begin() + i;
       auto it_bw = bw_idx.begin() + i;
@@ -437,15 +386,7 @@ public:
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
-      arma::vec new_state;
-#ifdef _OPENMP
-{
-#pragma omp ordered
-#endif
-      new_state = mvrnorm(it_inter->mu, it_inter->Sigma_chol);
-#ifdef _OPENMP
-}
-#endif
+      arma::vec new_state = mvrnorm(it_inter->mu, it_inter->Sigma_chol);
       ans.New_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];

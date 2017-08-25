@@ -104,7 +104,7 @@ public:
               dens_calc.log_prob_state_given_previous(
                 data, it->parent->state, it->state, t + 1);
 
-            it->log_weight =
+            it->log_unnormalized_weight = it->log_weight =
               /* nominator */
               log_prob_y_given_state + log_prob_state_given_previous
               /* denoninator */
@@ -222,13 +222,14 @@ public:
             double log_artificial_prior =
               dens_calc.log_artificial_prior(data, *it->child /* note child */, t + 1 /* note t + 1 */);
 
-            it->log_weight =
+            it->log_unnormalized_weight = it->log_weight =
               /* nominator */
               (log_prob_y_given_state + log_prob_state_given_previous + log_prob_next_given_state +
                 it->parent->log_weight + it->child->log_weight)
               /* denoninator */
               - (log_importance_dens + it->parent->log_resampling_weight +
                   it->child->log_resampling_weight + log_artificial_prior);
+
 
             max_weight = MAX(it->log_weight, max_weight);
           }

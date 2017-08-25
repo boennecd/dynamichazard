@@ -141,7 +141,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     Thus, I made this overload
   */
 
-  arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
+  arma::uvec r_set = data.get_risk_set(t);
 
   return(
     compute_mu_n_Sigma_from_normal_apprx
@@ -182,10 +182,12 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     Use lock as critical section will not do if this function is called in
     nested parallel setup. See https://stackoverflow.com/a/20447843
   */
-  omp_lock_t lock;
-  if(multithread)
-    omp_init_lock(&lock);
-#pragma omp parallel for schedule(static, 3)
+  omp_lock_t *lock;
+  if(multithread){
+    lock = new omp_lock_t;
+    omp_init_lock(lock);
+  }
+#pragma omp parallel for schedule(static) if(multithread)
 #endif
   for(unsigned int i = 0; i < n_jobs; ++i){
     auto &job = jobs[i];
@@ -216,21 +218,24 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
 
 #ifdef _OPENMP
     if(multithread)
-      omp_set_lock(&lock);
-
+      omp_set_lock(lock);
 #endif
+
     Sigma_inv += my_Sigma_inv;
     mu += my_mu;
 
 #ifdef _OPENMP
     if(multithread)
-      omp_unset_lock(&lock);
+      omp_unset_lock(lock);
 #endif
+
   }
 
 #ifdef _OPENMP
-  if(multithread)
-    omp_destroy_lock(&lock);
+  if(multithread){
+    omp_destroy_lock(lock);
+    delete lock;
+  }
 #endif
 
   /* copy to lower */
@@ -283,7 +288,7 @@ static input_for_normal_apprx_w_cloud_mean
     auto n_elem = cl.size();
     ans.mu_js = std::vector<arma::vec>(n_elem);
 #ifdef _OPENMP
-#pragma omp  parallel for schedule(static, 10)
+#pragma omp  parallel for schedule(static)
 #endif
     for(unsigned int i = 0; i < n_elem; ++i){
       arma::vec mu_j = solve_w_precomputed_chol(Q.chol, cl[i].state) + ans.mu;
@@ -321,7 +326,6 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
   mu_iterator begin, const unsigned int size){
   constexpr bool is_bw_w_use_prior = (!is_forward) && use_prior_in_bw_filter;
 
-
   const covarmat *Q_use;
   arma::mat Q_art_chol;
   if(is_bw_w_use_prior){
@@ -335,13 +339,12 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
   }
 
-
   input_for_normal_apprx_w_particle_mean ans(size);
 
   mu_iterator b = begin;
-  arma::uvec r_set = Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
+  arma::uvec r_set = data.get_risk_set(t);
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static, 10)
+#pragma omp parallel for schedule(static)
 #endif
   for(unsigned int i = 0; i < size; ++i){
     mu_iterator iter = b + i;
