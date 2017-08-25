@@ -1,9 +1,9 @@
 PF_smooth <- asNamespace("dynamichazard")$PF_smooth
 
-set.seed(4)
+set.seed(5)
 n_vars <- 3
 sims <- test_sim_func_logit(
-  n_series = 250, n_vars = n_vars, t_0 = 0, t_max = 20,
+  n_series = 200, n_vars = n_vars, t_0 = 0, t_max = 20,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
   intercept_start = -3, sds = c(.05, rep(.2, n_vars)))
 
@@ -16,38 +16,9 @@ sum(sims$res$event)
 xtabs(~ sims$res$tstop[sims$res$event == 1])
 matplot(sims$beta, type = "l", lty = 1)
 
-Q <- diag(1, n_vars + 1)
+Q <- diag(.5, n_vars + 1)
 Q_0 <- diag(.1, n_vars + 1)
 a_0 <- sims$betas[1, ]
-
-args <- list(
-  n_fixed_terms_in_state_vec = 0,
-  X = t(X_Y$X),
-  fixed_terms = t(X_Y$fixed_terms),
-  tstart = X_Y$Y[1, ],
-  tstop = X_Y$Y[2, ],
-  Q_0 = Q_0,
-
-  Q = Q,
-  a_0 = a_0,
-
-  Q_tilde = diag(0, n_vars + 1),
-  risk_obj = risk_set,
-  F = diag(1, n_vars + 1),
-  n_max = 20,
-  order = 1,
-  n_threads = 7,
-  N_fw_n_bw = 1e3,
-  N_smooth = 1e3,
-  N_first = 1e4,
-  forward_backward_ESS_threshold = NULL,
-  debug = 2, # TODO: remove
-  method = "AUX_normal_approx_w_particles")
-
-sink("tmp.txt") # TODO: remove
-set.seed(30302129)
-result <- do.call(PF_smooth, args)
-sink() # TODO: remove
 
 ddfit <- ddhazard(
   Surv(tstart, tstop, event) ~ . - id,
@@ -59,26 +30,34 @@ ddfit <- ddhazard(
   Q = Q,
   a_0 = sims$betas[1, ])
 
+sink("tmp.txt")
+tmp <- PF_EM(
+  n_fixed_terms_in_state_vec = 0,
+  X = t(X_Y$X),
+  fixed_terms = t(X_Y$fixed_terms),
+  tstart = X_Y$Y[1, ],
+  tstop = X_Y$Y[2, ],
+  Q_0 = Q_0,
+
+  Q = Q,
+  a_0 = a_0,
+  risk_obj = risk_set,
+  n_max = 200,
+  order = 1,
+  n_threads = 7,
+  N_fw_n_bw = 1e3,
+  N_smooth = 1e3,
+  N_first = 1e4,
+  forward_backward_ESS_threshold = NULL,
+  trace = 3, # TODO: remove
+  method = "AUX_normal_approx_w_particles",
+  eps = 1e-2)
+sink()
 
 
 
-options(digits = 3)
-compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
-.i <- 1
-loglikes <- c()
-
-
-sapply(result, function(x){
-  ws <- lapply(x, "[[", "weights")
-  sapply(ws, function(z) 1 / sum(z^2))
-})
-
-tmp <- sum(tail(
-  sapply(lapply(result$forward_clouds, "[[", "log_unnormalized_weights"), mean),
-  -1))
-
-print(loglikes <- c(loglikes, tmp), digits = 6)
-print(logLik(ddfit), digits = 6)
+print(loglikes <- c(loglikes, logLik(result)), digits = 6)
+PF_effective_sample_size(result)
 
 b_idx <- 1:4 #1:5
 matplot(0:20, sims$betas[, b_idx], lty = 1, type = "l", ylim = c(-5, 5), xlim = c(0, 21),
@@ -89,8 +68,9 @@ for(i in 3){
   }))
 
   idx <- switch(i, "1" = 0:20, "2" = 1:21, "3" = 1:20)
-  matplot(idx, state_est[, b_idx], lty = i + 1, type = "l", add = TRUE, lwd = if(i == 1) 1.5 else .5)
-  matplot(idx, state_est[, b_idx], lty = i + 1, type = "p", add = TRUE, pch = 16 + i)
+  matplot(idx, state_est[, b_idx], lty = i + 1, type = "l", add = TRUE, lwd = if(3 == i) 1.5 else .5)
+  matplot(idx, state_est[, b_idx], lty = i + 1, type = "p", add = TRUE, pch = 16 + i,
+          cex = if(3 == i) 1 else .75)
 }
 matplot(0:20, ddfit$state_vecs[, b_idx], lty = 1, col = "brown", type = "l", add = TRUE)
 

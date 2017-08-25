@@ -166,7 +166,7 @@ public:
     double max_weight =  -std::numeric_limits<double>::max();
 
     unsigned int n_elem = PF_cloud.size();
-    auto r_set = data.get_risk_set(t);
+    arma::uvec r_set = data.get_risk_set(t);
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
@@ -185,7 +185,7 @@ public:
       it_cl->log_weight + log_prop_transition + log_prob_y_given_state
         - log_prop_proposal;
 #ifdef _OPENMP
-#pragma omp critical(aux_norm_particle_lock)
+#pragma omp critical(resampler_aux_norm_particle_lock)
 {
 #endif
       max_weight = MAX(it_cl->log_resampling_weight, max_weight);

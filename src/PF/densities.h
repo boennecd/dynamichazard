@@ -39,12 +39,19 @@ class binary {
   chol_map Q_t_chol_inv;
 
   const arma::mat& get_Q_t_chol_inv(const PF_data &data, arma::uword t){
+#ifdef _OPENMP
+#pragma omp critical(get_Q_t_chol_inv_lock)
+{
+#endif
     if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end()){
       Q_t_chol_inv.insert(std::make_pair(
           t,
           arma::inv(arma::trimatu(arma::chol(get_artificial_prior_covar(
             data, t))))));
     }
+#ifdef _OPENMP
+}
+#endif
 
     return Q_t_chol_inv[t];
   }

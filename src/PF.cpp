@@ -90,7 +90,7 @@ Rcpp::List get_rcpp_list_from_cloud(
     const smoother_output &sm_output, const PF_data *data){
   unsigned int state_dim = sm_output.forward_clouds[0][0].state.n_elem;
 
-  return Rcpp::List::create(
+  Rcpp::List ans = Rcpp::List::create(
     Rcpp::Named("forward_clouds") =
       get_rcpp_list_from_cloud(
         sm_output.forward_clouds, false, state_dim, data),
@@ -102,6 +102,10 @@ Rcpp::List get_rcpp_list_from_cloud(
     Rcpp::Named("smoothed_clouds") =
       get_rcpp_list_from_cloud(
         sm_output.smoothed_clouds, false, state_dim, data));
+
+  ans.attr("class") = "PF_clouds";
+
+  return ans;
 }
 
 /* Function to turn an Rcpp::List into a clouds of particles */

@@ -93,9 +93,15 @@ public:
       {
           densities dens_calc = densities();
           double max_weight =  -std::numeric_limits<double>::max();
-          for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+          arma::uvec r_set = data.get_risk_set(t);
+          unsigned int n_elem = new_cloud.size();
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+          for(unsigned int i = 0; i < n_elem; ++i){
+            auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
-              dens_calc.log_prob_y_given_state(data, *it, t);
+              dens_calc.log_prob_y_given_state(data, it->state, t, r_set, false);
             double log_prob_state_given_previous =
               is_forward ?
               dens_calc.log_prob_state_given_previous(
@@ -123,8 +129,14 @@ public:
               it->log_weight += dens_calc.log_artificial_prior(data, *it, t);
               it->log_weight -= dens_calc.log_artificial_prior(data, *it->parent, t + 1);
             }
-
+#ifdef _OPENMP
+#pragma omp critical(aux_lock)
+{
+#endif
             max_weight = MAX(it->log_weight, max_weight);
+#ifdef _OPENMP
+}
+#endif
           }
 
           normalize_log_weights<false, true>(new_cloud, max_weight);
@@ -208,9 +220,15 @@ public:
       {
           densities dens_calc = densities();
           double max_weight = -std::numeric_limits<double>::max();
-          for(auto it = new_cloud.begin(); it != new_cloud.end(); ++it){
+          arma::uvec r_set = data.get_risk_set(t);
+          unsigned int n_elem = new_cloud.size();
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+          for(unsigned int i = 0; i < n_elem; ++i){
+            auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
-              dens_calc.log_prob_y_given_state(data, *it, t);
+              dens_calc.log_prob_y_given_state(data, it->state, t, r_set, false);
             double log_prob_state_given_previous =
               dens_calc.log_prob_state_given_previous(
                 data, it->state, it->parent->state, t);
@@ -230,8 +248,14 @@ public:
               - (log_importance_dens + it->parent->log_resampling_weight +
                   it->child->log_resampling_weight + log_artificial_prior);
 
-
+#ifdef _OPENMP
+#pragma omp critical(smoother_lock)
+{
+#endif
             max_weight = MAX(it->log_weight, max_weight);
+#ifdef _OPENMP
+}
+#endif
           }
 
           normalize_log_weights<false, true>(new_cloud, max_weight);
