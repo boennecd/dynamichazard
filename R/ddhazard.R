@@ -183,112 +183,47 @@ ddhazard = function(formula, data,
   n_fixed <- ncol(X_Y$fixed_terms)
   est_fixed_in_E <- control$fixed_terms_method == "E_step" && n_fixed > 0
 
-  if(missing(Q_0)){
-    Q_0 = diag(10, n_params * order) # something large. Though depends on model, estimation method and data
+  #####
+  # Find starting values at time zero
+  tmp <- get_start_values(
+    formula = formula, data = data, max_T = max_T,
+    X_Y = X_Y, risk_set = risk_set, verbose = verbose,
+    n_threads = control$n_threads, model = model,
+    a_0 = if(missing(a_0)) NULL else a_0,
+    order = order,
+    fixed_parems_start = control$fixed_parems_start)
 
-    if(missing(Q))
-      Q = diag(1, n_params) # (Very) arbitrary default
-  }
-
-  F_ <- get_F(order, n_params, n_fixed, est_fixed_in_E)
-
-  # Check if there are any fixed coefficients. If not set the fixed
-  # coefficients to an empty vector
-  if(is.null(attr(X_Y$formula, "specials")[ddfixed_specials]))
-    if(is.null(control$fixed_parems_start))
-      control$fixed_parems_start <- vector("double")
-
-  if(n_params == 0){
-    # Model is fitted using ddhazard_fit_cpp for testing
-    warning("The model can be estimated more effeciently by using get_survival_case_Weights_and_data and static_glm when there is no time varying parameters")
-    a_0 = vector()
-
-    if(is.null(control$fixed_parems_start))
-      control$fixed_parems_start <- rep(0, ncol(X_Y$fixed_terms)) else
-        control$fixed_parems_start <- control$fixed_parems_start
-
-  } else if((missing_a_0 <- missing(a_0)) |
-            (missing_fixed <- (is.null(control$fixed_parems_start)))){
-    glm_func <- function(fam)
-        static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
-                   epsilon = sqrt(.Machine$double.eps) * 1e1,
-                   family = fam,
-                   speedglm = F,
-                   only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms),
-                   method_use = "parallelglm",
-                   n_threads = control$n_threads)
-
-    if(model == "logit"){
-      coefs = glm_func("binomial")
-
-    } else if(model %in% exp_model_names){
-      coefs = glm_func("exponential")
-
-    } else
-      stop("Method not implemented to find initial values for '", model, "'. Please, provide intial values for a_0")
-
-    is_fixed <-
-      names(coefs) %in% colnames(X_Y$fixed_terms) |
-      grepl("^ddFixed_intercept\\(", names(coefs), perl = TRUE)
-
-    if(missing_a_0){
-      message("a_0 not supplied. One iteration IWLS of static glm model is used")
-      a_0 = rep(coefs[!is_fixed], order)
-
-      if(verbose){
-        message("Starting value for time-varying coeffecients are:")
-        print(a_0)
-      }
-    }
-
-    if(missing_fixed){
-      control$fixed_parems_start <- coefs[is_fixed]
-
-      if(verbose && length(control$fixed_parems_start) > 0){
-        message("Starting value for fixed coeffecients are:")
-        print(control$fixed_parems_start)
-      }
-    }
-  }
-
-  if(is.vector(Q) && length(Q) == 1)
-    Q <- matrix(Q)
-
-  if(is.vector(Q_0) && length(Q_0) == 1)
-    Q_0 <- matrix(Q_0)
-
-  if(ncol(F_) != n_params * order + n_fixed * est_fixed_in_E)
-    stop("F_ does not have the correct dimension. Its dimension should be ", n_params * order + n_fixed * est_fixed_in_E,
-         " but it has ", ncol(F_), " columns")
-
-  if(ncol(Q) != n_params)
-    stop("Q does not have the correct dimension. Its dimension should be ", n_params,
-         " but it has ", ncol(Q), " columns")
-
-  if(ncol(Q_0) != n_params * order)
-    stop("Q_0 does not have the correct dimension. Its dimension should be ", n_params * order,
-         " but it has ", ncol(Q_0), " columns")
+  a_0 <- tmp$a_0
+  control$fixed_parems_start <- tmp$fixed_parems_start
 
   if(length(a_0) != n_params * order)
     stop("a_0 does not have the correct length. Its length should be ", n_params * order,
          " but it has length ", length(a_0), " ")
 
-  if(order > 1){
-    tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)
-    tmp[1:n_params, 1:n_params] <- Q
-    Q <- tmp
-  }
+  #####
+  # Find matrices for state equation
+  tmp <- get_state_eq_matrices(
+    order = order, n_params = n_params, n_fixed = n_fixed,
+    est_fixed_in_E = est_fixed_in_E,
+    Q_0 = if(missing(Q_0)) NULL else Q_0,
+    Q = if(missing(Q)) NULL else Q)
 
+  Q_0 = tmp$Q_0
+  Q = tmp$Q
+  .F = tmp$.F
+
+  #####
+  # Make changes to matrices if fixed effects are estimated in the E-step
   if(est_fixed_in_E){
     # We need to add entries to the various matrices and vectors
     indicies_fix <- 1:n_fixed + n_params
 
-    Q_new <- F_ # F_ already has the right dimensions
+    Q_new <- .F # .F already has the right dimensions
     Q_new[, ] <- 0
     Q_new[-indicies_fix, -indicies_fix] <- Q
     Q <- Q_new
 
-    Q_0_new <- F_
+    Q_0_new <- .F
     Q_0_new[, ] <- 0
     Q_0_new[-indicies_fix, -indicies_fix] <- Q_0
     if(length(indicies_fix) == 1)
@@ -302,45 +237,13 @@ ddhazard = function(formula, data,
       first_half <- 1:(length(a_0)/2)
       a_0 <- c(a_0[first_half], control$fixed_parems_start, a_0[-first_half])
     } else
-      stop("Order of '", order, "' not supported here")
+      stop("Order of '", order, "' not supported")
     control$fixed_parems_start <- vector()
   }
 
-  # Report pre-liminary stats
-  if(verbose){
-    tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
-    colnames(tmp_tbl) = c("Risk size", "Num events")
-
-    # Find the number of event in each bin
-    n_events <- xtabs(~ risk_set$is_event_in)
-    n_events <- n_events[names(n_events) != "-1"]
-    names(n_events) <- as.integer(names(n_events)) + 1
-
-    # Some bins may have no events. We need to add these
-    if(any(event_group_missing <- !seq_len(risk_set$d) %in% names(n_events))){
-      n_missing <- sum(event_group_missing)
-      n_events <- c(rep(0, n_missing), n_events)
-      names(n_events)[seq_len(n_missing)] <- which(event_group_missing)
-    }
-    n_events <- n_events[order(as.integer(names(n_events)))]
-
-    # Insert in to table to print and print
-    tmp_tbl[, "Num events"] <- n_events
-    tmp_tbl[, "Risk size"] <- unlist(lapply(risk_set$risk_sets, length))
-
-    message("Total number of included events are ", sum(tmp_tbl[, 2]), " of ",   sum(X_Y$Y[, 3]))
-    message("Size of risk set and number of events in each risk set are ([Risk set size]:[# events]):")
-
-    tmp_tbl[, 1] <- sprintf("%8s", tmp_tbl[, 1])
-    tmp_tbl[, 2] <- sprintf("%-8s", tmp_tbl[, 2])
-    tmp_message <- sprintf("%21s", apply(tmp_tbl, 1, paste, collapse = " : "))
-    msg_final <- tmp_message[1]
-    for(i in seq_along(tmp_message)[-1])
-      msg_final <- paste0(msg_final, if((i - 1) %% 4 > 0) " " else "\n", tmp_message[i])
-    message(msg_final)
-
-    message("Running EM")
-  }
+  if(verbose)
+    report_pre_liminary_stats_before_EM(
+      risk_set = risk_set, X_Y = X_Y)
 
   if(control$permu){
     # Permuting is useful for e.g. the SMA
@@ -366,7 +269,7 @@ ddhazard = function(formula, data,
   k_vals <- seq_len(control$LR_max_try) - 1
   for(k in k_vals){
     tryCatch({
-      result <- ddhazard_no_validation(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose, Q = Q,
+      result <- ddhazard_no_validation(a_0 = a_0, Q_0 = Q_0, .F = .F, verbose = verbose, Q = Q,
                                        risk_set= risk_set, X_Y = X_Y, order = order, model = model,
                                        LR = control$LR * control$LR_decrease_fac^(k),
                                        n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
@@ -414,7 +317,7 @@ ddhazard = function(formula, data,
 
     result$Q  <- result$Q[-indicies_fix, -indicies_fix, drop = F]
 
-    F_ <- F_[-indicies_fix, -indicies_fix, drop = F]
+    .F <- .F[-indicies_fix, -indicies_fix, drop = F]
   }
 
   if(control$permu){
@@ -453,7 +356,7 @@ ddhazard = function(formula, data,
         exp_ / (1 + exp_)^2
       })
 
-  }else if(model %in% exp_model_names){
+  } else if(model %in% exp_model_names){
     res <- list(
     hazard_func =  function(eta, tstart, tstop, ...){
       1 - exp( - exp(eta) * (tstop - tstart))
@@ -481,7 +384,7 @@ ddhazard = function(formula, data,
     risk_set = if(control$save_risk_set) risk_set else NULL,
     data = if(control$save_data) data else NULL,
     id = if(control$save_data) id else NULL,
-    order = order, F_ = F_,
+    order = order, F_ = .F,
     method = control$method,
     model = model,
     est_Q_0 = control$est_Q_0,
@@ -490,12 +393,12 @@ ddhazard = function(formula, data,
     "class" = "fahrmeier_94")
 }
 
-ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
+ddhazard_no_validation <- function(a_0, Q_0, .F, verbose, Q,
                                    risk_set, X_Y, order, model, LR,
                                    n_fixed_terms_in_state_vec,
                                    weights = weights,
                                    control){
-  ddhazard_fit_cpp(a_0 = a_0, Q_0 = Q_0, F_ = F_, verbose = verbose,
+  ddhazard_fit_cpp(a_0 = a_0, Q_0 = Q_0, F_ = .F, verbose = verbose,
                    Q = Q, n_max = control$n_max,
                    risk_obj = risk_set, eps = control$eps,
                    X = X_Y$X, fixed_terms = X_Y$fixed_terms,
@@ -523,6 +426,52 @@ ddhazard_no_validation <- function(a_0, Q_0, F_, verbose, Q,
                    EKF_batch_size = control$EKF_batch_size)
 }
 
+get_state_eq_matrices <-  function(
+  order, n_params, n_fixed, est_fixed_in_E,
+  Q_0, Q){
+  func <- function(x, n_elem, default){
+    if(!is.null(x))
+      return(x)
+
+    if(n_elem > 0)
+      warning(
+        sQuote(substitute(x)),
+        " not supplied. It has been set to a diagonal matrix with diagonal entries equal to ",
+        default)
+
+    diag(default, n_elem)
+  }
+
+  Q_0 <- func(Q_0, n_params * order, 10)
+  Q <- func(Q, n_params, 1)
+  .F <- get_F(order, n_params, n_fixed, est_fixed_in_E)
+
+  if(is.vector(Q) && length(Q) == 1)
+    Q <- matrix(Q)
+
+  if(is.vector(Q_0) && length(Q_0) == 1)
+    Q_0 <- matrix(Q_0)
+
+  if(ncol(.F) != n_params * order + n_fixed * est_fixed_in_E)
+    stop(".F does not have the correct dimension. Its dimension should be ", n_params * order + n_fixed * est_fixed_in_E,
+         " but it has ", ncol(.F), " columns")
+
+  if(ncol(Q) != n_params)
+    stop("Q does not have the correct dimension. Its dimension should be ", n_params,
+         " but it has ", ncol(Q), " columns")
+
+  if(ncol(Q_0) != n_params * order)
+    stop("Q_0 does not have the correct dimension. Its dimension should be ", n_params * order,
+         " but it has ", ncol(Q_0), " columns")
+
+  if(order > 1){
+    tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)
+    tmp[1:n_params, 1:n_params] <- Q
+    Q <- tmp
+  }
+
+  return(list(Q = Q, Q_0 = Q_0, .F = .F))
+}
 
 get_F <- function(order, n_params, n_fixed, est_fixed_in_E){
   if(order == 1){
@@ -533,25 +482,139 @@ get_F <- function(order, n_params, n_fixed, est_fixed_in_E){
     indicies_lag <- n_params + 1:n_params + ifelse(est_fixed_in_E, n_fixed, 0)
     indicies_fix <- if(est_fixed_in_E) 1:n_fixed + n_params else vector()
 
-    F_ = matrix(NA_real_,
+    .F = matrix(NA_real_,
                 nrow = 2 * n_params + n_fixed * est_fixed_in_E,
                 ncol = 2 * n_params + n_fixed * est_fixed_in_E)
-    F_[indicies_cur, indicies_cur] = diag(2, n_params)
-    F_[indicies_lag, indicies_cur] = diag(1, n_params)
-    F_[indicies_cur, indicies_lag] = diag(-1, n_params)
-    F_[indicies_lag, indicies_lag] = 0
+    .F[indicies_cur, indicies_cur] = diag(2, n_params)
+    .F[indicies_lag, indicies_cur] = diag(1, n_params)
+    .F[indicies_cur, indicies_lag] = diag(-1, n_params)
+    .F[indicies_lag, indicies_lag] = 0
 
     if(length(indicies_fix) > 0){
-      F_[indicies_fix, ] <- 0
-      F_[, indicies_fix] <- 0
+      .F[indicies_fix, ] <- 0
+      .F[, indicies_fix] <- 0
       if(length(indicies_fix) > 1)
-        diag(F_[indicies_fix, indicies_fix]) <- 1 else
-          F_[indicies_fix, indicies_fix] <- 1
+        diag(.F[indicies_fix, indicies_fix]) <- 1 else
+          .F[indicies_fix, indicies_fix] <- 1
     }
 
-    return(F_)
+    return(.F)
   } else stop("Method not implemented for order ", order)
 }
 
-exp_model_names <- c("exp_bin",
-                     "exp_clip_time", "exp_clip_time_w_jump")
+exp_model_names <- c(
+  "exp_bin", "exp_clip_time", "exp_clip_time_w_jump")
+
+get_start_values <- function(
+  formula, data, max_T, X_Y, risk_set,
+  verbose = FALSE,
+  n_threads,
+  model,
+  order,
+  a_0 = NULL, fixed_parems_start = NULL){
+
+  n_params = ncol(X_Y$X)
+  n_fixed = ncol(X_Y$fixed_terms)
+
+  missing_a_0 <- is.null(a_0) && n_params > 0
+  missing_fixed <- is.null(fixed_parems_start) && n_fixed > 0
+
+  if(!missing_a_0 && !missing_fixed){
+    if(is.null(fixed_parems_start))
+      fixed_parems_start <- numeric()
+    if(is.null(a_0))
+      a_0 <- numeric()
+
+  } else if(n_params == 0){
+    # Model is fitted for testing
+    warning("The model can be estimated more effeciently by using get_survival_case_Weights_and_data and static_glm when there is no time varying parameters")
+    a_0 = vector()
+
+    if(is.null(fixed_parems_start))
+      fixed_parems_start <- rep(0, n_fixed) else
+        fixed_parems_start <- fixed_parems_start
+
+  } else {
+    glm_func <- function(fam)
+      static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
+                 epsilon = sqrt(.Machine$double.eps) * 1e1,
+                 family = fam,
+                 speedglm = FALSE,
+                 only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms),
+                 method_use = "parallelglm",
+                 n_threads = n_threads)
+
+    if(model == "logit"){
+      coefs = glm_func("binomial")
+
+    } else if(model %in% exp_model_names){
+      coefs = glm_func("exponential")
+
+    } else
+      stop("Method not implemented to find initial values for ", sQuote(model),
+           ". Please, provide intial values for a_0")
+
+    is_fixed <-
+      names(coefs) %in% colnames(X_Y$fixed_terms) |
+      grepl("^ddFixed_intercept\\(", names(coefs), perl = TRUE)
+
+    if(is.null(a_0)){
+      message("a_0 not supplied. One iteration IWLS of static glm model is used")
+      a_0 = rep(coefs[!is_fixed], order)
+
+      if(verbose){
+        message("Starting value for time-varying coeffecients are:")
+        print(a_0)
+      }
+    }
+
+    if(is.null(fixed_parems_start)){
+      fixed_parems_start <- coefs[is_fixed]
+
+      if(verbose && length(fixed_parems_start) > 0){
+        message("Starting value for fixed coeffecients are:")
+        print(fixed_parems_start)
+      }
+    }
+  }
+
+  return(list(a_0 = a_0, fixed_parems_start = fixed_parems_start))
+}
+
+report_pre_liminary_stats_before_EM <- function(
+  risk_set, X_Y){
+  tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
+  colnames(tmp_tbl) = c("Risk size", "Num events")
+
+  # Find the number of event in each bin
+  n_events <- xtabs(~ risk_set$is_event_in)
+  n_events <- n_events[names(n_events) != "-1"]
+  names(n_events) <- as.integer(names(n_events)) + 1
+
+  # Some bins may have no events. We need to add these
+  if(any(event_group_missing <- !seq_len(risk_set$d) %in% names(n_events))){
+    n_missing <- sum(event_group_missing)
+    n_events <- c(rep(0, n_missing), n_events)
+    names(n_events)[seq_len(n_missing)] <- which(event_group_missing)
+  }
+  n_events <- n_events[order(as.integer(names(n_events)))]
+
+  # Insert in to table to print and print
+  tmp_tbl[, "Num events"] <- n_events
+  tmp_tbl[, "Risk size"] <- unlist(lapply(risk_set$risk_sets, length))
+
+  message("Total number of included events are ", sum(tmp_tbl[, 2]), " of ",   sum(X_Y$Y[, 3]))
+  message("Size of risk set and number of events in each risk set are ([Risk set size]:[# events]):")
+
+  tmp_tbl[, 1] <- sprintf("%8s", tmp_tbl[, 1])
+  tmp_tbl[, 2] <- sprintf("%-8s", tmp_tbl[, 2])
+  tmp_message <- sprintf("%21s", apply(tmp_tbl, 1, paste, collapse = " : "))
+  msg_final <- tmp_message[1]
+  for(i in seq_along(tmp_message)[-1])
+    msg_final <- paste0(msg_final, if((i - 1) %% 4 > 0) " " else "\n", tmp_message[i])
+  message(msg_final)
+
+  message("Running EM")
+
+  return(invisible())
+}

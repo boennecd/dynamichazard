@@ -20,6 +20,57 @@ PF_effective_sample_size <- function(object){
 # TODO: remove export
 #' @export
 PF_EM <- function(
+  formula, data,
+  model = "logit",
+  by, max_T, id,
+  a_0, Q_0, Q = Q_0,
+  order = 1,
+  control = list(),
+  verbose = F
+){
+  #####
+  # Checks
+  if(order != 1) # TODO: test
+    stop(sQuote('order'), " not equal to 1 is not supported")
+
+  if(!model %in% "logit") # TODO: test
+    stop(sQuote('model'), " is not supported")
+
+  if(missing(id)){
+    if(verbose)
+      warning("You did not parse and Id argument")
+    id = 1:nrow(data)
+  }
+
+  #####
+  # FInd design matrix
+
+  X_Y = get_design_matrix(formula, data)
+  n_params = ncol(X_Y$X)
+
+  if(length(X_Y$fixed_terms) > 0) # TODO: test
+    stop("Fixed terms are not supported")
+
+
+  #####
+  # Set control variables
+  control_default <- list(
+    eps = 1e-2, forward_backward_ESS_threshold = NULL,
+    method = "AUX_normal_approx_w_particles",
+    trace = 0, n_max = 25,
+    n_threads = getOption("ddhazard_max_threads"))
+
+  if(any(is.na(control_match <- match(names(control), names(control_default)))))
+    stop("These control parameters are not recognized: ",
+         paste0(names(control)[is.na(control_match)], collapse = "\t"))
+
+  control_default[control_match] <- control
+  control <- control_default
+
+}
+
+
+.PF_EM <- function(
   n_fixed_terms_in_state_vec,
   X,
   fixed_terms,
@@ -40,12 +91,6 @@ PF_EM <- function(
   trace = 0,
   method = "AUX_normal_approx_w_particles",
   seed){
-  if(order != 1) # TODO: test
-    stop(sQuote('order'), " not equal to 1 is not supported")
-
-  if(length(X_Y$fixed_terms) > 0) # TODO: test
-    stop("Fixed terms are not supported")
-
   cl <- match.call()
   args <- as.list(cl)
   n_vars <- nrow(X)

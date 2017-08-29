@@ -7,7 +7,7 @@ test_that("Print yields the expected results for object returned by ddhazard", {
     by = 1,
     control = list(est_Q_0 = F, n_max = 10^4, eps = 1e-1,
                    save_data = F, save_risk_set = F),
-    a_0 = rep(0, 2), Q_0 = diag(1, 2),
+    a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(1, 2),
     max_T = 20, order = 1)
 
   # print(paste0(capture.output(print(result, digits = 4)), collapse = "\n"), max.print = 1e8)
@@ -22,7 +22,7 @@ test_that("Print yields the expected results for object returned by ddhazard", {
     control = list(est_Q_0 = F, n_max = 10^4, eps = 1e-1,
                    save_data = F, save_risk_set = F,
                    fixed_terms_method = "E_step"),
-    a_0 = rep(0, 1), Q_0 = diag(1, 1),
+    a_0 = rep(0, 1), Q_0 = diag(1, 1), Q = 1,
     max_T = 20, order = 1)
 
   # print(paste0(capture.output(print(result, digits = 4)), collapse = "\n"), max.print = 1e8)

@@ -116,6 +116,7 @@ test_that("UKF with fixed effects works", {
 
   fit <- ddhazard(formula(survival::Surv(tstart, tstop, event) ~
                             -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + x2 + x3),
+                  Q = diag(1, 2), Q_0 = diag(10, 2),
                   data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
                   control = list(method = "UKF", fixed_parems_start = rep(0, 2),
                                  save_data = F, save_risk_set = F,
@@ -133,6 +134,7 @@ test_that("UKF with fixed effects works", {
   #####
   fit <- ddhazard(formula(survival::Surv(tstart, tstop, event) ~
                             -1 + ddFixed(rep(1, length(x1))) + ddFixed(x1) + x2 + x3),
+                  Q = diag(1, 2), Q_0 = diag(10, 2),
                   data = sims$res, model = "exp_clip_time_w_jump", by = 1, id = sims$res$id, max_T = 10,
                   control = list(method = "UKF",
                                  fixed_terms_method = "M_step"))

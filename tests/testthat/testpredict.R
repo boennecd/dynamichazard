@@ -1,10 +1,12 @@
 context("Testing predict")
 
-suppressMessages(result <- ddhazard(
+result <- ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,
-  a_0 = rep(0, 2), Q_0 = diag(.1, 2)))
+  a_0 = rep(0, 2),
+  Q_0 = diag(.1, 2),
+  Q = diag(1, 2))
 
 for(use_parallel in c(T, F)){
   # Test that we get same estimate in one period estimates
@@ -73,7 +75,7 @@ test_that("Term prediction with fixed effects",{
   fit <- ddhazard(
     formula = survival::Surv(start, stop, event) ~ ddFixed(group),
     data = head_neck_cancer,
-    by = 1, a_0 = 0, Q_0 = as.matrix(1))
+    by = 1, a_0 = 0, Q_0 = as.matrix(1), Q = 1)
 
   for(g in 0:1){
     predict_terms = predict(fit, new_data = data.frame(group = g), type = "term")
@@ -103,11 +105,11 @@ test_that("Terms prediction when parsing two observations",{
 
 for(use_parallel in c(T, F)){
   # Test that we get same estimate in one period estimates
-  test_that(paste0("Testing one period in sample with fixed effects and use_parallel ", use_parallel),{
+  test_that(paste0("Testing one period in sample with fixed effects and use_parallel = ", use_parallel),{
     result <- ddhazard(
       formula = survival::Surv(start, stop, event) ~ ddFixed(group),
       data = head_neck_cancer,
-      by = 1, a_0 = 0, Q_0 = as.matrix(1))
+      by = 1, a_0 = 0, Q_0 = as.matrix(1), Q = 1)
 
     for(g in c(0, 1)){
       predict_ = predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(g, 60)),
@@ -149,6 +151,7 @@ test_that("get_survival_case_weights_and_data and predict yields consistent resu
   suppressMessages(
     fit <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
                     data = s$res, max_T = 10, by = 1, id = s$res$id,
+                    Q = diag(1, 6), Q_0 = diag(10, 6),
                     control = list(LR = .5)))
 
   s$res$tstart_ceil <- ceiling(s$res$tstart)

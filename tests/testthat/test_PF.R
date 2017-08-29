@@ -26,7 +26,6 @@ test_that("PF_smooth gives same results", {
   skip_on_cran()
 
   PF_smooth <- asNamespace("dynamichazard")$PF_smooth
-  PF_effective_sample_size <- asNamespace("dynamichazard")$PF_effective_sample_size
 
   n_vars <- 2
   set.seed(78095324)
@@ -82,7 +81,7 @@ test_that("PF_smooth gives same results", {
           rep(1, length(r)), sapply(sapply(r, "[", "weights"), sum),
           check.attributes = FALSE)
       }
-      save_to_test(result, file_name = .(test_file_name))
+      # save_to_test(result, file_name = .(test_file_name))
       expect_equal(result, read_to_test(.(test_file_name)), tolerance = 1.49e-08)
 
       old_args <- args
@@ -166,6 +165,7 @@ test_that("PF_smooth gives same results", {
     envir = environment())
 
   # # #TODO: clean up
+  # PF_effective_sample_size <- asNamespace("dynamichazard")$PF_effective_sample_size
   # plot(result, type = "smoothed_clouds")
   # plot(result, type = "backward_clouds", qlvls = c(), lty = 2, add = TRUE)
   # plot(result, type = "forward_clouds", qlvls = c(), lty = 3, add = TRUE)

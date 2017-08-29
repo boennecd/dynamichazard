@@ -119,7 +119,7 @@ test_that("State space error gives correct dimension with fixed effects", {
   fit <- ddhazard(
     formula = survival::Surv(start, stop, event) ~ ddFixed(group),
     data = head_neck_cancer,
-    by = 1, a_0 = 0, Q_0 = as.matrix(1))
+    by = 1, a_0 = 0, Q_0 = as.matrix(1), Q = 1)
 
   std_res <- residuals(fit, "std_space_error")
   expect_equal(dim(std_res$residuals), c(59, 1))
@@ -141,6 +141,7 @@ fit <- ddhazard(
   formula = survival::Surv(time, status == 2) ~ log(protime),
   data = pbc, Q_0 = diag(rep(1e8, 2)), by = 100,
   Q = diag(rep(1e-2, 2)), max_T = 3600,
+  a = rep(0, 2),
   control = list(est_Q_0 = F, eps = .1))
 
 test_that("Pearson residuals and raw residuals for logistic model are consistent with each other", {
@@ -188,6 +189,7 @@ fit <- ddhazard(
   by = 1, data = exp_sim_200$res,
   id = exp_sim_200$res$id,
   model = "exp_clip_time_w_jump",
+  a_0 = numeric(2),
   max_T = 10, Q_0 = diag(1e8, 2), Q = diag(.1, 2),
   control = list(eps = .1))
 

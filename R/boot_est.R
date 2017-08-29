@@ -149,7 +149,7 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
       tryCatch({
         suppressWarnings(est <- ddhazard_no_validation(
           a_0 = a_0, Q_0 = ddhazard_fit$Q_0,
-          F_ = ddhazard_fit$F_, verbose = F, Q = ddhazard_fit$Q,
+          .F = ddhazard_fit$F_, verbose = F, Q = ddhazard_fit$Q,
           risk_set= boot_risk_set, X_Y = boot_X_Y,
           order = ddhazard_fit$order, model = ddhazard_fit$model,
           LR = l,

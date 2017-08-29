@@ -66,13 +66,13 @@ test_that("Saving or not saving risk set or data gives the same result", {
     data = head_neck_cancer,
     by = 1,
     a_0 = rep(0, 2), Q_0 = diag(1, 2),
+    Q = diag(.2, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1,
     verbose = F)
 
   control_fit <- do.call(ddhazard, arg_list)
   control_fit$logLik <- logLik(control_fit)
-
 
   for(save_risk_set in c(T, F))
     for(save_data in c(T, F)){

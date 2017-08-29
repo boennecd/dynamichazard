@@ -28,7 +28,7 @@ test_that("Using weights yields a message about lag_one_cov", {
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 3,
-      a_0 = rep(0, 2), Q_0 = diag(1, 2),
+      a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(1, 2),
       max_T = 27, order = 1,
       weights = ws),
     regexp = "^lag_one_cov will not be correct when some weights are not 1\n$")

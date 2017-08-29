@@ -56,6 +56,7 @@ test_that("UKF does not fail and both methods give the same",{
                   data = sims$res,
                   a_0 = rep(0, ncol(sims$res) + 1 - 4),
                   Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
+                  Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
                   verbose = F,
                   control = list(eps = 1e-2, est_Q_0 = F, method = "UKF",
                                  kappa = 0.1, alpha = 1, beta = 0),
@@ -67,6 +68,7 @@ test_that("UKF does not fail and both methods give the same",{
                       data = sims$res,
                       a_0 = rep(0, ncol(sims$res) + 1 - 4),
                       Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
+                      Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
                       control = list(est_Q_0 = F, kappa = 0.1, alpha = 1, beta = 0, eps = 1e-2, method = "UKF_org"),
                       id = sims$res$id,
                       max_T = 10)
