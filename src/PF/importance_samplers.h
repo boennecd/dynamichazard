@@ -64,15 +64,7 @@ public:
 };
 
 /*
- Importance sampler with importance density that does not depend on the
- outcome for the first order random walk. That is:
-  q(alpah_t | alpha_{t - 1}^{j}, y_t) =
-    N(alpha | alpha_{t - j}^{j}, Q)
-  tilde{q}(alpah_t | alpha_{t + 1}^{k}, y_t) =
-    N(alpha | alpha_{t + 1}^{j}, Q)
-  tilde{q}(alpah_t | alpha_{t + 1}^{j}, alpha_{t + 1}^{k}, y_t) =
-    N(alpha | (1/2)Q(Q^-1 alpha_{t + 1}^{j} + alpha_{t + 1}^{k}), (1/2)Q) =
-    N(alpha | (1/2)alpha_{t + 1}^{j} + (1/2)alpha_{t + 1}^{k}), (1/2)Q)
+ Bootstrap filter
 
  See:
   Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
@@ -81,11 +73,6 @@ public:
 template<typename densities, bool is_forward>
 class importance_dens_no_y_dependence :
   public importance_dens_base<densities, is_forward>{
-  static double log_importance_dens(const PF_data &data, const particle &p, int t){
-    /* independent of is_forward for first order random walk */
-    return dmvnrm_log(p.state, p.parent->state, data.Q_proposal.chol_inv);
-  }
-
   static double log_importance_dens_smooth(
       const PF_data &data, const particle &p, int t){
     arma::vec mean = p.parent->state + p.child->state;
@@ -101,6 +88,21 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
+    const covarmat *Q_use;
+    const arma::mat *Q_use_inv_chol;
+    const arma::vec *mu_term;
+
+    if(is_forward){
+      Q_use = &data.Q_proposal;
+
+    } else {
+      arma::mat art = densities::get_artificial_prior_covar(data, t);
+      mu_term = new arma::vec(arma::solve(art, data.a_0));
+      Q_use = new covarmat(arma::inv(arma::inv(art) + data.Q_proposal.inv));
+      Q_use_inv_chol = new arma::mat(arma::chol(Q_use->inv));
+
+    }
+
     if(data.debug > 2){
       data.log(3) << "Sampling new cloud from normal distribution with chol(Q) given by" << std::endl
                   << data.Q_proposal.chol;
@@ -108,11 +110,33 @@ public:
 
     auto it = resample_idx.begin();
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
-      arma::vec new_state = mvrnorm(cl[*it].state, data.Q_proposal.chol);
+      const arma::vec *mu;
+      if(is_forward){
+        mu = &cl[*it].state;
+
+      } else {
+        arma::vec tmp =
+          solve_w_precomputed_chol(data.Q_proposal.chol, cl[*it].state) + *mu_term;
+
+        mu = new arma::vec(solve_w_precomputed_chol(*Q_use_inv_chol, tmp));
+
+      }
+
+      arma::vec new_state = mvrnorm(*mu, Q_use->chol);
       ans.New_particle(new_state, &cl[*it]);
 
       particle &p = ans[i];
-      p.log_importance_dens = log_importance_dens(data, p, t);
+      p.log_importance_dens = dmvnrm_log(p.state, *mu, Q_use->chol_inv);
+
+      if(!is_forward)
+        delete mu;
+    }
+
+    if(!is_forward){
+      delete Q_use;
+      delete Q_use_inv_chol;
+      delete mu_term;
+
     }
 
     return ans;

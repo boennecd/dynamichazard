@@ -58,6 +58,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
         fac <- qnorm(.5 - level / 2)
         lb = x$state_vecs[, i] + fac * sqrt(x$state_vars[i, i, ])
         ub = x$state_vecs[, i] - fac * sqrt(x$state_vars[i, i, ])
+
       } else {
         boot_ests <- ddhazard_boot$t[, (i - 1) * nrow(x$state_vecs) + 1:nrow(x$state_vecs)]
         R <- nrow(boot_ests)

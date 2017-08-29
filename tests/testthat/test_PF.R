@@ -26,6 +26,7 @@ test_that("PF_smooth gives same results", {
   skip_on_cran()
 
   PF_smooth <- asNamespace("dynamichazard")$PF_smooth
+  PF_effective_sample_size <- asNamespace("dynamichazard")$PF_effective_sample_size
 
   n_vars <- 2
   set.seed(78095324)
@@ -41,6 +42,7 @@ test_that("PF_smooth gives same results", {
 
   # sum(sims$res$event)
   # matplot(sims$beta, type = "l", lty = 1)
+  # xtabs(~ sims$res$tstop[sims$res$event == 1])
 
   Q <- diag(sqrt(.33), 3)
   Q_0 <- diag(.5, 3)
@@ -67,7 +69,7 @@ test_that("PF_smooth gives same results", {
     N_smooth = 1000,
     N_first = 10000,
     forward_backward_ESS_threshold = NULL,
-    debug = 3, # TODO: remove
+    debug = 0,
     method = "PF")
 
   get_test_expr <- function(fit_quote, test_file_name){
@@ -80,7 +82,7 @@ test_that("PF_smooth gives same results", {
           rep(1, length(r)), sapply(sapply(r, "[", "weights"), sum),
           check.attributes = FALSE)
       }
-      # save_to_test(result, file_name = .(test_file_name))
+      save_to_test(result, file_name = .(test_file_name))
       expect_equal(result, read_to_test(.(test_file_name)), tolerance = 1.49e-08)
 
       old_args <- args
@@ -97,13 +99,10 @@ test_that("PF_smooth gives same results", {
   # Simple PF
   eval(get_test_expr(
     quote({
-      sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
       args$method <- "bootstrap_filter"
       result <- do.call(PF_smooth, args)
-      sink() # TODO: remove
-
       result
     }),
     test_file_name = "local_tests/bootstrap_filter"),
@@ -114,13 +113,10 @@ test_that("PF_smooth gives same results", {
   # Normal approximation in importance density with mean from previous cloud
   eval(get_test_expr(
     quote({
-      sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
       args$method <- "PF_normal_approx_w_cloud_mean"
       result <- do.call(PF_smooth, args)
-      sink() # TODO: remove
-
       result
     }),
     test_file_name = "local_tests/PF_normal_approx_w_cloud_mean"),
@@ -131,13 +127,10 @@ test_that("PF_smooth gives same results", {
   # Normal approximation in AUX filter with mean from previous cloud
   eval(get_test_expr(
     quote({
-      sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
       args$method <- "AUX_normal_approx_w_cloud_mean"
       result <- do.call(PF_smooth, args)
-      sink() # TODO: remove
-
       result
     }),
     test_file_name = "local_tests/AUX_normal_approx_w_cloud_mean"),
@@ -148,13 +141,10 @@ test_that("PF_smooth gives same results", {
   # Normal approximation in importance density with mean from parent and child particle
   eval(get_test_expr(
     quote({
-      sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
       args$method <- "PF_normal_approx_w_particles"
       result <- do.call(PF_smooth, args)
-      sink() # TODO: remove
-
       result
     }),
     test_file_name = "local_tests/PF_normal_approx_w_particles"),
@@ -165,13 +155,10 @@ test_that("PF_smooth gives same results", {
   # Normal approximation in AUX filter with mean from parent and child particle
   eval(get_test_expr(
     quote({
-      sink("tmp.txt") # TODO: remove
       set.seed(30302129)
       old_seed <- .Random.seed
       args$method <- "AUX_normal_approx_w_particles"
       result <- do.call(PF_smooth, args)
-      sink() # TODO: remove
-
       result
     }),
     test_file_name = "local_tests/AUX_normal_approx_w_particles"),
@@ -179,6 +166,16 @@ test_that("PF_smooth gives same results", {
     envir = environment())
 
   # # #TODO: clean up
+  # plot(result, type = "smoothed_clouds")
+  # plot(result, type = "backward_clouds", qlvls = c(), lty = 2, add = TRUE)
+  # plot(result, type = "forward_clouds", qlvls = c(), lty = 3, add = TRUE)
+  # abline(h = sims$betas[1, ])
+  # (tmp <- PF_effective_sample_size(result))
+  # (tmp2 <- PF_effective_sample_size(read_to_test("local_tests/AUX_normal_approx_w_particles")))
+  # for(i in seq_along(tmp)){
+  #   tmp[[i]] <- (tmp[[i]] - tmp2[[i]]) / tmp2[[i]]
+  # }
+  # tmp
   # ddfit <- ddhazard(
   #   Surv(tstart, tstop, event) ~ . - id,
   #   data = sims$res,
@@ -207,17 +204,17 @@ test_that("PF_smooth gives same results", {
   # }
   # matplot(0:10, ddfit$state_vecs, lty = 1, col = "blue", type = "l", add = TRUE)
   # # #
-  # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
+  # sapply(lapply(result$backward_clouds, "[[", "parent_idx"),
   #        function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])
-  # sapply(lapply(result$smoothed_clouds, "[[", "parent_idx"),
+  # sapply(lapply(result$backward_clouds, "[[", "parent_idx"),
   #        function(n) sort(xtabs(~ n), decreasing = TRUE)[1:10])
   #
-  # sapply(lapply(result$smoothed_clouds, "[[", "weights"),
+  # sapply(lapply(result$backward_clouds, "[[", "weights"),
   #        function(x) sort(x, decreasing = TRUE)[1:10])
-  # ord <- sapply(lapply(result$smoothed_clouds, "[[", "weights"),
-  #             function(x) order(x, decreasing = TRUE)[1:10])
-  #
-  # result$smoothed_clouds[[8]]$states[, 1556]
+  # ord <- sapply(lapply(result$backward_clouds, "[[", "weights"),
+  #             function(x) order(x, decreasing = TRUE)[1:11])
+  # #
+  # result$smoothed_clouds[[10]]$states[, ord[, 10]]
   # result$smoothed_clouds[[8]]$states[, 5740]
   #
   # result <- result$smoothed_clouds

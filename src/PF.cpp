@@ -271,6 +271,7 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
   unsigned int n_elem = smoothed_clouds[0][0].state.n_elem;
 
   for(unsigned int i = 0; i < n_periods; ++i){
+    const bool is_last = i == n_periods - 1;
     auto it_cl = (smoothed_clouds.begin() + i);
 
     unsigned int n_part = it_cl->size();
@@ -284,8 +285,20 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
 
       E_x += weight * p.state;
       // TODO: use BLAS outer product rank one update
+      if(is_last)
+        continue;
       arma::vec inter = sqrt(weight) * (p.state - p.parent->state);
       E_x_less_x_less_one_outer += inter * inter.t();
+    }
+
+    if(is_last){
+      --it_cl;
+      for(auto p = it_cl->begin(); p != it_cl->end(); ++p){
+        // TODO: use BLAS outer product rank one update
+        arma::vec inter =
+          sqrt(exp(p->log_weight)) * (p->child->state - p->state);
+        E_x_less_x_less_one_outer += inter * inter.t();
+      }
     }
 
     E_xs.push_back(std::move(E_x));

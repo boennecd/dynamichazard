@@ -19,7 +19,8 @@ protected:
     if(probs.n_elem != data.N_fw_n_bw){
       if(data.debug > 1){
         data.log(2) << "Subsampling " << probs.n_elem << " to get "
-                    << data.N_fw_n_bw <<  " using re-sampling weights";
+                    << data.N_fw_n_bw <<  " using re-sampling weights. ESS of re-sampling weights are "
+                    << ESS;
       }
 
       did_resample = true;
@@ -29,7 +30,7 @@ protected:
     if(ESS < data.forward_backward_ESS_threshold){
 
       if(data.debug > 1){
-        data.log(2) << "ESS is below threshold (" << ESS << " < "
+        data.log(2) << "ESS of re-sampling weights is below threshold (" << ESS << " < "
                     << data.forward_backward_ESS_threshold << "). Re-sampling";
       }
 
@@ -44,7 +45,7 @@ protected:
     }
 
     if(data.debug > 1){
-      data.log(2) << "ESS is greater than threshold (" << ESS << " >= "
+      data.log(2) << "ESS of re-sampling weights is greater than threshold (" << ESS << " >= "
                   << data.forward_backward_ESS_threshold << "). No re-sampling needed";
     }
 
@@ -115,6 +116,26 @@ public:
       <densities, is_forward>
       (data, t, Q, alpha_bar, PF_cloud);
 
+    const arma::mat *Q_numerator_chol_inv;
+    const arma::mat *Q_numerator_inv_chol;
+    const arma::vec *mu_bw_term;
+    if(is_forward){
+      Q_numerator_chol_inv = &data.Q.chol_inv;
+
+    } else {
+      arma::mat tmp = densities::get_artificial_prior_covar(data, t);
+      mu_bw_term = // Q_t^-1 * a_0;
+        new arma::vec(arma::solve(tmp, data.a_0));
+
+      tmp = // Q_t^-1 + Q^-1
+        data.Q.inv + arma::inv(tmp);
+      Q_numerator_inv_chol = new arma::mat(arma::chol(tmp));
+
+      tmp = arma::inv(arma::trimatu(arma::chol(arma::inv(tmp))));
+      Q_numerator_chol_inv = new arma::mat(std::move(tmp));
+
+    }
+
     /* Compute sampling weights*/
     double max_weight =  -std::numeric_limits<double>::max();
     auto it_cl = PF_cloud.begin();
@@ -123,8 +144,19 @@ public:
     for(unsigned int i = 0; i != n_elem; ++i, ++it_cl, ++it_mu_j){
       double log_prob_y_given_state = densities::log_prob_y_given_state(
         data, *it_mu_j, t);
-      double log_prop_transition = dmvnrm_log(
-        *it_mu_j, it_cl->state /* Notice previous */, data.Q.chol_inv /* Notice Q */);
+      double log_prop_transition;
+      if(is_forward){
+        log_prop_transition = dmvnrm_log(
+          *it_mu_j, it_cl->state, *Q_numerator_chol_inv);
+
+      } else {
+        arma::vec mean = solve_w_precomputed_chol(data.Q.chol, it_cl->state) + *mu_bw_term;
+        mean = solve_w_precomputed_chol(*Q_numerator_inv_chol, mean);
+        log_prop_transition = dmvnrm_log(
+          *it_mu_j, mean, *Q_numerator_chol_inv);
+
+      }
+
       double log_prop_proposal = dmvnrm_log(
         *it_mu_j, *it_mu_j /* Notice same */, ans.sigma_chol_inv /* Notice Sigma*/);
 
@@ -133,6 +165,13 @@ public:
         - log_prop_proposal;
 
       max_weight = MAX(it_cl->log_resampling_weight, max_weight);
+    }
+
+    if(!is_forward){
+      delete Q_numerator_chol_inv;
+      delete mu_bw_term;
+      delete Q_numerator_inv_chol;
+
     }
 
     auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
@@ -162,6 +201,26 @@ public:
       <densities, is_forward>
       (data, t, Q, PF_cloud);
 
+    const arma::mat *Q_numerator_chol_inv;
+    const arma::mat *Q_numerator_inv_chol;
+    const arma::vec *mu_bw_term;
+    if(is_forward){
+      Q_numerator_chol_inv = &data.Q.chol_inv;
+
+    } else {
+      arma::mat tmp = densities::get_artificial_prior_covar(data, t);
+      mu_bw_term = // Q_t^-1 * a_0;
+        new arma::vec(arma::solve(tmp, data.a_0));
+
+      tmp = // Q_t^-1 + Q^-1
+        data.Q.inv + arma::inv(tmp);
+      Q_numerator_inv_chol = new arma::mat(arma::chol(tmp));
+
+      tmp = arma::inv(arma::trimatu(arma::chol(arma::inv(tmp))));
+      Q_numerator_chol_inv = new arma::mat(std::move(tmp));
+
+    }
+
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
 
@@ -176,8 +235,20 @@ public:
 
       double log_prob_y_given_state = densities::log_prob_y_given_state(
         data, it_ans->mu, t, r_set, false);
-      double log_prop_transition = dmvnrm_log(
-        it_ans->mu, it_cl->state /* Notice previous */, data.Q.chol_inv /* Notice Q */);
+
+      double log_prop_transition;
+      if(is_forward){
+        log_prop_transition = dmvnrm_log(
+          it_ans->mu, it_cl->state, *Q_numerator_chol_inv);
+
+      } else {
+        arma::vec mean = solve_w_precomputed_chol(data.Q.chol, it_cl->state) + *mu_bw_term;
+        mean = solve_w_precomputed_chol(*Q_numerator_inv_chol, mean);
+        log_prop_transition = dmvnrm_log(
+          it_ans->mu, mean, *Q_numerator_chol_inv);
+
+      }
+
       double log_prop_proposal = dmvnrm_log(
         it_ans->mu, it_ans->mu /* Notice same */, it_ans->sigma_chol_inv /* Notice Sigma*/);
 
@@ -194,6 +265,12 @@ public:
 #endif
     }
 
+    if(!is_forward){
+      delete Q_numerator_chol_inv;
+      delete mu_bw_term;
+      delete Q_numerator_inv_chol;
+
+    }
 
     auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
     outcome = sample(data, norm_out.weights, norm_out.ESS, did_resample);

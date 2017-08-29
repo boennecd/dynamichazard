@@ -149,7 +149,7 @@ public:
 
   static arma::mat get_artificial_prior_covar(
       const PF_data &data, int t){
-    return data.Q.mat * t + data.Q_0.mat;
+    return data.Q.mat * (t + 1);
   }
 
   static double log_p_prime(double y, double eta, int t){

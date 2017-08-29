@@ -8,8 +8,9 @@ release_questions <- function() {
     "Have you updated NEWS.md?",
     "Have you run devtools::spell_check()?",
     "Have you checked reverse dependencies?",
-    "Did you set args = c('--compact-vignettes=gs+qpdf')",
-    "Did you search through for CHECK?",
-    "Are 'ARMA_NO_DEBUG' and 'ARMA_DONT_PRINT_ERRORS' defined in arma_n_rcpp.h'?"
+    "Have you set args = c('--compact-vignettes=gs+qpdf')",
+    "Have you search through for CHECK?",
+    "Are 'ARMA_NO_DEBUG' and 'ARMA_DONT_PRINT_ERRORS' defined in arma_n_rcpp.h'?",
+    "Have you run non-cran tests with ubsan and asan?"
   )
 }

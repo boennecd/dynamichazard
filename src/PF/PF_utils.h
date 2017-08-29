@@ -2,6 +2,7 @@
 #define PF_UTILS
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
+#define USE_PRIOR_IN_BW_FILTER_DEFAULT true
 
 #include <tuple>
 #include "particles.h"
@@ -259,7 +260,7 @@ struct input_for_normal_apprx_w_cloud_mean : public input_for_normal_apprx {
     input_for_normal_apprx(other) {}
 };
 
-template<typename densities, bool is_forward, bool use_prior_in_bw_filter = false>
+template<typename densities, bool is_forward, bool use_prior_in_bw_filter = USE_PRIOR_IN_BW_FILTER_DEFAULT>
 static input_for_normal_apprx_w_cloud_mean
   compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean(
     const PF_data &data, const unsigned int t, const covarmat &Q, const arma::vec &alpha_bar,
@@ -268,12 +269,12 @@ static input_for_normal_apprx_w_cloud_mean
 
     const covarmat *Q_use;
     const arma::mat tmp;
-    arma::mat Q_art_chol;
+    arma::vec *mu_term;
     if(is_bw_w_use_prior){
       // Add the covariance matrix of the artificial prior
       arma::mat art = densities::get_artificial_prior_covar(data, t);
-      Q_use = new covarmat(Q.mat + art);
-      Q_art_chol = arma::chol(art);
+      Q_use = new covarmat(arma::inv(Q.inv + arma::inv(art)));
+      mu_term = new arma::vec(arma::solve(art, data.a_0));
 
     } else {
       Q_use = &Q;
@@ -292,9 +293,8 @@ static input_for_normal_apprx_w_cloud_mean
 #endif
     for(unsigned int i = 0; i < n_elem; ++i){
       arma::vec mu_j = solve_w_precomputed_chol(Q.chol, cl[i].state) + ans.mu;
-      if(is_bw_w_use_prior){
-        mu_j += solve_w_precomputed_chol(Q_art_chol, data.a_0);
-      }
+      if(is_bw_w_use_prior)
+        mu_j += *mu_term;
       mu_j = solve_w_precomputed_chol(ans.Sigma_inv_chol, mu_j);
 
       ans.mu_js[i] = std::move(mu_j);
@@ -302,6 +302,8 @@ static input_for_normal_apprx_w_cloud_mean
 
     if(is_bw_w_use_prior){
       delete Q_use;
+      delete mu_term;
+
     }
 
     return ans;
@@ -319,7 +321,7 @@ using input_for_normal_apprx_w_particle_mean =
   std::vector<input_for_normal_apprx_w_particle_mean_element>;
 
 template<typename densities, typename mu_iterator,
-         typename Func, bool is_forward, bool use_prior_in_bw_filter = false>
+         typename Func, bool is_forward, bool use_prior_in_bw_filter = USE_PRIOR_IN_BW_FILTER_DEFAULT>
 static input_for_normal_apprx_w_particle_mean
 compute_mu_n_Sigma_from_normal_apprx_w_particles(
   const PF_data &data, const unsigned int t, const covarmat &Q,
@@ -328,11 +330,12 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
   const covarmat *Q_use;
   arma::mat Q_art_chol;
+  arma::vec *mu_term;
   if(is_bw_w_use_prior){
     // Add the covariance matrix of the artificial prior
     arma::mat art = densities::get_artificial_prior_covar(data, t);
-    Q_use = new covarmat(Q.mat + art);
-    Q_art_chol = arma::chol(art);
+    Q_use = new covarmat(arma::inv(Q.inv + arma::inv(art)));
+    mu_term = new arma::vec(arma::solve(art, data.a_0));
 
   } else {
     Q_use = &Q;
@@ -354,7 +357,8 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
     mu = solve_w_precomputed_chol(Q.chol, mu) + inter.mu;
     if(is_bw_w_use_prior)
-      mu += solve_w_precomputed_chol(Q_art_chol, data.a_0);
+      mu += *mu_term;
+
     mu = solve_w_precomputed_chol(inter.Sigma_inv_chol, mu);
 
     ans[i].mu = std::move(mu);
@@ -364,12 +368,14 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
   if(is_bw_w_use_prior){
     delete Q_use;
+    delete mu_term;
+
   }
 
   return ans;
 }
 
-template<typename densities, bool is_forward, bool use_prior_in_bw_filter = false>
+template<typename densities, bool is_forward, bool use_prior_in_bw_filter = USE_PRIOR_IN_BW_FILTER_DEFAULT>
 static input_for_normal_apprx_w_particle_mean
 compute_mu_n_Sigma_from_normal_apprx_w_particles(
   const PF_data &data, const unsigned int t, const covarmat &Q,
@@ -386,7 +392,7 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
     (data, t, Q, cl.begin(), cl.size()));
 }
 
-template<typename densities, bool is_forward, bool use_prior_in_bw_filter = false>
+template<typename densities, bool is_forward, bool use_prior_in_bw_filter = USE_PRIOR_IN_BW_FILTER_DEFAULT>
 static input_for_normal_apprx_w_particle_mean
 compute_mu_n_Sigma_from_normal_apprx_w_particles(
   const PF_data &data, const unsigned int t, const covarmat &Q,
@@ -424,5 +430,6 @@ Rcpp::List get_rcpp_list_from_cloud(
 
 smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list);
 
+#undef USE_PRIOR_IN_BW_FILTER_DEFAULT
 #undef MAX
 #endif
