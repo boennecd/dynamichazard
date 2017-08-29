@@ -1,3 +1,15 @@
+#' @title Log likelihood of smoothed state vector of a \code{fahrmeier_94} object
+#' @description
+#' Computes the log likelihood of (a potentially new) data set given the estimated:
+#' \deqn{E_{\theta}(\alpha_1 | y_{1:d}), E_{\theta}(\alpha_{2} | y_{1:d}), ..., E_{\theta}(\alpha_{d} | y_{1:d})}
+#'
+#' from the \code{fahrmeier_94} class object. Note that this is not the log likelihood of the observed data given the outcome.
+#'
+#' @param object an object of class \code{fahrmeier_94}.
+#' @param data new data to evaluate the likelihood for.
+#' @param id the individual identifiers as in \code{\link{ddhazard}}.
+#' @param ... unused.
+#'
 #' @export
 logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
   data <- if(!is.null(object$data)) object$data else data
@@ -48,4 +60,24 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
   class(val) <- "logLik"
 
   val
+}
+
+#' @title Log-Likelihood of a \code{PF_clouds} object
+#' @param object an object of class \code{PF_clouds}
+#' @description
+#' Computes the log-likelihood using the forward filter clouds. See the particle_filter vignette for details.
+#'
+#' @return
+#' The log-likelihood value given the observed data and set of parameter used when simulating the clouds.
+#'
+#' @export
+logLik.PF_clouds <- function(object){
+  sum(tail(
+    sapply(lapply(object$forward_clouds,
+                  "[[", "log_unnormalized_weights"),
+           function(x){
+             .max <- max(x)
+             log(sum(exp(x - .max))) + .max - log(length(x))
+           }),
+    -1))
 }

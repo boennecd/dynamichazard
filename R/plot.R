@@ -168,3 +168,96 @@ plot.fahrmeier_94_SpaceErrors = function(x, mod, cov_index = NA, t_index = NA,
   # add 95% conf
   abline(h = c(-1, 1) * 1.96, lty = 2)
 }
+
+# TODO: test
+#' @title Plot of clouds from a \code{PF_clouds} object
+#' @description
+#' Plots mean curve along with quantiles through time for the forward, backward or smoothed cloud.
+#'
+#' @param x an object of class \code{PF_clouds}.
+#' @param y unused.
+#' @param type parameter to specify which cloud to plot.
+#' @param ylim \code{ylim} passed to \code{\link{matplot}}.
+#' @param add \code{TRUE} if a new plot should not be made.
+#' @param qlvls vector of quantile levels to be plotted.
+#' @param pch \code{pch} argument for the quantile points.
+#' @param lty \code{lty} argument for the mean curves.
+#' @param ... unused.
+#' @param cov_index indices of the state vector to plot. All are plotted if this argument is omitted.
+#'
+#' @return
+#' List with quantile levels and mean curve.
+#'
+#' @export
+plot.PF_clouds <- function(
+  x, y,
+  type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
+  ylim, add = FALSE, qlvls = c(.05, .5, .95), pch = 4, lty = 1, ..., cov_index){
+  type <- type[1]
+  these_clouds <- x[[type]]
+  if(missing(cov_index))
+    cov_index <- seq_len(dim(these_clouds[[1]]$states)[1])
+
+  #####
+  # Find means
+  .mean <- t(sapply(these_clouds, function(row){
+    colSums(t(row$states[cov_index, , drop = FALSE]) * drop(row$weights))
+  }))
+
+  #####
+  # Find quantiles
+  if(length(qlvls) > 0){
+    qs <- lapply(these_clouds, function(row){
+      out <- apply(row$states[cov_index, , drop = FALSE], 1, function(x){
+        ord <- order(x)
+        wg_cumsum <- cumsum(row$weights[ord])
+        idx <- ord[sapply(qlvls, function(q) max(which(wg_cumsum < q)))]
+        x[idx]
+      })
+
+      if(is.null(dim(out)))
+        out <- matrix(out, ncol = length(out))
+
+      out
+    })
+    qs <- simplify2array(qs)
+  } else
+    qs <- NULL
+
+  #####
+  # Plot
+  .x <- 1:nrow(.mean) + if(type == "forward_clouds") -1 else 0
+  if(missing(ylim))
+    ylim <- range(qs, .mean, na.rm = TRUE) # can have NA if we dont have a
+  # weighted value below or above
+  # qlvl
+  matplot(.x, .mean, ylim = ylim, type = "l", lty = lty, add = add,
+          xlab = "Time", ylab = "State vector", ...)
+  if(length(qs) > 0){
+    for(i in 1:dim(qs)[2]){
+      tmp <- qs[, i, ]
+      if(is.null(dim(tmp)))
+        tmp <- matrix(tmp, ncol = length(tmp))
+      matpoints(.x, t(tmp), pch = pch, col = i)
+    }
+  }
+
+  invisible(list(mean = .mean, qs = qs))
+}
+
+# TODO: test
+#' @title Plot for a \code{PF_EM} object
+#' @description
+#' Short hand to call \code{\link{plot.PF_clouds}}.
+#'
+#' @param x an object of class \code{PF_EM}.
+#' @param y unused.
+#' @param ... arguments to \code{\link{plot.PF_clouds}}.
+#'
+#' @return
+#' See \code{\link{plot.PF_clouds}}
+#'
+#' @export
+plot.PF_EM <- function(x, y, ...){
+  invisible(do.call(plot, c(list(x = x$clouds), list(...))))
+}

@@ -11,7 +11,7 @@
 #' @param Q Initial covariance matrix for the state equation
 #' @param order Order of the random walk
 #' @param weights Weights to use if e.g. a skewed sample is used
-#' @param control List of control variables (see details below)
+#' @param control List of control variables (see the control section below)
 #' @param verbose \code{TRUE} if you want status messages during execution
 #'
 #' @details
@@ -120,9 +120,6 @@ ddhazard = function(formula, data,
     message("lag_one_cov will not be correct when some weights are not 1")
   }
 
-  X_Y = get_design_matrix(formula, data)
-  n_params = ncol(X_Y$X)
-
   if(model == "logit"){
     is_for_discrete_model <- TRUE
 
@@ -131,6 +128,9 @@ ddhazard = function(formula, data,
 
   } else
     stop("Model '", model, "' is not implemented")
+
+  X_Y = get_design_matrix(formula, data)
+  n_params = ncol(X_Y$X)
 
   control_default <- list(kappa = NULL, alpha = 1, beta = 0,
                           NR_eps = NULL, LR = 1, n_max = 10^2, eps = 1e-3,
@@ -177,8 +177,10 @@ ddhazard = function(formula, data,
   if(verbose)
     message("Finding Risk set")
   risk_set <-
-    get_risk_obj(Y = X_Y$Y, by = by, max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
-                 id = id, is_for_discrete_model = is_for_discrete_model)
+    get_risk_obj(
+      Y = X_Y$Y, by = by,
+      max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
+      id = id, is_for_discrete_model = is_for_discrete_model)
 
   n_fixed <- ncol(X_Y$fixed_terms)
   est_fixed_in_E <- control$fixed_terms_method == "E_step" && n_fixed > 0

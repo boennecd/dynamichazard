@@ -1,9 +1,9 @@
 set.seed(12)
-n_vars <- 10
+n_vars <- 3
 sims <- test_sim_func_logit(
-  n_series = 1e4, n_vars = n_vars, t_0 = 0, t_max = 20,
+  n_series = 200, n_vars = n_vars, t_0 = 0, t_max = 20,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
-  intercept_start = -3.5, sds = Q_true <- c(.05, rep(.2, n_vars)))
+  intercept_start = -3, sds = Q_true <- c(.05, rep(.2, n_vars)))
 Q_true <- diag(Q_true^2)
 
 X_Y = get_design_matrix(Surv(tstart, tstop, event) ~ . - id, sims$res)
@@ -27,50 +27,29 @@ ddfit <- ddhazard(
   id = sims$res$id,
   Q_0 = Q_0,
   Q = Q,
-  a_0 = a_0,
   control = list(n_max = 10))
 
 options(digits = 4)
-tmp <- PF_EM(
-  n_fixed_terms_in_state_vec = 0,
-  X = t(X_Y$X),
-  fixed_terms = t(X_Y$fixed_terms),
-  tstart = X_Y$Y[1, ],
-  tstop = X_Y$Y[2, ],
+result <- PF_EM(
+  Surv(tstart, tstop, event) ~ . - id,
+  data = sims$res,
+  max_T = 20,
+  by = 1,
+  id = sims$res$id,
   Q_0 = Q_0,
-
   Q = Q,
-  a_0 = a_0,
-  risk_obj = risk_set,
-  n_max = 10,
-  order = 1,
-  n_threads = 7,
-  N_fw_n_bw = 100,
-  N_smooth = 1e3,
-  N_first = 1e3,
-  forward_backward_ESS_threshold = NULL,
-  trace = 1, # TODO: remove
-  method = "bootstrap_filter",
-  eps = 1e-2)
-
-new_call <- tmp$call
-new_call$Q <- tmp$Q
-new_call$a_0 <- tmp$a_0
-new_call$N_fw_n_bw <- 100
-new_call$N_smooth <- 1e4
-new_call$trace <- 3
-new_call$n_max <- 1
-
-result <- eval(new_call)
+  control = list(N_fw_n_bw = 200, N_smooth = 1e4, N_first = 2e3,
+                 n_threads = 7),
+  trace = 1)
 
 norm(ddfit$Q - Q_true)
-norm(result$call$Q - Q_true)
+norm(result$Q - Q_true)
 
 diag(ddfit$Q - Q_true)
-diag(result$call$Q - Q_true)
+diag(result$Q - Q_true)
 
 var(ddfit$state_vecs[1, ] - a_0)
-var(result$call$a_0 - a_0)
+var(result$a_0 - a_0)
 
 
 b_idx <- 1:4 #1:5

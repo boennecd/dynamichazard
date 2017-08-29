@@ -30,7 +30,7 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 
 \item{weights}{Weights to use if e.g. a skewed sample is used}
 
-\item{control}{List of control variables (see details below)}
+\item{control}{List of control variables (see the control section below)}
 
 \item{verbose}{\code{TRUE} if you want status messages during execution}
 }

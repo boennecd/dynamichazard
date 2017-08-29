@@ -1,7 +1,7 @@
 context("Testing ddhazard function")
 
 # Test on data set that is one of Farhmiers papers
-result = ddhazard(
+result <- ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,
@@ -10,8 +10,6 @@ result = ddhazard(
   a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
   max_T = 45,
   id = head_neck_cancer$id, order = 1)
-
-# plot(result)
 
 test_that("Testing names of output from ddhazard on head and neck cancer dataset", {
   expect_equal(colnames(result$state_vecs), c("(Intercept)", "group1"))
@@ -26,8 +24,6 @@ result <- result[c("state_vecs", "state_vars","lag_one_cov", "model")]
 test_that("get previous results with head_neck", {
   expect_equal(result, read_to_test("ddhazard_head_neck"))
 })
-
-
 
 test_that("Invalid penalty terms throw error", {
   expect_error(
@@ -45,6 +41,30 @@ test_that("Invalid penalty terms throw error", {
       by = 1, # Use by month intervals
       control = list(denom_term = -1)),
     regexp = "Method not implemented with penalty term \\(control\\$denom_term\\) equal to -1")
+})
+
+test_that("Get expected warning when no Q or Q_0 is passed", {
+  args <- list(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    control = list(est_Q_0 = F,
+                   save_data = F, save_risk_set = F),
+    a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
+    max_T = 45,
+    id = head_neck_cancer$id, order = 1)
+
+  tmp <- args
+  tmp$Q_0 <- NULL
+  expect_warning(
+    do.call(ddhazard, tmp),
+    paste(sQuote("Q_0"), "not supplied. It has been set to a diagonal matrix with diagonal entries equal to"))
+
+  tmp <- args
+  tmp$Q <- NULL
+  expect_warning(
+    do.call(ddhazard, tmp),
+    paste(sQuote("Q"), "not supplied. It has been set to a diagonal matrix with diagonal entries equal to"))
 })
 
 

@@ -1,33 +1,44 @@
-#' @export
-logLik.PF_clouds <- function(object){
-  sum(tail(
-    sapply(lapply(object$forward_clouds,
-                  "[[", "log_unnormalized_weights"),
-           function(x){
-             .max <- max(x)
-             log(sum(exp(x - .max))) + .max - log(length(x))
-          }),
-    -1))
-}
-
 PF_effective_sample_size <- function(object){
   sapply(object, function(x){
     sapply(lapply(x, "[[", "weights"), function(z) 1 / sum(z^2))
   })
 }
 
-# TODO: test
-# TODO: remove export
+#' @title EM estimation with particle filters
+#' @description Method to estimate the hyper parameters with an EM algorithm.
+#'
+#' @inheritParams ddhazard
+#' @param trace Argument to get progress information. Zero will yield no info an larger integer values will yield incrementally more information.
+#'
+#' @details
+#' See the particle_filter vignette for details.
+#'
+#' @section Control:
+#' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
+#' \describe{
+#' \item{\code{method}}{Method for forward, backward and smoothing filter. See the particle_filter vignette for details.}
+#' \item{\code{N_fw_n_bw}}{Number of particles to use in forward and backward filter.}
+#' \item{\code{N_first}}{Number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
+#' \item{\code{N_smooth}}{Number of particles to use in particle smoother.}
+#' \item{\code{eps}}{Convergence threhshold in EM method.}
+#' \item{\code{n_max}}{Maximum number of iterations of the EM algorithm.}
+#' \item{\code{n_threads}}{Maximum number threads to use in the computations.}
+#' \item{\code{forward_backward_ESS_threshold}}{Required effective sample size to not re-sample in the particle filters.}
+#' \item{\code{seed}}{seed to set at the start of every EM iteration.}
+#'}
+#'
+#' @return
+#' TODO: write me
+#'
 #' @export
 PF_EM <- function(
   formula, data,
   model = "logit",
   by, max_T, id,
-  a_0, Q_0, Q = Q_0,
+  a_0, Q_0, Q,
   order = 1,
   control = list(),
-  verbose = F
-){
+  trace = 0){
   #####
   # Checks
   if(order != 1) # TODO: test
@@ -37,28 +48,51 @@ PF_EM <- function(
     stop(sQuote('model'), " is not supported")
 
   if(missing(id)){
-    if(verbose)
+    if(trace > 0)
       warning("You did not parse and Id argument")
     id = 1:nrow(data)
   }
 
-  #####
-  # FInd design matrix
+  if(model == "logit"){
+    is_for_discrete_model <- TRUE
 
+  } else
+    stop("Model '", model, "' is not implemented")
+
+  #####
+  # Find design matrix
   X_Y = get_design_matrix(formula, data)
   n_params = ncol(X_Y$X)
 
   if(length(X_Y$fixed_terms) > 0) # TODO: test
     stop("Fixed terms are not supported")
 
+  #####
+  # Find risk set
+  if(trace > 0)
+    message("Finding Risk set")
+  risk_set <-
+    get_risk_obj(
+      Y = X_Y$Y, by = by,
+      max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
+      id = id, is_for_discrete_model = is_for_discrete_model)
+
+  n_fixed <- ncol(X_Y$fixed_terms)
+  if(n_fixed > 0)
+    stop("Fixed effects are not implemented")
 
   #####
   # Set control variables
   control_default <- list(
-    eps = 1e-2, forward_backward_ESS_threshold = NULL,
+    eps = 1e-2,
+    forward_backward_ESS_threshold = NULL,
     method = "AUX_normal_approx_w_particles",
-    trace = 0, n_max = 25,
-    n_threads = getOption("ddhazard_max_threads"))
+    n_max = 25,
+    N_fw_n_bw = NULL,
+    N_smooth = NULL,
+    N_first = NULL,
+    n_threads = getOption("ddhazard_max_threads"),
+    seed = NULL)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -67,8 +101,75 @@ PF_EM <- function(
   control_default[control_match] <- control
   control <- control_default
 
-}
+  check_n_particles_expr <- function(N_xyz)
+    bquote({
+      if(is.null(control[[.(N_xyz)]]))
+        stop("Please supply the number of particle for ", sQuote(paste0(
+          "control$", .(N_xyz))))
+    })
 
+  eval(check_n_particles_expr("N_first"))
+  eval(check_n_particles_expr("N_fw_n_bw"))
+  eval(check_n_particles_expr("N_smooth"))
+
+  #####
+  # Find starting values at time zero
+  tmp <- get_start_values(
+    formula = formula, data = data, max_T = max_T,
+    X_Y = X_Y, risk_set = risk_set, verbose = trace > 0,
+    n_threads = control$n_threads, model = model,
+    a_0 = if(missing(a_0)) NULL else a_0,
+    order = order,
+    fixed_parems_start = numeric())
+
+  a_0 <- tmp$a_0
+
+  if(length(a_0) != n_params * order)
+    stop("a_0 does not have the correct length. Its length should be ", n_params * order,
+         " but it has length ", length(a_0), " ")
+
+  #####
+  # Find matrices for state equation
+  tmp <- get_state_eq_matrices(
+    order = order, n_params = n_params, n_fixed = n_fixed,
+    est_fixed_in_E = FALSE,
+    Q_0 = if(missing(Q_0)) NULL else Q_0,
+    Q = if(missing(Q)) NULL else Q)
+
+  Q_0 = tmp$Q_0
+  Q = tmp$Q
+  .F = tmp$.F
+
+  if(trace > 0)
+    report_pre_liminary_stats_before_EM(
+      risk_set = risk_set, X_Y = X_Y)
+
+  out <- .PF_EM(
+    n_fixed_terms_in_state_vec = 0,
+    X = t(X_Y$X),
+    fixed_terms = t(X_Y$fixed_terms),
+    tstart = X_Y$Y[1, ],
+    tstop = X_Y$Y[2, ],
+    Q_0 = Q_0,
+    Q = Q,
+    a_0 = a_0,
+    .F = .F,
+    risk_obj = risk_set,
+    n_max = control$n_max,
+    order = order,
+    n_threads = control$n_threads,
+    N_fw_n_bw = control$N_fw_n_bw,
+    N_smooth = control$N_smooth,
+    N_first = control$N_first,
+    forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
+    trace = trace,
+    method = control$method,
+    eps = control$eps,
+    seed = control$seed)
+
+  out$call <- match.call()
+  out
+}
 
 .PF_EM <- function(
   n_fixed_terms_in_state_vec,
@@ -78,7 +179,8 @@ PF_EM <- function(
   tstop,
   Q_0,
   Q,
-  a_0 ,
+  a_0,
+  .F,
   risk_obj,
   n_max,
   order,
@@ -90,19 +192,18 @@ PF_EM <- function(
   forward_backward_ESS_threshold = NULL,
   trace = 0,
   method = "AUX_normal_approx_w_particles",
-  seed){
+  seed = NULL){
   cl <- match.call()
-  args <- as.list(cl)
   n_vars <- nrow(X)
-  args[[1]] <- NULL
-  args[["Q_tilde"]] <- diag(0, n_vars)
-  args[["F"]] <- diag(1, n_vars)
-  args[["debug"]] <- max(0, trace - 1)
-  args[c("trace", "eps", "seed")] <- NULL
+  fit_call <- cl
+  fit_call[[1]] <- as.name("PF_smooth")
+  fit_call[["Q_tilde"]] <- bquote(diag(0, .(n_vars)))
+  fit_call[["F"]] <- fit_call[[".F"]]
+  fit_call[["debug"]] <- max(0, trace - 1)
+  fit_call[c("trace", "eps", "seed", ".F")] <- NULL
 
-  if(missing(seed)){
+  if(is.null(seed))
     seed <- .Random.seed
-  }
 
   log_likes <- rep(NA_real_, n_max)
   log_like <- log_like_max <- -Inf
@@ -113,10 +214,10 @@ PF_EM <- function(
       cat("#######################\nStarting EM iteration", i, "\n")
 
       cat("a_0 is:\n")
-      print(eval(args$a_0, environment()))
+      print(eval(fit_call$a_0, environment()))
 
       cat("chol(Q) is:\n")
-      print(chol(eval(args$Q, environment())))
+      print(chol(eval(fit_call$Q, environment())))
     }
     log_like_old <- log_like
     log_like_max <- max(log_like, log_like_max)
@@ -124,7 +225,7 @@ PF_EM <- function(
     #####
     # Find clouds
     set.seed(seed)
-    clouds <- do.call(PF_smooth, args)
+    clouds <- eval(fit_call, envir = parent.frame(1))
 
     if(trace > 0){
       cat("Plotting state vector mean and quantiles for iteration", i, "\n")
@@ -138,6 +239,9 @@ PF_EM <- function(
 
     #####
     # Update parameters
+    a_0_old <- eval(fit_call$a_0, environment())
+    Q_old <- eval(fit_call$Q, environment())
+
     sum_stats <- compute_summary_stats(clouds)
     a_0 <- drop(sum_stats[[1]]$E_xs)
     Q <- matrix(0., length(a_0), length(a_0))
@@ -145,8 +249,8 @@ PF_EM <- function(
       Q <- Q + sum_stats[[j]]$E_x_less_x_less_one_outers
     Q <- Q / (length(sum_stats) - 1)
 
-    args$a_0 <- a_0
-    args$Q <- Q
+    fit_call$a_0 <- a_0
+    fit_call$Q <- Q
 
     #####
     # Compute log likelihood and check for convergernce
@@ -157,10 +261,17 @@ PF_EM <- function(
       cat("The log likelihood in iteration ", i, " is ", log_like,
           ". Largest log likelihood before this iteration is ", log_like_max, "\n", sep = "")
 
-    if(log_like < log_like_max)
-      warning("Likelihood decreased in iteration ", i, " compared to maximum likelihood seen so far.")
+    Q_relative_norm <- norm(Q_old - Q) / (norm(Q_old) + 1e-8)
+    a_0_relative_norm <- norm(t(a_0 - a_0_old)) / (norm(t(a_0_old)) + 1e-8)
 
-    if(has_converged <- log_like_max < log_like && log_like - log_like_max < eps)
+    if(trace > 0)
+      cat("The relative norm of the change in a_0 and Q are",
+          a_0_relative_norm, "and", Q_relative_norm,
+          "at iteration", i)
+
+    if(has_converged <-
+       Q_relative_norm < eps &&
+       a_0_relative_norm < eps)
       break
   }
 
@@ -175,78 +286,12 @@ PF_EM <- function(
     clouds = clouds,
     a_0 = a_0,
     Q = Q,
-    F = args$F,
+    F = fit_call$.F,
     summary_stats = sum_stats,
     log_likes = log_likes[1:i],
     n_iter = i,
     effective_sample_size = effective_sample_size,
     seed = seed),
     class = "PF_EM"))
-}
-
-# TODO: test
-# TODO: move to plot.R
-#' @export
-plot.PF_clouds <- function(
-  x, y,
-  type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
-  ylim, add = FALSE, qlvls = c(.05, .5, .95), pch = 4, lty = 1, ..., cov_index){
-  type <- type[1]
-  these_clouds <- x[[type]]
-  if(missing(cov_index))
-    cov_index <- seq_len(dim(these_clouds[[1]]$states)[1])
-
-  #####
-  # Find means
-  .mean <- t(sapply(these_clouds, function(row){
-    colSums(t(row$states[cov_index, , drop = FALSE]) * drop(row$weights))
-  }))
-
-  #####
-  # Find quantiles
-  if(length(qlvls) > 0){
-    qs <- lapply(these_clouds, function(row){
-      out <- apply(row$states[cov_index, , drop = FALSE], 1, function(x){
-        ord <- order(x)
-        wg_cumsum <- cumsum(row$weights[ord])
-        idx <- ord[sapply(qlvls, function(q) max(which(wg_cumsum < q)))]
-        x[idx]
-      })
-
-      if(is.null(dim(out)))
-        out <- matrix(out, ncol = length(out))
-
-      out
-      })
-    qs <- simplify2array(qs)
-  } else
-    qs <- NULL
-
-  #####
-  # Plot
-  .x <- 1:nrow(.mean) + if(type == "forward_clouds") -1 else 0
-  if(missing(ylim))
-    ylim <- range(qs, .mean, na.rm = TRUE) # can have NA if we dont have a
-                                           # weighted value below or above
-                                           # qlvl
-  matplot(.x, .mean, ylim = ylim, type = "l", lty = lty, add = add,
-          xlab = "Time", ylab = "State vector", ...)
-  if(length(qs) > 0){
-    for(i in 1:dim(qs)[2]){
-      tmp <- qs[, i, ]
-      if(is.null(dim(tmp)))
-        tmp <- matrix(tmp, ncol = length(tmp))
-      matpoints(.x, t(tmp), pch = pch, col = i)
-    }
-  }
-
-  invisible(list(mean = .mean, qs = qs))
-}
-
-# TODO: test
-# TODO: move to plot.R
-#' @export
-plot.PF_EM <- function(x, y, ...){
-  invisible(do.call(plot, c(list(x = x$clouds), list(...))))
 }
 

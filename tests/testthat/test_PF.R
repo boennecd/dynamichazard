@@ -235,5 +235,65 @@ test_that("Import and export PF cloud from Rcpp gives the same", {
 test_that("compute_summary_stats gives previous results", {
   skip_on_cran()
 
-  expect_true(FALSE)
+  compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
+  cloud_example <- read_to_test("local_tests/cloud_example")
+
+  sum_stats <- compute_summary_stats(cloud_example)
+
+  # save_to_test(sum_stats, "local_tests/compute_summary_stats")
+  expect_equal(sum_stats, read_to_test("local_tests/compute_summary_stats"), tolerance = 1.49e-08)
+})
+
+test_that("PF_EM stops with correct error messages due to wrong or missing arguments", {
+  args <- list(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2))
+
+  expect_error(
+    do.call(PF_EM, args), paste0(
+      "Please supply the number of particle for ", sQuote("control\\$N_first")))
+
+  args$control <- list(N_first = 1e3)
+  expect_error(
+    do.call(PF_EM, args), paste0(
+      "Please supply the number of particle for ", sQuote("control\\$N_fw_n_bw")))
+
+  args$control <- c(args$control, list(N_fw_n_bw = 1e3))
+  expect_error(
+    do.call(PF_EM, args), paste0(
+      "Please supply the number of particle for ", sQuote("control\\$N_smooth")))
+})
+
+test_that("PF_EM gives previous results on head neck data set", {
+  skip_on_cran()
+
+  set.seed(98612415)
+  result <- suppressWarnings( # Supressed as there is a warning about not converging
+    PF_EM(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2),
+      control = list(N_fw_n_bw = 200, N_smooth = 1e3, N_first = 2e3,
+                     n_max = 5, n_threads = 7),
+      max_T = 45))
+
+  #####
+  # Test that result are reproducable
+  r2 <- result$call
+  r2[["control"]] <- c(eval(r2$control, environment()),
+                       list(seed = result$seed))
+  r2  <- suppressWarnings(eval(r2, environment()))
+
+  result$call <- NULL
+  r2$call <- NULL
+  expect_equal(result, r2)
+
+  #####
+  # Test versus previous computed values
+  result <- result[c("a_0", "Q", "clouds", "summary_stats", "log_likes",
+                     "n_iter", "effective_sample_size", "seed")]
+
+  # save_to_test(result, "local_tests/PF_head_neck")
+  expect_equal(result, read_to_test("local_tests/PF_head_neck"), tolerance = 1.49e-08)
 })
