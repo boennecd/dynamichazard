@@ -1,6 +1,9 @@
 PF_effective_sample_size <- function(object){
-  sapply(object, function(x){
-    sapply(lapply(x, "[[", "weights"), function(z) 1 / sum(z^2))
+  sapply(object[
+    c("forward_clouds", "backward_clouds", "smoothed_clouds")],
+    function(x){
+    sapply(lapply(x,
+      "[[", "weights"), function(z) 1 / sum(z^2))
   })
 }
 

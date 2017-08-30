@@ -3,6 +3,17 @@
 #include "PF/resamplers.h"
 #include "PF/densities.h"
 
+// Util function
+static inline unsigned int get_cloud_idx(
+    const particle *const p){
+  return (p) ? p->cloud_idx + 1  /* want non-zero based */ : 0;
+}
+
+static inline const particle* get_cloud_idx(
+    const cloud &cl, const unsigned int r_idx){
+  return r_idx > 0 ? &cl[r_idx - 1]  /* not zero based */ : nullptr;
+}
+
 /* Function to turn a clouds of particles into an Rcpp::List */
 Rcpp::List get_rcpp_list_from_cloud(
     const std::vector<cloud> &clouds, const bool reverse,
@@ -32,11 +43,8 @@ Rcpp::List get_rcpp_list_from_cloud(
     for(arma::uword i = 0;
         i < n_elem;
         ++i, ++w, ++idx_pr, ++idx_ch, ++pr, ++un_w){
-      *idx_pr = (pr->parent) ?
-        pr->parent->cloud_idx + 1 /* want non-zero based */ : 0;
-
-      *idx_ch = (pr->child) ?
-        pr->child->cloud_idx + 1 /* want non-zero based */ : 0;
+      *idx_pr = get_cloud_idx(pr->parent);
+      *idx_ch = get_cloud_idx(pr->child);
 
       *w = exp(pr->log_weight);
       *un_w = pr->log_unnormalized_weight;
@@ -61,18 +69,59 @@ Rcpp::List get_rcpp_list_from_cloud(
     const smoother_output &sm_output, const PF_data *data){
   unsigned int state_dim = sm_output.forward_clouds[0][0].state.n_elem;
 
+  // Set-up the transition_likelihoods element
+  Rcpp::List transitions; // List with final output
+  auto &transition_likelihoods = sm_output.transition_likelihoods;
+  if(transition_likelihoods.size() > 0){
+    transitions = Rcpp::List(transition_likelihoods.size());
+
+    auto it_trans = transitions.begin();
+    // Time loop
+    for(auto it = transition_likelihoods.begin();
+        it != transition_likelihoods.end(); ++it, ++it_trans){
+      Rcpp::List ans_inner(it->size());
+
+      // Loop over first index of pair of particles
+      auto it_ans = ans_inner.begin();
+      for(auto it_inner = it->begin();
+          it_inner != it->end(); ++it_inner, ++it_ans){
+        const unsigned int n_inner = it_inner->transition_pairs.size();
+        arma::uvec fw_idx(n_inner);
+        arma::vec weights(n_inner);
+
+        auto it_fw_idx = fw_idx.begin();
+        auto it_w = weights.begin();
+        auto it_data = it_inner->transition_pairs.begin();
+        // Loop over second index of pair of particles
+        for(unsigned int j = 0; j < n_inner; ++j, ++it_fw_idx, ++it_w, ++it_data){
+          *it_fw_idx = get_cloud_idx(it_data->p);
+          *it_w = exp(it_data->log_weight);
+        }
+
+        *it_ans = Rcpp::List::create(
+          Rcpp::Named("fw_idx") = Rcpp::wrap(std::move(fw_idx)),
+          Rcpp::Named("weights") = Rcpp::wrap(std::move(weights)),
+          Rcpp::Named("bw_idx") = get_cloud_idx(it_inner->bw_particle)
+        );
+      }
+
+      *it_trans = std::move(ans_inner);
+    }
+  }
+
+  Rcpp::List forward_clouds = get_rcpp_list_from_cloud(
+    sm_output.forward_clouds, false, state_dim, data);
+  Rcpp::List backward_clouds = get_rcpp_list_from_cloud(
+    sm_output.backward_clouds, true, state_dim, data);
+  Rcpp::List smoothed_clouds = get_rcpp_list_from_cloud(
+      sm_output.smoothed_clouds, false, state_dim, data);
+
+  // Create output list
   Rcpp::List ans = Rcpp::List::create(
-    Rcpp::Named("forward_clouds") =
-      get_rcpp_list_from_cloud(
-        sm_output.forward_clouds, false, state_dim, data),
-
-    Rcpp::Named("backward_clouds") =
-      get_rcpp_list_from_cloud(
-        sm_output.backward_clouds, true, state_dim, data),
-
-    Rcpp::Named("smoothed_clouds") =
-      get_rcpp_list_from_cloud(
-        sm_output.smoothed_clouds, false, state_dim, data));
+    Rcpp::Named("forward_clouds") = std::move(forward_clouds),
+    Rcpp::Named("backward_clouds") = std::move(backward_clouds),
+    Rcpp::Named("smoothed_clouds") = std::move(smoothed_clouds),
+    Rcpp::Named("transition_likelihoods") = std::move(transitions));
 
   ans.attr("class") = "PF_clouds";
 
@@ -114,14 +163,15 @@ static std::vector<cloud> get_clouds_from_rcpp_list_util
           parent = nullptr;
 
         } else if(is_smooth){
-          parent = &(*fw)[i /* starts at time 0 */][*it_par - 1];
+          parent = get_cloud_idx((*fw)[i /* starts at time 0 */], *it_par);
 
-        }else
-          parent = &(*it_ans_prev)[*it_par - 1];
+        } else
+          parent = get_cloud_idx((*it_ans_prev), *it_par);
 
         const particle *child  =
           /* starts at time 1 and has on more index */
-          is_smooth ? &(*bw)[n_periods - (i + 1)][*it_child - 1] : nullptr;
+          is_smooth ?
+            get_cloud_idx((*bw)[n_periods - (i + 1)], *it_child) : nullptr;
 
         it_ans->New_particle(states.col(j), parent, child);
         particle &p = it_ans->back();
@@ -138,6 +188,7 @@ static std::vector<cloud> get_clouds_from_rcpp_list_util
 smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
   smoother_output ans;
 
+  // Find clouds
   std::vector<cloud> &fw_clouds = ans.forward_clouds;
   std::vector<cloud> &bw_clouds = ans.backward_clouds;
   std::vector<cloud> &smooth_clouds = ans.smoothed_clouds;
@@ -146,6 +197,55 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
   bw_clouds = get_clouds_from_rcpp_list_util<false, true>(rcpp_list["backward_clouds"]);
   smooth_clouds = get_clouds_from_rcpp_list_util<true, false>(
     rcpp_list["smoothed_clouds"], &fw_clouds, &bw_clouds);
+
+  // Set transition likelihoods
+  std::vector<std::vector<smoother_output::particle_pairs>>
+    &transition_likelihoods = ans.transition_likelihoods;
+  const Rcpp::List transitions((SEXP)rcpp_list["transition_likelihoods"]);
+  if(transitions.size() > 0){
+    unsigned int n_periods = transitions.size();
+    transition_likelihoods.resize(n_periods);
+
+    auto it_trans = transitions.begin();
+    auto it_ans = transition_likelihoods.begin();
+    // Time loop
+    for(unsigned int i = 0; i < n_periods; ++i, ++it_trans, ++it_ans){
+      Rcpp::List input_at_t(*it_trans);
+      unsigned int n_elem = input_at_t.size();
+      std::vector<smoother_output::particle_pairs> &new_elems = *it_ans;
+      new_elems.resize(n_elem);
+
+      cloud &fw_cloud = fw_clouds[i]; // starts at time 0
+      cloud &bw_cloud = bw_clouds[i]; // starts at time 1
+
+      auto it_input_at_t = input_at_t.begin();
+      auto it_elems = new_elems.begin();
+      // Loop over first index of pair of particles
+      for(unsigned int j = 0; j < n_elem; ++j, ++it_input_at_t, ++it_elems){
+        smoother_output::particle_pairs &elem = *it_elems;
+        std::vector<smoother_output::pair> &transition_pairs =
+          elem.transition_pairs;
+
+        Rcpp::List elem_info(*it_input_at_t);
+        unsigned int idx = Rcpp::as<unsigned int>(elem_info["bw_idx"]);
+        elem.bw_particle = (idx > 0) ? &bw_cloud[idx - 1] : nullptr;
+
+        arma::uvec fw_idx = Rcpp::as<arma::uvec>(elem_info["fw_idx"]);
+        arma::vec weights = Rcpp::as<arma::vec>(elem_info["weights"]);
+
+        unsigned int n_elem_inner = fw_idx.n_elem;
+        transition_pairs.resize(n_elem_inner);
+        auto it_idx = fw_idx.begin();
+        auto it_w = weights.begin();
+        auto it_trans_pair = transition_pairs.begin();
+        // Loop over second index of pair of particles
+        for(unsigned int k = 0; k < n_elem_inner; ++k, ++it_idx, ++it_w, ++it_trans_pair){
+          it_trans_pair->p = (*it_idx == 0) ? nullptr : &fw_cloud[*it_idx - 1];
+          it_trans_pair->log_weight = log(*it_w);
+        }
+      }
+    }
+  }
 
   return ans;
 }

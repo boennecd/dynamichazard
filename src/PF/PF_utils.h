@@ -432,8 +432,11 @@ struct smoother_output {
 
     // added to be able to use std::Vector<>::emplace_back
     pair(particle *p, double log_weight):
-      p(p), log_weight(log_weight)
-    {}
+      p(p), log_weight(log_weight) {}
+
+    pair():
+      p(nullptr),
+      log_weight(std::numeric_limits<double>::quiet_NaN()) {}
   };
 
   struct particle_pairs {

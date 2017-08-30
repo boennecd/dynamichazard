@@ -296,7 +296,7 @@ public:
     std::vector<cloud> &forward_clouds = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
     std::vector<cloud> &smoothed_clouds = result.smoothed_clouds;
-    auto transition_likelihoods = result.transition_likelihoods;
+    auto &transition_likelihoods = result.transition_likelihoods;
 
     forward_clouds = forward_filter::compute(data);
     backward_clouds = backward_filter::compute(data);
@@ -311,13 +311,16 @@ public:
 
     double max_weight = -std::numeric_limits<double>::max();
     for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){
+      const bool is_first_period = t == 1;
+
       if(data.debug > 0)
         data.log(1) << "Started smoothing at time " << t;
 
       unsigned int n_elem_fw = fw_cloud->size();
       unsigned int n_elem_bw = bw_cloud->size();
 
-      std::vector<smoother_output::particle_pairs>  new_trans_like(n_elem_bw);
+      std::vector<smoother_output::particle_pairs>  new_trans_like;
+      new_trans_like.reserve(n_elem_bw);
       cloud new_cloud;
       new_cloud.reserve(n_elem_bw);
 
@@ -334,20 +337,29 @@ public:
       for(unsigned int i = 0; i < n_elem_bw; ++i){
         particle &bw_particle = (*bw_cloud)[i];
         smoother_output::particle_pairs pf_pairs(&bw_particle);
-        pf_pairs.transition_pairs.reserve(n_elem_fw);
+        pf_pairs.transition_pairs.reserve(is_first_period ? 1 : n_elem_fw);
 
         double max_weight_inner = -std::numeric_limits<double>::max();
-        for(auto fw_particle = fw_cloud->begin();
-            fw_particle != fw_cloud->end();
-            ++fw_particle){
-          // compute un-normalized weight of pair
+        if(is_first_period){
           double log_like_transition = dens_calc.log_prob_state_given_previous(
-            data, bw_particle.state, fw_particle->state, t);
-          double this_term = fw_particle->log_weight + log_like_transition;
+            data, bw_particle.state, data.a_0, t);
 
-          // add pair information and update max log term seen so far
-          pf_pairs.transition_pairs.emplace_back(&(*fw_particle), this_term);
-          max_weight_inner = MAX(max_weight_inner, this_term);
+            pf_pairs.transition_pairs.emplace_back(nullptr, log_like_transition);
+            max_weight_inner = MAX(max_weight_inner, log_like_transition);
+
+        } else {
+          for(auto fw_particle = fw_cloud->begin();
+              fw_particle != fw_cloud->end();
+              ++fw_particle){
+            // compute un-normalized weight of pair
+            double log_like_transition = dens_calc.log_prob_state_given_previous(
+              data, bw_particle.state, fw_particle->state, t);
+            double this_term = fw_particle->log_weight + log_like_transition;
+
+            // add pair information and update max log term seen so far
+            pf_pairs.transition_pairs.emplace_back(&(*fw_particle), this_term);
+            max_weight_inner = MAX(max_weight_inner, this_term);
+          }
         }
 
         //  compute log sum of logs and normalize weights on transition_pairs

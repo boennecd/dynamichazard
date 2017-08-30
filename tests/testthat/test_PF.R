@@ -72,19 +72,34 @@ test_that("PF_smooth gives same results", {
     method = "PF",
     smoother ="Fearnhead_O_N")
 
+  test_func <- function(x){
+    cloud <- bquote(.(substitute(x)))
+    n <- length(x)
+    lapply(1:n, function(i){
+      bquote(expect_equal(sum(.(cloud)[[.(i)]]$weights), 1))
+    })
+  }
+
   get_test_expr <- function(fit_quote, test_file_name){
     bquote({
       result <- .(fit_quote)
 
       expect_false(all(old_seed == .Random.seed))
-      for(r in result){
-        expect_equal(
-          rep(1, length(r)), sapply(sapply(r, "[", "weights"), sum),
-          check.attributes = FALSE)
-      }
+
+      #####
+      # Test versus previous computed values
+
       # save_to_test(result, file_name = .(test_file_name))
       expect_equal(result, read_to_test(.(test_file_name)), tolerance = 1.49e-08)
 
+      #####
+      # Test that weights sum to one
+      lapply(test_func(result$forward_clouds), eval)
+      lapply(test_func(result$backward_clouds), eval)
+      lapply(test_func(result$smoothed_clouds), eval)
+
+      #####
+      # Test that multithreaded version gives the same
       old_args <- args
       args$n_threads <- 7
 
@@ -181,12 +196,12 @@ test_that("PF_smooth gives same results", {
     envir = environment())
 
   # # #TODO: clean up
-  # PF_effective_sample_size <- asNamespace("dynamichazard")$PF_effective_sample_size
-  # plot(result, type = "smoothed_clouds")
-  # plot(result, type = "backward_clouds", qlvls = c(), lty = 2, add = TRUE)
-  # plot(result, type = "forward_clouds", qlvls = c(), lty = 3, add = TRUE)
-  # abline(h = sims$betas[1, ])
-  # (tmp <- PF_effective_sample_size(result))
+  PF_effective_sample_size <- asNamespace("dynamichazard")$PF_effective_sample_size
+  plot(result, type = "smoothed_clouds")
+  plot(result, type = "backward_clouds", qlvls = c(), lty = 2, add = TRUE)
+  plot(result, type = "forward_clouds", qlvls = c(), lty = 3, add = TRUE)
+  abline(h = sims$betas[1, ])
+  (tmp <- PF_effective_sample_size(result))
   # (tmp2 <- PF_effective_sample_size(read_to_test("local_tests/AUX_normal_approx_w_particles")))
   # for(i in seq_along(tmp)){
   #   tmp[[i]] <- (tmp[[i]] - tmp2[[i]]) / tmp2[[i]]
@@ -240,7 +255,23 @@ test_that("Import and export PF cloud from Rcpp gives the same", {
   skip_on_cran()
 
   PF_cloud_to_rcpp_and_back <- asNamespace("dynamichazard")$PF_cloud_to_rcpp_and_back
-  cloud_example <- read_to_test("local_tests/cloud_example")
+
+  #####
+  # Without transition_likelihoods
+  cloud_example <- read_to_test("local_tests/cloud_example_no_transition_likelihoods")
+  expect_equal( # quick sanity check
+    length(cloud_example$transition_likelihoods), 0)
+
+  result <- PF_cloud_to_rcpp_and_back(cloud_example)
+  for(i in seq_along(cloud_example)){
+    expect_equal(cloud_example[i], result[i])
+  }
+
+  #####
+  # With transition_likelihoods
+  cloud_example <- read_to_test("local_tests/cloud_example_with_transition_likelihoods")
+  expect_gt( # quick sanity check
+    length(cloud_example$transition_likelihoods), 0)
 
   result <- PF_cloud_to_rcpp_and_back(cloud_example)
   for(i in seq_along(cloud_example)){
@@ -252,12 +283,14 @@ test_that("compute_summary_stats gives previous results", {
   skip_on_cran()
 
   compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
-  cloud_example <- read_to_test("local_tests/cloud_example")
+  cloud_example <- read_to_test("local_tests/cloud_example_no_transition_likelihoods")
 
   sum_stats <- compute_summary_stats(cloud_example)
 
   # save_to_test(sum_stats, "local_tests/compute_summary_stats")
   expect_equal(sum_stats, read_to_test("local_tests/compute_summary_stats"), tolerance = 1.49e-08)
+
+  expect_true(FALSE) # test with O(N^2 method)
 })
 
 test_that("PF_EM stops with correct error messages due to wrong or missing arguments", {
@@ -313,3 +346,6 @@ test_that("PF_EM gives previous results on head neck data set", {
   # save_to_test(result, "local_tests/PF_head_neck")
   expect_equal(result, read_to_test("local_tests/PF_head_neck"), tolerance = 1.49e-08)
 })
+
+test_that("transition_likelihoods are correct and weights sum to one and passing back and forward works",
+          expect_true(FALSE))
