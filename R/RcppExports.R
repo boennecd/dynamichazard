@@ -81,8 +81,8 @@ parallelglm <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthr
     .Call(`_dynamichazard_parallelglm`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace)
 }
 
-PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method) {
-    .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method)
+PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother) {
+    .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother)
 }
 
 compute_summary_stats <- function(rcpp_list) {

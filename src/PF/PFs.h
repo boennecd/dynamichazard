@@ -167,7 +167,7 @@ template<
   template <typename, bool> class T_importance_dens,
   class densities
 >
-class PF_smoother : private PF_base {
+class PF_smoother_Fearnhead_O_N : private PF_base {
   using uword = arma::uword;
 
   inline static arma::uvec sample_idx(const PF_data &data, cloud &cl){
@@ -195,9 +195,9 @@ public:
     if(data.debug > 0)
       data.log(1) << "Finished finding forward and backward clouds. Started smoothing";
 
-    auto fw_cloud = /* first index is time 0 */ forward_clouds.begin();
+    auto fw_cloud = forward_clouds.begin(); // first index is time 0
     auto bw_cloud = backward_clouds.rbegin();
-    bw_cloud += 1; // first index is time 1 -- we need index 2 to start with
+    ++bw_cloud; // first index is time 1 -- we need index 2 to start with
 
     for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){
       /* re-sample */
@@ -237,7 +237,7 @@ public:
                 /* notice different order and t + 1*/
                 data, it->child->state, it->state, t + 1);
             double log_importance_dens = it->log_importance_dens;
-            double log_artificial_prior =
+            double log_artificial_prior = // TODO: have already been computed
               dens_calc.log_artificial_prior(data, *it->child /* note child */, t + 1 /* note t + 1 */);
 
             it->log_unnormalized_weight = it->log_weight =
@@ -277,7 +277,142 @@ public:
   using importance_dens = T_importance_dens<densities, false /* arg should not matter*/>;
 };
 
+/*
+  O(N^2) smoother from:
+    Briers, M., Doucet, A., & Maskell, S. (2010). Smoothing algorithms for state–space models. Annals of the Institute of Statistical Mathematics, 62(1), 61-89.
+*/
+
+template<
+  template <typename, bool> class T_resampler,
+  template <typename, bool> class T_importance_dens,
+  class densities
+>
+class PF_smoother_Brier_O_N_square : private PF_base {
+  using uword = arma::uword;
+
+public:
+  static smoother_output compute(const PF_data &data){
+    smoother_output result;
+    std::vector<cloud> &forward_clouds = result.forward_clouds;
+    std::vector<cloud> &backward_clouds = result.backward_clouds;
+    std::vector<cloud> &smoothed_clouds = result.smoothed_clouds;
+    auto transition_likelihoods = result.transition_likelihoods;
+
+    forward_clouds = forward_filter::compute(data);
+    backward_clouds = backward_filter::compute(data);
+
+    if(data.debug > 0)
+      data.log(1) << "Finished finding forward and backward clouds. Started smoothing";
+
+    auto fw_cloud = forward_clouds.begin();
+    //++fw_cloud; // first index is time 0 -- we need index 1 to start with
+    auto bw_cloud = backward_clouds.rbegin();
+    //++bw_cloud; // first index is time 1 -- we need index 2 to start with
+
+    double max_weight = -std::numeric_limits<double>::max();
+    for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){
+      if(data.debug > 0)
+        data.log(1) << "Started smoothing at time " << t;
+
+      unsigned int n_elem_fw = fw_cloud->size();
+      unsigned int n_elem_bw = bw_cloud->size();
+
+      std::vector<smoother_output::particle_pairs>  new_trans_like(n_elem_bw);
+      cloud new_cloud;
+      new_cloud.reserve(n_elem_bw);
+
+#ifdef _OPENMP
+#pragma omp parallel
+{
+#endif
+
+      densities dens_calc = densities();
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+      for(unsigned int i = 0; i < n_elem_bw; ++i){
+        particle &bw_particle = (*bw_cloud)[i];
+        smoother_output::particle_pairs pf_pairs(&bw_particle);
+        pf_pairs.transition_pairs.reserve(n_elem_fw);
+
+        double max_weight_inner = -std::numeric_limits<double>::max();
+        for(auto fw_particle = fw_cloud->begin();
+            fw_particle != fw_cloud->end();
+            ++fw_particle){
+          // compute un-normalized weight of pair
+          double log_like_transition = dens_calc.log_prob_state_given_previous(
+            data, bw_particle.state, fw_particle->state, t);
+          double this_term = fw_particle->log_weight + log_like_transition;
+
+          // add pair information and update max log term seen so far
+          pf_pairs.transition_pairs.emplace_back(&(*fw_particle), this_term);
+          max_weight_inner = MAX(max_weight_inner, this_term);
+        }
+
+        //  compute log sum of logs and normalize weights on transition_pairs
+        double this_log_weight;
+        {
+          auto tmp =
+            normalize_log_weights
+            <false, true>
+            (pf_pairs.transition_pairs, max_weight_inner);
+          this_log_weight = tmp.log_sum_logs;
+        }
+
+        // add pairs
+#ifdef _OPENMP
+#pragma omp critical(smoother_lock_brier_one)
+{
+#endif
+        new_trans_like.push_back(std::move(pf_pairs));
+#ifdef _OPENMP
+}
+#endif
+
+        double log_artificial_prior = // TODO: have already been computed
+          dens_calc.log_artificial_prior(data, bw_particle, t);
+
+        // add likelihood from BW particle
+        this_log_weight += bw_particle.log_weight - log_artificial_prior;
+
+        // add particle to smooth cloud with weight
+#ifdef _OPENMP
+#pragma omp critical(smoother_lock_brier_two)
+{
+#endif
+        new_cloud.New_particle(bw_particle.state, nullptr);
+        particle &new_p = new_cloud.back();
+        new_p.log_unnormalized_weight = new_p.log_weight = this_log_weight;
+        max_weight = MAX(max_weight, this_log_weight);
+#ifdef _OPENMP
+}
+#endif
+      }
+#ifdef _OPENMP
+} // end omp parallel
+#endif
+
+      // normalize smoothed weights
+      normalize_log_weights<false, true>(new_cloud, max_weight);
+
+      debug_msg_after_weighting(data, new_cloud);
+
+      /* Add new elements  */
+      transition_likelihoods.push_back(std::move(new_trans_like));
+      smoothed_clouds.push_back(std::move(new_cloud));
+    }
+
+    return result;
+  }
+
+  using forward_filter =
+    AUX_PF<T_resampler, T_importance_dens, densities, true>;
+  using backward_filter =
+    AUX_PF<T_resampler, T_importance_dens, densities, false>;
+};
+
+
 #undef MIN
 #undef MAX
-
 #endif

@@ -9,16 +9,14 @@ particle::particle(
       std::numeric_limits<double>::quiet_NaN();
   }
 
-particle& cloud::New_particle(
+void cloud::New_particle(
     arma::vec state, const particle *parent, const particle *child){
   emplace_back(state, parent, size(), child);
-  return back();
 }
 
-particle& cloud::New_particle(
+void cloud::New_particle(
     arma::vec state, const particle *parent){
   emplace_back(state, parent, size(), nullptr);
-  return back();
 }
 
 /*

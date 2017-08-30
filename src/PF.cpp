@@ -3,35 +3,6 @@
 #include "PF/resamplers.h"
 #include "PF/densities.h"
 
-using bootstrap_filter_sm = PF_smoother<
-  None_AUX_resampler,
-  importance_dens_no_y_dependence,
-  binary>;
-
-using PF_w_normal_approx_sm =
-  PF_smoother<
-    None_AUX_resampler,
-    importance_dens_normal_approx_w_cloud_mean,
-    binary>;
-
-using AUX_w_normal_approx_sm =
-  PF_smoother<
-    AUX_resampler_normal_approx_w_cloud_mean,
-    importance_dens_normal_approx_w_cloud_mean,
-    binary>;
-
-using PF_w_particles_sm =
-  PF_smoother<
-    None_AUX_resampler,
-    importance_dens_normal_approx_w_particles,
-    binary>;
-
-using AUX_w_particles_sm =
-  PF_smoother<
-    AUX_resampler_normal_approx_w_particles,
-    importance_dens_normal_approx_w_particles,
-    binary>;
-
 /* Function to turn a clouds of particles into an Rcpp::List */
 Rcpp::List get_rcpp_list_from_cloud(
     const std::vector<cloud> &clouds, const bool reverse,
@@ -152,7 +123,8 @@ static std::vector<cloud> get_clouds_from_rcpp_list_util
           /* starts at time 1 and has on more index */
           is_smooth ? &(*bw)[n_periods - (i + 1)][*it_child - 1] : nullptr;
 
-        particle &p = it_ans->New_particle(states.col(j), parent, child);
+        it_ans->New_particle(states.col(j), parent, child);
+        particle &p = it_ans->back();
         p.log_weight = log(*it_w);
         p.log_unnormalized_weight = *it_un_w;
       }
@@ -180,6 +152,75 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
 
 /* --------------------------------------- */
 
+template<
+  template <
+    template <typename, bool> class,
+    template <typename, bool> class,
+    class>
+  class smoother>
+class PF_smooth_T {
+public:
+  using bootstrap_filter_sm =
+    smoother<
+      None_AUX_resampler,
+      importance_dens_no_y_dependence,
+      binary>;
+
+  using PF_w_normal_approx_sm =
+    smoother<
+      None_AUX_resampler,
+      importance_dens_normal_approx_w_cloud_mean,
+      binary>;
+
+  using AUX_w_normal_approx_sm =
+    smoother<
+      AUX_resampler_normal_approx_w_cloud_mean,
+      importance_dens_normal_approx_w_cloud_mean,
+      binary>;
+
+  using PF_w_particles_sm =
+    smoother<
+      None_AUX_resampler,
+      importance_dens_normal_approx_w_particles,
+      binary>;
+
+  using AUX_w_particles_sm =
+    smoother<
+      AUX_resampler_normal_approx_w_particles,
+      importance_dens_normal_approx_w_particles,
+      binary>;
+
+  static Rcpp::List compute(
+      const PF_data &data, const std::string method){
+
+    /* Get the smoothed particles at time 1, 2, ..., d */
+    smoother_output result;
+    if (method == "bootstrap_filter") {
+      result = bootstrap_filter_sm::compute(data);
+
+    } else if (method == "PF_normal_approx_w_cloud_mean"){
+      result = PF_w_normal_approx_sm::compute(data);
+
+    } else if (method == "AUX_normal_approx_w_cloud_mean"){
+      result = AUX_w_normal_approx_sm::compute(data);
+
+    } else if (method == "PF_normal_approx_w_particles"){
+      result = PF_w_particles_sm::compute(data);
+
+    }  else if (method == "AUX_normal_approx_w_particles"){
+      result = AUX_w_particles_sm::compute(data);
+
+    } else {
+      std::stringstream stream;
+      stream << "method '" << method << "' is not implemented";
+      Rcpp::stop(stream.str());
+    }
+
+    /* Create output list */
+    return(get_rcpp_list_from_cloud(result, &data));
+  }
+};
+
 // [[Rcpp::export]]
 Rcpp::List PF_smooth(
     const int n_fixed_terms_in_state_vec,
@@ -201,7 +242,8 @@ Rcpp::List PF_smooth(
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
     const int debug,
     const int N_first,
-    const std::string method){
+    const std::string method,
+    const std::string smoother){
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   PF_data data(
@@ -226,31 +268,24 @@ Rcpp::List PF_smooth(
       debug,
       N_first);
 
-  /* Get the smoothed particles at time 1, 2, ..., d */
-  smoother_output result;
-  if (method == "bootstrap_filter") {
-    result = bootstrap_filter_sm::compute(data);
+  Rcpp::List ans;
 
-  } else if (method == "PF_normal_approx_w_cloud_mean"){
-    result = PF_w_normal_approx_sm::compute(data);
+  if(smoother == "Fearnhead_O_N"){
+    ans =
+      PF_smooth_T<PF_smoother_Fearnhead_O_N>::compute(data, method);
 
-  } else if (method == "AUX_normal_approx_w_cloud_mean"){
-    result = AUX_w_normal_approx_sm::compute(data);
-
-  } else if (method == "PF_normal_approx_w_particles"){
-    result = PF_w_particles_sm::compute(data);
-
-  }  else if (method == "AUX_normal_approx_w_particles"){
-    result = AUX_w_particles_sm::compute(data);
+  } else if (smoother == "Brier_O_N_square"){
+    ans =
+      PF_smooth_T<PF_smoother_Brier_O_N_square>::compute(data, method);
 
   } else {
     std::stringstream stream;
-    stream << "method '" << method << "' is not implemented";
+    stream << "smoother '" << smoother << "' is not implemented";
     Rcpp::stop(stream.str());
+
   }
 
-  /* Create output list */
-  return(get_rcpp_list_from_cloud(result, &data));
+  return(ans);
 }
 
 /* --------------------------------------- */

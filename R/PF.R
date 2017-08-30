@@ -17,6 +17,7 @@ PF_effective_sample_size <- function(object){
 #' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
 #' \describe{
 #' \item{\code{method}}{Method for forward, backward and smoothing filter. See the particle_filter vignette for details.}
+#' \item{\code{smoother}}{TODO: write.}
 #' \item{\code{N_fw_n_bw}}{Number of particles to use in forward and backward filter.}
 #' \item{\code{N_first}}{Number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
 #' \item{\code{N_smooth}}{Number of particles to use in particle smoother.}
@@ -92,7 +93,8 @@ PF_EM <- function(
     N_smooth = NULL,
     N_first = NULL,
     n_threads = getOption("ddhazard_max_threads"),
-    seed = NULL)
+    seed = NULL,
+    smoother = "Fearnhead_O_N")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
@@ -165,7 +167,8 @@ PF_EM <- function(
     trace = trace,
     method = control$method,
     eps = control$eps,
-    seed = control$seed)
+    seed = control$seed,
+    smoother = control$smoother)
 
   out$call <- match.call()
   out
@@ -192,7 +195,8 @@ PF_EM <- function(
   forward_backward_ESS_threshold = NULL,
   trace = 0,
   method = "AUX_normal_approx_w_particles",
-  seed = NULL){
+  seed = NULL,
+  smoother){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl

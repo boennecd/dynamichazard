@@ -28,13 +28,14 @@ public:
   using Base::const_iterator;
   using Base::reverse_iterator;
 
-  particle& New_particle(arma::vec state, const particle *parent, const particle *child);
-  particle& New_particle(arma::vec state, const particle *parent);
+  void New_particle(arma::vec state, const particle *parent, const particle *child);
+  void New_particle(arma::vec state, const particle *parent);
   arma::vec get_weigthed_mean();
 
   using Base::begin;
   using Base::end;
   using Base::rbegin;
+  using Base::back;
   using Base::rend;
   using Base::operator[];
   using Base::reserve;

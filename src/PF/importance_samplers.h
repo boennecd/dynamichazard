@@ -1,8 +1,6 @@
 #ifndef IMPORTANCE_SAMPLERS
 #define IMPORTANCE_SAMPLERS
 
-#define MAX(a,b) (((a)>(b))?(a):(b))
-
 #include "PF_data.h"
 #include "particles.h"
 #include "../sample_funcs.h"
@@ -424,5 +422,4 @@ public:
 };
 
 
-#undef MAX
 #endif

@@ -69,7 +69,8 @@ test_that("PF_smooth gives same results", {
     N_first = 10000,
     forward_backward_ESS_threshold = NULL,
     debug = 0,
-    method = "PF")
+    method = "PF",
+    smoother ="Fearnhead_O_N")
 
   get_test_expr <- function(fit_quote, test_file_name){
     bquote({
@@ -161,6 +162,21 @@ test_that("PF_smooth gives same results", {
       result
     }),
     test_file_name = "local_tests/AUX_normal_approx_w_particles"),
+
+    envir = environment())
+
+  #####
+  # Test O(n^2) method from Brier et al
+  eval(get_test_expr(
+    quote({
+      set.seed(30302129)
+      old_seed <- .Random.seed
+      args$method <- "AUX_normal_approx_w_particles"
+      args$smoother <- "Brier_O_N_square"
+      result <- do.call(PF_smooth, args)
+      result
+    }),
+    test_file_name = "local_tests/Brier_O_N_square_AUX_normal_approx_w_particles"),
 
     envir = environment())
 
