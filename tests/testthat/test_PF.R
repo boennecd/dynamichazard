@@ -312,5 +312,6 @@ test_that("compute_summary_stats gives previous results", {
   cloud_example <- read_to_test("local_tests/PF_head_neck_w_Brier_method")$clouds
   sum_stats <- compute_summary_stats(cloud_example)
 
-  expect_true(FALSE) # test with O(N^2 method)
+  # save_to_test(sum_stats, "local_tests/compute_summary_stats_w_Brier_method")
+  expect_equal(sum_stats, read_to_test("local_tests/compute_summary_stats_w_Brier_method"), tolerance = 1.49e-08)
 })

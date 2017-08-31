@@ -319,10 +319,9 @@ public:
       unsigned int n_elem_fw = fw_cloud->size();
       unsigned int n_elem_bw = bw_cloud->size();
 
-      std::vector<smoother_output::particle_pairs>  new_trans_like;
-      new_trans_like.reserve(n_elem_bw);
-      cloud new_cloud;
-      new_cloud.reserve(n_elem_bw);
+      std::vector<smoother_output::particle_pairs>
+        new_trans_like(n_elem_bw);
+      cloud new_cloud(n_elem_bw);
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -374,12 +373,13 @@ public:
 
         // add pairs
 #ifdef _OPENMP
-#pragma omp critical(smoother_lock_brier_one)
-{
+// Locks should not be needed. See https://stackoverflow.com/a/13955871
+// #pragma omp critical(smoother_lock_brier_one)
+// {
 #endif
-        new_trans_like.push_back(std::move(pf_pairs));
+        new_trans_like[i] = std::move(pf_pairs);
 #ifdef _OPENMP
-}
+// }
 #endif
 
         double log_artificial_prior = // TODO: have already been computed
@@ -390,12 +390,20 @@ public:
 
         // add particle to smooth cloud with weight
 #ifdef _OPENMP
-#pragma omp critical(smoother_lock_brier_two)
+// Locks should not be needed. See https://stackoverflow.com/a/13955871
+// #pragma omp critical(smoother_lock_brier_two)
+// {
+#endif
+        particle &new_p = new_cloud.set_particle(i, bw_particle.get_state());
+        new_p.log_unnormalized_weight = new_p.log_weight = this_log_weight;
+#ifdef _OPENMP
+// }
+#endif
+
+#ifdef _OPENMP
+#pragma omp critical(smoother_lock_brier_three)
 {
 #endif
-        new_cloud.new_particle(bw_particle.get_state(), nullptr);
-        particle &new_p = new_cloud.back();
-        new_p.log_unnormalized_weight = new_p.log_weight = this_log_weight;
         max_weight = MAX(max_weight, this_log_weight);
 #ifdef _OPENMP
 }

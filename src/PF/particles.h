@@ -40,6 +40,9 @@ public:
   using Base::const_iterator;
   using Base::reverse_iterator;
 
+  cloud(): Base() {}
+  cloud(size_type count): Base(count) {}
+
   void new_particle(
       arma::vec state, const particle *parent = nullptr, const particle *child = nullptr);
   particle& set_particle(
@@ -55,7 +58,6 @@ public:
   using Base::operator[];
   using Base::reserve;
   using Base::size;
-  using Base::resize;
 };
 
 #endif
