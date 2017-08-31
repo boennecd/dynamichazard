@@ -101,14 +101,14 @@ public:
           for(unsigned int i = 0; i < n_elem; ++i){
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
-              dens_calc.log_prob_y_given_state(data, it->state, t, r_set, false);
+              dens_calc.log_prob_y_given_state(data, it->get_state(), t, r_set, false);
             double log_prob_state_given_previous =
               is_forward ?
               dens_calc.log_prob_state_given_previous(
-                data, it->state, it->parent->state, t) :
+                data, it->get_state(), it->parent->get_state(), t) :
               /* Notice different order and t + 1 */
               dens_calc.log_prob_state_given_previous(
-                data, it->parent->state, it->state, t + 1);
+                data, it->parent->get_state(), it->get_state(), t + 1);
 
             it->log_unnormalized_weight = it->log_weight =
               /* nominator */
@@ -228,14 +228,14 @@ public:
           for(unsigned int i = 0; i < n_elem; ++i){
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
-              dens_calc.log_prob_y_given_state(data, it->state, t, r_set, false);
+              dens_calc.log_prob_y_given_state(data, it->get_state(), t, r_set, false);
             double log_prob_state_given_previous =
               dens_calc.log_prob_state_given_previous(
-                data, it->state, it->parent->state, t);
+                data, it->get_state(), it->parent->get_state(), t);
             double log_prob_next_given_state =
               dens_calc.log_prob_state_given_previous(
                 /* notice different order and t + 1*/
-                data, it->child->state, it->state, t + 1);
+                data, it->child->get_state(), it->get_state(), t + 1);
             double log_importance_dens = it->log_importance_dens;
             double log_artificial_prior = // TODO: have already been computed
               dens_calc.log_artificial_prior(data, *it->child /* note child */, t + 1 /* note t + 1 */);
@@ -336,13 +336,13 @@ public:
 #endif
       for(unsigned int i = 0; i < n_elem_bw; ++i){
         particle &bw_particle = (*bw_cloud)[i];
-        smoother_output::particle_pairs pf_pairs(&bw_particle);
+        smoother_output::particle_pairs pf_pairs;
         pf_pairs.transition_pairs.reserve(is_first_period ? 1 : n_elem_fw);
 
         double max_weight_inner = -std::numeric_limits<double>::max();
         if(is_first_period){
           double log_like_transition = dens_calc.log_prob_state_given_previous(
-            data, bw_particle.state, data.a_0, t);
+            data, bw_particle.get_state(), data.a_0, t);
 
             pf_pairs.transition_pairs.emplace_back(nullptr, log_like_transition);
             max_weight_inner = MAX(max_weight_inner, log_like_transition);
@@ -353,7 +353,7 @@ public:
               ++fw_particle){
             // compute un-normalized weight of pair
             double log_like_transition = dens_calc.log_prob_state_given_previous(
-              data, bw_particle.state, fw_particle->state, t);
+              data, bw_particle.get_state(), fw_particle->get_state(), t);
             double this_term = fw_particle->log_weight + log_like_transition;
 
             // add pair information and update max log term seen so far
@@ -393,7 +393,7 @@ public:
 #pragma omp critical(smoother_lock_brier_two)
 {
 #endif
-        new_cloud.New_particle(bw_particle.state, nullptr);
+        new_cloud.new_particle(bw_particle.get_state(), nullptr);
         particle &new_p = new_cloud.back();
         new_p.log_unnormalized_weight = new_p.log_weight = this_log_weight;
         max_weight = MAX(max_weight, this_log_weight);
@@ -407,6 +407,12 @@ public:
 
       // normalize smoothed weights
       normalize_log_weights<false, true>(new_cloud, max_weight);
+
+      // Set particle on new_trans_like
+      auto it_cl = new_cloud.begin();
+      auto it_trans = new_trans_like.begin();
+      for(unsigned int i = 0; i < n_elem_bw; ++i, ++it_cl, ++it_trans)
+        it_trans->p = &(*it_cl);
 
       debug_msg_after_weighting(data, new_cloud);
 

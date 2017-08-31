@@ -3,11 +3,22 @@
 
 #include "../arma_n_rcpp.h"
 
-struct particle {
-  const arma::vec state;
-  const particle *const parent;
-  const arma::uword cloud_idx; /* zero based */
-  const particle *const child;
+class particle {
+  arma::vec state;
+  arma::uword cloud_idx; /* zero based */
+
+public:
+  const particle *parent;
+  const particle *child;
+
+  const arma::vec& get_state() const {
+    return state;
+  }
+
+  arma::uword get_cloud_idx() const {
+    return cloud_idx;
+  }
+
   /* log-scale */
   double log_importance_dens;
   double log_weight;
@@ -17,6 +28,7 @@ struct particle {
   particle(
     const arma::vec state, const particle *parent,
     const arma::uword cloud_idx, const particle *child = nullptr);
+  particle();
 };
 
 class cloud : private std::vector<particle> {
@@ -28,8 +40,11 @@ public:
   using Base::const_iterator;
   using Base::reverse_iterator;
 
-  void New_particle(arma::vec state, const particle *parent, const particle *child);
-  void New_particle(arma::vec state, const particle *parent);
+  void new_particle(
+      arma::vec state, const particle *parent = nullptr, const particle *child = nullptr);
+  particle& set_particle(
+      arma::uword idx, arma::vec state,
+      const particle *parent = nullptr, const particle *child = nullptr);
   arma::vec get_weigthed_mean();
 
   using Base::begin;
@@ -40,6 +55,7 @@ public:
   using Base::operator[];
   using Base::reserve;
   using Base::size;
+  using Base::resize;
 };
 
 #endif

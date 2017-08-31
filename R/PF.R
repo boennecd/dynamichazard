@@ -96,7 +96,7 @@ PF_EM <- function(
     N_smooth = NULL,
     N_first = NULL,
     n_threads = getOption("ddhazard_max_threads"),
-    seed = NULL,
+    seed = .Random.seed,
     smoother = "Fearnhead_O_N")
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
@@ -107,15 +107,15 @@ PF_EM <- function(
   control <- control_default
 
   check_n_particles_expr <- function(N_xyz)
-    bquote({
+    eval(bquote({
       if(is.null(control[[.(N_xyz)]]))
         stop("Please supply the number of particle for ", sQuote(paste0(
           "control$", .(N_xyz))))
-    })
+    }), parent.frame())
 
-  eval(check_n_particles_expr("N_first"))
-  eval(check_n_particles_expr("N_fw_n_bw"))
-  eval(check_n_particles_expr("N_smooth"))
+  check_n_particles_expr("N_first")
+  check_n_particles_expr("N_fw_n_bw")
+  check_n_particles_expr("N_smooth")
 
   #####
   # Find starting values at time zero
@@ -232,7 +232,7 @@ PF_EM <- function(
     #####
     # Find clouds
     set.seed(seed)
-    clouds <- eval(fit_call, envir = parent.frame(1))
+    clouds <- eval(fit_call, envir = parent.frame())
 
     if(trace > 0){
       cat("Plotting state vector mean and quantiles for iteration", i, "\n")

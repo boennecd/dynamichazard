@@ -59,7 +59,7 @@ class binary {
 public:
   static double log_prob_y_given_state(
       const PF_data &data, const particle &p, int t){
-    return(log_prob_y_given_state(data, p.state, t));
+    return(log_prob_y_given_state(data, p.get_state(), t));
   }
 
   static double log_prob_y_given_state
@@ -144,7 +144,7 @@ public:
 
   double log_artificial_prior(
       const PF_data &data, const particle &p, int t){
-    return(dmvnrm_log(p.state, data.a_0 /* note a_o */, get_Q_t_chol_inv(data, t)));
+    return(dmvnrm_log(p.get_state(), data.a_0 /* note a_o */, get_Q_t_chol_inv(data, t)));
   }
 
   static arma::mat get_artificial_prior_covar(

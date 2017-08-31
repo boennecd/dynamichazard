@@ -53,7 +53,7 @@ public:
     double log_weight = log(1. / data.N_first);
     for(arma::uword i = 0; i < data.N_first; ++i){
       arma::vec new_state = mvrnorm(*mean, *Q_chol);
-      ans.New_particle(new_state, nullptr);
+      ans.new_particle(new_state, nullptr);
       ans[i].log_weight = log_weight;
     }
 
@@ -73,10 +73,10 @@ class importance_dens_no_y_dependence :
   public importance_dens_base<densities, is_forward>{
   static double log_importance_dens_smooth(
       const PF_data &data, const particle &p, int t){
-    arma::vec mean = p.parent->state + p.child->state;
+    arma::vec mean = p.parent->get_state() + p.child->get_state();
     mean *= .5;
 
-    return dmvnrm_log(p.state, mean, data.Q_proposal_smooth.chol_inv);
+    return dmvnrm_log(p.get_state(), mean, data.Q_proposal_smooth.chol_inv);
   }
 
 public:
@@ -110,21 +110,21 @@ public:
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
       const arma::vec *mu;
       if(is_forward){
-        mu = &cl[*it].state;
+        mu = &cl[*it].get_state();
 
       } else {
         arma::vec tmp =
-          solve_w_precomputed_chol(data.Q_proposal.chol, cl[*it].state) + *mu_term;
+          solve_w_precomputed_chol(data.Q_proposal.chol, cl[*it].get_state()) + *mu_term;
 
         mu = new arma::vec(solve_w_precomputed_chol(*Q_use_inv_chol, tmp));
 
       }
 
       arma::vec new_state = mvrnorm(*mu, Q_use->chol);
-      ans.New_particle(new_state, &cl[*it]);
+      ans.new_particle(new_state, &cl[*it]);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(p.state, *mu, Q_use->chol_inv);
+      p.log_importance_dens = dmvnrm_log(p.get_state(), *mu, Q_use->chol_inv);
 
       if(!is_forward)
         delete mu;
@@ -158,12 +158,12 @@ public:
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
-      arma::vec mean = fw_p.state + bw_p.state;
+      arma::vec mean = fw_p.get_state() + bw_p.get_state();
       mean *= .5;
 
       arma::vec new_state = mvrnorm(
         mean, data.Q_proposal_smooth.chol);
-      ans.New_particle(std::move(new_state), &fw_p, &bw_p);
+      ans.new_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens = log_importance_dens_smooth(data, p, t);
@@ -199,15 +199,15 @@ class importance_dens_normal_approx_w_cloud_mean  :
     if(data.debug > 4){
       auto log = data.log(5);
       log << "Sampled particle:" << std::endl
-          << p.state.t()
+          << p.get_state().t()
           << "from normal distribution with mean:" << std::endl
           << mu.t()
           << "The parent had state:" << std::endl
-          << p.parent->state.t();
+          << p.parent->get_state().t();
 
       if(p.child){
         log << "and the child had state" << std::endl
-            << p.child->state.t();
+            << p.child->get_state().t();
       }
     }
   }
@@ -243,10 +243,10 @@ public:
       arma::vec &mu_j = inter_output.mu_js[*it];
 
       arma::vec new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
-      ans.New_particle(std::move(new_state), &cl[*it]);
+      ans.new_particle(std::move(new_state), &cl[*it]);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(p.state, mu_j, inter_output.sigma_chol_inv);
+      p.log_importance_dens = dmvnrm_log(p.get_state(), mu_j, inter_output.sigma_chol_inv);
 
       debug_msg_while_sampling(data, p, mu_j);
     }
@@ -280,17 +280,17 @@ public:
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
-      arma::vec mu_j = fw_p.state + bw_p.state;
+      arma::vec mu_j = fw_p.get_state() + bw_p.get_state();
       mu_j *= .5;
       mu_j = solve_w_precomputed_chol(Q.chol, mu_j) + inter_output.mu;
       mu_j = solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mu_j);
 
       arma::vec new_state;
       new_state = mvrnorm(mu_j, inter_output.Sigma_chol);
-      ans.New_particle(std::move(new_state), &fw_p, &bw_p);
+      ans.new_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(p.state, mu_j, inter_output.sigma_chol_inv);
+      p.log_importance_dens = dmvnrm_log(p.get_state(), mu_j, inter_output.sigma_chol_inv);
 
       debug_msg_while_sampling(data, p, mu_j);
     }
@@ -313,17 +313,17 @@ class importance_dens_normal_approx_w_particles  :
     if(data.debug > 4){
       auto log = data.log(5);
       log << "Sampled particle:" <<  std::endl
-          << p.state.t()
+          << p.get_state().t()
           << "from normal distribution with mean:"  <<  std::endl
           << mu.t()
           << "and chol(Sigma):"  <<  std::endl
           << Sigma_chol
           << "The parent had state:" <<  std::endl
-          << p.parent->state.t();
+          << p.parent->get_state().t();
 
       if(p.child){
         log << "and the child had state" <<  std::endl
-            << p.child->state.t();
+            << p.child->get_state().t();
       }
     }
   }
@@ -357,10 +357,10 @@ public:
 
       arma::vec new_state;
       new_state = mvrnorm(inter_o.mu, inter_o.Sigma_chol);
-      ans.New_particle(std::move(new_state), &cl[*it]);
+      ans.new_particle(std::move(new_state), &cl[*it]);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(p.state, inter_o.mu, inter_o.sigma_chol_inv);
+      p.log_importance_dens = dmvnrm_log(p.get_state(), inter_o.mu, inter_o.sigma_chol_inv);
 
       debug_msg_while_sampling(data, p, inter_o.mu, inter_o.Sigma_chol);
     }
@@ -386,7 +386,7 @@ public:
       const particle &fw_p = fw_cloud[*(begin_fw + i)];
       const particle &bw_p = bw_cloud[*(begin_bw + i)];
 
-      mu_j = fw_p.state + bw_p.state;
+      mu_j = fw_p.get_state() + bw_p.get_state();
       mu_j *= .5;
     }
 
@@ -409,10 +409,10 @@ public:
       const particle &bw_p = bw_cloud[*it_bw];
 
       arma::vec new_state = mvrnorm(it_inter->mu, it_inter->Sigma_chol);
-      ans.New_particle(std::move(new_state), &fw_p, &bw_p);
+      ans.new_particle(std::move(new_state), &fw_p, &bw_p);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(p.state, it_inter->mu, it_inter->sigma_chol_inv);
+      p.log_importance_dens = dmvnrm_log(p.get_state(), it_inter->mu, it_inter->sigma_chol_inv);
 
       debug_msg_while_sampling(data, p, it_inter->mu, it_inter->Sigma_chol);
     }

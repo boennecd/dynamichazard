@@ -302,7 +302,7 @@ static input_for_normal_apprx_w_cloud_mean
 #pragma omp  parallel for schedule(static)
 #endif
     for(unsigned int i = 0; i < n_elem; ++i){
-      arma::vec mu_j = solve_w_precomputed_chol(Q.chol, cl[i].state) + ans.mu;
+      arma::vec mu_j = solve_w_precomputed_chol(Q.chol, cl[i].get_state()) + ans.mu;
       if(is_bw_w_use_prior)
         mu_j += *mu_term;
       mu_j = solve_w_precomputed_chol(ans.Sigma_inv_chol, mu_j);
@@ -392,7 +392,7 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
   cloud &cl){
   struct Func{
     static inline const arma::vec get_elem(cloud::iterator &it){
-      return it->state;
+      return it->get_state();
     }
   };
 
@@ -427,7 +427,7 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
 struct smoother_output {
   struct pair {
-    particle *p;
+    const particle *p;
     double log_weight;
 
     // added to be able to use std::Vector<>::emplace_back
@@ -441,10 +441,7 @@ struct smoother_output {
 
   struct particle_pairs {
     std::vector<pair> transition_pairs;
-    particle *bw_particle;
-
-    particle_pairs(particle *bw_particle): bw_particle(bw_particle) {}
-    particle_pairs(): bw_particle(nullptr) {}
+    const particle *p;
   };
 
   std::vector<cloud> forward_clouds;

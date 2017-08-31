@@ -3,20 +3,27 @@
 particle::particle(
   const arma::vec state, const particle *parent,
   const arma::uword cloud_idx, const particle *child):
-  state(state), parent(parent), cloud_idx(cloud_idx), child(child)
+  state(state), cloud_idx(cloud_idx), parent(parent), child(child)
   {
     log_unnormalized_weight = log_importance_dens = log_weight = log_resampling_weight =
       std::numeric_limits<double>::quiet_NaN();
   }
 
-void cloud::New_particle(
+particle::particle():
+  particle::particle(arma::vec(), nullptr, 0, nullptr) {}
+
+void cloud::new_particle(
     arma::vec state, const particle *parent, const particle *child){
   emplace_back(state, parent, size(), child);
 }
 
-void cloud::New_particle(
-    arma::vec state, const particle *parent){
-  emplace_back(state, parent, size(), nullptr);
+particle& cloud::set_particle(
+    arma::uword idx, arma::vec state,
+    const particle *parent, const particle *child){
+  // use copy assigment
+  particle &elem = this->at(idx);
+  elem = particle(state, parent, idx, child);
+  return elem;
 }
 
 /*
@@ -27,9 +34,9 @@ arma::vec cloud::get_weigthed_mean(){
   if(size() == 0)
     return arma::vec();
 
-  arma::vec out(front().state.n_elem, arma::fill::zeros);
+  arma::vec out(front().get_state().n_elem, arma::fill::zeros);
   for(auto it = begin(); it != end(); ++it){
-    out += (it->state * exp(it->log_weight));
+    out += (it->get_state() * exp(it->log_weight));
   }
 
   return out;

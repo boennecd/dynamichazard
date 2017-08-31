@@ -6,7 +6,7 @@
 // Util function
 static inline unsigned int get_cloud_idx(
     const particle *const p){
-  return (p) ? p->cloud_idx + 1  /* want non-zero based */ : 0;
+  return ((p) ? p->get_cloud_idx() + 1  /* want non-zero based */ : 0);
 }
 
 static inline const particle* get_cloud_idx(
@@ -49,7 +49,7 @@ Rcpp::List get_rcpp_list_from_cloud(
       *w = exp(pr->log_weight);
       *un_w = pr->log_unnormalized_weight;
 
-      states.col(i) = pr->state;
+      states.col(i) = pr->get_state();
     }
 
     ans[j] =
@@ -67,7 +67,7 @@ Rcpp::List get_rcpp_list_from_cloud(
 
 Rcpp::List get_rcpp_list_from_cloud(
     const smoother_output &sm_output, const PF_data *data){
-  unsigned int state_dim = sm_output.forward_clouds[0][0].state.n_elem;
+  unsigned int state_dim = sm_output.forward_clouds[0][0].get_state().n_elem;
 
   // Set-up the transition_likelihoods element
   Rcpp::List transitions; // List with final output
@@ -101,7 +101,7 @@ Rcpp::List get_rcpp_list_from_cloud(
         *it_ans = Rcpp::List::create(
           Rcpp::Named("fw_idx") = Rcpp::wrap(std::move(fw_idx)),
           Rcpp::Named("weights") = Rcpp::wrap(std::move(weights)),
-          Rcpp::Named("bw_idx") = get_cloud_idx(it_inner->bw_particle)
+          Rcpp::Named("bw_idx") = get_cloud_idx(it_inner->p)
         );
       }
 
@@ -169,7 +169,7 @@ static std::vector<cloud> get_clouds_from_rcpp_list_util
           is_smooth ?
             get_cloud_idx((*bw)[n_periods - (i + 1)], *it_child) : nullptr;
 
-        it_ans->New_particle(states.col(j), parent, child);
+        it_ans->new_particle(states.col(j), parent, child);
         particle &p = it_ans->back();
         p.log_weight = log(*it_w);
         p.log_unnormalized_weight = *it_un_w;
@@ -212,7 +212,7 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
       new_elems.resize(n_elem);
 
       cloud &fw_cloud = fw_clouds[i]; // starts at time 0
-      cloud &bw_cloud = bw_clouds[i]; // starts at time 1
+      cloud &sm_cloud = smooth_clouds[i]; // starts at time 1
 
       auto it_input_at_t = input_at_t.begin();
       auto it_elems = new_elems.begin();
@@ -224,7 +224,7 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
 
         Rcpp::List elem_info(*it_input_at_t);
         unsigned int idx = Rcpp::as<unsigned int>(elem_info["bw_idx"]);
-        elem.bw_particle = (idx > 0) ? &bw_cloud[idx - 1] : nullptr;
+        elem.p = get_cloud_idx(sm_cloud, idx);
 
         arma::uvec fw_idx = Rcpp::as<arma::uvec>(elem_info["fw_idx"]);
         arma::vec weights = Rcpp::as<arma::vec>(elem_info["weights"]);
@@ -236,7 +236,7 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
         auto it_trans_pair = transition_pairs.begin();
         // Loop over second index of pair of particles
         for(unsigned int k = 0; k < n_elem_inner; ++k, ++it_idx, ++it_w, ++it_trans_pair){
-          it_trans_pair->p = (*it_idx == 0) ? nullptr : &fw_cloud[*it_idx - 1];
+          it_trans_pair->p = get_cloud_idx(fw_cloud, *it_idx);
           it_trans_pair->log_weight = log(*it_w);
         }
       }
@@ -399,35 +399,81 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
   std::vector<arma::mat> &E_x_less_x_less_one_outers = ans.E_x_less_x_less_one_outers;
 
   unsigned int n_periods = smoothed_clouds.size();
-  unsigned int n_elem = smoothed_clouds[0][0].state.n_elem;
+  unsigned int n_elem = smoothed_clouds[0][0].get_state().n_elem;
 
-  for(unsigned int i = 0; i < n_periods; ++i){
+  auto it_cl = smoothed_clouds.begin();
+  for(unsigned int i = 0; i < n_periods; ++i, ++it_cl){
+    // TODO: do something different at time 1?
     const bool is_last = i == n_periods - 1;
-    auto it_cl = (smoothed_clouds.begin() + i);
 
     unsigned int n_part = it_cl->size();
     arma::vec E_x(n_elem, arma::fill::zeros);
     arma::mat E_x_less_x_less_one_outer(n_elem, n_elem, arma::fill::zeros);
 
-    auto cl_begin = it_cl->begin();
-    for(unsigned int j = 0; j < n_part; ++j){
-      const particle &p = *(cl_begin + j);
-      double weight = exp(p.log_weight);
+    auto it_p = it_cl->begin();
+    for(unsigned int j = 0; j < n_part; ++j, ++it_p){
+      double weight = exp(it_p->log_weight);
 
-      E_x += weight * p.state;
-      // TODO: use BLAS outer product rank one update
+      E_x += weight * it_p->get_state();
       if(is_last)
         continue;
-      arma::vec inter = sqrt(weight) * (p.state - p.parent->state);
+
+      arma::vec inter = sqrt(weight) * (it_p->get_state() - it_p->parent->get_state());
+      // TODO: use BLAS outer product rank one update
       E_x_less_x_less_one_outer += inter * inter.t();
     }
 
     if(is_last){
       --it_cl;
-      for(auto p = it_cl->begin(); p != it_cl->end(); ++p){
-        // TODO: use BLAS outer product rank one update
+      for(auto it_p = it_cl->begin(); it_p != it_cl->end(); ++it_p){
         arma::vec inter =
-          sqrt(exp(p->log_weight)) * (p->child->state - p->state);
+          sqrt(exp(it_p->log_weight)) * (it_p->child->get_state() - it_p->get_state());
+        // TODO: use BLAS outer product rank one update
+        E_x_less_x_less_one_outer += inter * inter.t();
+      }
+    }
+
+    E_xs.push_back(std::move(E_x));
+    E_x_less_x_less_one_outers.push_back(std::move(E_x_less_x_less_one_outer));
+  }
+
+  return ans;
+}
+
+static PF_summary_stats compute_summary_stats(
+    const std::vector<std::vector<smoother_output::particle_pairs>> &transition_likelihoods){
+  PF_summary_stats ans;
+  std::vector<arma::vec> &E_xs = ans.E_xs;
+  std::vector<arma::mat> &E_x_less_x_less_one_outers = ans.E_x_less_x_less_one_outers;
+
+  unsigned int n_periods = transition_likelihoods.size();
+  unsigned int n_elem = transition_likelihoods[0][0].p->get_state().n_elem;
+
+  auto it_trans = transition_likelihoods.begin();
+  for(unsigned int i = 0; i < n_periods; ++i, ++it_trans){
+    // TODO: need special treatment at time 0?
+    const bool is_first = i == 0;
+
+    unsigned int n_part = it_trans->size();
+    arma::vec E_x(n_elem, arma::fill::zeros);
+    arma::mat E_x_less_x_less_one_outer(n_elem, n_elem, arma::fill::zeros);
+
+    auto it_elem = it_trans->begin();
+    for(unsigned int j = 0; j < n_part; ++j, ++it_elem){
+      const particle *this_p = it_elem->p;
+      double weight_outer = exp(this_p->log_weight);
+      E_x += weight_outer * this_p->get_state();
+
+      if(is_first /* TODO: what to do at time 1 */)
+        continue;
+
+      for(auto it_pair = it_elem->transition_pairs.begin();
+          it_pair != it_elem->transition_pairs.end(); ++it_pair){
+        const particle *pair_p = it_pair->p;
+        double weight_inner = exp(this_p->log_weight + it_pair->log_weight);
+
+        arma::vec inter = sqrt(weight_inner) * (this_p->get_state() - pair_p->get_state());
+        // TODO: use BLAS outer product rank one update
         E_x_less_x_less_one_outer += inter * inter.t();
       }
     }
@@ -440,7 +486,11 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
 }
 
 static PF_summary_stats compute_summary_stats(const smoother_output sm_output){
-  return(compute_summary_stats(sm_output.smoothed_clouds));
+  if(sm_output.transition_likelihoods.size() == 0){
+    return(compute_summary_stats(sm_output.smoothed_clouds));
+  }
+
+  return(compute_summary_stats(sm_output.transition_likelihoods));
 }
 
 // [[Rcpp::export]]

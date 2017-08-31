@@ -147,10 +147,10 @@ public:
       double log_prop_transition;
       if(is_forward){
         log_prop_transition = dmvnrm_log(
-          *it_mu_j, it_cl->state, *Q_numerator_chol_inv);
+          *it_mu_j, it_cl->get_state(), *Q_numerator_chol_inv);
 
       } else {
-        arma::vec mean = solve_w_precomputed_chol(data.Q.chol, it_cl->state) + *mu_bw_term;
+        arma::vec mean = solve_w_precomputed_chol(data.Q.chol, it_cl->get_state()) + *mu_bw_term;
         mean = solve_w_precomputed_chol(*Q_numerator_inv_chol, mean);
         log_prop_transition = dmvnrm_log(
           *it_mu_j, mean, *Q_numerator_chol_inv);
@@ -239,10 +239,10 @@ public:
       double log_prop_transition;
       if(is_forward){
         log_prop_transition = dmvnrm_log(
-          it_ans->mu, it_cl->state, *Q_numerator_chol_inv);
+          it_ans->mu, it_cl->get_state(), *Q_numerator_chol_inv);
 
       } else {
-        arma::vec mean = solve_w_precomputed_chol(data.Q.chol, it_cl->state) + *mu_bw_term;
+        arma::vec mean = solve_w_precomputed_chol(data.Q.chol, it_cl->get_state()) + *mu_bw_term;
         mean = solve_w_precomputed_chol(*Q_numerator_inv_chol, mean);
         log_prop_transition = dmvnrm_log(
           it_ans->mu, mean, *Q_numerator_chol_inv);
