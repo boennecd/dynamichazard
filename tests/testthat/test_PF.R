@@ -64,9 +64,9 @@ test_that("PF_smooth gives same results", {
     n_max = 10,
     order = 1,
     n_threads = 1,
-    N_fw_n_bw = 500,
-    N_smooth = 1000,
-    N_first = 10000,
+    N_fw_n_bw = 20,
+    N_smooth = 100,
+    N_first = 100,
     forward_backward_ESS_threshold = NULL,
     debug = 0,
     method = "PF",
@@ -94,9 +94,21 @@ test_that("PF_smooth gives same results", {
 
       #####
       # Test that weights sum to one
-      lapply(test_func(result$forward_clouds), eval)
-      lapply(test_func(result$backward_clouds), eval)
-      lapply(test_func(result$smoothed_clouds), eval)
+      lapply(test_func(result$forward_clouds), eval, envir = environment())
+      lapply(test_func(result$backward_clouds), eval, envir = environment())
+      lapply(test_func(result$smoothed_clouds), eval, envir = environment())
+
+      #####
+      # Check that weights in transition_likelihoods sum to one
+      if(length(result$transition_likelihoods) > 0){
+        ws <- lapply(result$transition_likelihoods, function(x){
+          sapply(lapply(x, "[[", "weights"), sum)
+        })
+
+        for(i in seq_along(ws))
+          eval(substitute(
+            expect_equal(ws[[i]], rep(1, length(ws[[i]]))), list(i = i)))
+      }
 
       #####
       # Test that multithreaded version gives the same
@@ -196,12 +208,12 @@ test_that("PF_smooth gives same results", {
     envir = environment())
 
   # # #TODO: clean up
-  PF_effective_sample_size <- asNamespace("dynamichazard")$PF_effective_sample_size
-  plot(result, type = "smoothed_clouds")
-  plot(result, type = "backward_clouds", qlvls = c(), lty = 2, add = TRUE)
-  plot(result, type = "forward_clouds", qlvls = c(), lty = 3, add = TRUE)
-  abline(h = sims$betas[1, ])
-  (tmp <- PF_effective_sample_size(result))
+  # PF_effective_sample_size <- asNamespace("dynamichazard")$PF_effective_sample_size
+  # plot(result, type = "smoothed_clouds")
+  # plot(result, type = "backward_clouds", qlvls = c(), lty = 2, add = TRUE)
+  # plot(result, type = "forward_clouds", qlvls = c(), lty = 3, add = TRUE)
+  # abline(h = sims$betas[1, ])
+  # (tmp <- PF_effective_sample_size(result))
   # (tmp2 <- PF_effective_sample_size(read_to_test("local_tests/AUX_normal_approx_w_particles")))
   # for(i in seq_along(tmp)){
   #   tmp[[i]] <- (tmp[[i]] - tmp2[[i]]) / tmp2[[i]]
@@ -279,20 +291,6 @@ test_that("Import and export PF cloud from Rcpp gives the same", {
   }
 })
 
-test_that("compute_summary_stats gives previous results", {
-  skip_on_cran()
-
-  compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
-  cloud_example <- read_to_test("local_tests/cloud_example_no_transition_likelihoods")
-
-  sum_stats <- compute_summary_stats(cloud_example)
-
-  # save_to_test(sum_stats, "local_tests/compute_summary_stats")
-  expect_equal(sum_stats, read_to_test("local_tests/compute_summary_stats"), tolerance = 1.49e-08)
-
-  expect_true(FALSE) # test with O(N^2 method)
-})
-
 test_that("PF_EM stops with correct error messages due to wrong or missing arguments", {
   args <- list(
     formula = survival::Surv(start, stop, event) ~ group,
@@ -347,5 +345,16 @@ test_that("PF_EM gives previous results on head neck data set", {
   expect_equal(result, read_to_test("local_tests/PF_head_neck"), tolerance = 1.49e-08)
 })
 
-test_that("transition_likelihoods are correct and weights sum to one and passing back and forward works",
-          expect_true(FALSE))
+test_that("compute_summary_stats gives previous results", {
+  skip_on_cran()
+
+  compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
+  cloud_example <- read_to_test("local_tests/PF_head_neck")$clouds
+
+  sum_stats <- compute_summary_stats(cloud_example)
+
+  # save_to_test(sum_stats, "local_tests/compute_summary_stats")
+  expect_equal(sum_stats, read_to_test("local_tests/compute_summary_stats"), tolerance = 1.49e-08)
+
+  expect_true(FALSE) # test with O(N^2 method)
+})

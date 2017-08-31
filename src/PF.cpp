@@ -109,18 +109,14 @@ Rcpp::List get_rcpp_list_from_cloud(
     }
   }
 
-  Rcpp::List forward_clouds = get_rcpp_list_from_cloud(
-    sm_output.forward_clouds, false, state_dim, data);
-  Rcpp::List backward_clouds = get_rcpp_list_from_cloud(
-    sm_output.backward_clouds, true, state_dim, data);
-  Rcpp::List smoothed_clouds = get_rcpp_list_from_cloud(
-      sm_output.smoothed_clouds, false, state_dim, data);
-
   // Create output list
   Rcpp::List ans = Rcpp::List::create(
-    Rcpp::Named("forward_clouds") = std::move(forward_clouds),
-    Rcpp::Named("backward_clouds") = std::move(backward_clouds),
-    Rcpp::Named("smoothed_clouds") = std::move(smoothed_clouds),
+    Rcpp::Named("forward_clouds") = get_rcpp_list_from_cloud(
+      sm_output.forward_clouds, false, state_dim, data),
+    Rcpp::Named("backward_clouds") = get_rcpp_list_from_cloud(
+      sm_output.backward_clouds, true, state_dim, data),
+    Rcpp::Named("smoothed_clouds") = get_rcpp_list_from_cloud(
+      sm_output.smoothed_clouds, false, state_dim, data),
     Rcpp::Named("transition_likelihoods") = std::move(transitions));
 
   ans.attr("class") = "PF_clouds";
