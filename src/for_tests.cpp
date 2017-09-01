@@ -61,15 +61,6 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
 
 // -------------------------------------------------- //
 
-#include "BLAS_and_LAPACK/arma_utils.h"
-
-// [[Rcpp::export]]
-arma::vec solve_w_precomputed_chol_test(const arma::mat &chol_decomp, const arma::vec& B){
-  return(solve_w_precomputed_chol(chol_decomp, B));
-}
-
-// -------------------------------------------------- //
-
 #include "PF/PF_utils.h"
 
 // [[Rcpp::export]]
@@ -78,3 +69,38 @@ Rcpp::List PF_cloud_to_rcpp_and_back(const Rcpp::List &rcpp_list){
 
   return get_rcpp_list_from_cloud(cpp_result);
 }
+
+// -------------------------------------------------- //
+
+#include "arma_BLAS_LAPACK.h"
+
+// [[Rcpp::export]]
+void chol_rank_one_update_test(arma::mat &R, arma::vec x){
+  return chol_rank_one_update(R, x);
+}
+
+// [[Rcpp::export]]
+void square_tri_inv_test(const arma::mat &R, arma::mat &out){
+  return square_tri_inv(R, out);
+}
+
+// [[Rcpp::export]]
+void symmetric_mat_chol_test(const arma::mat& A, arma::mat &out){
+  return symmetric_mat_chol(A, out);
+}
+
+// [[Rcpp::export]]
+void tri_mat_times_vec_test(arma::mat &A, const arma::vec &x, arma::vec &out, bool is_transpose){
+  return tri_mat_times_vec(A, x, out, is_transpose);
+}
+
+// [[Rcpp::export]]
+void sym_mat_rank_one_update_test(const double alpha, const arma::vec &x, arma::mat &A){
+  return sym_mat_rank_one_update(alpha, x, A);
+}
+
+// [[Rcpp::export]]
+arma::vec solve_w_precomputed_chol_test(const arma::mat &chol_decomp, const arma::vec& B){
+  return(solve_w_precomputed_chol(chol_decomp, B));
+}
+

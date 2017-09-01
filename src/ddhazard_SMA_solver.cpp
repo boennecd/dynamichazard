@@ -1,5 +1,5 @@
 #include "ddhazard.h"
-#include "BLAS_and_LAPACK/arma_utils.h"
+#include "arma_BLAS_LAPACK.h"
 
 inline double SMA_hepler_logit::NR_delta(
       const double offset, const double coef1, const double coef2,

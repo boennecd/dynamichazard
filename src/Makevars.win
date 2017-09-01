@@ -10,8 +10,8 @@ else
 	BLAS_LIBS_USE = $(BLAS_LIBS)
 endif
 
-SOURCES_CPP = PF/PF_logger.cpp for_tests.cpp PF/particles.cpp sample_funcs.cpp PF.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp BLAS_and_LAPACK/LAPACK_BLAS_wrapper.cpp arma_utils.cpp ddhazard_SMA_solver.cpp ddhazard_GMA_solver.cpp parallel_glm.cpp thread_pool.cpp
-SOURCES_F = biglm/boundedQRf.f dchur.f
+SOURCES_CPP = BLAS_LAPACK/R_BLAS_LAPACK.cpp BLAS_LAPACK/arma_BLAS_LAPACK.cpp PF/PF_logger.cpp for_tests.cpp PF/particles.cpp sample_funcs.cpp PF.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp ddhazard_SMA_solver.cpp ddhazard_GMA_solver.cpp parallel_glm.cpp thread_pool.cpp
+SOURCES_F = biglm/boundedQRf.f BLAS_LAPACK/dchur.f
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o) $(SOURCES_F:.f=.o)
 

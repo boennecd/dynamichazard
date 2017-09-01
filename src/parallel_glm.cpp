@@ -5,7 +5,7 @@
 
 #include "arma_n_rcpp.h"
 #include "thread_pool.h"
-#include "BLAS_and_LAPACK/arma_utils.h"
+#include "arma_BLAS_LAPACK.h"
 
 template<typename family>
 class parallelglm_class {

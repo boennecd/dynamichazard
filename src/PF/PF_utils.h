@@ -6,7 +6,7 @@
 
 #include <tuple>
 #include "particles.h"
-#include "../BLAS_and_LAPACK/arma_utils.h"
+#include "../arma_BLAS_LAPACK.h"
 
 struct normalize_weights_output {
   double ESS = 0.;

@@ -1,4 +1,4 @@
-#include "../arma_n_rcpp.h"
+#include "arma_n_rcpp.h"
 
 void symmetric_mat_chol(const arma::mat&, arma::mat &);
 

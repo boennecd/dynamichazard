@@ -11,11 +11,11 @@ if(interactive()){
   exp_model_names <- with(environment(ddhazard), exp_model_names)
 
   # test_LAPACK_BLAS_wrapper.R
-  chol_rank_one_update <- with(environment(ddhazard), chol_rank_one_update)
-  square_tri_inv <- with(environment(ddhazard), square_tri_inv)
-  symmetric_mat_chol <- with(environment(ddhazard), symmetric_mat_chol)
-  tri_mat_times_vec <- with(environment(ddhazard), tri_mat_times_vec)
-  sym_mat_rank_one_update <- with(environment(ddhazard), sym_mat_rank_one_update)
+  chol_rank_one_update_test <- with(environment(ddhazard), chol_rank_one_update_test)
+  square_tri_inv_test <- with(environment(ddhazard), square_tri_inv_test)
+  symmetric_mat_chol_test <- with(environment(ddhazard), symmetric_mat_chol_test)
+  tri_mat_times_vec_test <- with(environment(ddhazard), tri_mat_times_vec_test)
+  sym_mat_rank_one_update_test <- with(environment(ddhazard), sym_mat_rank_one_update_test)
   solve_w_precomputed_chol_test <- with(environment(ddhazard), solve_w_precomputed_chol_test)
 
   # test_SMA.R

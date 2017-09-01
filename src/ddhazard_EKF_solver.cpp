@@ -1,7 +1,7 @@
 #include "ddhazard.h"
 #include "exp_model_funcs.h"
 #include "thread_pool.h"
-#include "BLAS_and_LAPACK/arma_utils.h"
+#include "arma_BLAS_LAPACK.h"
 
 // worker class for parallel computation
 template<typename T>

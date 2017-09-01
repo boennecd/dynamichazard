@@ -6,64 +6,6 @@
 
 using namespace Rcpp;
 
-// chol_rank_one_update
-void chol_rank_one_update(arma::mat& R, arma::vec x);
-RcppExport SEXP _dynamichazard_chol_rank_one_update(SEXP RSEXP, SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat& >::type R(RSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
-    chol_rank_one_update(R, x);
-    return R_NilValue;
-END_RCPP
-}
-// square_tri_inv
-void square_tri_inv(const arma::mat& R, arma::mat& out);
-RcppExport SEXP _dynamichazard_square_tri_inv(SEXP RSEXP, SEXP outSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
-    square_tri_inv(R, out);
-    return R_NilValue;
-END_RCPP
-}
-// symmetric_mat_chol
-void symmetric_mat_chol(const arma::mat& A, arma::mat& out);
-RcppExport SEXP _dynamichazard_symmetric_mat_chol(SEXP ASEXP, SEXP outSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
-    symmetric_mat_chol(A, out);
-    return R_NilValue;
-END_RCPP
-}
-// tri_mat_times_vec
-void tri_mat_times_vec(arma::mat& A, const arma::vec& x, arma::vec& out, bool is_transpose);
-RcppExport SEXP _dynamichazard_tri_mat_times_vec(SEXP ASEXP, SEXP xSEXP, SEXP outSEXP, SEXP is_transposeSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat& >::type A(ASEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type out(outSEXP);
-    Rcpp::traits::input_parameter< bool >::type is_transpose(is_transposeSEXP);
-    tri_mat_times_vec(A, x, out, is_transpose);
-    return R_NilValue;
-END_RCPP
-}
-// sym_mat_rank_one_update
-void sym_mat_rank_one_update(const double alpha, const arma::vec& x, arma::mat& A);
-RcppExport SEXP _dynamichazard_sym_mat_rank_one_update(SEXP alphaSEXP, SEXP xSEXP, SEXP ASEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type A(ASEXP);
-    sym_mat_rank_one_update(alpha, x, A);
-    return R_NilValue;
-END_RCPP
-}
 // bigglm_regcf_rcpp
 arma::vec bigglm_regcf_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol);
 RcppExport SEXP _dynamichazard_bigglm_regcf_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP) {
@@ -254,6 +196,75 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// PF_cloud_to_rcpp_and_back
+Rcpp::List PF_cloud_to_rcpp_and_back(const Rcpp::List& rcpp_list);
+RcppExport SEXP _dynamichazard_PF_cloud_to_rcpp_and_back(SEXP rcpp_listSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type rcpp_list(rcpp_listSEXP);
+    rcpp_result_gen = Rcpp::wrap(PF_cloud_to_rcpp_and_back(rcpp_list));
+    return rcpp_result_gen;
+END_RCPP
+}
+// chol_rank_one_update_test
+void chol_rank_one_update_test(arma::mat& R, arma::vec x);
+RcppExport SEXP _dynamichazard_chol_rank_one_update_test(SEXP RSEXP, SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type R(RSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    chol_rank_one_update_test(R, x);
+    return R_NilValue;
+END_RCPP
+}
+// square_tri_inv_test
+void square_tri_inv_test(const arma::mat& R, arma::mat& out);
+RcppExport SEXP _dynamichazard_square_tri_inv_test(SEXP RSEXP, SEXP outSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
+    square_tri_inv_test(R, out);
+    return R_NilValue;
+END_RCPP
+}
+// symmetric_mat_chol_test
+void symmetric_mat_chol_test(const arma::mat& A, arma::mat& out);
+RcppExport SEXP _dynamichazard_symmetric_mat_chol_test(SEXP ASEXP, SEXP outSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
+    symmetric_mat_chol_test(A, out);
+    return R_NilValue;
+END_RCPP
+}
+// tri_mat_times_vec_test
+void tri_mat_times_vec_test(arma::mat& A, const arma::vec& x, arma::vec& out, bool is_transpose);
+RcppExport SEXP _dynamichazard_tri_mat_times_vec_test(SEXP ASEXP, SEXP xSEXP, SEXP outSEXP, SEXP is_transposeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type out(outSEXP);
+    Rcpp::traits::input_parameter< bool >::type is_transpose(is_transposeSEXP);
+    tri_mat_times_vec_test(A, x, out, is_transpose);
+    return R_NilValue;
+END_RCPP
+}
+// sym_mat_rank_one_update_test
+void sym_mat_rank_one_update_test(const double alpha, const arma::vec& x, arma::mat& A);
+RcppExport SEXP _dynamichazard_sym_mat_rank_one_update_test(SEXP alphaSEXP, SEXP xSEXP, SEXP ASEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type A(ASEXP);
+    sym_mat_rank_one_update_test(alpha, x, A);
+    return R_NilValue;
+END_RCPP
+}
 // solve_w_precomputed_chol_test
 arma::vec solve_w_precomputed_chol_test(const arma::mat& chol_decomp, const arma::vec& B);
 RcppExport SEXP _dynamichazard_solve_w_precomputed_chol_test(SEXP chol_decompSEXP, SEXP BSEXP) {
@@ -263,17 +274,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type chol_decomp(chol_decompSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type B(BSEXP);
     rcpp_result_gen = Rcpp::wrap(solve_w_precomputed_chol_test(chol_decomp, B));
-    return rcpp_result_gen;
-END_RCPP
-}
-// PF_cloud_to_rcpp_and_back
-Rcpp::List PF_cloud_to_rcpp_and_back(const Rcpp::List& rcpp_list);
-RcppExport SEXP _dynamichazard_PF_cloud_to_rcpp_and_back(SEXP rcpp_listSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Rcpp::List& >::type rcpp_list(rcpp_listSEXP);
-    rcpp_result_gen = Rcpp::wrap(PF_cloud_to_rcpp_and_back(rcpp_list));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -384,11 +384,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_dynamichazard_chol_rank_one_update", (DL_FUNC) &_dynamichazard_chol_rank_one_update, 2},
-    {"_dynamichazard_square_tri_inv", (DL_FUNC) &_dynamichazard_square_tri_inv, 2},
-    {"_dynamichazard_symmetric_mat_chol", (DL_FUNC) &_dynamichazard_symmetric_mat_chol, 2},
-    {"_dynamichazard_tri_mat_times_vec", (DL_FUNC) &_dynamichazard_tri_mat_times_vec, 4},
-    {"_dynamichazard_sym_mat_rank_one_update", (DL_FUNC) &_dynamichazard_sym_mat_rank_one_update, 3},
     {"_dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &_dynamichazard_bigglm_regcf_rcpp, 6},
     {"_dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &_dynamichazard_ddhazard_fit_cpp, 38},
     {"_dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_compute_length, 5},
@@ -400,8 +395,13 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_mvrnorm_test", (DL_FUNC) &_dynamichazard_mvrnorm_test, 2},
     {"_dynamichazard_dmvnrm_log_test", (DL_FUNC) &_dynamichazard_dmvnrm_log_test, 3},
     {"_dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &_dynamichazard_bigglm_updateQR_rcpp, 12},
-    {"_dynamichazard_solve_w_precomputed_chol_test", (DL_FUNC) &_dynamichazard_solve_w_precomputed_chol_test, 2},
     {"_dynamichazard_PF_cloud_to_rcpp_and_back", (DL_FUNC) &_dynamichazard_PF_cloud_to_rcpp_and_back, 1},
+    {"_dynamichazard_chol_rank_one_update_test", (DL_FUNC) &_dynamichazard_chol_rank_one_update_test, 2},
+    {"_dynamichazard_square_tri_inv_test", (DL_FUNC) &_dynamichazard_square_tri_inv_test, 2},
+    {"_dynamichazard_symmetric_mat_chol_test", (DL_FUNC) &_dynamichazard_symmetric_mat_chol_test, 2},
+    {"_dynamichazard_tri_mat_times_vec_test", (DL_FUNC) &_dynamichazard_tri_mat_times_vec_test, 4},
+    {"_dynamichazard_sym_mat_rank_one_update_test", (DL_FUNC) &_dynamichazard_sym_mat_rank_one_update_test, 3},
+    {"_dynamichazard_solve_w_precomputed_chol_test", (DL_FUNC) &_dynamichazard_solve_w_precomputed_chol_test, 2},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 10},
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 21},
