@@ -2,6 +2,7 @@
 #include "PF/importance_samplers.h"
 #include "PF/resamplers.h"
 #include "PF/densities.h"
+#include "arma_BLAS_LAPACK.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -401,25 +402,50 @@ static arma::mat get_E_x_less_x_less_one_outer_at_one(
   const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
   const cloud &cl){
   // TODO: make chol and reduce computational cost
-  arma::uword n_elem = a_0.n_elem;
+  const arma::uword n_elem = a_0.n_elem;
+  const unsigned int n_particles = cl.size();
+  auto cl_begin = cl.begin();
 
   arma::mat ans(n_elem, n_elem, arma::fill::zeros);
-  arma::mat S_inv = arma::inv(Q) + arma::inv(Q_0);
-  arma::vec a_0_term = solve(Q_0, a_0);
+  const arma::mat S_inv = arma::inv(Q) + arma::inv(Q_0);
+  const arma::vec a_0_term = solve(Q_0, a_0);
 
-  for(auto it_p = cl.begin(); it_p != cl.end(); ++it_p){
+  const arma::mat Q_chol = arma::chol(Q);
+  const arma::mat S_inv_chol = arma::chol(S_inv);
+
+#ifdef _OPENMP
+#pragma omp parallel
+{
+#endif
+
+  arma::mat my_ans(n_elem, n_elem, arma::fill::zeros);
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+  for(unsigned int i = 0; i < n_particles; ++i){
+    auto it_p = cl_begin + i;
     const arma::vec &state = it_p->get_state();
-    arma::vec m = a_0_term + solve(Q, state);
-    m = arma::solve(S_inv, m);
+    arma::vec m = a_0_term + solve_w_precomputed_chol(Q_chol, state);
+    m = solve_w_precomputed_chol(S_inv_chol, m);
     double weight = exp(it_p->log_weight);
     m *= sqrt(weight);
     arma::vec tmp = sqrt(weight) * state;
 
     // TODO: use rank one updates
-    ans += tmp * tmp.t()
+    my_ans += tmp * tmp.t()
       - m * tmp.t() - tmp * m.t()
       + m * m.t();
   }
+#ifdef _OPENMP
+#pragma omp critical(get_E_x_less_x_less_one_outer_at_one)
+{
+#endif
+  ans += my_ans;
+#ifdef _OPENMP
+}
+}
+#endif
 
   ans += arma::inv(S_inv);
 
