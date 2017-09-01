@@ -9,22 +9,6 @@ ddhazard_fit_cpp <- function(X, fixed_terms, weights, tstart, tstop, a_0, fixed_
     .Call(`_dynamichazard_ddhazard_fit_cpp`, X, fixed_terms, weights, tstart, tstop, a_0, fixed_parems_start, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_params, n_max, eps, verbose, order_, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation, fixed_effect_chunk_size, debug, NR_it_max, n_threads, denom_term, n_fixed_terms_in_state_vec, use_pinv, criteria, posterior_version, GMA_max_rep, GMA_NR_eps, EKF_batch_size)
 }
 
-SMA_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
-    .Call(`_dynamichazard_SMA_hepler_logit_compute_length`, offset, coef1, coef2, w, y)
-}
-
-SMA_hepler_logit_second_d <- function(c, offset) {
-    .Call(`_dynamichazard_SMA_hepler_logit_second_d`, c, offset)
-}
-
-SMA_hepler_exp_compute_length <- function(offset, coef1, coef2, w, y, length) {
-    .Call(`_dynamichazard_SMA_hepler_exp_compute_length`, offset, coef1, coef2, w, y, length)
-}
-
-SMA_hepler_exp_second_d <- function(c, offset, length) {
-    .Call(`_dynamichazard_SMA_hepler_exp_second_d`, c, offset, length)
-}
-
 sample_indices_test <- function(size, probs) {
     .Call(`_dynamichazard_sample_indices_test`, size, probs)
 }
@@ -43,6 +27,22 @@ dmvnrm_log_test <- function(x, mean, sigma_chol_inv) {
 
 bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w) {
     invisible(.Call(`_dynamichazard_bigglm_updateQR_rcpp`, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
+}
+
+SMA_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
+    .Call(`_dynamichazard_SMA_hepler_logit_compute_length`, offset, coef1, coef2, w, y)
+}
+
+SMA_hepler_logit_second_d <- function(c, offset) {
+    .Call(`_dynamichazard_SMA_hepler_logit_second_d`, c, offset)
+}
+
+SMA_hepler_exp_compute_length <- function(offset, coef1, coef2, w, y, length) {
+    .Call(`_dynamichazard_SMA_hepler_exp_compute_length`, offset, coef1, coef2, w, y, length)
+}
+
+SMA_hepler_exp_second_d <- function(c, offset, length) {
+    .Call(`_dynamichazard_SMA_hepler_exp_second_d`, c, offset, length)
 }
 
 PF_cloud_to_rcpp_and_back <- function(rcpp_list) {

@@ -70,62 +70,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// SMA_hepler_logit_compute_length
-double SMA_hepler_logit_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y);
-RcppExport SEXP _dynamichazard_SMA_hepler_logit_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
-    Rcpp::traits::input_parameter< const double >::type coef1(coef1SEXP);
-    Rcpp::traits::input_parameter< const double >::type coef2(coef2SEXP);
-    Rcpp::traits::input_parameter< const double >::type w(wSEXP);
-    Rcpp::traits::input_parameter< const bool >::type y(ySEXP);
-    rcpp_result_gen = Rcpp::wrap(SMA_hepler_logit_compute_length(offset, coef1, coef2, w, y));
-    return rcpp_result_gen;
-END_RCPP
-}
-// SMA_hepler_logit_second_d
-double SMA_hepler_logit_second_d(const double c, const double offset);
-RcppExport SEXP _dynamichazard_SMA_hepler_logit_second_d(SEXP cSEXP, SEXP offsetSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type c(cSEXP);
-    Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
-    rcpp_result_gen = Rcpp::wrap(SMA_hepler_logit_second_d(c, offset));
-    return rcpp_result_gen;
-END_RCPP
-}
-// SMA_hepler_exp_compute_length
-double SMA_hepler_exp_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y, const double length);
-RcppExport SEXP _dynamichazard_SMA_hepler_exp_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP, SEXP lengthSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
-    Rcpp::traits::input_parameter< const double >::type coef1(coef1SEXP);
-    Rcpp::traits::input_parameter< const double >::type coef2(coef2SEXP);
-    Rcpp::traits::input_parameter< const double >::type w(wSEXP);
-    Rcpp::traits::input_parameter< const bool >::type y(ySEXP);
-    Rcpp::traits::input_parameter< const double >::type length(lengthSEXP);
-    rcpp_result_gen = Rcpp::wrap(SMA_hepler_exp_compute_length(offset, coef1, coef2, w, y, length));
-    return rcpp_result_gen;
-END_RCPP
-}
-// SMA_hepler_exp_second_d
-double SMA_hepler_exp_second_d(const double c, const double offset, const double length);
-RcppExport SEXP _dynamichazard_SMA_hepler_exp_second_d(SEXP cSEXP, SEXP offsetSEXP, SEXP lengthSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type c(cSEXP);
-    Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
-    Rcpp::traits::input_parameter< const double >::type length(lengthSEXP);
-    rcpp_result_gen = Rcpp::wrap(SMA_hepler_exp_second_d(c, offset, length));
-    return rcpp_result_gen;
-END_RCPP
-}
 // sample_indices_test
 arma::uvec sample_indices_test(int size, arma::vec probs);
 RcppExport SEXP _dynamichazard_sample_indices_test(SEXP sizeSEXP, SEXP probsSEXP) {
@@ -194,6 +138,62 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type w(wSEXP);
     bigglm_updateQR_rcpp(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w);
     return R_NilValue;
+END_RCPP
+}
+// SMA_hepler_logit_compute_length
+double SMA_hepler_logit_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y);
+RcppExport SEXP _dynamichazard_SMA_hepler_logit_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
+    Rcpp::traits::input_parameter< const double >::type coef1(coef1SEXP);
+    Rcpp::traits::input_parameter< const double >::type coef2(coef2SEXP);
+    Rcpp::traits::input_parameter< const double >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const bool >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(SMA_hepler_logit_compute_length(offset, coef1, coef2, w, y));
+    return rcpp_result_gen;
+END_RCPP
+}
+// SMA_hepler_logit_second_d
+double SMA_hepler_logit_second_d(const double c, const double offset);
+RcppExport SEXP _dynamichazard_SMA_hepler_logit_second_d(SEXP cSEXP, SEXP offsetSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type c(cSEXP);
+    Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
+    rcpp_result_gen = Rcpp::wrap(SMA_hepler_logit_second_d(c, offset));
+    return rcpp_result_gen;
+END_RCPP
+}
+// SMA_hepler_exp_compute_length
+double SMA_hepler_exp_compute_length(const double offset, const double coef1, const double coef2, const double w, const bool y, const double length);
+RcppExport SEXP _dynamichazard_SMA_hepler_exp_compute_length(SEXP offsetSEXP, SEXP coef1SEXP, SEXP coef2SEXP, SEXP wSEXP, SEXP ySEXP, SEXP lengthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
+    Rcpp::traits::input_parameter< const double >::type coef1(coef1SEXP);
+    Rcpp::traits::input_parameter< const double >::type coef2(coef2SEXP);
+    Rcpp::traits::input_parameter< const double >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const bool >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const double >::type length(lengthSEXP);
+    rcpp_result_gen = Rcpp::wrap(SMA_hepler_exp_compute_length(offset, coef1, coef2, w, y, length));
+    return rcpp_result_gen;
+END_RCPP
+}
+// SMA_hepler_exp_second_d
+double SMA_hepler_exp_second_d(const double c, const double offset, const double length);
+RcppExport SEXP _dynamichazard_SMA_hepler_exp_second_d(SEXP cSEXP, SEXP offsetSEXP, SEXP lengthSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type c(cSEXP);
+    Rcpp::traits::input_parameter< const double >::type offset(offsetSEXP);
+    Rcpp::traits::input_parameter< const double >::type length(lengthSEXP);
+    rcpp_result_gen = Rcpp::wrap(SMA_hepler_exp_second_d(c, offset, length));
+    return rcpp_result_gen;
 END_RCPP
 }
 // PF_cloud_to_rcpp_and_back
@@ -386,15 +386,15 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &_dynamichazard_bigglm_regcf_rcpp, 6},
     {"_dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &_dynamichazard_ddhazard_fit_cpp, 38},
-    {"_dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_compute_length, 5},
-    {"_dynamichazard_SMA_hepler_logit_second_d", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_second_d, 2},
-    {"_dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_compute_length, 6},
-    {"_dynamichazard_SMA_hepler_exp_second_d", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_second_d, 3},
     {"_dynamichazard_sample_indices_test", (DL_FUNC) &_dynamichazard_sample_indices_test, 2},
     {"_dynamichazard_systematic_resampling_test", (DL_FUNC) &_dynamichazard_systematic_resampling_test, 2},
     {"_dynamichazard_mvrnorm_test", (DL_FUNC) &_dynamichazard_mvrnorm_test, 2},
     {"_dynamichazard_dmvnrm_log_test", (DL_FUNC) &_dynamichazard_dmvnrm_log_test, 3},
     {"_dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &_dynamichazard_bigglm_updateQR_rcpp, 12},
+    {"_dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_compute_length, 5},
+    {"_dynamichazard_SMA_hepler_logit_second_d", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_second_d, 2},
+    {"_dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_compute_length, 6},
+    {"_dynamichazard_SMA_hepler_exp_second_d", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_second_d, 3},
     {"_dynamichazard_PF_cloud_to_rcpp_and_back", (DL_FUNC) &_dynamichazard_PF_cloud_to_rcpp_and_back, 1},
     {"_dynamichazard_chol_rank_one_update_test", (DL_FUNC) &_dynamichazard_chol_rank_one_update_test, 2},
     {"_dynamichazard_square_tri_inv_test", (DL_FUNC) &_dynamichazard_square_tri_inv_test, 2},

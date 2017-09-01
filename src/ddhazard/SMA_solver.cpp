@@ -1,5 +1,5 @@
-#include "ddhazard.h"
-#include "arma_BLAS_LAPACK.h"
+#include "../ddhazard.h"
+#include "../arma_BLAS_LAPACK.h"
 
 inline double SMA_hepler_logit::NR_delta(
       const double offset, const double coef1, const double coef2,
@@ -16,7 +16,7 @@ inline double SMA_hepler_logit::NR_delta(
       (2. * coef1 + w * e / pow(1. + e, 2));
 };
 
-inline double SMA_hepler_logit::compute_length(
+double SMA_hepler_logit::compute_length(
     const double offset, const double coef1, const double coef2,
     const double w, const bool is_event, const double length){
   double c0 = 0.;
@@ -41,27 +41,11 @@ inline double SMA_hepler_logit::compute_length(
   return c1;
 };
 
-inline double SMA_hepler_logit::second_d(
+double SMA_hepler_logit::second_d(
   const double c, const double offset, const double length){
     const double e = exp(c + offset);
     return - e / pow(1. + e, 2);
 };
-
-// Export for tests
-// [[Rcpp::export]]
-double SMA_hepler_logit_compute_length(
-    const double offset, const double coef1, const double coef2,
-    const double w, const bool y){
-  return SMA_hepler_logit::compute_length(
-    offset, coef1, coef2, w, y, 0.);
-};
-
-// [[Rcpp::export]]
-double SMA_hepler_logit_second_d(
-    const double c, const double offset){
-  return SMA_hepler_logit::second_d(c, offset,0.);
-};
-
 
 
 
@@ -80,7 +64,7 @@ inline double SMA_hepler_exp::NR_delta(
   return (2. * coef1 * c0 + coef2 + w *  e) / (2. * coef1 + w * e);
 };
 
-inline double SMA_hepler_exp::compute_length(
+double SMA_hepler_exp::compute_length(
     const double offset, const double coef1, const double coef2,
     const double w, const bool is_event, const double length){
   double c0 = 0.;
@@ -105,24 +89,9 @@ inline double SMA_hepler_exp::compute_length(
   return c1;
 };
 
-inline double SMA_hepler_exp::second_d(
+double SMA_hepler_exp::second_d(
     const double c, const double offset, const double length){
   return -  exp(c + offset + log(length));
-};
-
-// Export for tests
-// [[Rcpp::export]]
-double SMA_hepler_exp_compute_length(
-    const double offset, const double coef1, const double coef2,
-    const double w, const bool y, const double length){
-  return SMA_hepler_exp::compute_length(
-    offset, coef1, coef2, w, y, length);
-};
-
-// [[Rcpp::export]]
-double SMA_hepler_exp_second_d(
-    const double c, const double offset, const double length){
-  return SMA_hepler_exp::second_d(c, offset, length);
 };
 
 

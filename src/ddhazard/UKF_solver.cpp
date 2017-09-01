@@ -1,5 +1,5 @@
-#include "ddhazard.h"
-#include "exp_model_funcs.h"
+#include "../ddhazard.h"
+#include "../exp_model_funcs.h"
 
 // This is the orginal UKF formulation from:
 // Julier, Simon J., and Jeffrey K. Uhlmann. "New extension of the Kalman filter

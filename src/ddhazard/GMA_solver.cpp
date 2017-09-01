@@ -1,8 +1,8 @@
-#include "ddhazard.h"
+#include "../ddhazard.h"
+#include "../arma_BLAS_LAPACK.h"
 #ifdef _OPENMP
 #include "omp.h"
 #endif
-#include "arma_BLAS_LAPACK.h"
 
 inline double GMA_hepler_logit::d1(
     const double eta, const bool is_event, const double at_risk_length){
