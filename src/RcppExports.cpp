@@ -350,14 +350,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // compute_summary_stats
-Rcpp::List compute_summary_stats(const Rcpp::List& rcpp_list, unsigned int n_threads);
-RcppExport SEXP _dynamichazard_compute_summary_stats(SEXP rcpp_listSEXP, SEXP n_threadsSEXP) {
+Rcpp::List compute_summary_stats(const Rcpp::List& rcpp_list, unsigned int n_threads, const arma::vec& a_0, const arma::mat& Q, const arma::mat& Q_0);
+RcppExport SEXP _dynamichazard_compute_summary_stats(SEXP rcpp_listSEXP, SEXP n_threadsSEXP, SEXP a_0SEXP, SEXP QSEXP, SEXP Q_0SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::List& >::type rcpp_list(rcpp_listSEXP);
     Rcpp::traits::input_parameter< unsigned int >::type n_threads(n_threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_summary_stats(rcpp_list, n_threads));
+    Rcpp::traits::input_parameter< const arma::vec& >::type a_0(a_0SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Q_0(Q_0SEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_summary_stats(rcpp_list, n_threads, a_0, Q, Q_0));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -405,7 +408,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 10},
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 21},
-    {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 2},
+    {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 5},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {NULL, NULL, 0}
 };

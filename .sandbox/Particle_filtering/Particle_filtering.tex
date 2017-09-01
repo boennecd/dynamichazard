@@ -889,7 +889,7 @@ We then repeat with the new $\vec{a}_0$ and $\mat{Q}$ for a given number of iter
 & = \normalC{\vec{\alpha}_0}{
 		\optor{\vec{m}_{\vec{\theta}}}{\vec{\alpha}_1}
 	}{ % end of arg2 of normalC
-		\optor{\mat{S}_{\vec{\theta}}}{\vec{\alpha}_1}
+		\mat{S}_{\vec{\theta}}
 	}
 	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{y}_{1:d}} \\
 %
@@ -897,7 +897,7 @@ We then repeat with the new $\vec{a}_0$ and $\mat{Q}$ for a given number of iter
 	\normalC{\vec{\alpha}_0}{
 		\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}
 	}{ % end of arg2 of normalC
-		\optor{\mat{S}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}
+		\mat{S}_{\vec{\theta}}
 	}
 	\particS{w}{t}{i}\dirac{\vec{\alpha}_1 - \particS{\vec{\alpha}}{1}{i}}
 \end{split}\end{equation} %
@@ -908,26 +908,30 @@ $\optorC{\Prob_{\vec{\theta}}}{\vec{y}_{1:d}}{\vec{\alpha}_1, \vec{\alpha}_0} = 
 ~and have:
 
 \begin{equation}\begin{split}
-	\optor{\mat{S}_{\vec{\theta}}}{\vec{\alpha}}^{-1} &= 
+	\mat{S}_{\vec{\theta}}^{-1} &= 
 		\mat{Q}_0^{-1} + \mat{F}^{-1}\mat{Q}^{-1}\Lparen{\mat{F}^{-1}}^\top \\ 
 %
 	\optor{\vec{m}_{\vec{\theta}}}{\vec{\alpha}} &= 
-		\optor{\mat{S}_{\vec{\theta}}}{\vec{\alpha}}
-		\Lparen{\mat{Q}_0^{-1}\vec{a}_0 + \mat{F}^{-1}\mat{Q}^{-1}\vec{a}_0}
+		\mat{S}_{\vec{\theta}}
+		\Lparen{\mat{Q}_0^{-1}\vec{a}_0 + \mat{F}^{-1}\mat{Q}^{-1}\vec{a}}
 \end{split}\end{equation}%
 %
 Thus, we end with:
 
 \begin{equation}\begin{split}
 \vec{T}_1^{(\vec{\theta})} \approx  
-	\sum_{i = 1}^{N_s} \hspace{15pt} & \hspace{-15pt} \left(
-		\particS{w}{1}{i}\particS{\vec{\alpha}}{1}{i}\Lparen{\particS{\vec{\alpha}}{1}{i}}^\top 
-		+ \mat{F}\mat{Q}_0\mat{F}^\top \right. \\
+	\sum_{i = 1}^{N_s} \hspace{30pt} & \hspace{-30pt} \particS{w}{1}{i}\left(
+		\particS{\vec{\alpha}}{1}{i}\Lparen{\particS{\vec{\alpha}}{1}{i}}^\top \right. \\
 %
-	& \left. - \particS{w}{1}{i}\mat{F}\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}
+	&  -\mat{F}\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}
 		\Lparen{\particS{\vec{\alpha}}{1}{i}}^\top
-	- \particS{w}{1}{i}\particS{\vec{\alpha}}{1}{i}
-		\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}^\top\mat{F}^\top \right)
+	- \particS{\vec{\alpha}}{1}{i}
+		\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}^\top\mat{F}^\top \\
+%
+	& \left. + \mat{F}
+		\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}
+		\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}^\top
+	\mat{F}^\top \right) + \mat{S}_{\vec{\theta}} 
 \end{split}\end{equation}
 
 \section{Implementation}

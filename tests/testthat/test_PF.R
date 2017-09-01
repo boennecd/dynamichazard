@@ -298,14 +298,18 @@ test_that("compute_summary_stats gives previous results", {
 
   compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
 
+  Q_0 <- diag(1, 2)
+  Q <- diag(0.1, 2)
+  a_0 <- c(-3.6, 0)
+
   test_func <- function(data_file, test_file){
     q <- bquote({
       cloud_example <- read_to_test(.(data_file))$clouds
 
       #####
       # Test that multithreaded version gives the same
-      sum_stats <- compute_summary_stats(cloud_example, 1)
-      s2 <- compute_summary_stats(cloud_example, 4)
+      sum_stats <- compute_summary_stats(cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0)
+      s2 <- compute_summary_stats(cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0)
 
       expect_equal(sum_stats, s2)
 
@@ -314,6 +318,8 @@ test_that("compute_summary_stats gives previous results", {
       # save_to_test(sum_stats, .(test_file))
       expect_equal(sum_stats, read_to_test(.(test_file)), tolerance = 1.49e-08)
     })
+
+    eval(q, envir = parent.frame())
   }
 
   test_func("local_tests/PF_head_neck", "local_tests/compute_summary_stats")

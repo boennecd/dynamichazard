@@ -397,7 +397,38 @@ struct PF_summary_stats {
   std::vector<arma::mat> E_x_less_x_less_one_outers;
 };
 
-static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed_clouds){
+static arma::mat get_E_x_less_x_less_one_outer_at_one(
+  const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
+  const cloud &cl){
+  // TODO: make chol and reduce computational cost
+  arma::uword n_elem = a_0.n_elem;
+
+  arma::mat ans(n_elem, n_elem, arma::fill::zeros);
+  arma::mat S_inv = arma::inv(Q) + arma::inv(Q_0);
+  arma::vec a_0_term = solve(Q_0, a_0);
+
+  for(auto it_p = cl.begin(); it_p != cl.end(); ++it_p){
+    const arma::vec &state = it_p->get_state();
+    arma::vec m = a_0_term + solve(Q, state);
+    m = arma::solve(S_inv, m);
+    double weight = exp(it_p->log_weight);
+    m *= sqrt(weight);
+    arma::vec tmp = sqrt(weight) * state;
+
+    // TODO: use rank one updates
+    ans += tmp * tmp.t()
+      - m * tmp.t() - tmp * m.t()
+      + m * m.t();
+  }
+
+  ans += arma::inv(S_inv);
+
+  return ans;
+}
+
+static PF_summary_stats compute_summary_stats(
+    const std::vector<cloud> &smoothed_clouds,
+    const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0){
   PF_summary_stats ans;
   std::vector<arma::vec> &E_xs = ans.E_xs;
   std::vector<arma::mat> &E_x_less_x_less_one_outers = ans.E_x_less_x_less_one_outers;
@@ -407,7 +438,7 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
 
   auto it_cl = smoothed_clouds.begin();
   for(unsigned int i = 0; i < n_periods; ++i, ++it_cl){
-    // TODO: do something different at time 1?
+    const bool is_first = i == 0;
     const bool is_last = i == n_periods - 1;
 
     unsigned int n_part = it_cl->size();
@@ -419,7 +450,7 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
       double weight = exp(it_p->log_weight);
 
       E_x += weight * it_p->get_state();
-      if(is_last)
+      if(is_last || is_first)
         continue;
 
       arma::vec inter = it_p->get_state() - it_p->parent->get_state();
@@ -432,6 +463,10 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
         arma::vec inter = it_p->child->get_state() - it_p->get_state();
         sym_mat_rank_one_update(exp(it_p->log_weight), inter, E_x_less_x_less_one_outer);
       }
+
+    } else if(is_first){
+      E_x_less_x_less_one_outer =
+        get_E_x_less_x_less_one_outer_at_one(a_0, Q, Q_0, *it_cl);
     }
 
     E_xs.push_back(std::move(E_x));
@@ -443,7 +478,9 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
 }
 
 static PF_summary_stats compute_summary_stats(
-    const std::vector<std::vector<smoother_output::particle_pairs>> &transition_likelihoods){
+    const std::vector<std::vector<smoother_output::particle_pairs>> &transition_likelihoods,
+    const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
+    const cloud &first_smoothed_cloud){
   PF_summary_stats ans;
   std::vector<arma::vec> &E_xs = ans.E_xs;
   std::vector<arma::mat> &E_x_less_x_less_one_outers = ans.E_x_less_x_less_one_outers;
@@ -453,7 +490,6 @@ static PF_summary_stats compute_summary_stats(
 
   auto it_trans = transition_likelihoods.begin();
   for(unsigned int i = 0; i < n_periods; ++i, ++it_trans){
-    // TODO: need special treatment at time 0?
     const bool is_first = i == 0;
 
     unsigned int n_part = it_trans->size();
@@ -500,6 +536,11 @@ static PF_summary_stats compute_summary_stats(
 }
 #endif
 
+    if(is_first){
+      E_x_less_x_less_one_outer =
+        get_E_x_less_x_less_one_outer_at_one(a_0, Q, Q_0, first_smoothed_cloud);
+    }
+
     E_xs.push_back(std::move(E_x));
     E_x_less_x_less_one_outer = arma::symmatu(E_x_less_x_less_one_outer);
     E_x_less_x_less_one_outers.push_back(std::move(E_x_less_x_less_one_outer));
@@ -509,25 +550,30 @@ static PF_summary_stats compute_summary_stats(
 }
 
 static PF_summary_stats compute_summary_stats(
-    const smoother_output sm_output, unsigned int n_threads){
+    const smoother_output sm_output, unsigned int n_threads,
+    const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0){
 #ifdef _OPENMP
   omp_set_num_threads(n_threads);
 #endif
 
   if(sm_output.transition_likelihoods.size() == 0){
-    return(compute_summary_stats(sm_output.smoothed_clouds));
+    return(compute_summary_stats(
+        sm_output.smoothed_clouds, a_0, Q, Q_0));
   }
 
-  return(compute_summary_stats(sm_output.transition_likelihoods));
+  return(compute_summary_stats(
+      sm_output.transition_likelihoods, a_0, Q, Q_0,
+      sm_output.smoothed_clouds.front()));
 }
 
 // [[Rcpp::export]]
 Rcpp::List compute_summary_stats(
-    const Rcpp::List &rcpp_list, unsigned int n_threads){
+    const Rcpp::List &rcpp_list, unsigned int n_threads,
+    const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0){
   PF_summary_stats stats;
   {
     auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
-    stats = compute_summary_stats(sm_output, n_threads);
+    stats = compute_summary_stats(sm_output, n_threads, a_0, Q, Q_0);
   }
 
   unsigned int n_periods = stats.E_xs.size();
