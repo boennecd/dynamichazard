@@ -3,6 +3,7 @@
 #include "PF/resamplers.h"
 #include "PF/densities.h"
 #include "arma_BLAS_LAPACK.h"
+#include "R_BLAS_LAPACK.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -401,8 +402,7 @@ struct PF_summary_stats {
 static arma::mat get_E_x_less_x_less_one_outer_at_one(
   const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
   const cloud &cl){
-  // TODO: make chol and reduce computational cost
-  const arma::uword n_elem = a_0.n_elem;
+  const int n_elem = a_0.n_elem;
   const unsigned int n_particles = cl.size();
   auto cl_begin = cl.begin();
 
@@ -429,13 +429,23 @@ static arma::mat get_E_x_less_x_less_one_outer_at_one(
     arma::vec m = a_0_term + solve_w_precomputed_chol(Q_chol, state);
     m = solve_w_precomputed_chol(S_inv_chol, m);
     double weight = exp(it_p->log_weight);
-    m *= sqrt(weight);
-    arma::vec tmp = sqrt(weight) * state;
+    double neg_weight = -weight;
+    const static int inc = 1;
 
-    // TODO: use rank one updates
-    my_ans += tmp * tmp.t()
-      - m * tmp.t() - tmp * m.t()
-      + m * m.t();
+    // Could use dsyrk and dsyr2k
+    // This parts only sets the upper triangular part of the matrix
+    sym_mat_rank_one_update(weight, state, my_ans);
+    sym_mat_rank_one_update(weight, m, my_ans);
+    R_BLAS_LAPACK::dger(
+      &n_elem /* M */, &n_elem /* N */, &neg_weight /* ALPHA */,
+      state.memptr() /* X */, &inc /* INCX*/,
+      m.memptr() /* Y */, &inc /* INCY */,
+      my_ans.memptr() /* A */, &n_elem /* LDA */);
+    R_BLAS_LAPACK::dger(
+      &n_elem, &n_elem, &neg_weight,
+      m.memptr() /* swapped */, &inc ,
+      state.memptr() /* swapped */, &inc,
+      my_ans.memptr(), &n_elem);
   }
 #ifdef _OPENMP
 #pragma omp critical(get_E_x_less_x_less_one_outer_at_one)

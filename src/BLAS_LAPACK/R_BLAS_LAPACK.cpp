@@ -215,4 +215,16 @@ namespace R_BLAS_LAPACK {
     F77_NAME(dtrmv)(
         uplo, trans, diag, n, a, lda, x, incx);
   }
+
+  void dger(
+      const int *m, const int *n, const double *alpha,
+      const double *x, const int *incx,
+      const double *y, const int *incy,
+      double *a, const int *lda){
+    F77_NAME(dger)(
+        m, n, alpha,
+        x, incx,
+        y, incy,
+        a, lda);
+  }
 }

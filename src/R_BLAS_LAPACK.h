@@ -34,4 +34,10 @@ namespace R_BLAS_LAPACK {
       const char *uplo, const char *trans, const char *diag,
       const int *n, const double *a, const int *lda,
       double *x, const int *incx);
+
+  void dger(
+      const int *m, const int *n, const double *alpha,
+      const double *x, const int *incx,
+      const double *y, const int *incy,
+      double *a, const int *lda);
 }
