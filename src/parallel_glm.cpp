@@ -88,11 +88,6 @@ class parallelglm_class {
         double z = (*eta - *offset) + (*y - mu)/mu_eta_val;
         double w = (*weight * mu_eta_val * mu_eta_val)/varmu;
 
-        /* TODO: delete
-        Rcpp::Rcout << "eta "<< *eta << "\t offset " << *offset << "\t g "<< mu << "\t gprime "<< mu_eta_val << "\t var "<< varmu << "\t z "<<
-          z << "\t w " << w << "\t" << std::endl;
-        */
-
         my_XtopWz += my_X.col(i) * (w * z);
         sym_mat_rank_one_update(w, my_X.col(i), my_XtopWX);
       }
@@ -169,7 +164,6 @@ public:
 
       compute_hessian_n_score(data, i == 0);
 
-      /* TODO: replace with other LINPACK method to solve? */
       beta = arma::solve(
         data.XtopWX, data.XtopWz, arma::solve_opts::no_approx);
 

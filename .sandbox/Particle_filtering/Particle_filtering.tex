@@ -799,7 +799,7 @@ We can also use a bootstrap like filter by sampling from:
 We can evaluate the log likelihood for a particular value of $\vec{\theta} = \Lbrace{\mat{Q}, \mat{Q}_0, \vec{a}_0}$ as described in \citet[page 5]{doucet09} and \citet[page 193]{malik11} using the forward particle filter shown in algorithm~\ref{alg:forward}.
 
 \section{Parameter estimation}
-We can use the EM-algorithm \citep{dempster77} to estimate $\mat{Q}$ and $\vec{a}_0$ elements of $\vec{\theta} = \Lbrace{\mat{Q}, \mat{Q}_0, \vec{a}_0}$. We do this by running algorithm~\ref{alg:ONsmoother} for with the current $\vec{\theta}$. Then we compute the so-called \emph{smoothed additive functional} or just summary statistics:
+We can use the EM-algorithm \citep{dempster77} to estimate $\mat{Q}$ and $\vec{a}_0$ elements of $\vec{\theta} = \Lbrace{\mat{Q}, \mat{Q}_0, \vec{a}_0}$. We do this by running algorithm~\ref{alg:ONsmoother} for the current $\vec{\theta}$. Then we compute the so-called \emph{smoothed additive functional} or summary statistics:
 
 \begin{equation}\begin{split}
 \vec{t}_t^{(\vec{\theta})} &= \int_{\vec{\alpha}_t} \vec{\alpha}_t 

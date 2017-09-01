@@ -1,5 +1,6 @@
 #include "sample_funcs.h"
 #include <RcppArmadilloExtensions/sample.h>
+#include "R_BLAS_LAPACK.h"
 
 arma::uvec sample_indices(arma::vec &probs){
   return sample_indices(probs.n_elem, probs);
@@ -50,10 +51,17 @@ arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs){
 
 // --------------------------------------- //
 
-arma::mat mvrnorm(arma::uword n, const arma::vec mu, const arma::mat sigma_chol){
-  int ncols = sigma_chol.n_cols;
-  arma::mat Y = arma::randn(n, ncols);
-  return arma::repmat(mu, 1, n).t() + Y * sigma_chol /* TODO can be replaced by BLAS dtrmv */;
+arma::mat mvrnorm(const int m, const arma::vec mu, const arma::mat sigma_chol){
+  const int n = sigma_chol.n_cols;
+  arma::mat Y = arma::randn(m, n);
+  // Y <-- Y * chol(Sigma)
+  const double alpha = 1.;
+  R_BLAS_LAPACK::dtrmm(
+    "R" /* side */, "U" /* UPLO */, "N" /* TRANSA */, "N" /* DIAG */,
+    &m /* M */, &n /* N */, &alpha /* ALPHA */,
+    sigma_chol.memptr() /* A */, &n /* LDA */,
+    Y.memptr() /* B */, &m /* LDB */);
+  return arma::repmat(mu, 1, m).t() + Y;
 }
 
 arma::vec mvrnorm(const arma::vec mu, const arma::mat sigma_chol){

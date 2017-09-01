@@ -84,7 +84,7 @@ namespace R_BLAS_LAPACK {
     }
   };
 
-  void tri_mat_times_vec(double *A, double *x, int n, int lda, bool is_transpose){
+  void tri_mat_times_vec(const double *A, double *x, int n, int lda, bool is_transpose){
     // Computes x <-- A * x where A is a triangular matrix
     // Computes x <-- A^T * x if TRANS = 'T' or 't' and not it 'N' or 'n'
     // A is DOUBLE PRECISION array of DIMENSION ( LDA, n ).
@@ -196,5 +196,23 @@ namespace R_BLAS_LAPACK {
       str << "Got error code '" << info << "' when using LAPACK dtrtrs";
       Rcpp::stop(str.str());
     }
+  }
+
+  void dtrmm(
+      const char *side, const char *uplo, const char *transa,
+      const char *diag, const int *m, const int *n,
+      const double *alpha, const double *a, const int *lda,
+      double *b, const int *ldb){
+    F77_NAME(dtrmm)(
+        side, uplo, transa, diag, m, n, alpha, a, lda,
+        b, ldb);
+  }
+
+  void dtrmv(
+      const char *uplo, const char *trans, const char *diag,
+      const int *n, const double *a, const int *lda,
+      double *x, const int *incx){
+    F77_NAME(dtrmv)(
+        uplo, trans, diag, n, a, lda, x, incx);
   }
 }

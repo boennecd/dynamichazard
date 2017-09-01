@@ -263,19 +263,15 @@ test_that("PF_EM gives previous results on head neck data set", {
       these_args$control <- c(these_args$control, smoother = .(smoother))
 
       set.seed(98612415)
-      sink("tmp.txt") # TODO: delete
       result <- suppressWarnings( # Supressed as there is a warning about not converging
         do.call(PF_EM, these_args))
-      sink() # TODO: delete
 
       #####
       # Test that result are reproducable
       r2 <- result$call
       r2[["control"]] <- c(eval(r2$control, environment()),
                            list(seed = result$seed))
-      sink("tmptmp.txt") # TODO: delete
       r2  <- suppressWarnings(eval(r2, environment()))
-      sink() # TODO: delete
 
       result$call <- NULL
       r2$call <- NULL

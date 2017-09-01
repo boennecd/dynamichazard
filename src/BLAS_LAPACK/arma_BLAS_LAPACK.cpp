@@ -29,7 +29,7 @@ void symmetric_mat_chol(const arma::mat& A, arma::mat & out){
   out = arma::trimatl(out); // keep only lower diagonal
 }
 
-void tri_mat_times_vec(arma::mat &A, const arma::vec &x, arma::vec &out, bool is_transpose){
+void tri_mat_times_vec(const arma::mat &A, const arma::vec &x, arma::vec &out, bool is_transpose){
   // Computes x <-- A * x where A is a triangular matrix
   // Computes x <-- A^T * x if TRANS = 'T' or 't' and not it 'N' or 'n'
   // A is DOUBLE PRECISION array of DIMENSION ( LDA, n ).
@@ -51,7 +51,7 @@ void tri_mat_times_vec(arma::mat &A, const arma::vec &x, arma::vec &out, bool is
   R_BLAS_LAPACK::tri_mat_times_vec(A.memptr(), out.memptr(), n, n, is_transpose);
 }
 
-void tri_mat_times_vec(arma::mat &A, arma::vec &out, bool is_transpose){
+void tri_mat_times_vec(const arma::mat &A, arma::vec &out, bool is_transpose){
   int n = A.n_cols;
   R_BLAS_LAPACK::tri_mat_times_vec(A.memptr(), out.memptr(), n, n, is_transpose);
 }
