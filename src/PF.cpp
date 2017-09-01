@@ -3,6 +3,10 @@
 #include "PF/resamplers.h"
 #include "PF/densities.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 // Util function
 static inline unsigned int get_cloud_idx(
     const particle *const p){
@@ -418,22 +422,20 @@ static PF_summary_stats compute_summary_stats(const std::vector<cloud> &smoothed
       if(is_last)
         continue;
 
-      arma::vec inter = sqrt(weight) * (it_p->get_state() - it_p->parent->get_state());
-      // TODO: use BLAS outer product rank one update
-      E_x_less_x_less_one_outer += inter * inter.t();
+      arma::vec inter = it_p->get_state() - it_p->parent->get_state();
+      sym_mat_rank_one_update(weight, inter, E_x_less_x_less_one_outer);
     }
 
     if(is_last){
       --it_cl;
       for(auto it_p = it_cl->begin(); it_p != it_cl->end(); ++it_p){
-        arma::vec inter =
-          sqrt(exp(it_p->log_weight)) * (it_p->child->get_state() - it_p->get_state());
-        // TODO: use BLAS outer product rank one update
-        E_x_less_x_less_one_outer += inter * inter.t();
+        arma::vec inter = it_p->child->get_state() - it_p->get_state();
+        sym_mat_rank_one_update(exp(it_p->log_weight), inter, E_x_less_x_less_one_outer);
       }
     }
 
     E_xs.push_back(std::move(E_x));
+    E_x_less_x_less_one_outer = arma::symmatu(E_x_less_x_less_one_outer);
     E_x_less_x_less_one_outers.push_back(std::move(E_x_less_x_less_one_outer));
   }
 
@@ -458,11 +460,22 @@ static PF_summary_stats compute_summary_stats(
     arma::vec E_x(n_elem, arma::fill::zeros);
     arma::mat E_x_less_x_less_one_outer(n_elem, n_elem, arma::fill::zeros);
 
-    auto it_elem = it_trans->begin();
-    for(unsigned int j = 0; j < n_part; ++j, ++it_elem){
+    auto it_trans_begin = it_trans->begin();
+#ifdef _OPENMP
+#pragma omp parallel
+{
+#endif
+    arma::vec my_E_x(n_elem, arma::fill::zeros);
+    arma::mat my_E_x_less_x_less_one_outer(n_elem, n_elem, arma::fill::zeros);
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+    for(unsigned int j = 0; j < n_part; ++j){
+      auto it_elem = it_trans_begin + j;
       const particle *this_p = it_elem->p;
       double weight_outer = exp(this_p->log_weight);
-      E_x += weight_outer * this_p->get_state();
+      my_E_x += weight_outer * this_p->get_state();
 
       if(is_first /* TODO: what to do at time 1 */)
         continue;
@@ -472,20 +485,35 @@ static PF_summary_stats compute_summary_stats(
         const particle *pair_p = it_pair->p;
         double weight_inner = exp(this_p->log_weight + it_pair->log_weight);
 
-        arma::vec inter = sqrt(weight_inner) * (this_p->get_state() - pair_p->get_state());
-        // TODO: use BLAS outer product rank one update
-        E_x_less_x_less_one_outer += inter * inter.t();
+        arma::vec inter =  this_p->get_state() - pair_p->get_state();
+        sym_mat_rank_one_update(weight_inner, inter, my_E_x_less_x_less_one_outer);
       }
     }
+#ifdef _OPENMP
+#pragma omp critical(compute_summary_stats_w_tran_like)
+{
+#endif
+    E_x += my_E_x;
+    E_x_less_x_less_one_outer += my_E_x_less_x_less_one_outer;
+#ifdef _OPENMP
+}
+}
+#endif
 
     E_xs.push_back(std::move(E_x));
+    E_x_less_x_less_one_outer = arma::symmatu(E_x_less_x_less_one_outer);
     E_x_less_x_less_one_outers.push_back(std::move(E_x_less_x_less_one_outer));
   }
 
   return ans;
 }
 
-static PF_summary_stats compute_summary_stats(const smoother_output sm_output){
+static PF_summary_stats compute_summary_stats(
+    const smoother_output sm_output, unsigned int n_threads){
+#ifdef _OPENMP
+  omp_set_num_threads(n_threads);
+#endif
+
   if(sm_output.transition_likelihoods.size() == 0){
     return(compute_summary_stats(sm_output.smoothed_clouds));
   }
@@ -494,11 +522,12 @@ static PF_summary_stats compute_summary_stats(const smoother_output sm_output){
 }
 
 // [[Rcpp::export]]
-Rcpp::List compute_summary_stats(const Rcpp::List &rcpp_list){
+Rcpp::List compute_summary_stats(
+    const Rcpp::List &rcpp_list, unsigned int n_threads){
   PF_summary_stats stats;
   {
     auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
-    stats = compute_summary_stats(sm_output);
+    stats = compute_summary_stats(sm_output, n_threads);
   }
 
   unsigned int n_periods = stats.E_xs.size();

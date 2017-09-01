@@ -301,17 +301,29 @@ test_that("compute_summary_stats gives previous results", {
   skip_on_cran()
 
   compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
-  cloud_example <- read_to_test("local_tests/PF_head_neck")$clouds
-  sum_stats <- compute_summary_stats(cloud_example)
 
-  # save_to_test(sum_stats, "local_tests/compute_summary_stats")
-  expect_equal(sum_stats, read_to_test("local_tests/compute_summary_stats"), tolerance = 1.49e-08)
+  test_func <- function(data_file, test_file){
+    q <- bquote({
+      cloud_example <- read_to_test(.(data_file))$clouds
+
+      #####
+      # Test that multithreaded version gives the same
+      sum_stats <- compute_summary_stats(cloud_example, 1)
+      s2 <- compute_summary_stats(cloud_example, 4)
+
+      expect_equal(sum_stats, s2)
+
+      #####
+      # Test versus previous results
+      # save_to_test(sum_stats, .(test_file))
+      expect_equal(sum_stats, read_to_test(.(test_file)), tolerance = 1.49e-08)
+    })
+  }
+
+  test_func("local_tests/PF_head_neck", "local_tests/compute_summary_stats")
 
   ######
   # Test with method from Brier et al (2010)
-  cloud_example <- read_to_test("local_tests/PF_head_neck_w_Brier_method")$clouds
-  sum_stats <- compute_summary_stats(cloud_example)
-
-  # save_to_test(sum_stats, "local_tests/compute_summary_stats_w_Brier_method")
-  expect_equal(sum_stats, read_to_test("local_tests/compute_summary_stats_w_Brier_method"), tolerance = 1.49e-08)
+  test_func("local_tests/PF_head_neck_w_Brier_method",
+            "local_tests/compute_summary_stats_w_Brier_method")
 })

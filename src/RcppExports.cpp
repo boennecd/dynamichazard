@@ -350,13 +350,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // compute_summary_stats
-Rcpp::List compute_summary_stats(const Rcpp::List& rcpp_list);
-RcppExport SEXP _dynamichazard_compute_summary_stats(SEXP rcpp_listSEXP) {
+Rcpp::List compute_summary_stats(const Rcpp::List& rcpp_list, unsigned int n_threads);
+RcppExport SEXP _dynamichazard_compute_summary_stats(SEXP rcpp_listSEXP, SEXP n_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::List& >::type rcpp_list(rcpp_listSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_summary_stats(rcpp_list));
+    Rcpp::traits::input_parameter< unsigned int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_summary_stats(rcpp_list, n_threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -404,7 +405,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 10},
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 21},
-    {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 1},
+    {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 2},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {NULL, NULL, 0}
 };

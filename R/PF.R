@@ -249,7 +249,7 @@ PF_EM <- function(
     a_0_old <- eval(fit_call$a_0, environment())
     Q_old <- eval(fit_call$Q, environment())
 
-    sum_stats <- compute_summary_stats(clouds)
+    sum_stats <- compute_summary_stats(clouds, n_threads)
     a_0 <- drop(sum_stats[[1]]$E_xs)
     Q <- matrix(0., length(a_0), length(a_0))
     for(j in 2:length(sum_stats))

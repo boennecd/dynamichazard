@@ -85,8 +85,8 @@ PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop,
     .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother)
 }
 
-compute_summary_stats <- function(rcpp_list) {
-    .Call(`_dynamichazard_compute_summary_stats`, rcpp_list)
+compute_summary_stats <- function(rcpp_list, n_threads) {
+    .Call(`_dynamichazard_compute_summary_stats`, rcpp_list, n_threads)
 }
 
 get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model = TRUE) {

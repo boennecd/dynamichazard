@@ -105,8 +105,6 @@ public:
   inline static input_for_normal_apprx_w_cloud_mean resampler(
       const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome,
       bool &did_resample){
-    // TODO: need to change weights when doing backward filter?
-
     /* Find weighted mean estimate */
     arma::vec alpha_bar = PF_cloud.get_weigthed_mean();
 
@@ -193,8 +191,6 @@ public:
   inline static input_for_normal_apprx_w_particle_mean resampler(
       const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome,
       bool &did_resample){
-    // TODO: need to change weights when doing backward filter?
-
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
     auto ans = compute_mu_n_Sigma_from_normal_apprx_w_particles
