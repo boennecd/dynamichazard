@@ -238,6 +238,8 @@
 
 \newcommand{\propAproxC}[2]{\optorC{\widetilde{p}}{#1}{#2}}
 
+\newcommand{\dirac}[1]{\optor{\delta}{#1}}
+
 % Normal distribution
 \newcommand{\normal}[2]{\optor{\mathcal{N}}{#1,#2}}
 \newcommand{\normalC}[3]{\optorC{\mathcal{N}}{#1}{#2,#3}}
@@ -827,16 +829,106 @@ We can use the EM-algorithm \citep{dempster77} to estimate $\mat{Q}$ and $\vec{a
 \end{split}\end{equation}%
 %
 % 
-where $\vec{\alpha}_{s:t} = \Lbrace{\vec{\alpha}_s, \vec{\alpha}_{s +1}, \dots \vec{\alpha}_t}$ and the subscript in $\Prob$ denotes that it is the probability given the parameter $\vec{\theta}$. I use that the normalized weights $\particS{w}{t}{i}$ and the pairs $\Lbrace{\partic{\vec{\alpha}}{t-1}{j_i}, \particS{\vec{\alpha}}{t}{i}, \particB{\vec{\alpha}}{t + 1}{k_i}}$ form a discrete approximation of $\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_{(t-1):(t+1)}}{{\vec{y}_{1:d}}}$. The update of $\vec{a}_0$ and $\mat{Q}$ given the summary statistics is:
+where $\vec{\alpha}_{s:t} = \Lbrace{\vec{\alpha}_s, \vec{\alpha}_{s +1}, \dots \vec{\alpha}_t}$ and the subscript in $\Prob$ denotes that it is the probability given the parameter $\vec{\theta}$. I use that the normalized weights $\particS{w}{t}{i}$ and the pairs $\Lbrace{\partic{\vec{\alpha}}{t-1}{j_i}, \particS{\vec{\alpha}}{t}{i}, \particB{\vec{\alpha}}{t + 1}{k_i}}$ form a discrete approximation of $\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_{(t-1):(t+1)}}{{\vec{y}_{1:d}}}$. That is, 
+
+\begin{equation}\begin{split}
+\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_{(t-1):{t+1}}}{\vec{y}_{1:d}} \hspace{-50pt} & \\
+%
+	& \approx \sum_{i=1}^{N_s}\particS{w}{t}{i} 
+		\dirac{\vec{\alpha}_{t - 1} - \partic{\vec{\alpha}}{t-1}{j_i}}
+		\dirac{\vec{\alpha}_{t} - \particS{\vec{\alpha}}{t}{i}}
+		\dirac{\vec{\alpha}_{t + 1} - \particB{\vec{\alpha}}{t + 1}{k_i}}
+\end{split}\end{equation} %
+%
+% 
+where $\dirac{\cdot}$ is the Dirac delta function. The update of $\vec{a}_0$ and $\mat{Q}$ given the summary statistics is:
 
 \begin{equation}
 \vec{a}_0 = \vec{t}_0^{(\vec{\theta})} \qquad
 %
-\mat{Q} = \frac{1}{d}\sum_{t = 1}^d\vec{T}_t^{(\vec{\theta})}
+\mat{Q} = \frac{1}{d}\sum_{t = 1}^d \mat{R}^\top\vec{T}_t^{(\vec{\theta})}\mat{R}
 \end{equation}
 
 We then repeat with the new $\vec{a}_0$ and $\mat{Q}$ for a given number of iterations or till a convergence criteria is satisfied.  See \cite{kantas15}, \cite{del10} and \cite{schon11} for further details on parameter estimation with particle filters.
 
+\begin{equation}\begin{split}
+\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1, \vec{\alpha}_0}{\vec{y}_{1:d}} \hspace{-50pt} & \\
+%
+& = \optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_0}{\vec{\alpha}_1, \vec{y}_{1:d}}
+	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{y}_{1:d}} \\
+%
+& = \frac{
+		\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1, \vec{y}_{1:d}}{\vec{\alpha}_0}
+		\optor{\Prob_{\vec{\theta}}}{\vec{\alpha}_0}
+	}{ % end of frac arg1
+		\optor{\Prob_{\vec{\theta}}}{\vec{\alpha}_1, \vec{y}_{1:d}}
+	} % end of frac arg2
+	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{y}_{1:d}} \\
+%
+& = \frac{
+		\optorC{\Prob_{\vec{\theta}}}{\vec{y}_{1:d}}{\vec{\alpha}_1, \vec{\alpha}_0}
+		\optorC{f_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{\alpha}_0}
+		\optor{\Prob_{\vec{\theta}}}{\vec{\alpha}_0}
+	}{ % end of frac arg1
+		\optor{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}
+		\optorC{\Prob_{\vec{\theta}}}{\vec{y}_{1:d}}{\vec{\alpha}_1}
+	} % end of frac arg2
+	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{y}_{1:d}} \\
+%
+& = \frac{
+		\optorC{f_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{\alpha}_0}
+		\optor{\Prob_{\vec{\theta}}}{\vec{\alpha}_0}
+	}{ % end of frac arg1
+		\optor{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}
+	} % end of frac arg2
+	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{y}_{1:d}} \\
+%
+& = \optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_0}{\vec{\alpha}_1}
+	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{y}_{1:d}} \\
+%
+& = \normalC{\vec{\alpha}_0}{
+		\optor{\vec{m}_{\vec{\theta}}}{\vec{\alpha}_1}
+	}{ % end of arg2 of normalC
+		\optor{\mat{S}_{\vec{\theta}}}{\vec{\alpha}_1}
+	}
+	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1}{\vec{y}_{1:d}} \\
+%
+& \approx \sum_{i=1}^{N_s}
+	\normalC{\vec{\alpha}_0}{
+		\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}
+	}{ % end of arg2 of normalC
+		\optor{\mat{S}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}
+	}
+	\particS{w}{t}{i}\dirac{\vec{\alpha}_1 - \particS{\vec{\alpha}}{1}{i}}
+\end{split}\end{equation} %
+%
+% 
+where we use that %
+$\optorC{\Prob_{\vec{\theta}}}{\vec{y}_{1:d}}{\vec{\alpha}_1, \vec{\alpha}_0} = \optorC{\Prob_{\vec{\theta}}}{\vec{y}_{1:d}}{\vec{\alpha}_1}$%
+~and have:
+
+\begin{equation}\begin{split}
+	\optor{\mat{S}_{\vec{\theta}}}{\vec{\alpha}}^{-1} &= 
+		\mat{Q}_0^{-1} + \mat{F}^{-1}\mat{Q}^{-1}\Lparen{\mat{F}^{-1}}^\top \\ 
+%
+	\optor{\vec{m}_{\vec{\theta}}}{\vec{\alpha}} &= 
+		\optor{\mat{S}_{\vec{\theta}}}{\vec{\alpha}}
+		\Lparen{\mat{Q}_0^{-1}\vec{a}_0 + \mat{F}^{-1}\mat{Q}^{-1}\vec{a}_0}
+\end{split}\end{equation}%
+%
+Thus, we end with:
+
+\begin{equation}\begin{split}
+\vec{T}_1^{(\vec{\theta})} \approx  
+	\sum_{i = 1}^{N_s} \hspace{15pt} & \hspace{-15pt} \left(
+		\particS{w}{1}{i}\particS{\vec{\alpha}}{1}{i}\Lparen{\particS{\vec{\alpha}}{1}{i}}^\top 
+		+ \mat{F}\mat{Q}_0\mat{F}^\top \right. \\
+%
+	& \left. - \particS{w}{1}{i}\mat{F}\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}
+		\Lparen{\particS{\vec{\alpha}}{1}{i}}^\top
+	- \particS{w}{1}{i}\particS{\vec{\alpha}}{1}{i}
+		\optor{\vec{m}_{\vec{\theta}}}{\particS{\vec{\alpha}}{1}{i}}^\top\mat{F}^\top \right)
+\end{split}\end{equation}
 
 \section{Implementation}
 The \verb|PF_EM| method in the \verb|dynamichazard| package contains an implementation of the above described method. You specify the number of particles by the \verb|N_first|, \verb|N_fw_n_bw| and \verb|N_smooth| argument for respectively the $N_f$, $N$ and $N_s$ in the algorithm \ref{alg:ONsmoother}-\ref{alg:backward}. We may want more particle in the smoothing step, $N_s > N$ as pointed out in the discussion in \citet[page 460 and 461]{fearnhead10}. Further, selecting $N_f > N$ may be preferable to ensure coverage of the state space at time $0$ and $d + 1$.

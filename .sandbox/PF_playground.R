@@ -1,7 +1,7 @@
 set.seed(12)
 n_vars <- 3
 sims <- test_sim_func_logit(
-  n_series = 200, n_vars = n_vars, t_0 = 0, t_max = 20,
+  n_series = 1e4, n_vars = n_vars, t_0 = 0, t_max = 20,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
   intercept_start = -3, sds = Q_true <- c(.05, rep(.2, n_vars)))
 Q_true <- diag(Q_true^2)
@@ -41,7 +41,7 @@ result <- PF_EM(
   Q = Q,
   control = list(N_fw_n_bw = 1e3, N_smooth = 1e3, N_first = 2e3,
                  n_threads = 7,
-                 smoother = "Brier_O_N_square"
+                 smoother = "Fearnhead_O_N"
                  ),
   trace = 2)
 sink()
