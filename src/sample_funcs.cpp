@@ -53,7 +53,10 @@ arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs){
 
 arma::mat mvrnorm(const int m, const arma::vec mu, const arma::mat sigma_chol){
   const int n = sigma_chol.n_cols;
-  arma::mat Y = arma::randn(m, n);
+
+  Rcpp::NumericVector rng_draw = Rcpp::rnorm(m * n);
+  arma::mat Y(&rng_draw[0], m, n, false /* don't copy */);
+
   // Y <-- Y * chol(Sigma)
   const double alpha = 1.;
   R_BLAS_LAPACK::dtrmm(

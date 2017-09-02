@@ -52,7 +52,7 @@ PF_effective_sample_size <- function(object){
 #'    N_fw_n_bw = 500,
 #'    N_first = 2500,
 #'    N_smooth = 2500,
-#'    n_max = 25,
+#'    n_max = 50,
 #'    n_threads = parallel::detectCores()),
 #'  trace = 1)
 #'

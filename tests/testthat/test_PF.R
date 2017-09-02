@@ -88,12 +88,6 @@ test_that("PF_smooth gives same results", {
       expect_false(all(old_seed == .Random.seed))
 
       #####
-      # Test versus previous computed values
-
-      # save_to_test(result, file_name = .(test_file_name))
-      expect_equal(result, read_to_test(.(test_file_name)), tolerance = 1.49e-08)
-
-      #####
       # Test that weights sum to one
       func <- .(get_func)
 
@@ -114,7 +108,15 @@ test_that("PF_smooth gives same results", {
       }
 
       #####
+      # Changing the seed changes the result
+      set.seed(1)
+      result_new_seed <- .(fit_quote)
+
+      expect_false(isTRUE(all.equal(result, result_new_seed)))
+
+      #####
       # Test that multithreaded version gives the same
+      set.seed(30302129)
       old_args <- args
       args$n_threads <- 7
 
@@ -124,11 +126,10 @@ test_that("PF_smooth gives same results", {
       args <- old_args
 
       #####
-      # Changing the seed changes the result
-      set.seed(1)
-      r_new_seed <- .(fit_quote)
+      # Test versus previous computed values
 
-      expect_false(isTRUE(all.equal(result, r_new_seed)))
+      # save_to_test(result, file_name = .(test_file_name))
+      expect_equal(result, read_to_test(.(test_file_name)), tolerance = 1.49e-08)
     })
 
     eval(q, envir = parent.frame())
@@ -139,8 +140,7 @@ test_that("PF_smooth gives same results", {
   test_func(
     quote({
       args$method <- "bootstrap_filter"
-      result <- do.call(PF_smooth, args)
-      result
+      do.call(PF_smooth, args)
     }),
     test_file_name = "local_tests/bootstrap_filter")
 
@@ -149,8 +149,7 @@ test_that("PF_smooth gives same results", {
   test_func(
     quote({
       args$method <- "PF_normal_approx_w_cloud_mean"
-      result <- do.call(PF_smooth, args)
-      result
+      do.call(PF_smooth, args)
     }),
     test_file_name = "local_tests/PF_normal_approx_w_cloud_mean")
 
@@ -159,8 +158,7 @@ test_that("PF_smooth gives same results", {
   test_func(
     quote({
       args$method <- "AUX_normal_approx_w_cloud_mean"
-      result <- do.call(PF_smooth, args)
-      result
+      do.call(PF_smooth, args)
     }),
     test_file_name = "local_tests/AUX_normal_approx_w_cloud_mean")
 
@@ -169,8 +167,7 @@ test_that("PF_smooth gives same results", {
   test_func(
     quote({
       args$method <- "PF_normal_approx_w_particles"
-      result <- do.call(PF_smooth, args)
-      result
+      do.call(PF_smooth, args)
     }),
     test_file_name = "local_tests/PF_normal_approx_w_particles")
 
@@ -179,8 +176,7 @@ test_that("PF_smooth gives same results", {
   test_func(
     quote({
       args$method <- "AUX_normal_approx_w_particles"
-      result <- do.call(PF_smooth, args)
-      result
+      do.call(PF_smooth, args)
     }),
     test_file_name = "local_tests/AUX_normal_approx_w_particles")
 
@@ -190,8 +186,7 @@ test_that("PF_smooth gives same results", {
     quote({
       args$method <- "AUX_normal_approx_w_particles"
       args$smoother <- "Brier_O_N_square"
-      result <- do.call(PF_smooth, args)
-      result
+      do.call(PF_smooth, args)
     }),
     test_file_name = "local_tests/Brier_O_N_square_AUX_normal_approx_w_particles")
 })
@@ -351,8 +346,9 @@ test_that("help page example runs and gives previous computed results", {
       N_fw_n_bw = 500,
       N_first = 2500,
       N_smooth = 2500,
-      n_max = 25,
-      n_threads = parallel::detectCores()))
+      n_max = 50,
+      n_threads = parallel::detectCores()),
+    trace = 1)
 
   # save_to_test(pf_fit[names(pf_fit) != "call"], "local_tests/survival_lung_example")
   expect_equal(pf_fit[names(pf_fit) != "call"], read_to_test("local_tests/survival_lung_example"), tolerance = 1.49e-08)

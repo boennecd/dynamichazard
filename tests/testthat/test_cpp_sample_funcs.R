@@ -67,6 +67,20 @@ test_that("mvrnorm gives expected sample mean and variance", {
   }
 })
 
+test_that("different seed gives different results", {
+  n <- 5
+  mu <- -2:2
+  Sigma <- matrix(.5, ncol=n, nrow = n)
+  diag(Sigma) <- 1:n
+
+  set.seed(1)
+  r1 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
+  set.seed(2)
+  r2 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
+
+  expect_false(isTRUE(all.equal(r1, r2)))
+})
+
 test_that("cpp systematic_resampling function gives the same as R version", {
   test_func <- function(n, probs){
     n_probs <- length(probs)
