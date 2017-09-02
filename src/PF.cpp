@@ -212,7 +212,7 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
     auto it_ans = transition_likelihoods.begin();
     // Time loop
     for(unsigned int i = 0; i < n_periods; ++i, ++it_trans, ++it_ans){
-      Rcpp::List input_at_t(*it_trans);
+      Rcpp::ListOf<Rcpp::List> input_at_t(*it_trans);
       unsigned int n_elem = input_at_t.size();
       std::vector<smoother_output::particle_pairs> &new_elems = *it_ans;
       new_elems.resize(n_elem);
@@ -220,22 +220,20 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
       cloud &fw_cloud = fw_clouds[i]; // starts at time 0
       cloud &sm_cloud = smooth_clouds[i]; // starts at time 1
 
-      auto it_input_at_t = input_at_t.begin();
-      auto it_elems = new_elems.begin();
       // Loop over first index of pair of particles
-      for(unsigned int j = 0; j < n_elem; ++j, ++it_input_at_t, ++it_elems){
-        smoother_output::particle_pairs &elem = *it_elems;
+      auto it_elems = new_elems.begin();
+      auto it_input = input_at_t.begin();
+      for(unsigned int j = 0; j < n_elem; ++j, ++it_elems, ++it_input){
         std::vector<smoother_output::pair> &transition_pairs =
-          elem.transition_pairs;
+          it_elems->transition_pairs;
 
-        Rcpp::List elem_info(*it_input_at_t);
-        unsigned int idx = Rcpp::as<unsigned int>(elem_info["bw_idx"]);
-        elem.p = get_cloud_idx(sm_cloud, idx);
+        Rcpp::List input(*it_input);
+        unsigned int idx = Rcpp::as<unsigned int>(input["bw_idx"]);
+        it_elems->p = get_cloud_idx(sm_cloud, idx);
+        Rcpp::IntegerVector fw_idx(Rcpp::as<Rcpp::IntegerVector>(input["fw_idx"]));
+        Rcpp::NumericVector weights(Rcpp::as<Rcpp::NumericVector>(input["weights"]));
 
-        arma::uvec fw_idx = Rcpp::as<arma::uvec>(elem_info["fw_idx"]);
-        arma::vec weights = Rcpp::as<arma::vec>(elem_info["weights"]);
-
-        unsigned int n_elem_inner = fw_idx.n_elem;
+        unsigned int n_elem_inner = fw_idx.size();
         transition_pairs.resize(n_elem_inner);
         auto it_idx = fw_idx.begin();
         auto it_w = weights.begin();
@@ -586,12 +584,8 @@ static PF_summary_stats compute_summary_stats(
 }
 
 static PF_summary_stats compute_summary_stats(
-    const smoother_output sm_output, unsigned int n_threads,
+    const smoother_output sm_output,
     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0){
-#ifdef _OPENMP
-  omp_set_num_threads(n_threads);
-#endif
-
   if(sm_output.transition_likelihoods.size() == 0){
     return(compute_summary_stats(
         sm_output.smoothed_clouds, a_0, Q, Q_0));
@@ -606,10 +600,14 @@ static PF_summary_stats compute_summary_stats(
 Rcpp::List compute_summary_stats(
     const Rcpp::List &rcpp_list, unsigned int n_threads,
     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0){
+#ifdef _OPENMP
+  omp_set_num_threads(n_threads);
+#endif
+
   PF_summary_stats stats;
   {
     auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
-    stats = compute_summary_stats(sm_output, n_threads, a_0, Q, Q_0);
+    stats = compute_summary_stats(sm_output, a_0, Q, Q_0);
   }
 
   unsigned int n_periods = stats.E_xs.size();

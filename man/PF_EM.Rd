@@ -33,7 +33,7 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 \item{trace}{Argument to get progress information. Zero will yield no info an larger integer values will yield incrementally more information.}
 }
 \value{
-TODO: write me
+An object of class \code{PF_EM}.
 }
 \description{
 Method to estimate the hyper parameters with an EM algorithm.
@@ -46,6 +46,7 @@ See the particle_filter vignette for details.
 The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
 \describe{
 \item{\code{method}}{Method for forward, backward and smoothing filter. See the particle_filter vignette for details.}
+\item{\code{smoother}}{TODO: write.}
 \item{\code{N_fw_n_bw}}{Number of particles to use in forward and backward filter.}
 \item{\code{N_first}}{Number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
 \item{\code{N_smooth}}{Number of particles to use in particle smoother.}
@@ -53,6 +54,46 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \item{\code{n_max}}{Maximum number of iterations of the EM algorithm.}
 \item{\code{n_threads}}{Maximum number threads to use in the computations.}
 \item{\code{forward_backward_ESS_threshold}}{Required effective sample size to not re-sample in the particle filters.}
+\item{\code{seed}}{seed to set at the start of every EM iteration.}
 }
 }
 
+\examples{
+#####
+# Fit model with lung data set from survival
+# Warning: this has a longer computation time
+
+\dontrun{
+library(dynamichazard)
+.lung <- lung[!is.na(lung$ph.ecog), ]
+pf_fit <- PF_EM(
+ Surv(time, status == 2) ~ ph.ecog + age,
+ data = .lung, by = 50, id = 1:nrow(.lung),
+ Q_0 = diag(1, 3), Q = diag(1, 3),
+ max_T = 800,
+ control = list(
+   N_fw_n_bw = 500,
+   N_first = 2500,
+   N_smooth = 2500,
+   n_max = 25,
+   n_threads = parallel::detectCores()),
+ trace = 1)
+
+# Plot state vector estimates
+plot(pf_fit, cov_index = 1)
+plot(pf_fit, cov_index = 2)
+plot(pf_fit, cov_index = 3)
+
+# Plot log-likelihood
+plot(pf_fit$log_likes)}
+
+#####
+# Can be compared with this example from ?coxph in R 3.4.1. Though, the above
+# only has a linear effect for age
+
+\dontrun{
+cox <- coxph(
+ Surv(time, status) ~ ph.ecog + tt(age), data= .lung,
+ tt=function(x,t,...) pspline(x + t/365.25))
+cox}
+}

@@ -200,9 +200,9 @@ plot.PF_clouds <- function(
 
   #####
   # Find means
-  .mean <- t(sapply(these_clouds, function(row){
+  .mean <- do.call(rbind, sapply(these_clouds, function(row){
     colSums(t(row$states[cov_index, , drop = FALSE]) * drop(row$weights))
-  }))
+  }, simplify = FALSE))
 
   #####
   # Find quantiles

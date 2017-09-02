@@ -1,4 +1,4 @@
-set.seed(12)
+set.seed(14)
 n_vars <- 3
 sims <- test_sim_func_logit(
   n_series = 250, n_vars = n_vars, t_0 = 0, t_max = 20,
@@ -27,7 +27,7 @@ ddfit <- ddhazard(
   id = sims$res$id,
   Q_0 = Q_0,
   Q = Q,
-  control = list(n_max = 10))
+  control = list(n_max = 25, eps = 1e-8))
 
 sink("tmp.txt")
 options(digits = 4)
@@ -41,8 +41,8 @@ result <- PF_EM(
   Q = Q,
   control = list(N_fw_n_bw = 500, N_smooth = 1e3, N_first = 2e3,
                  n_threads = 7,
-                 smoother = "Fearnhead_O_N"
-                 ),
+                 smoother = "Brier_O_N_square",
+                 n_max = 25),
   trace = 2)
 sink()
 

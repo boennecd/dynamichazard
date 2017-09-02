@@ -329,3 +329,29 @@ test_that("compute_summary_stats gives previous results", {
   test_func("local_tests/PF_head_neck_w_Brier_method",
             "local_tests/compute_summary_stats_w_Brier_method")
 })
+
+test_that("help page example runs and gives previous computed results", {
+  skip_on_cran()
+
+  .lung <- lung[!is.na(lung$ph.ecog), ]
+  pf_fit <- PF_EM(
+    Surv(time, status == 2) ~ ph.ecog + age,
+    data = .lung, by = 50, id = 1:nrow(.lung),
+    Q_0 = diag(1, 3), Q = diag(1, 3),
+    max_T = 800,
+    control = list(
+      N_fw_n_bw = 500,
+      N_first = 2500,
+      N_smooth = 2500,
+      n_max = 25,
+      n_threads = parallel::detectCores()),
+    trace = 1)
+
+  # save_to_test(pf_fit[names(pf_fit) != "call"], "local_tests/survival_lung_example")
+  expect_equal(pf_fit[names(pf_fit) != "call"], read_to_test("local_tests/survival_lung_example"), tolerance = 1.49e-08)
+
+  expect_no_error(plot(pf_fit, cov_index = 1))
+  expect_no_error(plot(pf_fit, cov_index = 2))
+  expect_no_error(plot(pf_fit, cov_index = 3))
+  expect_no_error(plot(pf_fit$log_likes))
+})
