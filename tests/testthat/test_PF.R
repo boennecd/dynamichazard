@@ -122,6 +122,13 @@ test_that("PF_smooth gives same results", {
       expect_equal(result_multi, result)
 
       args <- old_args
+
+      #####
+      # Changing the seed changes the result
+      set.seed(1)
+      r_new_seed <- .(fit_quote)
+
+      expect_false(isTRUE(all.equal(result, r_new_seed)))
     })
 
     eval(q, envir = parent.frame())
@@ -334,6 +341,7 @@ test_that("help page example runs and gives previous computed results", {
   skip_on_cran()
 
   .lung <- lung[!is.na(lung$ph.ecog), ]
+  set.seed(43588155)
   pf_fit <- PF_EM(
     Surv(time, status == 2) ~ ph.ecog + age,
     data = .lung, by = 50, id = 1:nrow(.lung),
@@ -344,8 +352,7 @@ test_that("help page example runs and gives previous computed results", {
       N_first = 2500,
       N_smooth = 2500,
       n_max = 25,
-      n_threads = parallel::detectCores()),
-    trace = 1)
+      n_threads = parallel::detectCores()))
 
   # save_to_test(pf_fit[names(pf_fit) != "call"], "local_tests/survival_lung_example")
   expect_equal(pf_fit[names(pf_fit) != "call"], read_to_test("local_tests/survival_lung_example"), tolerance = 1.49e-08)

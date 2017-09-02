@@ -1,4 +1,5 @@
 #include "../ddhazard.h"
+#include "../utils.h"
 #include "../arma_BLAS_LAPACK.h"
 #ifdef _OPENMP
 #include "omp.h"
@@ -66,7 +67,7 @@ void GMA<T>::solve(){
     }
 
     // E-step: Correction step
-    const arma::uvec r_set = p_dat.get_risk_set(t);
+    const arma::uvec r_set = get_risk_set(p_dat, t);
     arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim_in_arrays, false);
     arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim_in_arrays,
                 p_dat.space_dim_in_arrays, false);
@@ -90,8 +91,8 @@ void GMA<T>::solve(){
     arma::vec at_risk_lenght(r_set.n_elem);
     int i = 0;
     for(auto it = r_set.begin(); it < r_set.end(); it++, i++){
-      at_risk_lenght[i] =
-        std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
+      at_risk_lenght[i] = get_at_risk_length(
+        p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart);
     }
 
     arma::vec h_1d(r_set.n_elem);

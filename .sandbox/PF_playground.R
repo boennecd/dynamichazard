@@ -59,7 +59,7 @@ var(result$a_0 - a_0)
 b_idx <- 1:4 #1:5
 matplot(0:20, sims$betas[, b_idx], lty = 1, type = "l", xlim = c(0, 21),
         ylim = range(ddfit$state_vecs[, b_idx], sims$betas[, b_idx]))
-plot_out <- plot(result, add = TRUE, qlvls = .5, lty = 2, cov_index = b_idx)
+plot_out <- plot(result, add = TRUE, lty = 2, cov_index = b_idx)
 plot(result, add = TRUE, qlvls = c(),
      type = "forward_clouds", lty = 3, cov_index = b_idx)
 plot(result, add = TRUE, qlvls = c(),

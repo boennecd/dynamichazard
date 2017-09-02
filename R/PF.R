@@ -42,6 +42,7 @@ PF_effective_sample_size <- function(object){
 #'\dontrun{
 #'library(dynamichazard)
 #'.lung <- lung[!is.na(lung$ph.ecog), ]
+#'set.seed(43588155)
 #'pf_fit <- PF_EM(
 #'  Surv(time, status == 2) ~ ph.ecog + age,
 #'  data = .lung, by = 50, id = 1:nrow(.lung),

@@ -5,6 +5,7 @@
 #include "particles.h"
 #include "../sample_funcs.h"
 #include "PF_utils.h"
+#include "../utils.h"
 
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -221,7 +222,7 @@ public:
     double max_weight =  -std::numeric_limits<double>::max();
 
     unsigned int n_elem = PF_cloud.size();
-    arma::uvec r_set = data.get_risk_set(t);
+    arma::uvec r_set = get_risk_set(data, t);
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif

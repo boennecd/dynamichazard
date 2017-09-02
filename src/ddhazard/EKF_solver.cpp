@@ -2,6 +2,7 @@
 #include "../exp_model_funcs.h"
 #include "../thread_pool.h"
 #include "../arma_BLAS_LAPACK.h"
+#include "../utils.h"
 
 // worker class for parallel computation
 template<typename T>
@@ -35,9 +36,10 @@ inline void EKF_filter_worker<T>::operator()(){
     const double eta = arma::dot(i_a_t, x_) + offset;
 
     const bool do_die = dat.is_event_in_bin(*it) == bin_number;
-    const double time_outcome = std::min(dat.tstop(*it), bin_tstop) - std::max(dat.tstart(*it), bin_tstart);
+    //-----naming could be better
+    const double time_outcome = get_at_risk_length(dat.tstop(*it), bin_tstop, dat.tstart(*it), bin_tstart);
     const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
-
+    //-----
     EKF_filter_worker_calculations res =
       T::cal(do_die, time_outcome, at_risk_length, eta, dat.denom_term);
 
@@ -221,7 +223,7 @@ void EKF_solver<T>::solve(){
     }
 
     // E-step: scoring step: information matrix and scoring vector
-    arma::uvec r_set = p_dat.get_risk_set(t);
+    arma::uvec r_set = get_risk_set(p_dat, t);
     arma::vec i_a_t = p_dat.a_t_less_s.col(t - 1);
     arma::mat V_t_less_s_inv;
     inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,

@@ -114,10 +114,6 @@ public:
 #endif
   }
 
-  arma::uvec get_risk_set(const unsigned int time) const {
-    return Rcpp::as<arma::uvec>(risk_sets[time - 1]) - 1;
-  }
-
   problem_data & operator=(const problem_data&) = delete;
   problem_data(const problem_data&) = delete;
   problem_data() = delete;

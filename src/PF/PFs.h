@@ -5,6 +5,7 @@
 #include "particles.h"
 #include "../sample_funcs.h"
 #include "PF_utils.h"
+#include "../utils.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -93,7 +94,7 @@ public:
       {
           densities dens_calc = densities();
           double max_weight =  -std::numeric_limits<double>::max();
-          arma::uvec r_set = data.get_risk_set(t);
+          arma::uvec r_set = get_risk_set(data, t);
           unsigned int n_elem = new_cloud.size();
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
@@ -220,7 +221,7 @@ public:
       {
           densities dens_calc = densities();
           double max_weight = -std::numeric_limits<double>::max();
-          arma::uvec r_set = data.get_risk_set(t);
+          arma::uvec r_set = get_risk_set(data, t);
           unsigned int n_elem = new_cloud.size();
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)

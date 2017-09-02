@@ -3,6 +3,7 @@
 #include "bigglm_wrapper.h"
 #include "problem_data.h"
 #include "arma_n_rcpp.h"
+#include "utils.h"
 
 // Method to estimate fixed effects like in biglm::bigglm
 template <class updater>
@@ -28,7 +29,7 @@ void estimate_fixed_effects_M_step(ddhazard_data * const p_data, arma::uword chu
     bin_stop += delta_t;
 
     // Find the risk set
-    arma::uvec r_set = p_data->get_risk_set(t);
+    arma::uvec r_set = get_risk_set(*p_data, t);
 
     // Compute offsets from dynamic effects if needed
     arma::vec offsets;

@@ -1,12 +1,13 @@
 #ifndef PF_UTILS
 #define PF_UTILS
 
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#define USE_PRIOR_IN_BW_FILTER_DEFAULT true
-
 #include <tuple>
 #include "particles.h"
 #include "../arma_BLAS_LAPACK.h"
+#include "../utils.h"
+
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define USE_PRIOR_IN_BW_FILTER_DEFAULT true
 
 struct normalize_weights_output {
   double ESS = 0.;
@@ -152,7 +153,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     Thus, I made this overload
   */
 
-  arma::uvec r_set = data.get_risk_set(t);
+  arma::uvec r_set = get_risk_set(data, t);
 
   return(
     compute_mu_n_Sigma_from_normal_apprx
@@ -219,8 +220,8 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
     arma::vec my_mu(p, arma::fill::zeros);
     for(arma::uword i = 0; i < n_elem; ++i, ++it_eta, ++it_is_event, ++it_r){
-      double g = densities::log_p_prime(*it_is_event, *it_eta, t);
-      double neg_G = - densities::log_p_2prime(*it_is_event, *it_eta, t);
+      double g = densities::log_p_prime(*it_eta, *it_is_event, t);
+      double neg_G = - densities::log_p_2prime(*it_eta, *it_is_event, t);
 
       sym_mat_rank_one_update(neg_G, data.X.col(*it_r), my_Sigma_inv);
 
@@ -355,7 +356,7 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
   input_for_normal_apprx_w_particle_mean ans(size);
 
   mu_iterator b = begin;
-  arma::uvec r_set = data.get_risk_set(t);
+  arma::uvec r_set = get_risk_set(data, t);
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif

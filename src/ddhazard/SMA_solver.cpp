@@ -1,5 +1,6 @@
 #include "../ddhazard.h"
 #include "../arma_BLAS_LAPACK.h"
+#include "../utils.h"
 
 inline double SMA_hepler_logit::NR_delta(
       const double offset, const double coef1, const double coef2,
@@ -133,7 +134,7 @@ void SMA<T>::solve(){
     openblas_set_num_threads(1);
 #endif
 
-    arma::uvec r_set = p_dat.get_risk_set(t);
+    arma::uvec r_set = get_risk_set(p_dat, t);
     arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim_in_arrays, false);
     arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim_in_arrays,
                 p_dat.space_dim_in_arrays, false);
@@ -159,11 +160,11 @@ void SMA<T>::solve(){
         const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
-        const double at_risk_lenght =
-          std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
+        const double at_risk_length =
+          get_at_risk_length(p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart);
 
-        const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, is_event, at_risk_lenght);
-        const double neg_second_d = - w * T::second_d(c, offset, at_risk_lenght);
+        const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, is_event, at_risk_length);
+        const double neg_second_d = - w * T::second_d(c, offset, at_risk_length);
 
         a -= (p_dat.LR * (f2 - c) * f1) * inter_vec;
         sym_mat_rank_one_update(

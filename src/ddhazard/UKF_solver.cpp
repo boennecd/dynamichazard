@@ -1,5 +1,6 @@
 #include "../ddhazard.h"
 #include "../exp_model_funcs.h"
+#include "../utils.h"
 
 // This is the orginal UKF formulation from:
 // Julier, Simon J., and Jeffrey K. Uhlmann. "New extension of the Kalman filter
@@ -59,7 +60,7 @@ void UKF_solver_Org::solve(){
 
       // E-step: correction-step
       // First, we compute the mean of the outcome
-      arma::uvec r_set = p_dat.get_risk_set(t);
+      arma::uvec r_set = get_risk_set(p_dat, t);
 
       arma::mat Z_t = (sigma_points.t() * p_dat.X.cols(r_set)).t(); // we transpose due to the column-major
       Z_t = arma::trunc_exp(Z_t);
@@ -195,7 +196,7 @@ void UKF_solver_New<T>::solve(){
     }
 
     // E-step: correction-step
-    arma::uvec r_set = p_dat.get_risk_set(t);
+    arma::uvec r_set = get_risk_set(p_dat, t);
 
     // ** 1: compute means and variances **
     arma::uword n_risk = r_set.n_elem;
@@ -219,7 +220,7 @@ void UKF_solver_New<T>::solve(){
 
       at_risk_length[i] = T::adj_risk_len && do_die[i] == 1L?
         bin_stop - std::max(starts[i], bin_start) :
-        std::min(stops[i], bin_stop) - std::max(starts[i], bin_start);
+        get_at_risk_length(stops[i], bin_stop, starts[i], bin_start);
     }
 
     for(arma::uword j = 0; j < sigma_points.n_cols; ++j){
