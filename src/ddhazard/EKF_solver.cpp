@@ -235,10 +235,6 @@ void EKF_solver<T>::solve(){
     while(true){
       ++n_NR_it;
 
-#if defined(USE_OPEN_BLAS)
-      openblas_set_num_threads(1);
-#endif
-
       parallel_filter_step(
         r_set.begin(), r_set.end(), i_a_t(*p_dat.span_current_cov),
         t == p_dat.d, t - 1, bin_tstart, bin_tstop);
@@ -248,10 +244,6 @@ void EKF_solver<T>::solve(){
         my_print(p_dat, p_dat.u, "u");
         my_print(p_dat, p_dat.U, "U");
       }
-
-#ifdef USE_OPEN_BLAS
-      openblas_set_num_threads(p_dat.n_threads);
-#endif
 
       if(p_dat.u.has_inf() || p_dat.u.has_nan()){
         Rcpp::stop("ddhazard_fit_cpp estimation error: score vector had inf or nan elements. Try decreasing the learning rate");

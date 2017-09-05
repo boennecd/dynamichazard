@@ -142,11 +142,6 @@ public:
       arma::mat &X, arma::vec &beta0, const arma::vec &Ys,
       const arma::vec &weights, const arma::vec &offsets,
       double tol, int nthreads, int it_max, bool trace){
-#if defined(USE_OPEN_BLAS)
-    int openblas_nthread = openblas_get_num_threads();
-    openblas_set_num_threads(1);
-#endif
-
     /* TODO: make QR decomp of X? */
 
     uword p = X.n_rows;
@@ -181,10 +176,6 @@ public:
 
     if(i == it_max)
       Rcpp::stop("parallelglm did not converge");
-
-#ifdef USE_OPEN_BLAS
-    openblas_set_num_threads(openblas_nthread);
-#endif
 
     return beta;
   }

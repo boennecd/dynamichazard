@@ -128,12 +128,6 @@ void SMA<T>::solve(){
     }
 
     // E-step: scoring step
-#ifdef USE_OPEN_BLAS
-    // adverse effect on performance unless the dimension of state vector is
-    // quite large
-    openblas_set_num_threads(1);
-#endif
-
     arma::uvec r_set = get_risk_set(p_dat, t);
     arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim_in_arrays, false);
     arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim_in_arrays,
@@ -209,10 +203,6 @@ void SMA<T>::solve(){
 
       V = L_inv.t() * L_inv;
     }
-
-#ifdef USE_OPEN_BLAS
-    openblas_set_num_threads(p_dat.n_threads);
-#endif
 
     if(a.has_inf() || a.has_nan()){
       Rcpp::stop("ddhazard_fit_cpp estimation error: State vector in correction step has nan or inf elements in in bin " +

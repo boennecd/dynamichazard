@@ -4,17 +4,6 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#if defined(USE_OPEN_BLAS)
-// Used to set the number of threads later
-#include "cblas.h"
-extern void openblas_set_num_threads(int num_threads);
-extern int openblas_get_num_threads();
-#define ARMA_USE_OPENBLAS
-#define ARMA_DONT_USE_WRAPPER
-#else
-#define ARMA_USE_BLAS
-#endif
-
 // Don't use openMP for elementwise operations. It is automatically if -fopenmp
 // is present. Seems to cause issues on some platforms
 #define ARMA_DONT_USE_OPENMP

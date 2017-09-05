@@ -1,28 +1,7 @@
-SOURCES_CPP = utils.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard_EKF_solver.cpp ddhazard_UKF_solver.cpp LAPACK_BLAS_wrapper.cpp arma_utils.cpp ddhazard_SMA_solver.cpp ddhazard_GMA_solver.cpp parallel_glm.cpp thread_pool.cpp
-SOURCES_F = biglm/boundedQRf.f dchur.f
+SOURCES_CPP = utils.cpp BLAS_LAPACK/R_BLAS_LAPACK.cpp BLAS_LAPACK/arma_BLAS_LAPACK.cpp PF/PF_logger.cpp for_tests.cpp PF/particles.cpp sample_funcs.cpp PF.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard/EKF_solver.cpp ddhazard/UKF_solver.cpp ddhazard/SMA_solver.cpp ddhazard/GMA_solver.cpp parallel_glm.cpp thread_pool.cpp
+SOURCES_F = biglm/boundedQRf.f BLAS_LAPACK/dchur.f
 CXX_STD = CXX11
 OBJECTS = $(SOURCES_CPP:.cpp=.o) $(SOURCES_F:.f=.o)
 
-## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags
-PKG_CXXFLAGS = $(BLAS_CXXFLAGS_USE) $(SHLIB_PTHREAD_FLAGS) $(SHLIB_OPENMP_CXXFLAGS)
-## PKG_LIBS: Linker flags
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SHLIB_PTHREAD_FLAGS) $(SHLIB_OPENMP_CXXFLAGS)
-
-DD_DEPS = arma_n_rcpp.h problem_data.h ddhazard.h
-BIGGLM_DEPS = arma_n_rcpp.h bigglm_wrapper.h
-
-all: $(SHLIB)
-
-loglike.o: arma_n_rcpp.h loglike.cpp
-
-Cdqrls_wrapper.o: $(BIGGLM_DEPS) Cdqrls_wrapper.cpp
-
-bigglm_wrapper.o: $(BIGGLM_DEPS) bigglm_wrapper.cpp
-
-ddhazard.o: $(DD_DEPS) $(BIGGLM_DEPS) thread_pool.h estimate_fixed_effects_M_step.h ddhazard.cpp
-
-ddhazard_EKF_solver.o: $(DD_DEPS) exp_model_funcs.h thread_pool.h ddhazard_EKF_solver.cpp
-
-ddhazard_UKF_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_UKF_solver.cpp
-
-ddhazard_posterior_approx_solver.o: $(DD_DEPS) exp_model_funcs.h ddhazard_posterior_approx_solver.cpp
+PKG_CXXFLAGS = $(BLAS_CXXFLAGS_USE) $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SHLIB_OPENMP_CXXFLAGS)

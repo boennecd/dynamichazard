@@ -1,34 +1,13 @@
-BLAS_CXXFLAGS_USE =
-USE_OPEN_BLAS =
-
-OPEN_BLAS_DIR = C:/OpenBLAS/
-ifneq "$(wildcard $(OPEN_BLAS_DIR))" ""
-	BLAS_CXXFLAGS_USE = -I"C:/OpenBLAS/include" -lopenblas
-	USE_OPEN_BLAS = -D USE_OPEN_BLAS
-	BLAS_LIBS_USE = c:/OpenBLAS/lib/libopenblas.a
-else
-	BLAS_LIBS_USE = $(BLAS_LIBS)
-endif
-
 SOURCES_CPP = utils.cpp BLAS_LAPACK/R_BLAS_LAPACK.cpp BLAS_LAPACK/arma_BLAS_LAPACK.cpp PF/PF_logger.cpp for_tests.cpp PF/particles.cpp sample_funcs.cpp PF.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard/EKF_solver.cpp ddhazard/UKF_solver.cpp ddhazard/SMA_solver.cpp ddhazard/GMA_solver.cpp parallel_glm.cpp thread_pool.cpp
 SOURCES_F = biglm/boundedQRf.f BLAS_LAPACK/dchur.f
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o) $(SOURCES_F:.f=.o)
 
-## PKG_CFLAGS & PKG_CXXFLAGS C and C++ flags
-PKG_CXXFLAGS = $(BLAS_CXXFLAGS_USE) $(USE_OPEN_BLAS) $(SHLIB_OPENMP_CFLAGS) $(SHLIB_OPENMP_CXXFLAGS)
+PKG_CXXFLAGS = $(BLAS_LIBS) $(USE_OPEN_BLAS) $(SHLIB_OPENMP_CXXFLAGS)
 
 ifeq "$(WIN)" "64"
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS_USE) $(FLIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS) $(SHLIB_OPENMP_CXXFLAGS) -D ARMA_64BIT_WORD
+	PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SHLIB_OPENMP_CXXFLAGS) -D ARMA_64BIT_WORD
 else
-PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS_USE) $(FLIBS) $(SHLIB_PTHREAD_FLAGS) $(USE_OPEN_BLAS) $(SHLIB_OPENMP_CXXFLAGS)
-endif
-
-ifeq "$(wildcard $(OPEN_BLAS_DIR))" ""
-all: $(SHLIB)
-		@echo "Did not find $(OPEN_BLAS_DIR) and will compile with BLAS used by R"
-else
-all: $(SHLIB)
-		@echo "Found $(OPEN_BLAS_DIR) and will compile with openBlas"
+	PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SHLIB_OPENMP_CXXFLAGS)
 endif
 
