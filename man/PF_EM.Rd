@@ -12,7 +12,7 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 
 \item{data}{Data frame or environment containing the outcome and co-variates}
 
-\item{model}{\code{"logit"}, \code{"exp_clip_time_w_jump"}, \code{"exp_clip_time"} or \code{"exp_bin"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the three latter cases (see the ddhazard vignette for details of the methods)}
+\item{model}{Either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.}
 
 \item{by}{Interval length of the bins in which parameters are fixed}
 
@@ -46,7 +46,7 @@ See the particle_filter vignette for details.
 The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
 \describe{
 \item{\code{method}}{Method for forward, backward and smoothing filter. See the particle_filter vignette for details.}
-\item{\code{smoother}}{TODO: write.}
+\item{\code{smoother}}{Smoother to use. See the particle_filter vignette for details.}
 \item{\code{N_fw_n_bw}}{Number of particles to use in forward and backward filter.}
 \item{\code{N_first}}{Number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
 \item{\code{N_smooth}}{Number of particles to use in particle smoother.}
@@ -66,6 +66,7 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \dontrun{
 library(dynamichazard)
 .lung <- lung[!is.na(lung$ph.ecog), ]
+set.seed(43588155)
 pf_fit <- PF_EM(
  Surv(time, status == 2) ~ ph.ecog + age,
  data = .lung, by = 50, id = 1:nrow(.lung),
@@ -75,7 +76,7 @@ pf_fit <- PF_EM(
    N_fw_n_bw = 500,
    N_first = 2500,
    N_smooth = 2500,
-   n_max = 25,
+   n_max = 50,
    n_threads = parallel::detectCores()),
  trace = 1)
 

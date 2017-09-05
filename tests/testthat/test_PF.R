@@ -69,7 +69,8 @@ test_that("PF_smooth gives same results", {
     forward_backward_ESS_threshold = NULL,
     debug = 0,
     method = "PF",
-    smoother = "Fearnhead_O_N")
+    smoother = "Fearnhead_O_N",
+    model = "logit")
 
   test_func <- function(fit_quote, test_file_name){
     get_func <- quote(
@@ -347,8 +348,7 @@ test_that("help page example runs and gives previous computed results", {
       N_first = 2500,
       N_smooth = 2500,
       n_max = 50,
-      n_threads = parallel::detectCores()),
-    trace = 1)
+      n_threads = parallel::detectCores()))
 
   # save_to_test(pf_fit[names(pf_fit) != "call"], "local_tests/survival_lung_example")
   expect_equal(pf_fit[names(pf_fit) != "call"], read_to_test("local_tests/survival_lung_example"), tolerance = 1.49e-08)

@@ -12,6 +12,7 @@ PF_effective_sample_size <- function(object){
 #'
 #' @inheritParams ddhazard
 #' @param trace Argument to get progress information. Zero will yield no info an larger integer values will yield incrementally more information.
+#' @param model Either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.
 #'
 #' @details
 #' See the particle_filter vignette for details.
@@ -87,7 +88,7 @@ PF_EM <- function(
   if(order != 1) # TODO: test
     stop(sQuote('order'), " not equal to 1 is not supported")
 
-  if(!model %in% "logit") # TODO: test
+  if(!model %in% c("logit", "exponential")) # TODO: test
     stop(sQuote('model'), " is not supported")
 
   if(missing(id)){
@@ -96,11 +97,7 @@ PF_EM <- function(
     id = 1:nrow(data)
   }
 
-  if(model == "logit"){
-    is_for_discrete_model <- TRUE
-
-  } else
-    stop("Model '", model, "' is not implemented")
+  is_for_discrete_model <- model == "logit"
 
   #####
   # Find design matrix
@@ -192,8 +189,8 @@ PF_EM <- function(
     n_fixed_terms_in_state_vec = 0,
     X = t(X_Y$X),
     fixed_terms = t(X_Y$fixed_terms),
-    tstart = X_Y$Y[1, ],
-    tstop = X_Y$Y[2, ],
+    tstart = X_Y$Y[, 1],
+    tstop = X_Y$Y[, 2],
     Q_0 = Q_0,
     Q = Q,
     a_0 = a_0,
@@ -210,7 +207,8 @@ PF_EM <- function(
     method = control$method,
     eps = control$eps,
     seed = control$seed,
-    smoother = control$smoother)
+    smoother = control$smoother,
+    model = model)
 
   out$call <- match.call()
   out
@@ -238,7 +236,8 @@ PF_EM <- function(
   trace = 0,
   method = "AUX_normal_approx_w_particles",
   seed = NULL,
-  smoother){
+  smoother,
+  model){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl

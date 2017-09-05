@@ -549,7 +549,7 @@ get_start_values <- function(
     if(model == "logit"){
       coefs = glm_func("binomial")
 
-    } else if(model %in% exp_model_names){
+    } else if(model %in% c(exp_model_names, "exponential")){
       coefs = glm_func("exponential")
 
     } else

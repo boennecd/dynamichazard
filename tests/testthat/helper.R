@@ -44,6 +44,11 @@ if(interactive()){
 
   # teststatic_glm.R
   get_design_matrix <- environment(ddhazard)$get_design_matrix
+
+  # test_cpp_utils.R
+  lambert_W0_test <- environment(ddhazard)$lambert_W0_test
+  trunc_lp_in_exponential_dist_test <- environment(ddhazard)$trunc_lp_in_exponential_dist_test
+  trunc_lp_in_exponential_dist_test_log_eps <- environment(ddhazard)$trunc_lp_in_exponential_dist_test_log_eps
 }
 
 # hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by

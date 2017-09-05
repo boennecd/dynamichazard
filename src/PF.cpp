@@ -257,38 +257,39 @@ template<
     template <typename, bool> class,
     template <typename, bool> class,
     class>
-  class smoother>
-class PF_smooth_T {
+  class smoother,
+  class dens>
+class PF_smooth_smoother_n_dens {
 public:
   using bootstrap_filter_sm =
     smoother<
       None_AUX_resampler,
       importance_dens_no_y_dependence,
-      binary>;
+      dens>;
 
   using PF_w_normal_approx_sm =
     smoother<
       None_AUX_resampler,
       importance_dens_normal_approx_w_cloud_mean,
-      binary>;
+      dens>;
 
   using AUX_w_normal_approx_sm =
     smoother<
       AUX_resampler_normal_approx_w_cloud_mean,
       importance_dens_normal_approx_w_cloud_mean,
-      binary>;
+      dens>;
 
   using PF_w_particles_sm =
     smoother<
       None_AUX_resampler,
       importance_dens_normal_approx_w_particles,
-      binary>;
+      dens>;
 
   using AUX_w_particles_sm =
     smoother<
       AUX_resampler_normal_approx_w_particles,
       importance_dens_normal_approx_w_particles,
-      binary>;
+      dens>;
 
   static Rcpp::List compute(
       const PF_data &data, const std::string method){
@@ -321,6 +322,37 @@ public:
   }
 };
 
+template<class dens>
+class PF_smooth_dens {
+public:
+  using Fearnhead_O_N  =
+    PF_smooth_smoother_n_dens<PF_smoother_Fearnhead_O_N, dens>;
+
+  using Brier_O_N_square  =
+    PF_smooth_smoother_n_dens<PF_smoother_Brier_O_N_square, dens>;
+
+  static Rcpp::List compute(
+      const PF_data &data, const std::string smoother, const std::string method){
+    Rcpp::List ans;
+
+    if(smoother == "Fearnhead_O_N"){
+      ans = Fearnhead_O_N::compute(data, method);
+
+    } else if (smoother == "Brier_O_N_square"){
+      ans = Brier_O_N_square::compute(data, method);
+
+    } else {
+      std::stringstream stream;
+      stream << "smoother '" << smoother << "' is not implemented";
+      Rcpp::stop(stream.str());
+
+    }
+
+    return ans;
+  }
+};
+
+
 // [[Rcpp::export]]
 Rcpp::List PF_smooth(
     const int n_fixed_terms_in_state_vec,
@@ -343,7 +375,8 @@ Rcpp::List PF_smooth(
     const int debug,
     const int N_first,
     const std::string method,
-    const std::string smoother){
+    const std::string smoother,
+    const std::string model){
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   PF_data data(
@@ -370,17 +403,15 @@ Rcpp::List PF_smooth(
 
   Rcpp::List ans;
 
-  if(smoother == "Fearnhead_O_N"){
-    ans =
-      PF_smooth_T<PF_smoother_Fearnhead_O_N>::compute(data, method);
+  if(model == "logit"){
+    ans = PF_smooth_dens<binary>::compute(data, smoother, method);
 
-  } else if (smoother == "Brier_O_N_square"){
-    ans =
-      PF_smooth_T<PF_smoother_Brier_O_N_square>::compute(data, method);
+  } else if (model == "exponential"){
+    ans = PF_smooth_dens<exponential>::compute(data, smoother, method);
 
   } else {
     std::stringstream stream;
-    stream << "smoother '" << smoother << "' is not implemented";
+    stream << "model '" << model << "' is not implemented";
     Rcpp::stop(stream.str());
 
   }

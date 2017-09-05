@@ -117,8 +117,12 @@ public:
       unsigned int n = eta.n_elem;
       for(arma::uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
         double at_risk_length = 0;
-        if(outcome_dens::uses_at_risk_length)
-          at_risk_length = get_at_risk_length(*(it_stops++), bin_stop, *(it_start++), bin_start);
+        if(outcome_dens::uses_at_risk_length){
+          at_risk_length = get_at_risk_length(
+            *(it_stops++) /* increament here */, bin_stop,
+            *(it_start++) /* increament here */, bin_start);
+        }
+
         my_log_like += outcome_dens::log_like_outcome(*it_eta, *it_is_event, at_risk_length);
       }
     }
@@ -210,6 +214,33 @@ public:
     double trunc_eta = MIN(MAX(eta, -15), 15);
 
     return is_event ? log(1 / (1 + exp(-trunc_eta))) : log(1 - 1 / (1 + exp(-trunc_eta)));
+  }
+};
+
+/*
+  Class for exponentially distributed arrival times where state vectors follows
+  a first order random walk
+*/
+class exponential : public first_order_random_walk_base<binary> {
+public:
+  static const bool uses_at_risk_length = true;
+
+  static inline double log_p_prime(const double eta, const bool is_event, const double at_risk_length){
+    auto tmp = trunc_lp_in_exponential_dist(eta, at_risk_length, is_event);
+
+    return is_event - tmp.exp_eta_trunc * at_risk_length;
+  }
+
+  static inline double log_p_2prime(const double eta, const bool is_event, const double at_risk_length){
+    auto tmp = trunc_lp_in_exponential_dist(eta, at_risk_length, is_event);
+
+    return - tmp.exp_eta_trunc * at_risk_length;
+  }
+
+  static inline double log_like_outcome(const double eta, const bool is_event, const double at_risk_length){
+    auto tmp = trunc_lp_in_exponential_dist(eta, at_risk_length, is_event);
+
+    return is_event * tmp.eta_trunc - tmp.exp_eta_trunc * at_risk_length;
   }
 };
 

@@ -73,6 +73,18 @@ solve_w_precomputed_chol_test <- function(chol_decomp, B) {
     .Call(`_dynamichazard_solve_w_precomputed_chol_test`, chol_decomp, B)
 }
 
+lambert_W0_test <- function(x) {
+    .Call(`_dynamichazard_lambert_W0_test`, x)
+}
+
+trunc_lp_in_exponential_dist_test <- function(eta, at_risk_length, is_event) {
+    .Call(`_dynamichazard_trunc_lp_in_exponential_dist_test`, eta, at_risk_length, is_event)
+}
+
+trunc_lp_in_exponential_dist_test_log_eps <- function() {
+    .Call(`_dynamichazard_trunc_lp_in_exponential_dist_test_log_eps`)
+}
+
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {
     .Call(`_dynamichazard_logLike_cpp`, X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }
@@ -81,8 +93,8 @@ parallelglm <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthr
     .Call(`_dynamichazard_parallelglm`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace)
 }
 
-PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother) {
-    .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother)
+PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother, model) {
+    .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother, model)
 }
 
 compute_summary_stats <- function(rcpp_list, n_threads, a_0, Q, Q_0) {

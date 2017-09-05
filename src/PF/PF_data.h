@@ -94,19 +94,7 @@ private:
   std::unique_ptr<oprefixstream> oprefixstream_dummy;
 
   const static unsigned int n_spaces = 3;
-  static std::string get_prefix(const unsigned int level){
-    std::stringstream ss;
-
-#ifdef _OPENMP
-    ss << "Thread:" << std::setw(3) << omp_get_thread_num() << "\t";
-#endif
-
-    ss << "delta T: " << std::setw(10) << std::setprecision(6)
-       << get_elapsed_seconds_n_set_last_message_time() << "\t";
-
-    ss << std::string(n_spaces * (level - 1), ' ');
-    return ss.str();
-  }
+  static std::string get_prefix(const unsigned int level);
 
   using tp = std::chrono::time_point<std::chrono::system_clock>;
   using tp_pointer =std::unique_ptr<tp>;

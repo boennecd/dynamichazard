@@ -277,6 +277,40 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// lambert_W0_test
+double lambert_W0_test(const double x);
+RcppExport SEXP _dynamichazard_lambert_W0_test(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(lambert_W0_test(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// trunc_lp_in_exponential_dist_test
+Rcpp::List trunc_lp_in_exponential_dist_test(const double eta, const double at_risk_length, const bool is_event);
+RcppExport SEXP _dynamichazard_trunc_lp_in_exponential_dist_test(SEXP etaSEXP, SEXP at_risk_lengthSEXP, SEXP is_eventSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< const double >::type at_risk_length(at_risk_lengthSEXP);
+    Rcpp::traits::input_parameter< const bool >::type is_event(is_eventSEXP);
+    rcpp_result_gen = Rcpp::wrap(trunc_lp_in_exponential_dist_test(eta, at_risk_length, is_event));
+    return rcpp_result_gen;
+END_RCPP
+}
+// trunc_lp_in_exponential_dist_test_log_eps
+double trunc_lp_in_exponential_dist_test_log_eps();
+RcppExport SEXP _dynamichazard_trunc_lp_in_exponential_dist_test_log_eps() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(trunc_lp_in_exponential_dist_test_log_eps());
+    return rcpp_result_gen;
+END_RCPP
+}
 // logLike_cpp
 std::vector<double> logLike_cpp(const arma::mat& X, const Rcpp::List& risk_obj, const arma::mat& F, const arma::mat& Q_0, arma::mat Q, const arma::mat& a_t_d_s, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_effects_offsets, const int order_, const std::string model);
 RcppExport SEXP _dynamichazard_logLike_cpp(SEXP XSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP a_t_d_sSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_effects_offsetsSEXP, SEXP order_SEXP, SEXP modelSEXP) {
@@ -319,8 +353,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // PF_smooth
-Rcpp::List PF_smooth(const int n_fixed_terms_in_state_vec, arma::mat& X, arma::mat& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat& Q_0, arma::mat& Q, const arma::mat Q_tilde, const Rcpp::List& risk_obj, const arma::mat& F, const int n_max, const int order, const int n_threads, const int N_fw_n_bw, const int N_smooth, Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold, const int debug, const int N_first, const std::string method, const std::string smoother);
-RcppExport SEXP _dynamichazard_PF_smooth(SEXP n_fixed_terms_in_state_vecSEXP, SEXP XSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP Q_tildeSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP n_maxSEXP, SEXP orderSEXP, SEXP n_threadsSEXP, SEXP N_fw_n_bwSEXP, SEXP N_smoothSEXP, SEXP forward_backward_ESS_thresholdSEXP, SEXP debugSEXP, SEXP N_firstSEXP, SEXP methodSEXP, SEXP smootherSEXP) {
+Rcpp::List PF_smooth(const int n_fixed_terms_in_state_vec, arma::mat& X, arma::mat& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, arma::mat& Q_0, arma::mat& Q, const arma::mat Q_tilde, const Rcpp::List& risk_obj, const arma::mat& F, const int n_max, const int order, const int n_threads, const int N_fw_n_bw, const int N_smooth, Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold, const int debug, const int N_first, const std::string method, const std::string smoother, const std::string model);
+RcppExport SEXP _dynamichazard_PF_smooth(SEXP n_fixed_terms_in_state_vecSEXP, SEXP XSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP Q_tildeSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP n_maxSEXP, SEXP orderSEXP, SEXP n_threadsSEXP, SEXP N_fw_n_bwSEXP, SEXP N_smoothSEXP, SEXP forward_backward_ESS_thresholdSEXP, SEXP debugSEXP, SEXP N_firstSEXP, SEXP methodSEXP, SEXP smootherSEXP, SEXP modelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -345,7 +379,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type N_first(N_firstSEXP);
     Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
     Rcpp::traits::input_parameter< const std::string >::type smoother(smootherSEXP);
-    rcpp_result_gen = Rcpp::wrap(PF_smooth(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother));
+    Rcpp::traits::input_parameter< const std::string >::type model(modelSEXP);
+    rcpp_result_gen = Rcpp::wrap(PF_smooth(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, Q_0, Q, Q_tilde, risk_obj, F, n_max, order, n_threads, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother, model));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -405,9 +440,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_tri_mat_times_vec_test", (DL_FUNC) &_dynamichazard_tri_mat_times_vec_test, 4},
     {"_dynamichazard_sym_mat_rank_one_update_test", (DL_FUNC) &_dynamichazard_sym_mat_rank_one_update_test, 3},
     {"_dynamichazard_solve_w_precomputed_chol_test", (DL_FUNC) &_dynamichazard_solve_w_precomputed_chol_test, 2},
+    {"_dynamichazard_lambert_W0_test", (DL_FUNC) &_dynamichazard_lambert_W0_test, 1},
+    {"_dynamichazard_trunc_lp_in_exponential_dist_test", (DL_FUNC) &_dynamichazard_trunc_lp_in_exponential_dist_test, 3},
+    {"_dynamichazard_trunc_lp_in_exponential_dist_test_log_eps", (DL_FUNC) &_dynamichazard_trunc_lp_in_exponential_dist_test_log_eps, 0},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 10},
-    {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 21},
+    {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 22},
     {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 5},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {NULL, NULL, 0}

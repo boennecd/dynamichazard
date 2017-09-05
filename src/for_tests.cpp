@@ -132,3 +132,31 @@ arma::vec solve_w_precomputed_chol_test(const arma::mat &chol_decomp, const arma
   return(solve_w_precomputed_chol(chol_decomp, B));
 }
 
+// -------------------------------------------------- //
+
+#include "utils.h"
+
+// [[Rcpp::export]]
+double lambert_W0_test(const double x){
+  return lambert_W0(x);
+}
+
+// [[Rcpp::export]]
+Rcpp::List trunc_lp_in_exponential_dist_test(
+  const double eta, const double at_risk_length, const bool is_event)
+{
+  auto ans = trunc_lp_in_exponential_dist(eta, at_risk_length, is_event);
+
+  return Rcpp::List::create(
+    Rcpp::Named("eta_trunc") = ans.eta_trunc,
+    Rcpp::Named("exp_eta_trunc") = ans.exp_eta_trunc,
+    Rcpp::Named("did_truncate") = ans.did_truncate);
+}
+
+// [[Rcpp::export]]
+double trunc_lp_in_exponential_dist_test_log_eps(){
+  return trunc_lp_in_exponential_dist_log_eps;
+}
+
+
+

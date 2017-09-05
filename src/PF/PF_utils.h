@@ -177,6 +177,14 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
 
   input_for_normal_apprx ans;
 
+  double bin_start, bin_stop;
+  if(densities::uses_at_risk_length){
+    auto tmp = get_bin_times(data, t);
+    bin_start = tmp.start;
+    bin_stop = tmp.stop;
+
+  }
+
   /* Compute the terms that does not depend on the outcome */
   /* Sigma^-1 = (Q + \tilde{Q})^{-1} */
   arma::uword p = alpha_bar.n_elem;
@@ -199,7 +207,19 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     lock = new omp_lock_t;
     omp_init_lock(lock);
   }
-#pragma omp parallel for schedule(static) if(multithread)
+#pragma omp parallel if(multithread)
+{
+#endif
+
+  arma::vec starts;
+  arma::vec stops;
+  arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
+  arma::vec my_mu(p, arma::fill::zeros);
+
+  // auto logger = data.log(1); // TODO: delete
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
 #endif
   for(unsigned int i = 0; i < n_jobs; ++i){
     auto &job = jobs[i];
@@ -208,42 +228,64 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     arma::vec eta =  alpha_bar.t() * data.X.cols(my_r_set);
     const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
+    if(densities::uses_at_risk_length){
+      starts = data.tstart(my_r_set);
+      stops = data.tstop(my_r_set);
+    }
+
     auto it_eta = eta.begin();
     auto it_is_event = is_event.begin();
     auto it_r = my_r_set.begin();
+    auto it_start = starts.begin();
+    auto it_stops = stops.begin();
     arma::uword n_elem = eta.n_elem;
     /*
       Update with:
         Signa = ... + X^T (-G) X
         mu = X^T (-G) X \bar{alpha} + X^T (-g)
     */
-    arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
-    arma::vec my_mu(p, arma::fill::zeros);
     for(arma::uword i = 0; i < n_elem; ++i, ++it_eta, ++it_is_event, ++it_r){
-      double g = densities::log_p_prime(*it_eta, *it_is_event, t);
-      double neg_G = - densities::log_p_2prime(*it_eta, *it_is_event, t);
+      double at_risk_length = 0;
+      if(densities::uses_at_risk_length){
+        at_risk_length = get_at_risk_length(
+          *(it_stops++) /* increament here */, bin_stop,
+          *(it_start++) /* increament here */, bin_start);
+
+      }
+
+      double g = densities::log_p_prime(*it_eta, *it_is_event, at_risk_length);
+      double neg_G = - densities::log_p_2prime(*it_eta, *it_is_event, at_risk_length);
+
+      /*
+      logger << g  << "\t"  << neg_G  <<  "\t" << *it_eta  << "\t"
+             << at_risk_length  << "\t" << *it_is_event
+             << "\t" << (*it_eta * neg_G) + g <<  std::endl; // TODO: delete
+      */
 
       sym_mat_rank_one_update(neg_G, data.X.col(*it_r), my_Sigma_inv);
 
       my_mu += data.X.col(*it_r) * ((*it_eta * neg_G) + g);
     }
-
-#ifdef _OPENMP
-    if(multithread)
-      omp_set_lock(lock);
-#endif
-
-    Sigma_inv += my_Sigma_inv;
-    mu += my_mu;
-
-#ifdef _OPENMP
-    if(multithread)
-      omp_unset_lock(lock);
-#endif
-
   }
 
+  // logger << "my_mu: " << my_mu.t() <<  std::endl; // TODO: delete
+  // logger << "my_Sigma_inv\n" << my_Sigma_inv; // TODO: delete
+
 #ifdef _OPENMP
+  if(multithread)
+    omp_set_lock(lock);
+#endif
+
+  Sigma_inv += my_Sigma_inv;
+  mu += my_mu;
+
+#ifdef _OPENMP
+  if(multithread)
+    omp_unset_lock(lock);
+#endif
+
+#ifdef _OPENMP
+}
   if(multithread){
     omp_destroy_lock(lock);
     delete lock;
@@ -424,7 +466,7 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
 /*
  Output class for smoothers
- */
+*/
 
 struct smoother_output {
   struct pair {

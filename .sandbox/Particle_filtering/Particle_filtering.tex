@@ -211,6 +211,7 @@
 \newcommand{\matLarrow}[1]{\overleftarrow{\mat{#1}}}
 \newcommand{\matLRarrow}[1]{\overleftrightarrow{\mat{#1}}}
 
+\newcommand{\Lbrac}[1]{\left[ #1\right]}
 \newcommand{\Lbrace}[1]{\left\{ #1\right\}}
 \newcommand{\Lparen}[1]{\left( #1\right)}
 \newcommand{\Cond}[2]{\left. #1 \vphantom{#2} \right\vert  #2}
@@ -277,7 +278,7 @@ Benjamin Christoffersen \\[\baselineskip]
 
 \begin{document}
 \myTitle
-This is vignette covers the particle filter for the \verb|dynamichazard| package in R. See \url{https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf} for more information on the package.
+This is vignette covers the particle filter for the \verb|dynamichazard| package in \verb|R|. See \url{https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf} for more information on the package.
 
 I assume that you are familiar with the setup in the \verb|dynamichazard| package and the other estimation methods in the package. Further, some prior knowledge of particle filters is required.  If you lag knowledge of particle filter then \cite{doucet09} provides a tutorial on particle filters and \cite{kantas15} covers parameter estimation with particle filters. This vignette relies heavily on \cite{fearnhead10}.
 
@@ -303,7 +304,7 @@ where I  denote the conditional densities as $\vec{y}_t \sim \optorC{g}{\cdot}{\
 I will use a particle filter and smoother to get smoothed estimates of $\vec{\alpha}_1, \dots, \vec{\alpha}_d$ given the outcomes $\vec{y}_{1:d} = \Lbrace{\vec{y}_1,\vec{y}_2,\dots, \vec{y}_d}$ and use an EM-algorithm to estimate $\mat{Q}$ and $\vec{a}_0$. One choice of smoother is the generalized two-filter smoothing in \cite{fearnhead10} and \cite{briers10}. I have included the $\bigO{N}$ smoother in \cite{fearnhead10} shown in algorithm~\ref{alg:ONsmoother}. The rest of vignette is structured as follows: first I cover the particle filter and smoother. Then I cover the EM-algorithm and other miscellaneous topics. I will end with what is implemented at this point.
 
 \subsection*{Considerations}
-Algorithm~\ref{alg:ONsmoother} shows the generalized two-filter smoother. It requires that we specify the following importance densities and re-sampling weights ("optimal" values are given as the right hand side):
+Algorithm~\ref{alg:ONsmoother} shows one of the generalized two-filter smoother from \cite{fearnhead10}. It requires that we specify the following importance densities and re-sampling weights ("optimal" values are given as the right hand side):
 
 \begin{equation}\begin{matrix}
 	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} = \propC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} \\
@@ -330,7 +331,7 @@ with an artificial prior distribution $\gamma_t \Lparen{\vec{\alpha}_t}$. See \c
 Given the models of interest we have that:
 
 \begin{itemize}
-	\item Evaluating $\propC{\vec{y}_t}{\vec{\alpha}_t}$ is an expensive operation as $n \gg p$ and it has a $\bigO{np}$ computational cost. In general, any $\bigO{n}$ operation is going to take considerable time if it is needed in any steps of the algorithms. 
+	\item Evaluating $\propC{\vec{y}_t}{\vec{\alpha}_t}$ is an expensive operation as $n \gg p$ and it has a $\bigO{np}$ computational cost. Any $\bigO{n}$ operation is going to take considerable time. 
 	\item Evaluating $\optorC{f}{\vec{\alpha}_t}{\vec{\alpha}_{t -1}}$ and $\optorC{f}{\vec{\alpha}_t}{\vec{\alpha}_{t + 1}}$ is cheap and can be done in closed form and sampling from these distribution can be done in closed form.
 	\item The second example in \cite{fearnhead10} is close to the model here though with $n = 1$ and $p = 2$. 
 \end{itemize}
@@ -744,9 +745,9 @@ We can also use a bootstrap like filter by sampling from:
 \INPUT
 \Statex A backwards filter distribution approximation:
 \begin{equation}
-	\propAproxC{\vec{\alpha}_t}{\vec{y}_{t:T}} \propto \gamma_t \Lparen{\vec{\alpha}_t}\propC{\vec{y}_{t:T}}{\vec{\alpha}_t}
+	\propAproxC{\vec{\alpha}_t}{\vec{y}_{t:d}} \propto \gamma_t \Lparen{\vec{\alpha}_t}\propC{\vec{y}_{t:d}}{\vec{\alpha}_t}
 \end{equation} 
-\Statex with an  artificial prior distribution $\gamma_t \Lparen{\vec{\alpha}_t}$. This is introduced as $\propC{\vec{y}_{t:T}}{\vec{\alpha}_t}$ is not a density function in $\vec{\alpha}_t$.
+\Statex with an  artificial prior distribution $\gamma_t \Lparen{\vec{\alpha}_t}$. This is introduced as $\propC{\vec{y}_{t:d}}{\vec{\alpha}_t}$ is not a density function in $\vec{\alpha}_t$.
 \Statex Importance density and specification of weights {\footnotesize (\citet[page 451 -- look in the example in the appendix]{fearnhead10})}:
 \Statex\begin{equation}
 	\IDAproxC{\vec{\alpha}_t}{\vec{y}_t, \particB{\vec{\alpha}}{t + 1}{k}}\particB{\beta}{t}{k} \approx %
@@ -851,6 +852,8 @@ where $\dirac{\cdot}$ is the Dirac delta function. The update of $\vec{a}_0$ and
 
 We then repeat with the new $\vec{a}_0$ and $\mat{Q}$ for a given number of iterations or till a convergence criteria is satisfied.  See \cite{kantas15}, \cite{del10} and \cite{schon11} for further details on parameter estimation with particle filters.
 
+We can do parts of the probability estimates exact at time $1$ by using:
+
 \begin{equation}\begin{split}
 \optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_1, \vec{\alpha}_0}{\vec{y}_{1:d}} \hspace{-50pt} & \\
 %
@@ -934,19 +937,6 @@ Thus, we end with:
 	\mat{F}^\top \right) + \mat{S}_{\vec{\theta}} 
 \end{split}\end{equation}
 
-\section{Implementation}
-The \verb|PF_EM| method in the \verb|dynamichazard| package contains an implementation of the above described method. You specify the number of particles by the \verb|N_first|, \verb|N_fw_n_bw| and \verb|N_smooth| argument for respectively the $N_f$, $N$ and $N_s$ in the algorithm \ref{alg:ONsmoother}-\ref{alg:backward}. We may want more particle in the smoothing step, $N_s > N$ as pointed out in the discussion in \citet[page 460 and 461]{fearnhead10}. Further, selecting $N_f > N$ may be preferable to ensure coverage of the state space at time $0$ and $d + 1$.
-
-The \verb|method| argument specify how the filters are set up. The argument can take the following values:
-
-\begin{itemize}
-	\item \verb|"bootstrap_filter"| for a bootstrap filter.
-	\item \verb|"PF_normal_approx_w_cloud_mean"| and \verb|"AUX_normal_approx_w_cloud_mean"| for the Taylor expansion of the conditional density of $\vec{y}_t$ made around the weighted mean of the previous cloud. The \verb|PF| and \verb|AUX| prefix specifies whether or not the auxiliary version should be used.
-	\item \verb|"PF_normal_approx_w_particles"| and \verb|"AUX_normal_approx_w_particles"| for the Taylor expansion of the conditional density of $\vec{y}_t$ made around the parent (or/and child) particle. The \verb|PF_| and \verb|AUX_| prefix specifies whether or not the auxiliary version should be used.
-\end{itemize}
-
-The \emph{Systematic Resampling} \citep{kitagawa96} is used in all re-sampling steps. See \cite{douc05} for a comparison of re-sampling methods. The rest of the arguments to \verb|PF_EM| are similar to those of the \verb|ddhazard| function.
-
 \section{Other options}
 The $\bigO{N^2}$ two-filter smoother in \cite{fearnhead10} is going to be computationally expensive as an approximation is going to be needed for equation (8) in the article. For instance, only the Taylor expansion approximation around a single point to approximate $g$ would be feasible. The non-auxiliary version in \citet{briers10} is more feasible as it only requires evaluation of $f$ in the smoothing part of two-filter smoother (see equation (46) in the paper). Similar conclusions applies to the forward smoother in \cite{del10} and the backward smoother as presented in \cite{kantas15}. Both have a $\bigO{N^2}$ computational cost.
 
@@ -954,9 +944,151 @@ Despite the $\bigO{N^2}$ cost of the method in \citet{briers10} and \cite{del10}
 
 The method in \citet[see particularly section 6.2 on page 203]{malik11} can be used to do continuous likelihood evaluation. I am not sure how well these method scale with higher state dimension, $p$.
 
-\citet{kantas15} show empirically that it may be worth just using a forward filter. However, the example is with a univariate outcome ($n=1$ -- not to be confused with the number of periods $d$). The cost here of the forward filter is at least $\bigO{dNnp}$. Every new particle yields an $\bigO{dnp}$ cost which is expensive due to the large number of outcomes $n$. Thus, the considerations are different and a $\bigO{dNnp + N^2}$ method will not make a big difference unless $N$ is large.
+\citet{kantas15} show empirically that it may be worth just using a forward filter. However, the example is with a univariate outcome ($n=1$ -- not to be confused with the number of periods $d$). The cost here of the forward filter is at least $\bigO{dNnp}$. Every new particle yields an $\bigO{dnp}$ cost which is expensive due to the large number of outcomes, $n$. Thus, the considerations are different and a $\bigO{dNnp + N^2}$ method will not make a big difference unless $N$ is large.
 
-An alternative is to add noise to $\vec{\theta}_{t}$ and use the methods in \cite{andrieu02}.
+Another alternative is to add noise to $\vec{\theta}_{t}$ and use the methods in \cite{andrieu02}.
+
+\section{\citet{briers10}}
+The $\bigO{N^2}$ smother from \citet{briers10} is also implemented as it is feasible for a moderate number of particles (though, we can use the approximations in \cite{kantas15} to reduce the computational complexity). It is shown in algorithm \ref{alg:ON2smoother}. The weights in equation~\eqref{eqn:combineWeightO2} comes from the two-filter formula:
+
+\begin{equation}\begin{split}
+\propC{\vec{\alpha}_t}{\vec{y}_{1:d}} &= 
+	\frac{
+		\propC{\vec{\alpha}_t}{\vec{y}_{1:{t-1}}}
+		\propC{\vec{y}_{t:d}}{\vec{\alpha}_t}
+	}{ \propC{\vec{y}_{t:d}}{\vec{y}_{1:{t-1}}}} \\
+%
+& \propto
+	\propC{\vec{\alpha}_t}{\vec{y}_{1:{t-1}}}\propC{\vec{y}_{t:d}}{\vec{\alpha}_t} \\
+%
+& = \propC{\vec{\alpha}_t}{\vec{y}_{1:{t-1}}}\frac{
+		\propC{\vec{\alpha}_t}{\vec{y}_{t:d}}\prop{\vec{y}_{t:d}}
+	}{ \prop{\vec{\alpha}_t} } \\
+%
+& \propto \propC{\vec{\alpha}_t}{\vec{y}_{1:{t-1}}}
+	\frac{\propC{\vec{\alpha}_t}{\vec{y}_{t:d}}
+	}{ \prop{\vec{\alpha}_t} } \\
+%
+& = 
+	\propC{\vec{\alpha}_t}{\vec{y}_{t:d}}
+	\frac{
+		\Lbrac{\int_{\vec{\alpha}_{t - 1}}
+		\propC{\vec{\alpha}_{t-1}}{\vec{y}_{1:{t-1}}}
+		\optorC{f}{\vec{\alpha}_t}{\vec{\alpha}_{t - 1}}
+		\partial\vec{\alpha}_{t - 1}}
+	}{ \prop{\vec{\alpha}_t} } \\
+%
+& \approx \sum_{i=1}^N
+	\particB{w}{t}{i}
+	\dirac{\vec{\alpha}_t - \particB{\vec{\alpha}}{t}{i}}
+	\frac{
+		\Lbrac{\sum_{j = 1}^N
+		\partic{w}{t -1}{j}
+		\optorC{f}{\particB{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j}}}
+	}{ \optor{\gamma_t}{\particB{\vec{\alpha}}{t}{i}} }
+\end{split}\end{equation}%
+%
+Similar arguments leads to:
+
+\begin{equation}\begin{split}
+\propC{\vec{\alpha}_t, \vec{\alpha}_{t-1}}{\vec{y}_{1:d}} \hspace{-50pt} & \hspace{50pt} \\
+%
+& \propto 
+	\propC{\vec{\alpha}_t}{\vec{y}_{t:d}}
+	\frac{
+		\propC{\vec{\alpha}_{t-1}}{\vec{y}_{1:{t-1}}}
+		\optorC{f}{\vec{\alpha}_t}{\vec{\alpha}_{t - 1}}
+	}{ \prop{\vec{\alpha}_t} } \\
+%
+& \approx \sum_{i=1}^N\sum_{j=1}^N
+	\particB{w}{t}{i}
+	\dirac{\vec{\alpha}_t - \particB{\vec{\alpha}}{t}{i}}
+	\frac{
+		\Lbrac{\sum_{j = 1}^N
+		\partic{w}{t -1}{j}
+		\optorC{f}{\particB{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j}}}
+	}{ \optor{\gamma_t}{\particB{\vec{\alpha}}{t}{i}} }
+	\frac{
+		\partic{w}{t -1}{j}
+		\dirac{\vec{\alpha}_{t -1} - \partic{\vec{\alpha}}{t - 1}{j}}
+		\optorC{f}{\particB{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j}}
+	}{
+		\Lbrac{\sum_{j = 1}^N
+		\partic{w}{t -1}{j}
+		\optorC{f}{\particB{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j}}}
+	} \\
+%
+& = \sum_{i=1}^N\sum_{j=1}^N
+	\particS{w}{t}{i,j} 
+	\dirac{\vec{\alpha}_t - \particB{\vec{\alpha}}{t}{i}}
+	\dirac{\vec{\alpha}_{t -1} - \partic{\vec{\alpha}}{t - 1}{j}} \\
+\end{split}\end{equation}
+%
+%
+where 
+
+\begin{equation}
+\particS{w}{t}{i,j} = \particS{w}{t}{i} 
+	\frac{
+		\partic{w}{t -1}{j}
+		\optorC{f}{\particB{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j}}
+	}{
+		\Lbrac{\sum_{j = 1}^N
+		\partic{w}{t -1}{j}
+		\optorC{f}{\particB{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j}}}
+	}
+\end{equation}
+
+The above is what we need for the EM-algorithm.
+
+\begin{algorithm}[H]
+\caption{$\bigO{N^2}$ generalized two filter smoother using the method in \citet{briers10}.}\label{alg:ON2smoother}
+\begin{algorithmic}[1]\raggedright
+\INPUT
+\Statex $\mat{Q},\mat{Q}_0,\vec{a}_0,\mat{X}_1,\dots,\mat{X}_d,\vec{y}_1,\dots,\vec{y}_d,R_1,\dots,R_d,\mat{S}$
+%
+\Procedure{Filter forward}{}
+\State Run a forward particle filter to get a particle clouds % 
+	$\Lbrace{\partic{\vec{\alpha}}{t}{j}, \partic{w}{t}{j}, \partic{\beta}{t + 1}{j}}_{j=1,\dots,N}$ %
+	approximating $\propC{\vec{\alpha}_t}{\vec{y}_{1:t}}$ for $t = 0, 1, \dots, d$. See algorithm~\ref{alg:forward}.
+\EndProcedure
+%
+\Procedure{Filter backwards}{}
+\State Run a similar backward filter to get %
+	$\Lbrace{\particB{\vec{\alpha}}{t}{k}, \particB{w}{t}{k}, \particB{\beta}{t - 1}{k}}_{k=1,\dots,N}$  %
+	approximating $\propC{\vec{\alpha}_t}{\vec{y}_{t:d}}$ for $t = d + 1, d, d-1, \dots, 1$. See algorithm~\ref{alg:backward}.
+\EndProcedure
+% 
+\Procedure{Smooth (combine)}{}
+\For{$t=1,\dots, d$}
+\State Assign each backward filter particle a smoothing weight given by:
+\StateXX \begin{equation}\label{eqn:combineWeightO2}
+\particS{w}{t}{i} \propto
+	\particB{w}{t}{i} \frac{\Lbrac{
+		\sum_{j = 1}^N \partic{w}{t - 1}{j}
+		\optorC{f}{\particB{\vec{\alpha}}{t}{i}}{\partic{\vec{\alpha}}{t - 1}{j}}
+	}}{ \optor{\gamma_t}{\particB{\vec{\alpha}}{t}{i}}}
+\end{equation}
+\EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Implementation}
+The \verb|PF_EM| method in the \verb|dynamichazard| package contains an implementation of the above described method. You specify the number of particles by the \verb|N_first|, \verb|N_fw_n_bw| and \verb|N_smooth| argument for respectively the $N_f$, $N$ and $N_s$ in the algorithm \ref{alg:ONsmoother}-\ref{alg:backward}. We may want more particle in the smoothing step, $N_s > N$, as pointed out in the discussion in \citet[page 460 and 461]{fearnhead10}. Further, selecting $N_f > N$ may be preferable to ensure coverage of the state space at time $0$ and $d + 1$.
+
+The \verb|method| argument specify how the filters are set up. The argument can take the following values:
+
+\begin{itemize}
+	\item \verb|"bootstrap_filter"| for a bootstrap filter.
+	\item \verb|"PF_normal_approx_w_cloud_mean"| and \verb|"AUX_normal_approx_w_cloud_mean"| for the Taylor expansion normal approximation of the conditional density of $\vec{y}_t$ made around the weighted mean of the previous cloud. The \verb|PF| and \verb|AUX| prefix specifies whether or not the auxiliary version should be used.
+	\item \verb|"PF_normal_approx_w_particles"| and \verb|"AUX_normal_approx_w_particles"| for the Taylor expansion normal approximation of the conditional density of $\vec{y}_t$ made around the parent (or/and child) particle. The \verb|PF_| and \verb|AUX_| prefix specifies whether or not the auxiliary version should be used.
+\end{itemize}
+
+The smoother is selected with the \verb|smoother| argument. \verb|"Fearnhead_O_N"| gives the smoother in algorithm~\ref{alg:ONsmoother} and \verb|"Brier_O_N_square"| gives the smoother in algorithm~\ref{alg:ON2smoother}.
+
+The \emph{Systematic Resampling} \citep{kitagawa96} is used in all re-sampling steps. See \cite{douc05} for a comparison of re-sampling methods. The rest of the arguments to \verb|PF_EM| are similar to those of the \verb|ddhazard| function.
 
 
 
