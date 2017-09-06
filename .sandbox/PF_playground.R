@@ -85,11 +85,10 @@ args$Q <- Q
 a_0  - ddfit$state_vecs[1, ]
 diag(Q) - diag(ddfit$Q)
 
-sink("tmp.txt") # TODO: remove
+sink("tmp.txt")
 set.seed(30302129)
 result <- do.call(PF_smooth, args)
-sink() # TODO: remove
-
+sink()
 .i <- .i + 1
 
 

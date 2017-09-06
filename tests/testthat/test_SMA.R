@@ -206,7 +206,7 @@ test_that("Posterior gives previous found results with large by length for pbc d
   f1 <- f1[c("state_vecs", "state_vecs")]
   # save_to_test(f1, "posterior_approx_logit_pbc_large_by")
 
-  expect_equal(f1, read_to_test("posterior_approx_logit_pbc_large_by"), tolerance = 1.490116e-08)
+  expect_equal(f1, read_to_test("posterior_approx_logit_pbc_large_by"), tolerance = 1e-7)
 })
 
 #####

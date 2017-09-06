@@ -48,6 +48,9 @@ test_that("Print yields the expected results for object returned by ddhazard", {
 test_that("print.ddhazard_boot gives the expected output", {
   skip_on_cran()
 
+  #####
+  # With fixed effects
+
   sims <- exp_sim_200
   result <- ddhazard(
     survival::Surv(tstart, tstop, event) ~ ddFixed(x1) + ddFixed(x2) + . - id - x1 - x2,
@@ -55,7 +58,7 @@ test_that("print.ddhazard_boot gives the expected output", {
     by = 1,
     control = list(fixed_terms_method = "E_step",
                    eps = 1e-2), # decreased to reduce run-time
-    Q_0 = diag(1e5, 9),
+    Q_0 = diag(1, 9),
     Q = diag(1e-2, 9),
     max_T = 10, model = "exp_clip_time_w_jump",
     id = sims$res$id, order = 1,
@@ -66,27 +69,29 @@ test_that("print.ddhazard_boot gives the expected output", {
 
   # plot(result, ddhazard_boot = boot_out) # needs bigger R
   # save_to_test(
-  #   capture.output(print(boot_out, digits = 4)),
+  #   capture.output(print(boot_out, digits = 1)),
   #   file_name = "boot_print.RDS")
-  expect_equal(capture.output(print(boot_out, digits = 4)), read_to_test("boot_print.RDS"))
+  expect_equal(capture.output(print(boot_out, digits = 1)), read_to_test("boot_print.RDS"))
 
+  #####
+  # Without fixed effects
   result <- ddhazard(
     survival::Surv(tstart, tstop, event) ~ . - id,
     sims$res,
     by = 1,
     control = list(fixed_terms_method = "E_step",
-                   eps = 1e-2), # decreased to reduce run-time),
-    Q_0 = diag(1e5, 11),
+                   eps = 1e-2), # decreased to reduce run-time
+    Q_0 = diag(1, 11),
     Q = diag(1e-2, 11),
     max_T = 10, model = "exp_clip_time_w_jump",
     id = sims$res$id, order = 1,
     verbose = F)
 
   set.seed(1992)
-  suppressWarnings(boot_out <- ddhazard_boot(result, R = 19))
+  boot_out <- ddhazard_boot(result, R = 19)
 
   # save_to_test(
-  #   capture.output(print(boot_out, digits = 4)),
+  #   capture.output(print(boot_out, digits = 1)),
   #   file_name = "boot_print_two.RDS")
-  expect_equal(capture.output(print(boot_out, digits = 4)), read_to_test("boot_print_two.RDS"))
+  expect_equal(capture.output(print(boot_out, digits = 1)), read_to_test("boot_print_two.RDS"))
 })

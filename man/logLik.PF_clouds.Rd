@@ -4,10 +4,12 @@
 \alias{logLik.PF_clouds}
 \title{Log-Likelihood of a \code{PF_clouds} object}
 \usage{
-\method{logLik}{PF_clouds}(object)
+\method{logLik}{PF_clouds}(object, ...)
 }
 \arguments{
 \item{object}{an object of class \code{PF_clouds}}
+
+\item{...}{unused.}
 }
 \value{
 The log-likelihood value given the observed data and set of parameter used when simulating the clouds.

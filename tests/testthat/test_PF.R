@@ -21,6 +21,16 @@ test_that("dmvnrm_log_test gives correct likelihood", {
   }
 })
 
+# Function to compute cloud means
+get_means <- function(result){
+  means <- lapply(
+    result[c("forward_clouds", "backward_clouds", "smoothed_clouds")],
+    function(clouds)
+      do.call(rbind, sapply(clouds, function(row){
+        colSums(t(row$states) * drop(row$weights))
+      }, simplify = FALSE)))
+}
+
 test_that("PF_smooth gives same results", {
   skip_on_cran()
 
@@ -119,7 +129,7 @@ test_that("PF_smooth gives same results", {
       # Test that multithreaded version gives the same
       set.seed(30302129)
       old_args <- args
-      args$n_threads <- 7
+      args$n_threads <- max(2, parallel:::detectCores())
 
       result_multi <- .(fit_quote)
       expect_equal(result_multi, result)
@@ -129,8 +139,19 @@ test_that("PF_smooth gives same results", {
       #####
       # Test versus previous computed values
 
-      # save_to_test(result, file_name = .(test_file_name))
-      expect_equal(result, read_to_test(.(test_file_name)), tolerance = 1.49e-08)
+      # This one may be skipped as the test file is large-ish
+      .file <- paste0("local_tests/", .(test_file_name))
+      # save_to_test(result, file_name = .file)
+      test_if_file_exists(
+        .file,
+        expect_equal(result, read_to_test(.file), tolerance = 1.49e-08))
+
+
+      # Compute clouds means to test against
+      .file <- paste0(.(test_file_name), "_cloud_means")
+
+      # save_to_test(get_means(result), file_name = .file)
+      expect_equal(get_means(result), read_to_test(.file), tolerance = 1.49e-08)
     })
 
     eval(q, envir = parent.frame())
@@ -143,7 +164,7 @@ test_that("PF_smooth gives same results", {
       args$method <- "bootstrap_filter"
       do.call(PF_smooth, args)
     }),
-    test_file_name = "local_tests/bootstrap_filter")
+    test_file_name = "bootstrap_filter")
 
   #####
   # Normal approximation in importance density with mean from previous cloud
@@ -152,7 +173,7 @@ test_that("PF_smooth gives same results", {
       args$method <- "PF_normal_approx_w_cloud_mean"
       do.call(PF_smooth, args)
     }),
-    test_file_name = "local_tests/PF_normal_approx_w_cloud_mean")
+    test_file_name = "PF_normal_approx_w_cloud_mean")
 
   #####
   # Normal approximation in AUX filter with mean from previous cloud
@@ -161,7 +182,7 @@ test_that("PF_smooth gives same results", {
       args$method <- "AUX_normal_approx_w_cloud_mean"
       do.call(PF_smooth, args)
     }),
-    test_file_name = "local_tests/AUX_normal_approx_w_cloud_mean")
+    test_file_name = "AUX_normal_approx_w_cloud_mean")
 
   #####
   # Normal approximation in importance density with mean from parent and child particle
@@ -170,7 +191,7 @@ test_that("PF_smooth gives same results", {
       args$method <- "PF_normal_approx_w_particles"
       do.call(PF_smooth, args)
     }),
-    test_file_name = "local_tests/PF_normal_approx_w_particles")
+    test_file_name = "PF_normal_approx_w_particles")
 
   #####
   # Normal approximation in AUX filter with mean from parent and child particle
@@ -179,7 +200,7 @@ test_that("PF_smooth gives same results", {
       args$method <- "AUX_normal_approx_w_particles"
       do.call(PF_smooth, args)
     }),
-    test_file_name = "local_tests/AUX_normal_approx_w_particles")
+    test_file_name = "AUX_normal_approx_w_particles")
 
   #####
   # Test O(n^2) method from Brier et al
@@ -189,7 +210,7 @@ test_that("PF_smooth gives same results", {
       args$smoother <- "Brier_O_N_square"
       do.call(PF_smooth, args)
     }),
-    test_file_name = "local_tests/Brier_O_N_square_AUX_normal_approx_w_particles")
+    test_file_name = "Brier_AUX_normal_w_particles")
 })
 
 test_that("Import and export PF cloud from Rcpp gives the same", {
@@ -199,8 +220,6 @@ test_that("Import and export PF cloud from Rcpp gives the same", {
 
   #####
   # Without transition_likelihoods
-  cloud_example <- read_to_test("local_tests/cloud_example_no_transition_likelihoods")
-
   test_func <- function(has_transition){
     q <- bquote({
       .(if(has_transition)
@@ -219,13 +238,21 @@ test_that("Import and export PF cloud from Rcpp gives the same", {
     eval(q, envir = parent.frame())
   }
 
-  test_func(FALSE)
+  test_if_file_exists(
+    "local_tests/cloud_example_no_transition_likelihoods",
+    {
+      cloud_example <- read_to_test("local_tests/cloud_example_no_transition_likelihoods")
+      test_func(FALSE)
+    })
 
   #####
   # With transition_likelihoods
-  cloud_example <- read_to_test("local_tests/cloud_example_with_transition_likelihoods")
-
-  test_func(TRUE)
+  test_if_file_exists(
+    "local_tests/cloud_example_with_transition_likelihoods",
+    {
+      cloud_example <- read_to_test("local_tests/cloud_example_with_transition_likelihoods")
+      test_func(TRUE)
+    })
 })
 
 test_that("PF_EM stops with correct error messages due to wrong or missing arguments", {
@@ -257,7 +284,8 @@ test_that("PF_EM gives previous results on head neck data set", {
     data = head_neck_cancer,
     by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2),
     control = list(N_fw_n_bw = 200, N_smooth = 1e3, N_first = 2e3,
-                   n_max = 5, n_threads = 7),
+                   n_max = 5,
+                   n_threads = max(parallel::detectCores(), 2)),
     max_T = 45)
 
   test_func <- function(smoother, file_name){
@@ -285,15 +313,24 @@ test_that("PF_EM gives previous results on head neck data set", {
       result <- result[c("a_0", "Q", "clouds", "summary_stats", "log_likes",
                          "n_iter", "effective_sample_size", "seed")]
 
-      # save_to_test(result, .(file_name))
-      expect_equal(result, read_to_test(.(file_name)), tolerance = 1.49e-08)
+      .file <- paste0("local_tests/", .(file_name))
+      # save_to_test(result, .file)
+      test_if_file_exists(
+        .file,
+        expect_equal(result, read_to_test(.file), tolerance = 1.49e-08))
+
+      # Compute clouds means to test against
+      .file <- paste0(.(file_name), "_cloud_means")
+
+      # save_to_test(get_means(result$clouds), file_name = .file)
+      expect_equal(get_means(result$clouds), read_to_test(.file), tolerance = 1.49e-08)
     })
 
     eval(q, envir = parent.frame())
   }
 
-  test_func(smoother = "Fearnhead_O_N", "local_tests/PF_head_neck")
-  test_func(smoother = "Brier_O_N_square", "local_tests/PF_head_neck_w_Brier_method")
+  test_func(smoother = "Fearnhead_O_N", "PF_head_neck")
+  test_func(smoother = "Brier_O_N_square", "PF_head_neck_w_Brier_method")
 })
 
 test_that("compute_summary_stats gives previous results", {
@@ -307,19 +344,23 @@ test_that("compute_summary_stats gives previous results", {
 
   test_func <- function(data_file, test_file){
     q <- bquote({
-      cloud_example <- read_to_test(.(data_file))$clouds
+      test_if_file_exists(
+        .(data_file),
+        {
+          cloud_example <- read_to_test(.(data_file))$clouds
 
-      #####
-      # Test that multithreaded version gives the same
-      sum_stats <- compute_summary_stats(cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0)
-      s2 <- compute_summary_stats(cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0)
+          #####
+          # Test that multithreaded version gives the same
+          sum_stats <- compute_summary_stats(cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0)
+          s2 <- compute_summary_stats(cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0)
 
-      expect_equal(sum_stats, s2)
+          expect_equal(sum_stats, s2)
 
-      #####
-      # Test versus previous results
-      # save_to_test(sum_stats, .(test_file))
-      expect_equal(sum_stats, read_to_test(.(test_file)), tolerance = 1.49e-08)
+          #####
+          # Test versus previous results
+          # save_to_test(sum_stats, .(test_file))
+          expect_equal(sum_stats, read_to_test(.(test_file)), tolerance = 1.49e-08)
+      })
     })
 
     eval(q, envir = parent.frame())
@@ -350,8 +391,16 @@ test_that("help page example runs and gives previous computed results", {
       n_max = 50,
       n_threads = parallel::detectCores()))
 
-  # save_to_test(pf_fit[names(pf_fit) != "call"], "local_tests/survival_lung_example")
-  expect_equal(pf_fit[names(pf_fit) != "call"], read_to_test("local_tests/survival_lung_example"), tolerance = 1.49e-08)
+  .file <- "local_tests/survival_lung_example"
+  # save_to_test(pf_fit[names(pf_fit) != "call"], .file)
+  test_if_file_exists(
+    .file,
+    expect_equal(pf_fit[names(pf_fit) != "call"], read_to_test(.file), tolerance = 1.49e-08)
+  )
+
+  .file <- "survival_lung_example_cloud_means"
+  # save_to_test(get_means(pf_fit$clouds), file_name = .file)
+  expect_equal(get_means(pf_fit$clouds), read_to_test(.file), tolerance = 1.49e-08)
 
   expect_no_error(plot(pf_fit, cov_index = 1))
   expect_no_error(plot(pf_fit, cov_index = 2))

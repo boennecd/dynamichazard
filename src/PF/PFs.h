@@ -56,7 +56,6 @@ public:
     std::vector<cloud> clouds;
     std::string direction_str = (is_forward) ? "forward" : "backward";
 
-    /* TODO: what to do at time 0 or d + 1 */
     if(data.debug > 0)
       data.log(1) << "Running " << direction_str << " filter"
                   << "\nSampling first particle at time "

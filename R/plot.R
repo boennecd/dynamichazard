@@ -15,6 +15,8 @@
 #' @details
 #' Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
 #'
+#' @importFrom graphics matplot matpoints
+#'
 #' @export
 plot.fahrmeier_94 = function(x, xlab = "Time",
                              ylab = "Hazard",
@@ -169,7 +171,6 @@ plot.fahrmeier_94_SpaceErrors = function(x, mod, cov_index = NA, t_index = NA,
   abline(h = c(-1, 1) * 1.96, lty = 2)
 }
 
-# TODO: test
 #' @title Plot of clouds from a \code{PF_clouds} object
 #' @description
 #' Plots mean curve along with quantiles through time for the forward, backward or smoothed cloud.
@@ -245,7 +246,6 @@ plot.PF_clouds <- function(
   invisible(list(mean = .mean, qs = qs))
 }
 
-# TODO: test
 #' @title Plot for a \code{PF_EM} object
 #' @description
 #' Short hand to call \code{\link{plot.PF_clouds}}.

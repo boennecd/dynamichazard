@@ -6,7 +6,9 @@
 
 // Don't use openMP for elementwise operations. It is automatically if -fopenmp
 // is present. Seems to cause issues on some platforms
+#ifndef ARMA_DONT_USE_OPENMP
 #define ARMA_DONT_USE_OPENMP
+#endif
 
 // we know these are avialble with all R installations
 #define ARMA_USE_LAPACK

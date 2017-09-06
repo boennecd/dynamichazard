@@ -578,7 +578,7 @@ static PF_summary_stats compute_summary_stats(
       double weight_outer = exp(this_p->log_weight);
       my_E_x += weight_outer * this_p->get_state();
 
-      if(is_first /* TODO: what to do at time 1 */)
+      if(is_first)
         continue;
 
       for(auto it_pair = it_elem->transition_pairs.begin();

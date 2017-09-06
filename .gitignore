@@ -27,10 +27,9 @@ vignettes/Prebuild/logit_sim_*.RDS
 vignettes/figure/
 
 # Ignore everything
-.sandbox/Particle_filtering/*
+vignettes/Prebuild/Particle_filtering/*
 # But not these files...
-!.sandbox/Particle_filtering/Particle_filtering.pdf
-!.sandbox/Particle_filtering/Particle_filtering.tex
+!vignettes/Prebuild/Particle_filtering/Particle_filtering.pdf
 
 sandbox/*
 **/Rprof.out

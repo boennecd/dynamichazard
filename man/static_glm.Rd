@@ -36,7 +36,7 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 
 \item{mf}{model matrix for regression. Needed when \code{only_coef = TRUE}}
 
-\item{method_use}{method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm::speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.}
+\item{method_use}{method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.}
 
 \item{n_threads}{number of threads to use when \code{method_use} is \code{"parallelglm"}.}
 }

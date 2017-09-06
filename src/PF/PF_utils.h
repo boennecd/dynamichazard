@@ -256,7 +256,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
       double g = densities::log_p_prime(*it_eta, *it_is_event, at_risk_length);
       double neg_G = - densities::log_p_2prime(*it_eta, *it_is_event, at_risk_length);
 
-      /*
+      /* TODO: delete
       logger << g  << "\t"  << neg_G  <<  "\t" << *it_eta  << "\t"
              << at_risk_length  << "\t" << *it_is_event
              << "\t" << (*it_eta * neg_G) + g <<  std::endl; // TODO: delete

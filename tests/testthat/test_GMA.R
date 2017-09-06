@@ -53,7 +53,7 @@ test_that("GMA works w/ second order random walk", {
   # plot(f1)
   f1 <- f1[c("state_vecs", "state_vars", "Q")]
   # save_to_test(f1, "GMA_pbc_o2_logit")
-  expect_equal(f1, read_to_test("GMA_pbc_o2_logit"), tolerance = 1.490116e-08)
+  expect_equal(f1, read_to_test("GMA_pbc_o2_logit"), tolerance = 1.490116e-06)
 })
 
 test_that("GMA works w/ fixed effects in E-step", {

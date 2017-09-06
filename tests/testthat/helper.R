@@ -123,10 +123,21 @@ any_numeric <- function(x){
 }
 
 read_to_test <- function(file_name){
+  readRDS(read_to_test_get_file_w_path(file_name))
+}
+
+read_to_test_get_file_w_path <- function(file_name){
   path <- if(!interactive()) "./previous_results/" else
     paste0(stringr::str_match(getwd(), ".+dynamichazard"), "/tests/testthat/previous_results/")
 
-  readRDS(paste0(path, file_name, ".RDS"))
+  paste0(path, file_name, ".RDS")
+}
+
+test_if_file_exists <- function(file_name, test_expr){
+  if(!file.exists(file_w_path <- read_to_test_get_file_w_path(file_name))){
+    cat("Skipped test as", sQuote(file_w_path), "does not exists\n")
+  } else
+    eval(substitute(test_expr), envir = parent.frame())
 }
 
 library(testthat)

@@ -64,6 +64,7 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
 
 #' @title Log-Likelihood of a \code{PF_clouds} object
 #' @param object an object of class \code{PF_clouds}
+#' @param ... unused.
 #' @description
 #' Computes the log-likelihood using the forward filter clouds. See the particle_filter vignette for details.
 #'
@@ -71,7 +72,7 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
 #' The log-likelihood value given the observed data and set of parameter used when simulating the clouds.
 #'
 #' @export
-logLik.PF_clouds <- function(object){
+logLik.PF_clouds <- function(object, ...){
   sum(tail(
     sapply(lapply(object$forward_clouds,
                   "[[", "log_unnormalized_weights"),
