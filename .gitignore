@@ -34,3 +34,4 @@ vignettes/Prebuild/Particle_filtering/*
 sandbox/*
 **/Rprof.out
 **/Sweave.sty
+README_cache

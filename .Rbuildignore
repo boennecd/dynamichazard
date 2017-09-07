@@ -19,10 +19,7 @@ release_questions\.R$
 cran-comments\.md$
 revdep/
 
-^README\.Rmd$
-^README\.md$
-^README\.bib$
-^README-.*\.png$
+^README
 
 vignettes/\.jss
 vignettes/figure
@@ -38,3 +35,4 @@ Examples
 sandbox
 speedtest
 tests/testthat/previous_results/local_tests
+README_cache
