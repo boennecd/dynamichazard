@@ -110,7 +110,7 @@ test_that("PF_smooth gives same results", {
       # Check that weights in transition_likelihoods sum to one
       if(length(result$transition_likelihoods) > 0){
         ws <- lapply(result$transition_likelihoods, function(x){
-          sapply(lapply(x, "[[", "weights"), sum)
+          colSums(result$transition_likelihoods[[2]]$weights)
         })
 
         for(i in seq_along(ws))

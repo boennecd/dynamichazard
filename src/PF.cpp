@@ -85,33 +85,34 @@ Rcpp::List get_rcpp_list_from_cloud(
     // Time loop
     for(auto it = transition_likelihoods.begin();
         it != transition_likelihoods.end(); ++it, ++it_trans){
-      Rcpp::List ans_inner(it->size());
+      unsigned int n_bw = it->size();
+      // assume equal number of pair for each element
+      unsigned int n_fw = it->front().transition_pairs.size();
+      arma::uvec bw_idx(n_bw);
+      arma::umat fw_idx(n_fw, n_bw);
+      arma::mat weights(n_fw, n_bw);
 
       // Loop over first index of pair of particles
-      auto it_ans = ans_inner.begin();
+      auto it_w = weights.begin();
+      auto it_fw = fw_idx.begin();
+      auto it_bw = bw_idx.begin();
       for(auto it_inner = it->begin();
-          it_inner != it->end(); ++it_inner, ++it_ans){
-        const unsigned int n_inner = it_inner->transition_pairs.size();
-        arma::uvec fw_idx(n_inner);
-        arma::vec weights(n_inner);
+          it_inner != it->end(); ++it_inner, ++it_bw){
+        *it_bw = get_cloud_idx(it_inner->p);
 
-        auto it_fw_idx = fw_idx.begin();
-        auto it_w = weights.begin();
         auto it_data = it_inner->transition_pairs.begin();
         // Loop over second index of pair of particles
-        for(unsigned int j = 0; j < n_inner; ++j, ++it_fw_idx, ++it_w, ++it_data){
-          *it_fw_idx = get_cloud_idx(it_data->p);
+        for(unsigned int j = 0; j < n_fw; ++j, ++it_fw, ++it_w, ++it_data){
+          *it_fw = get_cloud_idx(it_data->p);
           *it_w = exp(it_data->log_weight);
         }
-
-        *it_ans = Rcpp::List::create(
-          Rcpp::Named("fw_idx") = Rcpp::wrap(std::move(fw_idx)),
-          Rcpp::Named("weights") = Rcpp::wrap(std::move(weights)),
-          Rcpp::Named("bw_idx") = get_cloud_idx(it_inner->p)
-        );
       }
 
-      *it_trans = std::move(ans_inner);
+      *it_trans = Rcpp::List::create(
+        Rcpp::Named("fw_idx") = Rcpp::wrap(std::move(fw_idx)),
+        Rcpp::Named("weights") = Rcpp::wrap(std::move(weights)),
+        Rcpp::Named("bw_idx") = Rcpp::wrap(std::move(bw_idx))
+      );
     }
   }
 
@@ -212,35 +213,42 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
     auto it_ans = transition_likelihoods.begin();
     // Time loop
     for(unsigned int i = 0; i < n_periods; ++i, ++it_trans, ++it_ans){
-      Rcpp::ListOf<Rcpp::List> input_at_t(*it_trans);
-      unsigned int n_elem = input_at_t.size();
-      std::vector<smoother_output::particle_pairs> &new_elems = *it_ans;
-      new_elems.resize(n_elem);
-
       cloud &fw_cloud = fw_clouds[i]; // starts at time 0
       cloud &sm_cloud = smooth_clouds[i]; // starts at time 1
 
+      const Rcpp::List inner_list(*it_trans);
+      const Rcpp::IntegerVector bw_idx((SEXP)inner_list["bw_idx"]);
+      const Rcpp::IntegerMatrix fw_idx((SEXP)inner_list["fw_idx"]);
+      const Rcpp::NumericMatrix weights((SEXP)inner_list["weights"]);
+
+      unsigned int n_bw = bw_idx.size();
+      unsigned int n_fw = fw_idx.nrow();
+
+      std::vector<smoother_output::particle_pairs> &new_elems = *it_ans;
+      new_elems.resize(n_bw);
+
       // Loop over first index of pair of particles
-      auto it_elems = new_elems.begin();
-      auto it_input = input_at_t.begin();
-      for(unsigned int j = 0; j < n_elem; ++j, ++it_elems, ++it_input){
+      auto it_elems_begin = new_elems.begin();
+      const int *it_bw_begin = &bw_idx[0];
+      const int *it_fw_begin = &fw_idx(0,0);
+      const double *it_w_begin = &weights(0,0);
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+      for(unsigned int j = 0; j < n_bw; ++j){
+        auto it_elems = it_elems_begin + j;
         std::vector<smoother_output::pair> &transition_pairs =
           it_elems->transition_pairs;
 
-        Rcpp::List input(*it_input);
-        unsigned int idx = Rcpp::as<unsigned int>(input["bw_idx"]);
-        it_elems->p = get_cloud_idx(sm_cloud, idx);
-        Rcpp::IntegerVector fw_idx(Rcpp::as<Rcpp::IntegerVector>(input["fw_idx"]));
-        Rcpp::NumericVector weights(Rcpp::as<Rcpp::NumericVector>(input["weights"]));
+        it_elems->p = get_cloud_idx(sm_cloud, *(it_bw_begin + j));
 
-        unsigned int n_elem_inner = fw_idx.size();
-        transition_pairs.resize(n_elem_inner);
-        auto it_idx = fw_idx.begin();
-        auto it_w = weights.begin();
+        transition_pairs.resize(n_fw);
         auto it_trans_pair = transition_pairs.begin();
         // Loop over second index of pair of particles
-        for(unsigned int k = 0; k < n_elem_inner; ++k, ++it_idx, ++it_w, ++it_trans_pair){
-          it_trans_pair->p = get_cloud_idx(fw_cloud, *it_idx);
+        const int *it_fw = it_fw_begin + j * n_fw;
+        const double *it_w = it_w_begin + j * n_fw;
+        for(unsigned int k = 0; k < n_fw; ++k, ++it_fw, ++it_w, ++it_trans_pair){
+          it_trans_pair->p = get_cloud_idx(fw_cloud, *it_fw);
           it_trans_pair->log_weight = log(*it_w);
         }
       }

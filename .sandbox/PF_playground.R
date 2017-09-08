@@ -39,11 +39,11 @@ result <- PF_EM(
   id = sims$res$id,
   Q_0 = Q_0,
   Q = Q,
-  control = list(N_fw_n_bw = 500, N_smooth = 1e3, N_first = 2e3,
+  control = list(N_fw_n_bw = 1250, N_smooth = 1e3, N_first = 2e3,
                  n_threads = 7,
                  smoother = "Brier_O_N_square",
                  n_max = 25),
-  trace = 2)
+  trace = 1)
 sink()
 
 norm(ddfit$Q - Q_true)
