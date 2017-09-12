@@ -1,7 +1,7 @@
-set.seed(14)
+set.seed(16)
 n_vars <- 3
-sims <- test_sim_func_logit(
-  n_series = 250, n_vars = n_vars, t_0 = 0, t_max = 20,
+sims <- test_sim_func_exp(
+  n_series = 200, n_vars = n_vars, t_0 = 0, t_max = 20,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
   intercept_start = -3, sds = Q_true <- c(.05, rep(.2, n_vars)))
 Q_true <- diag(Q_true^2)
@@ -12,11 +12,11 @@ risk_set <-
                id = sims$res$id, is_for_discrete_model = TRUE)
 
 sum(sims$res$event)
-xtabs(~ sims$res$tstop[sims$res$event == 1])
+# xtabs(~ sims$res$tstop[sims$res$event == 1])
 matplot(sims$beta, type = "l", lty = 1)
 
 Q <- diag(1, n_vars + 1)
-Q_0 <- diag(.1, n_vars + 1)
+Q_0 <- diag(sqrt(.1), n_vars + 1)
 a_0 <- sims$betas[1, ]
 
 ddfit <- ddhazard(
@@ -26,8 +26,9 @@ ddfit <- ddhazard(
   by = 1,
   id = sims$res$id,
   Q_0 = Q_0,
+  model = "exp_clip_time_w_jump",
   Q = Q,
-  control = list(n_max = 25, eps = 1e-8))
+  control = list(n_max = 10, eps = 1e-8))
 
 sink("tmp.txt")
 options(digits = 4)
@@ -35,14 +36,16 @@ result <- PF_EM(
   Surv(tstart, tstop, event) ~ . - id,
   data = sims$res,
   max_T = 20,
+  model = 'exponential',
   by = 1,
   id = sims$res$id,
   Q_0 = Q_0,
   Q = Q,
-  control = list(N_fw_n_bw = 1250, N_smooth = 1e3, N_first = 2e3,
+  control = list(N_fw_n_bw = 1000, N_smooth = 1e3, N_first = 2e3,
                  n_threads = 7,
+                 method = "bootstrap_filter",
                  smoother = "Brier_O_N_square",
-                 n_max = 25),
+                 n_max = 10),
   trace = 1)
 sink()
 
@@ -55,10 +58,11 @@ diag(result$Q - Q_true)
 var(ddfit$state_vecs[1, ] - a_0)
 var(result$a_0 - a_0)
 
-
 b_idx <- 1:4 #1:5
+ylim <- range(range(ddfit$state_vecs[, b_idx], sims$betas[, b_idx]))
+ylim[1] <- min(range(ddfit$state_vecs[, b_idx], sims$betas[, b_idx]), -4)
 matplot(0:20, sims$betas[, b_idx], lty = 1, type = "l", xlim = c(0, 21),
-        ylim = range(ddfit$state_vecs[, b_idx], sims$betas[, b_idx]))
+        ylim = ylim)
 plot_out <- plot(result, add = TRUE, lty = 2, cov_index = b_idx)
 plot(result, add = TRUE, qlvls = c(),
      type = "forward_clouds", lty = 3, cov_index = b_idx)
@@ -179,3 +183,58 @@ colSums((
 # result$smoothed_clouds[[8]]$states[, 5740]
 #
 # result <- result$smoothed_clouds
+
+
+options(digits = 4)
+
+beta <- c(-3, 1, .25, 1)
+n <- 1e4
+q <- length(beta)
+tmax <- 1
+
+X <- matrix(runif(q*n, -.5, .5), ncol = q)
+y <- pmin(rexp(n, exp(drop(X %*% beta))), tmax)
+sum(y == tmax)
+
+fp <- function(y, eta, tmax)
+  drop((y < tmax) - exp(eta) * y)
+fpp <- function(y, eta, tmax)
+  drop(- exp(eta) * y)
+
+(cur <- beta + rnorm(length(beta), sd = sqrt(.1)))
+# cur <- beta
+
+eta <- X %*% cur
+tmp <- eta  -
+  fp(y = y, eta = eta, tmax = tmax) /
+  fpp(y = y, eta = eta, tmax = tmax)
+
+tmp <- t(X) %*% (tmp * (-fpp(y = y, eta = eta, tmax = tmax)))
+
+.cov <- solve(t(X) %*% (X * (- fpp(y = y, eta = eta, tmax = tmax))))
+# .cov <- t(X) %*% (X / (- fpp(y = y, eta = eta, tmax = tmax)))
+.cov %*% tmp
+
+
+
+y <- drop(1 / (1 + exp(-X %*% beta))) > runif(n)
+sum(y)
+
+fp <- function(y, eta, tmax)
+  drop((exp(eta) * (y - 1) + y) / (1 + exp(eta)))
+fpp <- function(y, eta, tmax)
+  drop(- exp(eta) / (exp(eta) + 1)^2)
+
+(cur <- beta + rnorm(length(beta), sd = sqrt(.1)))
+# cur <- beta
+
+eta <- X %*% cur
+tmp <- eta  -
+  fp(y = y, eta = eta, tmax = tmax) /
+  fpp(y = y, eta = eta, tmax = tmax)
+
+tmp <- t(X) %*% (tmp * (-fpp(y = y, eta = eta, tmax = tmax)))
+
+.cov <- solve(t(X) %*% (X * (- fpp(y = y, eta = eta, tmax = tmax))))
+# .cov <- t(X) %*% (X / (- fpp(y = y, eta = eta, tmax = tmax)))
+.cov %*% tmp
