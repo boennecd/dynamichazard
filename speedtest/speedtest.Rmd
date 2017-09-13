@@ -101,7 +101,7 @@ get_rune_time_summary <- function(n, p){
   cat("(n, p) = (", n, ", ", p, ")",
       ". Units is ", sQuote(attr(out, "unit")), "\n", sep = "")
   
-  print(out[, c("expr", "lq", "median", "uq", "cld")], row.names = FALSE)
+  print(out[, c("expr", "lq", "median", "uq")], row.names = FALSE)
   
   cat("\n\n")
   
