@@ -97,35 +97,51 @@ void GMA<T>::solve(){
 
     arma::vec h_1d(r_set.n_elem);
 
-    signed int k;
+    unsigned int k, q = X_t.n_rows;
     for(k = 0; k < max_rep; k++){
-      arma::mat X_tilde = X_t;
+      arma::mat X_cross(q, q, arma::fill::zeros);
       arma::vec a_old = a;
 
       arma::vec eta = (a(*p_dat.span_current_cov).t() * X_t).t() + offsets;
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static, 1000)
+      int n_threads = std::max(1, std::min(omp_get_max_threads(), (int)ceil(r_set.n_elem / 1000)));
+#pragma omp parallel num_threads(n_threads) if(n_threads > 1)
+{
+#endif
+      arma::mat my_X_cross(q, q, arma::fill::zeros);
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
 #endif
       for(arma::uword i = 0; i < r_set.n_elem; i++){
         double w_i = w[i];
         h_1d[i] = w_i * T::d1(eta[i], is_event[i], at_risk_lenght[i]);
-        double h_2d_neg = sqrt(- w_i * T::d2(eta[i], at_risk_lenght[i]));
-        X_tilde.col(i) *= h_2d_neg;
+        double h_2d_neg = - w_i * T::d2(eta[i], at_risk_lenght[i]);
+        sym_mat_rank_one_update(h_2d_neg, X_t.col(i), my_X_cross);
       }
 
-      /* TODO: This can be faster I do as with EKF use the thread_pool */
+#ifdef _OPENMP
+#pragma omp critical(gma_lock)
+{
+#endif
+      X_cross += my_X_cross;
 
-      X_tilde = arma::symmatu(out_mat_prod(X_tilde));
+#ifdef _OPENMP
+}
+}
+#endif
+
+      X_cross = arma::symmatu(X_cross);
 
       if(p_dat.debug){
-        my_print(p_dat, X_tilde, "X^T(-p'')X");
-        my_debug_logger(p_dat) << "Condition number of X^T(-p'')X is " << arma::cond(X_tilde);
+        my_print(p_dat, X_cross, "X^T(-p'')X");
+        my_debug_logger(p_dat) << "Condition number of X^T(-p'')X is " << arma::cond(X_cross);
       }
 
       {
         arma::mat tmp = V_t_less_inv;
-        tmp(*p_dat.span_current_cov, *p_dat.span_current_cov) += X_tilde;
+        tmp(*p_dat.span_current_cov, *p_dat.span_current_cov) += X_cross;
         inv_sympd(V, tmp, p_dat.use_pinv,
                   "ddhazard_fit_cpp estimation error: Failed to invert Hessian");
       }
@@ -134,11 +150,11 @@ void GMA<T>::solve(){
         arma::vec tmp = grad_term;
         if(1. - 1e-15 < p_dat.LR && p_dat.LR < 1. + 1e-15){
           tmp(*p_dat.span_current_cov) +=
-            X_tilde * a(*p_dat.span_current_cov) + X_t * h_1d;
+            X_cross * a(*p_dat.span_current_cov) + X_t * h_1d;
 
         } else {
           tmp(*p_dat.span_current_cov) +=
-            X_tilde * a(*p_dat.span_current_cov) + X_t * (h_1d * p_dat.LR);
+            X_cross * a(*p_dat.span_current_cov) + X_t * (h_1d * p_dat.LR);
 
           tmp += V_t_less_inv * ((1 - p_dat.LR) * a);
         }

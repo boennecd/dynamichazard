@@ -311,13 +311,13 @@ template<class T>
 class GMA : public Solver
 {
   ddhazard_data &p_dat;
-  const signed int max_rep;
+  const unsigned int max_rep;
   const double NR_eps;
   bool have_failed_once = false;
 
 public:
-  GMA(ddhazard_data &p_, signed int max_rep_, double NR_eps_):
-  p_dat(p_), max_rep(max_rep_), NR_eps(NR_eps_)
+  GMA(ddhazard_data &p, signed int max_rep, double NR_eps):
+  p_dat(p), max_rep((unsigned int)max_rep), NR_eps(NR_eps)
   { };
 
   void solve();

@@ -67,6 +67,7 @@
 #' \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm }
 #' \item{\code{hazard_func}}{Hazard function }
 #' \item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
+#' \item{\code{n_threads}}{Maximum number of threads to use.}
 #'}
 #'
 #' @seealso
