@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 options(digits = 3, width = 80)
 ```
 
-# Setup
+# Setup 
 
 ```{r load_libs}
 library(dynamichazard); library(microbenchmark)
