@@ -150,7 +150,7 @@ ddhazard = function(formula, data,
                           posterior_version = "cholesky",
                           GMA_max_rep = 25,
                           GMA_NR_eps = 1e-4,
-                          EKF_batch_size = 2000L)
+                          EKF_batch_size = 500L)
 
   if(any(is.na(control_match <- match(names(control), names(control_default)))))
     stop("These control parameters are not recognized: ",
