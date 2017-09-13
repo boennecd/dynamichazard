@@ -1,8 +1,8 @@
 #include "../ddhazard.h"
 #include "../exp_model_funcs.h"
-#include "../thread_pool.h"
 #include "../arma_BLAS_LAPACK.h"
 #include "../utils.h"
+#include "../thread_pool.h"
 
 // worker class for parallel computation
 template<typename T>
@@ -330,10 +330,12 @@ void EKF_solver<T>::parallel_filter_step(
   unsigned long const length = std::distance(first, last);
 
   unsigned long const block_size =
-    std::max(p_dat.EKF_batch_size, (int)std::ceil(length / p_dat.n_threads));
+    p_dat.n_threads <= 1 ?
+    length :
+    std::max(p_dat.EKF_batch_size, (int)std::ceil(length / (p_dat.n_threads - 1)));
   unsigned long const num_blocks=(length+block_size-1)/block_size;
   std::vector<std::future<void> > futures(num_blocks-1);
-  thread_pool pool(num_blocks - 1, max_threads);
+  thread_pool pool(num_blocks-1);
 
   std::vector<worker_T> workers;
 

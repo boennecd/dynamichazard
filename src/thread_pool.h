@@ -213,12 +213,10 @@ public:
   }
 
   // From listing 9.2
-  thread_pool(
-    // Added
-    unsigned const n_jobs, unsigned const max_threads = 1):
+  thread_pool(unsigned const n_threads = 1):
     done(false),
     joiner(threads),
-    thread_count(std::min(n_jobs, max_threads))
+    thread_count(n_threads)
   {
     // Moved to private member
     //unsigned const thread_count=std::thread::hardware_concurrency();

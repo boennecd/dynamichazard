@@ -114,7 +114,7 @@ class parallelglm_class {
     // Compute the number of blocks to create
     uword num_blocks=(n + block_size - 1) / block_size;
     std::vector<std::future<void> > futures(num_blocks-1);
-    thread_pool pool(num_blocks - 1, data.max_threads);
+    thread_pool pool(std::min(num_blocks - 1, data.max_threads));
 
     std::vector<worker> workers;
     workers.reserve(num_blocks - 1);

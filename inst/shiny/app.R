@@ -110,7 +110,7 @@ get_JS_code_for_log_slider <- function(input_name, base, exp_min, exp_max){
   }, 5)})")
 }
 
-n_series_stuff <- list(base = 2, exp_min = 6, exp_max = 18)
+n_series_stuff <- list(base = 2, exp_min = 6, exp_max = 19)
 
 JScode <- get_JS_code_for_log_slider(
   "n_series", n_series_stuff$base, n_series_stuff$exp_min, n_series_stuff$exp_max)
