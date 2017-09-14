@@ -139,19 +139,23 @@ test_that("PF_smooth gives same results", {
       #####
       # Test versus previous computed values
 
-      # This one may be skipped as the test file is large-ish
-      .file <- paste0("local_tests/", .(test_file_name))
-      # save_to_test(result, file_name = .file)
-      test_if_file_exists(
-        .file,
-        expect_equal(result, read_to_test(.file), tolerance = 1.49e-08))
-
-
       # Compute clouds means to test against
       .file <- paste0(.(test_file_name), "_cloud_means")
 
       # save_to_test(get_means(result), file_name = .file)
-      expect_equal(get_means(result), read_to_test(.file), tolerance = 1.49e-08)
+      eval(substitute(
+        expect_equal(
+          get_means(result), read_to_test(.file), tolerance = 1.49e-08),
+        list(.file = .file)), envir = environment())
+
+      # This one may be skipped as the test file is large-ish
+      .file <- paste0("local_tests/", .(test_file_name))
+      # save_to_test(result, file_name = .file)
+      eval(substitute(
+        test_if_file_exists(
+          .file,
+          expect_equal(result, read_to_test(.file), tolerance = 1.49e-08)),
+        list(.file = .file)), envir = environment())
     })
 
     eval(q, envir = parent.frame())

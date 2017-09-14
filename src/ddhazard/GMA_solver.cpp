@@ -105,7 +105,7 @@ void GMA<T>::solve(){
       arma::vec eta = (a(*p_dat.span_current_cov).t() * X_t).t() + offsets;
 
 #ifdef _OPENMP
-      int n_threads = std::max(1, std::min(omp_get_max_threads(), (int)ceil(r_set.n_elem / 1000)));
+      int n_threads = std::max(1, std::min(omp_get_max_threads(), (int)r_set.n_elem / 1000 + 1));
 #pragma omp parallel num_threads(n_threads) if(n_threads > 1)
 {
 #endif

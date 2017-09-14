@@ -87,18 +87,19 @@ public:
     ans.reserve(data.N_fw_n_bw);
 
     const covarmat *Q_use;
-    const arma::mat *Q_use_inv_chol;
-    const arma::vec *mu_term;
-
+    arma::vec *a_0_scaled;
+    double bw_w1, bw_w2;
     if(is_forward){
       Q_use = &data.Q_proposal;
 
     } else {
-      arma::mat art = densities::get_artificial_prior_covar(data, t);
-      mu_term = new arma::vec(arma::solve(art, data.a_0));
-      Q_use = new covarmat(arma::inv(arma::inv(art) + data.Q_proposal.inv));
-      Q_use_inv_chol = new arma::mat(arma::chol(Q_use->inv));
+      bw_w1 = (double)(t + 1) / (t + 2);
+      bw_w2 =              1. / (t + 2);
 
+      arma::vec &&tmp_vec = bw_w2 * data.a_0;
+      a_0_scaled = new arma::vec(tmp_vec);
+      arma::mat &&tmp = ((double)(t + 1) / (t + 2)) * data.Q.mat;
+      Q_use = new covarmat(tmp);
     }
 
     if(data.debug > 2){
@@ -113,10 +114,8 @@ public:
         mu = &cl[*it].get_state();
 
       } else {
-        arma::vec tmp =
-          solve_w_precomputed_chol(data.Q_proposal.chol, cl[*it].get_state()) + *mu_term;
-
-        mu = new arma::vec(solve_w_precomputed_chol(*Q_use_inv_chol, tmp));
+        arma::vec &&tmp = bw_w1 * cl[*it].get_state() + *a_0_scaled;
+        mu = new arma::vec(tmp);
 
       }
 
@@ -132,8 +131,7 @@ public:
 
     if(!is_forward){
       delete Q_use;
-      delete Q_use_inv_chol;
-      delete mu_term;
+      delete a_0_scaled;
 
     }
 

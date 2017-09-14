@@ -116,21 +116,18 @@ public:
       (data, t, Q, alpha_bar, PF_cloud);
 
     const arma::mat *Q_numerator_chol_inv;
-    const arma::mat *Q_numerator_inv_chol;
-    const arma::vec *mu_bw_term;
+    arma::vec *a_0_scaled;
+    double bw_w1, bw_w2;
     if(is_forward){
       Q_numerator_chol_inv = &data.Q.chol_inv;
 
     } else {
-      arma::mat tmp = densities::get_artificial_prior_covar(data, t);
-      mu_bw_term = // Q_t^-1 * a_0;
-        new arma::vec(arma::solve(tmp, data.a_0));
+      bw_w1 = (double)(t + 1) / (t + 2);
+      bw_w2 =              1. / (t + 2);
+      arma::vec tmp_vec = data.a_0 * bw_w2;
 
-      tmp = // Q_t^-1 + Q^-1
-        data.Q.inv + arma::inv(tmp);
-      Q_numerator_inv_chol = new arma::mat(arma::chol(tmp));
-
-      tmp = arma::inv(arma::trimatu(arma::chol(arma::inv(tmp))));
+      a_0_scaled = new arma::vec(std::move(tmp_vec));
+      arma::mat tmp = data.Q.chol_inv / sqrt((double)(t + 1) / (t + 2));
       Q_numerator_chol_inv = new arma::mat(std::move(tmp));
 
     }
@@ -149,8 +146,7 @@ public:
           *it_mu_j, it_cl->get_state(), *Q_numerator_chol_inv);
 
       } else {
-        arma::vec mean = solve_w_precomputed_chol(data.Q.chol, it_cl->get_state()) + *mu_bw_term;
-        mean = solve_w_precomputed_chol(*Q_numerator_inv_chol, mean);
+        arma::vec mean = bw_w1 * it_cl->get_state() + *a_0_scaled;
         log_prop_transition = dmvnrm_log(
           *it_mu_j, mean, *Q_numerator_chol_inv);
 
@@ -168,8 +164,7 @@ public:
 
     if(!is_forward){
       delete Q_numerator_chol_inv;
-      delete mu_bw_term;
-      delete Q_numerator_inv_chol;
+      delete a_0_scaled;
 
     }
 
@@ -198,22 +193,19 @@ public:
       <densities, is_forward>
       (data, t, Q, PF_cloud);
 
+    arma::vec *a_0_scaled;
+    double bw_w1, bw_w2;
     const arma::mat *Q_numerator_chol_inv;
-    const arma::mat *Q_numerator_inv_chol;
-    const arma::vec *mu_bw_term;
     if(is_forward){
       Q_numerator_chol_inv = &data.Q.chol_inv;
 
     } else {
-      arma::mat tmp = densities::get_artificial_prior_covar(data, t);
-      mu_bw_term = // Q_t^-1 * a_0;
-        new arma::vec(arma::solve(tmp, data.a_0));
+      bw_w1 = (double)(t + 1) / (t + 2);
+      bw_w2 =              1. / (t + 2);
+      arma::vec tmp_vec = data.a_0 * bw_w2;
 
-      tmp = // Q_t^-1 + Q^-1
-        data.Q.inv + arma::inv(tmp);
-      Q_numerator_inv_chol = new arma::mat(arma::chol(tmp));
-
-      tmp = arma::inv(arma::trimatu(arma::chol(arma::inv(tmp))));
+      a_0_scaled = new arma::vec(std::move(tmp_vec));
+      arma::mat tmp = data.Q.chol_inv / sqrt((double)(t + 1) / (t + 2));
       Q_numerator_chol_inv = new arma::mat(std::move(tmp));
 
     }
@@ -239,8 +231,7 @@ public:
           it_ans->mu, it_cl->get_state(), *Q_numerator_chol_inv);
 
       } else {
-        arma::vec mean = solve_w_precomputed_chol(data.Q.chol, it_cl->get_state()) + *mu_bw_term;
-        mean = solve_w_precomputed_chol(*Q_numerator_inv_chol, mean);
+        arma::vec mean = bw_w1 * it_cl->get_state() + *a_0_scaled;
         log_prop_transition = dmvnrm_log(
           it_ans->mu, mean, *Q_numerator_chol_inv);
 
@@ -264,8 +255,7 @@ public:
 
     if(!is_forward){
       delete Q_numerator_chol_inv;
-      delete mu_bw_term;
-      delete Q_numerator_inv_chol;
+      delete a_0_scaled;
 
     }
 

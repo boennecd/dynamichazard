@@ -1,6 +1,6 @@
 set.seed(16)
 n_vars <- 3
-sims <- test_sim_func_exp(
+sims <- test_sim_func_logit(
   n_series = 200, n_vars = n_vars, t_0 = 0, t_max = 20,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
   intercept_start = -3, sds = Q_true <- c(.05, rep(.2, n_vars)))
@@ -26,7 +26,7 @@ ddfit <- ddhazard(
   by = 1,
   id = sims$res$id,
   Q_0 = Q_0,
-  model = "exp_clip_time_w_jump",
+  model = "logit",
   Q = Q,
   control = list(n_max = 10, eps = 1e-8))
 
@@ -36,7 +36,7 @@ result <- PF_EM(
   Surv(tstart, tstop, event) ~ . - id,
   data = sims$res,
   max_T = 20,
-  model = 'exponential',
+  model = 'logit',
   by = 1,
   id = sims$res$id,
   Q_0 = Q_0,
@@ -46,7 +46,7 @@ result <- PF_EM(
                  method = "bootstrap_filter",
                  smoother = "Brier_O_N_square",
                  n_max = 10),
-  trace = 1)
+  trace = 3)
 sink()
 
 norm(ddfit$Q - Q_true)
