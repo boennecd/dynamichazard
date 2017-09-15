@@ -261,10 +261,25 @@ test_that("Import and export PF cloud from Rcpp gives the same", {
 
 test_that("PF_EM stops with correct error messages due to wrong or missing arguments", {
   args <- list(
-    formula = survival::Surv(start, stop, event) ~ group,
-    data = head_neck_cancer,
+    formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+    data = head_neck_cancer, order = 2, model = "something_not_implemented",
     by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2))
 
+  expect_error(
+    do.call(PF_EM, args), paste0(
+      sQuote("order"), " not equal to 1 is not supported"))
+
+  args$order <- 1
+  expect_error(
+    do.call(PF_EM, args), paste0(
+      sQuote("model"), " is not supported"))
+
+  args$model <- "logit"
+  expect_error(
+    do.call(PF_EM, args), paste0(
+      "Fixed terms are not supported"))
+
+  args$formula <- survival::Surv(start, stop, event) ~ group
   expect_error(
     do.call(PF_EM, args), paste0(
       "Please supply the number of particle for ", sQuote("control\\$N_first")))

@@ -1,7 +1,7 @@
 set.seed(16)
-n_vars <- 3
+n_vars <- 10
 sims <- test_sim_func_logit(
-  n_series = 200, n_vars = n_vars, t_0 = 0, t_max = 20,
+  n_series = 1e6, n_vars = n_vars, t_0 = 0, t_max = 20,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
   intercept_start = -3, sds = Q_true <- c(.05, rep(.2, n_vars)))
 Q_true <- diag(Q_true^2)
@@ -19,6 +19,7 @@ Q <- diag(1, n_vars + 1)
 Q_0 <- diag(sqrt(.1), n_vars + 1)
 a_0 <- sims$betas[1, ]
 
+.t <- proc.time()
 ddfit <- ddhazard(
   Surv(tstart, tstop, event) ~ . - id,
   data = sims$res,
@@ -28,10 +29,14 @@ ddfit <- ddhazard(
   Q_0 = Q_0,
   model = "logit",
   Q = Q,
-  control = list(n_max = 10, eps = 1e-8))
+  control = list(n_max = 10, eps = 1e-8, n_threads = 6))
+proc.time() - .t
+
+plot(ddfit)
 
 sink("tmp.txt")
 options(digits = 4)
+.t <- proc.time()
 result <- PF_EM(
   Surv(tstart, tstop, event) ~ . - id,
   data = sims$res,
@@ -42,11 +47,12 @@ result <- PF_EM(
   Q_0 = Q_0,
   Q = Q,
   control = list(N_fw_n_bw = 1000, N_smooth = 1e3, N_first = 2e3,
-                 n_threads = 7,
-                 method = "bootstrap_filter",
-                 smoother = "Brier_O_N_square",
-                 n_max = 10),
-  trace = 3)
+                 n_threads = 6,
+                 method = "AUX_normal_approx_w_particles",
+                 smoother = "Fearnhead_O_N",
+                 n_max = 2),
+  trace = 1)
+proc.time() - .t
 sink()
 
 norm(ddfit$Q - Q_true)

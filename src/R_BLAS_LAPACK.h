@@ -40,4 +40,8 @@ namespace R_BLAS_LAPACK {
       const double *x, const int *incx,
       const double *y, const int *incy,
       double *a, const int *lda);
+
+  double ddot(
+      const int *n, const double *dx, const int *incx,
+      const double *dy, const int *incy);
 }

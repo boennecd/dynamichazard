@@ -1,4 +1,5 @@
 #include "problem_data.h"
+#include "R_BLAS_LAPACK.h"
 
 #ifndef DDHAZARD_UTILS
 #define DDHAZARD_UTILS
@@ -89,6 +90,28 @@ inline trunc_lp_in_exponential_dist_result
     ans.exp_eta_trunc = exp(ans.eta_trunc);
     return ans;
   }
+
+
+inline arma::vec get_linear_product(
+    const arma::vec &coef, const arma::mat &X, const arma::uvec &rset){
+  /* Next line is slow in Armadillo release 7.960.1 (Northern Banana
+     Republic Deluxe) due to memory copy in subview::extract and
+     subview_elem2::extract. Same goes for similar calls */
+
+  // arma::vec eta =  coef.t() * X.cols(rset);
+
+  // turns out this is not much faster
+  arma::vec eta(rset.n_elem);
+  double *it_e = eta.begin();
+  const arma::uword *it_idx = rset.begin();
+  const int q = X.n_rows;
+  const double *coef_ptr = coef.memptr();
+  int inc = 1;
+  for(unsigned int k = 0; k < rset.n_elem; ++k, ++it_e, ++it_idx)
+    *it_e = R_BLAS_LAPACK::ddot(&q, coef_ptr, &inc, X.colptr(*it_idx), &inc);
+
+  return eta;
+}
 
 #undef MIN
 #undef MAX

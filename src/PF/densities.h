@@ -102,7 +102,7 @@ public:
     for(unsigned int i = 0; i < n_jobs; ++i){
       auto &job = jobs[i];
       arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
-      arma::vec eta =  coefs.t() * data.X.cols(my_r_set);
+      arma::vec eta =  get_linear_product(coefs, data.X, my_r_set);
       const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
       if(outcome_dens::uses_at_risk_length){

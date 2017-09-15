@@ -227,4 +227,10 @@ namespace R_BLAS_LAPACK {
         y, incy,
         a, lda);
   }
+
+  double ddot(
+      const int *n, const double *dx, const int *incx,
+      const double *dy, const int *incy){
+    return F77_NAME(ddot)(n, dx, incx, dy, incy);
+  }
 }

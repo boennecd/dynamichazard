@@ -30,6 +30,7 @@ vignettes/figure/
 vignettes/Prebuild/Particle_filtering/*
 # But not these files...
 !vignettes/Prebuild/Particle_filtering/Particle_filtering.pdf
+!vignettes/Prebuild/Particle_filtering/Particle_filtering.tex
 
 sandbox/*
 **/Rprof.out

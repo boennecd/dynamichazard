@@ -85,10 +85,10 @@ PF_EM <- function(
   trace = 0){
   #####
   # Checks
-  if(order != 1) # TODO: test
+  if(order != 1)
     stop(sQuote('order'), " not equal to 1 is not supported")
 
-  if(!model %in% c("logit", "exponential")) # TODO: test
+  if(!model %in% c("logit", "exponential"))
     stop(sQuote('model'), " is not supported")
 
   if(missing(id)){
@@ -104,7 +104,7 @@ PF_EM <- function(
   X_Y = get_design_matrix(formula, data)
   n_params = ncol(X_Y$X)
 
-  if(length(X_Y$fixed_terms) > 0) # TODO: test
+  if(length(X_Y$fixed_terms) > 0)
     stop("Fixed terms are not supported")
 
   #####

@@ -216,8 +216,6 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
   arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
   arma::vec my_mu(p, arma::fill::zeros);
 
-  // auto logger = data.log(1); // TODO: delete
-
 #ifdef _OPENMP
 #pragma omp for schedule(static)
 #endif
@@ -225,7 +223,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     auto &job = jobs[i];
     arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
 
-    arma::vec eta =  alpha_bar.t() * data.X.cols(my_r_set);
+    arma::vec eta =  get_linear_product(alpha_bar, data.X, my_r_set);
     const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
     if(densities::uses_at_risk_length){
@@ -256,21 +254,11 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
       double g = densities::log_p_prime(*it_eta, *it_is_event, at_risk_length);
       double neg_G = - densities::log_p_2prime(*it_eta, *it_is_event, at_risk_length);
 
-      /* TODO: delete 
-      logger << t  << "\t" << my_r_set[i] << "\t"
-             << at_risk_length  << "\t" << *it_is_event
-             << bin_start << "\t" << bin_stop << "\t"
-             << *(it_stops - 1) << "\t" << *(it_start - 1) << std::endl; // TODO: delete
-      */
-
       sym_mat_rank_one_update(neg_G, data.X.col(*it_r), my_Sigma_inv);
 
       my_mu += data.X.col(*it_r) * ((*it_eta * neg_G) + g);
     }
   }
-
-  // logger << "my_mu: " << my_mu.t() <<  std::endl; // TODO: delete
-  // logger << "my_Sigma_inv\n" << my_Sigma_inv; // TODO: delete
 
 #ifdef _OPENMP
   if(multithread)

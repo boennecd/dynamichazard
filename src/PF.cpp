@@ -93,16 +93,24 @@ Rcpp::List get_rcpp_list_from_cloud(
       arma::mat weights(n_fw, n_bw);
 
       // Loop over first index of pair of particles
-      auto it_w = weights.begin();
-      auto it_fw = fw_idx.begin();
-      auto it_bw = bw_idx.begin();
-      for(auto it_inner = it->begin();
-          it_inner != it->end(); ++it_inner, ++it_bw){
+      auto it_w_begin = weights.begin();
+      auto it_fw_begin = fw_idx.begin();
+      auto it_bw_begin = bw_idx.begin();
+      auto it_inner_begin = it->begin();
+#ifdef _OPENMP
+      int n_threads_use = std::min(omp_get_max_threads(), (int)n_bw / 200 + 1);
+#pragma omp parallel for num_threads(n_threads_use) if(n_threads_use > 1)
+#endif
+      for(unsigned int j = 0; j < n_bw; ++j){
+        auto it_inner = it_inner_begin + j;
+        auto it_bw = it_bw_begin + j;
         *it_bw = get_cloud_idx(it_inner->p);
 
         auto it_data = it_inner->transition_pairs.begin();
+        auto it_w = it_w_begin + j * n_fw;
+        auto it_fw = it_fw_begin + j * n_fw;
         // Loop over second index of pair of particles
-        for(unsigned int j = 0; j < n_fw; ++j, ++it_fw, ++it_w, ++it_data){
+        for(unsigned int i = 0; i < n_fw; ++i, ++it_fw, ++it_w, ++it_data){
           *it_fw = get_cloud_idx(it_data->p);
           *it_w = exp(it_data->log_weight);
         }
@@ -233,7 +241,8 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
       const int *it_fw_begin = &fw_idx(0,0);
       const double *it_w_begin = &weights(0,0);
 #ifdef _OPENMP
-#pragma omp for schedule(static)
+      int n_threads_use = std::min(omp_get_max_threads(), (int)n_bw / 200 + 1);
+#pragma omp parallel for schedule(static) num_threads(n_threads_use) if(n_threads_use > 1)
 #endif
       for(unsigned int j = 0; j < n_bw; ++j){
         auto it_elems = it_elems_begin + j;
@@ -571,7 +580,7 @@ static PF_summary_stats compute_summary_stats(
 
     auto it_trans_begin = it_trans->begin();
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel if(!is_first)
 {
 #endif
     arma::vec my_E_x(n_elem, arma::fill::zeros);
