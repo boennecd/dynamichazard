@@ -18,7 +18,6 @@ static double cache_at_risk_length_result =
   std::numeric_limits<double>::quiet_NaN();
 
 static constexpr double log_eps = trunc_lp_in_exponential_dist_log_eps;
-static constexpr double eps = exp(log_eps);
 
 template <typename T>
 inline int sgn(T val) {

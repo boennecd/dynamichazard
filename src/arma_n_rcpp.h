@@ -7,22 +7,7 @@
 // Don't use openMP for elementwise operations. It is automatically if -fopenmp
 // is present. Seems to cause issues on some platforms
 #ifndef ARMA_DONT_USE_OPENMP
-#define ARMA_DONT_USE_OPENMP
-#endif
-
-// we know these are avialble with all R installations
-#define ARMA_USE_LAPACK
-
-#define ARMA_HAVE_STD_ISFINITE
-#define ARMA_HAVE_STD_ISINF
-#define ARMA_HAVE_STD_ISNAN
-#define ARMA_HAVE_STD_SNPRINTF
-
-// Rcpp has its own stream object which cooperates more nicely
-// with R's i/o -- and as of Armadillo 2.4.3, we can use this
-// stream object as well
-#if !defined(ARMA_DEFAULT_OSTREAM)
-#define ARMA_DEFAULT_OSTREAM Rcpp::Rcout
+  #define ARMA_DONT_USE_OPENMP 1
 #endif
 
 #define ARMA_NO_DEBUG
@@ -40,7 +25,6 @@
 //// Comment out the above line if you don't want errors and warnings printed (eg. failed decompositions)
 
 #include <RcppArmadillo.h>
-// [[Rcpp::depends("RcppArmadillo")]]
 
 // Print function to print out vectors as rows
 template<typename T>

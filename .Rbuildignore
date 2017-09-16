@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 \.log$
 ^\.git
+^\.Rprofile
 
 ^\.commit$
 ^\.sandbox

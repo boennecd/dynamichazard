@@ -13,12 +13,12 @@ Authors@R: c(person("Benjamin", "Christoffersen",
                     role = c("cph")),
              person("R-core", email = "R-core@R-project.org",
                     role = c("cph")))
-Description: Contains functions that lets you fit dynamic hazard models with binary 
-  outcomes using state space models. The methods are originally described in  
-  Fahrmeir (1992) <doi:10.1080/01621459.1992.10475232> and Fahrmeir (1994) 
-  <doi:10.1093/biomet/81.2.317>. The functions also provide an extension hereof where the 
-  Extended Kalman filter is replaced by an Unscented Kalman filter. Models are 
-  fitted with the regular coxph() like formula.
+Description: Contains functions that lets you fit dynamic hazard models using 
+  state space models. The first implemented model is described in Fahrmeir 
+  (1992) <doi:10.1080/01621459.1992.10475232> and Fahrmeir (1994) 
+  <doi:10.1093/biomet/81.2.317>. Extensions hereof are available where the  
+  Extended Kalman filter is replaced by an unscented Kalman filter and other 
+  options including particle filters.
 License: GPL-2
 LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo

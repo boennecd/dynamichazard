@@ -44,7 +44,7 @@ knitr::knit_hooks$set(output = function(x, options) {
  })
 
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, 
-                      dpi = 144, cache = T, dev = "png")
+                      dpi = 100, cache = T, dev = "png")
 knitr::opts_knit$set(warning = F, message = F)
 options(digits = 3)
 
@@ -206,7 +206,8 @@ library(dynamichazard)
 dd_rossi <- ddhazard(
   Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
   data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+  Q_0 = diag(10000, 5), Q = diag(.1, 5),
+  control = list(eps = .001))
 ```
 
 Then we plot the predicted coefficients:
@@ -282,7 +283,7 @@ is_large <-
   names(head(sort(max_hat, decreasing = T), 5))
 
 # Plot hat values
-plot(range(hats_stacked$interval_n), c(0, 0.22), type = "n",
+plot(range(hats_stacked$interval_n), c(0, 0.07), type = "n",
      xlab = "Interval number", ylab = "Hat value")
 
 invisible(
@@ -312,7 +313,7 @@ Rossi_subset <- Rossi_subset[nrow(Rossi_subset):1, ]
 Rossi_subset[!duplicated(Rossi_subset$id), ]
 ```
 
-They all have a large number of prior convictions as shown in the next plot. Moreover, we can see by the next histogram that the number of prior convictions is skewed:
+They mainly have a large number of prior convictions as shown in the next plot. Moreover, we can see by the next histogram that the number of prior convictions is skewed:
 
 ```{r}
 tmp <- xtabs(~Rossi$prio[!duplicated(Rossi$id)]) 
@@ -334,7 +335,8 @@ Below, we make a fit where we use this transformation of prior convictions inste
 dd_rossi_trans <- ddhazard(
   Surv(start, stop, event) ~ fin + age + log(prio + 1) + employed.cumsum, 
   data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+  Q_0 = diag(10000, 5), Q = diag(.1, 5), 
+  control = list(eps = .001))
 
 plot(dd_rossi_trans)
 ```
@@ -420,7 +422,8 @@ We estimate the model as follows:
 dd_whas <- ddhazard(
   Surv(lenfol, fstat) ~ gender + age + bmi + hr + cvd,
   data = whas500, by = 100, max_T = 2000, 
-  Q_0 = diag(10000, 6), Q = diag(.1, 6))
+  Q_0 = diag(10000, 6), Q = diag(.1, 6),
+  control = list(eps = .001))
 
 plot(dd_whas)
 ```
@@ -431,7 +434,8 @@ The intercept drops in the first period which possibly is due to the initial hig
 dd_whas <- ddhazard(
   Surv(lenfol, fstat) ~ age + bmi + hr + cvd,
   data = whas500, by = 100, max_T = 2000, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+  Q_0 = diag(10000, 5), Q = diag(.1, 5), 
+  control = list(eps = .001))
 
 plot(dd_whas)
 ```
@@ -444,7 +448,8 @@ Suppose that we had not included the age to start with:
 dd_whas_no_age <- ddhazard(
   Surv(lenfol, fstat) ~ bmi + hr + cvd,   # No age
   data = whas500, by = 100, max_T = 1700, 
-  Q_0 = diag(10000, 4), Q = diag(.1, 4))
+  Q_0 = diag(10000, 4), Q = diag(.1, 4), 
+  control = list(eps = .001))
 
 plot(dd_whas_no_age)
 ```
@@ -660,7 +665,8 @@ Next, we estimate the model and compare the estimated coefficients with the fit:
 f1 <- ddhazard(
   Surv(tstart, tstop, event) ~ x1 + x2 + x3,
   sim_dat$res, by = 1, max_T = 20, id = sim_dat$res$id, 
-  Q_0 = diag(10000, 4), Q = diag(.1, 4))
+  Q_0 = diag(10000, 4), Q = diag(.1, 4), 
+  control = list(eps = .001))
 
 matplot(betas, col = cols, lty = 1, type = "l")
 matplot(f1$state_vecs, col = cols, lty = 2, type = "l", add = T)
@@ -710,7 +716,8 @@ for(i in 1:3){
   f1 <- ddhazard(
     Surv(tstart, tstop, event) ~ x1 + x2 + x3,
     sim_dat$res, by = 1, max_T = 20, id = sim_dat$res$id, 
-    Q_0 = diag(10000, 4), Q = diag(.1, 4))
+    Q_0 = diag(10000, 4), Q = diag(.1, 4), 
+    control = list(eps = .001))
   
   # Plot coefficients
   matplot(betas, col = cols, lty = 1, type = "l",
@@ -809,7 +816,8 @@ Rossi_sub <- Rossi[!Rossi$id %in% c(is_max, is_min), ]
 dd_rossi_tmp <- ddhazard(
   Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
   data = Rossi_sub, id = Rossi_sub$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+  Q_0 = diag(10000, 5), Q = diag(.1, 5), 
+  control = list(eps = .001))
 
 par(mfcol = c(2, 3))
 for(i in 1:5){
@@ -855,7 +863,7 @@ is_max
 whas500[is_max, ]
 ```
 
-The first one has a high heart rate while the latter two has low BMI (below 18.5 is underweight). Another idea is to look at the average up to the given time of the hat values. The motivation is the two lines that end around the 5'th interval either because they die or are right censored. Hence, we normalize by the interval number and plot against time
+One of them has a high heart rate while the two others have a low BMI (below 18.5 is underweight). Another idea is to look at the average up to the given time of the hat values. The motivation is the two lines that end around the 5'th interval either because they die or are right censored. Hence, we normalize by the interval number and plot against time
 
 ```{r}
 # Averages of hat values
@@ -869,7 +877,7 @@ invisible(
          col = gray(0, alpha = .2)))
 ```
 
-Indeed the two stands out along with three others. Hence, we look further at the five largest values:
+Indeed the two stands. Hence, we look further at the five largest values:
 
 ```{r}
 max_avg <- tapply(hats_stacked$hats_avg, hats_stacked$id, max)
@@ -880,7 +888,7 @@ is_max_avg
 whas500[is_max_avg, ]
 ```
 
-The three later are the same as before. The two new ones are one who is old and another with an extreme heart rate (a typical rule rule of thumb is that the maximum heart rate is $220$ less your age!). In order to show this, we make the following plots:
+The two new ones with the highest values are one who is old and another with an extreme heart rate (a typical rule rule of thumb is that the maximum heart rate is $220$ less your age!). In order to show this, we make the following plots:
 
 ```{r}
 # Setup parameters for the plot
@@ -909,7 +917,8 @@ This could motivate us to stop the slightly before the last cluster of censoring
 dd_whas <- ddhazard(
   Surv(lenfol, fstat) ~ age + bmi + hr + cvd,
   data = whas500, by = 100, max_T = 1700, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+  Q_0 = diag(10000, 5), Q = diag(.1, 5), 
+  control = list(eps = .001))
 
 dd_whas_no_extreme <- ddhazard(
   Surv(lenfol, fstat) ~ age + bmi + hr + cvd,

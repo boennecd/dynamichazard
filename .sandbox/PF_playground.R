@@ -1,7 +1,7 @@
-set.seed(16)
-n_vars <- 10
-sims <- test_sim_func_logit(
-  n_series = 1e6, n_vars = n_vars, t_0 = 0, t_max = 20,
+set.seed(18)
+n_vars <- 3
+sims <- test_sim_func_exp(
+  n_series = 1e3, n_vars = n_vars, t_0 = 0, t_max = 20,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
   intercept_start = -3, sds = Q_true <- c(.05, rep(.2, n_vars)))
 Q_true <- diag(Q_true^2)
@@ -41,16 +41,16 @@ result <- PF_EM(
   Surv(tstart, tstop, event) ~ . - id,
   data = sims$res,
   max_T = 20,
-  model = 'logit',
+  model = 'exponential',
   by = 1,
   id = sims$res$id,
   Q_0 = Q_0,
   Q = Q,
-  control = list(N_fw_n_bw = 1000, N_smooth = 1e3, N_first = 2e3,
-                 n_threads = 6,
-                 method = "AUX_normal_approx_w_particles",
+  control = list(N_fw_n_bw = 1000, N_smooth = 2.5e3, N_first = 2e3,
+                 n_threads = 4,
+                 method = "bootstrap_filter",
                  smoother = "Fearnhead_O_N",
-                 n_max = 2),
+                 n_max = 10),
   trace = 1)
 proc.time() - .t
 sink()
@@ -244,3 +244,18 @@ tmp <- t(X) %*% (tmp * (-fpp(y = y, eta = eta, tmax = tmax)))
 .cov <- solve(t(X) %*% (X * (- fpp(y = y, eta = eta, tmax = tmax))))
 # .cov <- t(X) %*% (X / (- fpp(y = y, eta = eta, tmax = tmax)))
 .cov %*% tmp
+
+
+
+.t <- 1
+plot(function(x) x - exp(x) * .t, xlim = c(-200, 10), ylim = c(-170, 0))
+abline(a = 0, b = 1, lty = 2)
+plot(function(x) - exp(x) * .t, xlim = c(-200, 10), add = TRUE, col = "red")
+abline(h = -150, tly = 3)
+
+eta <- 10
+(out <- trunc_lp_in_exponential_dist_test(eta, at_risk_length = .t, is_event = FALSE))
+if(out$did_truncate)
+  abline(v = out$eta_trunc, lty = 3)
+
+out$eta_trunc - exp(out$eta_trunc) * .t

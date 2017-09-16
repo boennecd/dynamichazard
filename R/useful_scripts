@@ -12,6 +12,10 @@ Sys.setenv(GS_CMD="C:/Program Files/gs/gs9.20/bin/gswin64c.exe")
 devtools::build_win(version = "R-release", args = "--compact-vignettes=gs+qpdf")
 devtools::build_win(version = "R-devel", args = "--compact-vignettes=gs+qpdf")
 
+# Avoid the Sys.getenv by making a .Rprofile file like:
+  # See https://stackoverflow.com/a/37198142 and https://support.rstudio.com/hc/en-us/community/posts/203035636-global-environment-variable
+  Sys.setenv(R_GSCMD = "C:\\Program Files\\gs\\gs9.21\\bin\\gswin64c.exe")
+
 library(tools)
 out <- check_packages_in_dir(
   ".",
@@ -26,5 +30,8 @@ out <- devtools::revdep_check(
   threads = 4)
 
 
-
-# rhub::check_with_sanitizers()
+rhub::platforms()
+rhub::check(path = "C:\\Users\\User\\Dropbox\\skole_backup\\phd\\dynamichazard_0.4.0.tar.gz",
+            platform = "debian-gcc-devel", show_status = FALSE,
+            check_args = "--no-build-vignettes" # Due to latex packages
+            )

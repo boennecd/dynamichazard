@@ -51,8 +51,12 @@ struct trunc_lp_in_exponential_dist_result {
   bool did_truncate;
 };
 
-// Function to truncate the linear predictor for exponentially distributed outcomes
-static constexpr double trunc_lp_in_exponential_dist_log_eps = -150;
+// Function to truncate the linear predictor for exponentially distributed
+// outcomes
+/* CHECK: The next two constants match. I have hard coded them as the exp is
+   not constexpr with clang-4.0 */
+static constexpr double trunc_lp_in_exponential_dist_log_eps = -50;
+static constexpr double trunc_lp_in_exponential_dist_eps = 1.9287498479639178e-22;
 double trunc_lp_in_exponential_dist_inner_func(const double);
 
 inline trunc_lp_in_exponential_dist_result
@@ -60,7 +64,7 @@ inline trunc_lp_in_exponential_dist_result
     const double eta, const double at_risk_length, const bool is_event)
   {
     static constexpr double log_eps = trunc_lp_in_exponential_dist_log_eps;
-    static constexpr double eps = exp(log_eps);
+    static constexpr double eps = trunc_lp_in_exponential_dist_eps;
 
     trunc_lp_in_exponential_dist_result ans;
     ans.exp_eta_trunc = exp(eta);

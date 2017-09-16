@@ -1,6 +1,7 @@
 # dynamichazard 0.4.0
 * Parallel version of `glm` is used to find the first state vector
 * Default values of `ddhazard` control argument is changed
+* Particle filter and smoothers alternative are available
 
 # dynamichazard 0.3.0
 The following has been changed or added:
