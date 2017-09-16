@@ -18,7 +18,7 @@ devtools::build_win(version = "R-devel", args = "--compact-vignettes=gs+qpdf")
 
 library(tools)
 out <- check_packages_in_dir(
-  ".",
+  "..", # assumes that there is .tar.gz file in parent directory with this package
   check_args = c("--as-cran"),
   reverse = list(repos = getOption("repos")["CRAN"],
                  which = "all"),
