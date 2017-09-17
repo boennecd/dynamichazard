@@ -444,7 +444,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
     } else if(p_data->criteria == "delta_likeli"){
       old_log_like = log_like;
     }
-  }while(++it < n_max);
+  } while(++it < n_max);
 
   if(it == n_max)
     Rcpp::warning("EM algorithm did not converge within the n_max number of iterations");
@@ -455,7 +455,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             Rcpp::Named("lag_one_cov") = Rcpp::wrap(p_data->lag_one_cov),
                             Rcpp::Named("fixed_effects") = Rcpp::wrap(p_data->fixed_parems),
 
-                            Rcpp::Named("n_iter") = it + 1,
+                            Rcpp::Named("n_iter") = std::min(it + 1, n_max),
                             Rcpp::Named("conv_values") = conv_values,
                             Rcpp::Named("Q") = Rcpp::wrap(Q),
                             Rcpp::Named("Q_0") = Rcpp::wrap(Q_0)));
