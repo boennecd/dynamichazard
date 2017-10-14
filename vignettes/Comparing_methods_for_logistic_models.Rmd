@@ -470,7 +470,7 @@ The red curves are from the sequential rank-one approximation. The difference se
 We may want to fit a model where we assume that some of the co-variates are fixed. For instance, we may want to fit a model where `age`, the intercept, `log(protime)` and `log(albumin)` are fixed. We fix these based on the previous plots where the effects seems no to be time-varying. The model can be fitted as by the following call:
 ```{r, warning=FALSE}
 dd_fit <- ddhazard(
-  Surv(tstart, tstop, death == 2) ~ ddFixed(1) + 
+  Surv(tstart, tstop, death == 2) ~ ddFixed_intercept() + 
     ddFixed(age) + ddFixed(log(albumin)) + edema + ddFixed(log(protime)) + log(bili), 
   pbc2, id = pbc2$id, by = 100, max_T = 3600, 
   Q_0 = diag(100, 2), Q = diag(0.01, 2),
@@ -499,7 +499,7 @@ set.seed(3434439) # <-- Data is permuated so we set a seed
 ```{r}
 # Define formula
 form <- Surv(tstart, tstop, death == 2) ~ 
-                     ddFixed(1) + ddFixed(age) + 
+                     ddFixed_intercept() + ddFixed(age) + 
                      ddFixed(edema) + ddFixed(log(albumin)) + 
                      ddFixed(log(protime)) + log(bili)
 

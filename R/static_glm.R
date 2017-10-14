@@ -246,14 +246,14 @@ static_glm = function(
 
       fit <- eval(bquote(
         glm.fit(x = mf, y = data$Y, weights = data$weights,
-                family = .(family), control = .(ctrl), offset = offset)))
+                family = family, control = .(ctrl), offset = offset)))
 
       return(fit$coefficients)
     }
 
     return(eval(bquote(
       glm(formula = .(formula), data = data,
-          family = .(family), model = model,
+          family = family, model = model,
           weights = weights, ...))))
 
   } else if(method_use == "parallelglm" && only_coef){

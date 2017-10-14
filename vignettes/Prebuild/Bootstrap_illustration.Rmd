@@ -183,17 +183,17 @@ plot(dd_fit, ddhazard_boot = boot_out_by_weights)
 Fixed effects (time invariant effects) can also be bootstrap to get confidence bounds. The fixed effects bootstrap coefficients are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
 
 ```{r}
-dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ 
-                     ddFixed(1) + ddFixed(log(protime)) # changed to fixed
-                     + age + edema + log(albumin) +  + log(bili), pbc2,
-                   id = pbc2$id, by = 100, max_T = 3600, 
-                   Q_0 = diag(rep(10000, 4)), Q = diag(rep(0.001, 4)),
-                   control = list(
-                     save_risk_set = T, save_data = T, eps = .1,
-                     fixed_terms_method = "E_step")     # Fixed effects are 
-                                                        # esimated in E-step
-                   )
-
+dd_fit <- ddhazard(
+  Surv(tstart, tstop, death == 2) ~ 
+    ddFixed_intercept() + ddFixed(log(protime)) # changed to fixed
+    + age + edema + log(albumin) +  + log(bili), pbc2,
+  id = pbc2$id, by = 100, max_T = 3600, 
+  Q_0 = diag(rep(10000, 4)), Q = diag(rep(0.001, 4)),
+  control = list(
+    save_risk_set = T, save_data = T, eps = .1,
+    fixed_terms_method = "E_step")     # Fixed effects are 
+                                      # esimated in E-step
+  )
 ```
 
 The time varying effects are plotted below:

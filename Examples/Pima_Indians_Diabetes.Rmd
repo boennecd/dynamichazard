@@ -44,7 +44,7 @@ xtabs(~ has_diabetes + t, diabetes)
 # Fit the model
 fit <- ddhazard(
   Surv(t, has_diabetes) ~
-    ddFixed(1) +                         # These effects are time invariant
+    ddFixed_intercept() +                # These effects are time invariant
     ddFixed(diabetes_pedigree) +
     ddFixed(times_pregnant) +
     glucose_cocen + blood_pres +         # The rest are time-varying

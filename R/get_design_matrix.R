@@ -105,7 +105,6 @@ get_design_matrix = function(
 #' @description
 #' Functions used in formula of \code{\link{ddhazard}} for time-invariant effects. \code{ddFixed_intercept} is only used for the intercept.
 #' @param object Expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}
-#' @param n Number of rows in the data frame the data for estimation
 #'@examples
 #'# All these call with give the same result where data' is a hypothetical
 #'# data.frame. We can get a time-invariant estimate for x1 by:

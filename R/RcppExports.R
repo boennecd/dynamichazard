@@ -105,9 +105,6 @@ get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_
     .Call(`_dynamichazard_get_risk_obj_rcpp`, start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model)
 }
 
-#' @param x sequence of values to one of \code{boundaries} if they are almost equal.
-#' @param x_ord order of \code{x} in increasing order e.g. by using \code{\link{order}}. Must be a zero-based index.
-#' @param boundaries boundaries which \code{x} should match if it is very close to being equal.
 round_if_almost_eq <- function(x, x_ord, boundaries) {
     .Call(`_dynamichazard_round_if_almost_eq`, x, x_ord, boundaries)
 }

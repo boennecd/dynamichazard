@@ -11,22 +11,19 @@ ddFixed_intercept(object)
 }
 \arguments{
 \item{object}{Expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}}
-
-\item{n}{Number of rows in the data frame the data for estimation}
 }
 \description{
 Functions used in formula of \code{\link{ddhazard}} for time-invariant effects. \code{ddFixed_intercept} is only used for the intercept.
 }
 \examples{
-# All these call with give the same result where
-# 'data' is a hypothetical data frame. We can get a
-# time-invariant estimate for x1 by:
+# All these call with give the same result where data' is a hypothetical
+# data.frame. We can get a time-invariant estimate for x1 by:
 \dontrun{
 ddhazard(Surv(stop, event) ~ ddFixed(x1), data)
 }
 
-# All of the calls below will yield the same result
-# with a time-invariant intercept:
+# All of the calls below will yield the same result with a time-invariant
+# intercept:
 \dontrun{
 ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, data)
 ddhazard(Surv(stop, event) ~ -1 + ddFixed_intercept() + x1, data)

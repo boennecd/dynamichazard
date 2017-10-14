@@ -274,6 +274,7 @@ matplot(fit$state_vecs, col = 1:(n_beta + 1), lty = 2,
 ```
 
 Below, we define a function to estimate a first order random walk model where only one parameter (`x2`) is time varying:
+
 ```{r}
 # Fitting with fixed effects
 fit_funcs$dd_fixed <- function(
@@ -283,7 +284,7 @@ fit_funcs$dd_fixed <- function(
   tryCatch({
     ddhazard(
       formula = Surv(tstart, tstop, event) ~ 
-        ddFixed(1) +                             # Fix intercept
+        ddFixed_intercept() +                    # Fix intercept
         ddFixed(x1) + x2 +                       # Note x2 is time varying
         ddFixed(x3) + ddFixed(x4) + ddFixed(x5),
       data = s, max_T = T_max, by = 1, id = s$id, 

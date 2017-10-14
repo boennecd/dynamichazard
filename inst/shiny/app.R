@@ -434,15 +434,15 @@ server <- function(input, output) {
     n_fixed <- n_fixed_when_est()
 
     if(n_fixed == 0){
-      form <- formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5)
+      form <- survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5
 
     } else if(n_fixed == 3){
-      form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed(1) +
-        ddFixed(x1) + ddFixed(x2) + x3 + x4 + x5)
+      form <- survival::Surv(tstart, tstop, event) ~ ddFixed_intercept() +
+        ddFixed(x1) + ddFixed(x2) + x3 + x4 + x5
 
     } else if(n_fixed == 5){
-      form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed(1) +
-        ddFixed(x1) + ddFixed(x2) + ddFixed(x3) + ddFixed(x4) + x5)
+      form <- survival::Surv(tstart, tstop, event) ~ ddFixed_intercept() +
+        ddFixed(x1) + ddFixed(x2) + ddFixed(x3) + ddFixed(x4) + x5
 
     } else
       stop("n_fixed is not implemented")
