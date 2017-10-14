@@ -5,7 +5,8 @@ sims = logit_sim_200$res
 
 #######
 # Test design mat
-design = get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 +x3), sims)
+design = get_design_matrix(
+  survival::Surv(tstart, tstop, event) ~ x1 + x2 +x3, sims)
 
 test_that("Testing get design marix", {
   expect_equal(design$Y[, 1], sims$tstart, check.attributes = F, use.names = F)
@@ -19,9 +20,77 @@ test_that("Testing get design marix", {
 ########
 # Test fixed terms
 
-dum <- function(x) cbind(x, -x)
+test_that("different ways of fixing the intercept gives the same result", {
+  .data <- data.frame(
+    y = rnorm(25) > 0, x = sample(letters[1:3], 25, replace = TRUE),
+    tstop = rexp(25, 1))
+  test_formulas <- list(
+    Surv(tstop, y) ~ ddFixed_intercept() + x,
+    Surv(tstop, y) ~ -1 + ddFixed_intercept() + x,
+    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + x,
+    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + .,
+    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + .,
+    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + x)
+
+  test_exp <- expression({
+    results <- lapply(test_formulas, get_design_matrix, data = .data)
+
+    for(i in 2:length(test_formulas))
+      eval(substitute({
+        expect_equal(results[[1]], results[[i]])
+        r_new <- with(results[[i]], get_design_matrix(
+          data = .data[1:10, ], Terms = terms, xlev = xlev,
+          has_fixed_intercept = has_fixed_intercept))
+        expect_equal(results[[i]][["X"]][1:10, , drop = FALSE], r_new[["X"]])
+        expect_equal(results[[i]][["fixed_terms"]][1:10, , drop = FALSE],
+                     r_new[["fixed_terms"]])
+        expect_equal(results[[i]][["Y"]][1:10, ], r_new[["Y"]][1:10, ])
+      }, list(i = i)))
+  })
+  eval(test_exp)
+
+  # Key thing about poly is that forms an orthogonal basis so we need to use
+  # predvars in the terms object to get the same resutls (if I am correct)
+  .data$x <- rnorm(25)
+  test_formulas <- list(
+    Surv(tstop, y) ~ ddFixed_intercept() + poly(x, degree = 3),
+    Surv(tstop, y) ~ -1 + ddFixed_intercept() + poly(x, degree = 3),
+    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + poly(x, degree = 3),
+    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + poly(x, degree = 3))
+  eval(test_exp)
+
+  test_formulas <- list(
+    Surv(tstop, y) ~ ddFixed_intercept() + x,
+    Surv(tstop, y) ~ -1 + ddFixed_intercept() + x,
+    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + x,
+    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + .,
+    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + .,
+    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + x)
+  eval(test_exp)
+})
+
+test_that(
+  "Previous way of fixing the intercept gives the correct error message", {
+    .data <- data.frame(tstop = rep(1, 10), event = c(rep(0, 5), rep(1, 5)),
+                        x = 1:10)
+
+    lapply(list(
+      Surv(tstop, event) ~ ddFixed(1) + x1,
+      Surv(tstop, event) ~ -1 + ddFixed(1) + x1,
+      Surv(tstop, event) ~ ddFixed(rep(1, nrow(.data)))),
+      function(frm) eval(bquote(
+        expect_error(
+          get_design_matrix((frm), .data),
+          "^All elements in call to .ddFixed. is one. This is potentially a"
+          ))))
+  })
+
 test_that("Fixed terms works as expected",{
-  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(dum(x2)) + x3), sims)
+  dum <- function(x) cbind(x, -x)
+
+  design_with_fixed <- get_design_matrix(
+    formula(survival::Surv(tstart, tstop, event) ~
+              x1 + ddFixed(dum(x2)) + x3), sims)
 
   expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
                check.attributes = F)
@@ -32,57 +101,65 @@ test_that("Fixed terms works as expected",{
 test_that("Different forms of fixing the intercept gives same results", {
   sims = exp_sim_200$res
 
+  frms <- list(
+    survival::Surv(tstart, tstop, event) ~ ddFixed_intercept(1) + x1 + x2,
+    survival::Surv(tstart, tstop, event) ~ -1 + ddFixed_intercept(1) + x1 + x2,
+    survival::Surv(tstart, tstop, event) ~
+      -1 + ddFixed_intercept(rep(1, length(x1))) + x1 + x2)
+
   for(m in c("logit", exp_model_names)){
-    m1 <- suppressWarnings(suppressMessages(
-      ddhazard(survival::Surv(tstart, tstop, event) ~ ddFixed(1) + x1 + x2,
-               model = m, by = 1, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.01, 2),
-               control = list(eps = .1, method = "GMA",
-                              fixed_terms_method = "M_step"))))
-    m2 <- suppressWarnings(suppressMessages(
-      ddhazard(survival::Surv(tstart, tstop, event) ~ -1 + ddFixed(1) + x1 + x2,
-               model = m, by = 1, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.01, 2),
-               control = list(eps = .1, method = "GMA",
-                              fixed_terms_method = "M_step"))))
-    m3 <- suppressWarnings(suppressMessages(
-      ddhazard(survival::Surv(tstart, tstop, event) ~ -1 + ddFixed(rep(1, length(x1))) + x1 + x2,
-               model = m, by = 1, data = sims, max_T = 10,
-               Q_0 = diag(1, 2), Q = diag(.01, 2),
-               control = list(eps = .1, method = "GMA",
-                              fixed_terms_method = "M_step"))))
+    if(m != "logit")
+      skip_on_cran()
+
+    results <- lapply(frms, function(f)
+      suppressWarnings(suppressMessages(
+        ddhazard(f,
+                 model = m, by = 1, data = sims, max_T = 10,
+                 Q_0 = diag(1, 2), Q = diag(.01, 2),
+                 control = list(eps = .1, method = "GMA",
+                                fixed_terms_method = "M_step")))))
 
     # matplot(exp_sim_200$betas, lty = 1, type = "l", main = m)
     # matplot(m1$state_vecs, col = 2:3, lty = 2, add = TRUE, type = "l")
     # abline(h = m1$fixed_effects, lty = 2, col = 1)
 
-    expect_equal(m1$state_vecs, m2$state_vecs, tolerance = 1e-5)
-    expect_equal(m1$fixed_effects, m2$fixed_effects, tolerance = 1e-5)
-
-    expect_equal(m1$state_vecs, m3$state_vecs, 1e-5)
-    expect_equal(m1$fixed_effects, m3$fixed_effects, 1e-5, check.attributes = F)
+    for(i in 2:length(frms))
+      eval(bquote({
+      expect_equal(results[[1]][c("state_vecs", "fixed_effects")],
+                   results[[.(i)]][c("state_vecs", "fixed_effects")],
+                   tolerance = 1e-5)
+    }))
   }
 })
 
 test_that("Fixed terms works as expected",{
-  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), sims)
+  design_with_fixed <- get_design_matrix(
+    formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), sims)
 
-  expect_equal(design_with_fixed$X[, c("x1", "x2", "x3")], as.matrix(sims[, c("x1", "x2", "x3")]),
-               check.attributes = F)
+  expect_equal(
+    design_with_fixed$X[, c("x1", "x2", "x3")],
+    as.matrix(sims[, c("x1", "x2", "x3")]), check.attributes = F)
   expect_length(design_with_fixed$fixed_terms, 0)
 
 
-  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + x3), sims)
-  expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
+  design_with_fixed <- get_design_matrix(formula(
+    survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + x3), sims)
+  expect_equal(design_with_fixed$X[, c("x1", "x3")],
+               as.matrix(sims[, c("x1", "x3")]),
                check.attributes = F)
-  expect_equal(as.matrix(design_with_fixed$fixed_terms), as.matrix(sims[, c("x2")]),
+  expect_equal(as.matrix(design_with_fixed$fixed_terms),
+               as.matrix(sims[, c("x2")]),
                check.attributes = F)
 
 
-  design_with_fixed <- get_design_matrix(formula(survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + ddFixed(x3)), sims)
-  expect_equal(design_with_fixed$X[, c("x1"), drop = F], as.matrix(sims[, c("x1")]),
+  design_with_fixed <- get_design_matrix(
+    survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + ddFixed(x3),
+    sims)
+  expect_equal(design_with_fixed$X[, c("x1"), drop = F],
+               as.matrix(sims[, c("x1")]),
                check.attributes = F)
-  expect_equal(as.matrix(design_with_fixed$fixed_terms), as.matrix(sims[, c("x2", "x3")]),
+  expect_equal(as.matrix(design_with_fixed$fixed_terms),
+               as.matrix(sims[, c("x2", "x3")]),
                check.attributes = F)
 })
 
@@ -285,7 +362,8 @@ test_that("dimension are correct with get_design_matrix with different combinati
   # No intercept w/ mixed fixed and time-varying effects
   dsng_mat <- get_design_matrix(
     Surv(tstart, tstop, event) ~
-      -1 + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0), sims)
+      -1 + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) +
+      as.factor(x3 > 0), sims)
 
   expect_equal(ncol(dsng_mat$fixed_terms), 2)
   expect_equal(colnames(dsng_mat$fixed_terms),
@@ -298,33 +376,22 @@ test_that("dimension are correct with get_design_matrix with different combinati
   # Fixed intercept w/ mixed fixed and time-varying effects
   dsng_mat <- get_design_matrix(
     Surv(tstart, tstop, event) ~
-      ddFixed(1) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0), sims)
+      ddFixed_intercept() + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) +
+      as.factor(x3 > 0), sims)
   expect_equal(ncol(dsng_mat$fixed_terms), 2)
   expect_equal(colnames(dsng_mat$fixed_terms),
-               c("ddFixed((Intercept))", "ddFixed(as.factor(x1 > 0))TRUE"))
+               c("(Intercept)", "ddFixed(as.factor(x1 > 0))TRUE"))
   expect_equal(ncol(dsng_mat$X), 2)
   expect_equal(colnames(dsng_mat$X),
                c("as.factor(x2 > 0)TRUE", "as.factor(x3 > 0)TRUE"))
-
-  # all these formulas should give the same
-  for(frm in list(
-    Surv(tstart, tstop, event) ~ -1 + ddFixed(1) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0),
-    Surv(tstart, tstop, event) ~ ddFixed(rep(1, nrow(data))) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0),
-    Surv(tstart, tstop, event) ~ -1 + ddFixed(rep(1, nrow(data))) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0),
-    Surv(tstart, tstop, event) ~ ddFixed_intercept(nrow(data)) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0),
-    Surv(tstart, tstop, event) ~ -1 + ddFixed_intercept(nrow(data)) + ddFixed(as.factor(x1 > 0)) + as.factor(x2 > 0) + as.factor(x3 > 0))){
-    new_dsng_mat <- get_design_matrix(frm, sims)
-
-    expect_equal(dsng_mat$X, new_dsng_mat$X)
-    expect_equal(dsng_mat$fixed_terms, new_dsng_mat$fixed_terms)
-  }
 })
 
 # Test that removal of intercepts works as in lm
-arg_list <- list(formula = formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), data = sims, response = T)
+arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3,
+                 data = sims, response = T)
 design <- do.call(get_design_matrix, arg_list)
 
-arg_list$formula <- formula(survival::Surv(tstart, tstop, event) ~ -1 + x1 + x2 + x3)
+arg_list$formula <- survival::Surv(tstart, tstop, event) ~ -1 + x1 + x2 + x3
 design_no_intercept <- do.call(get_design_matrix, arg_list)
 
 test_that("Design mat with vs. without intercept", {

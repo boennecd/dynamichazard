@@ -9,12 +9,11 @@ test_that("Implement state space errors for EKF and exponential model. Requires 
 test_that("How to compute the starting value for lag one cov with UKF",
           expect_true(FALSE))
 
-get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
-
 test_that("Implement lag-one-cov with weights", {
   expect_true(FALSE)
 })
 
+get_design_matrix <- function(...) environment(ddhazard)$get_design_matrix(...)
 test_that("This work when get_design_matrix when function is defined not in global scope", {
   # Simulate data
   set.seed(11111)

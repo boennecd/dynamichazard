@@ -77,3 +77,40 @@ double trunc_lp_in_exponential_dist_inner_func(const double at_risk_length){
 
   return mb;
 }
+
+//' @param x sequence of values to one of \code{boundaries} if they are almost equal.
+//' @param x_ord order of \code{x} in increasing order e.g. by using \code{\link{order}}. Must be a zero-based index.
+//' @param boundaries boundaries which \code{x} should match if it is very close to being equal.
+// [[Rcpp::export]]
+arma::vec round_if_almost_eq(
+    const arma::vec &x, const arma::uvec &x_ord,
+    const arma::vec &boundaries){
+  const static double threshold = 100 * std::numeric_limits<double>::epsilon();
+  arma::vec x_out = x; // make copy
+
+  double *x_out_begin = x_out.memptr();
+  const double *it_bound = boundaries.begin();
+
+  double lb = *it_bound - threshold;
+  double ub = *it_bound + threshold;
+  for(auto i = x_ord.begin(); i != x_ord.end(); ++i){
+    double *this_x = x_out_begin + *i;
+    if(*this_x >= ub){
+      // have to proceed to next boundary and test again
+      --i;
+      ++it_bound;
+      if(it_bound == boundaries.end())
+        break;
+      lb = *it_bound - threshold;
+      ub = *it_bound + threshold;
+      continue;
+    }
+
+    if(*this_x <= lb) // below lb so no action needed
+      continue;
+
+    *this_x = *it_bound; // x is in (lb, ub) -- set x to boundary
+  }
+
+  return x_out;
+}

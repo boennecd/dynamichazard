@@ -32,7 +32,7 @@ get_risk_obj = function(
   event = Y[, 3]
   is_ev <- event == 1
 
-  start_order = order(start, method = "radix") - 1L
+
   max_T = if(missing(max_T)) min(max(stop[is_ev]), max(stop[-is_ev])) else max_T
   order_by_id_and_rev_start = order(id, -start, method = "radix") - 1L
 
@@ -43,6 +43,15 @@ get_risk_obj = function(
   tmp_n <- length(event_times_in)
   if(event_times_in[tmp_n] < max_T)
     event_times_in <- c(event_times_in, event_times_in[tmp_n] + by)
+
+  # Set exactly to boundaries where values are very close and difference is
+  # likely do to floating point operations
+  start_order = order(start, method = "radix") - 1L
+  start <-
+    round_if_almost_eq(start, start_order, c(min_start, event_times_in))
+  stop_order = order(stop, method = "radix") - 1L
+  stop <-
+    round_if_almost_eq(stop, stop_order, c(min_start, event_times_in))
 
   if(n_threads == 1 || min_chunk > n_ids){
     return(

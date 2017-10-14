@@ -12,8 +12,8 @@ namespace R_BLAS_LAPACK {
     // See http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646
     // I use the macro from r-source/src/include/R_ext/RS.h
     void F77_NAME(dchur)(
-        int *,   // UPPER
-        int *,   // DOTRAN
+        int*,   // UPPER
+        int*,   // DOTRAN
         int*,    // N
         int*,    // M
         double*, // R

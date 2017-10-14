@@ -420,6 +420,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// round_if_almost_eq
+arma::vec round_if_almost_eq(const arma::vec& x, const arma::uvec& x_ord, const arma::vec& boundaries);
+RcppExport SEXP _dynamichazard_round_if_almost_eq(SEXP xSEXP, SEXP x_ordSEXP, SEXP boundariesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type x_ord(x_ordSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type boundaries(boundariesSEXP);
+    rcpp_result_gen = Rcpp::wrap(round_if_almost_eq(x, x_ord, boundaries));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &_dynamichazard_bigglm_regcf_rcpp, 6},
@@ -448,6 +461,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 22},
     {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 5},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
+    {"_dynamichazard_round_if_almost_eq", (DL_FUNC) &_dynamichazard_round_if_almost_eq, 3},
     {NULL, NULL, 0}
 };
 

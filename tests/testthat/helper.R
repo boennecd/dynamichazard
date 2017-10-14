@@ -42,9 +42,6 @@ if(interactive()){
   get_order_data_rev_exp <- with(environment(ddhazard), get_order_data_rev_exp)
   get_design_matrix <- environment(ddhazard)$get_design_matrix
 
-  # teststatic_glm.R
-  get_design_matrix <- environment(ddhazard)$get_design_matrix
-
   # test_cpp_utils.R
   lambert_W0_test <- environment(ddhazard)$lambert_W0_test
   trunc_lp_in_exponential_dist_test <- environment(ddhazard)$trunc_lp_in_exponential_dist_test
@@ -217,7 +214,7 @@ exp_sim_500 <- get_sim(500)
 # # To test a particular file
 # system.time(testthat::test_file("tests/testthat/testpredict.R"))
 #
-# Or use:
+# # Or use:
 # test_that <- function(desc, code){
 #   cat("\nRunning", sQuote(desc), "\n")
 #   .time <- system.time(out <- testthat::test_that(desc, code))

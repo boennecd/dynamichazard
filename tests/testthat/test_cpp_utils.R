@@ -59,3 +59,35 @@ test_that("trunc_lp_in_exponential_dist does not truncate when not needed", {
 })
 
 
+test_that("round_if_almost_eq rounds to nearest boundary as expected", {
+  round_if_almost_eq <- asNamespace("dynamichazard")$round_if_almost_eq
+  set.seed(56219385)
+  n <- 1e2
+
+  x <- replicate(n, {
+    x <- 1
+    for(i in 1:10){
+      tmp <- rexp(1, 1)
+      n <- sample.int(1e2, 1)
+      delta <- tmp / n
+      for(j in 1:n)
+      x <- x - delta
+      x <- x + tmp
+    }
+    x
+  })
+
+  boundaries <- seq(0, 2, .1)
+  x_ord <- order(x) - 1L
+  x_trans <- drop(round_if_almost_eq(x, x_ord, boundaries = boundaries))
+
+  correct_bound <- boundaries[11]
+  expect_gt(sx <- sum(x_trans == correct_bound), sum(x == correct_bound))
+  expect_equal(sx, length(x))
+
+  # values not at the boundary should not get truncated
+  x <- rnorm(n)
+  x_ord <- order(x) - 1L
+  x_trans <- drop(round_if_almost_eq(x, x_ord, boundaries = boundaries))
+  expect_equal(x_trans, x)
+})

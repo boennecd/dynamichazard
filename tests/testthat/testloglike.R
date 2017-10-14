@@ -134,8 +134,8 @@ test_that("logLik for head_neck_cancer data set match previous results with fixe
 })
 
 test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
-  form <- survival::Surv(start, stop, event) ~ -1 + ddFixed(rep(1, length(group))) +
-    ddFixed(as.numeric(group == 1))
+  form <- survival::Surv(start, stop, event) ~
+    ddFixed_intercept() + ddFixed(group)
 
   suppressWarnings(result <- ddhazard(
     formula = form,

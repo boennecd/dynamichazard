@@ -28,7 +28,10 @@ ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,
     stop("Cannot bootstrap estimates when ddhazard has been called with control = list(save_risk_set = F, save_data = F, ...)")
 
   id <- ddhazard_fit$id
-  X_Y <- get_design_matrix(formula = ddhazard_fit$formula, data = ddhazard_fit$data)
+  X_Y <- get_design_matrix(
+    data = ddhazard_fit$data, Terms = ddhazard_fit$terms,
+    xlev = ddhazard_fit$xlev,
+    has_fixed_intercept = ddhazard_fit$has_fixed_intercept)
 
   # Find unique id and whether the individuals do die
   if(missing(unique_id))

@@ -16,7 +16,7 @@ test_that("Print yields the expected results for object returned by ddhazard", {
                           fixed = T))
 
   result <-  ddhazard(
-    formula = survival::Surv(stop, event) ~ ddFixed(1) + group,
+    formula = survival::Surv(stop, event) ~ ddFixed_intercept() + group,
     data = head_neck_cancer,
     by = 1,
     control = list(est_Q_0 = F, n_max = 10^4, eps = 1e-1,
@@ -27,11 +27,11 @@ test_that("Print yields the expected results for object returned by ddhazard", {
 
   # print(paste0(capture.output(print(result, digits = 4)), collapse = "\n"), max.print = 1e8)
   expect_that(print(result, digits = 4),
-              prints_text("Formula:\nsurvival::Surv(stop, event) ~ ddFixed(1) + group\n\nEstimated with EKF in 2 iterations of the EM algorithm\n\nEstimated time-varying effects and point-wise standard deviation:\n      group1    sd \nt0  -0.30363 0.7490\nt1  -0.40003 0.5721\nt2   0.14752 0.6353\nt3   0.89512 0.5788\nt4   0.61924 0.4402\nt5   1.71482 0.5019\nt6   1.52557 0.4088\nt7   0.66129 0.4474\nt8   0.84395 0.5513\nt9   0.69078 0.5495\nt10  0.53181 0.5825\nt11 -0.01786 0.6187\nt12 -0.14110 0.7235\nt13  0.31465 0.7936\nt14  1.52097 0.7866\nt15  1.02346 0.5449\nt16  0.38831 0.6161\nt17  0.16822 0.7148\nt18  0.49660 0.8016\nt19  0.65475 0.8562\nt20  1.53209 1.0514\n\nFixed effects are estimated in the E_step. The estimates are:\n(Intercept) \n     -2.926 ",
+              prints_text("Formula:\nsurvival::Surv(stop, event) ~ ddFixed_intercept() + group\n\nEstimated with EKF in 2 iterations of the EM algorithm\n\nEstimated time-varying effects and point-wise standard deviation:\n      group1    sd \nt0  -0.30363 0.7490\nt1  -0.40003 0.5721\nt2   0.14752 0.6353\nt3   0.89512 0.5788\nt4   0.61924 0.4402\nt5   1.71482 0.5019\nt6   1.52557 0.4088\nt7   0.66129 0.4474\nt8   0.84395 0.5513\nt9   0.69078 0.5495\nt10  0.53181 0.5825\nt11 -0.01786 0.6187\nt12 -0.14110 0.7235\nt13  0.31465 0.7936\nt14  1.52097 0.7866\nt15  1.02346 0.5449\nt16  0.38831 0.6161\nt17  0.16822 0.7148\nt18  0.49660 0.8016\nt19  0.65475 0.8562\nt20  1.53209 1.0514\n\nFixed effects are estimated in the E_step. The estimates are:\n(Intercept) \n     -2.926 ",
                           fixed = T))
 
   suppressWarnings(result <-  ddhazard(
-    formula = survival::Surv(stop, event) ~ ddFixed(1) + ddFixed(as.numeric(group)),
+    formula = survival::Surv(stop, event) ~ ddFixed_intercept() + ddFixed(as.numeric(group)),
     data = head_neck_cancer,
     by = 1,
     control = list(est_Q_0 = F, n_max = 10^4, eps = 1e-1,
@@ -41,7 +41,7 @@ test_that("Print yields the expected results for object returned by ddhazard", {
 
   # print(paste0(capture.output(print(result, digits = 4)), collapse = "\n"), max.print = 1e8)
   expect_that(print(result, digits = 4),
-              prints_text("Formula:\nsurvival::Surv(stop, event) ~ ddFixed(1) + ddFixed(as.numeric(group))\n\nEstimated with EKF in 3 iterations of the EM algorithm\n\nFixed effects are estimated in the E_step. The estimates are:\n      (Intercept) as.numeric(group) \n          -3.4628            0.5524 ",
+              prints_text("Formula:\nsurvival::Surv(stop, event) ~ ddFixed_intercept() + ddFixed(as.numeric(group))\n\nEstimated with EKF in 3 iterations of the EM algorithm\n\nFixed effects are estimated in the E_step. The estimates are:\n      (Intercept) as.numeric(group) \n          -3.4628            0.5524 ",
                           fixed = T))
 })
 

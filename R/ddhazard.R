@@ -54,20 +54,23 @@
 #' \describe{
 #' \item{\code{formula}}{The passed formula}
 #' \item{\code{call}}{The matched call}
-#' \item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin }
-#' \item{\code{state_vars}}{3D array with smoothed variance estimates for each state vector }
-#' \item{\code{lag_one_cov}}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF }
-#' \item{\code{n_risk}}{The number of observations in each interval }
-#' \item{\code{times}}{The interval borders }
-#' \item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved }
-#' \item{\code{data}}{The \code{data} argument if saved }
-#' \item{\code{id}}{ids used to match rows in \code{data} to individuals }
-#' \item{\code{order}}{Order of the random walk }
-#' \item{\code{F_}}{Matrix with that map transition from one state vector to the next }
+#' \item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin}
+#' \item{\code{state_vars}}{3D array with smoothed variance estimates for each state vector}
+#' \item{\code{lag_one_cov}}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF}
+#' \item{\code{n_risk}}{The number of observations in each interval}
+#' \item{\code{times}}{The interval borders}
+#' \item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved}
+#' \item{\code{data}}{The \code{data} argument if saved}
+#' \item{\code{id}}{ids used to match rows in \code{data} to individuals}
+#' \item{\code{order}}{Order of the random walk}
+#' \item{\code{F_}}{Matrix with that map transition from one state vector to the next}
 #' \item{\code{method}}{Method used in the E-step}
-#' \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm }
-#' \item{\code{hazard_func}}{Hazard function }
+#' \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm}
+#' \item{\code{hazard_func}}{Hazard function}
 #' \item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
+#' \item{\code{terms}}{the \code{\link{terms}} object used}
+#' \item{\code{has_fixed_intercept}}{\code{TRUE} if the model has a time-invariant intercept}
+#' \item{\code{xlev}}{a record of the levels of the factors used in fitting}
 #'}
 #'
 #' @seealso
@@ -391,6 +394,9 @@ ddhazard = function(formula, data,
     method = control$method,
     model = model,
     est_Q_0 = control$est_Q_0,
+    terms = X_Y$terms,
+    has_fixed_intercept = X_Y$has_fixed_intercept,
+    xlev = X_Y$xlev,
     control = control),
     LR = LR),
     "class" = "fahrmeier_94")

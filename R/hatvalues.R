@@ -24,7 +24,9 @@ hatvalues.fahrmeier_94 <- function(model, ...){
 
   # Get design matrix, save the start and stop times and include the fixed
   # effects
-  design_mat <- get_design_matrix(formula = model$formula, data = model$data)
+  design_mat <- get_design_matrix(
+    data = model$data, Terms = model$terms, xlev = model$xlev,
+    has_fixed_intercept = model$has_fixed_intercept)
   tstart <- design_mat$Y[, 1]
   tstop <- design_mat$Y[, 2]
   design_mat = cbind(design_mat$X, design_mat$fixed_terms)

@@ -102,9 +102,13 @@ test_that("Result of exponential model on head_neck_data match previous results"
   result_exp$data <- NULL
   result_exp$risk_set <- NULL
   result_exp$id <- NULL
+  result_exp <- result_exp[
+    !names(result_exp) %in% c("control", "call", "data", "risk_set", "id",
+                              "terms", "xlev", "has_fixed_intercept")]
   # save_to_test(result_exp, "head_neck_exp")
 
-  expect_equal(result_exp, read_to_test("head_neck_exp"))
+  expect_equal(result_exp, read_to_test("head_neck_exp"),
+               check.attributes = FALSE)
 })
 
 test_that("exponential model and logit moels hazzard functions differs", {
@@ -149,8 +153,7 @@ test_that("Chaning by argument gives previous results for the exp_clip_time_w_ju
   ))
 
   # plot(result_exp)
-  result_exp$control <- NULL
-  result_exp$call <- NULL
+  result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
   # save_to_test(result_exp, "ddhazard_changed_by")
 
   expect_equal(result_exp, read_to_test("ddhazard_changed_by"))

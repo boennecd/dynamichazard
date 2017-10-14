@@ -18,7 +18,7 @@ test_that("Works with EKF and logit model and with one fixed and one non-fixed",
 
 test_that("Gives previous results with call as for pbc as in vignette", {
   dd_fit <- ddhazard(
-    Surv(tstart, tstop, death == 2) ~ ddFixed(1) +
+    Surv(tstart, tstop, death == 2) ~ ddFixed_intercept() +
       ddFixed(age) + ddFixed(log(albumin)) + edema +ddFixed(log(protime)) + log(bili),
     pbc2, id = pbc2$id, by = 100, max_T = 3600,
     Q_0 = diag(rep(100000, 2)), Q = diag(rep(0.001, 2)),
@@ -52,7 +52,7 @@ set.seed(849239)
 sims_logit <- test_sim_func_logit(n_series = 1e3, n_vars = 4, x_range = 2, t_max = 10, x_mean = 0,
                                   beta_start = rnorm(4), intercept_start = -4)
 # sum(sims_logit$res$event)
-form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed(1) + ddFixed(x1) + x2 + x3 + x4)
+form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed_intercept() + ddFixed(x1) + x2 + x3 + x4)
 
 test_that("Works with UKF and logit model", {
  fit <- ddhazard(form, Q_0 = diag(1, 3), Q = diag(.1, 3),
@@ -111,7 +111,7 @@ sims_exp <- test_sim_func_exp(n_series = 4e2, n_vars = 3, x_range = 1, t_max = 1
                               beta_start = 1, intercept_start = -3, is_fixed = 1:2)
 # sum(sims_exp$res$event)
 
-form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed(1) + ddFixed(x1) + x2 + x3)
+form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed_intercept() + ddFixed(x1) + x2 + x3)
 
 test_that("Works with UKF and continous time model", {
   fit <- suppressWarnings(ddhazard(form, Q_0 = diag(1, 2), Q = diag(1, 2),

@@ -16,7 +16,9 @@ logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
   if(is.null(data))
     stop("data is needed to compute log likelihood. Please, pass the data set used in 'ddhazard' call")
 
-  X <- get_design_matrix(object$formula, data)
+  X <- get_design_matrix(
+    data = data, Terms = object$terms, xlev = object$xlev,
+    has_fixed_intercept = object$has_fixed_intercept)
   X$X <- t(X$X)
 
   fixed_effects_offsets <- if(ncol(X$fixed_terms) == 0)

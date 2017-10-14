@@ -35,7 +35,7 @@ get_survival_case_weights_and_data = function(
   c_weights = "weights",
   c_end_t = "t"){
   X_Y = get_design_matrix(formula, data, predictors = F)
-  formula <- X_Y$formula
+  formula_used <- X_Y$formula_used
   attr(data, "class") <- c("data.table", attr(data, "class"))
 
   if(missing(init_weights))
@@ -133,7 +133,7 @@ get_survival_case_weights_and_data = function(
       X[[i]] <- factor(levels(data[[i]])[X[[i]]], levels = levels(data[[i]]))
   }
 
-  list(X = X, formula = formula)
+  list(X = X, formula_used = formula_used)
 }
 
 
@@ -187,14 +187,12 @@ static_glm = function(
       formula = formula, data = data, by = by, max_T = max_T, id = id,
       init_weights = weights, risk_obj = risk_obj)
 
-    formula <- tmp$formula
+    formula <- tmp$formula_used
     X <- tmp$X
     rm(tmp)
 
     data <- X
     formula <- update(formula, Y ~ ., data = data)
-    formula <- terms(formula, data = data, specials = ddfixed_specials)
-    class(formula) <- c("ddformula", class(formula))
 
   } else if(family == "exponential"){
     family <- poisson()
@@ -202,7 +200,7 @@ static_glm = function(
     X_Y = get_design_matrix(formula, data)
     X_Y$X <- X_Y$X[, -1] # remove the intercept
 
-    formula <- X_Y$formula
+    formula <- X_Y$formula_used
 
     is_before_max_T <- X_Y$Y[, 1] < max_T
     data <- data[is_before_max_T, ]
@@ -215,8 +213,6 @@ static_glm = function(
 
     data <- X
     formula <- update(formula, Y ~ . + offset(log_delta_time), data = data)
-    formula <- terms(formula, data, specials = ddfixed_specials)
-    class(formula) <- c("ddformula", class(formula))
 
   } else
     stop("family '", family, "' not implemented in static_glm")
@@ -248,13 +244,17 @@ static_glm = function(
     if(only_coef){
       ctrl <- do.call(glm.control, list(...))
 
-      fit <- glm.fit(x = mf, y = data$Y, weights = data$weights,
-                     family = family, control = ctrl, offset = offset)
+      fit <- eval(bquote(
+        glm.fit(x = mf, y = data$Y, weights = data$weights,
+                family = .(family), control = .(ctrl), offset = offset)))
 
       return(fit$coefficients)
     }
 
-    return(glm(formula = formula, data = data, family = family, model = model, weights = weights, ...))
+    return(eval(bquote(
+      glm(formula = .(formula), data = data,
+          family = .(family), model = model,
+          weights = weights, ...))))
 
   } else if(method_use == "parallelglm" && only_coef){
     epsilon <- list(...)$epsilon

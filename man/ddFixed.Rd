@@ -7,7 +7,7 @@
 \usage{
 ddFixed(object)
 
-ddFixed_intercept(n)
+ddFixed_intercept(object)
 }
 \arguments{
 \item{object}{Expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}}
@@ -28,17 +28,8 @@ ddhazard(Surv(stop, event) ~ ddFixed(x1), data)
 # All of the calls below will yield the same result
 # with a time-invariant intercept:
 \dontrun{
-ddhazard(Surv(stop, event)
-    ~ ddFixed(1) + x1, data)
-ddhazard(Surv(stop, event)
-    ~ -1 + ddFixed(1) + x1, data)
-ddhazard(Surv(stop, event)
-    ~ ddFixed(rep(1, nrow(data))) + x1, data)
-ddhazard(Surv(stop, event)
-    ~ -1 + ddFixed(rep(1, nrow(data))) + x1, data)
-ddhazard(Surv(stop, event)
-    ~ ddFixed_intercept(nrow(data)) + x1, data)
-ddhazard(Surv(stop, event)
-    ~ -1 + ddFixed_intercept(nrow(data)) + x1, data)
+ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, data)
+ddhazard(Surv(stop, event) ~ -1 + ddFixed_intercept() + x1, data)
+ddhazard(Surv(stop, event) ~ ddFixed_intercept(what_ever) + x1, data)
 }
 }

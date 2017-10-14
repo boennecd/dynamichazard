@@ -34,8 +34,11 @@ predict.fahrmeier_94 = function(object, new_data,
     stop("Functions for model '", object$model, "' is not implemented")
 
   type = type[1]
-  tmp = get_design_matrix(formula = object$formula, data = new_data, response = F)
-  object$formula <- tmp$formula
+  # TODO: change the code below to use new get_design_matrix arguments
+  tmp = get_design_matrix(
+    data = new_data, response = F, Terms = object$terms, xlev = object$xlev,
+    has_fixed_intercept = object$has_fixed_intercept)
+  object$formula <- tmp$formula_used
 
   if(type %in% c("term"))
     return(predict_terms(object, new_data, tmp$X, sds, tmp$fixed_terms))
