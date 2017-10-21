@@ -198,10 +198,11 @@ for(do_truncate in c(F, T)){
         expect_true(all(design$Y[set, 2] > t_ - by_))
         expect_true(all(design$Y[set, 1] < t_))
 
-        expect_true(all((design$Y[not_set, 1] > t_ - by_ | # after interval start
-                            design$Y[not_set, 2] <= t_ - by_) | # stop befor interval start
-                          (design$Y[not_set, 1] <= t_ - by_ & # is inside a bin
-                             design$Y[not_set, 2] <= t_)))
+        expect_true(all(
+          (design$Y[not_set, 1] > t_ - by_ |     # after interval start
+             design$Y[not_set, 2] <= t_ - by_) | # stop before interval start
+            (design$Y[not_set, 1] <= t_ - by_ &  # is inside a bin
+               design$Y[not_set, 2] <= t_)))
         })
     }
 
@@ -223,20 +224,24 @@ for(do_truncate in c(F, T)){
     })
 
     inside_of_bin_and_event <- inside_of_bin & sims$event
-    test_that("All those inside of bins with events have has the correct previous row as event", {
-      ids <- sims$id[inside_of_bin_and_event]
-      ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = F)
-      for(id in ids_to_check){
-        rows_ <- sims[ids_to_row_indicies[[id]], ]
-        event_time <- max(rows_$tstop)
-        bin_start <- min(risk_set$event_times[risk_set$event_times >= event_time]) - by_
+    if(sum(inside_of_bin_and_event) > 0)
+      test_that("All those inside of bins with events have has the correct previous row as event", {
+        ids <- sims$id[inside_of_bin_and_event]
+        ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = F)
 
-        should_be_event <- which(rows_$tstart <= bin_start &  bin_start < rows_$tstop)
+        for(id in ids_to_check){
+          rows_ <- sims[ids_to_row_indicies[[id]], ]
+          event_time <- max(rows_$tstop)
+          bin_start <- min(
+            risk_set$event_times[risk_set$event_times >= event_time]) - by_
 
-        if(risk_set$is_event_in[ids_to_row_indicies[[id]][should_be_event]] < 0)
-          expect_true(FALSE)
-      }
-    })
+          should_be_event <- which(
+            rows_$tstart <= bin_start &  bin_start < rows_$tstop)
+          expect_true(
+            risk_set$is_event_in[
+              ids_to_row_indicies[[id]][should_be_event]] >= 0)
+        }
+      })
 
     # Test with max_T
     max_T = 6
@@ -285,20 +290,23 @@ for(do_truncate in c(F, T)){
     })
 
     inside_of_bin_and_event <- inside_of_bin & sims$event & sims$tstart < max_T
-    test_that("All those inside of bins with events have has the correct previous row as event", {
-      ids <- sims$id[inside_of_bin_and_event]
-      ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = F)
-      for(id in ids_to_check){
-        rows_ <- sims[ids_to_row_indicies[[id]], ]
-        event_time <- max(rows_$tstop)
-        bin_start <- min(risk_set$event_times[risk_set$event_times >= event_time]) - by_
+    if(sum(inside_of_bin_and_event) > 0)
+      test_that("All those inside of bins with events have has the correct previous row as event", {
+        ids <- sims$id[inside_of_bin_and_event]
+        ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = F)
+        for(id in ids_to_check){
+          rows_ <- sims[ids_to_row_indicies[[id]], ]
+          event_time <- max(rows_$tstop)
+          bin_start <- min(
+            risk_set$event_times[risk_set$event_times >= event_time]) - by_
 
-        should_be_event <- which(rows_$tstart <= bin_start &  bin_start < rows_$tstop)
+          should_be_event <- which(
+            rows_$tstart <= bin_start &  bin_start < rows_$tstop)
 
-        if(risk_set$is_event_in[ids_to_row_indicies[[id]][should_be_event]] < 0)
-          expect_true(FALSE)
-      }
-    })
+          expect_true(risk_set$is_event_in[
+            ids_to_row_indicies[[id]][should_be_event]] >= 0)
+        }
+      })
 
   }
 }

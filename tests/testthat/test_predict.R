@@ -343,3 +343,41 @@ test_that("Terms from predict with exponential outcome are correct", {
     expect_equal(unname(respone_pred$fits[rand_indicies[j]]), c(1 - p_survival), info = "")
   }
 })
+
+
+
+
+test_that("Different non-integer time_scales gives the same result with predict results", {
+  skip_on_cran()
+  scales <- exp(seq(-2, 2, .05))
+
+  fit_exp <- expression(suppressMessages(local({
+    fit <- ddhazard(
+      formula = survival::Surv(start * .by, stop * .by, event) ~ group,
+      data = head_neck_cancer,
+      by = .by,
+      control = list(est_Q_0 = F, save_data = F),
+      a_0 = rep(0, 2), Q_0 = diag(1e2, 2), Q = diag(1e-2 / .by, 2),
+      id = head_neck_cancer$id, order = 1)
+
+    tmp_dat <- head_neck_cancer[1, ]
+    tmp_dat$stop <- 40 * .by
+    p1 <- predict(fit, new_data = tmp_dat)
+    t1 <- predict(fit, new_data = tmp_dat, type = "term")
+
+    tmp_dat <- head_neck_cancer[1, ]
+    tmp_dat$start <- 20 * .by
+    tmp_dat$stop <- 100 * .by
+    p2 <- predict(fit, new_data = tmp_dat)
+    t2 <- predict(fit, new_data = tmp_dat, type = "term")
+
+    list(p1 = p1$fits, p2 = p2$fits, t1 = t1$terms, t2 = t2$terms)
+    })))
+
+  .by <- scales[1]
+  f1 <- eval(fit_exp)
+  for(.by in scales[-1]){
+    f2 <- eval(fit_exp)
+    expect_equal(f1, f2, info = paste0("by = ", .by))
+  }
+})

@@ -14,7 +14,7 @@ test_that("verbose prints log likelihood",{
                    Q_0 = Q_0_arg, model = m, order = o,
                    verbose = 5,
                    control = list (eps = .1, method = method))
-        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
+        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")
 }}}})
 
 test_that("verbose prints log likelihood with fixed effects",{
@@ -32,7 +32,7 @@ test_that("verbose prints log likelihood with fixed effects",{
                    verbose = 5,
                    control = list (eps = .1, method = method,
                                    fixed_terms_method = fixed_method))
-        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood is\\s+")
+        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")
       }}}})
 
 test_that("logLik for head_neck_cancer data set match previous results", {

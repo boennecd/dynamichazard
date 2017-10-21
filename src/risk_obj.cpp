@@ -77,7 +77,8 @@ Rcpp::List get_risk_obj_rcpp(
       }
     }
 
-    risk_sets[d_] = std::move(Rcpp::IntegerVector(indicies.begin(), indicies.end()));
+    risk_sets[d_] = std::move(
+      Rcpp::IntegerVector(indicies.begin(), indicies.end()));
 
     I_stop_time = I_start_time;
 
@@ -101,7 +102,8 @@ Rcpp::List get_risk_obj_rcpp(
     dum_start[i] = dum_stop[i - 1] = dum_for_find_interval[i] = event_times[i - 1];
   }
 
-  dum_for_find_interval[d + 1] = dum_stop[d] = std::max(max(stop) + 1.0, dum_stop[d]);
+  dum_for_find_interval[d + 1] = dum_stop[d] =
+    std::max(max(stop) + 1.0, dum_stop[d]);
 
   int old_id, this_id, this_bin;
   unsigned int k, l;
@@ -144,8 +146,10 @@ Rcpp::List get_risk_obj_rcpp(
         //     in 1. from the corresponding risk set
 
         // Find the bin that the last observation stops in
-        tmp_pointer =  std::lower_bound(dum_for_find_interval.begin(), dum_for_find_interval.end(), stop[i]);
-        int bin_number = std::distance(dum_for_find_interval.begin(), tmp_pointer) - 1;
+        tmp_pointer =  std::lower_bound(
+          dum_for_find_interval.begin(), dum_for_find_interval.end(), stop[i]);
+        int bin_number = std::distance(
+          dum_for_find_interval.begin(), tmp_pointer) - 1;
 
         bin_stop = dum_stop[bin_number];
 

@@ -34,7 +34,8 @@ predict.fahrmeier_94 = function(object, new_data,
     stop("Functions for model '", object$model, "' is not implemented")
 
   type = type[1]
-  # TODO: change the code below to use new get_design_matrix arguments
+  # TODO: change the code below to use terms object to get the index of
+  #       potential fixed effects
   tmp = get_design_matrix(
     data = new_data, response = F, Terms = object$terms, xlev = object$xlev,
     has_fixed_intercept = object$has_fixed_intercept)
@@ -92,7 +93,9 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms){
   return(list(terms = terms_res, sds = sds_res, fixed_terms = fixed_terms))
 }
 
-predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, sds, fixed_terms, max_threads){
+predict_response <- function(
+  object, new_data, m, tstart, tstop, use_parallel, sds, fixed_terms,
+  max_threads){
   # Change drop behavior inside this function
   old <- `[`
   `[` <- function(...) { old(..., drop=FALSE) }
@@ -110,6 +113,12 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
     # Find min start. Throw error if before time zero
     start = new_data[[tstart]]
     stop_ = new_data[[tstop]]
+
+    start_order = order(start, method = "radix") - 1L
+    start <- round_if_almost_eq(start, start_order, object$times)
+    stop_order = order(stop_, method = "radix") - 1L
+    stop_ <- round_if_almost_eq(stop_, stop_order, object$times)
+
   } else{
     message("start and stop times ('", tstart, "' and '", tstop, "') are not in data columns. Each row in new_data will get a row for every bin")
     n_obs <- nrow(m)
@@ -129,9 +138,15 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
   max_times = tail(object$times, 1)
 
   # Check if we have to predict state variables in the future
-  if(max_stop > tail(object$times, 1)){
+  if(max_stop > (last_time <- tail(object$times, 1))){
     last_gab = diff(tail(object$times, 2))
-    new_times = max_times + last_gab*(1:ceiling((max_stop - max_times) / last_gab))
+    new_times = seq(last_time, max_stop, last_gab)[-1]
+
+    n <- length(new_times)
+    if(!isTRUE(all.equal(new_times[n], max_stop))){
+      new_times <- c(new_times, new_times[n] + last_gab)
+    } else if(new_times[n] < max_stop)
+      new_times[n] <- max_stop # needed when we use findInterval later
 
     n_cols = dim(parems)[2]
     parems = rbind(parems, matrix(NA_real_, nrow = length(new_times), ncol = n_cols))
@@ -147,12 +162,12 @@ predict_response <- function(object, new_data, m, tstart, tstop, use_parallel, s
     parems = parems[, 1:(dim(parems)[2] / object$order)] # We only need the current estimates (relevant for higher than 1. order)
   }
 
-  # Round if needed. Throw error if so
+  # Round if needed. Throw warning if we do so
   int_start = findInterval(start, times)
   if(any(start - times[int_start] > 0) && !object$model %in% exp_model_names)
     warning("Some start times are rounded down")
 
-  int_stop_ = findInterval(stop_, times, left.open = T) # TODO: better way to deal with equality in the stop time?
+  int_stop_ = findInterval(stop_, times, left.open = TRUE) # TODO: better way to deal with equality in the stop time?
   if(any(times[int_stop_] - stop_ > 0) && !object$model %in% exp_model_names)
     warning("Some stop times are rounded up")
 

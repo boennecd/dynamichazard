@@ -1,3 +1,6 @@
+# dynamichazard 0.5.0
+* Fixed issues with close to equal non-integer stop and start times
+
 # dynamichazard 0.4.0
 * Parallel version of `glm` is used to find the first state vector
 * Default values of `ddhazard` control argument is changed

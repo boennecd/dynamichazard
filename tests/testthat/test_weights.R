@@ -3,7 +3,7 @@ context("Testing weights in fit")
 test_that("Passing fewer weigths than rows in design mat throws error",{
 
   expect_error(
-    result = ddhazard(
+    ddhazard(
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1,

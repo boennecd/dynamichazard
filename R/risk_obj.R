@@ -32,8 +32,8 @@ get_risk_obj = function(
   event = Y[, 3]
   is_ev <- event == 1
 
-
-  max_T = if(missing(max_T)) min(max(stop[is_ev]), max(stop[-is_ev])) else max_T
+  max_T = if(missing(max_T))
+    min(max(stop[is_ev]), max(stop[!is_ev])) else max_T
   order_by_id_and_rev_start = order(id, -start, method = "radix") - 1L
 
   min_start <- as.double(min(start))
@@ -41,7 +41,7 @@ get_risk_obj = function(
   storage.mode(by) <- "double"
   event_times_in <- seq(min_start + by, max_T, by)
   tmp_n <- length(event_times_in)
-  if(event_times_in[tmp_n] < max_T)
+  if(!isTRUE(all.equal(event_times_in[tmp_n], max_T)))
     event_times_in <- c(event_times_in, event_times_in[tmp_n] + by)
 
   # Set exactly to boundaries where values are very close and difference is

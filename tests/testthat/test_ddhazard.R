@@ -171,6 +171,30 @@ test_that("Unmacthed control variable throw error",
               control = list(None_existing_parem = 1)
             )}, regexp = "These control parameters are not recognized"))
 
+test_that("Different non-integer time_scales gives the same result with ddhazard", {
+  skip_on_cran()
+  scales <- exp(seq(-2, 2, .05))
+
+  fit_exp <- expression(
+    ddhazard(
+      formula = survival::Surv(start * .by, stop * .by, event) ~ group,
+      data = head_neck_cancer,
+      by = .by,
+      control = list(est_Q_0 = F, save_data = F),
+      a_0 = rep(0, 2), Q_0 = diag(1e2, 2), Q = diag(1e-2 / .by, 2),
+      id = head_neck_cancer$id, order = 1))
+
+  .by <- scales[1]
+  f1 <- eval(fit_exp)
+  for(.by in scales[-1]){
+    f2 <- eval(fit_exp)
+    info <- paste0("by = ", .by)
+    expect_equal(f1$risk_set$risk_sets, f2$risk_set$risk_sets, info = info)
+    expect_equal(f1$risk_set$is_event_in, f2$risk_set$is_event_in, info = info)
+    expect_equal(f1$state_vecs, f2$state_vecs, info = info)
+  }
+})
+
 ########
 # Test on simulated data
 
@@ -262,6 +286,7 @@ test_that("Permutating data does not change the results", {
 
   #####
   # With weigths
+  set.seed(94884214)
   w <- sample(1:3, nrow(pbc2), replace = T)
 
   args <- list(
@@ -270,7 +295,7 @@ test_that("Permutating data does not change the results", {
     id = pbc2$id, by = 100, max_T = 3000,
     weights = w,
     Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
-    control = list(n_threads = 1, LR = .8))
+    control = list(n_threads = 1, LR = .6))
 
   r1 <- do.call(ddhazard, args)
   args$control <- c(args$control, list(permu = T))

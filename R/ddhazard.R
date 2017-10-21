@@ -183,7 +183,10 @@ ddhazard = function(formula, data,
   risk_set <-
     get_risk_obj(
       Y = X_Y$Y, by = by,
-      max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
+      max_T = ifelse(
+        missing(max_T),
+        min(max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max(X_Y$Y[X_Y$Y[, 3] == 0, 2])),
+        max_T),
       id = id, is_for_discrete_model = is_for_discrete_model)
 
   n_fixed <- ncol(X_Y$fixed_terms)

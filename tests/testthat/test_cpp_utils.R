@@ -62,7 +62,7 @@ test_that("trunc_lp_in_exponential_dist does not truncate when not needed", {
 test_that("round_if_almost_eq rounds to nearest boundary as expected", {
   round_if_almost_eq <- asNamespace("dynamichazard")$round_if_almost_eq
   set.seed(56219385)
-  n <- 1e2
+  n <- 1e3
 
   x <- replicate(n, {
     x <- 1

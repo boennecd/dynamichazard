@@ -433,7 +433,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       my_debug_logger(*p_data)
         << "Iteration " <<  std::setw(5)<< it + 1
         << " ended with conv criteria " << std::setw(15) << *(conv_values.end() -1)
-        << "\t" << "The log likelihood is " << log_like << std::setw(rcout_width);
+        << "\t" << "The log likelihood of the mean path is " << log_like << std::setw(rcout_width);
     }
 
     if(*(conv_values.end() -1) < eps)
