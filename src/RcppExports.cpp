@@ -288,26 +288,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// trunc_lp_in_exponential_dist_test
-Rcpp::List trunc_lp_in_exponential_dist_test(const double eta, const double at_risk_length, const bool is_event);
-RcppExport SEXP _dynamichazard_trunc_lp_in_exponential_dist_test(SEXP etaSEXP, SEXP at_risk_lengthSEXP, SEXP is_eventSEXP) {
+// trunc_eta_exponential_test
+Rcpp::List trunc_eta_exponential_test(const double eta, const double at_risk_length, const bool is_event);
+RcppExport SEXP _dynamichazard_trunc_eta_exponential_test(SEXP etaSEXP, SEXP at_risk_lengthSEXP, SEXP is_eventSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const double >::type eta(etaSEXP);
     Rcpp::traits::input_parameter< const double >::type at_risk_length(at_risk_lengthSEXP);
     Rcpp::traits::input_parameter< const bool >::type is_event(is_eventSEXP);
-    rcpp_result_gen = Rcpp::wrap(trunc_lp_in_exponential_dist_test(eta, at_risk_length, is_event));
+    rcpp_result_gen = Rcpp::wrap(trunc_eta_exponential_test(eta, at_risk_length, is_event));
     return rcpp_result_gen;
 END_RCPP
 }
-// trunc_lp_in_exponential_dist_test_log_eps
-double trunc_lp_in_exponential_dist_test_log_eps();
-RcppExport SEXP _dynamichazard_trunc_lp_in_exponential_dist_test_log_eps() {
+// trunc_eta_exponential_test_log_eps
+double trunc_eta_exponential_test_log_eps();
+RcppExport SEXP _dynamichazard_trunc_eta_exponential_test_log_eps() {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(trunc_lp_in_exponential_dist_test_log_eps());
+    rcpp_result_gen = Rcpp::wrap(trunc_eta_exponential_test_log_eps());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -454,8 +454,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_sym_mat_rank_one_update_test", (DL_FUNC) &_dynamichazard_sym_mat_rank_one_update_test, 3},
     {"_dynamichazard_solve_w_precomputed_chol_test", (DL_FUNC) &_dynamichazard_solve_w_precomputed_chol_test, 2},
     {"_dynamichazard_lambert_W0_test", (DL_FUNC) &_dynamichazard_lambert_W0_test, 1},
-    {"_dynamichazard_trunc_lp_in_exponential_dist_test", (DL_FUNC) &_dynamichazard_trunc_lp_in_exponential_dist_test, 3},
-    {"_dynamichazard_trunc_lp_in_exponential_dist_test_log_eps", (DL_FUNC) &_dynamichazard_trunc_lp_in_exponential_dist_test_log_eps, 0},
+    {"_dynamichazard_trunc_eta_exponential_test", (DL_FUNC) &_dynamichazard_trunc_eta_exponential_test, 3},
+    {"_dynamichazard_trunc_eta_exponential_test_log_eps", (DL_FUNC) &_dynamichazard_trunc_eta_exponential_test_log_eps, 0},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 10},
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 22},

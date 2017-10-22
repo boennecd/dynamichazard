@@ -772,8 +772,6 @@ tmp <- sim_func()
 
 library(testthat)
 
-# get_expect_equal(tmp$res[tmp$res$id == 25, ])
-
 expect_equal(unname(c(tmp$res[tmp$res$id == 25, ]$id)),
 c(25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25 ))
 

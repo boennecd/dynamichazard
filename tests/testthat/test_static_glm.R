@@ -51,7 +51,6 @@ test_that("static glm gives results with exponential that match previous computa
     family = "exponential", model = T)
 
   tmp <- res_lower["coefficients"]
-  # get_expect_equal(tmp)
 
   expect_equal(unname(c(tmp$coefficients)),
                c(-2.7762125831981495, -0.3728709821372309, -0.2619269145416432, -1.4856958985013418 ))
@@ -110,8 +109,7 @@ test_that("Gives depreciated warning about speedglm argument", {
       id = sims$id, only_coef = FALSE,
       speedglm = TRUE # should give warning
       ),
-    "'speedglm' have been depreciated. Use 'method_use'",
-    fixed = TRUE)
+    ".speedglm. have been depreciated. Use .method_use.")
 })
 
 test_that("Gets same with different methods", {

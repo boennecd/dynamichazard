@@ -98,7 +98,7 @@ ddhazard = function(formula, data,
     model <- "exp_clip_time_w_jump"
   } else if(model == "exp_combined"){
     stop("'exp_combined' is not supported since version 0.3.0")
-  }
+  } # TODO: make message about depreciated exp_ and test that it fires
 
   if(missing(id)){
     if(verbose)
@@ -514,8 +514,9 @@ get_F <- function(order, n_params, n_fixed, est_fixed_in_E){
   } else stop("Method not implemented for order ", order)
 }
 
+# TODO: remove other names at some future point after 0.5.0 changes
 exp_model_names <- c(
-  "exp_bin", "exp_clip_time", "exp_clip_time_w_jump")
+  "exponential", "exp_bin", "exp_clip_time", "exp_clip_time_w_jump")
 
 get_start_values <- function(
   formula, data, max_T, X_Y, risk_set,
@@ -559,7 +560,7 @@ get_start_values <- function(
     if(model == "logit"){
       coefs = glm_func("binomial")
 
-    } else if(model %in% c(exp_model_names, "exponential")){
+    } else if(model %in% exp_model_names){
       coefs = glm_func("exponential")
 
     } else

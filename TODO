@@ -4,3 +4,9 @@ How to compute lag one covariance matrix with UKF
 Fix bug with particle filter and exponential model
 Replace `save_to_test` and `read_to_test` with `testthat::expect_known_output`
 Make on family cpp function and use throughout all estimation methods and in R
+Remove all the exp_... from the EKF and use Poisson model with offsets instead
+Use `src/family.h` in `src/bigglm_wrapper.cpp`
+Use `src/family.h` in `src/ddhazard/GMA_solver.cpp`
+Use `src/family.h` in `src/ddhazard/SMA_solver.cpp`
+Use `src/family.h` in `src/ddhazard/UKF_solver.cpp`
+Use `src/family.h` in `src/PF/densities.cpp`

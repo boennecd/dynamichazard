@@ -45,46 +45,47 @@ inline double lambert_W0(const double x){
   return x * (1 - x * (1 - 3/2 * x * (1 - 4 * x * (1 - 125 / 144 * x))));
 }
 
-struct trunc_lp_in_exponential_dist_result {
+struct trunc_eta_res {
   double eta_trunc;
   double exp_eta_trunc;
-  bool did_truncate;
 };
 
 // Function to truncate the linear predictor for exponentially distributed
 // outcomes
 /* CHECK: The next two constants match. I have hard coded them as the exp is
    not constexpr with clang-4.0 */
-static constexpr double trunc_lp_in_exponential_dist_log_eps = -50;
-static constexpr double trunc_lp_in_exponential_dist_eps = 1.9287498479639178e-22;
-double trunc_lp_in_exponential_dist_inner_func(const double);
+static constexpr double trunc_eta_exponential_log_eps = -50;
+static constexpr double trunc_eta_exponential_eps = 1.9287498479639178e-22;
+double trunc_eta_exponential_inner_func(const double);
 
-inline trunc_lp_in_exponential_dist_result
-  trunc_lp_in_exponential_dist(
-    const double eta, const double at_risk_length, const bool is_event)
+inline trunc_eta_res
+  trunc_eta_exponential(
+    const bool outcome, const double eta, const double exp_eta,
+    const double at_risk_length)
   {
-    static constexpr double log_eps = trunc_lp_in_exponential_dist_log_eps;
-    static constexpr double eps = trunc_lp_in_exponential_dist_eps;
+    static constexpr double log_eps = trunc_eta_exponential_log_eps;
+    static constexpr double eps = trunc_eta_exponential_eps;
 
-    trunc_lp_in_exponential_dist_result ans;
-    ans.exp_eta_trunc = exp(eta);
+    trunc_eta_res ans;
+    ans.exp_eta_trunc = exp_eta;
 
     // P(outcome) < eps or f(outcome) < eps
-    ans.did_truncate = is_event * eta - ans.exp_eta_trunc * at_risk_length < log_eps;
+    bool did_truncate =
+      outcome * eta - ans.exp_eta_trunc * at_risk_length < log_eps;
 
-    if(!ans.did_truncate){
+    if(!did_truncate){
       ans.eta_trunc = eta;
       return ans;
     }
 
-    if(is_event){
+    if(outcome){
       if(eta < -ans.exp_eta_trunc * at_risk_length){
         // answer is eta = log(eps) - W_0(-t * eps)
         ans.eta_trunc = log_eps - lambert_W0(- at_risk_length * eps);
 
       } else {
         // answer is eta = log(eps) - W_1(-t * eps)
-        ans.eta_trunc = trunc_lp_in_exponential_dist_inner_func(at_risk_length);
+        ans.eta_trunc = trunc_eta_exponential_inner_func(at_risk_length);
 
       }
 

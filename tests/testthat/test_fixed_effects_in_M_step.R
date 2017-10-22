@@ -104,27 +104,25 @@ test_that("Changing fixed effect control parems changes the result", {
 })
 
 test_that("Gets previous results with exponential model with some fixed terms", {
-  sims <- exp_sim_200
+  sims <- exp_sim_500
   form <- formula(survival::Surv(tstart, tstop, event) ~
                     ddFixed_intercept() + x1 + x2 + x3)
 
-  suppressMessages(
-    res1 <- ddhazard(
-      form, data = sims$res, model = "exp_clip_time_w_jump", by = 1,
-      id = sims$res$id, max_T = 10, control = list(
-        eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3,
-        save_risk_set = F, save_data = F, n_max = 1e2,
-        denom_term = .0001,
-        fixed_terms_method = "M_step"),
-      Q_0 = diag(rep(100000, 3)), Q = diag(.01, 3)))
+  res1 <- ddhazard(
+    form, data = sims$res, model = "exponential", by = 1,
+    id = sims$res$id, max_T = 10, control = list(
+      eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3,
+      save_risk_set = F, save_data = F, n_max = 1e2,
+      fixed_terms_method = "M_step"),
+    Q_0 = diag(100000, 3), Q = diag(.01, 3))
 
-  # matplot(sims$betas, type = "l", ylim = range(sims$betas, res1$state_vecs))
+  # matplot(sims$betas[, 1:4], type = "l", lty = 2
+  #         ylim = range(sims$betas, res1$state_vecs, res1$fixed_effects))
   # matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
+  # abline(h = res1$fixed_effects)
   # res1$fixed_effects
   res1 <- res1[c("state_vars","state_vecs","fixed_effects")]
-  # save_to_test(res1, "fixed_terms1")
-
-  expect_equal(res1, read_to_test("fixed_terms1"))
+  expect_known_value(res1, "fixed_terms1.RDS", update = FALSE)
 })
 
 test_that("UKF with fixed effects works", {

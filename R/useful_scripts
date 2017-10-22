@@ -35,3 +35,40 @@ rhub::check(path = "C:\\Users\\User\\Dropbox\\skole_backup\\phd\\dynamichazard_0
             platform = "debian-gcc-devel", show_status = FALSE,
             check_args = "--no-build-vignettes" # Due to latex packages
             )
+
+
+
+
+# ######
+# # Debugging what takes time
+# files <- list.files("tests/testthat")
+# files <- files[grepl("^test", files)]
+#
+# time_taken <- sapply(files, function(f){
+#   cat("Running", sQuote(f), "\n")
+#   print(out <- system.time(testthat::test_file(paste0("tests/testthat/", f))))
+#   cat("\n")
+#
+#   out
+# })
+#
+# time_taken <- t(time_taken)
+# time_taken[order(time_taken[, "elapsed"], decreasing = TRUE), ]
+# sum(time_taken[, "elapsed"])
+
+# ######
+# # To test a particular file
+# system.time(testthat::test_file("tests/testthat/testpredict.R"))
+#
+# # Or use:
+# test_that <- function(desc, code){
+#   cat("\nRunning", sQuote(desc), "\n")
+#   .time <- system.time(out <- testthat::test_that(desc, code))
+#   print(.time)
+#   cat("\n")
+#
+#   out
+# }
+
+
+Sys.setenv(NOT_CRAN = "true")

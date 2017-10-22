@@ -8,7 +8,8 @@
 inline bool is_exponential_model(std::string model){
   return(model == "exp_bin" ||
          model == "exp_clip_time" ||
-         model == "exp_clip_time_w_jump");
+         model == "exp_clip_time_w_jump" ||
+         model == "exponential");
 }
 
 // Abstact solver class
@@ -67,42 +68,6 @@ public:
     const double bin_tstart_, const double bin_tstop_);
 
   void operator()();
-};
-
-struct EKF_filter_worker_calculations {
-  /* (y_{it} - h(eta)) |_{\eta = x_{it}^T \alpha_{t}} */
-  const double Y_residual;
-  /* \frac{ \dot{h}(\eta) }{ Var(\eta)+ \xi } |_{\eta = x_{it}^T \alpha_{t}} */
-  const double score_factor;
-  /* \frac{ \dot{h}(\eta)^2 }{ Var(\eta)+ \xi } |_{\eta = x_{it}^T \alpha_{t}} */
-  const double hessian_factor;
-  /* \dot{h}(\eta) */
-  const double var_inv;
-  const double z_dot_factor;
-};
-
-struct EKF_logit_cals{
-  static EKF_filter_worker_calculations cal(
-      const bool do_die, const double time_outcome, const double at_risk_length,
-      const double eta, const double denom_term);
-};
-
-struct EKF_exp_bin_cals {
-  static EKF_filter_worker_calculations cal(
-      const bool do_die, const double time_outcome, const double at_risk_length,
-      const double eta, const double denom_term);
-};
-
-struct EKF_exp_clip_cals {
-  static EKF_filter_worker_calculations  cal(
-      const bool do_die, const double time_outcome, const double at_risk_length,
-      const double eta, const double denom_term);
-};
-
-struct EKF_exp_clip_w_jump_cals{
-  static EKF_filter_worker_calculations cal(
-      const bool do_die, const double time_outcome, const double at_risk_length,
-      const double eta, const double denom_term);
 };
 
 
@@ -322,5 +287,13 @@ public:
 
   void solve();
 };
+
+
+std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
+                                const arma::mat&, const arma::mat&,
+                                arma::mat Q, const arma::mat&,
+                                const arma::vec&, const arma::vec&,
+                                const arma::vec &,
+                                const int, const std::string);
 
 #endif

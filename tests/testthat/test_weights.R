@@ -75,7 +75,7 @@ test_that("Making large design mat and using weights yield the same with UKF",{
   ws <- sapply(1:nrow(head_neck_cancer), function(x) sum(tmp == x))
 
   meth <- "UKF"
-  for(m in c("logit", exp_model_names)){
+  for(m in c("logit", "exponential")){
     f1 <- ddhazard(
       formula = survival::Surv(stop, event) ~ group,
       data = dum_design,

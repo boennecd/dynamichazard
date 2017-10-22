@@ -1,28 +1,28 @@
 context("Testing loglike")
 
-test_that("verbose prints log likelihood",{
+test_that("ddhazard with verbose > 0 prints log likelihood",{
   for(method in c("EKF", "UKF")){
     for(o in c(1, 2)){
-      Q_0_arg <- if(o == 1) diag(1, 2) else diag(c(1, 1, .1, .1))
-      for(m in c(exp_model_names, "logit")){
-        if(m == "exp_clip_time" && method == "UKF")
+      Q_0_arg <- if(o == 1) diag(1, 2) else diag(1, 4)
+      for(m in c("exponential", "logit")){
+        if(m == "exponential" && method == "UKF")
           next
         expect_output({
           ddhazard(survival::Surv(start, stop, event) ~ group,
                    data = head_neck_cancer, id = head_neck_cancer$id,
-                   by = 2, max_T = 30, Q = diag(.01, 2),
+                   by = 1, max_T = 30, Q = diag(.01, 2),
                    Q_0 = Q_0_arg, model = m, order = o,
                    verbose = 5,
                    control = list (eps = .1, method = method))
         }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")
 }}}})
 
-test_that("verbose prints log likelihood with fixed effects",{
+test_that("ddhazard with verbose > 0 prints log likelihood with fixed effects",{
   for(method in c("EKF", "UKF")){
     for(fixed_method in c("M_step", "E_step")){
       Q_0_arg <- if(method == "EKF") 1e5 else 1
-      for(m in c(exp_model_names, "logit")){
-        if(m == "exp_clip_time" && method == "UKF")
+      for(m in c("exponential", "logit")){
+        if(m == "exponential" && method == "UKF")
           next
         expect_output({
           ddhazard(survival::Surv(start, stop, event) ~ ddFixed(group),
@@ -178,8 +178,7 @@ test_that("logLik for simulated data versus old results", {
 
   log_like <- logLik(object = result)
 
-  # print(log_like, digits = 16)
-
+  # dput(log_like)
   old <- structure(-136.706189501914,
                    class = "logLik")
   expect_equal(log_like, old)
@@ -192,17 +191,15 @@ test_that("logLik for simulated data versus old results", {
     Q_0 = diag(1e5, 11),
     max_T = 10,
     id = sims$res$id, order = 1,
-    verbose = F, model = "exp_clip_time_w_jump")
+    verbose = F, model = "exponential", control = list(n_max = 150))
 
   # matplot(sims$betas, lty = 1, type = "l")
   # matplot(result$state_vecs, type = "l", lty = 2, add = T)
 
   log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
 
-  # print(log_like, digits = 16)
-
-  old <- structure(-193.3489503557651,
-                   class = "logLik")
+  # dput(log_like)
+  old <- structure(-188.884654279978, class = "logLik")
   expect_equal(log_like, old, tolerance = 1e-3)
 
 
@@ -224,8 +221,6 @@ test_that("logLik for simulated data versus old results", {
   # matplot(sims$betas, lty = 1, type = "l")
   # matplot(result$state_vecs, type = "l", lty = 2, add = T, col = c(1, 4:11))
   # abline(h = result$fixed_effects, col = 2:3, lty = 2)
-  # print(log_like, digits = 16)
-
   old <- structure(-180.8480151206968,
                    class = "logLik")
   expect_equal(log_like, old, tolerance = 1e-6)
@@ -238,7 +233,7 @@ test_that("logLik for simulated data versus old results", {
     control = list(fixed_terms_method = "E_step"),
     Q_0 = diag(1e5, 9),
     Q = diag(1e-2, 9),
-    max_T = 10, model = "exp_clip_time_w_jump",
+    max_T = 10, model = "exponential",
     id = sims$res$id, order = 1,
     verbose = F)
 
@@ -247,10 +242,9 @@ test_that("logLik for simulated data versus old results", {
   # matplot(sims$betas, lty = 1, type = "l")
   # matplot(result$state_vecs, type = "l", lty = 2, add = T, col = c(1, 4:11))
   # abline(h = result$fixed_effects, col = 2:3, lty = 2)
-  # print(log_like, digits = 16)
+  # dput(log_like)
 
-  old <- structure(-228.63504443729,
-                   class = "logLik")
+  old <- structure(-221.332924990221, class = "logLik")
   expect_equal(log_like, old, tolerance = 1e-6)
 })
 

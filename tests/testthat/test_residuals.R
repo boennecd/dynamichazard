@@ -206,7 +206,7 @@ test_that("Calls to residuals should fail for exponential model and state space 
 #####
 # Test previous result for examples in diagnostics vignette
 
-test_that("Get previous results with Rossi", {
+test_that("Gets previous results with Rossi", {
   skip_on_cran()
 
   if(interactive()){
@@ -224,15 +224,11 @@ test_that("Get previous results with Rossi", {
       Q_0 = diag(10000, 5), Q = diag(.1, 5)))
 
   state <- residuals(dd_fit, type = "std_space_error")
-
-  # save_to_test(state, "Rossi_state")
-  expect_equal(state, read_to_test("Rossi_state"))
+  expect_known_value(state, "Rossi_state.RDS", update = FALSE)
 
   pearson <- residuals(dd_fit, type = "pearson")
   pearson <- pearson[[1]][1:2]
-
-  # save_to_test(pearson, "Rossi_pearson")
-  expect_equal(pearson, read_to_test("Rossi_pearson"))
+  expect_known_value(pearson, "Rossi_pearson.RDS", update = FALSE)
 })
 
 test_that("Get prevoius residuals with whas500", {

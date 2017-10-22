@@ -37,15 +37,15 @@ test_that("Works with EKF and continous time model and that it work with one fix
   fit <- ddhazard(survival::Surv(start, stop, event) ~ ddFixed(group),
                   Q_0 = matrix(100000), Q = matrix(.1),
                   data = head_neck_cancer, max_T = 35,
-                  by = 1, model = "exp_clip_time_w_jump",
+                  by = 1, model = "exponential",
                   control = list(fixed_terms_method = "E_step",
                                  save_risk_set = F, save_data = F))
 
   # plot(fit$state_vecs)
   # fit$fixed_effects
   fit <- fit[c("state_vecs", "state_vars","Q","fixed_effects")]
-  # save_to_test(fit, "E_step_fixed_exp_head_neck")
-  expect_equal(fit, read_to_test("E_step_fixed_exp_head_neck"), tolerance = 1.490116e-08)
+  expect_known_value(fit, "E_step_fixed_exp_head_neck.RDS", tolerance = 1e-8,
+                     update = FALSE)
 })
 
 set.seed(849239)

@@ -226,19 +226,19 @@ public:
   static const bool uses_at_risk_length = true;
 
   static inline double log_p_prime(const double eta, const bool is_event, const double at_risk_length){
-    auto tmp = trunc_lp_in_exponential_dist(eta, at_risk_length, is_event);
+    auto tmp = trunc_eta_exponential(is_event, eta, exp(eta), at_risk_length);
 
     return is_event - tmp.exp_eta_trunc * at_risk_length;
   }
 
   static inline double log_p_2prime(const double eta, const bool is_event, const double at_risk_length){
-    auto tmp = trunc_lp_in_exponential_dist(eta, at_risk_length, is_event);
+    auto tmp = trunc_eta_exponential(is_event, eta, exp(eta), at_risk_length);
 
     return - tmp.exp_eta_trunc * at_risk_length;
   }
 
   static inline double log_like_outcome(const double eta, const bool is_event, const double at_risk_length){
-    auto tmp = trunc_lp_in_exponential_dist(eta, at_risk_length, is_event);
+    auto tmp = trunc_eta_exponential(is_event, eta, exp(eta), at_risk_length);
 
     return is_event * tmp.eta_trunc - tmp.exp_eta_trunc * at_risk_length;
   }

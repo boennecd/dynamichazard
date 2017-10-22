@@ -142,20 +142,19 @@ double lambert_W0_test(const double x){
 }
 
 // [[Rcpp::export]]
-Rcpp::List trunc_lp_in_exponential_dist_test(
+Rcpp::List trunc_eta_exponential_test(
   const double eta, const double at_risk_length, const bool is_event)
 {
-  auto ans = trunc_lp_in_exponential_dist(eta, at_risk_length, is_event);
+  auto ans = trunc_eta_exponential(is_event, eta, exp(eta), at_risk_length);
 
   return Rcpp::List::create(
     Rcpp::Named("eta_trunc") = ans.eta_trunc,
-    Rcpp::Named("exp_eta_trunc") = ans.exp_eta_trunc,
-    Rcpp::Named("did_truncate") = ans.did_truncate);
+    Rcpp::Named("exp_eta_trunc") = ans.exp_eta_trunc);
 }
 
 // [[Rcpp::export]]
-double trunc_lp_in_exponential_dist_test_log_eps(){
-  return trunc_lp_in_exponential_dist_log_eps;
+double trunc_eta_exponential_test_log_eps(){
+  return trunc_eta_exponential_log_eps;
 }
 
 

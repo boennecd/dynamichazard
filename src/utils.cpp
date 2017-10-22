@@ -17,7 +17,7 @@ static double cache_at_risk_length =
 static double cache_at_risk_length_result =
   std::numeric_limits<double>::quiet_NaN();
 
-static constexpr double log_eps = trunc_lp_in_exponential_dist_log_eps;
+static constexpr double log_eps = trunc_eta_exponential_log_eps;
 
 template <typename T>
 inline int sgn(T val) {
@@ -28,7 +28,7 @@ inline double func(const double eta, const double at_risk_length){
   return -(eta - exp(eta) * at_risk_length - log_eps);
 }
 
-double trunc_lp_in_exponential_dist_inner_func(const double at_risk_length){
+double trunc_eta_exponential_inner_func(const double at_risk_length){
   static constexpr unsigned int n_max = 1000;
   static constexpr double delta = 10;
   static constexpr double tol = 1e-10;
@@ -67,7 +67,7 @@ double trunc_lp_in_exponential_dist_inner_func(const double at_risk_length){
 
   if(n == n_max){
     std::stringstream msg;
-    msg << "trunc_lp_in_exponential_dist_inner_func did not converge with at_risk_length = "
+    msg << "trunc_eta_exponential_inner_func did not converge with at_risk_length = "
         << at_risk_length;
     Rcpp::stop(msg.str());
   }

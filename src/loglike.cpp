@@ -1,12 +1,9 @@
 #include "ddhazard.h"
+#include "family.h"
 
-class logLike_link_term_helper{
-private:
+class logLike_link_term_helper {
+protected:
   using uvec_iter = arma::uvec::const_iterator;
-
-  // function that takes the inear predictor and delta time
-  virtual double link_term_if_death(const double &, const double &) = 0;
-  virtual double link_term_if_control(const double &, const double &) = 0;
 
   const arma::mat &X;
   const arma::vec &tstart;
@@ -26,67 +23,40 @@ public:
     fixed_effects_offsets(fixed_effects_offsets_)
   {}
 
-  double link_logLik_terms(const arma::vec &a_t,
-                           const arma::uvec &risk_set,
-                           const double &bin_start, const double &bin_stop,
-                           const int bin_number){
+  virtual double link_logLik_terms(
+      const arma::vec &a_t,
+      const arma::uvec &risk_set,
+      const double &bin_start, const double &bin_stop,
+      const int bin_number) = 0;
+};
+
+
+template<typename family_T>
+class logLike_link_term_helper_T : public logLike_link_term_helper {
+public:
+  using logLike_link_term_helper::logLike_link_term_helper;
+
+  double link_logLik_terms(
+      const arma::vec &a_t,
+      const arma::uvec &risk_set,
+      const double &bin_start, const double &bin_stop,
+      const int bin_number){
     double res(0.0);
 
     for(uvec_iter it = risk_set.begin(); it != risk_set.end(); ++it){
-      const double eta = fixed_effects_offsets(*it)
-        + (n_parems > 0 ? arma::dot(a_t.head(n_parems), X.col(*it)) : 0.);
-      const double delta_t = std::min(tstop(*it), bin_stop) - std::max(tstart(*it), bin_start);
+      const double eta = fixed_effects_offsets(*it) +
+        (n_parems > 0 ? arma::dot(a_t.head(n_parems), X.col(*it)) : 0.);
+      const double at_risk_length =
+        family_T::uses_at_risk_length ?
+        get_at_risk_length(tstop(*it), bin_stop, tstart(*it), bin_start) :
+        0.;
 
-      res += (bin_number == is_event_in_bin(*it)) ?
-        link_term_if_death(eta, delta_t) : link_term_if_control(eta, delta_t);
+      res += family_T::log_like(
+        bin_number == is_event_in_bin(*it), eta, exp(eta), at_risk_length);
     }
 
     return res;
   }
-};
-
-
-
-class logLike_link_term_helper_logit : public logLike_link_term_helper{
-private:
-  inline double link_term_if_death(const double &eta, const double &delta_t){
-    return eta - log(1 + exp(eta));
-  };
-
-  inline double link_term_if_control(const double &eta, const double &delta_t){
-    return - log(1 + exp(eta));
-  };
-
-public:
-  logLike_link_term_helper_logit(const arma::mat &X_,
-                                 const arma::vec &tstart_,
-                                 const arma::vec &tstop_,
-                                 const arma::ivec &is_event_in_bin_,
-                                 const arma::vec &fixed_effects_offsets_):
-    logLike_link_term_helper(X_, tstart_, tstop_, is_event_in_bin_, fixed_effects_offsets_)
-  {}
-};
-
-
-
-class logLike_link_term_helper_cloglog : public logLike_link_term_helper{
-private:
-  inline double link_term_if_death(const double &eta, const double &delta_t){
-    return eta - exp(eta) * delta_t;
-  };
-
-  inline double link_term_if_control(const double &eta, const double &delta_t){
-    return - exp(eta) * delta_t;
-  };
-
-public:
-  logLike_link_term_helper_cloglog(const arma::mat &X_,
-                                   const arma::vec &tstart_,
-                                   const arma::vec &tstop_,
-                                   const arma::ivec &is_event_in_bin_,
-                                   const arma::vec &fixed_effects_offsets_):
-    logLike_link_term_helper(X_, tstart_, tstop_, is_event_in_bin_, fixed_effects_offsets_)
-  {}
 };
 
 
@@ -99,8 +69,8 @@ std::vector<double>
               arma::mat Q, const arma::mat &a_t_d_s,
               const arma::vec &tstart, const arma::vec &tstop,
               const arma::vec &fixed_effects_offsets,
-              const int order_ = 1,
-              const std::string model = "logit"){
+              const int order_,
+              const std::string model){
   const int d(Rcpp::as<int>(risk_obj["d"]));
   const int n_parems(a_t_d_s.n_rows / order_);
   const bool any_dynamic = n_parems > 0;
@@ -140,15 +110,15 @@ std::vector<double>
 
   std::unique_ptr<logLike_link_term_helper> helper;
   if(model == "logit"){
-    helper.reset(new logLike_link_term_helper_logit(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets));
+    helper.reset(new logLike_link_term_helper_T<logistic>(
+        X, tstart, tstop, is_event_in_bin, fixed_effects_offsets));
 
   } else if (is_exponential_model(model)){
-    helper.reset(new logLike_link_term_helper_cloglog(X, tstart, tstop, is_event_in_bin, fixed_effects_offsets));
+    helper.reset(new logLike_link_term_helper_T<exponential>(
+        X, tstart, tstop, is_event_in_bin, fixed_effects_offsets));
 
-  } else{
+  } else
     Rcpp::stop("Model '" + model + "' not implemented for logLike method");
-  }
-
 
   double log_det_Q, dum;
   arma::log_det(log_det_Q, dum, Q);
@@ -160,7 +130,8 @@ std::vector<double>
 
     if(any_dynamic){
       a_t = a_t_d_s.col(t);
-      arma::vec delta = a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
+      arma::vec delta =
+        a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
 
       logLike -=  1.0/ 2.0 * (log_det_Q + log(bin_stop - bin_Start))
         + n_parems / 2.0 * (log(2.0) + log(M_PI));
@@ -171,7 +142,8 @@ std::vector<double>
 
     const arma::uvec &risk_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
 
-    logLike += helper->link_logLik_terms(a_t, risk_set, bin_Start, bin_stop, t - 1);
+    logLike +=
+      helper->link_logLik_terms(a_t, risk_set, bin_Start, bin_stop, t - 1);
   }
 
   return std::vector<double>{logLike, t_0_logLike};

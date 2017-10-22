@@ -60,7 +60,7 @@ test_that("print.ddhazard_boot gives the expected output", {
                    eps = 1e-2), # decreased to reduce run-time
     Q_0 = diag(1, 9),
     Q = diag(1e-2, 9),
-    max_T = 10, model = "exp_clip_time_w_jump",
+    max_T = 10, model = "exponential",
     id = sims$res$id, order = 1,
     verbose = F)
 
@@ -68,10 +68,8 @@ test_that("print.ddhazard_boot gives the expected output", {
   boot_out <- ddhazard_boot(result, R = 19)
 
   # plot(result, ddhazard_boot = boot_out) # needs bigger R
-  # save_to_test(
-  #   capture.output(print(boot_out, digits = 1)),
-  #   file_name = "boot_print.RDS")
-  expect_equal(capture.output(print(boot_out, digits = 1)), read_to_test("boot_print.RDS"))
+  expect_known_output(
+    print(boot_out, digits = 1), "boot_print", update = FALSE)
 
   #####
   # Without fixed effects
@@ -83,15 +81,13 @@ test_that("print.ddhazard_boot gives the expected output", {
                    eps = 1e-2), # decreased to reduce run-time
     Q_0 = diag(1, 11),
     Q = diag(1e-2, 11),
-    max_T = 10, model = "exp_clip_time_w_jump",
+    max_T = 10, model = "exponential",
     id = sims$res$id, order = 1,
     verbose = F)
 
   set.seed(1992)
   boot_out <- ddhazard_boot(result, R = 19)
 
-  # save_to_test(
-  #   capture.output(print(boot_out, digits = 1)),
-  #   file_name = "boot_print_two.RDS")
-  expect_equal(capture.output(print(boot_out, digits = 1)), read_to_test("boot_print_two.RDS"))
+  expect_known_output(
+    print(boot_out, digits = 1), "boot_print_w_o_fixed", update = FALSE)
 })

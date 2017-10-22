@@ -1,4 +1,5 @@
 #include "ddhazard.h"
+#include "family.h"
 #include "estimate_fixed_effects_M_step.h"
 
 using uword = arma::uword;
@@ -21,13 +22,6 @@ inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &n
   return arma::norm(prev_est - new_est, 2) / (arma::norm(prev_est, 2) + 1.0e-10);
 }
 double (*conv_criteria)(const arma::mat&, const arma::mat&) = relative_norm_change;
-
-extern std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
-                                       const arma::mat&, const arma::mat&,
-                                       arma::mat Q, const arma::mat&,
-                                       const arma::vec&, const arma::vec&,
-                                       const arma::vec &,
-                                       const int, const std::string);
 
 // [[Rcpp::export]]
 Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assumed to have observations in the columns for performance due to column-major storage
@@ -100,19 +94,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       order_, est_Q_0, model != "logit", NR_it_max, debug, n_threads,
       denom_term, use_pinv, criteria, EKF_batch_size));
     if(model == "logit"){
-      solver.reset(new EKF_solver<EKF_logit_cals>(
+      solver.reset(new EKF_solver<logistic>(
           static_cast<ddhazard_data_EKF &>(*p_data.get()), model));
 
-    } else if (model == "exp_bin"){
-      solver.reset(new EKF_solver<EKF_exp_bin_cals>(
-          static_cast<ddhazard_data_EKF &>(*p_data.get()), model));
-
-    } else if(model == "exp_clip_time"){
-      solver.reset(new EKF_solver<EKF_exp_clip_cals>(
-          static_cast<ddhazard_data_EKF &>(*p_data.get()), model));
-
-    } else if(model == "exp_clip_time_w_jump"){
-      solver.reset(new EKF_solver<EKF_exp_clip_w_jump_cals>(
+    } else if (is_exponential_model(model)){
+      solver.reset(new EKF_solver<exponential>(
           static_cast<ddhazard_data_EKF &>(*p_data.get()), model));
 
     } else

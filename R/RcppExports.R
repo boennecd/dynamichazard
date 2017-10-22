@@ -77,15 +77,15 @@ lambert_W0_test <- function(x) {
     .Call(`_dynamichazard_lambert_W0_test`, x)
 }
 
-trunc_lp_in_exponential_dist_test <- function(eta, at_risk_length, is_event) {
-    .Call(`_dynamichazard_trunc_lp_in_exponential_dist_test`, eta, at_risk_length, is_event)
+trunc_eta_exponential_test <- function(eta, at_risk_length, is_event) {
+    .Call(`_dynamichazard_trunc_eta_exponential_test`, eta, at_risk_length, is_event)
 }
 
-trunc_lp_in_exponential_dist_test_log_eps <- function() {
-    .Call(`_dynamichazard_trunc_lp_in_exponential_dist_test_log_eps`)
+trunc_eta_exponential_test_log_eps <- function() {
+    .Call(`_dynamichazard_trunc_eta_exponential_test_log_eps`)
 }
 
-logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_ = 1L, model = "logit") {
+logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model) {
     .Call(`_dynamichazard_logLike_cpp`, X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }
 

@@ -2,6 +2,7 @@
 #include "../exp_model_funcs.h"
 #include "../arma_BLAS_LAPACK.h"
 #include "../utils.h"
+#include "../family.h"
 #include "../thread_pool.h"
 
 // worker class for parallel computation
@@ -34,22 +35,26 @@ inline void EKF_filter_worker<T>::operator()(){
     const double w = dat.weights(*it);
     const double offset = (dat.any_fixed_in_M_step) ? arma::dot(dat.fixed_parems, dat.fixed_terms.col(*it)) : 0.;
     const double eta = arma::dot(i_a_t, x_) + offset;
-
     const bool do_die = dat.is_event_in_bin(*it) == bin_number;
-    //-----naming could be better
-    const double time_outcome = get_at_risk_length(dat.tstop(*it), bin_tstop, dat.tstart(*it), bin_tstart);
-    const double at_risk_length = do_die ? bin_tstop - std::max(dat.tstart(*it), bin_tstart) : time_outcome;
-    //-----
-    EKF_filter_worker_calculations res =
-      T::cal(do_die, time_outcome, at_risk_length, eta, dat.denom_term);
+    const double at_risk_length =
+      T::uses_at_risk_length ?
+        get_at_risk_length(
+          dat.tstop(*it), bin_tstop, dat.tstart(*it), bin_tstart) :
+        0.;
+
+    auto trunc_res = T::truncate_eta(do_die, eta, exp(eta), at_risk_length);
+    const double mu = T::linkinv(trunc_res, at_risk_length);
+    const double mu_eta = T::mu_eta(trunc_res, at_risk_length);
+    const double var = T::var(trunc_res, at_risk_length);
 
     /* Update local score and Hessian */
-    u_ += x_ * (w * res.score_factor * res.Y_residual);
-    sym_mat_rank_one_update(w * res.hessian_factor, x_, U_);
+    u_ += x_ * (w * mu_eta * (do_die - mu) / (var + dat.denom_term));
+    sym_mat_rank_one_update(
+      w * mu_eta * mu_eta / (var + dat.denom_term), x_, U_);
 
     if(compute_z_and_H){
-      dat.H_diag_inv(i) = res.var_inv;
-      dat.z_dot(*dat.span_current_cov, i) = x_ * res.z_dot_factor;
+      dat.H_diag_inv(i) = 1 / var;
+      dat.z_dot(*dat.span_current_cov, i) = x_ * mu_eta;
     }
   }
 
@@ -64,129 +69,6 @@ inline void EKF_filter_worker<T>::operator()(){
     dat.u(*dat.span_current_cov) += u_;
   }
 };
-
-inline EKF_filter_worker_calculations EKF_logit_cals::cal(
-    const bool do_die, const double time_outcome, const double at_risk_length,
-    const double eta, const double denom_term){
-  const double exp_eta = exp(eta);
-  const double var = exp_eta / pow(exp_eta + 1.0, 2.0);
-
-  EKF_filter_worker_calculations answer {
-    do_die - 1 / (1 + exp(-eta)),
-    exp_eta/(denom_term + exp_eta + 2 * denom_term * exp_eta + denom_term * pow(exp_eta,2)),
-    pow(exp_eta,2)/(pow(1 + exp_eta,4)*(denom_term + exp_eta/pow(1 + exp_eta, 2))),
-    pow(var, -1),
-    var
-  };
-
-  return answer;
-}
-
-inline EKF_filter_worker_calculations EKF_exp_bin_cals::cal(
-    const bool do_die, const double time_outcome, const double at_risk_length,
-    const double eta, const double denom_term){
-  const double exp_eta = exp(eta);
-  const double v = time_outcome * exp_eta;
-  const double inv_exp_v = pow(exp(v), -1.0);
-
-  const double expect_chance_die = exp_model_funcs::expect_chance_die(v, inv_exp_v);
-
-  EKF_filter_worker_calculations answer {
-    do_die - expect_chance_die,
-    (inv_exp_v*v)/(denom_term + (1 - inv_exp_v)*inv_exp_v),
-    pow(inv_exp_v*v, 2)/(denom_term + (1 - inv_exp_v)*inv_exp_v),
-    (v >= 1e-4) ?
-      // Set v = a exp(eta)
-      // Then: 1 / exp(- a exp(eta))(1 - exp(-a exp(eta))) = 1 / exp(-v) (1 - exp(-v))
-      1 / (expect_chance_die * (1 - expect_chance_die)):
-      //Lauren series from https://www.wolframalpha.com/input/?i=1%2F((1-exp(-v))exp(-v))
-      1 / v * (1 + v * (3 / 2 + v * (13 / 12 + v * (1 / 2 + v * 119 / 720)))),
-    inv_exp_v * v
-  };
-
-  return answer;
-}
-
-inline EKF_filter_worker_calculations EKF_exp_clip_cals::cal(
-    const bool do_die, const double time_outcome, const double at_risk_length,
-    const double eta, const double denom_term){
-  const double exp_eta = exp(eta);
-  const double inv_exp_eta = pow(exp_eta, -1);
-  const double v = at_risk_length * exp_eta;
-  const double exp_v = exp(v);
-  const double inv_exp_v = pow(exp_v, -1.0);
-
-  EKF_filter_worker_calculations answer {
-    time_outcome -  exp_model_funcs::expect_time(v, at_risk_length, inv_exp_v, exp_eta),
-    (at_risk_length * exp_eta >= 1e-4) ?
-      (-1 + inv_exp_v + at_risk_length*exp_eta*inv_exp_v)/(denom_term*exp_eta + inv_exp_eta - 2*at_risk_length*inv_exp_v -
-      inv_exp_eta*pow(inv_exp_v,2)) :
-      ((exp_eta / denom_term) *(-3*pow(at_risk_length,2)*denom_term + (pow(at_risk_length,5) + 2*pow(at_risk_length,3)*denom_term)*exp_eta))/(6*denom_term),
-    (at_risk_length * exp_eta >= 1e-4) ?
-      (1 - 2*inv_exp_v - 2*at_risk_length*exp_eta*inv_exp_v + pow(inv_exp_v,2) + 2*at_risk_length*exp_eta*pow(inv_exp_v,2) +
-      pow(at_risk_length*exp_eta*inv_exp_v, 2))/
-        (1 + denom_term*pow(exp_eta,2) - 2*at_risk_length*exp_eta*inv_exp_v - pow(inv_exp_v,2)) :
-      (pow(exp_eta/denom_term,2)*(3*pow(at_risk_length,4)*denom_term + (-pow(at_risk_length,7) - 4*pow(at_risk_length,5)*denom_term)*exp_eta))/12,
-    (v >= 1e-4) ?
-      // a: as_risk_length
-      // Set v = a exp(eta)
-      // Then: exp(2eta) / (1 - exp(-2 delta * exp(eta)) - 2 exp(-delta * exp(eta)) delta exp(eta)) =
-      //               exp(2eta) / (1 - exp(-2v) - 2 * v * exp(-v))
-      exp_eta * exp_eta / (1.0 - inv_exp_v * inv_exp_v - 2.0 * v * inv_exp_v) :
-      // Laruent series from https://www.wolframalpha.com/input/?i=1%2F(1-exp(2v)-2v*exp(v))
-      exp_eta * exp_eta *
-        (-1 / v * (1 / 4 - v * (1 / 4 - v * (5 / 48 - v * (1/48 - v /1440))))),
-    inv_exp_eta*inv_exp_v*(1 - exp_v + v)
-  };
-
-  return answer;
-}
-
-EKF_filter_worker_calculations EKF_exp_clip_w_jump_cals::cal(
-    const bool do_die, const double time_outcome, const double at_risk_length,
-    const double eta, const double denom_term){
-  const double exp_eta = exp(eta);
-  const double inv_exp_eta = pow(exp_eta, -1);
-  const double v = at_risk_length * exp_eta;
-  const double exp_v = exp(v);
-  const double inv_exp_v = pow(exp_v, -1);
-
-  const double expect_time = exp_model_funcs::expect_time_w_jump(exp_eta, inv_exp_eta, inv_exp_v, at_risk_length);
-
-  double score_factor;
-  if(v >= 1e-4){
-    score_factor = (exp_eta*(-1 + inv_exp_v) + at_risk_length*pow(exp_eta,2)*inv_exp_v - pow(at_risk_length*exp_eta,2) *exp_eta*inv_exp_v)/
-      (1 - pow(inv_exp_v,2) + at_risk_length*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)) +
-        pow(exp_eta,2)*(denom_term + pow(at_risk_length,2)*(3*inv_exp_v - pow(inv_exp_v,2))));
-  } else {
-    score_factor = (pow(v,2)*(-18*pow(at_risk_length,2) - 9*denom_term + (7*pow(at_risk_length,2) + 8*denom_term)*v))/(24*pow(at_risk_length,4)*exp_eta + 24*pow(at_risk_length,2)*denom_term*exp_eta +
-      6*pow(denom_term,2)*exp_eta);
-  }
-
-  double hessian_factor;
-  if(v >= 1e-4){
-    hessian_factor = (1 - 2*inv_exp_v + pow(inv_exp_v,2) + (- 2*pow(at_risk_length*exp_eta,3) + pow(at_risk_length*exp_eta,4))*pow(inv_exp_v,2) +
-           pow(at_risk_length*exp_eta,2)*(2*inv_exp_v - pow(inv_exp_v,2)) + at_risk_length*exp_eta*(-2*inv_exp_v + 2*pow(inv_exp_v,2)))/
-             (1 - pow(inv_exp_v,2) + at_risk_length*exp_eta*(-4*inv_exp_v + 2*pow(inv_exp_v,2)) +
-               pow(exp_eta,2)*(denom_term + pow(at_risk_length,2)*(3*inv_exp_v - pow(inv_exp_v,2))));
-  } else{
-    hessian_factor = 9*(v/denom_term)*pow(v/exp_eta, 2) * (v/4);
-  }
-
-  EKF_filter_worker_calculations answer {
-    time_outcome - expect_time - at_risk_length * do_die,
-    score_factor,
-    hessian_factor,
-    1 / exp_model_funcs::var_wait_time_w_jump(exp_eta, inv_exp_v, inv_exp_v),
-    -inv_exp_eta + at_risk_length*inv_exp_v - pow(at_risk_length,2)*exp_eta*inv_exp_v + inv_exp_eta*inv_exp_v
-  };
-
-  return answer;
-}
-
-
-
-
 
 
 
@@ -371,10 +253,8 @@ void EKF_solver<T>::parallel_filter_step(
 };
 
 // Define classes
-template class EKF_solver<EKF_logit_cals>;
-template class EKF_solver<EKF_exp_bin_cals>;
-template class EKF_solver<EKF_exp_clip_cals>;
-template class EKF_solver<EKF_exp_clip_w_jump_cals>;
+template class EKF_solver<logistic>;
+template class EKF_solver<exponential>;
 
 
 

@@ -5,8 +5,7 @@ if(interactive()){
   library(dynamichazard); library(testthat)
 
   if(grepl("testthat$", getwd()))
-    source("../../R/test_utils.R") else
-      source("R/test_utils.R")
+    source("../../R/test_utils.R") else source("R/test_utils.R")
 
   exp_model_names <- with(environment(ddhazard), exp_model_names)
 
@@ -44,44 +43,23 @@ if(interactive()){
 
   # test_cpp_utils.R
   lambert_W0_test <- environment(ddhazard)$lambert_W0_test
-  trunc_lp_in_exponential_dist_test <- environment(ddhazard)$trunc_lp_in_exponential_dist_test
-  trunc_lp_in_exponential_dist_test_log_eps <- environment(ddhazard)$trunc_lp_in_exponential_dist_test_log_eps
+  trunc_eta_exponential_test <- environment(ddhazard)$trunc_eta_exponential_test
+  trunc_eta_exponential_test_log_eps <- environment(ddhazard)$trunc_eta_exponential_test_log_eps
 }
 
-# hint use this regexp '\r\n\s*\[\d+\]\s' and replace with '\r\n,' followed by
-# as search for '(?<=\d)\s+(?=\d)' and replace with ','
-# or be lazy and use this function
-str_func <- function(x, n_digist = 16){
-  tmp <- capture.output(print(unname(c(x)), digits = n_digist))
-  tmp <- sapply(tmp, gsub, pattern = "\\s*\\[1\\]\\s", replacement = "", USE.NAMES = F)
-  tmp <- sapply(tmp, gsub, pattern = "\\s*\\[\\d+\\]\\s", replacement = ",\\ ", USE.NAMES = F)
-  tmp <- sapply(tmp, gsub, pattern = "(?<=(\\d)|(NA))\\s+(?=(\\d)|-|(NA))", replacement = ",\\ ", perl = T, USE.NAMES = F)
-
-  tmp <- paste0(c("c(", tmp, " )"), collapse = "")
-
-  max_lengt <- floor(8191 * .75)
-  n_nums_before_break = floor(max_lengt / (n_digist + 4))
-  gsub(pattern = paste0("((\\d,\\ .*?){", n_nums_before_break - 1, "})(,\\ )"), replacement = "\\1,\n\\ ",
-       x = tmp, perl = T)
-}
-
-get_expect_equal <- function(x, eps, file = ""){
-  op_old <- options()
-  on.exit(options(op_old))
-  options(max.print = 1e7)
-
-  arg_name <- deparse(substitute(x))
-  expects <- unlist(lapply(x, str_func))
-  tol_string = if(!missing(eps)) paste0("\n, tolerance = " , eval(bquote(.(eps)))) else ""
-  expects <- mapply(function(e, index_name)
-    paste0("expect_equal(unname(c(", arg_name, "$", index_name, ")),\n", e,
-           tol_string, ")", collapse = ""),
-    e = expects, index_name = names(expects))
-
-  out <- paste0(c("{", paste0(expects, collapse = "\n\n"), "}\n"), collapse = "\n")
-  cat(out, file = file)
-  invisible()
-}
+# wrapper for expect_know_...
+trace(
+  what = testthat::expect_known_value, at = 2, print = FALSE,
+  tracer = quote(
+    file <- paste0(
+      stringr::str_match(getwd(), ".+dynamichazard"),
+      "/tests/testthat/previous_results/", file)))
+trace(
+  what = testthat::expect_known_output, at = 2, print = FALSE,
+  tracer = quote(
+    file <- paste0(
+      stringr::str_match(getwd(), ".+dynamichazard"),
+      "/tests/testthat/previous_results/", file)))
 
 # And we may aswell just save it to a file
 save_to_test <- function(obj, file_name, tolerance = sqrt(.Machine$double.eps)){
@@ -192,34 +170,3 @@ exp_sim_500 <- get_sim(500)
 # matplot(exp_sim_500$betas, type = "l", lty = 1)
 # sum(exp_sim_500$res$event)
 # hist(exp_sim_500$res$tstop[logit_sim_500$res$event == 1])
-
-# ######
-# # Debugging what takes time
-# files <- list.files("tests/testthat")
-# files <- files[grepl("^test", files)]
-#
-# time_taken <- sapply(files, function(f){
-#   cat("Running", sQuote(f), "\n")
-#   print(out <- system.time(testthat::test_file(paste0("tests/testthat/", f))))
-#   cat("\n")
-#
-#   out
-# })
-#
-# time_taken <- t(time_taken)
-# time_taken[order(time_taken[, "elapsed"], decreasing = TRUE), ]
-# sum(time_taken[, "elapsed"])
-
-# ######
-# # To test a particular file
-# system.time(testthat::test_file("tests/testthat/testpredict.R"))
-#
-# # Or use:
-# test_that <- function(desc, code){
-#   cat("\nRunning", sQuote(desc), "\n")
-#   .time <- system.time(out <- testthat::test_that(desc, code))
-#   print(.time)
-#   cat("\n")
-#
-#   out
-# }

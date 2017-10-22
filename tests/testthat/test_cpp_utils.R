@@ -12,15 +12,12 @@ test_that("trunc_lp_in_exponential_dist does not truncate when not needed", {
   skip_on_cran()
   .interactive <- interactive()
 
-  eps <- exp(trunc_lp_in_exponential_dist_test_log_eps())
+  eps <- exp(trunc_eta_exponential_test_log_eps())
 
   test_func <- function(eta, .t, is_event){
     q <- bquote({
-      ans <- trunc_lp_in_exponential_dist_test(
+      ans <- trunc_eta_exponential_test(
         eta = .(eta), at_risk_length = .(.t), is_event = .(is_event))
-      expect_equal(
-        ans$did_truncate,
-        should_trunc <- .(eta) * .(is_event) - exp(.(eta)) * .(.t) < log(eps))
 
       if(.(.interactive)){
         cat(c(.(eta), .(.t), .(is_event)), "\n")
@@ -28,6 +25,7 @@ test_that("trunc_lp_in_exponential_dist does not truncate when not needed", {
         cat("ans is ", unlist(ans), "\n")
 
       }
+      should_trunc <- .(eta) * .(is_event) - exp(.(eta)) * .(.t) < log(eps)
       if(!should_trunc){
         expect_equal(ans$exp_eta_trunc, exp(.(eta)))
         expect_equal(ans$eta_trunc, .(eta))

@@ -85,31 +85,14 @@ test_that("Changing convergence criteria change output",{
   expect_true(res1$n_iter != res2$n_iter)
 })
 
-suppressMessages(
-  result_exp <- ddhazard(
-    formula = survival::Surv(start, stop, event) ~ group,
-    data = head_neck_cancer,
-    by = 3, Q_0 = diag(10000, 2),
-    Q = diag(1e-3, 2),
-    max_T = 30,
-    id = head_neck_cancer$id, order = 1,
-    model = "exp_clip_time_w_jump"))
-
-test_that("Result of exponential model on head_neck_data match previous results", {
-  # plot(result_exp)
-  result_exp$control <- NULL
-  result_exp$call <- NULL
-  result_exp$data <- NULL
-  result_exp$risk_set <- NULL
-  result_exp$id <- NULL
-  result_exp <- result_exp[
-    !names(result_exp) %in% c("control", "call", "data", "risk_set", "id",
-                              "terms", "xlev", "has_fixed_intercept")]
-  # save_to_test(result_exp, "head_neck_exp")
-
-  expect_equal(result_exp, read_to_test("head_neck_exp"),
-               check.attributes = FALSE)
-})
+result_exp <- ddhazard(
+  formula = survival::Surv(start, stop, event) ~ group,
+  data = head_neck_cancer,
+  by = 1, Q_0 = diag(10000, 2),
+  Q = diag(1e-3, 2), a_0 = c(0, 0),
+  max_T = 30,
+  id = head_neck_cancer$id, order = 1,
+  model = "exponential")
 
 test_that("exponential model and logit moels hazzard functions differs", {
   result = ddhazard(
@@ -136,28 +119,17 @@ test_that("Testing names of output from ddhazard on head and neck cancer dataset
   expect_equal(unlist(dimnames(result_exp$Q_0)), rep(c("(Intercept)", "group1"), 2))
 })
 
-
-# Change by argument
-test_that("Chaning by argument gives previous results for the exp_clip_time_w_jump method", {
-  suppressMessages(result_exp <- ddhazard(
-    formula = survival::Surv(start, stop, event) ~ group,
-    data = head_neck_cancer,
-    by = 5, Q_0 = diag(1, 2),
-    Q = diag(1e-1, 2),
-    control = list(est_Q_0 = F,
-                   save_data = F, save_risk_set = F),
-    max_T = 30,
-    id = head_neck_cancer$id, order = 1,
-    verbose = F,
-    model = "exp_clip_time_w_jump"
-  ))
-
-  # plot(result_exp)
-  result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
-  # save_to_test(result_exp, "ddhazard_changed_by")
-
-  expect_equal(result_exp, read_to_test("ddhazard_changed_by"))
+# plot(result_exp)
+result_exp <- result_exp[
+  names(result_exp) %in%
+    c("state_vecs", "state_vars", "fixed_effects", "Q")]
+test_that("Result of exponential model on head_neck_data match previous results", {
+  expect_known_value(
+    result_exp, file = "head_neck_exp.RDS", update = FALSE,
+    check.attributes = FALSE)
 })
+rm(result_exp)
+
 
 test_that("Unmacthed control variable throw error",
           expect_error({
@@ -188,7 +160,7 @@ test_that("Different non-integer time_scales gives the same result with ddhazard
   f1 <- eval(fit_exp)
   for(.by in scales[-1]){
     f2 <- eval(fit_exp)
-    info <- paste0("by = ", .by)
+    info <- paste("by =", .by)
     expect_equal(f1$risk_set$risk_sets, f2$risk_set$risk_sets, info = info)
     expect_equal(f1$risk_set$is_event_in, f2$risk_set$is_event_in, info = info)
     expect_equal(f1$state_vecs, f2$state_vecs, info = info)
@@ -198,7 +170,7 @@ test_that("Different non-integer time_scales gives the same result with ddhazard
 ########
 # Test on simulated data
 
-test_that("Result of exponential model with only binary or right clipped time yield previous results", {
+test_that("Result of exponential model gives previous results w/ simulated data", {
   args <- list(
     formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     data = exp_sim_500$res,
@@ -210,36 +182,15 @@ test_that("Result of exponential model with only binary or right clipped time yi
       method = "EKF"),
     max_T = 10,
     id = exp_sim_500$res$id, order = 1,
-    model = "exp_bin")
+    model = "exponential")
 
   result_exp <- do.call(ddhazard, args)
 
   # matplot(exp_sim_500$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, lty = 2, type = "l", add = T)
   result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
-  # save_to_test(result_exp, "ddhazard_exp_bin")
-
-  expect_equal(result_exp, read_to_test("ddhazard_exp_bin"), tolerance = 1e-5)
-
-  args$model <- "exp_clip_time"
-  result_exp <- do.call(ddhazard, args)
-
-  # matplot(exp_sim_500$betas, type = "l", lty = 1)
-  # matplot(result_exp$state_vecs, lty = 2, type = "l", add = T)
-
-  result_exp <- result_exp[c("state_vecs", "state_vars", "Q")]
-  # save_to_test(result_exp, file_name = "ddhazard_exp_clip", tolerance = 1e-4)
-  expect_equal(result_exp, read_to_test("ddhazard_exp_clip"), tolerance = 1e-04)
-
-  args$model <- "exp_clip_time_w_jump"
-  result_exp <- do.call(ddhazard, args)
-
-  # matplot(exp_sim_500$betas, type = "l", lty = 1)
-  # matplot(result_exp$state_vecs, lty = 2, type = "l", add = T)
-
-  result_exp <- result_exp[c("state_vecs", "state_vars", "Q")]
-  # save_to_test(result_exp, file_name = "ddhazard_exp_clip_w_jump", 1e-4)
-  expect_equal(result_exp, read_to_test("ddhazard_exp_clip_w_jump"), tolerance = 1e-04)
+  expect_known_value(
+    result_exp, "sim_exp.RDS", tolerance = 1e-5, update = FALSE)
 })
 
 
@@ -247,8 +198,7 @@ test_that("Permutating data does not change the results", {
   args <- list(
     Surv(stop, event) ~ group, head_neck_cancer,
     by = 1, max_T = 40,
-    Q_0 = diag(rep(10000, 2)), Q = diag(rep(0.1, 2)),
-    control = list(n_threads = 1))
+    Q_0 = diag(rep(10000, 2)), Q = diag(rep(0.1, 2)))
 
   r1 <- do.call(ddhazard, args)
 
@@ -307,7 +257,5 @@ test_that("Permutating data does not change the results", {
   expect_equal(r1$state_vecs, r2$state_vecs)
   expect_true(is.character(
     all.equal(r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
-
 })
-
 
