@@ -137,10 +137,9 @@ test_that("UKF with fixed effects works", {
                    save_data = F, save_risk_set = F,
                    fixed_terms_method = "M_step"))
 
-
   # matplot(sims$betas, type = "l", lty = 1)
   # matplot(fit$state_vecs, type = "l", lty = 2, col = 3:4, add = T)
-  # fit$fixed_effects
+  # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
   fit <- fit[c("state_vars", "state_vecs", "fixed_effects")]
   # save_to_test(fit, "fixed_terms_UKF")
 
@@ -149,21 +148,20 @@ test_that("UKF with fixed effects works", {
   #####
   fit <- ddhazard(formula(survival::Surv(tstart, tstop, event) ~
                             ddFixed_intercept() + ddFixed(x1) + x2 + x3),
-                  Q = diag(1, 2), Q_0 = diag(10, 2),
-                  data = sims$res, model = "exp_clip_time_w_jump",
+                  Q = diag(.1, 2), Q_0 = diag(10, 2),
+                  data = sims$res, model = "exponential",
                   by = 1, id = sims$res$id, max_T = 10,
                   control = list(method = "UKF",
                                  fixed_terms_method = "M_step"))
 
 
-  # matplot(sims$betas, type = "l", ylim = range(fit$state_vecs, sims$betas))
-  # matplot(fit$state_vecs, type = "l", col = 3:4, add = T, lty = 1)
-  # fit$fixed_effects
+  # matplot(sims$betas, type = "l", lty = 1)
+  # matplot(fit$state_vecs, type = "l", lty = 2, col = 3:4, add = T)
+  # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "fixed_effects")]
   # save_to_test(fit, "fixed_terms_UKF_exp")
-
-  expect_equal(fit, read_to_test("fixed_terms_UKF_exp"))
+  expect_known_output(fit, "fixed_terms_UKF_exp.RDS", update = FALSE)
 })
 
 

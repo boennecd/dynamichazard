@@ -28,90 +28,25 @@ public:
 template<typename T>
 class bigglm_updateQR{
   // match logic in update.bigqr
-  static arma::vec linkinv(const arma::vec &eta);
+  static arma::vec linkinv(
+      const arma::vec&, const arma::vec&, const arma::vec&);
 
-  static arma::vec d_mu_d_eta(const arma::vec &eta);
+  static arma::vec d_mu_d_eta(
+      const arma::vec&, const arma::vec&, const arma::vec&);
 
-  static arma::vec variance(const arma::vec &mu);
+  static arma::vec variance(
+      const arma::vec&, const arma::vec&, const arma::vec&);
 
 public:
   static void update(
       qr_obj &qr, // Previous/starting value. Will be overwritten
-      const arma::mat &X, const arma::vec &eta,
-      const arma::vec &offset, arma::vec &y, // y will not be altered
-      const arma::vec &w);
+      const arma::mat&, const arma::vec&,
+      const arma::vec&, const arma::vec&,
+      arma::vec &, const arma::vec&);
 
   typedef T family;
 };
 
 arma::vec bigglm_regcf(qr_obj &qr);
-
-//logit_fam
-class logit_fam {
-private:
-  static constexpr double THRESH = 30.;
-  static constexpr double MTHRESH = -30.;
-  static constexpr double INVEPS = 1 / DOUBLE_EPS;
-
-public:
-  static inline double link_func(const double &mu){
-    return (log(mu / (1 - mu)));
-  };
-
-  static inline double link_func_inv(const double &eta){
-    double tmp = (eta < MTHRESH) ? DOUBLE_EPS :
-    ((eta > THRESH) ? INVEPS : exp(eta));
-
-    return( tmp / (1.0 + tmp));
-  };
-
-  static inline double variance(const double &mu){
-    return(mu * (1 - mu));
-  };
-
-  static inline double d_mu_d_eta(const double& eta){
-    double exp_eta = exp(eta);
-    double opexp = 1 + exp_eta;
-
-    return((eta > THRESH || eta < MTHRESH) ?  DOUBLE_EPS : exp_eta / (opexp * opexp));
-  };
-
-  static inline double dev_resids(const double &y, const double &mu, const double &w){
-    return (y > 0.0) ? - log(mu) : - log(1 - mu);
-  };
-
-  static inline double time_offset(const double &delta_t){
-    return 0.;
-  }
-};
-
-//poisson_fam
-class poisson_fam
-{
-public:
-  static inline double link_func(const double &mu){
-    return log(mu);
-  };
-
-  static inline double link_func_inv(const double &eta){
-    return std::max(exp(eta), DOUBLE_EPS);
-  };
-
-  static inline double variance(const double &mu){
-    return mu;
-  };
-
-  static inline double d_mu_d_eta(const double &eta){
-    return std::max(exp(eta), DOUBLE_EPS);
-  };
-
-  static inline double dev_resids(const double &y, const double &mu, const double &w){
-    return (y > 0.0) ? w * (y * log(y / mu) - (y - mu)) : mu * w;
-  };
-
-  static inline double time_offset(const double &delta_t){
-    return log(delta_t);
-  };
-};
 
 #endif

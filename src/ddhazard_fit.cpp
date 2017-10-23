@@ -3,13 +3,8 @@
 #include "estimate_fixed_effects_M_step.h"
 
 using uword = arma::uword;
-using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
-using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
-
-using UKF_logit = UKF_solver_New<UKF_solver_New_hepler_logit>;
-using UKF_exp_bin = UKF_solver_New<UKF_solver_New_hepler_exp_bin>;
-using UKF_exp_clip_time = UKF_solver_New<UKF_solver_New_hepler_exp_clip_time>;
-using UKF_exp_clip_time_w_jump = UKF_solver_New<UKF_solver_New_hepler_exp_clip_time_w_jump>;
+using bigglm_updateQR_logit   = bigglm_updateQR<logistic>;
+using bigglm_updateQR_poisson = bigglm_updateQR<exponential>;
 
 using SMA_logit =  SMA<SMA_hepler_logit>;
 using SMA_exp =  SMA<SMA_hepler_exp>;
@@ -119,23 +114,19 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       criteria));
 
     if(model == "logit"){
-      solver.reset(new UKF_logit(*p_data.get(), kappa, alpha, beta));
+      solver.reset(
+        new UKF_solver_New<logistic>(*p_data.get(), kappa, alpha, beta));
 
-    } else if (model == "exp_combined"){
-      Rcpp::stop("exp_combined is not supported since version 0.3.0");
+    } else if (is_exponential_model(model)){
+      solver.reset(
+        new UKF_solver_New<exponential>(*p_data.get(), kappa, alpha, beta));
 
-    } else if (model == "exp_bin"){
-      solver.reset(new UKF_exp_bin(*p_data.get(), kappa, alpha, beta));
-    } else if (model == "exp_clip_time"){
-      solver.reset(new UKF_exp_clip_time(*p_data.get(), kappa, alpha, beta));
-    } else if (model == "exp_clip_time_w_jump"){
-      solver.reset(new UKF_exp_clip_time_w_jump(*p_data.get(), kappa, alpha, beta));
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with UKF");
 
   } else if (method == "UKF_org"){
     if(model != "logit")
-      Rcpp::stop("UKF is not implemented for model '" + model  +"'");
+      Rcpp::stop("UKF_org is not implemented for model '" + model  +"'");
 
     p_data.reset(new ddhazard_data(
       n_fixed_terms_in_state_vec,
@@ -149,7 +140,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       criteria));
 
     if(p_data->any_fixed_in_M_step)
-      Rcpp::stop("Fixed effects is not implemented with UKF");
+      Rcpp::stop("Fixed effects is not implemented with UKF_org");
 
     solver.reset(new UKF_solver_Org(*p_data.get(), kappa));
 

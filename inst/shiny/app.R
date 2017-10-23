@@ -25,7 +25,7 @@ start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_m
 start_args <- list(
   n_series = 2, sim_with = "exponential", sim_fix_options = 1,
   obs_time = t_max, seed = 65848, covar_range = c(-.5, .5),
-  sd_intercept = .2, sd_coef = .5, est_with_model = "exp_clip_time_w_jump",
+  sd_intercept = .2, sd_coef = .5, est_with_model = "exponential",
   est_with_method = "EKF", est_fix_options = 1, LR = 1,
   order = 1, denom_term = 1, fixed_terms_method = "M_step",
   use_extra_correction = F, beta = 0, alpha = 1,
@@ -194,7 +194,7 @@ ui <- fluidPage(
 
        selectInput("est_with_model",
                    "Choose model to estimate with",
-                   choices = c("logit", exp_model_names),
+                   choices = c("logit", "exponential"),
                    selected = start_args$est_with_model),
 
        selectInput("est_with_method",

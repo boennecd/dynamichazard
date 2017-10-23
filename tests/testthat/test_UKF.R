@@ -176,7 +176,7 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
   expect_true(class(all.equal(m3$state_vars, m4$state_vars)) == "character")
 })
 
-test_that("UKF on simulated data works with exponential models with only one of the variables", {
+test_that("UKF works on simulated data works with exponential model and gives previous results", {
   sims <- exp_sim_200
 
   result_exp <- ddhazard(
@@ -190,54 +190,12 @@ test_that("UKF on simulated data works with exponential models with only one of 
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
-    model = "exp_bin")
+    model = "exponential")
 
   # matplot(sims$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, type = "l", lty = 2, add = T)
   result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
-  # save_to_test(result_exp, "UKF4")
-
-  expect_equal(result_exp, read_to_test("UKF4"))
-
-  result_exp <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-    data = sims$res,
-    by = (by_ <- 1),
-    Q_0 = diag(1, 11),
-    Q = diag(1e-1, 11),
-    control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3, method = "UKF",
-                   debug = F, beta = 0, save_data = F, save_risk_set = F),
-    max_T = 10,
-    id = sims$res$id, order = 1,
-    verbose = F,
-    model = "exp_clip_time")
-
-  # matplot(sims$betas, type = "l", lty = 1)
-  # matplot(result_exp$state_vecs, type = "l", lty = 2, add = T)
-  result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
-  # save_to_test(result_exp, "UKF5")
-
-  expect_equal(result_exp, read_to_test("UKF5"))
-
-  result_exp <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
-    data = sims$res,
-    by = (by_ <- 1),
-    Q_0 = diag(1, 11),
-    Q = diag(1e-1, 11),
-    control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3, method = "UKF",
-                   debug = F, beta = 0, save_data = F, save_risk_set = F),
-    max_T = 10,
-    id = sims$res$id, order = 1,
-    verbose = F,
-    model = "exp_clip_time_w_jump")
-
-  # matplot(sims$betas, type = "l", lty = 1)
-  # matplot(result_exp$state_vecs, type = "l", lty = 2, add = T)
-  result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
-  # save_to_test(result_exp, "UKF6")
-
-  expect_equal(result_exp, read_to_test("UKF6"))
+  expect_known_value(result_exp, "UKF4.RDS", update = FALSE)
 })
 
 test_that("UKF second order model works (that is, gives no errors...)", {

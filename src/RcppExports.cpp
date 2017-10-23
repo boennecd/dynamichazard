@@ -120,8 +120,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // bigglm_updateQR_rcpp
-void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, arma::vec& y, const arma::vec& w);
-RcppExport SEXP _dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP ySEXP, SEXP wSEXP) {
+void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, const arma::vec& at_risk_length, arma::vec& y, const arma::vec& w);
+RcppExport SEXP _dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP at_risk_lengthSEXP, SEXP ySEXP, SEXP wSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec& >::type D(DSEXP);
@@ -134,9 +134,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type eta(etaSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type offset(offsetSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type at_risk_length(at_risk_lengthSEXP);
     Rcpp::traits::input_parameter< arma::vec& >::type y(ySEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type w(wSEXP);
-    bigglm_updateQR_rcpp(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w);
+    bigglm_updateQR_rcpp(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, at_risk_length, y, w);
     return R_NilValue;
 END_RCPP
 }
@@ -441,7 +442,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_systematic_resampling_test", (DL_FUNC) &_dynamichazard_systematic_resampling_test, 2},
     {"_dynamichazard_mvrnorm_test", (DL_FUNC) &_dynamichazard_mvrnorm_test, 2},
     {"_dynamichazard_dmvnrm_log_test", (DL_FUNC) &_dynamichazard_dmvnrm_log_test, 3},
-    {"_dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &_dynamichazard_bigglm_updateQR_rcpp, 12},
+    {"_dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &_dynamichazard_bigglm_updateQR_rcpp, 13},
     {"_dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_compute_length, 5},
     {"_dynamichazard_SMA_hepler_logit_second_d", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_second_d, 2},
     {"_dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_compute_length, 6},

@@ -74,8 +74,15 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12,
 
       bigglm_updateQR_rcpp(D = D, rbar = rbar, ss = ss, thetab = thetab,
                            checked = checked, tol = tol, model = model,
-                           X = t(as.matrix(mm)), # both R and Fotran are column-major so we transpose
-                           eta = eta, offset = off, y = y, w = w)
+                           # both R and Fotran are column-major so we transpose
+                           X = t(as.matrix(mm)),
+                           eta = eta, offset = off,
+                           # at_risk_length added here. As of this writting we
+                           # can set this to one to get same results as we
+                           # expect from bigglm. May change if further families
+                           # or link functions are implemented
+                           at_risk_length = rep(1, length(y)),
+                           y = y, w = w)
 
       # eta<-etafun(mm)+off
       # mu <- family$linkinv(eta)

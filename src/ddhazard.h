@@ -153,54 +153,6 @@ public:
   void solve();
 };
 
-class UKF_solver_New_hepler_logit{
-public:
-  static constexpr bool need_risk_len = false;
-  static constexpr bool adj_risk_len = false;
-
-  static void mean_n_var_in_place(
-      double&, const double, double &, const double);
-
-  static double outcome(
-      const bool, const double, const double, const double, const double);
-};
-
-class UKF_solver_New_hepler_exp_bin{
-public:
-  static constexpr bool need_risk_len = true;
-  static constexpr bool adj_risk_len = false;
-
-  static void mean_n_var_in_place(
-      double&, const double, double &, const double);
-
-  static double outcome(
-      const bool, const double, const double, const double, const double);
-};
-
-class UKF_solver_New_hepler_exp_clip_time{
-public:
-  static constexpr bool need_risk_len = true;
-  static constexpr bool adj_risk_len = true;
-
-  static void mean_n_var_in_place(
-      double&, const double, double &, const double);
-
-  static double outcome(
-      const bool, const double, const double, const double, const double);
-};
-
-class UKF_solver_New_hepler_exp_clip_time_w_jump{
-public:
-  static constexpr bool need_risk_len = true;
-  static constexpr bool adj_risk_len = true;
-
-  static void mean_n_var_in_place(
-      double&, const double, double &, const double);
-
-  static double outcome(
-      const bool, const double, const double, const double, const double);
-};
-
 // Solver with approximation at the posterior mode sequentially
 
 class SMA_hepler_logit{

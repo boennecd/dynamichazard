@@ -115,14 +115,12 @@ sims_exp <- test_sim_func_exp(n_series = 4e2, n_vars = 3, x_range = 1, t_max = 1
 form <- formula(survival::Surv(tstart, tstop, event) ~ ddFixed_intercept() + ddFixed(x1) + x2 + x3)
 
 test_that("Works with UKF and continous time model", {
-  fit <- suppressWarnings(ddhazard(form, Q_0 = diag(1, 2), Q = diag(1, 2),
+  fit <- ddhazard(form, Q_0 = diag(1, 2), Q = diag(1, 2),
                   data = sims_exp$res, id = sims_exp$res$id,
-                  by = 1, model = "exp_bin", max_T = 10,
+                  by = 1, model = "exponential", max_T = 10,
                   control = list(fixed_terms_method = "E_step",
                                  save_risk_set = F, save_data = F,
-                                 method = "UKF")))
-
-
+                                 method = "UKF"))
 
   # matplot(sims_exp$betas, lty = 1, type = "l",
   #         ylim = range(fit$fixed_effects, fit$state_vecs, sims_exp$betas))
@@ -130,20 +128,18 @@ test_that("Works with UKF and continous time model", {
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "Q", "lag_one_cov")]
-  # save_to_test(fit, "E_step_sim_exp_UKF")
-
-  expect_equal(fit, read_to_test("E_step_sim_exp_UKF"), tolerance = 1.490116e-08)
+  expect_known_value(fit, "E_step_sim_exp_UKF.RDS", update = FALSE)
 })
 
 test_that("Works with second order random walk and continous time model",{
-  fit <- suppressWarnings(ddhazard(form,
-                                   Q_0 = diag(1, 4), Q = diag(1, 2),
-                                   data = sims_exp$res, id = sims_exp$res$id,
-                                   by = 1, model = "exp_clip_time_w_jump", max_T = 10,
-                                   control = list(fixed_terms_method = "E_step",
-                                                  save_risk_set = F, save_data = F,
-                                                  method = "UKF"),
-                                   order = 2))
+  fit <- ddhazard(form,
+                  Q_0 = diag(1, 4), Q = diag(1, 2),
+                  data = sims_exp$res, id = sims_exp$res$id,
+                  by = 1, model = "exp_clip_time_w_jump", max_T = 10,
+                  control = list(fixed_terms_method = "E_step",
+                                 save_risk_set = F, save_data = F,
+                                 method = "UKF"),
+                  order = 2)
 
   # matplot(sims_exp$betas, lty = 1, type = "l",
   #         ylim = range(fit$fixed_effects, fit$state_vecs, sims_exp$betas))
@@ -151,9 +147,7 @@ test_that("Works with second order random walk and continous time model",{
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "Q", "lag_one_cov")]
-  # save_to_test(fit, "E_step_sim_exp_UKF_order_two")
-
-  expect_equal(fit, read_to_test("E_step_sim_exp_UKF_order_two"), tolerance = 1.490116e-08)
+  expect_known_value(fit, "E_step_sim_exp_UKF_order_two.RDS", update = FALSE)
 })
 
 test_that("posterior_approx gives previous found values with fixed effects in E-step", {

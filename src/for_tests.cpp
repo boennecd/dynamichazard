@@ -31,10 +31,11 @@ double dmvnrm_log_test(
 // -------------------------------------------------- //
 
 #include "ddhazard.h"
+#include "family.h"
 #include "estimate_fixed_effects_M_step.h"
 
-using bigglm_updateQR_logit   = bigglm_updateQR<logit_fam>;
-using bigglm_updateQR_poisson = bigglm_updateQR<poisson_fam>;
+using bigglm_updateQR_logit   = bigglm_updateQR<logistic>;
+using bigglm_updateQR_poisson = bigglm_updateQR<exponential>;
 
 // [[Rcpp::export]]
 void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
@@ -42,7 +43,9 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
                           std::string model,
 
                           const arma::mat &X, const arma::vec &eta,
-                          const arma::vec &offset, arma::vec &y,
+                          const arma::vec &offset,
+                          const arma::vec &at_risk_length,
+                          arma::vec &y,
                           const arma::vec &w){
   qr_obj qr;
   qr.D = std::shared_ptr<arma::vec>(&D, [](arma::vec*x) -> void { });
@@ -53,9 +56,11 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
   qr.tol = std::shared_ptr<arma::vec>(&tol, [](arma::vec*x) -> void { });
 
   if(model == "logit"){
-    return(bigglm_updateQR_logit::update(qr, X, eta, offset, y, w));
+    return(bigglm_updateQR_logit::update(
+        qr, X, eta, offset, at_risk_length, y, w));
   } else if (is_exponential_model(model)){
-    return(bigglm_updateQR_poisson::update(qr, X, eta, offset, y, w));
+    return(bigglm_updateQR_poisson::update(
+        qr, X, eta, offset, at_risk_length, y, w));
   }
 }
 

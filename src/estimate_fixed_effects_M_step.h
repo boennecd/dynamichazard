@@ -15,6 +15,7 @@ void estimate_fixed_effects_M_step(ddhazard_data * const p_data, arma::uword chu
     uword data_row_idx;
     bool is_event_in_bin;
     double offset;
+    double at_risk_length;
     double weight;
   };
 
@@ -45,33 +46,17 @@ void estimate_fixed_effects_M_step(ddhazard_data * const p_data, arma::uword chu
     auto off_i = offsets.begin();
     for(auto i = r_set.begin(); i != r_set.end(); ++i, ++off_i){
       bool is_event_in_bin  = p_data->is_event_in_bin(*i) == (t - 1);
-      double offset =
-        *off_i + updater::family::time_offset(
-            std::min(p_data->tstop(*i), bin_stop) -
-            std::max(p_data->tstart(*i), bin_start));
+      double offset = *off_i;
+
+      double at_risk_length =
+        updater::family::uses_at_risk_length ?
+        get_at_risk_length(
+          p_data->tstop(*i), bin_stop, p_data->tstart(*i), bin_start) : 0;
       double w = p_data->weights(*i);
-      obs_info obj = {*i, is_event_in_bin, offset, w};
+      obs_info obj = {*i, is_event_in_bin, offset, at_risk_length, w};
       obs_data.push_back(std::move(obj));
     }
   }
-
-  /* Tried to use sampling because there as I suspected it might cause a
-   * I guess there is not an error (or just a small one) of the series of rank
-   * one updates in the QR decomposition. I have kept the code and comments for
-   * now...
-   *
-   * I should likely have looked at source like 6.5 of: Golub, Gene H. Matrix Computations (Johns Hopkins Studies in the Mathematical Sciences) (Kindle Location 8376). Johns Hopkins University Press. Kindle Edition.
-   *
-   * Sample obs_info. This is done to avoid issues if one of the fixed
-   * covariates depends on time too.
-   * I use the sampler from http://gallery.rcpp.org/articles/using-the-Rcpp-based-sample-implementation/
-   * The motivation is to get reproducible results. See the post here for
-   * using the random number generator with Rcpp: http://gallery.rcpp.org/articles/random-number-generation/
-
-   arma::uvec ord = arma::linspace<arma::uvec>(0, obs_data.size() - 1L, obs_data.size());
-   ord = Rcpp::RcppArmadillo::sample(ord, ord.n_elem, false);
-
-   */
 
   // Start the estimation
   int it_outer = 0;
@@ -85,23 +70,27 @@ void estimate_fixed_effects_M_step(ddhazard_data * const p_data, arma::uword chu
       uword n_take = std::min<uword>(chunk_size, n_elements - i);
       arma::vec offsets(n_take);
       arma::mat fixed_terms(p_data->fixed_parems.n_elem, n_take);
+      arma::vec at_risk_length(n_take);
       arma::vec y(n_take);
       arma::vec w(n_take);
 
+
       auto o_j = offsets.begin();
+      double *at_j = at_risk_length.memptr();
       auto y_j = y.begin();
       auto w_j = w.begin();
-      for(uword j = 0; j < n_take; ++j, ++i, ++o_j, ++y_j, ++w_j){
+      for(uword j = 0; j < n_take; ++j, ++i, ++o_j, ++at_j, ++y_j, ++w_j){
         obs_info *dat = &obs_data[i];
-        *o_j = dat->offset;
-        *y_j = dat->is_event_in_bin;
-        *w_j = dat->weight;
+        *o_j  = dat->offset;
+        *at_j = dat->at_risk_length;
+        *y_j  = dat->is_event_in_bin;
+        *w_j  = dat->weight;
         fixed_terms.col(j) = p_data->fixed_terms.col(dat->data_row_idx);
       }
       arma::vec eta = fixed_terms.t() * p_data->fixed_parems;
 
       // Update QR decomposition
-      updater::update(qr, fixed_terms, eta, offsets, y, w);
+      updater::update(qr, fixed_terms, eta, offsets, at_risk_length, y, w);
     }
 
     old_beta = p_data->fixed_parems;

@@ -221,7 +221,7 @@ public:
   Class for exponentially distributed arrival times where state vectors follows
   a first order random walk
 */
-class exponential : public first_order_random_walk_base<binary> {
+class exponential_dens : public first_order_random_walk_base<exponential_dens> {
 public:
   static const bool uses_at_risk_length = true;
 

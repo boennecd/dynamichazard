@@ -25,8 +25,8 @@ dmvnrm_log_test <- function(x, mean, sigma_chol_inv) {
     .Call(`_dynamichazard_dmvnrm_log_test`, x, mean, sigma_chol_inv)
 }
 
-bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w) {
-    invisible(.Call(`_dynamichazard_bigglm_updateQR_rcpp`, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, y, w))
+bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, at_risk_length, y, w) {
+    invisible(.Call(`_dynamichazard_bigglm_updateQR_rcpp`, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, at_risk_length, y, w))
 }
 
 SMA_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
