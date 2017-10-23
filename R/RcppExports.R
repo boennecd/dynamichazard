@@ -33,16 +33,8 @@ SMA_hepler_logit_compute_length <- function(offset, coef1, coef2, w, y) {
     .Call(`_dynamichazard_SMA_hepler_logit_compute_length`, offset, coef1, coef2, w, y)
 }
 
-SMA_hepler_logit_second_d <- function(c, offset) {
-    .Call(`_dynamichazard_SMA_hepler_logit_second_d`, c, offset)
-}
-
 SMA_hepler_exp_compute_length <- function(offset, coef1, coef2, w, y, length) {
     .Call(`_dynamichazard_SMA_hepler_exp_compute_length`, offset, coef1, coef2, w, y, length)
-}
-
-SMA_hepler_exp_second_d <- function(c, offset, length) {
-    .Call(`_dynamichazard_SMA_hepler_exp_second_d`, c, offset, length)
 }
 
 PF_cloud_to_rcpp_and_back <- function(rcpp_list) {

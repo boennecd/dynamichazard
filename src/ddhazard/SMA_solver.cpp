@@ -1,30 +1,23 @@
 #include "../ddhazard.h"
 #include "../arma_BLAS_LAPACK.h"
-#include "../utils.h"
+#include "../family.h"
 
-inline double SMA_hepler_logit::NR_delta(
-      const double offset, const double coef1, const double coef2,
-      const double w, const double c0, const bool is_event,
-      const double length){
-    const double e = exp(c0 + offset);
-
-    if(is_event){
-      return (2. * coef1 * c0 + coef2 - w/(1. + e)) /
-        (2. * coef1 + w * e / pow(1. + e, 2));
-    }
-
-    return (2. * coef1 * c0 + coef2 + w * e/(1. + e)) /
-      (2. * coef1 + w * e / pow(1. + e, 2));
-};
-
-double SMA_hepler_logit::compute_length(
+template <class T>
+double SMA<T>::compute_length(
     const double offset, const double coef1, const double coef2,
     const double w, const bool is_event, const double length){
   double c0 = 0.;
   double c1;
 
   for(int i = 0; i < 100; i++){
-    c1 = c0 - NR_delta(offset, coef1, coef2, w, c0, is_event, 0.);
+    const double eta = c0 + offset;
+    auto trunc_eta = T::truncate_eta(is_event, eta, exp(eta), length);
+    const double d1 = T::d_log_like(is_event, trunc_eta, length);
+    const double d2 = T::dd_log_like(is_event, trunc_eta, length);
+
+    double &&intermediate =
+      (2. * coef1 * c0 + coef2 - w * d1) / (2. * coef1 - w * d2);
+    c1 = c0 - intermediate;
 
     if(std::abs(c1 - c0) < 1e-5){
       return c1;
@@ -41,66 +34,6 @@ double SMA_hepler_logit::compute_length(
 
   return c1;
 };
-
-double SMA_hepler_logit::second_d(
-  const double c, const double offset, const double length){
-    const double e = exp(c + offset);
-    return - e / pow(1. + e, 2);
-};
-
-
-
-
-
-inline double SMA_hepler_exp::NR_delta(
-    const double offset, const double coef1, const double coef2,
-    const double w, const double c0, const bool is_event,
-    const double length){
-  const double e = exp(c0 + offset + log(length));
-
-  if(is_event){
-    return (2. * coef1 * c0 + coef2 - w * (1. - e)) / (2. * coef1 + w * e);
-  }
-
-  return (2. * coef1 * c0 + coef2 + w *  e) / (2. * coef1 + w * e);
-};
-
-double SMA_hepler_exp::compute_length(
-    const double offset, const double coef1, const double coef2,
-    const double w, const bool is_event, const double length){
-  double c0 = 0.;
-  double c1;
-
-  for(int i = 0; i < 100; i++){
-    c1 = c0 - NR_delta(offset, coef1, coef2, w, c0, is_event, length);
-
-    if(std::abs(c1 - c0) < 1e-5){
-      return c1;
-    }
-
-    c0 = c1;
-  }
-
-  static bool have_failed_once;
-  if(!have_failed_once){
-    have_failed_once = true;
-    Rcpp::warning("Newton Rapshon in prediction step failed at least once\n");
-  }
-
-  return c1;
-};
-
-double SMA_hepler_exp::second_d(
-    const double c, const double offset, const double length){
-  return -  exp(c + offset + log(length));
-};
-
-
-
-
-
-
-
 
 template <class T>
 void SMA<T>::solve(){
@@ -114,7 +47,8 @@ void SMA<T>::solve(){
 
     // E-step: Prediction step
     p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
-    p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
+    p_dat.V_t_less_s.slice(t - 1) =
+      p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
     if(p_dat.debug){
       std::stringstream str;
@@ -154,11 +88,17 @@ void SMA<T>::solve(){
         const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
-        const double at_risk_length =
-          get_at_risk_length(p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart);
 
-        const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, is_event, at_risk_length);
-        const double neg_second_d = - w * T::second_d(c, offset, at_risk_length);
+        const double at_risk_length =
+          T::uses_at_risk_length  ?
+          get_at_risk_length(
+            p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart) : 0;
+
+        const double c = compute_length(
+          offset, f1 / 2., -f2 * f1, w, is_event, at_risk_length);
+        double eta = c + offset;
+        const double neg_second_d = - w * T::dd_log_like(
+          is_event, eta, exp(eta), at_risk_length);
 
         a -= (p_dat.LR * (f2 - c) * f1) * inter_vec;
         sym_mat_rank_one_update(
@@ -186,11 +126,16 @@ void SMA<T>::solve(){
         const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
-        const double at_risk_lenght =
-          std::min(p_dat.tstop(*it), bin_tstop) - std::max(p_dat.tstart(*it), bin_tstart);
+        const double at_risk_length =
+          T::uses_at_risk_length  ?
+          get_at_risk_length(
+            p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart) : 0;
 
-        const double c = T::compute_length(offset, f1 / 2., -f2 * f1, w, is_event, at_risk_lenght);
-        const double neg_second_d = - w * T::second_d(c, offset, at_risk_lenght);
+        const double c = compute_length(
+          offset, f1 / 2., -f2 * f1, w, is_event, at_risk_length);
+        double eta = c + offset;
+        const double neg_second_d = - w * T::dd_log_like(
+          is_event, eta, exp(eta), at_risk_length);
 
         tri_mat_times_vec(L_inv, inter_vec, true);
         a -=  (p_dat.LR * (f2 - c) * f1) * inter_vec;
@@ -234,7 +179,6 @@ void SMA<T>::solve(){
   }
 };
 
-// Define classes
-template class SMA<SMA_hepler_logit>;
-template class SMA<SMA_hepler_exp>;
+template class SMA<logistic>;
+template class SMA<exponential>;
 

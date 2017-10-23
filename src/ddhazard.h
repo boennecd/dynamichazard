@@ -155,38 +155,6 @@ public:
 
 // Solver with approximation at the posterior mode sequentially
 
-class SMA_hepler_logit{
-private:
-  static double NR_delta(
-      const double offset, const double coef1, const double coef2,
-      const double w, const double c0, const bool is_event,
-      const double length);
-
-public:
-  static double compute_length(
-      const double, const double, const double, const double,
-      const bool, const double);
-
-  static double second_d(const double, const double,
-                         const double);
-};
-
-class SMA_hepler_exp{
-private:
-  static double NR_delta(
-      const double offset, const double coef1, const double coef2,
-      const double w, const double c0, const bool is_event,
-      const double length);
-
-public:
-  static double compute_length(
-      const double, const double, const double, const double, const bool,
-      const double);
-
-  static double second_d(const double, const double,
-                         const double);
-};
-
 template<class T>
 class SMA : public Solver
 {
@@ -202,27 +170,13 @@ public:
   };
 
   void solve();
+
+  static double compute_length(
+      const double, const double, const double,
+      const double, const bool, const double);
 };
 
 // Solver with approximation at the posterior mode sequentially
-
-class GMA_hepler_logit{
-public:
-  static double d1(
-      const double, const bool, const double);
-
-  static double d2(
-      const double, const double);
-};
-
-class GMA_hepler_exp{
-public:
-  static double d1(
-      const double, const bool, const double);
-
-  static double d2(
-      const double, const double);
-};
 
 template<class T>
 class GMA : public Solver

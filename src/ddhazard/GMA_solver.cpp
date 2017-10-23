@@ -1,45 +1,10 @@
 #include "../ddhazard.h"
 #include "../utils.h"
 #include "../arma_BLAS_LAPACK.h"
+#include "../family.h"
 #ifdef _OPENMP
 #include "omp.h"
 #endif
-
-inline double GMA_hepler_logit::d1(
-    const double eta, const bool is_event, const double at_risk_length){
-  if(is_event)
-    return(1 / (1 + exp(eta)));
-
-
-  const double e = exp(eta);
-  return(- e / (1 + e));
-}
-
-inline double GMA_hepler_logit::d2(
-  double eta, const double at_risk_length){
-  if(eta < -15. || eta > 15.)
-    return(0);
-
-  const double e = exp(eta);
-  return - e / pow(1. + e, 2);
-}
-
-
-
-inline double GMA_hepler_exp::d1(
-    const double eta, const bool is_event, const double at_risk_length){
-  const double e = exp(eta);
-  if(is_event){
-    return(1. - e * at_risk_length);
-  }
-
-  return(- e * at_risk_length);
-}
-
-inline double GMA_hepler_exp::d2(
-    double eta, const double at_risk_length){
-  return -  exp(eta) * at_risk_length;
-}
 
 template<class T>
 void GMA<T>::solve(){
@@ -88,12 +53,15 @@ void GMA<T>::solve(){
     const arma::mat X_t = p_dat.X.cols(r_set);
 
     const arma::uvec is_event = p_dat.is_event_in_bin(r_set) == bin_number;
-    arma::vec at_risk_lenght(r_set.n_elem);
+    arma::vec at_risk_length(r_set.n_elem);
     int i = 0;
-    for(auto it = r_set.begin(); it < r_set.end(); it++, i++){
-      at_risk_lenght[i] = get_at_risk_length(
-        p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart);
-    }
+    if(T::uses_at_risk_length){
+      for(auto it = r_set.begin(); it < r_set.end(); it++, i++){
+        at_risk_length[i] = get_at_risk_length(
+          p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart);
+      }
+    } else
+      at_risk_length.zeros();
 
     arma::vec h_1d(r_set.n_elem);
 
@@ -116,8 +84,15 @@ void GMA<T>::solve(){
 #endif
       for(arma::uword i = 0; i < r_set.n_elem; i++){
         double w_i = w[i];
-        h_1d[i] = w_i * T::d1(eta[i], is_event[i], at_risk_lenght[i]);
-        double h_2d_neg = - w_i * T::d2(eta[i], at_risk_lenght[i]);
+        double at_i = at_risk_length[i];
+        bool is_event_i = is_event[i];
+
+        auto trunc_eta = T::truncate_eta(
+          is_event_i, eta[i], exp(eta[i]), at_i);
+        h_1d[i] = w_i * T::d_log_like(
+          is_event_i, trunc_eta, at_i);
+        double h_2d_neg = - w_i * T::dd_log_like(
+          is_event_i, trunc_eta, at_i);
         sym_mat_rank_one_update(h_2d_neg, X_t.col(i), my_X_cross);
       }
 
@@ -207,6 +182,5 @@ void GMA<T>::solve(){
   }
 }
 
-// Define classes
-template class GMA<GMA_hepler_logit>;
-template class GMA<GMA_hepler_exp>;
+template class GMA<logistic>;
+template class GMA<exponential>;

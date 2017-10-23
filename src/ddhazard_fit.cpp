@@ -3,14 +3,6 @@
 #include "estimate_fixed_effects_M_step.h"
 
 using uword = arma::uword;
-using bigglm_updateQR_logit   = bigglm_updateQR<logistic>;
-using bigglm_updateQR_poisson = bigglm_updateQR<exponential>;
-
-using SMA_logit =  SMA<SMA_hepler_logit>;
-using SMA_exp =  SMA<SMA_hepler_exp>;
-
-using GMA_logit =  GMA<GMA_hepler_logit>;
-using GMA_exp = GMA<GMA_hepler_exp>;
 
 // Define convergence criteria used later
 inline double relative_norm_change(const arma::mat &prev_est, const arma::mat &new_est){
@@ -157,9 +149,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         criteria));
 
     if(model == "logit"){
-      solver.reset(new SMA_logit(*p_data.get(), posterior_version));
+      solver.reset(new SMA<logistic>(*p_data.get(), posterior_version));
+
     } else if(is_exponential_model(model)){
-      solver.reset(new SMA_exp(*p_data.get(), posterior_version));
+      solver.reset(new SMA<exponential>(*p_data.get(), posterior_version));
+
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
 
@@ -176,9 +170,9 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
         criteria));
 
     if(model == "logit"){
-      solver.reset(new GMA_logit(*p_data.get(), GMA_max_rep, GMA_NR_eps));
+      solver.reset(new GMA<logistic>(*p_data.get(), GMA_max_rep, GMA_NR_eps));
     }  else if(is_exponential_model(model)){
-      solver.reset(new GMA_exp(*p_data.get(), GMA_max_rep, GMA_NR_eps));
+      solver.reset(new GMA<exponential>(*p_data.get(), GMA_max_rep, GMA_NR_eps));
     }else
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
 
@@ -346,11 +340,11 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
       arma::vec old = p_data->fixed_parems;
 
       if(model == "logit"){
-        estimate_fixed_effects_M_step<bigglm_updateQR_logit>(
+        estimate_fixed_effects_M_step<bigglm_updateQR<logistic>>(
           p_data.get(), fixed_effect_chunk_size);
 
       } else if(is_exponential_model(model)){
-        estimate_fixed_effects_M_step<bigglm_updateQR_poisson>(
+        estimate_fixed_effects_M_step<bigglm_updateQR<exponential>>(
           p_data.get(), fixed_effect_chunk_size);
 
       } else

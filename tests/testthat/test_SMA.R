@@ -7,16 +7,6 @@ if(interactive()){
     source("../../R/test_utils.R") else
       source("./R/test_utils.R")
 
-  SMA_hepler_logit_compute_length <-
-    with(environment(ddhazard), SMA_hepler_logit_compute_length)
-  SMA_hepler_logit_second_d <-
-    with(environment(ddhazard), SMA_hepler_logit_second_d)
-
-  SMA_hepler_exp_compute_length <-
-    with(environment(ddhazard), SMA_hepler_exp_compute_length)
-  SMA_hepler_exp_second_d <-
-    with(environment(ddhazard), SMA_hepler_exp_second_d)
-
   exp_model_names <- with(environment(ddhazard), exp_model_names)
 }
 
@@ -53,16 +43,6 @@ test_that("NR method for logit function gives correct values for logit", {
     -2.15823, tolerance = 1e-5)
 })
 
-test_that("Logit second deriv gives correct values for", {
-  expect_equal(
-    SMA_hepler_logit_second_d(1, 1),
-    -exp(2) / (1+ exp(2))^2)
-
-  expect_equal(
-    SMA_hepler_logit_second_d(2, 0),
-    -exp(2) / (1+ exp(2))^2)
-})
-
 args <- list(Surv(tstart, tstop, death == 2) ~ age + edema +
                log(albumin) + log(protime) + log(bili), pbc2,
              id = pbc2$id, by = 100, max_T = 3600,
@@ -76,9 +56,7 @@ test_that("Logit model for posterior_approx gives previous found values", {
 
   # plot(f1)
   f1 <- f1[c("state_vecs", "state_vecs")]
-  # save_to_test(f1, "posterior_approx_logit_pbc")
-
-  expect_equal(f1, read_to_test("posterior_approx_logit_pbc"), tolerance = 1.490116e-08)
+  expect_known_value(f1, "posterior_approx_logit_pbc.RDS")
 })
 
 test_that("Changing between woodbury and cholesky makes a slight difference with PBC",{
@@ -240,20 +218,6 @@ test_that("NR method for logit function gives correct values for Exponential", {
   expect_equal(
     SMA_hepler_exp_compute_length(0, .5, .05, 1, F, 10),
     -1.76385, tolerance = 1e-5)
-})
-
-test_that("Exponential second deriv gives correct values for", {
-  expect_equal(
-    SMA_hepler_exp_second_d(1, 0, 1),
-    - exp(1 + 0 + log(1)))
-
-  expect_equal(
-    SMA_hepler_exp_second_d(1, 1, 1),
-    - exp(1 + 1 + log(1)))
-
-  expect_equal(
-    SMA_hepler_exp_second_d(1, 1, 10),
-    - exp(1 + 1 + log(10)))
 })
 
 

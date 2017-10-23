@@ -179,10 +179,9 @@ test_that("posterior_approx gives previous found values with fixed effects in M-
 
   # plot(f1)
   # f1$fixed_effects
-  f1 <- f1[c("state_vecs", "state_vecs")]
-  # save_to_test(f1, "posterior_approx_logit_fixed_M")
 
-  expect_equal(f1, read_to_test("posterior_approx_logit_fixed_M"), tolerance = 1.490116e-08)
+  f1 <- f1[c("state_vecs", "state_vecs")]
+  expect_known_output(f1, "posterior_approx_logit_fixed_M.RDS", update = FALSE)
 })
 
 

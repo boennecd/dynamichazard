@@ -20,12 +20,8 @@ if(interactive()){
   # test_SMA.R
   SMA_hepler_logit_compute_length <-
     with(environment(ddhazard), SMA_hepler_logit_compute_length)
-  SMA_hepler_logit_second_d <-
-    with(environment(ddhazard), SMA_hepler_logit_second_d)
   SMA_hepler_exp_compute_length <-
     with(environment(ddhazard), SMA_hepler_exp_compute_length)
-  SMA_hepler_exp_second_d <-
-    with(environment(ddhazard), SMA_hepler_exp_second_d)
 
   # testbigglm_wrapper.R
   bigglm_updateQR_rcpp <- with(environment(ddhazard), bigglm_updateQR_rcpp)

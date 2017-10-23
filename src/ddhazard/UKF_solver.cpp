@@ -309,7 +309,5 @@ void UKF_solver_New<T>::solve(){
   }
 };
 
-
-// D  efine classes
 template class UKF_solver_New<logistic>;
 template class UKF_solver_New<exponential>;

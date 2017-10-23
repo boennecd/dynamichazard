@@ -252,7 +252,6 @@ void EKF_solver<T>::parallel_filter_step(
   p_dat.U = symmatu(p_dat.U);
 };
 
-// Define classes
 template class EKF_solver<logistic>;
 template class EKF_solver<exponential>;
 
