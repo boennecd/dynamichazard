@@ -7,7 +7,5 @@ Replace `save_to_test` and `read_to_test` with `testthat::expect_known_output`
 Update vignettes to reflect use the new setup with `src/family.h`
 Make functions for `ddhazard` and `PF_EM` where you only take one iteration
 and can provide your own structural matrices
-Refactor code to get rid of `ddhazard_data_EKF` and simplify code in
-`/src/ddhazard_fit.cpp`
 Check documentation after latest set of changes
 Change the hatvalues section in ddhazard vignette

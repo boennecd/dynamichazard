@@ -103,7 +103,6 @@ public:
 };
 
 
-
 class exponential : public family_base<exponential> {
 public:
   const static bool uses_at_risk_length = true;

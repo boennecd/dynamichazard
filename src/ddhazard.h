@@ -19,9 +19,12 @@ public:
 };
 
 // Classes for EKF method
+class ddhazard_data_EKF;
+
 template<typename T>
 class EKF_solver : public Solver{
-  ddhazard_data_EKF &p_dat;
+  ddhazard_data &org;
+  std::unique_ptr<ddhazard_data_EKF> p_dat;
   const std::string model;
   unsigned long const max_threads;
 
@@ -33,45 +36,13 @@ class EKF_solver : public Solver{
       const double bin_tstart, const double bin_tstop);
 
 public:
-  EKF_solver(ddhazard_data_EKF &p_, const std::string model_);
+  EKF_solver(
+    ddhazard_data&, const std::string,
+    Rcpp::Nullable<Rcpp::NumericVector>, const unsigned int,
+    const int);
 
   void solve();
 };
-
-template<typename T>
-class EKF_filter_worker{
-  void do_comps(const arma::uvec::const_iterator it, int i,
-                const arma::vec &i_a_t, const bool compute_z_and_H,
-                const int bin_number,
-                const double bin_tstart, const double bin_tstop);
-  // Variables for computations
-  ddhazard_data_EKF &dat;
-  arma::uvec::const_iterator first;
-  const arma::uvec::const_iterator last;
-  const arma::vec &i_a_t;
-  const bool compute_z_and_H;
-  const int i_start;
-  const int bin_number;
-  const double bin_tstart;
-  const double bin_tstop;
-
-  // local variables to compute temporary result
-  arma::colvec u_;
-  arma::mat U_;
-
-public:
-  EKF_filter_worker(
-    ddhazard_data_EKF &p_data,
-    arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
-    const arma::vec &i_a_t_, const bool compute_z_and_H_,
-    const int i_start_, const int bin_number_,
-    const double bin_tstart_, const double bin_tstop_);
-
-  void operator()();
-};
-
-
-
 
 // UKF
 class UKF_solver_Org : public Solver{
