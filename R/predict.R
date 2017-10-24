@@ -26,7 +26,7 @@
 #'}
 #' @importFrom parallel mcmapply detectCores
 #' @export
-predict.fahrmeier_94 = function(object, new_data,
+predict.ddhazard = function(object, new_data,
                                 type = c("response", "term"),
                                 tstart = "start", tstop = "stop",
                                 use_parallel = F, sds = F, max_threads = getOption("ddhazard_max_threads"), ...)
@@ -49,7 +49,7 @@ predict.fahrmeier_94 = function(object, new_data,
     return(predict_response(object, new_data, tmp$X, tstart, tstop, use_parallel, sds, tmp$fixed_terms,
                             max_threads = max_threads))
 
-  stop("Type '", type, "' not implemented in predict.fahrmeier_94")
+  stop("Type '", type, "' not implemented in predict.ddhazard")
 }
 
 predict_terms <- function(object, new_data, m, sds, fixed_terms){

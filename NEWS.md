@@ -2,7 +2,6 @@
 * Fixed issues with close to equal non-integer stop and start times.
 * Refactored code to use more generic setup for distribution families.
 * Changed EKF and UKF to use Poisson counts instead of the three different types used before for exponential distributed arrival times. This means that the `model` argument to `ddhazard` should be changed from `"exp_bin"`, `"exp_clip_time"` or `"exp_clip_time_w_jump"` to `"exponential"`.
-* Fixed incorrect computation of `hatvalues`.
 
 # dynamichazard 0.4.0
 * Parallel version of `glm` is used to find the first state vector.

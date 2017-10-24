@@ -1,17 +1,17 @@
-#' @title Log likelihood of smoothed state vector of a \code{fahrmeier_94} object
+#' @title Log likelihood of smoothed state vector of a \code{ddhazard} object
 #' @description
 #' Computes the log likelihood of (a potentially new) data set given the estimated:
 #' \deqn{E_{\theta}(\alpha_1 | y_{1:d}), E_{\theta}(\alpha_{2} | y_{1:d}), ..., E_{\theta}(\alpha_{d} | y_{1:d})}
 #'
-#' from the \code{fahrmeier_94} class object. Note that this is not the log likelihood of the observed data given the outcome.
+#' from the \code{ddhazard} class object. Note that this is not the log likelihood of the observed data given the outcome.
 #'
-#' @param object an object of class \code{fahrmeier_94}.
+#' @param object an object of class \code{ddhazard}.
 #' @param data new data to evaluate the likelihood for.
 #' @param id the individual identifiers as in \code{\link{ddhazard}}.
 #' @param ... unused.
 #'
 #' @export
-logLik.fahrmeier_94 = function(object, data = NULL, id, ...){
+logLik.ddhazard = function(object, data = NULL, id, ...){
   data <- if(!is.null(object$data)) object$data else data
   if(is.null(data))
     stop("data is needed to compute log likelihood. Please, pass the data set used in 'ddhazard' call")

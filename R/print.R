@@ -57,7 +57,7 @@ print.ddhazard_boot <-
 #' The \code{sd} printed for time-varying effects are point-wise standard deviations from either the filter with smoothing
 #'
 #' @export
-print.fahrmeier_94 <- function(
+print.ddhazard<- function(
   x, var_indices = 1:ncol(x$state_vecs), time_indices = 1:nrow(x$state_vecs),
   digits = getOption("digits"), ...){
   cat("Formula:\n", deparse(x$formula), "\n", sep = "")

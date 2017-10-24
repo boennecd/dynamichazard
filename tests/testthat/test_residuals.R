@@ -101,11 +101,11 @@ test_that("State space error match whether standarized or not for logit model", 
   std_res <- residuals(result, "std_space_error")
 
   expect_true(std_res$standardize)
-  expect_s3_class(std_res, "fahrmeier_94_SpaceErrors")
+  expect_s3_class(std_res, "ddhazard_space_errors")
 
   non_std <- residuals(result, "space_error")
   expect_true(!non_std$standardize)
-  expect_s3_class(non_std, "fahrmeier_94_SpaceErrors")
+  expect_s3_class(non_std, "ddhazard_space_errors")
 
   expect_equal(non_std$Covariances, std_res$Covariances)
 
@@ -151,8 +151,8 @@ local({
     pearson_res <- residuals(object = fit, type = "pearson", data = pbc)
     raw_res <- residuals(object = fit, type = "raw", data = pbc)
 
-    expect_s3_class(pearson_res, "fahrmeier_94_res")
-    expect_s3_class(raw_res, "fahrmeier_94_res")
+    expect_s3_class(pearson_res, "ddhazard_residual")
+    expect_s3_class(raw_res, "ddhazard_residual")
 
     expect_equal(pearson_res$type, "pearson")
     expect_equal(raw_res$type, "raw")
@@ -252,8 +252,7 @@ test_that("Get prevoius residuals with whas500", {
 
   state <- residuals(dd_fit, type = "std_space_error")
 
-  # save_to_test(state, "whas_state")
-  expect_equal(state, read_to_test("whas_state"))
+  expect_known_value(state, "whas_state.RDS", update = FALSE)
 
   pearson <- residuals(dd_fit, type = "pearson")
   pearson <- pearson[[1]][1:2]

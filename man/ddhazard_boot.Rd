@@ -32,5 +32,5 @@ An object like returned from the \code{\link[boot]{boot}} function
 See the vignette 'Bootstrap illustration'. The \code{do_stratify_with_event} may be useful when either cases or non-cases are very rare to ensure that the model estimation succeeds.
 }
 \seealso{
-\code{\link{ddhazard}}, \code{\link[=plot.fahrmeier_94]{plot}}
+\code{\link{ddhazard}}, \code{\link[=plot.ddhazard]{plot}}
 }

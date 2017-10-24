@@ -44,7 +44,7 @@ knitr::knit_hooks$set(output = function(x, options) {
  })
 
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, 
-                      dpi = 100, cache = T, dev = "png")
+                      dpi = 100, cache = FALSE, dev = "png")
 knitr::opts_knit$set(warning = F, message = F)
 options(digits = 3)
 
@@ -206,8 +206,8 @@ library(dynamichazard)
 dd_rossi <- ddhazard(
   Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
   data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5),
-  control = list(eps = .001))
+  Q_0 = diag(10000, 5), Q = diag(.01, 5),
+  control = list(eps = .001, n_max = 250))
 ```
 
 Then we plot the predicted coefficients:
@@ -283,7 +283,7 @@ is_large <-
   names(head(sort(max_hat, decreasing = T), 5))
 
 # Plot hat values
-plot(range(hats_stacked$interval_n), c(0, 0.07), type = "n",
+plot(range(hats_stacked$interval_n), c(0, 0.03), type = "n",
      xlab = "Interval number", ylab = "Hat value")
 
 invisible(
@@ -313,7 +313,7 @@ Rossi_subset <- Rossi_subset[nrow(Rossi_subset):1, ]
 Rossi_subset[!duplicated(Rossi_subset$id), ]
 ```
 
-They mainly have a large number of prior convictions as shown in the next plot. Moreover, we can see by the next histogram that the number of prior convictions is skewed:
+Some have a large number of prior convictions as shown in the next plot. Moreover, we can see by the next histogram that the number of prior convictions is skewed:
 
 ```{r}
 tmp <- xtabs(~Rossi$prio[!duplicated(Rossi$id)]) 
@@ -335,8 +335,8 @@ Below, we make a fit where we use this transformation of prior convictions inste
 dd_rossi_trans <- ddhazard(
   Surv(start, stop, event) ~ fin + age + log(prio + 1) + employed.cumsum, 
   data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5), 
-  control = list(eps = .001))
+  Q_0 = diag(10000, 5), Q = diag(.01, 5), 
+  control = list(eps = .001, n_max = 250))
 
 plot(dd_rossi_trans)
 ```
@@ -359,12 +359,14 @@ A question is whether the new model fits better. Thus, we compare the mean logis
 f1 <- ddhazard(
   Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
   data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+  Q_0 = diag(10000, 5), Q = diag(.01, 5), 
+  control = list(eps = .001, n_max = 250))
 
 f2 <- ddhazard(
   Surv(start, stop, event) ~ fin + age + log(prio + 1) + employed.cumsum , 
   data = Rossi, id = Rossi$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5))
+  Q_0 = diag(10000, 5), Q = diag(.01, 5), 
+  control = list(eps = .001, n_max = 250))
 
 # Compute residuals
 res1 <- residuals(f1, type = "pearson")
@@ -379,16 +381,11 @@ log_error2 <- unlist(
     ifelse(x[, "Y"] == 1, log(x[, "p_est"]), log(1 - x[, "p_est"]))))
 
 # Compare mean
-mean(log_error1) # Mean error for first model
-mean(log_error2) # Mean error for second model
+print(c(res1 = mean(log_error1), res2 = mean(log_error2)),
+      digits = 8)
 ```
 
-The difference is very small. The difference is also small for the summary statistics of the two sets of errors: 
-
-```{r}
-summary(log_error1)
-summary(log_error2)
-```
+The difference is very small.
 
 ## Data set 2: Worcester Heart Attack Study
 Next, We will look at the Worcester Heart Attack Study. The dataset contains individuals who had a heart attack and is then followed up to check if they die within the following days. Below, we load the the data and plot the date of deaths:
@@ -477,10 +474,10 @@ The list of matrices is un-handy so we have defined a function called `stack_res
 
 ```{r stack_res, echo = FALSE}
 stack_residuals <- function(fit, resids){
-  if(!inherits(resids, "fahrmeier_94_res"))
-    stop("Residuals must have class 'fahrmeier_94_res'")
-  if(!inherits(fit, "fahrmeier_94"))
-    stop("fit must have class 'fahrmeier_94'")
+  if(!inherits(resids, "ddhazard_residual"))
+    stop("Residuals must have class 'ddhazard_residual'")
+  if(!inherits(fit, "ddhazard"))
+    stop("fit must have class 'ddhazard'")
   
   # Stack the residuals
   resids_stacked <- 
@@ -813,11 +810,12 @@ We note that they all have high number of prior convictions when we compare with
 ```{r}
 Rossi_sub <- Rossi[!Rossi$id %in% c(is_max, is_min), ]
 
+library(dynamichazard)
 dd_rossi_tmp <- ddhazard(
   Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
   data = Rossi_sub, id = Rossi_sub$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.1, 5), 
-  control = list(eps = .001))
+  Q_0 = diag(10000, 5), Q = diag(.01, 5),
+  control = list(eps = .001, n_max = 250))
 
 par(mfcol = c(2, 3))
 for(i in 1:5){

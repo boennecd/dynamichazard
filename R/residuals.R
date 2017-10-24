@@ -7,14 +7,14 @@
 #' @param ... Not used
 #'
 #' @section Pearson and raw residuals:
-#' Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"fahrmeier_94_res"} with the following elements
+#' Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"ddhazard_residual"} with the following elements
 #' \describe{
 #' \item{\code{residuals}}{ List of residuals for each bin. Each element of the list contains a 2D array where the rows corresponds to the passed \code{data} and columns are the residuals (\code{residuals}), estimated probability of death (\code{p_est}), outcome (\code{Y}) and row number in the initial dataset (\code{row_num}). The \code{data} rows will only have a residuals in a given risk list if they are at risk in that risk set}
 #' \item{\code{type}}{ The type of residual}
 #'}
 #'
 #' @section State space errors:
-#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is non-standardized. Returns a list with class \code{"fahrmeier_94_SpaceErrors"} with the following elements
+#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is non-standardized. Returns a list with class \code{"ddhazard_space_errors"} with the following elements
 #' \describe{
 #' \item{\code{residuals}}{ 2D array with either standardized or non-standardized state space errors. The row are bins and the columns are the parameters in the regression }
 #' \item{\code{standardize}}{ \code{TRUE} if standardized state space errors }
@@ -22,7 +22,7 @@
 #'}
 #'
 #' @export
-residuals.fahrmeier_94 = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data = NULL, ...){
+residuals.ddhazard = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data = NULL, ...){
   type = type[1]
 
   if(!object$model %in% c("logit", exp_model_names))
@@ -71,7 +71,7 @@ space_errors <- function(object, data, standardize){
   return(structure(list(residuals = res,
                         standardize = standardize,
                         Covariances = covs),
-                   "class" = "fahrmeier_94_SpaceErrors"))
+                   "class" = "ddhazard_space_errors"))
 }
 
 obs_res <- function(object, data, type){
@@ -122,5 +122,5 @@ obs_res <- function(object, data, type){
   }
 
   return(structure(list(
-    residuals = res, type = type), "class" = "fahrmeier_94_res"))
+    residuals = res, type = type), "class" = "ddhazard_residual"))
 }

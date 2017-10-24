@@ -15,7 +15,7 @@
 #' An object like returned from the \code{\link[boot]{boot}} function
 #'
 #' @seealso
-#' \code{\link{ddhazard}}, \code{\link[=plot.fahrmeier_94]{plot}}
+#' \code{\link{ddhazard}}, \code{\link[=plot.ddhazard]{plot}}
 #'
 #' @export
 ddhazard_boot <- function(ddhazard_fit,  strata, unique_id, R = 100,

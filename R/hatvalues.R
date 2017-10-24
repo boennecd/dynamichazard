@@ -15,7 +15,7 @@
 #' \code{\link{ddhazard}}
 #'
 #' @export
-hatvalues.fahrmeier_94 <- function(model, ...){
+hatvalues.ddhazard <- function(model, ...){
   if(!model$model %in% c("logit"))
     stop("Functions for model '",  model$model, "' is not implemented")
 
@@ -65,27 +65,22 @@ hatvalues.fahrmeier_94 <- function(model, ...){
     etas = design_mat_sub %*% coefs_cur
 
     # Compute the variances
-    vars <- mapply(
+    V <- local({
+      var <- mapply(
         model$family$var, eta = etas, at_risk_length = tsto - tsta) +
         model$control$denom_term
-    # V <- local({
-    #   var <- mapply(
-    #     model$family$var, eta = etas, at_risk_length = tsto - tsta) +
-    #     model$control$denom_term
-    #   mu_eta <- mapply(
-    #     model$family$mu_eta, eta = etas, at_risk_length = tsto - tsta) +
-    #     model$control$denom_term
-    #
-    #   model$weights[r_set] * mu_eta^2 / var
-    # })
+      mu_eta <- mapply(
+        model$family$mu_eta, eta = etas, at_risk_length = tsto - tsta) +
+        model$control$denom_term
+
+      model$weights[r_set] * mu_eta^2 / var
+    })
 
     # Compute the hat values
-    H <- t_design_mat_sub %*% (vars * design_mat_sub) + V_inv
-    H <- colSums(t_design_mat_sub * solve(H, t_design_mat_sub)) * vars
+    H <- t_design_mat_sub %*% (V * design_mat_sub) + V_inv
+    H <- colSums(t_design_mat_sub * solve(H, t_design_mat_sub)) * V
 
-    tmp <- cbind("hat_value" = H,
-                 row_num = r_set,
-                 id = model$id[r_set])
+    tmp <- cbind("hat_value" = H, row_num = r_set, id = model$id[r_set])
     row.names(tmp) <- NULL
     res[[i]] <- tmp
   }

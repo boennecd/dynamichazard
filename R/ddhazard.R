@@ -50,7 +50,7 @@
 #'}
 #'
 #' @return
-#' A list with class \code{fahrmeier_94}. The list contains:
+#' A list with class \code{ddhazard}. The list contains:
 #' \describe{
 #' \item{\code{formula}}{The passed formula}
 #' \item{\code{call}}{The matched call}
@@ -75,7 +75,7 @@
 #'}
 #'
 #' @seealso
-#' \code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}
+#' \code{\link[=plot.ddhazard]{plot}}, \code{\link[=residuals.ddhazard]{residuals}}, \code{\link[=predict.ddhazard]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}
 #'
 #' @references
 #' Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation for discrete time survival data}. Biometrika 81.2 (1994): 317-330.
@@ -393,7 +393,7 @@ ddhazard = function(formula, data,
     xlev = X_Y$xlev,
     control = control,
     LR = LR),
-    "class" = "fahrmeier_94")
+    "class" = "ddhazard")
 }
 
 ddhazard_no_validation <- function(a_0, Q_0, .F, verbose, Q,

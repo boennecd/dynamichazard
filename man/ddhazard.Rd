@@ -35,7 +35,7 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 \item{verbose}{\code{TRUE} if you want status messages during execution}
 }
 \value{
-A list with class \code{fahrmeier_94}. The list contains:
+A list with class \code{ddhazard}. The list contains:
 \describe{
 \item{\code{formula}}{The passed formula}
 \item{\code{call}}{The matched call}
@@ -46,13 +46,14 @@ A list with class \code{fahrmeier_94}. The list contains:
 \item{\code{times}}{The interval borders}
 \item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved}
 \item{\code{data}}{The \code{data} argument if saved}
+\item{\code{weights}}{\code{weights} used in estimation if saved}
 \item{\code{id}}{ids used to match rows in \code{data} to individuals}
 \item{\code{order}}{Order of the random walk}
 \item{\code{F_}}{Matrix with that map transition from one state vector to the next}
 \item{\code{method}}{Method used in the E-step}
 \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm}
 \item{\code{family}}{Rcpp \code{\link{Module}} with C++ functions used for estimation given the \code{model} argument}
-\item{\code{hazard_func}}{The hazard function corresponding to the \code{model} argument}
+\item{\code{discrete_hazard_func}}{The hazard function corresponding to the \code{model} argument}
 \item{\code{terms}}{the \code{\link{terms}} object used}
 \item{\code{has_fixed_intercept}}{\code{TRUE} if the model has a time-invariant intercept}
 \item{\code{xlev}}{a record of the levels of the factors used in fitting}
@@ -104,5 +105,5 @@ Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation fo
 Durbin, James, and Siem Jan Koopman. \emph{Time series analysis by state space methods}. No. 38. Oxford University Press, 2012.
 }
 \seealso{
-\code{\link[=plot.fahrmeier_94]{plot}}, \code{\link[=residuals.fahrmeier_94]{residuals}}, \code{\link[=predict.fahrmeier_94]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}
+\code{\link[=plot.ddhazard]{plot}}, \code{\link[=residuals.ddhazard]{residuals}}, \code{\link[=predict.ddhazard]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}
 }

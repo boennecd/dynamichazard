@@ -467,7 +467,7 @@ server <- function(input, output) {
 
     }
 
-    control_list <- list(eps = 1e-3, n_max = 10,
+    control_list <- list(eps = 1e-3, n_max = 100,
                          method = input$est_with_method,
                          n_threads = start_args$n_threads)
 

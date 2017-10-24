@@ -1320,18 +1320,17 @@ You can get the Pearson residuals by calling `residuals` with a `ddhazard` fit a
 ## Hat values
 Finding the influence matrix also known as the hat matrix does not seem to be possible in a computationally efficient way. Thus, we will look at an approximation. We will focus on the logistic model. In the filters in the E-step, each correction step in itself can be viewed as an logistic regression with an L2 penalty. Say we at time $t$ in the filter in the correction step with estimates $\emNotee{\vec{a}}{t}{t-1}$ and $\emNotee{\mat{V}}{t}{t-1}$. Then the penalty could be interpreted as a prior $N(\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1})$. With this view, regular hat values would be computed by:
 
-$$\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2}\mat{X}_t
-    \Lparen{\mat{X}_t^\top \mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{t-1}^{-1}}^{-1}
-  \mat{X}_t^\top\mat{H}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2}$$
+$$\mat{C}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2}\mat{X}_t
+    \Lparen{\mat{X}_t^\top \mat{C}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{t-1}^{-1}}^{-1}
+  \mat{X}_t^\top\mat{C}_t(\emNotee{\vec{\alpha}}{t}{t-1})^{1/2}$$
 
-where $\mat{X}_t$ is the design matrix in interval $t$. The above could motivate the following matrix as the "hat-like" matrix in each interval: 
+where $\mat{X}_t$ is the design matrix in interval $t$ and $\mat{C}_t(\vec{\alpha})$ is the working weights as in `glm`. The above could motivate the following matrix as the "hat-like" matrix in each interval: 
 
-$$\widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d})^{1/2}\mat{X}_t
-    \Lparen{\mat{X}_t^\top \widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{d}^{-1}}^{-1}
-  \mat{X}_t^\top\widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d})^{1/2}, \qquad 
-  \widetilde{\mat{H}}_t(\emNotee{\vec{\alpha}}{t}{d}) = \mat{H}_t(\emNotee{\vec{\alpha}}{t}{d}) + \xi\mat{I}$$
+$$\widetilde{\mat{C}}_t(\emNotee{\vec{\alpha}}{t}{d})^{1/2}\mat{X}_t
+    \Lparen{\mat{X}_t^\top \widetilde{\mat{C}}_t(\emNotee{\vec{\alpha}}{t}{d})^{-1} \mat{X}_t + \emNotee{\mat{V}}{t}{d}^{-1}}^{-1}
+  \mat{X}_t^\top\widetilde{\mat{C}}_t(\emNotee{\vec{\alpha}}{t}{d})^{1/2}$$
 
-where we have used the final smoothed estimators and adjusted for the $\xi$ factor as done in the algorithm. Plotting cumulative values versus time may show influential observations. You can get these estimates by calling `hatvalues` with a `ddhazard` fit
+where we have used the final smoothed estimators. Plotting cumulative values versus time may show influential observations. You can get these estimates by calling `hatvalues` with a `ddhazard` object as the argument.
 
 ## Residuals from the state vector
 We may be interested in looking at the predicted state error. The predicted state errors are given by: 

@@ -18,7 +18,7 @@
 #' @importFrom graphics matplot matpoints
 #'
 #' @export
-plot.fahrmeier_94 = function(x, xlab = "Time",
+plot.ddhazard = function(x, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
                              col = "black", add = F, do_alter_mfcol = T,
@@ -39,7 +39,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
       if(n_cov > 0){
         cov_index <- 1:min(9, n_cov)
       } else
-        stop("plot.fahrmeier_94 called with no time varying effects")
+        stop("plot.ddhazard called with no time varying effects")
     }
 
     n_plots <- length(cov_index)
@@ -120,14 +120,14 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
     return(invisible())
   }
 
-  stop("Type '", type, "' is not implemented for plot.fahrmeier_94")
+  stop("Type '", type, "' is not implemented for plot.ddhazard")
 }
 
 #' @title State space error plot
 #' @description Plot function for state space errors from \code{\link{ddhazard}} fit
 #'
-#' @param x Result of \code{\link[=residuals.fahrmeier_94]{residuals}} for state space errors
-#' @param mod The \code{\link{ddhazard}} result used in the \code{\link[=residuals.fahrmeier_94]{residuals}} call
+#' @param x Result of \code{\link[=residuals.ddhazard]{residuals}} for state space errors
+#' @param mod The \code{\link{ddhazard}} result used in the \code{\link[=residuals.ddhazard]{residuals}} call
 #' @param p_cex \code{cex} argument for the points
 #' @param cov_index The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standardized
 #' @param t_index The bin indices to plot. Default is to use all bins
@@ -136,7 +136,7 @@ plot.fahrmeier_94 = function(x, xlab = "Time",
 #' @param ... Arguments passed to plot
 #'
 #' @export
-plot.fahrmeier_94_SpaceErrors = function(x, mod, cov_index = NA, t_index = NA,
+plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
                                          p_cex = par()$cex * .2, pch = 16,
                                          ylab = "Std. state space error",
                                          x_tick_loc = NA, x_tick_mark = NA,
