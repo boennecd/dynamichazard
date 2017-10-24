@@ -421,7 +421,7 @@ Rcpp::List PF_smooth(
   Rcpp::List ans;
 
   if(model == "logit"){
-    ans = PF_smooth_dens<binary>::compute(data, smoother, method);
+    ans = PF_smooth_dens<logistic_dens>::compute(data, smoother, method);
 
   } else if (model == "exponential"){
     ans = PF_smooth_dens<exponential_dens>::compute(data, smoother, method);

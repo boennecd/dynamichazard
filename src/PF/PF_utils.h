@@ -251,8 +251,12 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
 
       }
 
-      double g = densities::log_p_prime(*it_eta, *it_is_event, at_risk_length);
-      double neg_G = - densities::log_p_2prime(*it_eta, *it_is_event, at_risk_length);
+      auto trunc_eta = densities::truncate_eta(
+        *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
+      double g = densities::d_log_like(
+        *it_is_event, trunc_eta, at_risk_length);
+      double neg_G = - densities::dd_log_like(
+        *it_is_event, trunc_eta, at_risk_length);
 
       sym_mat_rank_one_update(neg_G, data.X.col(*it_r), my_Sigma_inv);
 

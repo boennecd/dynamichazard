@@ -4,7 +4,7 @@
 #' @param type Either \code{"response"} for predicted probability of death or \code{"term"} for predicted terms in the linear predictor
 #' @param tstart Name of the start time column in \code{new_data}. It must corresponds to tstart used in the \code{\link[survival]{Surv}(tstart, tstop, event)} in the \code{formula} passed to \code{\link{ddhazard}}
 #' @param tstop same as \code{tstart} for the stop argument
-#' @param use_parallel \code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{parallel} package
+#' @param use_parallel \code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{\link{mcmapply}}. Notice the limitation in the help page of \code{\link{mcmapply}}.
 #' @param sds \code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}
 #' @param max_threads Maximum number of threads to use. -1 if it should be determined by a call to \code{\link[parallel]{detectCores}}
 #' @param ... Not used
@@ -24,6 +24,7 @@
 #' \item{\code{istart} }{ Vector with the index of the first bin the elements in \code{fits} is in }
 #' \item{\code{istop} }{ Vector with the index of the last bin the elements in \code{fits} is in}
 #'}
+#' @importFrom parallel mcmapply detectCores
 #' @export
 predict.fahrmeier_94 = function(object, new_data,
                                 type = c("response", "term"),
@@ -174,29 +175,22 @@ predict_response <- function(
   # Make function to predict for each observations
   # The function was slow on smaller data sets do to compilation. Thus, the
   # solution below which should only yeild to calls to compile
-  .env <- new.env(parent = baseenv())
-  hazard_func = object$hazard_func
-  environment(hazard_func) <- .env
+  .env <- new.env(parent = asNamespace("dynamichazard"))
+  .env$discrete_hazard_func = object$discrete_hazard_func
+  .env$times <- times
+  .env$parems <- parems
 
-  apply_func = eval(bquote(with(
+  apply_func = with(
     .env, {
-      hazard_func <- .(hazard_func)
-      times <- .(times)
-      parems <- .(parems)
 
-      FUN <- function(t, i, i_max, tstart, tstop, x_, offset){
+      FUN <- function(t, i, i_max, tstart, tstop, x, offset){
         tart <- if(i == 0) tstart else times[t]
         ttop <- if(i == i_max) tstop else times[t + 1]
 
-        hazard_func(parems[t, ] %*% x_ + offset, tstart = tart, tstop = ttop)
+        discrete_hazard_func(parems[t, ] %*% x + offset, ttop - tart)
       }
 
-      function(row_){
-        ######
-        # Setup
-        istart = row_[1]
-        istop = row_[2]
-
+      function(istart, istop, x, tstart, tstop, offset){
         #####
         # Compute
         ts = istart:istop
@@ -204,43 +198,43 @@ predict_response <- function(
         i_max <- istop - istart
         survival_probs = 1 - mapply(
           FUN,
-          t = ts,
-          i = is,
-          i_max = i_max,
-          x_ = list(row_[-(1:5), drop = FALSE]),
-          tstart =  row_[3],
-          tstop =  row_[4],
-          offset = row_[5])
+          t = ts, i = is, i_max = i_max, x = x, tstart =  tstart,
+          tstop = tstop, offset = offset)
         1 - prod(survival_probs)
-      }})))
+      }})
 
   # Compute hazard
-  apply_data_frame <- data.frame(istart = int_start, istop = int_stop_,
-                                 tstart = start, tstop = stop_,
-                                 offset = if(length(object$fixed_effects) == 0)
-                                   rep(0, length(tstart)) else fixed_terms %*% object$fixed_effects,
-                                 x_ = m,
-                                 check.names = FALSE,
-                                 fix.empty.names = FALSE)
+  args <- list(
+    FUN = apply_func,
+    x = apply(m, 1, list),
+    offset = if(length(object$fixed_effects) == 0)
+      rep(0, length(tstart)) else fixed_terms %*% object$fixed_effects,
+    istart = int_start, istop = int_stop_, tstart = start, tstop = stop_,
+    USE.NAMES = FALSE)
 
   if(use_parallel){
-    no_cores <- parallel::detectCores()
-    if(is.na(no_cores)){
-      no_cores <- 1
+    no_cores <- detectCores()
+    no_cores <- if(is.na(no_cores)){
+      1
+
+    } else if (.Platform$OS.type == "windows"){
+      1
+
     } else
-      no_cores <- max(min(no_cores - 1, ceiling(nrow(m) / 25)), 1)
+      max(min(no_cores - 1, ceiling(nrow(m) / 25)), 1)
 
     if(max_threads > 0)
       no_cores = min(no_cores, max_threads)
 
-    cl <- parallel::makeCluster(no_cores)
-    tryCatch({
-      fits = parallel::parRapply(cl = cl, apply_data_frame, apply_func)
-    }, finally = { parallel::stopCluster(cl)})
+    args <- c(args, list(mc.cores = no_cores))
+    fits <- do.call(mcmapply, args)
+
   }
   else{
-    fits = apply(apply_data_frame, 1, apply_func)
+    fits <- do.call(mapply, args)
+
   }
 
-  return(list(fits = fits, istart = times[int_start], istop = times[int_stop_]))
+  return(list(
+    fits = fits, istart = times[int_start], istop = times[int_stop_]))
 }

@@ -17,7 +17,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const arma::colvec &a_0,
                             const arma::vec &fixed_parems_start,
                             arma::mat Q_0, // by value copy. This  is key cuz we will change it if est_Q_0 = T
-                            arma::mat Q, // similary this is a copy
+                            arma::mat Q, // similarly this is a copy
                             const Rcpp::List &risk_obj,
                             const arma::mat &F_,
                             const double eps_fixed_parems, const int max_it_fixed_params,
@@ -25,7 +25,7 @@ Rcpp::List ddhazard_fit_cpp(arma::mat &X, arma::mat &fixed_terms, // Key: assume
                             const arma::uword verbose = 0,
                             const int order_ = 1, const bool est_Q_0 = true,
                             const std::string method = "EKF",
-                            Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue, // see this link for nullable example http://blogs.candoerz.com/question/164706/rcpp-function-for-adding-elements-of-a-vector.aspx
+                            Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue,
                             Rcpp::Nullable<Rcpp::NumericVector> alpha = R_NilValue,
                             Rcpp::Nullable<Rcpp::NumericVector> beta = R_NilValue,
                             Rcpp::Nullable<Rcpp::NumericVector> NR_eps = R_NilValue,

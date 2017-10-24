@@ -101,7 +101,9 @@ obs_res <- function(object, data, type){
     tmp_dat$tstart = pmax(tstart[r_set], start_)
     tmp_dat$tstop = pmin(tstop[r_set], stop_)
 
-    suppressMessages(p_est <- predict(object, tmp_dat, type = "response", tstart = "tstart", tstop = "tstop")$fits)
+    suppressMessages(p_est <- predict(
+      object, tmp_dat, type = "response", tstart = "tstart",
+      tstop = "tstop")$fits)
 
     Y = object$risk_set$is_event_in[r_set] == (i - 1)
 

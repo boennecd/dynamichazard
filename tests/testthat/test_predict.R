@@ -17,7 +17,8 @@ for(use_parallel in c(T, F)){
         use_parallel = use_parallel, max_threads = 1)
       tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
       expect_equal(
-        predict_$fits, c(result$hazard_func(tmp_state_vecs %*% c(1, 1))),
+        predict_$fits, c(result$discrete_hazard_func(
+          tmp_state_vecs %*% c(1, 1), 1)),
         use.names = F, check.attributes = F)
 
       predict_ = predict(
@@ -25,7 +26,7 @@ for(use_parallel in c(T, F)){
                                       group = factor(rep(2, 60))),
         use_parallel = use_parallel)
       expect_equal(
-        predict_$fits, c(result$hazard_func(tmp_state_vecs %*% c(1, 0))),
+        predict_$fits, c(result$discrete_hazard_func(tmp_state_vecs %*% c(1, 0), 1)),
         use.names = F, check.attributes = F)
   })
 
@@ -36,16 +37,20 @@ for(use_parallel in c(T, F)){
                                     group = factor(rep(1, 30))),
       use_parallel = use_parallel)
     tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
-    fac1 = c(result$hazard_func(tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 1)))
-    fac2 = c(result$hazard_func(tmp_state_vecs[2*(1:30), ] %*% c(1, 1)))
+    fac1 = c(result$discrete_hazard_func(
+      tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 1), 1))
+    fac2 = c(result$discrete_hazard_func(
+      tmp_state_vecs[2*(1:30), ] %*% c(1, 1), 1))
     expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
                  use.names = F, check.attributes = F)
 
     predict_ = predict(result, new_data = data.frame(
       start = 2*(0:29), stop = 2*(1:30), group = factor(rep(2, 30))),
       use_parallel = use_parallel)
-    fac1 = c(result$hazard_func(tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 0)))
-    fac2 = c(result$hazard_func(tmp_state_vecs[2*(1:30), ] %*% c(1, 0)))
+    fac1 = c(result$discrete_hazard_func(
+      tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 0), 1))
+    fac2 = c(result$discrete_hazard_func(
+      tmp_state_vecs[2*(1:30), ] %*% c(1, 0), 1))
     expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
                  use.names = F, check.attributes = F)
   })
@@ -55,14 +60,16 @@ for(use_parallel in c(T, F)){
     predict_ = predict(
       result, new_data = data.frame(start = 59, stop = 69, group = factor(1)),
       use_parallel = use_parallel)
-    fac1 = c(result$hazard_func(result$state_vecs[60, ] %*% c(1, 1)))
+    fac1 = c(result$discrete_hazard_func(
+      result$state_vecs[60, ] %*% c(1, 1), 1))
     expect_equal(predict_$fits, (1 - (1 - fac1)^10),
                  use.names = F, check.attributes = F)
 
     predict_ = predict(result, new_data = data.frame(
       start = 59, stop = 69, group = factor(2)),
       use_parallel = use_parallel)
-    fac1 = c(result$hazard_func(result$state_vecs[60, ] %*% c(1, 0)))
+    fac1 = c(result$discrete_hazard_func(
+      result$state_vecs[60, ] %*% c(1, 0), 1))
     expect_equal(predict_$fits, (1 - (1 - fac1)^10),
                  use.names = F, check.attributes = F)
   })
@@ -145,8 +152,8 @@ for(use_parallel in c(T, F)){
           rbind(result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
         expect_equal(
           as.vector(predict_$fits),
-          c(result$hazard_func(
-            tmp_state_vecs + result$fixed_effects * (g - 1))),
+          c(result$discrete_hazard_func(
+            tmp_state_vecs + result$fixed_effects * (g - 1), 1)),
           use.names = F, check.attributes = F)
       }
 
@@ -164,7 +171,8 @@ for(use_parallel in c(T, F)){
           result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
         expect_equal(
           unname(predict_$fits),
-          rep(result$hazard_func(c(c(g == 1, g == 2) %*% result$fixed_effects)), 60),
+          rep(result$discrete_hazard_func(
+            c(c(g == 1, g == 2) %*% result$fixed_effects), 1), 60),
                      use.names = F, check.attributes = F)
     }
   })
@@ -307,16 +315,21 @@ suppressMessages(fit <- ddhazard(
 # plot(fit)
 
 test_that("Terms from predict with exponential outcome are correct", {
-  pred <- predict(fit, new_data = pbc2_l, type = "term", tstart = "tstart", tstop = "tstop")
+  pred <- predict(
+    fit, new_data = pbc2_l, type = "term", tstart = "tstart", tstop = "tstop")
 
   expect_equal(dim(pred$terms), c(1 + 3600/100, nrow(pbc2_l), 4))
-  tmp_mat <- t(cbind(rep(1, nrow(pbc2_l)), pbc2_l$age, log(pbc2_l$bili), log(pbc2_l$protime)))
+  tmp_mat <- t(
+    cbind(rep(1, nrow(pbc2_l)), pbc2_l$age,
+          log(pbc2_l$bili), log(pbc2_l$protime)))
 
   for(i in 1:ncol(fit$state_vecs))
     expect_equal(pred$terms[, , i], fit$state_vecs[, i] %o% tmp_mat[i,])
 
   expect_message(
-    respone_pred <- predict(fit, new_data = pbc2_l, type = "response", tstart = "tstart", tstop = "tstop"),
+    respone_pred <- predict(
+      fit, new_data = pbc2_l, type = "response",
+      tstart = "tstart", tstop = "tstop"),
     "start and stop times \\('tstart' and 'tstop'\\) are in data. Prediction will match these periods")
 
   set.seed(192301258)
@@ -328,7 +341,7 @@ test_that("Terms from predict with exponential outcome are correct", {
 
   for(j in seq_along(test_rows)){
     tmp <- test_rows[j, ]
-    bins_breaks <- seq(0, 36, by = 1)
+    bins_breaks <- fit$times
     start <- findInterval(tmp$tstart, bins_breaks)
     stop  <- findInterval(tmp$tstop, bins_breaks, left.open = T)
     p_survival <- 1
@@ -336,11 +349,14 @@ test_that("Terms from predict with exponential outcome are correct", {
     t_min <- max(bins_breaks[start], tmp$tstart)
     for(i in start:stop){
       t_max <- min(bins_breaks[i + 1], tmp$tstop)
-      p_survival <- p_survival * exp(- exp(fit$state_vecs[i + 1, ] %*% unlist(tmp[, 1:4])) * (t_max - t_min))
+      p_survival <- p_survival * exp(
+        - exp(fit$state_vecs[i + 1, ] %*%
+                unlist(tmp[, 1:4])) * (t_max - t_min))
       t_min <- t_max
     }
 
-    expect_equal(unname(respone_pred$fits[rand_indicies[j]]), c(1 - p_survival), info = "")
+    expect_equal(unname(respone_pred$fits[rand_indicies[j]]),
+                 c(1 - p_survival))
   }
 })
 

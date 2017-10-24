@@ -410,6 +410,9 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP _rcpp_module_boot_dd_exponential();
+RcppExport SEXP _rcpp_module_boot_dd_logistic();
+
 static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &_dynamichazard_bigglm_regcf_rcpp, 6},
     {"_dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &_dynamichazard_ddhazard_fit_cpp, 38},
@@ -436,6 +439,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 5},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {"_dynamichazard_round_if_almost_eq", (DL_FUNC) &_dynamichazard_round_if_almost_eq, 3},
+    {"_rcpp_module_boot_dd_exponential", (DL_FUNC) &_rcpp_module_boot_dd_exponential, 0},
+    {"_rcpp_module_boot_dd_logistic", (DL_FUNC) &_rcpp_module_boot_dd_logistic, 0},
     {NULL, NULL, 0}
 };
 

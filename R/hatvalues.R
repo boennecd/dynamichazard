@@ -65,24 +65,23 @@ hatvalues.fahrmeier_94 <- function(model, ...){
     etas = design_mat_sub %*% coefs_cur
 
     # Compute the variances
-    vars <- mapply(model$var_func, eta = etas, tstart = tsta, tstop = tsto) + model$control$denom_term
+    vars <- mapply(
+        model$family$var, eta = etas, at_risk_length = tsto - tsta) +
+        model$control$denom_term
+    # V <- local({
+    #   var <- mapply(
+    #     model$family$var, eta = etas, at_risk_length = tsto - tsta) +
+    #     model$control$denom_term
+    #   mu_eta <- mapply(
+    #     model$family$mu_eta, eta = etas, at_risk_length = tsto - tsta) +
+    #     model$control$denom_term
+    #
+    #   model$weights[r_set] * mu_eta^2 / var
+    # })
 
     # Compute the hat values
-    # H <- solve(t_design_mat_sub %*% diag(vars) %*% design_mat_sub  + V_inv)
-    H <- solve(t_design_mat_sub %*% (vars * design_mat_sub) + V_inv)
-
-    # library(microbenchmark)
-    # microbenchmark(
-    #   t_design_mat_sub %*% diag(vars) %*% design_mat_sub,
-    #   t_design_mat_sub %*% (vars * design_mat_sub))
-
-    # H <- diag(design_mat_sub %*% H %*% t_design_mat_sub) * vars
-    H <- colSums(t_design_mat_sub * (H %*% t_design_mat_sub)) * vars
-
-    # library(microbenchmark)
-    # microbenchmark(
-    #   diag(design_mat_sub %*% H %*% t_design_mat_sub) * vars,
-    #   colSums(t_design_mat_sub * (H %*% t_design_mat_sub)) * vars)
+    H <- t_design_mat_sub %*% (vars * design_mat_sub) + V_inv
+    H <- colSums(t_design_mat_sub * solve(H, t_design_mat_sub)) * vars
 
     tmp <- cbind("hat_value" = H,
                  row_num = r_set,

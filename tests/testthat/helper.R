@@ -105,6 +105,8 @@ read_to_test_get_file_w_path <- function(file_name){
 }
 
 test_if_file_exists <- function(file_name, test_expr){
+  file_name <- gsub("(^.+)(\\.RDS)$", "\\1", file_name)
+
   if(!file.exists(file_w_path <- read_to_test_get_file_w_path(file_name))){
     cat("Skipped test as", sQuote(file_w_path), "does not exists\n")
   } else

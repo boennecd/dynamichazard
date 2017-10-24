@@ -5,13 +5,11 @@
 #include "particles.h"
 #include "dmvnrm.h"
 #include "PF_utils.h"
-#include "../utils.h"
+#include "../family.h"
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
 
 /*
   Each class has the following static functions:
@@ -23,11 +21,11 @@
       Returns the log density of of artificial prior gamma_t(alpha_t)
     get_artificial_prior_covar
       Returns the artificial prior covariance matrix at time t
-    log_p_prime
+    d_log_like
       Returns the first deriative of the log likelihood given outcome and the
       state for a given individual
-    log_p_2prime
-      Same as log_p_prime for the second derivative
+    dd_log_like
+      Same as d_log_like for the second derivative
 */
 
 /*
@@ -123,7 +121,10 @@ public:
             *(it_start++) /* increament here */, bin_start);
         }
 
-        my_log_like += outcome_dens::log_like_outcome(*it_eta, *it_is_event, at_risk_length);
+        auto trunc_eta = outcome_dens::truncate_eta(
+          *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
+        my_log_like += outcome_dens::log_like(
+          *it_is_event, trunc_eta, at_risk_length);
       }
     }
 
@@ -186,64 +187,16 @@ public:
   follows a first order random walk
 */
 
-class binary : public first_order_random_walk_base<binary> {
-public:
-  static const bool uses_at_risk_length = false;
-
-  static inline double log_p_prime(const double eta, const bool is_event, const double at_risk_length){
-    if(eta < 0){
-      double exp_eta = exp(eta);
-      return (exp_eta * (is_event - 1) + is_event) / (exp_eta + 1);
-    }
-
-    double exp_neg_eta = exp(-eta);
-    return ((is_event - 1) + is_event * exp_neg_eta) / (1 + exp_neg_eta);
-  }
-
-  static inline double log_p_2prime(const double eta, const bool is_event, const double at_risk_length){
-    if(eta < 0){
-      double exp_eta = exp(eta);
-      return - exp_eta / ((1 + exp_eta) * (1 + exp_eta));
-    }
-
-    double exp_neg_eta = exp(-eta);
-    return - exp_neg_eta / ((1 + exp_neg_eta) * (1 + exp_neg_eta));
-  }
-
-  static inline double log_like_outcome(const double eta, const bool is_event, const double at_risk_length){
-    double trunc_eta = MIN(MAX(eta, -15), 15);
-
-    return is_event ? log(1 / (1 + exp(-trunc_eta))) : log(1 - 1 / (1 + exp(-trunc_eta)));
-  }
-};
+class logistic_dens :
+  public first_order_random_walk_base<logistic>,
+  public logistic {};
 
 /*
   Class for exponentially distributed arrival times where state vectors follows
   a first order random walk
 */
-class exponential_dens : public first_order_random_walk_base<exponential_dens> {
-public:
-  static const bool uses_at_risk_length = true;
+class exponential_dens :
+  public first_order_random_walk_base<exponential>,
+  public exponential {};
 
-  static inline double log_p_prime(const double eta, const bool is_event, const double at_risk_length){
-    auto tmp = trunc_eta_exponential(is_event, eta, exp(eta), at_risk_length);
-
-    return is_event - tmp.exp_eta_trunc * at_risk_length;
-  }
-
-  static inline double log_p_2prime(const double eta, const bool is_event, const double at_risk_length){
-    auto tmp = trunc_eta_exponential(is_event, eta, exp(eta), at_risk_length);
-
-    return - tmp.exp_eta_trunc * at_risk_length;
-  }
-
-  static inline double log_like_outcome(const double eta, const bool is_event, const double at_risk_length){
-    auto tmp = trunc_eta_exponential(is_event, eta, exp(eta), at_risk_length);
-
-    return is_event * tmp.eta_trunc - tmp.exp_eta_trunc * at_risk_length;
-  }
-};
-
-#undef MIN
-#undef MAX
 #endif

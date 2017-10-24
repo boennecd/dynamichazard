@@ -1,5 +1,4 @@
 #include "../ddhazard.h"
-#include "../exp_model_funcs.h"
 #include "../arma_BLAS_LAPACK.h"
 #include "../utils.h"
 #include "../family.h"
@@ -90,8 +89,10 @@ void EKF_solver<T>::solve(){
     bin_tstop += delta_t;
 
     // E-step: Prediction step
-    p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
-    p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
+    p_dat.a_t_less_s.col(t - 1) =
+      p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
+    p_dat.V_t_less_s.slice(t - 1) =
+      p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
     if(p_dat.debug){
       std::stringstream str;
@@ -136,28 +137,35 @@ void EKF_solver<T>::solve(){
       }
 
       // E-step: scoring step: update values
-      inv_sympd(p_dat.V_t_t_s.slice(t) , V_t_less_s_inv + p_dat.U, p_dat.use_pinv,
-                "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
+      inv_sympd(
+        p_dat.V_t_t_s.slice(t) , V_t_less_s_inv + p_dat.U, p_dat.use_pinv,
+        "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
 
       //p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.col(t - 1) + p_dat.LR * p_dat.V_t_t_s.slice(t) * p_dat.u;
-      p_dat.a_t_t_s.col(t) = p_dat.V_t_t_s.slice(t) * (
+      p_dat.a_t_t_s.col(t) =
+        p_dat.V_t_t_s.slice(t) * (
         p_dat.U * i_a_t + update_term + (p_dat.LR * p_dat.u));
 
       if(p_dat.debug){
         my_print(p_dat,i_a_t, "a^(" + std::to_string(n_NR_it - 1L) + ")");
-        my_print(p_dat, p_dat.a_t_t_s.col(t), "a^(" +  std::to_string(n_NR_it) + ")");
+        my_print(p_dat, p_dat.a_t_t_s.col(t),
+                 "a^(" +  std::to_string(n_NR_it) + ")");
       }
 
-      if(!p_dat.is_mult_NR || arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8) < p_dat.NR_eps)
+      if(!p_dat.is_mult_NR || arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) /
+         (arma::norm(i_a_t, 2) + 1e-8) < p_dat.NR_eps)
         break;
 
       if(n_NR_it > p_dat.NR_it_max)
-        Rcpp::stop("Failed to convergece in NR method of filter step within " + std::to_string(p_dat.NR_it_max) + " iterations");
+        Rcpp::stop("Failed to convergece in NR method of filter step within " +
+          std::to_string(p_dat.NR_it_max) + " iterations");
 
       if(p_dat.debug){
         my_debug_logger(p_dat)
-          << "Did not converge in filter step in iteration " << n_NR_it << ". Convergence criteria value is  "
-          << arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) / (arma::norm(i_a_t, 2) + 1e-8);
+          << "Did not converge in filter step in iteration " << n_NR_it <<
+        ". Convergence criteria value is  "
+          << arma::norm(p_dat.a_t_t_s.col(t) - i_a_t, 2) /
+          (arma::norm(i_a_t, 2) + 1e-8);
       }
 
       i_a_t = p_dat.a_t_t_s.col(t);
@@ -183,10 +191,14 @@ void EKF_solver<T>::solve(){
 
       p_dat.K_d = p_dat.V_t_less_s.slice(t - 1) * (tmp_inv_mat * p_dat.z_dot * diagmat(p_dat.H_diag_inv));
       // Parenthesis is key here to avoid making a n x n matrix for large n
-      p_dat.K_d = (p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot  * diagmat(p_dat.H_diag_inv) * p_dat.z_dot.t()) * p_dat.K_d;
-      p_dat.K_d = p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) * p_dat.z_dot  * diagmat(p_dat.H_diag_inv) -  p_dat.K_d;
+      p_dat.K_d = (p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) *
+        p_dat.z_dot  * diagmat(p_dat.H_diag_inv) * p_dat.z_dot.t()) * p_dat.K_d;
+      p_dat.K_d = p_dat.F_ * p_dat.V_t_less_s.slice(t - 1) *
+        p_dat.z_dot  * diagmat(p_dat.H_diag_inv) -  p_dat.K_d;
 
-      p_dat.lag_one_cov.slice(t - 1) = (arma::eye<arma::mat>(size(p_dat.U)) - p_dat.K_d * p_dat.z_dot.t()) * p_dat.F_ * p_dat.V_t_t_s.slice(t - 1);
+      p_dat.lag_one_cov.slice(t - 1) =
+        (arma::eye<arma::mat>(size(p_dat.U)) - p_dat.K_d * p_dat.z_dot.t()) *
+        p_dat.F_ * p_dat.V_t_t_s.slice(t - 1);
     }
   }
 }

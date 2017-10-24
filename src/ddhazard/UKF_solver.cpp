@@ -1,5 +1,4 @@
 #include "../ddhazard.h"
-#include "../exp_model_funcs.h"
 #include "../utils.h"
 #include "../family.h"
 
@@ -207,7 +206,8 @@ void UKF_solver_New<T>::solve(){
     arma::vec y_bar(n_risk, arma::fill::zeros);
 
     arma::mat O =
-      (sigma_points.rows(*p_dat.span_current_cov).t() * p_dat.X.cols(r_set)).t();
+      (sigma_points.rows(*p_dat.span_current_cov).t() *
+      p_dat.X.cols(r_set)).t();
     O.each_col() += offsets(r_set);
 
     arma::ivec do_die =

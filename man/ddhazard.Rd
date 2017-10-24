@@ -12,7 +12,7 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 
 \item{data}{Data frame or environment containing the outcome and co-variates}
 
-\item{model}{\code{"logit"}, \code{"exp_clip_time_w_jump"}, \code{"exp_clip_time"} or \code{"exp_bin"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the three latter cases (see the ddhazard vignette for details of the methods)}
+\item{model}{\code{"logit"} or \code{"exponential"} for the logistic link function in the first case or for the continuous time model for the latter}
 
 \item{by}{Interval length of the bins in which parameters are fixed}
 
@@ -51,8 +51,8 @@ A list with class \code{fahrmeier_94}. The list contains:
 \item{\code{F_}}{Matrix with that map transition from one state vector to the next}
 \item{\code{method}}{Method used in the E-step}
 \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm}
-\item{\code{hazard_func}}{Hazard function}
-\item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
+\item{\code{family}}{Rcpp \code{\link{Module}} with C++ functions used for estimation given the \code{model} argument}
+\item{\code{hazard_func}}{The hazard function corresponding to the \code{model} argument}
 \item{\code{terms}}{the \code{\link{terms}} object used}
 \item{\code{has_fixed_intercept}}{\code{TRUE} if the model has a time-invariant intercept}
 \item{\code{xlev}}{a record of the levels of the factors used in fitting}

@@ -1,4 +1,4 @@
-context("Testing ddhazard function")
+context("Testing ddhazard w/ generic things and w/ the the EKF ")
 
 # Test on data set that is one of Farhmiers papers
 result <- ddhazard(
@@ -106,10 +106,7 @@ test_that("exponential model and logit moels hazzard functions differs", {
     id = head_neck_cancer$id, order = 1)
 
   expect_true(result_exp$model != result$model)
-  expect_true(toString(body(result_exp$hazard_func)) !=
-                toString(body(result$hazard_func)))
-  expect_true(toString(body(result_exp$hazard_first_deriv)) !=
-                toString(body(result$hazard_first_deriv)))
+  expect_true(result_exp$family$name() != result$family$name())
 })
 
 test_that("Testing names of output from ddhazard on head and neck cancer dataset", {

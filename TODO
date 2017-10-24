@@ -4,12 +4,12 @@ computation of lag one correlation"
 How to compute lag one covariance matrix with UKF
 Fix bug with particle filter and exponential model
 Replace `save_to_test` and `read_to_test` with `testthat::expect_known_output`
-Use `src/family.h` in `src/PF/densities.cpp`
-Use `src/family.h` when computing residuals
-Use `src/family.h` when approx hat values
-Use `src/family.h` in predict
 Update vignettes to reflect use the new setup with `src/family.h`
 Make functions for `ddhazard` and `PF_EM` where you only take one iteration
 and can provide your own structural matrices
 Refactor code to get rid of `ddhazard_data_EKF` and simplify code in
-`/srcddhazard_fit.cpp`
+`/src/ddhazard_fit.cpp`
+Change output class of `ddhazard`
+Check documentation after latest set of changes
+Fix incorrect computation of hatvalues
+Change the hatvalues section in ddhazard vignette

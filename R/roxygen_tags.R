@@ -1,5 +1,5 @@
 #' @useDynLib dynamichazard, .registration = TRUE
-#' @importFrom Rcpp sourceCpp
+#' @importFrom Rcpp sourceCpp loadModule
 #' @importFrom graphics abline axis lines par plot points
 #' @import stats
 #' @importFrom utils capture.output tail head object.size

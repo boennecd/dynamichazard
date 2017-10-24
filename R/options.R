@@ -1,3 +1,7 @@
+#' @importFrom Rcpp loadModule Module
+dd_exponential <- loadModule("dd_exponential")
+dd_logistic <- loadModule("dd_logistic")
+
 cur_load = if(exists(".onLoad()")) .onLoad else function() { NULL }
 .onLoad <- function(libname, pkgname){
   cur_load()

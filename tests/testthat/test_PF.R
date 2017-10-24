@@ -82,7 +82,7 @@ test_that("PF_smooth gives same results", {
     smoother = "Fearnhead_O_N",
     model = "logit")
 
-  test_func <- function(fit_quote, test_file_name){
+  test_func <- function(fit_quote, test_file_name, update = FALSE){
     get_func <- quote(
       function(x){
         cloud <- bquote(.(substitute(x)))
@@ -140,21 +140,19 @@ test_that("PF_smooth gives same results", {
       # Test versus previous computed values
 
       # Compute clouds means to test against
-      .file <- paste0(.(test_file_name), "_cloud_means")
-
-      # save_to_test(get_means(result), file_name = .file)
+      .file <- paste0(.(test_file_name), "_cloud_means.RDS")
       eval(substitute(
-        expect_equal(
-          get_means(result), read_to_test(.file), tolerance = 1.49e-08),
+        expect_known_value(
+          get_means(result), .file, tolerance = 1.49e-08, update = .(update)),
         list(.file = .file)), envir = environment())
 
       # This one may be skipped as the test file is large-ish
-      .file <- paste0("local_tests/", .(test_file_name))
-      # save_to_test(result, file_name = .file)
+      .file <- paste0("local_tests/", .(test_file_name), ".RDS")
       eval(substitute(
         test_if_file_exists(
           .file,
-          expect_equal(result, read_to_test(.file), tolerance = 1.49e-08)),
+          expect_known_value(
+            result, .file, tolerance = 1.49e-08, update = .(update))),
         list(.file = .file)), envir = environment())
     })
 

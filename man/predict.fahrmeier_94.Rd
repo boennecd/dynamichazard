@@ -19,7 +19,7 @@
 
 \item{tstop}{same as \code{tstart} for the stop argument}
 
-\item{use_parallel}{\code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{parallel} package}
+\item{use_parallel}{\code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{\link{mcmapply}}. Notice the limitation in the help page of \code{\link{mcmapply}}.}
 
 \item{sds}{\code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}}
 

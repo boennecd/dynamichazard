@@ -228,14 +228,16 @@ test_that("Gets previous results with Rossi", {
 
   pearson <- residuals(dd_fit, type = "pearson")
   pearson <- pearson[[1]][1:2]
-  expect_known_value(pearson, "Rossi_pearson.RDS", update = FALSE)
+  expect_known_value(pearson, "Rossi_pearson.RDS", update = FALSE,
+                     check.attributes = FALSE)
 })
 
 test_that("Get prevoius residuals with whas500", {
   skip_on_cran()
 
   if(interactive()){
-    diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+    diag_data_path <- paste0(
+      stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
   } else{
     diag_data_path <- "."
   }
@@ -257,5 +259,5 @@ test_that("Get prevoius residuals with whas500", {
   pearson <- pearson[[1]][1:2]
 
   # save_to_test(pearson, "whas_pearson")
-  expect_equal(pearson, read_to_test("whas_pearson"))
+  expect_equal(pearson, read_to_test("whas_pearson"), check.attributes = FALSE)
 })

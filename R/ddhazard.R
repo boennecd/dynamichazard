@@ -2,7 +2,7 @@
 #' @description  Function to fit dynamic discrete hazard models using state space models
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
 #' @param data Data frame or environment containing the outcome and co-variates
-#' @param model \code{"logit"}, \code{"exp_clip_time_w_jump"}, \code{"exp_clip_time"} or \code{"exp_bin"} for the discrete time function using the logistic link function in the first case or for the continuous time model with different estimation method in the three latter cases (see the ddhazard vignette for details of the methods)
+#' @param model \code{"logit"} or \code{"exponential"} for the logistic link function in the first case or for the continuous time model for the latter
 #' @param by Interval length of the bins in which parameters are fixed
 #' @param max_T End of the last interval. The last stop time with an event is selected if the parameter is omitted
 #' @param id Vector of ids for each row of the in the design matrix
@@ -61,13 +61,14 @@
 #' \item{\code{times}}{The interval borders}
 #' \item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved}
 #' \item{\code{data}}{The \code{data} argument if saved}
+#' \item{\code{weights}}{\code{weights} used in estimation if saved}
 #' \item{\code{id}}{ids used to match rows in \code{data} to individuals}
 #' \item{\code{order}}{Order of the random walk}
 #' \item{\code{F_}}{Matrix with that map transition from one state vector to the next}
 #' \item{\code{method}}{Method used in the E-step}
 #' \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm}
-#' \item{\code{hazard_func}}{Hazard function}
-#' \item{\code{hazard_first_deriv}}{First derivative of the hazard function with respect to the linear predictor}
+#' \item{\code{family}}{Rcpp \code{\link{Module}} with C++ functions used for estimation given the \code{model} argument}
+#' \item{\code{discrete_hazard_func}}{The hazard function corresponding to the \code{model} argument}
 #' \item{\code{terms}}{the \code{\link{terms}} object used}
 #' \item{\code{has_fixed_intercept}}{\code{TRUE} if the model has a time-invariant intercept}
 #' \item{\code{xlev}}{a record of the levels of the factors used in fitting}
@@ -352,33 +353,22 @@ ddhazard = function(formula, data,
     dimnames(result$Q_0) = dimnames(result$Q)
 
   if(model == "logit") {
-    res <- list(
-      hazard_func =  function(eta, ...){
-        1/(1 + exp(-eta))
-      },
-      hazard_first_deriv = function(beta, x_, ...){
-        exp_ = exp(beta %*% x_)
-        x_ * exp_ / (exp_ + 1)^2
-      },
-      var_func = function(eta, ...){
-        exp_ = exp(eta)
-        exp_ / (1 + exp_)^2
-      })
+    family <- Module("dd_logistic")
 
   } else if(model %in% exp_model_names){
-    res <- list(
-    hazard_func =  function(eta, tstart, tstop, ...){
-      1 - exp( - exp(eta) * (tstop - tstart))
-    },
-    hazard_first_deriv = function(beta, x_, tstart, tstop, ...){
-      eta <- beta %*% x_
-      x_ * (tstop - tstart) * exp(eta - exp(eta) * (tstop - tstart))
-    },
-    var_func = NULL)
+    family <- Module("dd_exponential")
+
   }
 
-  structure(c(
-    res, list(
+  discrete_hazard_func <- function(eta, at_risk_length){
+    out <-  mapply(family$log_like, outcome = FALSE,
+                   eta = eta, at_risk_length = at_risk_length)
+    1 - exp(out)
+  }
+
+  structure(list(
+    family = family,
+    discrete_hazard_func = discrete_hazard_func,
     formula = formula,
     call = match.call(),
     state_vecs = result$a_t_d_s,
@@ -392,6 +382,7 @@ ddhazard = function(formula, data,
     times = risk_set$event_times,
     risk_set = if(control$save_risk_set) risk_set else NULL,
     data = if(control$save_data) data else NULL,
+    weights = if(control$save_data) weights else NULL,
     id = if(control$save_data) id else NULL,
     order = order, F_ = .F,
     method = control$method,
@@ -400,7 +391,7 @@ ddhazard = function(formula, data,
     terms = X_Y$terms,
     has_fixed_intercept = X_Y$has_fixed_intercept,
     xlev = X_Y$xlev,
-    control = control),
+    control = control,
     LR = LR),
     "class" = "fahrmeier_94")
 }
