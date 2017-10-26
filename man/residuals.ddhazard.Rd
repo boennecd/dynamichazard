@@ -2,39 +2,39 @@
 % Please edit documentation in R/residuals.R
 \name{residuals.ddhazard}
 \alias{residuals.ddhazard}
-\title{Residuals for \code{\link{ddhazard}}}
+\title{Residuals method for \code{\link{ddhazard}}}
 \usage{
 \method{residuals}{ddhazard}(object, type = c("std_space_error",
   "space_error", "pearson", "raw"), data = NULL, ...)
 }
 \arguments{
-\item{object}{Result of \code{\link{ddhazard}} call}
+\item{object}{result of \code{\link{ddhazard}} call.}
 
-\item{type}{Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details}
+\item{type}{type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details.}
 
-\item{data}{Data frame with data for Pearson or raw residuals}
+\item{data}{\code{data.frame} with data for the Pearson or raw residuals.}
 
-\item{...}{Not used}
+\item{...}{not used.}
 }
 \description{
-Residuals function for the result of a \code{\link{ddhazard}} fit
+Residuals method for the result of a \code{\link{ddhazard}} call.
 }
 \section{Pearson and raw residuals}{
 
-Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"ddhazard_residual"} with the following elements
+Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"ddhazard_residual"} with the following elements.
 \describe{
-\item{\code{residuals}}{ List of residuals for each bin. Each element of the list contains a 2D array where the rows corresponds to the passed \code{data} and columns are the residuals (\code{residuals}), estimated probability of death (\code{p_est}), outcome (\code{Y}) and row number in the initial dataset (\code{row_num}). The \code{data} rows will only have a residuals in a given risk list if they are at risk in that risk set}
-\item{\code{type}}{ The type of residual}
+\item{\code{residuals}}{list of residuals for each bin. Each element of the list contains a 2D array where the rows corresponds to the passed \code{data} and columns are the residuals (\code{residuals}), estimated probability of death (\code{p_est}), outcome (\code{Y}) and row number in the initial data set (\code{row_num}). The \code{data} rows will only have a residuals in a given risk list if they are at risk in that risk set.}
+\item{\code{type}}{the type of residual.}
 }
 }
 
 \section{State space errors}{
 
-Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is non-standardized. Returns a list with class \code{"ddhazard_space_errors"} with the following elements
+Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is non-standardized. Returns a list with class. \code{"ddhazard_space_errors"} with the following elements:
 \describe{
-\item{\code{residuals}}{ 2D array with either standardized or non-standardized state space errors. The row are bins and the columns are the parameters in the regression }
-\item{\code{standardize}}{ \code{TRUE} if standardized state space errors }
-\item{\code{Covariances}}{ 3D array with the smoothed co-variance matrix for each set of the state space errors }
+\item{\code{residuals}}{2D array with either standardized or non-standardized state space errors. The row are bins and the columns are the parameters in the regression.}
+\item{\code{standardize}}{\code{TRUE} if standardized state space errors.}
+\item{\code{Covariances}}{3D array with the smoothed co-variance matrix for each set of the state space errors.}
 }
 }
 

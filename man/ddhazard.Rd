@@ -2,100 +2,100 @@
 % Please edit documentation in R/ddhazard.R
 \name{ddhazard}
 \alias{ddhazard}
-\title{Function to fit dynamic discrete hazard models}
+\title{Fitting dynamic hazard models}
 \usage{
 ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
   order = 1, weights, control = list(), verbose = F)
 }
 \arguments{
-\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
+\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
 
-\item{data}{Data frame or environment containing the outcome and co-variates}
+\item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
 
-\item{model}{\code{"logit"} or \code{"exponential"} for the logistic link function in the first case or for the continuous time model for the latter}
+\item{model}{\code{"logit"} or \code{"exponential"} for the logistic link function in the first case or for the continuous time model in the latter case.}
 
-\item{by}{Interval length of the bins in which parameters are fixed}
+\item{by}{interval length of the bins in which parameters are fixed.}
 
-\item{max_T}{End of the last interval. The last stop time with an event is selected if the parameter is omitted}
+\item{max_T}{end of the last interval inteval.}
 
-\item{id}{Vector of ids for each row of the in the design matrix}
+\item{id}{vector of ids for each row of the in the design matrix.}
 
-\item{a_0}{Vector \eqn{a_0} for the initial coefficient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}})}
+\item{a_0}{vector \eqn{a_0} for the initial coefficient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}}).}
 
-\item{Q_0}{Covariance matrix for the prior distribution}
+\item{Q_0}{covariance matrix for the prior distribution.}
 
-\item{Q}{Initial covariance matrix for the state equation}
+\item{Q}{initial covariance matrix for the state equation.}
 
-\item{order}{Order of the random walk}
+\item{order}{order of the random walk.}
 
-\item{weights}{Weights to use if e.g. a skewed sample is used}
+\item{weights}{weights to use if e.g. a skewed sample is used.}
 
-\item{control}{List of control variables (see the control section below)}
+\item{control}{list of control variables (see the control section below).}
 
-\item{verbose}{\code{TRUE} if you want status messages during execution}
+\item{verbose}{\code{TRUE} if you want status messages during execution.}
 }
 \value{
-A list with class \code{ddhazard}. The list contains:
+A list with class \code{ddhazard}. The list contains
 \describe{
-\item{\code{formula}}{The passed formula}
-\item{\code{call}}{The matched call}
-\item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin}
-\item{\code{state_vars}}{3D array with smoothed variance estimates for each state vector}
-\item{\code{lag_one_cov}}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF}
-\item{\code{n_risk}}{The number of observations in each interval}
-\item{\code{times}}{The interval borders}
-\item{\code{risk_set}}{The object from \code{\link{get_risk_obj}} if saved}
-\item{\code{data}}{The \code{data} argument if saved}
-\item{\code{weights}}{\code{weights} used in estimation if saved}
-\item{\code{id}}{ids used to match rows in \code{data} to individuals}
-\item{\code{order}}{Order of the random walk}
-\item{\code{F_}}{Matrix with that map transition from one state vector to the next}
-\item{\code{method}}{Method used in the E-step}
-\item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm}
-\item{\code{family}}{Rcpp \code{\link{Module}} with C++ functions used for estimation given the \code{model} argument}
-\item{\code{discrete_hazard_func}}{The hazard function corresponding to the \code{model} argument}
-\item{\code{terms}}{the \code{\link{terms}} object used}
-\item{\code{has_fixed_intercept}}{\code{TRUE} if the model has a time-invariant intercept}
-\item{\code{xlev}}{a record of the levels of the factors used in fitting}
+\item{\code{formula}}{the passed formula.}
+\item{\code{call}}{the matched call.}
+\item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin.}
+\item{\code{state_vars}}{3D array with smoothed variance estimates for each state vector.}
+\item{\code{lag_one_cov}}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF.}
+\item{\code{n_risk}}{the number of observations in each interval.}
+\item{\code{times}}{the interval borders.}
+\item{\code{risk_set}}{the object from \code{\link{get_risk_obj}} if saved.}
+\item{\code{data}}{the \code{data} argument if saved.}
+\item{\code{weights}}{\code{weights} used in estimation if saved.}
+\item{\code{id}}{ids used to match rows in \code{data} to individuals.}
+\item{\code{order}}{order of the random walk.}
+\item{\code{F_}}{matrix which map from one state vector to the next.}
+\item{\code{method}}{method used in the E-step.}
+\item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm.}
+\item{\code{family}}{Rcpp \code{\link{Module}} with C++ functions used for estimation given the \code{model} argument.}
+\item{\code{discrete_hazard_func}}{the hazard function corresponding to the \code{model} argument.}
+\item{\code{terms}}{the \code{\link{terms}} object used.}
+\item{\code{has_fixed_intercept}}{\code{TRUE} if the model has a time-invariant intercept.}
+\item{\code{xlev}}{a record of the levels of the factors used in fitting.}
 }
 }
 \description{
-Function to fit dynamic discrete hazard models using state space models
+Function to fit dynamic hazard models using state space models.
 }
 \details{
-This function can be used to estimate a binary regression where the regression parameters follows a given order random walk. The order is specified by the \code{order} argument. 1. and 2. order random walks is implemented. The regression parameters are updated at time \code{by}, 2\code{by}, ..., \code{max_T}. See the vignette 'ddhazard' for more details
+This function can be used to estimate survival models where the regression parameters follows a given order random walk. The order is specified by the \code{order} argument. 1. and 2. order random walks is implemented. The regression parameters are updated at time \code{by}, 2\code{by}, ..., \code{max_T}. See the \code{vignette("ddhazard", "dynamichazard")} for details.
 
-All filter methods needs a state covariance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is provided for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}} function). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a variance matrix for the first iteration \code{Q} is needed. It is recommended to select diagonal matrix with low values for the latter. The \code{Q}, \code{a_0} and optionally \code{Q_0} is estimated with an EM-algorithm
+All filter methods needs a state covariance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is used for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}}). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a covariance matrix for the first iteration \code{Q} is needed. The \code{Q} and \code{a_0} are estimated with an EM-algorithm.
 
-The model is specified through the \code{model} argument. See the \code{model} in the argument above for details. The logistic model is where outcomes are binned into the intervals. Be aware that there can be loss of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time varying co-variates. The the exponential models use an exponential model for the arrival times where there is no loss information due to binning
+The model is specified through the \code{model} argument. The logistic model is where outcomes are binned into the intervals. Be aware that there can be "loss" of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time-varying co-variates. The the exponential model use an exponential model for the arrival times where there is no "loss" information due to binning.
 
-It is recommended to see the Shiny app demo for this function by calling \code{\link{ddhazard_app}()}
+It is recommended to see the Shiny app demo for this function by calling \code{\link{ddhazard_app}()}.
 }
 \section{Control}{
 
-The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
+The \code{control} argument allows you to pass a \code{list} to select additional parameters. See \code{vignette("ddhazard", "dynamichazard")} for more information. Unspecified elements of the list will yield default values.
 \describe{
-\item{\code{method}}{Set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"}for the Unscented Kalman Filter, \code{"SMA"} for the sequential posterior mode approximation method or \code{"GMA"} for the global mode approximation method. \code{"EKF"} is the default}
-\item{\code{LR}}{Learning rate for the Extended Kalman filter}
-\item{\code{NR_eps}}{Tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step}
-\item{\code{alpha}}{Hyper parameter \eqn{\alpha} in the Unscented Kalman Filter}
-\item{\code{beta}}{Hyper parameter \eqn{\beta} in the Unscented Kalman Filter }
-\item{\code{kappa}}{Hyper parameter \eqn{\kappa} in the Unscented Kalman Filter}
-\item{\code{n_max}}{Maximum number of iteration in the EM-algorithm}
-\item{\code{eps}}{Tolerance parameter for the EM-algorithm}
-\item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}}
-\item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
-\item{\code{save_data}}{\code{TRUE} if you want to save the list \code{data} argument. It may be needed for later call to \code{residuals}, \code{plot} and \code{logLike}. Can be set to \code{FALSE} to save memory}
-\item{\code{denom_term}}{Term added to denominators in either the EKF or UKF}
-\item{\code{n_threads}}{Maximum number of threads to use.}
-\item{\code{fixed_parems_start}}{Starting value for fixed terms}
-\item{\code{fixed_terms_method}}{The method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively}
-\item{\code{Q_0_term_for_fixed_E_step}}{The diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step}
-\item{\code{eps_fixed_parems}}{Tolerance used in the M-step of the Fisher's Scoring Algorithm for the fixed effects}
-\item{\code{permu}}{\code{TRUE} if the risk sets should be permutated before computation. This is \code{TRUE} by default for posterior mode approximation method and \code{FALSE} for all other methods}
-\item{\code{posterior_version}}{The implementation version of the posterior approximation method. Either \code{"woodbury"} or \code{"cholesky"}}
-\item{\code{GMA_max_rep}}{Maximum number of iterations in the correction step if \code{method = 'GMA'}}
-\item{\code{GMA_NR_eps}}{Tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}}
+\item{\code{method}}{set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"} for the Unscented Kalman Filter, \code{"SMA"} for the sequential posterior mode approximation method or \code{"GMA"} for the global mode approximation method. \code{"EKF"} is the default.}
+\item{\code{LR}}{learning rate.}
+\item{\code{NR_eps}}{tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step.}
+\item{\code{alpha}}{hyper parameter \eqn{\alpha} in the unscented Kalman Filter.}
+\item{\code{beta}}{hyper parameter \eqn{\beta} in the unscented Kalman Filter.}
+\item{\code{kappa}}{hyper parameter \eqn{\kappa} in the unscented Kalman Filter.}
+\item{\code{n_max}}{maximum number of iteration in the EM-algorithm.}
+\item{\code{eps}}{tolerance parameter for the EM-algorithm.}
+\item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}.}
+\item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later calls to e.g., \code{residuals}, \code{plot} and \code{logLike}.}
+\item{\code{save_data}}{\code{TRUE} if you want to keep the \code{data} argument. It may be needed for later calls to e.g., \code{residuals}, \code{plot} and \code{logLike}.}
+\item{\code{denom_term}}{term added to denominators in either the EKF or UKF.}
+\item{\code{n_threads}}{maximum number of threads to use.}
+\item{\code{fixed_parems_start}}{starting value for fixed terms.}
+\item{\code{fixed_terms_method}}{the method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively.}
+\item{\code{Q_0_term_for_fixed_E_step}}{the diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step.}
+\item{\code{eps_fixed_parems}}{tolerance used in the M-step of the Fisher's scoring algorithm for the fixed effects.}
+\item{\code{permu}}{\code{TRUE} if the risk sets should be permutated before computation. This is \code{TRUE} by default for posterior mode approximation method and \code{FALSE} for all other methods.}
+\item{\code{posterior_version}}{the implementation version of the posterior approximation method. Either \code{"woodbury"} or \code{"cholesky"}.}
+\item{\code{GMA_max_rep}}{maximum number of iterations in the correction step if \code{method = 'GMA'}.}
+\item{\code{GMA_NR_eps}}{tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}.}
 }
 }
 

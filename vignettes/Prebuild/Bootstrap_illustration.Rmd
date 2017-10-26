@@ -39,7 +39,7 @@ library(boot)
 
 # Introduction
 
-This vignette will show how to bootstrap the confidence intervals of a `ddhazard` call. This vignette builds on the vignettes 'ddhazard' and 'Comparing methods for time varying logistic models'. Thus, it is recommended to read these first. You can get the version used to make this vignette by calling:`
+This vignette will show how to bootstrap the confidence intervals of a `ddhazard` object. It is recommended to read or skim `vignette("ddhazard", "dynamichazard")` first. You can get the version used to make this vignette by calling:
 
 ```{r echo=FALSE}
 tryCatch({
@@ -67,37 +67,26 @@ You can also get the latest version on CRAN by calling:
 install.packages("dynamichazard")
 ```
 
-# PBC data set
-We start by settings up the data set. We will use the pbc2 data set from the `survival` package as in the vignette 'Comparing methods for time varying logistic models':
-```{r}
-# PBC data set from survival with time variying covariates
-# Details of tmerge are not important in this scope. The code is included
-# to make you able to reproduce the results
-# See: https://cran.r-project.org/web/packages/survival/vignettes/timedep.pdf
-library(survival)
-temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))
-pbc2 <- tmerge(temp, temp, id=id, death = event(time, status))
-pbc2 <- tmerge(pbc2, pbcseq, id=id, albumin = tdc(day, albumin),
-               protime = tdc(day, protime), bili = tdc(day, bili))
-pbc2 <- pbc2[, c("id", "tstart", "tstop", "death", "sex", "edema", 
-                 "age", "albumin", "protime", "bili")]
-```
-
-Next, we fit the model as in the vignette 'Comparing methods for time varying logistic models':
+# TRACE
+We will use the `TRACE` data set from the `timreg` package. See `?TRACE` for details on the dataset and `?timereg::aalen` for a additive hazard model some of which are (kinda) like the one we fit next. The `TRACE` data set is used here to illustrate the bootstrap methods and not as example of how to analysis the data set. I have not looked at the details or model fits in detail. We fit the model as follows:
 
 ```{r}
 library(dynamichazard)
-dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
-                        log(albumin) + log(protime) + log(bili), pbc2,
-                   id = pbc2$id, by = 100, max_T = 3600, 
-                   Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
-                   control = list(save_risk_set = T, save_data = T, eps = .1))
+data(TRACE, package = "timereg")
+dd_fit <- ddhazard(
+  Surv(time, status == 9) ~ ddFixed_intercept() + 
+    ddFixed(age) + ddFixed(sex) + ddFixed(diabetes) + chf + vf,
+  TRACE, max_T = 7, by = .25, model = "exponential", 
+  Q_0 = diag(10, 2), Q = diag(.1^2, 2), 
+  control = list(eps = .001, n_max = 25))
 ```
 
-A plot of the estimates is given below. The dashed lines are 95% point-wise confidence intervals using the variances estimates from the Extended Kalman filter with smoothing:
+We use the exponential arrival times models with the EKF (the default) estimation method. A plot of the estimates is given below. The dashed lines are 95% point-wise confidence intervals using the variances estimates from the Extended Kalman filter with smoothing
 
 ```{r}
 plot(dd_fit)
+dd_fit$fixed_effects # the fixed effects estimates
+dd_fit$Q
 ```
 
 ## Sampling individuals
@@ -106,26 +95,24 @@ We can bootstrap the estimates in the model by using the `ddhazard_boot` functio
 
 ```{r}
 set.seed(7451)
-R <- 10000
-boot_out <- ddhazard_boot(
-  dd_fit, 
-  do_sample_weights = F,      # should re-sampeling be by weights or by
-                              # sampling each individual discreetly
-  R = R                       # Number of bootstrap samples
-  )
-
-# The list has the same structure and class as the list returned by boot::boot
-# Though, a few elements are added 
-class(boot_out)
+R <- 999 # number of bootstrap samples
+boot_out <- ddhazard_boot(dd_fit, R = R) 
 ```
 
-Above, we bootstrap the model by sampling the individuals. I.e. individuals will have weights of $0,1,2,\dots$ in the estimation. We can plot 95% confidence bounds from the bootstrap coefficients with the Percentile Bootstrap method as follows:
+The list has the same structure and class as the list returned by `boot::boot` a few other elements:
+
+```{r}
+class(boot_out)
+str(boot_out)
+```
+
+Above, we bootstrap the model by sampling the individuals. I.e. individuals will have weights of $0,1,2,\dots$ in the estimation. We can plot 95% confidence bounds from the bootstrap coefficients with the percentile bootstrap method as follows:
 
 ```{r}
 plot(dd_fit, ddhazard_boot = boot_out, level = 0.95)
 ```
 
-The completely black line is the original estimates, the dashed lines are 2.5% and 97.5% quantiles of the bootstrap coefficient taken at each point and the transparent black lines each represent a bootstrap estimate. Linear interpolation on the normal quantile scale is used if we do not have a quantile that match exactly. 
+The completely black line is the original estimates, the dashed lines are 5% and 95% quantiles of the bootstrap coefficient taken at each point and the transparent black lines each represent a bootstrap estimate. Linear interpolation on the normal quantile scale is used if we do not have a quantile that match exactly. 
 
 <!-- E.g. say we want a quantile $\alpha = .975$ as above but $(R + 1)\alpha$ is not an integer where $R$ is the number of bootstraps. Then we compute the quantile, $t^*_{(R+1)\alpha}$ by:
 
@@ -135,131 +122,57 @@ $$t^*_{((R+1)\alpha)} = t^*_{(k)}+\frac{\Phi^{-1}(\alpha)-\Phi^{-1}(\frac{k}{R+1
     
 where $\Phi^{-1}$ is the inverse cumulative distribution function of the standard normal distribution, $\lfloor \cdot \rfloor$ is the floor operator and $t_{(j)}^*$ is the $j$'th ordered value of the estimate at a given point in time -->
 
-## Strata
-You can provide a strata variable to perform stratified sampling with. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the data set). Further, you can use the `unique_id` argument to match the individual entries with the entries in `strata`. As an example, we stratify by the `age` at the start of the study period with the code below:
-
-```{r}
-# Individuals have different number of rows in the dataset
-xtabs(~xtabs(~pbc2$id))
-
-# Though all the individual have the same age for all periods
-# This age is the age at the start of the study
-unique(tapply(pbc2$age, pbc2$id, function(x) length(unique(x))))
-
-# Next, we find the age for each individual
-unique_id <- unique(pbc2$id)
-age <- sapply(unique_id, function(x) pbc2$age[pbc$id == x][1])
-summary(age)
-
-# We define a strata variable for those less than age 50
-is_less_than_50 <- age < 50
-
-# We perform stratified sampling over this variable as follows
-set.seed(101)
-boot_out_with_strata <- ddhazard_boot(
-  dd_fit,
-  unique_id = unique_id, 
-  strata = is_less_than_50,
-  R = R)
-
-plot(dd_fit, ddhazard_boot = boot_out_with_strata)
-```
-
-The above code is only provided for illustrative purposes. There is no reason to do stratified sampling over the age variable (as far as I gather). However, it may be useful if you have e.g. categorical variables in your model and want to ensure that each bootstrap sample has a given amount of observation in each category
-
-## Sampling weights
-We can also sample the weights. This is done as follows: within each stratum $j$ (e.g. males or females) let $r_j$ denote the number of individuals. Then we sample $r_j$ uniform variables $l_i\sim\text{Unif}(0,1)$ for $i = 1,\dots,r_j$ and normalize with a constant $c$ such that $\sum_{i=1}^{r_j} l_i/c = r_j$. The code below will sample the weights as described above:
-```{r}
-set.seed(401)
-boot_out_by_weights <- ddhazard_boot(
-  dd_fit, 
-  do_sample_weights = T, # changed
-  R = R)
-
-plot(dd_fit, ddhazard_boot = boot_out_by_weights)
-```
-
 ## Fixed effects
-Fixed effects (time invariant effects) can also be bootstrap to get confidence bounds. The fixed effects bootstrap coefficients are added as the last entries of the element `t` of the returned object by `ddhazard_boot`. As an example we will estimate a model below where `log(protime)` and the intercept are fixed
 
-```{r}
-dd_fit <- ddhazard(
-  Surv(tstart, tstop, death == 2) ~ 
-    ddFixed_intercept() + ddFixed(log(protime)) # changed to fixed
-    + age + edema + log(albumin) +  + log(bili), pbc2,
-  id = pbc2$id, by = 100, max_T = 3600, 
-  Q_0 = diag(rep(10000, 4)), Q = diag(rep(0.001, 4)),
-  control = list(
-    save_risk_set = T, save_data = T, eps = .1,
-    fixed_terms_method = "E_step")     # Fixed effects are 
-                                      # esimated in E-step
-  )
-```
-
-The time varying effects are plotted below:
-
-```{r}
-plot(dd_fit)
-```
-
-The fixed effects are estimated to:
+Recall that the fixed effects are estimated to be:
 
 ```{r}
 dd_fit$fixed_effects
 ```
 
-We can bootstrap the estimates with a call similar to those we made before:
+We can get confidence bounds for these with the `boot.ci` function from the `boot` library as shown below:
 
 ```{r}
-set.seed(9001)
-boot_out <- ddhazard_boot(
-  dd_fit, 
-  do_sample_weights = F,  # dont sample weights
-  R = R)
-
-# Plot time varying effects
-plot(dd_fit, ddhazard_boot = boot_out)
-```
-
-We then turn the bootstrap confidence intervals of the fixed effects. These can be computed with the `boot.ci` function from the `boot` library as shown below:
-
-```{r, fig.height=3.5}
 library(boot)
 
-# We start by printing confidence intervals for 
-colnames(boot_out$t)[ncol(boot_out$t) - 1]
+# print confidence intervals for 
+colnames(boot_out$t)[ncol(boot_out$t)] # this variable
+boot.ci(boot_out, index = ncol(boot_out$t) - 0, 
+        type = c("norm", "basic", "perc"))
+```
 
-boot.ci(boot_out, index = ncol(boot_out$t) - 1, 
-        # We specify the types of confidence intervals estimates here:
-        type = c(
-          "norm",  # A matrix of intervals calculated using the normal 
-                   # approximation.
-          "basic", # The intervals calculated using the basic bootstrap method.
-          "perc",  # The intervals calculated using the bootstrap percentile 
-                   # method.
-          "bca")   # The intervals calculated using the adjusted bootstrap 
-                   # percentile (BCa) method.
-        )
+## Strata
 
-# Then we print confidence intervals for 
-colnames(boot_out$t)[ncol(boot_out$t)]
-boot.ci(boot_out, index = ncol(boot_out$t) - 0, type = c(
-  "norm", "basic", "perc", "bca"))
+You can provide a strata variable to perform stratified sampling with. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the data set). You can use the `unique_id` argument to match the individual entries with the entries in `strata`. Though, this is not needed for this data set as we do not have time-varying coefficients. As an example, we stratify by the `chf` value below:
+
+```{r}
+# all observations are unique. I.e. all other individuals have one record. 
+# Otherwise we had to make a strata with an entry for each individual -- not 
+# each record in the data.frame used in the estimation
+sum(duplicated(TRACE$id))
+
+# use strafied bootstrap
+set.seed(101)
+boot_out_with_strata <- ddhazard_boot(
+  dd_fit, R = R, unique_id = TRACE$id, strata = TRACE$chf)
+
+plot(dd_fit, ddhazard_boot = boot_out_with_strata, level = 0.95)
 ```
 
 ## Boot envelope
 
-We may also want to get simultaneous confidence intervals. An easy way to get such confidence intervals is with the `envelope` function in the `boot` library. For instance, we can simultaneous confidence intervals for the `bili` covariate as follows: 
+We may also want to get simultaneous confidence intervals. An easy way to get such confidence intervals is with the `envelope` function in the `boot` library. For instance, we can simultaneous confidence intervals for the `vf` coefficient as follows: 
 
 ```{r}
 # Find the indices that correspondents to the log(bili) variable 
-is_bili_coef <- grep("^log\\(bili\\):", colnames(boot_out$t))
+is_vf <- grep("^vf:", colnames(boot_out$t))
 
 # Use the envelope
-envelopes <- envelope(boot_out, level = 0.95 ,index = is_bili_coef)
+envelopes <- envelope(boot_out, level = 0.95 ,index = is_vf)
 
 # Plot curves
-plot(dd_fit, cov_index = 4, ylim = c(-1, 2.5))
+plot(dd_fit, ylim = c(-1.5, 4), 
+     cov_index = grep("^vf$", colnames(dd_fit$state_vecs)))
 lines(dd_fit$times, envelopes$point[1, ], col = "blue")
 lines(dd_fit$times, envelopes$point[2, ], col = "blue")
 
@@ -267,7 +180,7 @@ lines(dd_fit$times, envelopes$overall[1, ], col = "red")
 lines(dd_fit$times, envelopes$overall[2, ], col = "red")
 ```
 
-The dashed black lines are from the smoothed covariance matrix. The blue lines are pointwise confidence intervals using the percentile method from the `envelope` function. The red line is the simultaneous confidence bounds using the envelope method in equation (4.17) of [@davison97]. The latter curves are formed by creating an envelope over each of the pointwise confidence intervals and hence the name
+The dashed black lines are from the smoothed covariance matrix. The blue lines are pointwise confidence intervals using the percentile method from the `envelope` function. The red line is the simultaneous confidence bounds using the envelope method in equation (4.17) of [@davison97]. The latter curves are formed by creating an envelope over each of the pointwise confidence intervals and hence the name.
 
 # How good is the coverage
 ```{r, echo=FALSE, include=FALSE}
@@ -278,14 +191,14 @@ gc()
 
 In this section, we will test the coverage of the pointwise confidence intervals using the smoothed covariance matrix and the bootstrap percentile method. We will test these in a simulation study where: 
 
- * The coefficients are drifting deterministically with a some normal noise added to them
- * Individuals have time invariant covariates
+ * The coefficients are drifting deterministically with a some normal noise added to them.
+ * Individuals have time invariant covariates.
 
 The simulation is to mimic a situation where we assume that the coefficients are not random (as the model implies) but we do not know the shape of the coefficient curves across time. We setup the parameters for the experiment below and plot the coefficients without noise:
 
 ```{r, echo=FALSE, eval=FALSE}
-if(requireNamespace(dichromat, quietly = T, warn.conflicts = F) && 
-   requireNamespace(colorspace, quietly = T, warn.conflicts = F)
+if(requireNamespace("dichromat", quietly = T, warn.conflicts = F) && 
+   requireNamespace("colorspace", quietly = T, warn.conflicts = F)
    ){
   cols <- dichromat::colorschemes$Categorical.12[(1:5)*2]
   
@@ -423,9 +336,8 @@ We are now able to estimate the model as follows:
 fit_expression <- expression({
   fit <- ddhazard(Surv(tstart, tstop, dies) ~ -1 + x1 + x2 + x3 + x4 + x5,
                 data = sim_list$sims, id = sim_list$sims$id, max_T = tmax, 
-                by = 1, Q_0 = diag(1e4, 5), Q = diag(1, 5),
-                a_0 = rep(0, 5), control = list(
-                  denom_term = 1e-3, eps = .01, criteria = "delta_likeli"))
+                by = 1, Q_0 = diag(1e4, 5), Q = diag(.1, 5),
+                a_0 = rep(0, 5), control = list(eps = .001, n_max = 25))
 })
 eval(fit_expression)
 
@@ -440,10 +352,8 @@ for(i in 1:5){
 The plots shows the estimated coefficient with 95% pointwise confidence intervals from the smoothed covariance matrix. The dots are the actual values (i.e. those with noise added to them). A bootstrap estimate of the confidence bounds is made below:
 
 ```{R, plot_2x3=TRUE}
-# Bootstrap with resampling individuals
-boot_out <- ddhazard_boot(fit,  
-                          do_sample_weights = F, R = 999, 
-                          do_stratify_with_event = F)
+# bootstrap with resampling individuals
+boot_out <- ddhazard_boot(fit, R = 999)
 
 # Plot estimated confidence bounds
 for(i in 1:5){

@@ -2,51 +2,51 @@
 % Please edit documentation in R/predict.R
 \name{predict.ddhazard}
 \alias{predict.ddhazard}
-\title{Predict function for the result of \code{\link{ddhazard}}}
+\title{Predict method for \code{\link{ddhazard}}}
 \usage{
 \method{predict}{ddhazard}(object, new_data, type = c("response", "term"),
   tstart = "start", tstop = "stop", use_parallel = F, sds = F,
   max_threads = getOption("ddhazard_max_threads"), ...)
 }
 \arguments{
-\item{object}{Result of a \code{\link{ddhazard}} call}
+\item{object}{result of a \code{\link{ddhazard}} call.}
 
-\item{new_data}{New data to base predictions on}
+\item{new_data}{new data to base predictions on.}
 
-\item{type}{Either \code{"response"} for predicted probability of death or \code{"term"} for predicted terms in the linear predictor}
+\item{type}{either \code{"response"} for predicted probability of death or \code{"term"} for predicted terms in the linear predictor.}
 
-\item{tstart}{Name of the start time column in \code{new_data}. It must corresponds to tstart used in the \code{\link[survival]{Surv}(tstart, tstop, event)} in the \code{formula} passed to \code{\link{ddhazard}}}
+\item{tstart}{name of the start time column in \code{new_data}. It must be on the same time scale as the tstart used in the \code{\link[survival]{Surv}(tstart, tstop, event)} in the \code{formula} passed to \code{\link{ddhazard}}.}
 
-\item{tstop}{same as \code{tstart} for the stop argument}
+\item{tstop}{same as \code{tstart} for the stop argument.}
 
 \item{use_parallel}{\code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{\link{mcmapply}}. Notice the limitation in the help page of \code{\link{mcmapply}}.}
 
-\item{sds}{\code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}}
+\item{sds}{\code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}.}
 
-\item{max_threads}{Maximum number of threads to use. -1 if it should be determined by a call to \code{\link[parallel]{detectCores}}}
+\item{max_threads}{maximum number of threads to use. -1 if it should be determined by a call to \code{\link[parallel]{detectCores}}.}
 
-\item{...}{Not used}
+\item{...}{not used.}
 }
 \description{
-Predict function for the result of \code{\link{ddhazard}}
+Predict method for \code{\link{ddhazard}}.
 }
 \section{Term}{
 
-The result of \code{type = "term"} is a list with the following elements
+The result with \code{type = "term"} is a list with the following elements
 \describe{
-\item{\code{terms} }{ Is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms}
-\item{\code{sds} }{ Similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices}
-\item{\code{fixed_terms} }{ Vector of the fixed effect terms for each observation}
+\item{\code{terms}}{is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms.}
+\item{\code{sds}}{similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices.}
+\item{\code{fixed_terms}}{vector of the fixed effect terms for each observation.}
 }
 }
 
 \section{Response}{
 
-The result of \code{type = "response"} is a list with the elements below. The function check if there are columns in \code{new_data} which's names match \code{tstart} and \code{tstop}. If not, then each row in new data will get a predicted probability of dying in every bin.
+The result with \code{type = "response"} is a list with the elements below. The function check if there are columns in \code{new_data} which's names match \code{tstart} and \code{tstop}. If not, then each row in new data will get a predicted probability of dying in every bin.
 \describe{
-\item{\code{fits} }{ Fitted probability of dying }
-\item{\code{istart} }{ Vector with the index of the first bin the elements in \code{fits} is in }
-\item{\code{istop} }{ Vector with the index of the last bin the elements in \code{fits} is in}
+\item{\code{fits}}{fitted probability of dying.}
+\item{\code{istart}}{vector with the index of the first bin the elements in \code{fits} is in.}
+\item{\code{istop}}{vector with the index of the last bin the elements in \code{fits} is in.}
 }
 }
 

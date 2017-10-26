@@ -11,24 +11,24 @@ PF_effective_sample_size <- function(object){
 #' @description Method to estimate the hyper parameters with an EM algorithm.
 #'
 #' @inheritParams ddhazard
-#' @param trace Argument to get progress information. Zero will yield no info an larger integer values will yield incrementally more information.
-#' @param model Either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.
+#' @param trace argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.
+#' @param model either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.
 #'
 #' @details
-#' See the particle_filter vignette for details.
+#' See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 #'
 #' @section Control:
-#' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
+#' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See \code{vignette("Particle_filtering", "dynamichazard")} for details. Unspecified elements of the list will yield default values.
 #' \describe{
-#' \item{\code{method}}{Method for forward, backward and smoothing filter. See the particle_filter vignette for details.}
-#' \item{\code{smoother}}{Smoother to use. See the particle_filter vignette for details.}
-#' \item{\code{N_fw_n_bw}}{Number of particles to use in forward and backward filter.}
-#' \item{\code{N_first}}{Number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
-#' \item{\code{N_smooth}}{Number of particles to use in particle smoother.}
-#' \item{\code{eps}}{Convergence threhshold in EM method.}
-#' \item{\code{n_max}}{Maximum number of iterations of the EM algorithm.}
-#' \item{\code{n_threads}}{Maximum number threads to use in the computations.}
-#' \item{\code{forward_backward_ESS_threshold}}{Required effective sample size to not re-sample in the particle filters.}
+#' \item{\code{method}}{method for forward, backward and smoothing filter.}
+#' \item{\code{smoother}}{smoother to use.}
+#' \item{\code{N_fw_n_bw}}{number of particles to use in forward and backward filter.}
+#' \item{\code{N_first}}{number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
+#' \item{\code{N_smooth}}{number of particles to use in particle smoother.}
+#' \item{\code{eps}}{convergence threhshold in EM method.}
+#' \item{\code{n_max}}{maximum number of iterations of the EM algorithm.}
+#' \item{\code{n_threads}}{maximum number threads to use in the computations.}
+#' \item{\code{forward_backward_ESS_threshold}}{required effective sample size to not re-sample in the particle filters.}
 #' \item{\code{seed}}{seed to set at the start of every EM iteration.}
 #'}
 #'

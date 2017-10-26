@@ -1,7 +1,7 @@
 Package: dynamichazard
 Type: Package
 Title: Dynamic Hazard Models using State Space Models
-Version: 0.4.0
+Version: 0.5.0
 Authors@R: c(person("Benjamin", "Christoffersen", 
                     email = "boennecd@gmail.com", 
                     role = c("cre", "aut")),

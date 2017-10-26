@@ -8,16 +8,16 @@
   time_indices = 1:nrow(x$state_vecs), digits = getOption("digits"), ...)
 }
 \arguments{
-\item{x}{Object returned from \code{\link{ddhazard}}}
+\item{x}{object returned from \code{\link{ddhazard}}.}
 
-\item{var_indices}{Variable indices to print for time-varying effects}
+\item{var_indices}{variable indices to print for time-varying effects.}
 
-\item{time_indices}{Time intervals to print for time-varying effects}
+\item{time_indices}{time intervals to print for time-varying effects.}
 
-\item{digits}{Number of digits to print}
+\item{digits}{number of digits to print.}
 
-\item{...}{Not used}
+\item{...}{not used.}
 }
 \description{
-The \code{sd} printed for time-varying effects are point-wise standard deviations from either the filter with smoothing
+The \code{sd} printed for time-varying effects are point-wise standard deviations from the smoothed covariance matrices.
 }

@@ -2,12 +2,12 @@
 % Please edit documentation in R/loglike.R
 \name{logLik.PF_clouds}
 \alias{logLik.PF_clouds}
-\title{Log-Likelihood of a \code{PF_clouds} object}
+\title{Log likelihood of a \code{PF_clouds} object}
 \usage{
 \method{logLik}{PF_clouds}(object, ...)
 }
 \arguments{
-\item{object}{an object of class \code{PF_clouds}}
+\item{object}{an object of class \code{PF_clouds}.}
 
 \item{...}{unused.}
 }
@@ -15,5 +15,5 @@
 The log-likelihood value given the observed data and set of parameter used when simulating the clouds.
 }
 \description{
-Computes the log-likelihood using the forward filter clouds. See the particle_filter vignette for details.
+Computes the log likelihood using the forward filter clouds. See the \code{vignette("Particle_filtering", "dynamichazard")} for details.
 }

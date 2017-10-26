@@ -2,45 +2,45 @@
 % Please edit documentation in R/static_glm.R
 \name{get_survival_case_weights_and_data}
 \alias{get_survival_case_weights_and_data}
-\title{Static GLM fit for survival models}
+\title{Get \code{data.frame} for discrete time survival models}
 \usage{
 get_survival_case_weights_and_data(formula, data, by, max_T, id, init_weights,
   risk_obj, use_weights = T, is_for_discrete_model = T, c_outcome = "Y",
   c_weights = "weights", c_end_t = "t")
 }
 \arguments{
-\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
+\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
 
-\item{data}{Data frame or environment containing the outcome and co-variates}
+\item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
 
-\item{by}{Length of each intervals that cases are binned into}
+\item{by}{interval length of the bins in which parameters are fixed.}
 
-\item{max_T}{The end time of the last bin}
+\item{max_T}{end of the last interval inteval.}
 
-\item{id}{The id for each row in \code{data}. This is important when variables are time varying}
+\item{id}{vector of ids for each row of the in the design matrix.}
 
-\item{init_weights}{Weights for the rows \code{data}. Useful with skewed sampling and will be used when computing the final weights}
+\item{init_weights}{weights for the rows in \code{data}. Useful e.g., with skewed sampling.}
 
-\item{risk_obj}{A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations}
+\item{risk_obj}{a pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations.}
 
-\item{use_weights}{\code{TRUE} if weights should be used. See details}
+\item{use_weights}{\code{TRUE} if weights should be used. See details.}
 
-\item{is_for_discrete_model}{\code{TRUE} if the model is for a discrete hazard model like the logistic model. Affects how deaths are included when individuals have time varying coefficients}
+\item{is_for_discrete_model}{\code{TRUE} if the model is for a discrete hazard model is used like the logistic model.}
 
-\item{c_outcome, c_weights, c_end_t}{Alternative names to use for the added columns described in the return section. Useful if you already have a column named \code{Y}, \code{t} or \code{weights}}
+\item{c_outcome, c_weights, c_end_t}{alternative names to use for the added columns described in the return section. Useful if you already have a column named \code{Y}, \code{t} or \code{weights}.}
 }
 \value{
-Returns a data frame with the design matrix from the formula where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}
+Returns a \code{data.frame} where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}.
 }
 \description{
-Function used to get design matrix and weights for a static fit for survivals models where observations are binned into intervals
+Function used to get \code{data.frame} with weights for a static fit for survivals.
 }
 \details{
-This function is used to get the data frame for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For example, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Next, consider an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the co-variates and \code{weights} is the weights for the regression. Consider another individual who does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 3)}
+This function is used to get the \code{data.frame} for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For example, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Next, consider an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the co-variates and \code{weights} is the weights for the regression. Consider another individual who does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 3)}.
 
-This function use similar logic as the \code{ddhazard} for individuals with time varying co-variates (see the vignette "ddhazard" for details)
+This function use similar logic as the \code{ddhazard} for individuals with time varying co-variates (see the vignette \code{vignette("ddhazard", "dynamichazard")} for details).
 
-If \code{use_weights = FALSE} then the two individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. al (2016) (see reference)
+If \code{use_weights = FALSE} then the two previously mentioned individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. al (2016).
 }
 \references{
 Tutz, Gerhard, and Matthias Schmid. \emph{Nonparametric Modeling and Smooth Effects}. Modeling Discrete Time-to-Event Data. Springer International Publishing, 2016. 105-127.

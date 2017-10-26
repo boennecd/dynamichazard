@@ -33,5 +33,5 @@
 List with quantile levels and mean curve.
 }
 \description{
-Plots mean curve along with quantiles through time for the forward, backward or smoothed cloud.
+Plots mean curve along with quantiles through time for the forward, backward or smoothed clouds.
 }

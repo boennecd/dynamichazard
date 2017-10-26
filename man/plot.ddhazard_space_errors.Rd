@@ -9,22 +9,22 @@
   x_tick_loc = NA, x_tick_mark = NA, xlab = "Time", ...)
 }
 \arguments{
-\item{x}{Result of \code{\link[=residuals.ddhazard]{residuals}} for state space errors}
+\item{x}{result of \code{\link[=residuals.ddhazard]{residuals}} with a `type` argument which yields state space errors.}
 
-\item{mod}{The \code{\link{ddhazard}} result used in the \code{\link[=residuals.ddhazard]{residuals}} call}
+\item{mod}{the \code{\link{ddhazard}} result used in the \code{\link[=residuals.ddhazard]{residuals}} call.}
 
-\item{cov_index}{The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standardized}
+\item{cov_index}{the indices of state vector errors to plot. Default is to use all.}
 
-\item{t_index}{The bin indices to plot. Default is to use all bins}
+\item{t_index}{the bin indices to plot. Default is to use all bins.}
 
 \item{p_cex}{\code{cex} argument for the points}
 
-\item{pch, ylab, xlab}{Arguments to override defaults set in the function}
+\item{pch, ylab, xlab}{arguments to override defaults set in the function.}
 
-\item{x_tick_loc, x_tick_mark}{\code{at} and \code{labels} arguments passed to \code{axis}}
+\item{x_tick_loc, x_tick_mark}{\code{at} and \code{labels} arguments passed to \code{axis}.}
 
-\item{...}{Arguments passed to plot}
+\item{...}{arguments passed to \code{\link{plot.default}}.}
 }
 \description{
-Plot function for state space errors from \code{\link{ddhazard}} fit
+Plot function for state space errors from \code{\link{ddhazard}} fit.
 }

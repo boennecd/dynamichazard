@@ -8,16 +8,16 @@
   index = 1L:ncol(boot.out$t), ...)
 }
 \arguments{
-\item{x}{Returned object from a \code{\link{ddhazard_boot}} call}
+\item{x}{returned object from a \code{\link{ddhazard_boot}} call.}
 
-\item{digits}{The number of digits to be printed in the summary statistics}
+\item{digits}{the number of digits to be printed in the summary statistics.}
 
-\item{index}{Indices indicating for which elements of the bootstrap output summary statistics are required}
+\item{index}{indices indicating for which elements of the bootstrap output summary statistics are required.}
 
-\item{...}{Not used}
+\item{...}{not used.}
 }
 \description{
-Arguments have the same effects as for an object from a \code{\link{boot}} call. See \code{\link[=print.boot]{print}}
+Arguments have the same effects as for an object from a \code{\link{boot}} call. See \code{\link[=print.boot]{print}}.
 }
 \seealso{
 \code{\link{ddhazard_boot}}

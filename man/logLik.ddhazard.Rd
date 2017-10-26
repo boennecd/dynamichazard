@@ -2,7 +2,7 @@
 % Please edit documentation in R/loglike.R
 \name{logLik.ddhazard}
 \alias{logLik.ddhazard}
-\title{Log likelihood of smoothed state vector of a \code{ddhazard} object}
+\title{Log likelihood of mean path of \code{\link{ddhazard}} object}
 \usage{
 \method{logLik}{ddhazard}(object, data = NULL, id, ...)
 }
@@ -19,5 +19,5 @@
 Computes the log likelihood of (a potentially new) data set given the estimated:
 \deqn{E_{\theta}(\alpha_1 | y_{1:d}), E_{\theta}(\alpha_{2} | y_{1:d}), ..., E_{\theta}(\alpha_{d} | y_{1:d})}
 
-from the \code{ddhazard} class object. Note that this is not the log likelihood of the observed data given the outcome.
+of the \code{ddhazard} object. Note that this is not the log likelihood of the observed data given the outcome.
 }

@@ -1,21 +1,23 @@
-#' Get the risk set at each bin over an equal distance grid
-#' @param Y Vector of outcome variable
-#' @param by Length of each bin
-#' @param max_T Last observed time
-#' @param id Vector with ids where entries match with outcomes \code{Y}
-#' @param is_for_discrete_model \code{TRUE}/\code{FALSE} for whether the model outcome is discrete. For example, a logit model is discrete whereas what is coined an exponential model in this package is a dynamic model
-#' @param n_threads Set to a value greater than one to use \code{\link{mclapply}} to find the risk object
-#' @param min_chunk Minimum chunk size of ids to use when parallel version is used.
+#' @title Risk set on an equidistant distant grid
+#' @description Get the risk set at each bin over an equidistant distant grid.
+#'
+#' @param Y vector of outcome variable.
+#' @param by length of each bin.
+#' @param max_T last observed time.
+#' @param id vector with ids where entries match with outcomes \code{Y}.
+#' @param is_for_discrete_model \code{TRUE} if the model outcome is discrete. For example, a logit model is discrete whereas what is is referred to as the exponential model in this package is a dynamic model.
+#' @param n_threads set to a value greater than one to use \code{\link{mclapply}} to find the risk object.
+#' @param min_chunk minimum chunk size of ids to use when parallel version is used.
 #'
 #' @return
-#' A list with the following elements:
+#' a list with the following elements
 #' \describe{
-#' \item{\code{risk_sets}}{List of lists with one for each bin. Each of the sub lists have indices that corresponds to the entries of \code{Y} that are at risk in the bin }
-#' \item{\code{min_start}}{ Start time of the first bin }
-#' \item{\code{I_len}}{ Length of each bin }
-#' \item{\code{d}}{ Number of bins }
-#' \item{\code{is_event_in}}{ Indices for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins }
-#' \item{\code{is_for_discrete_model}}{ Value of \code{is_for_discrete_model} argument}
+#' \item{\code{risk_sets}}{list of lists with one for each bin. Each of the sub lists have indices that corresponds to the entries of \code{Y} that are at risk in the bin.}
+#' \item{\code{min_start}}{start time of the first bin.}
+#' \item{\code{I_len}}{length of each bin.}
+#' \item{\code{d}}{number of bins.}
+#' \item{\code{is_event_in}}{indices for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins.}
+#' \item{\code{is_for_discrete_model}}{value of \code{is_for_discrete_model} argument.}
 #' }
 #' @export
 get_risk_obj = function(
@@ -44,8 +46,8 @@ get_risk_obj = function(
   if(!isTRUE(all.equal(event_times_in[tmp_n], max_T)))
     event_times_in <- c(event_times_in, event_times_in[tmp_n] + by)
 
-  # Set exactly to boundaries where values are very close and difference is
-  # likely do to floating point operations
+  # set exactly to boundaries where values are very close and difference is
+  # likely due to floating point operations
   start_order = order(start, method = "radix") - 1L
   start <-
     round_if_almost_eq(start, start_order, c(min_start, event_times_in))
@@ -61,19 +63,19 @@ get_risk_obj = function(
         max_T = max_T,
         order_by_id_and_rev_start = order_by_id_and_rev_start, id = id,
         is_for_discrete_model = is_for_discrete_model,
-        min_start = min_start, event_times_in = event_times_in)
-    )
+        min_start = min_start, event_times_in = event_times_in))
   }
 
-  # Find number of tasks
+  # find number of tasks
   n_tasks <- min(ceiling(n_ids / min_chunk), 4 * n_threads)
   tasks <- split(unique_ids, cut(seq_along(unique_ids), n_tasks, labels = FALSE))
 
-  # Find subset of risk sets
+  # find subset of risk sets
   out <- parallel::mclapply(tasks, function(ids) {
     my_indx <- which(id %in% ids) - 1L
     my_start_order <- intersect(start_order, my_indx)
-    my_order_by_id_and_rev_start <- intersect(order_by_id_and_rev_start,  my_indx)
+    my_order_by_id_and_rev_start <-
+      intersect(order_by_id_and_rev_start,  my_indx)
 
     local_res <- get_risk_obj_rcpp(
       start = start, stop = stop, event = event,
@@ -87,7 +89,7 @@ get_risk_obj = function(
     local_res
     })
 
-  # Combine results
+  # combine results
   final <- out[[1]]
   final$risk_sets <-
     lapply(seq_along(event_times_in), function(i){
@@ -105,7 +107,7 @@ get_risk_obj = function(
 }
 
 ######
-# Get expression to permutate data and risk set
+# get expression to permutate data and risk set
 
 permu_txt <-
   "for(i in seq_along(data))
@@ -168,7 +170,7 @@ get_permu_data_rev_exp <- function(data, risk_obj, weights){
 }
 
 ######
-# Get expression to sort data and risk set by start and stop time
+# get expression to sort data and risk set by start and stop time
 
 get_order_data_exp <- function(data, risk_obj, weights){
   data <- deparse(substitute(data))

@@ -8,29 +8,29 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
   control = list(), trace = 0)
 }
 \arguments{
-\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
+\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
 
-\item{data}{Data frame or environment containing the outcome and co-variates}
+\item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
 
-\item{model}{Either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.}
+\item{model}{either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.}
 
-\item{by}{Interval length of the bins in which parameters are fixed}
+\item{by}{interval length of the bins in which parameters are fixed.}
 
-\item{max_T}{End of the last interval. The last stop time with an event is selected if the parameter is omitted}
+\item{max_T}{end of the last interval inteval.}
 
-\item{id}{Vector of ids for each row of the in the design matrix}
+\item{id}{vector of ids for each row of the in the design matrix.}
 
-\item{a_0}{Vector \eqn{a_0} for the initial coefficient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}})}
+\item{a_0}{vector \eqn{a_0} for the initial coefficient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}}).}
 
-\item{Q_0}{Covariance matrix for the prior distribution}
+\item{Q_0}{covariance matrix for the prior distribution.}
 
-\item{Q}{Initial covariance matrix for the state equation}
+\item{Q}{initial covariance matrix for the state equation.}
 
-\item{order}{Order of the random walk}
+\item{order}{order of the random walk.}
 
-\item{control}{List of control variables (see the control section below)}
+\item{control}{list of control variables (see the control section below).}
 
-\item{trace}{Argument to get progress information. Zero will yield no info an larger integer values will yield incrementally more information.}
+\item{trace}{argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.}
 }
 \value{
 An object of class \code{PF_EM}.
@@ -39,21 +39,21 @@ An object of class \code{PF_EM}.
 Method to estimate the hyper parameters with an EM algorithm.
 }
 \details{
-See the particle_filter vignette for details.
+See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 }
 \section{Control}{
 
-The \code{control} argument allows you to pass a \code{list} to select additional parameters. See the vignette 'ddhazard' for more information on hyper parameters. Unspecified elements of the list will yield default values
+The \code{control} argument allows you to pass a \code{list} to select additional parameters. See \code{vignette("Particle_filtering", "dynamichazard")} for details. Unspecified elements of the list will yield default values.
 \describe{
-\item{\code{method}}{Method for forward, backward and smoothing filter. See the particle_filter vignette for details.}
-\item{\code{smoother}}{Smoother to use. See the particle_filter vignette for details.}
-\item{\code{N_fw_n_bw}}{Number of particles to use in forward and backward filter.}
-\item{\code{N_first}}{Number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
-\item{\code{N_smooth}}{Number of particles to use in particle smoother.}
-\item{\code{eps}}{Convergence threhshold in EM method.}
-\item{\code{n_max}}{Maximum number of iterations of the EM algorithm.}
-\item{\code{n_threads}}{Maximum number threads to use in the computations.}
-\item{\code{forward_backward_ESS_threshold}}{Required effective sample size to not re-sample in the particle filters.}
+\item{\code{method}}{method for forward, backward and smoothing filter.}
+\item{\code{smoother}}{smoother to use.}
+\item{\code{N_fw_n_bw}}{number of particles to use in forward and backward filter.}
+\item{\code{N_first}}{number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
+\item{\code{N_smooth}}{number of particles to use in particle smoother.}
+\item{\code{eps}}{convergence threhshold in EM method.}
+\item{\code{n_max}}{maximum number of iterations of the EM algorithm.}
+\item{\code{n_threads}}{maximum number threads to use in the computations.}
+\item{\code{forward_backward_ESS_threshold}}{required effective sample size to not re-sample in the particle filters.}
 \item{\code{seed}}{seed to set at the start of every EM iteration.}
 }
 }

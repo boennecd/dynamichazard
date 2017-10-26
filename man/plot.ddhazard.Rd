@@ -2,36 +2,36 @@
 % Please edit documentation in R/plot.R
 \name{plot.ddhazard}
 \alias{plot.ddhazard}
-\title{Plots for \code{\link{ddhazard}}}
+\title{Plots for \code{\link{ddhazard}} object}
 \usage{
 \method{plot}{ddhazard}(x, xlab = "Time", ylab = "Hazard", type = "cov",
   plot_type = "l", cov_index, ylim, col = "black", add = F,
   do_alter_mfcol = T, level = 0.95, ddhazard_boot, ...)
 }
 \arguments{
-\item{x}{Result of \code{\link{ddhazard}} call}
+\item{x}{result of \code{\link{ddhazard}} call.}
 
-\item{xlab, ylab, ylim, col}{Arguments to override defaults set in the function}
+\item{xlab, ylab, ylim, col}{arguments to override defaults set in the function.}
 
-\item{type}{Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters}
+\item{type}{type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters.}
 
-\item{plot_type}{The \code{type} argument passed to \code{plot}}
+\item{plot_type}{the \code{type} argument passed to \code{plot}.}
 
-\item{cov_index}{The index (indices) of the state space parameter(s) to plot}
+\item{cov_index}{the index (indices) of the state space parameter(s) to plot.}
 
-\item{add}{\code{FALSE} if you want to make a new plot}
+\item{add}{\code{FALSE} if you want to make a new plot.}
 
-\item{do_alter_mfcol}{\code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element}
+\item{do_alter_mfcol}{\code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element.}
 
-\item{level}{Level (fraction) for confidence bounds}
+\item{level}{level (fraction) for confidence bounds.}
 
-\item{ddhazard_boot}{Object from a \code{\link{ddhazard_boot}} call which confidence bounds will be based on and where bootstrap samples will be printed with a transparent color}
+\item{ddhazard_boot}{object from a \code{\link{ddhazard_boot}} call which confidence bounds will be based on and where bootstrap samples will be printed with a transparent color.}
 
-\item{...}{Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}}
+\item{...}{arguments passed to \code{\link{plot.default}} or \code{lines} depending on the value of \code{add}.}
 }
 \description{
-Plot to illustrate the estimate state space variables from a \code{\link{ddhazard}} fit
+Plot of estimated state space variables from a \code{\link{ddhazard}} fit.
 }
 \details{
-Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
+Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit.
 }

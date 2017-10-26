@@ -48,9 +48,9 @@ knitr::opts_knit$set(warning = F, message = F)
 \newcommand{\mat}[1]{\mathbf{#1}}
 
 # Introduction
-This note will compare the dynamic logistic model in `dynamichazard` with others methods within the package and methods from the `timereg` and `mgcv` packages. Further this note will serve as an illustration of how to use the `ddhazard` function for the logistic model. We will use the `pbc2` dataset from the `survival` package. The motivation is that the `pbc2` data set is commonly used in survival analysis for illustrations. It is suggested first to read the ddhazard vignette to get an introduction to the models and estimation methods in this package.
+In this vignette, we compare the dynamic logistic model in `dynamichazard` with others methods within the package and methods from the `timereg` and `mgcv` packages. Further this note will serve as an illustration of how to use the `ddhazard` function for the logistic model. We will use the `pbc2` dataset from the `survival` package. The motivation is that the `pbc2` data set is commonly used in survival analysis for illustrations. It is suggested to first read  or skim `vignette("ddhazard", "dynamichazard")` to get an introduction to the models and estimation methods in this package.
 
-The note is structured as follows: First, we cover the `pbc2` data set. Then we estimate two non-dynamic logistic regression models using `glm`. This is followed by a fit using a Generalized Additive model with the `gam` function in the `mgcv` package. Next, we will estimate a cox-model with time varying parameters using the `timecox` function in the `timereg` package. Finally, we will end by illustrating the methods in this package for time varying parameters in a logistic regression.
+The note is structured as follows: First, we cover the `pbc2` data set. Then we estimate two static (non-dynamic) logistic regression models using `glm`. This is followed by a fit using a Generalized Additive model with the `gam` function in the `mgcv` package. Next, we will estimate a cox-model with time varying parameters using the `timecox` function in the `timereg` package. Finally, we will end by illustrating the methods in this package for time varying parameters in a logistic regression.
 
 You can install the version of the library used to make this vignettes from github with the `devtools` library as follows:
 
@@ -109,7 +109,7 @@ The data set is in the usual start and stop time format used in survival analysi
 (ex <- pbc2[pbc2$id == 282, ])
 ```
 
-She (`sex` is `f`) has had four laboratory values measured at time `r ex$tstart[1]`, `r ex$tstart[2]`, `r ex$tstart[3]` and `r ex$tstart[4]`. Further, she does not die as the `death` column is zero in the final row 
+She (`sex` is `f`) has had four laboratory values measured at time `r ex$tstart[1]`, `r ex$tstart[2]`, `r ex$tstart[3]` and `r ex$tstart[4]`. Further, she does not die as the `death` column is zero in the final row.
 
 # Logistic model
 We can start of with a simple logistic model where we ignore `tstart` and `tstop` variable using `glm`:
@@ -121,7 +121,7 @@ glm_simple <- glm(death == 2 ~ age + edema + log(albumin) + log(protime) +
 glm_simple$coefficients
 ```
 
-Though, we want to account for the fact that say the second the row of individual 282 has a length of `r (ex$tstop - ex$tstart)[2]` days (`r ex$tstop[2]` minus `r ex$tstart[2]`) while the fourth row has a length `r (ex$tstop - ex$tstart)[4]` days. A way to incorporate this information is to bin the observations into periods of a given length. Example of such binning is found in [@tutz16] and [@shumway01]
+Though, we want to account for the fact that say the second the row of individual 282 has a length of `r (ex$tstop - ex$tstart)[2]` days (`r ex$tstop[2]` minus `r ex$tstart[2]`) while the fourth row has a length `r (ex$tstop - ex$tstart)[4]` days. A way to incorporate this information is to bin the observations into periods of a given length. Example of such binning is found in [@tutz16] and [@shumway01].
 
 Say that we set the bin interval lengths to 100 days. Then the first row for `id = 282`  will yield three observation: one from 0 to 100, one from 100 to 200 and one from 200 to 300 (since we know that she survives beyond time 300). That is, she survives from time 0 to time 100, survives from time 100 to time 200 etc. We can make such a data frame with the `get_survival_case_weights_and_data` function in this package:
 
@@ -134,7 +134,7 @@ pbc2_big_frame <- get_survival_case_weights_and_data(
 pbc2_big_frame <- pbc2_big_frame$X
 ```
 
-The code above uses the `Surv` function on the left hand side of the formula. The `Surv` function needs a start time, a stop time and a outcome. The right hand side is as before. The `by` argument specifies the interval length (here 100 days) and the `max_T` specify the last time we want to include. We will comment on `use_weights` argument shortly. As an example, we can look at individual `282` in the new data frame:
+The code above uses the `Surv` function on the left hand side of the formula. The `Surv` function needs a start time, a stop time and an outcome. The right hand side is as before. The `by` argument specifies the interval length (here 100 days) and the `max_T` specify the last time we want to include. We will comment on `use_weights` argument shortly. As an example, we can look at individual `282` in the new data frame:
 
 ```{r}
 pbc2_big_frame[pbc2_big_frame$id == 282, ]
@@ -200,7 +200,7 @@ static_glm_fit <- static_glm(
 all.equal(static_glm_fit$coefficients, glm_fit_big$coefficients)
 ```
 
-For details, see the help file by typing `?static_glm`
+For details, see the help file by typing `?static_glm`.
 
 # Generalized Additive Models using mgvc
 The first method we will compare with is Generalized Additive Models (GAM) by using the `gam` function in the `mgcv` package. The model we fit is of the form: 
@@ -214,7 +214,7 @@ $$\begin{aligned}
     + \vec{\gamma}_{\text{biil}}\vec{f}_{\text{bili}}(t_i)\log b_{it}
 \end{aligned}$$
     
-where $\pi_{it}$ is the probability that the $i$'th individual dies of cancer, $t$ is the stop time of the bin and $a_i$, $e_i$, $al_{it}$, $p_{it}$ and $b_{it}$ are respectively the $i$'th individual's age, edema, albumin, protime and bilirunbin. The extra subscript $t$ is added to refer to the level of the covariate in the bin at time $t$. It is important to notice that we will use the same bins as shown previously. In particular, we will use the `pbc2_big_frame` data frame from before. $\vec{f}_{\cdot}$ is a smooth function. We will use cubic regression splines with knots spread evenly through the covariate values. We fit the model with the following call:
+where $\pi_{it}$ is the probability that the $i$'th individual dies of cancer, $t$ is the stop time of the bin and $a_i$, $e_i$, $al_{it}$, $p_{it}$ and $b_{it}$ are respectively the $i$'th individual's age, edema, albumin, protime and bilirunbin. The extra subscript $t$ is added to refer to the level of the covariate in the bin at time $t$. It is important to notice that we will use the same bins as shown previously. In particular, we will use the `pbc2_big_frame` data frame from before. $\vec{f}_{\cdot}$ are a smooth function. We will use cubic regression splines with knots spread evenly through the covariate values. We fit the model with the following call:
 
 ```{r message=FALSE}
 library(mgcv, quietly = T)
@@ -231,7 +231,7 @@ spline_fit <- gam(
 
 The above estimates the GAM model where the likelihood is penalized by a L2 norm for each of the spline functions. The tuning parameters are chosen by generalized cross validation.<!-- As suggested in the help menu in regard to  the number of knots `k`, *"... [the] exact choice of k is not generally critical: it should be chosen to be large enough that you are reasonably sure of having enough degrees of freedom to represent the underlying ‘truth’ reasonably well, but small enough to maintain reasonable computational efficiency"*. See `?gam` or `?choose.k` for details --> Below are plots of the estimates:
 
-```{r, fig.height = 4.5, mySettings=FALSE, fig.cap="Plots of estimated effects in the GAM model. The effective degree of freedom is noted in the parentheses on the y axis and is computed given the number knots and final tuning parameter for spline function. For instance, `s(t,2.43):age` means that the effective degrees of freedom for `age` is `2.43`"}
+```{r, fig.height = 4.5, mySettings=FALSE, fig.cap="Plots of estimated effects in the GAM model. The effective degree of freedom is noted in the parentheses on the y-axis and is computed given the number knots and final tuning parameter for spline function. For instance, `s(t,2.43):age` means that the effective degrees of freedom for `age` is `2.43`."}
 plot(spline_fit, scale = 0, page = 1, rug = F)
 ```
 
@@ -254,7 +254,7 @@ Another method we can try is a time varying effects Cox model. We will use the C
 
 $$\lambda(t) = \lambda_0(t) \exp \left( \vec{x}\vec{\beta}(t) \right)$$
 
-where each element of $\vec{\beta}(t)$ is estimated recursively with an update equation. The update equation is simplified through a first order Taylor expansion of the score function and by adding a smoothness by using weighting depending on time changes with a uniform continuous kernel. For details see [@martinussen07] in chapter 6. The estimation method differs from other alternatives in `R` that use splines for the time varying effects. The baseline is $\lambda_0(t)=\exp(\alpha_0(t))$ where $\alpha_0(t)$ is estimated in a similar to way to $\vec{\beta}(t)$. Below we estimate a model similar to the previously fitted models
+where each element of $\vec{\beta}(t)$ is estimated recursively with an update equation. The update equation is simplified through a first order Taylor expansion of the score function and by adding a smoothness by using weighting depending on time changes with a uniform continuous kernel. For details see [@martinussen07] in chapter 6. The estimation method differs from other alternatives in `R` that use splines for the time varying effects. The baseline is $\lambda_0(t)=\exp(\alpha_0(t))$ where $\alpha_0(t)$ is estimated in a similar to way to $\vec{\beta}(t)$. Below we estimate a model similar to the previously fitted models.
 
 We set the last observation time (`max.time`) lower than in the previous model as there are issues with convergence if we do not. For the same reason we specify the effect of `log(protime)` to be constant (non-time varying). The cumulated coefficients $B(t) = \int_0^t \beta(t) dt$ are plotted to inspect the fitted model. Thus, a constant effect should be roughly linear.
 
@@ -270,7 +270,7 @@ par(mfcol = c(3, 2))
 plot(cox_fit)
 ```
 
-The `timecox` packages provides two test for whether the coefficient is time invariant or not:
+The `timecox` packages provides two test for whether the coefficient is time varying or not:
 
 ```{r, message=FALSE, fig.height = 6, mySettings=FALSE}
 summary(cox_fit)
@@ -298,7 +298,7 @@ for(c_name in colnames(diffs))
 <!-- which seems to be of minor use. Question: Include this or just make draw conclusions based on the previous plot? What they do in the book is only to infer on the cumulative regression functions -->
   
 # Dynamic hazard model
-In this section, we will cover the dynamic hazard model with the logistic link function that is implemented in this package. The model is estimated with an EM-algorithm which are from [@fahrmeir94] and [@fahrmeir92] when an Extended Kalman Filter is used in the E-step are. Firstly, we will briefly cover the model. See the ddhazard vignette for a more detailed explanation of the models. Secondly, we will turn to different ways of designing the model and fitting the model. The idea is that we discretize the outcomes into $1,2,\dots,d$ bins. In each bin, we observe whether the individual dies or survives. The state space model we are applying is of the form: 
+In this section, we will cover the dynamic hazard model with the logistic link function that is implemented in this package. The model is estimated with an EM-algorithm which are from [@fahrmeir94] and [@fahrmeir92] when an Extended Kalman Filter is used in the E-step are. Firstly, we will briefly cover the model. See `vignette("ddhazard", "dynamichazard")` for a more detailed explanation of the models. Secondly, we will turn to different ways of designing the model and fitting the model. The idea is that we discretize the outcomes into $1,2,\dots,d$ bins. In each bin, we observe whether the individual dies or survives. The state space model we are applying is of the form: 
 $$\begin{array}{ll}
     	\vec{y}_t = \vec{z}_t(\vec{\alpha}_t) + \vec{\epsilon}_t \qquad & 
          	\vec{\epsilon}_t \sim (\vec{0}, \text{Var}(\vec{y}_t | \vec{\alpha}_t))  \\
@@ -325,12 +325,12 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
 plot(dd_fit)
 ```
 
-We start by estimating the model. The arguments `Q_0` and `Q` corresponds to the co-variance matrix at time zero and the co-variance matrix in the state equation. `Q_0` will remain fixed while `Q` is the starting value in the first iteration of the EM algorithm after which we update $\mathbf{Q}$.
+The arguments `Q_0` and `Q` corresponds to the co-variance matrix at time zero and the co-variance matrix in the state equation. `Q_0` will remain fixed while `Q` is the starting value in the first iteration of the EM algorithm after which we update $\mathbf{Q}$.
 
 Next, we plot the coefficient. That is, we plot the predicted latent variables $\vec{\alpha}_0,\dots,\vec{\alpha}_d$. Notice that the predicted coefficient are close to the estimates we saw previously for the GAM model.
 
 ## Extra iteration in the correction step
-Another idea is to take extra iterations in the correction step of the EKF. The motivation is that this step has the form of a Newton Rapshon algorithm as pointed out in [@fahrmeir92] and [@fahrmeir94]. For more details see the ddhazard vignette.  Below, we estimate the model with potentially extra steps in the correction step. 
+Another idea is to take extra iterations in the correction step of the EKF. The motivation is that this step has the form of a Newton Rapshon algorithm as pointed out in [@fahrmeir92] and [@fahrmeir94]. Below, we estimate the model with potentially extra steps in the correction step. 
 
 ```{r, fig.height = 4.5, mySettings=FALSE}
 # Pre-computed sds of covariates
@@ -354,7 +354,8 @@ plot(dd_fit)
 First, we run the code with the `NR_eps` element of the list passed to the `control` argument set to something that is finite. The value is the threshold for the relative change of in the state vector in correction step of the EKF. We end the code above by creating plots of the new estimates.
 
 ## Estimation with the Unscented Kalman Filter
-Another option is to perform the E-step using an unscented Kalman filter. This is done below. We start by setting the initial co-variance matrix $\mat{Q}$ large:
+Another option is to perform the E-step using an unscented Kalman filter. This is done below. We start by setting the initial co-variance matrix $\mat{Q}_0$ to have large values in the diagonal elements:
+
 ```{r, fig.height = 4.5, mySettings=FALSE}
 dd_fit_UKF <- ddhazard(
   Surv(tstart, tstop, death == 2) ~ age +
@@ -415,7 +416,7 @@ This is comparable to the fits from the EKF and GAM model. The main points here 
 
 ## Estimation with rank-one posterior modes approximation
 
-Another method is to use the sequential rank-one approximation of the posterior posterior modes. This is done below. First, we estimate the model with the Extended Kalman filter and next with rank-one posterior modes approximation. We estimate both for comparison:
+Another method is to use the sequential rank-one approximation of the posterior posterior modes. This is done below. First, we estimate the model with the Extended Kalman filter and then we estimate the model with the rank-one posterior modes approximation method. We estimate both for comparison.
 
 ```{r, echo = FALSE}
 set.seed(7686280) # <-- Data is permuated so we set a seed
@@ -436,11 +437,10 @@ dd_fit_SMA <-
     Surv(tstart, tstop, death == 2) ~ age + edema +
      log(albumin) + log(protime) + log(bili), pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-     
+    Q_0 = diag(100, 6), Q = diag(0.01, 6),
     control = list(
        method = "SMA", # change estimation method 
-       eps = 0.001),
-    Q_0 = diag(100, 6), Q = diag(0.01, 6))
+       eps = 0.001))
 ```
 
 Next, we plot the two sets of predicted coefficients:
@@ -490,7 +490,7 @@ dd_fit$fixed_effects
 
 ## Second order random walk
 
-We will end by fitting a second order random walk to model where only `log(bili)` effect is time-varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have a time-varying coefficient. We will comparer estimates with the Extended Kalman Filter and the sequential rank-one approximation. First, we make the two estimations:
+We will end by fitting a second order random walk to model where only the `log(bili)` effect is time-varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have a time-varying coefficient. We will comparer estimates with the Extended Kalman Filter and the sequential rank-one approximation. First, we make the two estimations:
 
 ```{r, echo = FALSE}
 set.seed(3434439) # <-- Data is permuated so we set a seed
@@ -505,22 +505,25 @@ form <- Surv(tstart, tstop, death == 2) ~
 
 # Fit models
 dd_fit_EKF <- 
-  ddhazard(form, pbc2,
-           id = pbc2$id, by = 100, max_T = 3600,
-           order = 2,          # <-- second order
-           Q_0 = diag(100, 2), # <-- needs more elements
-           Q = 0.01, 
-           control = list(eps = .001))
+  ddhazard(form, 
+          pbc2, id = pbc2$id, by = 100, max_T = 3600, 
+ 
+          order = 2,          # <-- second order
+          Q_0 = diag(100, 2),   # <-- needs more elements
+          Q = .00001,         # <-- decreased
+          
+          control = list(eps = .001))
 
 dd_fit_post <- 
-  ddhazard(form, pbc2,
-           id = pbc2$id, by = 100, max_T = 3600, 
-           order = 2,
-           Q_0 = diag(100, 2), Q = 0.01, 
-           control = list(method = "SMA", eps = .001))
+  ddhazard(form, 
+          pbc2, id = pbc2$id, by = 100, max_T = 3600, 
+          order = 2,          
+          Q_0 = diag(100, 2), 
+          Q = .00001,         
+          control = list(eps = .001, method = "SMA"))
 ```
 
-The fixed effects estimates are not to far from each other:
+We have to decrease the starting value of `Q` in the above to get the methods to converge. The fixed effects estimates are not to far from each other:
 
 ```{r}
 rbind(
@@ -542,7 +545,7 @@ We see that the predicted curve is more smooth as expected with a second order r
 Question: Is this note too long now or should I also show how to compute residuals and predict outcomes? What about doing a K-fold cross validation here? -->
 
 # Summary
-We have estimated a model using Generalized additive models with the `mgcv` package and a time-varying Cox model with the `timereg` package. Further, we have illustrated how the `ddhazard` function in the `dynamichazard` package can be used. In particular, we have used the logit link function and showed how to estimate with fixed effects, taking extra Newton Raphson steps in the correction step, fitting second order random walks and using the Unscented Kalman filter in the E-step. All the fits have been comparable with the Generalized Additive model.
+We have estimated a model using Generalized additive models with the `mgcv` package and a time-varying Cox model with the `timereg` package. Further, we have illustrated how the `ddhazard` function in the `dynamichazard` package can be used. All the fits have been comparable with the Generalized Additive model.
 
 An unaddressed question is why you should this package. Some of the advantageous of the state space model here are among other: 
 

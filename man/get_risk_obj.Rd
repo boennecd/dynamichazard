@@ -2,37 +2,37 @@
 % Please edit documentation in R/risk_obj.R
 \name{get_risk_obj}
 \alias{get_risk_obj}
-\title{Get the risk set at each bin over an equal distance grid}
+\title{Risk set on an equidistant distant grid}
 \usage{
 get_risk_obj(Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
   min_chunk = 5000)
 }
 \arguments{
-\item{Y}{Vector of outcome variable}
+\item{Y}{vector of outcome variable.}
 
-\item{by}{Length of each bin}
+\item{by}{length of each bin.}
 
-\item{max_T}{Last observed time}
+\item{max_T}{last observed time.}
 
-\item{id}{Vector with ids where entries match with outcomes \code{Y}}
+\item{id}{vector with ids where entries match with outcomes \code{Y}.}
 
-\item{is_for_discrete_model}{\code{TRUE}/\code{FALSE} for whether the model outcome is discrete. For example, a logit model is discrete whereas what is coined an exponential model in this package is a dynamic model}
+\item{is_for_discrete_model}{\code{TRUE} if the model outcome is discrete. For example, a logit model is discrete whereas what is is referred to as the exponential model in this package is a dynamic model.}
 
-\item{n_threads}{Set to a value greater than one to use \code{\link{mclapply}} to find the risk object}
+\item{n_threads}{set to a value greater than one to use \code{\link{mclapply}} to find the risk object.}
 
-\item{min_chunk}{Minimum chunk size of ids to use when parallel version is used.}
+\item{min_chunk}{minimum chunk size of ids to use when parallel version is used.}
 }
 \value{
-A list with the following elements:
+a list with the following elements
 \describe{
-\item{\code{risk_sets}}{List of lists with one for each bin. Each of the sub lists have indices that corresponds to the entries of \code{Y} that are at risk in the bin }
-\item{\code{min_start}}{ Start time of the first bin }
-\item{\code{I_len}}{ Length of each bin }
-\item{\code{d}}{ Number of bins }
-\item{\code{is_event_in}}{ Indices for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins }
-\item{\code{is_for_discrete_model}}{ Value of \code{is_for_discrete_model} argument}
+\item{\code{risk_sets}}{list of lists with one for each bin. Each of the sub lists have indices that corresponds to the entries of \code{Y} that are at risk in the bin.}
+\item{\code{min_start}}{start time of the first bin.}
+\item{\code{I_len}}{length of each bin.}
+\item{\code{d}}{number of bins.}
+\item{\code{is_event_in}}{indices for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins.}
+\item{\code{is_for_discrete_model}}{value of \code{is_for_discrete_model} argument.}
 }
 }
 \description{
-Get the risk set at each bin over an equal distance grid
+Get the risk set at each bin over an equidistant distant grid.
 }

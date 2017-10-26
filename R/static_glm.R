@@ -1,25 +1,22 @@
-#' @title Static GLM fit for survival models
-#' @description Function used to get design matrix and weights for a static fit for survivals models where observations are binned into intervals
+#' @title Get \code{data.frame} for discrete time survival models
+#' @description Function used to get \code{data.frame} with weights for a static fit for survivals.
 #'
-#' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}
-#' @param data Data frame or environment containing the outcome and co-variates
-#' @param by Length of each intervals that cases are binned into
-#' @param max_T The end time of the last bin
-#' @param id The id for each row in \code{data}. This is important when variables are time varying
-#' @param init_weights Weights for the rows \code{data}. Useful with skewed sampling and will be used when computing the final weights
-#' @param risk_obj A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations
-#' @param use_weights \code{TRUE} if weights should be used. See details
-#' @param is_for_discrete_model \code{TRUE} if the model is for a discrete hazard model like the logistic model. Affects how deaths are included when individuals have time varying coefficients
-#' @param c_outcome,c_weights,c_end_t Alternative names to use for the added columns described in the return section. Useful if you already have a column named \code{Y}, \code{t} or \code{weights}
+#' @inheritParams ddhazard
+#' @param init_weights weights for the rows in \code{data}. Useful e.g., with skewed sampling.
+#' @param risk_obj a pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations.
+#' @param use_weights \code{TRUE} if weights should be used. See details.
+#' @param is_for_discrete_model \code{TRUE} if the model is for a discrete hazard model is used like the logistic model.
+#' @param c_outcome,c_weights,c_end_t alternative names to use for the added columns described in the return section. Useful if you already have a column named \code{Y}, \code{t} or \code{weights}.
+#'
 #' @details
-#' This function is used to get the data frame for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For example, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Next, consider an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the co-variates and \code{weights} is the weights for the regression. Consider another individual who does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 3)}
+#' This function is used to get the \code{data.frame} for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For example, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Next, consider an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the co-variates and \code{weights} is the weights for the regression. Consider another individual who does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 3)}.
 #'
-#' This function use similar logic as the \code{ddhazard} for individuals with time varying co-variates (see the vignette "ddhazard" for details)
+#' This function use similar logic as the \code{ddhazard} for individuals with time varying co-variates (see the vignette \code{vignette("ddhazard", "dynamichazard")} for details).
 #'
-#' If \code{use_weights = FALSE} then the two individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. al (2016) (see reference)
+#' If \code{use_weights = FALSE} then the two previously mentioned individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. al (2016).
 #'
 #' @return
-#' Returns a data frame with the design matrix from the formula where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}
+#' Returns a \code{data.frame} where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}.
 #'
 #' @seealso
 #' \code{\link{ddhazard}}, \code{\link{static_glm}}
@@ -137,23 +134,23 @@ get_survival_case_weights_and_data = function(
 }
 
 
-#' Function to make a static glm fit
+#' @title  Static glm fit
+#' @inheritParams ddhazard
 #' @inheritParams get_survival_case_weights_and_data
-#' @param ... arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used
-#' @param family \code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}
-#' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}
-#' @param weights weights if a skewed sample or similar is used
-#' @param speedglm Depreciated.
+#' @param ... arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used.
+#' @param family \code{"logit"} or \code{"exponential"} for a static equivalent model of \code{\link{ddhazard}}.
+#' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}.
+#' @param speedglm depreciated.
 #' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{\link[speedglm]{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.
 #' @param mf model matrix for regression. Needed when \code{only_coef = TRUE}
 #' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.
 #' @param n_threads number of threads to use when \code{method_use} is \code{"parallelglm"}.
 #'
-#' @details
-#' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
+#' @description
+#' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights.
 #'
 #' @return
-#' The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}
+#' The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}.
 #'
 #' @export
 static_glm = function(

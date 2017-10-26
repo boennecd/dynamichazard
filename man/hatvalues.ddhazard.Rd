@@ -2,23 +2,23 @@
 % Please edit documentation in R/hatvalues.R
 \name{hatvalues.ddhazard}
 \alias{hatvalues.ddhazard}
-\title{Hat values for \code{\link{ddhazard}}}
+\title{Hat values for \code{\link{ddhazard}} object}
 \usage{
 \method{hatvalues}{ddhazard}(model, ...)
 }
 \arguments{
-\item{model}{A fit from \code{\link{ddhazard}}}
+\item{model}{a fit from \code{\link{ddhazard}}.}
 
-\item{...}{Not used}
+\item{...}{not used.}
 }
 \value{
-A list of matrices. Each matrix has three columns: the hat values, the row number of the original data point and the id the row belongs to
+A list of matrices. Each matrix has three columns: the hat values, the row number of the original data point and the id the row belongs to.
 }
 \description{
-Computes hat-"like" values from usual L2 penalized binary regression
+Computes hat-"like" values from usual L2 penalized binary regression.
 }
 \details{
-Computes hat-"like" values in each interval for each individual at risk in the interval. See the ddhazard vignette for details
+Computes hat-"like" values in each interval for each individual at risk in the interval. See the \code{vignette("ddhazard", "dynamichazard")} vignette for details.
 }
 \seealso{
 \code{\link{ddhazard}}

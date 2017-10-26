@@ -11,15 +11,7 @@ result <- ddhazard(
   max_T = 45,
   id = head_neck_cancer$id, order = 1)
 
-test_that("Testing names of output from ddhazard on head and neck cancer dataset", {
-  expect_equal(colnames(result$state_vecs), c("(Intercept)", "group1"))
-  expect_equal(unlist(dimnames(result$state_vars)), unlist(list(c("(Intercept)", "group1"), c("(Intercept)", "group1"), NULL)))
-  expect_equal(unlist(dimnames(result$Q)), rep(c("(Intercept)", "group1"), 2))
-  expect_equal(unlist(dimnames(result$Q_0)), rep(c("(Intercept)", "group1"), 2))
-})
-
 result <- result[c("state_vecs", "state_vars","lag_one_cov", "model")]
-# save_to_test(result, "ddhazard_head_neck")
 
 test_that("get previous results with head_neck", {
   expect_equal(result, read_to_test("ddhazard_head_neck"))
@@ -163,6 +155,33 @@ test_that("Different non-integer time_scales gives the same result with ddhazard
     expect_equal(f1$state_vecs, f2$state_vecs, info = info)
   }
 })
+
+test_that(
+  "Old expoential models gives the same results and yields expected message", {
+    args <- list(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1, Q_0 = diag(10000, 2),
+      Q = diag(1e-3, 2), a_0 = c(0, 0),
+      max_T = 30,
+      id = head_neck_cancer$id, order = 1, control = list(eps = .1))
+
+    args$model <- "exponential"
+    expect_silent(f1 <- do.call(ddhazard, args))
+
+    for(m in c("exp_bin", "exp_clip_time", "exp_clip_time_w_jump")){
+      eval(bquote({
+        args$model <- .(m)
+        expect_message(
+          f2 <- do.call(ddhazard, args),
+          .(paste0(".", m, ". is not used after version 0\\.5\\.0\\.")))
+        expect_equal(f1[c("state_vars", "state_vecs")],
+                     f2[c("state_vars", "state_vecs")],
+                     info = .(m))
+      }))
+    }
+
+  })
 
 ########
 # Test on simulated data

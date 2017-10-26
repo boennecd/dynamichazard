@@ -1,5 +1,5 @@
-# Find the design matrix and returns it left hand site and right hand site of
-# objects in the regression equation
+# find the design matrix and returns the left hand side and right hand side of
+# objects in the formula
 get_design_matrix = function(
   formula, data, response = T, predictors = T,
   Terms = NULL, has_fixed_intercept = NULL, xlev = NULL){
@@ -104,15 +104,16 @@ get_design_matrix = function(
 #' Auxiliary functions for fixed effects
 #' @description
 #' Functions used in formula of \code{\link{ddhazard}} for time-invariant effects. \code{ddFixed_intercept} is only used for the intercept.
-#' @param object Expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}
+#'
+#' @param object expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}.
+#'
 #'@examples
-#'# All these call with give the same result where data' is a hypothetical
-#'# data.frame. We can get a time-invariant estimate for x1 by:
+#'# we can get a time-invariant effect of `x1` by
 #'\dontrun{
 #' ddhazard(Surv(stop, event) ~ ddFixed(x1), data)
 #'}
 #'
-#'# All of the calls below will yield the same result with a time-invariant
+#'# all of the calls below will yield the same result with a time-invariant
 #'# intercept:
 #'\dontrun{
 #' ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, data)

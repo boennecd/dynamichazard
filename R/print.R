@@ -1,13 +1,13 @@
 # from boot.print
 #' @title Summary statistics for a \code{ddhazard_boot} object
 #'
-#' @param x Returned object from a \code{\link{ddhazard_boot}} call
-#' @param digits The number of digits to be printed in the summary statistics
-#' @param index Indices indicating for which elements of the bootstrap output summary statistics are required
-#' @param ... Not used
+#' @param x returned object from a \code{\link{ddhazard_boot}} call.
+#' @param digits the number of digits to be printed in the summary statistics.
+#' @param index indices indicating for which elements of the bootstrap output summary statistics are required.
+#' @param ... not used.
 #'
 #' @description
-#' Arguments have the same effects as for an object from a \code{\link{boot}} call. See \code{\link[=print.boot]{print}}
+#' Arguments have the same effects as for an object from a \code{\link{boot}} call. See \code{\link[=print.boot]{print}}.
 #'
 #' @seealso
 #' \code{\link{ddhazard_boot}}
@@ -47,14 +47,14 @@ print.ddhazard_boot <-
 
 #' @title Print function for \code{ddhazard} result
 #'
-#' @param x Object returned from \code{\link{ddhazard}}
-#' @param var_indices Variable indices to print for time-varying effects
-#' @param time_indices Time intervals to print for time-varying effects
-#' @param digits Number of digits to print
-#' @param ... Not used
+#' @param x object returned from \code{\link{ddhazard}}.
+#' @param var_indices variable indices to print for time-varying effects.
+#' @param time_indices time intervals to print for time-varying effects.
+#' @param digits number of digits to print.
+#' @param ... not used.
 #'
 #' @description
-#' The \code{sd} printed for time-varying effects are point-wise standard deviations from either the filter with smoothing
+#' The \code{sd} printed for time-varying effects are point-wise standard deviations from the smoothed covariance matrices.
 #'
 #' @export
 print.ddhazard<- function(
@@ -71,7 +71,7 @@ print.ddhazard<- function(
     if(ncol(x$state_vecs) > 1)
       t(apply(state_vars, 3, diag)) else if(ncol(x$state_vecs) == 1)
         as.matrix(apply(state_vars, 3, diag), ncol = 1) else
-          state_vecs # this is a zero columns matrix
+          state_vecs
 
   if(length(state_vecs) > 0 && length(var_indices) > 0 &&
       length(time_indices) > 0){

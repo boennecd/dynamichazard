@@ -1,28 +1,30 @@
-#' @title Residuals for \code{\link{ddhazard}}
-#' @description Residuals function for the result of a \code{\link{ddhazard}} fit
+#' @title Residuals method for \code{\link{ddhazard}}
+#' @description Residuals method for the result of a \code{\link{ddhazard}} call.
 #'
-#' @param object Result of \code{\link{ddhazard}} call
-#' @param type Type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details
-#' @param data Data frame with data for Pearson or raw residuals
-#' @param ... Not used
+#' @param object result of \code{\link{ddhazard}} call.
+#' @param type type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details.
+#' @param data \code{data.frame} with data for the Pearson or raw residuals.
+#' @param ... not used.
 #'
 #' @section Pearson and raw residuals:
-#' Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"ddhazard_residual"} with the following elements
+#' Is the result of a call with a \code{type} argument of either \code{"pearson"} or \code{"raw"} for Pearson residuals or raw residuals. Returns a list with class \code{"ddhazard_residual"} with the following elements.
 #' \describe{
-#' \item{\code{residuals}}{ List of residuals for each bin. Each element of the list contains a 2D array where the rows corresponds to the passed \code{data} and columns are the residuals (\code{residuals}), estimated probability of death (\code{p_est}), outcome (\code{Y}) and row number in the initial dataset (\code{row_num}). The \code{data} rows will only have a residuals in a given risk list if they are at risk in that risk set}
-#' \item{\code{type}}{ The type of residual}
+#' \item{\code{residuals}}{list of residuals for each bin. Each element of the list contains a 2D array where the rows corresponds to the passed \code{data} and columns are the residuals (\code{residuals}), estimated probability of death (\code{p_est}), outcome (\code{Y}) and row number in the initial data set (\code{row_num}). The \code{data} rows will only have a residuals in a given risk list if they are at risk in that risk set.}
+#' \item{\code{type}}{the type of residual.}
 #'}
 #'
 #' @section State space errors:
-#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is non-standardized. Returns a list with class \code{"ddhazard_space_errors"} with the following elements
+#' Is the result of a call with a \code{type} argument of either \code{"std_space_error"} or \code{"space_error"}. The former is for standardized residuals while the latter is non-standardized. Returns a list with class. \code{"ddhazard_space_errors"} with the following elements:
 #' \describe{
-#' \item{\code{residuals}}{ 2D array with either standardized or non-standardized state space errors. The row are bins and the columns are the parameters in the regression }
-#' \item{\code{standardize}}{ \code{TRUE} if standardized state space errors }
-#' \item{\code{Covariances}}{ 3D array with the smoothed co-variance matrix for each set of the state space errors }
+#' \item{\code{residuals}}{2D array with either standardized or non-standardized state space errors. The row are bins and the columns are the parameters in the regression.}
+#' \item{\code{standardize}}{\code{TRUE} if standardized state space errors.}
+#' \item{\code{Covariances}}{3D array with the smoothed co-variance matrix for each set of the state space errors.}
 #'}
 #'
 #' @export
-residuals.ddhazard = function(object, type = c("std_space_error", "space_error", "pearson", "raw"), data = NULL, ...){
+residuals.ddhazard = function(
+  object, type = c("std_space_error", "space_error", "pearson", "raw"),
+  data = NULL, ...){
   type = type[1]
 
   if(!object$model %in% c("logit", exp_model_names))
@@ -61,12 +63,12 @@ space_errors <- function(object, data, standardize){
 
   covs <- vars <- object$state_vars
   for(i in seq_len(dim(vars)[3] - 1))
-    covs[, , i] = vars[, , i + 1] + vars[, , i] - object$lag_one_cov[, , i] - t(object$lag_one_cov[, , i])
+    covs[, , i] = vars[, , i + 1] + vars[, , i] -
+      object$lag_one_cov[, , i] - t(object$lag_one_cov[, , i])
 
-  if(standardize){
+  if(standardize)
     for(i in seq_len(dim(vars)[3] - 1))
       res[i, ] = res[i, ] %*% solve(chol(covs[, , i]))
-  }
 
   return(structure(list(residuals = res,
                         standardize = standardize,
@@ -78,17 +80,17 @@ obs_res <- function(object, data, type){
   if(is.null(data) || is.null(object$risk_set))
     stop("Missing risk set or data to compute residuals")
 
-  # We need these to check if there is an event in the bin
+  # we need these to check if there is an event in the bin
   new_stop = object$risk_set$stop_new
   new_event = object$risk_set$new_events_flags
   res = list()
 
-  # Get the reponse object
+  # get the reponse object
   response <- model.frame(update(object$formula, .~-1), data)[[1]]
   if(attr(response, "type") == "right")
     response <- cbind(rep(0, nrow(response)), response)
 
-  # Find the rows tstart and tstop
+  # find the rows tstart and tstop
   tstart <- response[, 1]
   tstop <- response[, 2]
 
@@ -108,17 +110,14 @@ obs_res <- function(object, data, type){
     Y = object$risk_set$is_event_in[r_set] == (i - 1)
 
     if(type == "raw"){
-      res[[i]] = cbind(residuals = Y - p_est,
-                       p_est = p_est,
-                       Y = Y,
-                       row_num = r_set)
+      res[[i]] = cbind(
+        residuals = Y - p_est, p_est = p_est, Y = Y, row_num = r_set)
       next
     }
 
-    res[[i]] = cbind(residuals = (Y - p_est)/sqrt(p_est * (1 - p_est)),
-                     p_est = p_est,
-                     Y = Y,
-                     row_num = r_set)
+    res[[i]] = cbind(
+      residuals = (Y - p_est)/sqrt(p_est * (1 - p_est)), p_est = p_est,
+      Y = Y, row_num = r_set)
   }
 
   return(structure(list(

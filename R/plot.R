@@ -1,19 +1,19 @@
-#' @title Plots for \code{\link{ddhazard}}
-#' @description Plot to illustrate the estimate state space variables from a \code{\link{ddhazard}} fit
+#' @title Plots for \code{\link{ddhazard}} object
+#' @description Plot of estimated state space variables from a \code{\link{ddhazard}} fit.
 #'
-#' @param x Result of \code{\link{ddhazard}} call
-#' @param type Type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters
-#' @param plot_type The \code{type} argument passed to \code{plot}
-#' @param cov_index The index (indices) of the state space parameter(s) to plot
-#' @param add \code{FALSE} if you want to make a new plot
-#' @param xlab,ylab,ylim,col Arguments to override defaults set in the function
-#' @param do_alter_mfcol \code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element
-#' @param level Level (fraction) for confidence bounds
-#' @param ddhazard_boot Object from a \code{\link{ddhazard_boot}} call which confidence bounds will be based on and where bootstrap samples will be printed with a transparent color
-#' @param ... Arguments passed to \code{plot} or \code{lines} depending on the value of \code{add}
+#' @param x result of \code{\link{ddhazard}} call.
+#' @param type type of plot. Currently, only \code{"cov"} is available for plot of the state space parameters.
+#' @param plot_type the \code{type} argument passed to \code{plot}.
+#' @param cov_index the index (indices) of the state space parameter(s) to plot.
+#' @param add \code{FALSE} if you want to make a new plot.
+#' @param xlab,ylab,ylim,col arguments to override defaults set in the function.
+#' @param do_alter_mfcol \code{TRUE} if the function should alter \code{par(mfcol)} in case that \code{cov_index} has more than one element.
+#' @param level level (fraction) for confidence bounds.
+#' @param ddhazard_boot object from a \code{\link{ddhazard_boot}} call which confidence bounds will be based on and where bootstrap samples will be printed with a transparent color.
+#' @param ... arguments passed to \code{\link{plot.default}} or \code{lines} depending on the value of \code{add}.
 #'
 #' @details
-#' Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit
+#' Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit.
 #'
 #' @importFrom graphics matplot matpoints
 #'
@@ -124,16 +124,16 @@ plot.ddhazard = function(x, xlab = "Time",
 }
 
 #' @title State space error plot
-#' @description Plot function for state space errors from \code{\link{ddhazard}} fit
+#' @description Plot function for state space errors from \code{\link{ddhazard}} fit.
 #'
-#' @param x Result of \code{\link[=residuals.ddhazard]{residuals}} for state space errors
-#' @param mod The \code{\link{ddhazard}} result used in the \code{\link[=residuals.ddhazard]{residuals}} call
+#' @param x result of \code{\link[=residuals.ddhazard]{residuals}} with a `type` argument which yields state space errors.
+#' @param mod the \code{\link{ddhazard}} result used in the \code{\link[=residuals.ddhazard]{residuals}} call.
 #' @param p_cex \code{cex} argument for the points
-#' @param cov_index The indices of state vector errors to plot. Default is to use all which is likely what you want if the state space errors are standardized
-#' @param t_index The bin indices to plot. Default is to use all bins
-#' @param pch,ylab,xlab Arguments to override defaults set in the function
-#' @param x_tick_loc,x_tick_mark \code{at} and \code{labels} arguments passed to \code{axis}
-#' @param ... Arguments passed to plot
+#' @param cov_index the indices of state vector errors to plot. Default is to use all.
+#' @param t_index the bin indices to plot. Default is to use all bins.
+#' @param pch,ylab,xlab arguments to override defaults set in the function.
+#' @param x_tick_loc,x_tick_mark \code{at} and \code{labels} arguments passed to \code{axis}.
+#' @param ... arguments passed to \code{\link{plot.default}}.
 #'
 #' @export
 plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
@@ -157,7 +157,7 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
   plot(range(res_std) ~ c(min(bin_times[t_index]) + min(delta_points),
                           max(bin_times[t_index]) + max(delta_points)),
        type = "n", ylab = ylab, xlab = xlab,
-       xaxt = ifelse(use_custom_x_axis, "n", "something"),
+       xaxt = ifelse(use_custom_x_axis, "n", "s"),
        ...)
 
   if(use_custom_x_axis)
@@ -169,11 +169,13 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
 
   # add 95% conf
   abline(h = c(-1, 1) * 1.96, lty = 2)
+
+  invisible()
 }
 
 #' @title Plot of clouds from a \code{PF_clouds} object
 #' @description
-#' Plots mean curve along with quantiles through time for the forward, backward or smoothed cloud.
+#' Plots mean curve along with quantiles through time for the forward, backward or smoothed clouds.
 #'
 #' @param x an object of class \code{PF_clouds}.
 #' @param y unused.
@@ -200,13 +202,13 @@ plot.PF_clouds <- function(
     cov_index <- seq_len(dim(these_clouds[[1]]$states)[1])
 
   #####
-  # Find means
+  # find means
   .mean <- do.call(rbind, sapply(these_clouds, function(row){
     colSums(t(row$states[cov_index, , drop = FALSE]) * drop(row$weights))
   }, simplify = FALSE))
 
   #####
-  # Find quantiles
+  # find quantiles
   if(length(qlvls) > 0){
     qs <- lapply(these_clouds, function(row){
       out <- apply(row$states[cov_index, , drop = FALSE], 1, function(x){
@@ -222,18 +224,20 @@ plot.PF_clouds <- function(
       out
     })
     qs <- simplify2array(qs)
+
   } else
     qs <- NULL
 
   #####
-  # Plot
+  # plot
   .x <- 1:nrow(.mean) + if(type == "forward_clouds") -1 else 0
   if(missing(ylim))
     ylim <- range(qs, .mean, na.rm = TRUE) # can have NA if we dont have a
-  # weighted value below or above
-  # qlvl
+                                           # weighted value below or above qlvl
+
   matplot(.x, .mean, ylim = ylim, type = "l", lty = lty, add = add,
           xlab = "Time", ylab = "State vector", ...)
+
   if(length(qs) > 0){
     for(i in 1:dim(qs)[2]){
       tmp <- qs[, i, ]

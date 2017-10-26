@@ -2,7 +2,7 @@
 % Please edit documentation in R/static_glm.R
 \name{static_glm}
 \alias{static_glm}
-\title{Function to make a static glm fit}
+\title{Static glm fit}
 \usage{
 static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
   weights, risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
@@ -10,27 +10,27 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
   n_threads = getOption("ddhazard_max_threads"))
 }
 \arguments{
-\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}}
+\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
 
-\item{data}{Data frame or environment containing the outcome and co-variates}
+\item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
 
-\item{by}{Length of each intervals that cases are binned into}
+\item{by}{interval length of the bins in which parameters are fixed.}
 
-\item{max_T}{The end time of the last bin}
+\item{max_T}{end of the last interval inteval.}
 
-\item{...}{arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used}
+\item{...}{arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used.}
 
-\item{id}{The id for each row in \code{data}. This is important when variables are time varying}
+\item{id}{vector of ids for each row of the in the design matrix.}
 
-\item{family}{\code{"logit"} or \code{"exponential"} for the static equivalent model of \code{\link{ddhazard}}}
+\item{family}{\code{"logit"} or \code{"exponential"} for a static equivalent model of \code{\link{ddhazard}}.}
 
-\item{model}{\code{TRUE} if you want to save the design matrix used in \code{\link{glm}}}
+\item{model}{\code{TRUE} if you want to save the design matrix used in \code{\link{glm}}.}
 
-\item{weights}{weights if a skewed sample or similar is used}
+\item{weights}{weights to use if e.g. a skewed sample is used.}
 
-\item{risk_obj}{A pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations}
+\item{risk_obj}{a pre-computed result from a \code{\link{get_risk_obj}}. Will be used to skip some computations.}
 
-\item{speedglm}{Depreciated.}
+\item{speedglm}{depreciated.}
 
 \item{only_coef}{\code{TRUE} if only coefficients should be returned. This will only call the \code{\link[speedglm]{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.}
 
@@ -41,11 +41,8 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 \item{n_threads}{number of threads to use when \code{method_use} is \code{"parallelglm"}.}
 }
 \value{
-The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}
+The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}.
 }
 \description{
-Function to make a static glm fit
-}
-\details{
-Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights
+Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights.
 }

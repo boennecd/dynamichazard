@@ -7,15 +7,15 @@
 ddhazard_app(quietly = F, ...)
 }
 \arguments{
-\item{quietly}{\code{TRUE} if no messages should be printed when the app is run}
+\item{quietly}{\code{TRUE} if no messages should be printed when the app is run.}
 
-\item{...}{Starting values for the shiny app}
+\item{...}{starting values for the shiny app.}
 }
 \description{
-\code{ddhazard_app} runs a shiny app with demonstration of models
+\code{ddhazard_app} runs a shiny app with demonstration of models.
 }
 \details{
-Runs a shiny app where you try different model specifications on simulated data
+Runs a shiny app where you try different model specifications on simulated data.
 }
 \examples{
 \dontrun{

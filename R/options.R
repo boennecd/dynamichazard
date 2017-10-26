@@ -11,7 +11,8 @@ cur_load = if(exists(".onLoad()")) .onLoad else function() { NULL }
   op.dynhazard <- list(
     ddhazard_max_threads = -1)
   toset <- !(names(op.dynhazard) %in% names(op))
-  if(any(toset)) options(op.dynhazard[toset])
+  if(any(toset))
+    options(op.dynhazard[toset])
 
   invisible()
 }
