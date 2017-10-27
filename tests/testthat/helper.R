@@ -1,6 +1,8 @@
 # Run before test
 # See https://github.com/hadley/testthat/issues/544#issuecomment-260053774
 
+options(useFancyQuotes = FALSE)
+
 if(interactive()){
   library(dynamichazard); library(testthat)
 

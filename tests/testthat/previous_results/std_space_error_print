@@ -1,0 +1,8 @@
+Standardized state space errors from a model with 20 periods and 2 coefficients. The errors in the first 5 time periods are:
+      Coefficient
+Period (Intercept)     group1
+     1  -0.3063691 0.01592371
+     2   0.0668897 0.15746972
+     3   0.6635947 0.65261772
+     4   0.7938611 0.21916597
+     5   1.2738940 1.10542988

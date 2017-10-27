@@ -84,7 +84,7 @@ PF_EM <- function(
   control = list(),
   trace = 0){
   #####
-  # Checks
+  # checks
   if(order != 1)
     stop(sQuote('order'), " not equal to 1 is not supported")
 
@@ -100,7 +100,7 @@ PF_EM <- function(
   is_for_discrete_model <- model == "logit"
 
   #####
-  # Find design matrix
+  # find design matrix
   X_Y = get_design_matrix(formula, data)
   n_params = ncol(X_Y$X)
 
@@ -108,7 +108,7 @@ PF_EM <- function(
     stop("Fixed terms are not supported")
 
   #####
-  # Find risk set
+  # find risk set
   if(trace > 0)
     message("Finding Risk set")
   risk_set <-
@@ -122,7 +122,7 @@ PF_EM <- function(
     stop("Fixed effects are not implemented")
 
   #####
-  # Set control variables
+  # set control variables
   control_default <- list(
     eps = 1e-2,
     forward_backward_ESS_threshold = NULL,
@@ -154,7 +154,7 @@ PF_EM <- function(
   check_n_particles_expr("N_smooth")
 
   #####
-  # Find starting values at time zero
+  # find starting values at time zero
   tmp <- get_start_values(
     formula = formula, data = data, max_T = max_T,
     X_Y = X_Y, risk_set = risk_set, verbose = trace > 0,
@@ -166,11 +166,11 @@ PF_EM <- function(
   a_0 <- tmp$a_0
 
   if(length(a_0) != n_params * order)
-    stop("a_0 does not have the correct length. Its length should be ", n_params * order,
-         " but it has length ", length(a_0), " ")
+    stop("a_0 does not have the correct length. Its length should be ",
+         n_params * order, " but it has length ", length(a_0))
 
   #####
-  # Find matrices for state equation
+  # find matrices for state equation
   tmp <- get_state_eq_matrices(
     order = order, n_params = n_params, n_fixed = n_fixed,
     est_fixed_in_E = FALSE,
@@ -268,7 +268,7 @@ PF_EM <- function(
     log_like_max <- max(log_like, log_like_max)
 
     #####
-    # Find clouds
+    # find clouds
     set.seed(seed)
     clouds <- eval(fit_call, envir = parent.frame())
 
@@ -283,7 +283,7 @@ PF_EM <- function(
     }
 
     #####
-    # Update parameters
+    # update parameters
     a_0_old <- eval(fit_call$a_0, environment())
     Q_old <- eval(fit_call$Q, environment())
 
@@ -298,21 +298,21 @@ PF_EM <- function(
     fit_call$Q <- Q
 
     #####
-    # Compute log likelihood and check for convergernce
+    # compute log likelihood and check for convergernce
     log_like <- logLik(clouds)
     log_likes[i] <- log_like
 
     if(trace > 0)
       cat("The log likelihood in iteration ", i, " is ", log_like,
-          ". Largest log likelihood before this iteration is ", log_like_max, "\n", sep = "")
+          ". Largest log likelihood before this iteration is ", log_like_max,
+          "\n", sep = "")
 
     Q_relative_norm <- norm(Q_old - Q) / (norm(Q_old) + 1e-8)
     a_0_relative_norm <- norm(t(a_0 - a_0_old)) / (norm(t(a_0_old)) + 1e-8)
 
     if(trace > 0)
       cat("The relative norm of the change in a_0 and Q are",
-          a_0_relative_norm, "and", Q_relative_norm,
-          "at iteration", i)
+          a_0_relative_norm, "and", Q_relative_norm, "at iteration", i)
 
     if(has_converged <-
        Q_relative_norm < eps &&

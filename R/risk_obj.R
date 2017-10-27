@@ -68,7 +68,8 @@ get_risk_obj = function(
 
   # find number of tasks
   n_tasks <- min(ceiling(n_ids / min_chunk), 4 * n_threads)
-  tasks <- split(unique_ids, cut(seq_along(unique_ids), n_tasks, labels = FALSE))
+  tasks <- split(
+    unique_ids, cut(seq_along(unique_ids), n_tasks, labels = FALSE))
 
   # find subset of risk sets
   out <- parallel::mclapply(tasks, function(ids) {

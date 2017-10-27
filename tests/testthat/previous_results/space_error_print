@@ -1,0 +1,8 @@
+State space errors from a model with 20 periods and 2 coefficients. The errors in the first 5 time periods are:
+      Coefficient
+Period (Intercept)      group1
+     1 -0.09380651 0.005700393
+     2  0.01752106 0.039134066
+     3  0.17683204 0.149767476
+     4  0.21209763 0.027302980
+     5  0.33849448 0.244158825

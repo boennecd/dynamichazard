@@ -39,17 +39,17 @@ get_survival_case_weights_and_data = function(
     init_weights = rep(1, nrow(data))
 
   if(any(colnames(data) == c_outcome)){
-    warning("Column called '", c_outcome, "' will be replaced")
+    warning("Column called ", sQuote(c_outcome), " will be replaced")
     data = data[, colnames(data) != c_outcome]
   }
 
   if(any(colnames(data) == c_weights)){
-    warning("Column called '", c_weights, "' will be replaced")
+    warning("Column called ", sQuote(c_weights), " will be replaced")
     data = data[, colnames(data) != c_weights]
   }
 
   if(!use_weights && any(colnames(data) == c_end_t)){
-    warning("Column called '", c_end_t, "' will be replaced")
+    warning("Column called ", sQuote(c_end_t), " will be replaced")
     data = data[, colnames(data) != c_end_t]
   }
 
@@ -106,10 +106,13 @@ get_survival_case_weights_and_data = function(
     class(X) <- "data.frame"
 
   } else {
+    # TODO: change to more general setup that does not convert all columns to
+    #       double values first
     n_rows_final <- sum(unlist(lapply(risk_obj$risk_sets, length)))
     X <- data.frame(matrix(NA, nrow = n_rows_final, ncol = 3 + ncol(data),
-                           dimnames = list(NULL, c(colnames(data),
-                                                   c_outcome, c_end_t, c_weights))))
+                           dimnames = list(
+                             NULL, c(colnames(data),
+                                     c_outcome, c_end_t, c_weights))))
 
     j <- 1
     for(i in seq_along(risk_obj$risk_sets)){
@@ -154,8 +157,9 @@ get_survival_case_weights_and_data = function(
 #'
 #' @export
 static_glm = function(
-  formula, data, by, max_T, ..., id, family = "logit", model = F, weights, risk_obj = NULL,
-  speedglm = F, only_coef = FALSE, mf, method_use = c("glm", "speedglm", "parallelglm"),
+  formula, data, by, max_T, ..., id, family = "logit", model = F, weights,
+  risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
+  method_use = c("glm", "speedglm", "parallelglm"),
   n_threads = getOption("ddhazard_max_threads")){
   if(only_coef && missing(mf))
     stop("mf must be supplied when only_coef = TRUE")
@@ -164,13 +168,13 @@ static_glm = function(
     stop("data and mf must have the same number of rows")
 
   if(speedglm)
-    warning(sQuote("speedglm"), " have been depreciated. Use ", sQuote("method_use"))
+    warning(sQuote("speedglm"), " have been depreciated. Use ",
+            sQuote("method_use"))
 
-  if(length(method_use) > 1)
-    method_use <- method_use[1]
+  method_use <- method_use[1]
 
   if(only_coef){
-    # We mark the row numbers as some may be removed and the order may be
+    # we mark the row numbers as some may be removed and the order may be
     # changed
     col_for_row_n <- ncol(data) + 1
     data[[col_for_row_n]] <- 1:nrow(data)

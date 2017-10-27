@@ -115,24 +115,24 @@ knit_print.matrix <- function(x, ..., digits = getOption("digits"), row.names = 
 
 # Introduction
 
-This vignette will show examples of how the `residuals` and `hatvalues` functions can be used for an object returned by `ddhazard`. See the vignette `ddhazard` for details of the computations. Firstly, we will present all the tools that turned out to be useful for data sets. This is in the section called "First round of checks". Then we return to the data sets using the other methods. The latter part is included to illustrate how the function in this package work. This is in the section called "Second round of checks".
+This vignette will show examples of how the `residuals` and `hatvalues` functions can be used for an object returned by `ddhazard`. See `vignette("ddhazard", "dynamichazard")` for details of the computations. Firstly, we will present all the tools that turned out to be useful for data sets. This is in the section called "First round of checks". Then we return to the data sets using the other methods. The latter part is included to illustrate how the function in this package work. This is in the section called "Second round of checks".
 
 # First round of checks
 ## Data set 1: Prisoner recidivism
 
-The first data set we will look at is an experimental study of recidivism of 432 male prisoners a year after being released from prison. The details of the data set are in [@rossi80]. The study was about randomly giving financial aid to the prisoners when they where released. The variables we will look at are:
+The first data set we will look at is an experimental study of recidivism of 432 male prisoners a year after being released from prison. The details of the data set are in [@rossi80]. The study involved randomly giving financial aid to the prisoners when they where released to see if this affected recidivism. The variables we will look at are:
 
-- `fin`: 1 if the prisoner got aid and zero otherwise
-- `age`: age at time of release
-- `prio`: number of prior convictions
-- `employed.cumsum`: Cumulative number of weeks employed from the date of release. This will vary through time
-- `event`: 1 if the prisoner is rearrested
+- `fin`: 1 if the prisoner got aid and zero otherwise.
+- `age`: age at time of release.
+- `prio`: number of prior convictions.
+- `employed.cumsum`: Cumulative number of weeks employed from the date of release. This will vary through time.
+- `event`: 1 if the prisoner is rearrested.
 
 A `.pdf` file called `Appendix-Cox-Regression.pdf` was previously on CRAN where they analyze this data set with the Cox regression model. They found: 
 
-- No very influential observation
-- No sign that the proportional-hazards assumption is violated. That is, no sign that the coefficients vary through time
-- Minor sign of non-linear effects
+- No very influential observation.
+- No sign that the proportional-hazards assumption is violated. That is, no sign that the coefficients vary through time.
+- Minor sign of non-linear effects.
 
 ### Loading the data set
 
@@ -229,7 +229,7 @@ hats <- hatvalues(dd_rossi)
 The returned object is list with a matrix for each interval. Each matrix has a column for the hat values, the row number in the original data set and the id of the individual the hat values belongs to: 
 
 ```{r}
-str(hats[1:3]) # Print str of first three matrices
+str(hats[1:3]) # str of first three elements 
 head(hats[[1]], 10) # Print the head of first matrix
 ```
 
@@ -341,7 +341,7 @@ dd_rossi_trans <- ddhazard(
 plot(dd_rossi_trans)
 ```
 
-Notice that the coefficient for `prio` is more stable / less wiggly. Further, computing the hat values and making a similar plot to the one before shows that the individuals are much less influential.
+computing the hat values and making a similar plot to the one before shows that the individuals are much less influential.
 
 ```{r, echo = FALSE}
 hats <- hatvalues(dd_rossi_trans)
@@ -425,7 +425,7 @@ dd_whas <- ddhazard(
 plot(dd_whas)
 ```
 
-The intercept drops in the first period which possibly is due to the initial high number of deaths right after the first heart attack. We further simply the model the model by removing `gender` variable which seems to be zero:
+The intercept drops in the first period which possibly is due to the initial high number of deaths right after the first heart attack. We further simplify the model the model by removing `gender` variable which seems to be zero:
 
 ```{r}
 dd_whas <- ddhazard(
@@ -631,9 +631,9 @@ We reduce the variance of the intercept and decrease the intercept to yield a lo
 
 <!-- CHECK: that defintion of sim function is still the same -->
 
-* Each individual start at time $0$
-* The individuals covariates are simulated from $\text{Unif}(-1, 1)$
-* We update the individuals covariate with intervals times drawn from a $\text{Exp}(1/10)$
+* Each individual start at time $0$.
+* The individuals covariates are simulated from $\text{Unif}(-1, 1)$.
+* We update the individuals covariate with intervals times drawn from a $\text{Exp}(1/10)$.
 
 This is done in the following call:
 
@@ -733,98 +733,7 @@ for(i in 1:3){
 ```
 
 
-It is worth stressing that neither the initial seed nor the parameters have been selected here to yield a particular result. The take away for me is that the previous finding with the Rossi data set and WHAS data set is an artifact of the data set and model specification and not something we would see if we have an actual random walk model. 
-
-## Residuals for observations
-
-We will look at the Pearson residuals but at an individual level in the following paragraphs. We use the Rossi data set where we find the residuals as follows:
-
-```{r}
-obs_res <- residuals(dd_rossi, type = "pearson")
-```
-
-We stack the residuals, cumulate the residuals for each individual and plot them against time:
-
-```{r}
-# Stack residuals
-resids_stacked <- stack_residuals(fit = dd_rossi, resids = obs_res)
-
-# Compute cummulated residuals
-resids_stacked$residuals_cum <- unlist(tapply(
-  resids_stacked$residuals, resids_stacked$id, cumsum))
-
-# Plot the cumulated residuals for each individual
-plot(c(1, 52), range(resids_stacked$residuals_cum), type = "n", 
-     xlab = "Interval number", ylab = "Cumulated Person residuals")
-invisible(
-  tapply(resids_stacked$residuals_cum, resids_stacked$id, lines, 
-         col = gray(0, alpha = .2)))
-```
-
-We may want to take a closer look at the individuals with a high maximum accumulated residual:
-
-```{r}
-max_cum <- tapply(resids_stacked$residuals_cum, resids_stacked$id, max)
-
-is_max <- names(max_cum)[order(max_cum, decreasing = T)[1:5]]
-is_max # Id of the those with the largest values
-```
-
-We print the last record each of these:
-
-```{r}
-Rossi_max_subset <- Rossi[Rossi$id %in% is_max, ]
-Rossi_max_subset <- Rossi_max_subset[nrow(Rossi_max_subset):1, ]
-Rossi_max_subset[!duplicated(Rossi_max_subset$id), ]
-```
-
-What they seem to have in common is that they are in the younger part of the population apart from one. We make a histogram of `age` to see this: 
-
-```{r}
-age <- Rossi$age[!duplicated(Rossi$id)]
-hist(age, breaks = 20)
-```
-
-Moreover, they all have a low number of prior convictions:
-
-```{r}
-summary(Rossi$prio[!duplicated(Rossi$id)])
-```
-
-We can repeat the same procedure for the lowest accumulated residual as follows:
-
-```{r}
-min_cum <- tapply(resids_stacked$residuals_cum, resids_stacked$id, min)
-
-is_min <- names(min_cum)[order(min_cum)[1:5]]
-is_min
-
-# We print the last record each of these
-Rossi_min_subset <- Rossi[Rossi$id %in% is_min, ]
-Rossi_min_subset <- Rossi_min_subset[nrow(Rossi_min_subset):1, ]
-Rossi_min_subset[!duplicated(Rossi_min_subset$id), ]
-```
-
-We note that they all have high number of prior convictions when we compare with the summary statistics for `prior` printed previously. Removing these does not make a big difference:
-
-```{r}
-Rossi_sub <- Rossi[!Rossi$id %in% c(is_max, is_min), ]
-
-library(dynamichazard)
-dd_rossi_tmp <- ddhazard(
-  Surv(start, stop, event) ~ fin + age + prio + employed.cumsum, 
-  data = Rossi_sub, id = Rossi_sub$id, by = 1, max_T = 52, 
-  Q_0 = diag(10000, 5), Q = diag(.01, 5),
-  control = list(eps = .001, n_max = 250))
-
-par(mfcol = c(2, 3))
-for(i in 1:5){
-  plot(dd_rossi, cov_index = i)
-  plot(dd_rossi_tmp, cov_index = i, col = "red", add = T)
-}
-```
-
-The red curves are the predicted coefficients without the previous discussed cases. Similar conclusion applies for doing the same with the Worcester Heart Attack Study data set
+It is worth stressing that neither the initial seed nor the parameters have been selected here to yield a particular result. The take away for me is that the previous finding with the Rossi data set and WHAS data set is an artifact of the data set and model specification and not something we would see if we have an actual random walk model it seems. 
 
 ## Hat values for Worcester Heart Attack Study
 

@@ -1,0 +1,25 @@
+Call:
+ddhazard(formula = survival::Surv(stop, event) ~ group, data = head_neck_cancer, 
+    by = 1, max_T = 20, a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(0.1, 
+        2), order = 1, control = list(eps = 0.1))
+
+'logit' model fitted with the 'EKF' method in 2 iterations of the EM algorithm.
+
+Smoothed time-varying coefficients are:
+   (Intercept)       sd     group1       sd 
+ 0   -2.806424 0.4064023 0.1519309 0.4488750
+ 2   -2.882709 0.3038966 0.1967654 0.3681009
+ 4   -2.493780 0.3060795 0.3738359 0.3596999
+ 6   -2.220863 0.2842865 0.6247045 0.3420799
+ 9   -2.888184 0.3244203 0.5569002 0.3892709
+11   -3.211450 0.3551100 0.4901311 0.4309866
+13   -3.398163 0.3907957 0.6133135 0.4794959
+16   -3.455511 0.4285787 0.7508514 0.5382961
+18   -3.479997 0.4831253 0.8774581 0.6095133
+20   -3.421549 0.5820568 1.0707865 0.7075980
+
+The estimated diagonal entries of the covariance matrix in the state equation are:
+(Intercept)      group1 
+ 0.10291497  0.09050972 
+
+96 individuals used in estimation with 65 observed events.

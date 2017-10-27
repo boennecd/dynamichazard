@@ -13,18 +13,25 @@ knitr::knit_hooks$set(
     if (before){
       options(digist = 4)
     }},
+  plot_2x1 = function(before, options, envir){
+    if(before){
+      options$fig.width = options$fig.height * 2
+      par(mfcol = c(2, 1), mar = c(5, 4, 2, 2) + 0.1)
+    }
+  },
   plot_2x3 = function(before, options, envir){
     if(before){
       options$fig.width = options$fig.height * 2
       par(mfcol = c(2, 3))
-    }
-  })
+      }
+    })
 options(digist = 4)
-knitr::opts_chunk$set(echo = TRUE, fig.height = 5, dpi = 144, 
-                      dev = "png",
-                      cache = T, 
-                      cache.path = "cache/bootstrap/",
-                      fig.path = "figure/bootstrap/")
+knitr::opts_chunk$set(
+  echo = TRUE, fig.height = 5, dpi = 144, 
+  dev = "png",
+  cache = T, 
+  cache.path = "cache/bootstrap/",
+  fig.path = "figure/bootstrap/")
 knitr::opts_knit$set(default_opts = T)
 
 options(ddhazard_max_threads = max(parallel::detectCores() - 2, 1))
@@ -34,12 +41,13 @@ options(ddhazard_max_threads = max(parallel::detectCores() - 2, 1))
 library(survival)
 library(dynamichazard)
 library(boot)
+library(timereg)
 ```
 
 
 # Introduction
 
-This vignette will show how to bootstrap the confidence intervals of a `ddhazard` object. It is recommended to read or skim `vignette("ddhazard", "dynamichazard")` first. You can get the version used to make this vignette by calling:
+This vignette will show how to use bootstrap a `ddhazard` object. It is recommended to read or skim `vignette("ddhazard", "dynamichazard")` first. You can get the version used to make this vignette by calling:
 
 ```{r echo=FALSE}
 tryCatch({
@@ -68,7 +76,7 @@ install.packages("dynamichazard")
 ```
 
 # TRACE
-We will use the `TRACE` data set from the `timreg` package. See `?TRACE` for details on the dataset and `?timereg::aalen` for a additive hazard model some of which are (kinda) like the one we fit next. The `TRACE` data set is used here to illustrate the bootstrap methods and not as example of how to analysis the data set. I have not looked at the details or model fits in detail. We fit the model as follows:
+We will use the `TRACE` data set from the `timreg` package. See `?TRACE` for a description of the dataset and `?timereg::aalen` for a additive hazard models used with data set -- at least in version  1.9.1. Some of them are (kinda) like the models we fit next in the sequal. The `TRACE` data set is used here to illustrate the bootstrap methods and not as example of how to analysis the data set. I have not looked at the details of the data set or the model fits. We fit the model as follows:
 
 ```{r}
 library(dynamichazard)
@@ -81,12 +89,11 @@ dd_fit <- ddhazard(
   control = list(eps = .001, n_max = 25))
 ```
 
-We use the exponential arrival times models with the EKF (the default) estimation method. A plot of the estimates is given below. The dashed lines are 95% point-wise confidence intervals using the variances estimates from the Extended Kalman filter with smoothing
+We use the exponential arrival times models with the extended Kalman filter (the default) estimation method. A plot of the estimates is given below. The dashed lines are 95% point-wise confidence intervals using the variances estimates from the Extended Kalman filter with smoothing
 
-```{r}
+```{r, plot_2x1 = TRUE}
 plot(dd_fit)
-dd_fit$fixed_effects # the fixed effects estimates
-dd_fit$Q
+summary(dd_fit)
 ```
 
 ## Sampling individuals
@@ -108,7 +115,7 @@ str(boot_out)
 
 Above, we bootstrap the model by sampling the individuals. I.e. individuals will have weights of $0,1,2,\dots$ in the estimation. We can plot 95% confidence bounds from the bootstrap coefficients with the percentile bootstrap method as follows:
 
-```{r}
+```{r, plot_2x1 = TRUE}
 plot(dd_fit, ddhazard_boot = boot_out, level = 0.95)
 ```
 
@@ -137,15 +144,15 @@ library(boot)
 
 # print confidence intervals for 
 colnames(boot_out$t)[ncol(boot_out$t)] # this variable
-boot.ci(boot_out, index = ncol(boot_out$t) - 0, 
-        type = c("norm", "basic", "perc"))
+boot.ci(
+  boot_out, index = ncol(boot_out$t), type = c("norm", "basic", "perc"))
 ```
 
 ## Strata
 
-You can provide a strata variable to perform stratified sampling with. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the data set). You can use the `unique_id` argument to match the individual entries with the entries in `strata`. Though, this is not needed for this data set as we do not have time-varying coefficients. As an example, we stratify by the `chf` value below:
+You can provide a strata variable to perform stratified sampling. This is done by setting the `strata` argument in the call to `ddhazard_boot`. Notice that this has to be on an individual level (one indicator variable per individual) not observation level (not one indicator variable per row in the data set). You can use the `unique_id` argument to match the individual entries with the entries in `strata`. Though, this is not needed for this data set as we do not have time-varying covariates. As an example, we stratify by the `chf` value below:
 
-```{r}
+```{r, plot_2x1 = TRUE}
 # all observations are unique. I.e. all other individuals have one record. 
 # Otherwise we had to make a strata with an entry for each individual -- not 
 # each record in the data.frame used in the estimation
@@ -161,16 +168,16 @@ plot(dd_fit, ddhazard_boot = boot_out_with_strata, level = 0.95)
 
 ## Boot envelope
 
-We may also want to get simultaneous confidence intervals. An easy way to get such confidence intervals is with the `envelope` function in the `boot` library. For instance, we can simultaneous confidence intervals for the `vf` coefficient as follows: 
+We may also want to get simultaneous confidence intervals. An easy way to get such confidence intervals is with the `envelope` function in the `boot` library. For instance, we can get simultaneous confidence intervals for the `vf` coefficient as follows: 
 
 ```{r}
-# Find the indices that correspondents to the log(bili) variable 
+# find the indices that correspondents to the coefficient we want
 is_vf <- grep("^vf:", colnames(boot_out$t))
 
-# Use the envelope
+# use the envelope
 envelopes <- envelope(boot_out, level = 0.95 ,index = is_vf)
 
-# Plot curves
+# plot curves
 plot(dd_fit, ylim = c(-1.5, 4), 
      cov_index = grep("^vf$", colnames(dd_fit$state_vecs)))
 lines(dd_fit$times, envelopes$point[1, ], col = "blue")
@@ -240,7 +247,7 @@ matplot(beta, type = "l", lty = 1, ylab = "coefficient without noise",
         col = cols)
 ```
 
-There will be a total of `n =` `r n` individuals in groups of three. We start observing each group at time `0`, `7` and `14`. We do so to have a "stable" number of individual through the experiment. The experiment ends after `tmax = ` `r tmax`. 
+There will be a total of `n =` `r n` individuals in groups of three. We start observing each group at time `0`, `7` and `14`. I.e. we have random random delayed entry. We do so to have a "stable" number of individual through the experiment. The experiment ends after `tmax = ` `r tmax`. 
 
 ```{r, include=FALSE, echo=FALSE}
 base_mat <- do.call(

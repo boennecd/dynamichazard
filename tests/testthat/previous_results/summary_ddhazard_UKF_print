@@ -1,0 +1,26 @@
+Call:
+ddhazard(formula = survival::Surv(stop, event) ~ group, data = head_neck_cancer, 
+    model = "exponential", by = 1, max_T = 20, a_0 = rep(0, 2), 
+    Q_0 = diag(1, 2), Q = diag(0.1, 2), order = 1, control = list(eps = 0.1, 
+        method = "UKF"))
+
+'exponential' model fitted with the 'UKF' method in 3 iterations of the EM algorithm.
+
+Smoothed time-varying coefficients are:
+   (Intercept)       sd       group1       sd 
+ 0   -3.255478 0.4587125 -0.04778766 0.5031436
+ 2   -3.120941 0.3597162  0.12999999 0.4335355
+ 4   -2.680845 0.3264705  0.33298262 0.3856080
+ 6   -2.463108 0.2877733  0.52279810 0.3457136
+ 9   -3.084883 0.3281004  0.46542344 0.3901447
+11   -3.397330 0.3605039  0.40243974 0.4335337
+13   -3.593882 0.3977080  0.50909742 0.4842464
+16   -3.671121 0.4405122  0.62677800 0.5486841
+18   -3.705972 0.4978186  0.74057640 0.6216574
+20   -3.676621 0.5987934  0.90500489 0.7187802
+
+The estimated diagonal entries of the covariance matrix in the state equation are:
+(Intercept)      group1 
+ 0.10426269  0.08889272 
+
+96 individuals used in estimation with 65 observed events.

@@ -57,45 +57,87 @@ print.ddhazard_boot <-
 #' The \code{sd} printed for time-varying effects are point-wise standard deviations from the smoothed covariance matrices.
 #'
 #' @export
-print.ddhazard<- function(
-  x, var_indices = 1:ncol(x$state_vecs), time_indices = 1:nrow(x$state_vecs),
-  digits = getOption("digits"), ...){
-  cat("Formula:\n", deparse(x$formula), "\n", sep = "")
+print.ddhazard<- function(x){
+  cat("Call:", deparse(x$call), sep = "\n")
 
-  cat("\nEstimated with ", x$method, " in ", x$n_iter, " iterations of the EM algorithm\n",
-      sep = "")
+  cat("\n", sQuote(x$model), " model fitted with the ", sQuote(x$method),
+      " method in ", x$n_iter, " iterations of the EM algorithm.\n", sep = "")
 
-  state_vecs <- x$state_vecs
-  state_vars <- x$state_vars
-  state_vars <-
-    if(ncol(x$state_vecs) > 1)
-      t(apply(state_vars, 3, diag)) else if(ncol(x$state_vecs) == 1)
-        as.matrix(apply(state_vars, 3, diag), ncol = 1) else
-          state_vecs
+  invisible(x)
+}
 
-  if(length(state_vecs) > 0 && length(var_indices) > 0 &&
-      length(time_indices) > 0){
-    out <- cbind(state_vecs[time_indices, var_indices, drop = F],
-                 sqrt(state_vars[time_indices, var_indices, drop = F]))
+#' @rdname summary.ddhazard
+#' @export
+print.summary.ddhazard <- function(x, digits = getOption("digits"), ...){
+  old <- getOption("digits")
+  on.exit(options(digits = old))
+  options(digits = digits)
 
-    colnames(out) <- c(colnames(out)[seq_along(var_indices)],
-                       rep("  sd ", length(var_indices)))
+  print.ddhazard(x)
+  cat("\n")
 
-    out <- out[, c(sapply(seq_along(var_indices), rep, times = 2)) +
-                 rep(c(0, length(var_indices)), length(var_indices))]
-
-    rownames(out) <- paste0("t", 1:nrow(out) - 1)
-
-    cat("\nEstimated time-varying effects and point-wise standard deviation:\n")
-    print(out, digits = digits)
+  if(!is.null(x$coefficients)){
+    cat("Smoothed time-varying coefficients are:\n")
+    print(x$coefficients)
+    cat("\n")
   }
 
-  fixed_effects <- x$fixed_effects
-  if(length(fixed_effects) > 0){
-    cat("\nFixed effects are estimated in the ", x$control$fixed_terms_method,
-        ". The estimates are:\n", sep = "")
-    print(fixed_effects, digits = digits)
+  if(!is.null(x$Q)){
+    cat("The estimated diagonal entries of the covariance matrix in the state equation are:\n")
+    print(diag(x$Q))
+    cat("\n")
   }
+
+  if(!is.null(x$fixed_effects) && length(x$fixed_effects) > 0){
+    cat("The estimated fixed effects are:\n")
+    print(x$fixed_effects)
+    cat("\n")
+  }
+
+  cat(
+    x$n_id, " individuals used in estimation",
+    if(!is.null(x$n_events))
+      paste(" with", x$n_events, "observed events") else "",
+    ".\n", sep = "")
+
+  invisible(x)
+}
+
+#' @export
+print.PF_EM <- function(x, ...){
+  cat("Call:\n", paste0(deparse(x$call), collapse = "\n"),
+      "\n\n", sep = "")
+
+  cat("Model estimated in ", x$n_iter, " iterations of the EM algorithm. ",
+      "The log-likelihood in the last iteration is ", tail(x$log_likes, 1),
+      ".\n", sep = "")
+
+  invisible(x)
+}
+
+#' @export
+print.PF_clouds <- function(x, ...){
+  cat("Particle clouds with ", length(x$forward_clouds),
+      " forward filter clouds ", length(x$backward_clouds),
+      " backward filter clouds and ", length(x$smoothed_clouds),
+      " clouds from smoothing.\n", sep = "")
+
+  invisible(x)
+}
+
+#' @export
+print.ddhazard_space_errors <- function(x, ...){
+  type <- if(x$standardize)
+    "Standardized state space errors" else "State space errors"
+
+  n <- 5
+  cat(type, " from a model with ", nrow(x$residuals), " periods and ",
+      ncol(x$residuals), " coefficients. The errors in the first ", n,
+      " time periods are:\n", sep = "")
+  errs <- head(x$residuals, n)
+
+  dimnames(errs) <- list("Period" = 1:n, "Coefficient" = colnames(errs))
+  print(errs)
 
   invisible(x)
 }

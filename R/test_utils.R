@@ -7,7 +7,7 @@ expect_no_error = function(expr, env = parent.frame()){
 # expect_no_error(1 / "a")
 # expect_no_error(1 / 1)
 
-# Load data example to play arround with and validate against
+# load data example Fahrmeier (1994)
 get_head_neck_cancer_data <- function(){
   is_censored = c(6, 27, 34, 36, 42, 46, 48:51,
                   51 + c(15, 30:28, 33, 35:37, 39, 40, 42:45))
@@ -31,7 +31,8 @@ get_head_neck_cancer_data <- function(){
   head_neck_cancer
 }
 
-# Simple function to make sure that we do not call rexp to many times
+# Simple function to make sure that we do not call rexp to many times when
+# simulating
 get_exp_draw <- function(cmpfun = TRUE) {
   out <- with(new.env(parent = .GlobalEnv), {
     is_first <- TRUE
@@ -55,7 +56,7 @@ get_exp_draw <- function(cmpfun = TRUE) {
         return(draws[n_cur - 1])
       }
 
-      # Draw if needed
+      # draw if needed
       if(n > n_max - n_cur){ # we forget about the - 1
         n_max <<- n + n_draws
         n_cur <<- 1
@@ -157,18 +158,19 @@ get_unif_draw <- function(cmpfun = TRUE) {
 
 # n <- 5e4
 # microbenchmark(
-#   { get_exp_draw()(n); for(i in 1:n) { }},
+#   { f <- get_exp_draw(); for(i in 1:n) { f(1) }},
 #   for(i in 1:n) { rexp(1,1) })
 
-# Define functions to simulate outcomes
-test_sim_func_logit <- function(n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x_range = .1, x_mean = -.1,
-                                re_draw = T, beta_start = 3, intercept_start,
-                                sds = rep(1, n_vars + !missing(intercept_start)),
-                                is_fixed = c(), lambda = 1,
-                                tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
-                                  t_0,
-                                betas){
-  # Make output matrix
+# define functions to simulate outcomes
+test_sim_func_logit <- function(
+  n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x_range = .1, x_mean = -.1,
+  re_draw = T, beta_start = 3, intercept_start,
+  sds = rep(1, n_vars + !missing(intercept_start)),
+  is_fixed = c(), lambda = 1,
+  tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
+    t_0,
+  betas){
+  # make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
                 dimnames = list(NULL, c("id", "tstart", "tstop", "event", paste0("x", 1:n_vars))))
@@ -198,14 +200,14 @@ test_sim_func_logit <- function(n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x
 
     betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
                                 nrow = nrow(betas))
-  } else {
+  } else
     use_intercept = ncol(betas) >= n_vars
-  }
 
-  ceiler <- function(x) ceiling(x * 100) / 100
+  ceiler <- function(x)
+    ceiling(x * 100) / 100
   x_adj <- - x_range / 2 + x_mean
 
-  # Simulate
+  # simulate
   for(id in 1:n_series){
     tstart <- tstop <- ceiler(tstart_sampl_func(t_0, t_max))
     interval_start <- ceiling(tstart)
@@ -257,16 +259,18 @@ test_sim_func_logit <- function(n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x
 # #
 # sum(tmp$res[, "event"])
 
-test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = 0,
-                              re_draw = T, beta_start = 1, intercept_start,
-                              sds = rep(1, n_vars + !missing(intercept_start)),
-                              is_fixed = c(), lambda = 1,
-                              tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
-                                t_0){
-  # Make output matrix
+test_sim_func_exp <- function(
+  n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = 0,
+  re_draw = T, beta_start = 1, intercept_start,
+  sds = rep(1, n_vars + !missing(intercept_start)),
+  is_fixed = c(), lambda = 1,
+  tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
+    t_0){
+  # make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,
-                dimnames = list(NULL, c("id", "tstart", "tstop", "event", paste0("x", 1:n_vars))))
+                dimnames = list(NULL, c("id", "tstart", "tstop", "event",
+                                        paste0("x", 1:n_vars))))
   cur_row <- 1
 
   get_unif_draw <- get_unif_draw()
@@ -287,7 +291,8 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
   betas <- matrix(get_norm_draw((t_max - t_0 + 1) * (n_vars + use_intercept)),
                   ncol = n_vars + use_intercept, nrow = t_max - t_0 + 1)
   betas <- t(t(betas) * sds)
-  betas[1, ] <- if(use_intercept) c(intercept_start, beta_start) else beta_start
+  betas[1, ] <-
+    if(use_intercept) c(intercept_start, beta_start) else beta_start
   betas <- apply(betas, 2, cumsum)
 
   betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
@@ -295,7 +300,7 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
 
   ceiler <- function(x, level=1) round(x + 5*10^(-level-1), level)
 
-  # Simulate
+  # simulate
   mean_term <- - x_range / 2 + x_mean
 
   for(id in 1:n_series){
@@ -309,7 +314,9 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
       tmp_t <- tstart
       while(tmp_t < tstop && tmp_t < t_max){
         delta_max <- min(ceiling(tmp_t + 1e-14), tstop) - tmp_t
-        new_time <- get_exp_draw(1) / exp(drop(betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars))
+        new_time <-
+          get_exp_draw(1) /
+          exp(drop(betas[floor(tmp_t - t_0) + 2, ] %*% l_x_vars))
         event <- new_time <= delta_max
         if(event){
           tstop <- ceiler(new_time + tmp_t, 14)
@@ -338,15 +345,14 @@ test_sim_func_exp <- function(n_series, n_vars = 10, t_0 = 0, t_max = 10, x_rang
 }
 
 ########
-# PBC data set from survival with the timevariying covariates
+# PBC data set from survival with the time-variying covariates
 # See: https://cran.r-project.org/web/packages/survival/vignettes/timedep.pdf
 
-# Remove a globally defined pbc dataset if it is present
 get_pbc2_data <- function(){
   pbc <- survival::pbc
   pbcseq <- survival::pbcseq
 
-  # Avoid notes with CRAN tests
+  # avoid notes with CRAN tests
   id <- NULL
   sex <- NULL
   time <- NULL
@@ -371,4 +377,3 @@ get_pbc2_data <- function(){
 
   pbc2
 }
-

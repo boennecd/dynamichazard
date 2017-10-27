@@ -4,8 +4,7 @@
 \alias{print.ddhazard}
 \title{Print function for \code{ddhazard} result}
 \usage{
-\method{print}{ddhazard}(x, var_indices = 1:ncol(x$state_vecs),
-  time_indices = 1:nrow(x$state_vecs), digits = getOption("digits"), ...)
+\method{print}{ddhazard}(x)
 }
 \arguments{
 \item{x}{object returned from \code{\link{ddhazard}}.}
