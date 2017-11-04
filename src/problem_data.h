@@ -8,6 +8,11 @@
 #include <omp.h>
 #endif
 
+struct coefs {
+  arma::vec dynamic_coefs;
+  arma::vec fixed_coefs;
+};
+
 class problem_data {
 public:
   // Constants
@@ -119,6 +124,7 @@ public:
   problem_data() = delete;
 };
 
+/* problem_data used in ddhazard_fit.cpp */
 class ddhazard_data : public problem_data {
 public:
   // constants
@@ -221,6 +227,9 @@ public:
   ddhazard_data & operator=(const ddhazard_data&) = delete;
   ddhazard_data(const ddhazard_data&) = delete;
   ddhazard_data() = delete;
+
+  virtual coefs get_coefs(unsigned int) = 0;
+  virtual arma::vec get_coefs(arma::vec&) = 0;
 };
 
 inline std::string debug_msg_prefix(const ddhazard_data &dat){
@@ -263,5 +272,14 @@ std::ostringstream& my_debug_logger::operator<<(const T &obj){
   os << debug_msg_prefix(*dat) << obj;
   return os;
 }
+
+/* Concrete implementation of data class */
+class problem_data_random_walk : public ddhazard_data {
+public:
+  using ddhazard_data::ddhazard_data;
+
+  coefs get_coefs(unsigned int);
+  arma::vec get_coefs(arma::vec&);
+};
 
 #endif

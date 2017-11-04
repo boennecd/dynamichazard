@@ -170,9 +170,32 @@ UKF_solver_New<T>::UKF_solver_New(
 };
 
 template<class T>
+void UKF_solver_New<T>::compute_sigma_points(
+    const arma::vec &a_t, arma::mat &s_points, const arma::mat &P_x_x){
+  arma::mat cholesky_decomp;
+  if(!arma::chol(cholesky_decomp, P_x_x, "lower")){
+    Rcpp::stop("ddhazard_fit_cpp estimation error: Cholesky decomposition failed");
+  }
+
+  s_points.col(0) = a_t;
+  for(arma::uword i = 1; i < s_points.n_cols; ++i)
+    if(i % 2 == 0)
+      s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
+        s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
+}
+
+template<class T>
 void UKF_solver_New<T>::solve(){
-  const arma::vec offsets = p_dat.any_fixed_in_M_step ?
-  p_dat.fixed_terms.t() * p_dat.fixed_parems : arma::vec(p_dat.X.n_cols, arma::fill::zeros);
+  arma::vec offsets;
+  if(p_dat.any_fixed_in_M_step){
+    auto coefs_it = p_dat.get_coefs(1);
+    offsets =  coefs_it.fixed_coefs.t() * p_dat.fixed_terms;
+
+  } else {
+    offsets = arma::vec(p_dat.X.n_cols, arma::fill::zeros);
+
+  }
+
   double bin_stop = p_dat.min_start;
   for (int t = 1; t < p_dat.d + 1; t++){
     double bin_start = bin_stop;
@@ -205,9 +228,11 @@ void UKF_solver_New<T>::solve(){
     arma::vec sqrt_weights_to_sds(n_risk, arma::fill::zeros);
     arma::vec y_bar(n_risk, arma::fill::zeros);
 
-    arma::mat O =
-      (sigma_points.rows(*p_dat.span_current_cov).t() *
-      p_dat.X.cols(r_set)).t();
+    arma::mat O(n_risk, sigma_points.n_cols);
+    for(arma::uword i = 0; i < O.n_cols; ++i){
+      arma::vec tmp(sigma_points.colptr(i), sigma_points.n_rows, false);
+      O.col(i) = p_dat.get_coefs(tmp).t() * p_dat.X.cols(r_set);
+    }
     O.each_col() += offsets(r_set);
 
     arma::ivec do_die =

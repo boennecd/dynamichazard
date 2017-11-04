@@ -30,7 +30,7 @@ class EKF_solver : public Solver{
 
   void parallel_filter_step(
       arma::uvec::const_iterator first, arma::uvec::const_iterator last,
-      const arma::vec &i_a_t,
+      const coefs &coefs_it,
       const bool compute_H_and_z,
       const int bin_number,
       const double bin_tstart, const double bin_tstop);
@@ -101,20 +101,7 @@ protected:
   arma::vec weights_vec_c_inv;
   arma::vec weights_vec_cc;
 
-  inline void compute_sigma_points(const arma::vec &a_t,
-                                   arma::mat &s_points,
-                                   const arma::mat &P_x_x){
-    arma::mat cholesky_decomp;
-    if(!arma::chol(cholesky_decomp, P_x_x, "lower")){
-      Rcpp::stop("ddhazard_fit_cpp estimation error: Cholesky decomposition failed");
-    }
-
-    s_points.col(0) = a_t;
-    for(arma::uword i = 1; i < s_points.n_cols; ++i)
-      if(i % 2 == 0)
-        s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
-          s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
-  }
+  void compute_sigma_points(const arma::vec&, arma::mat&, const arma::mat&);
 
 public:
   UKF_solver_New(ddhazard_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,

@@ -1,4 +1,4 @@
-SOURCES_CPP = family.cpp utils.cpp BLAS_LAPACK/R_BLAS_LAPACK.cpp BLAS_LAPACK/arma_BLAS_LAPACK.cpp PF/PF_logger.cpp for_tests.cpp PF/particles.cpp sample_funcs.cpp PF.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard/EKF_solver.cpp ddhazard/UKF_solver.cpp ddhazard/SMA_solver.cpp ddhazard/GMA_solver.cpp parallel_glm.cpp thread_pool.cpp
+SOURCES_CPP = problem_data.cpp family.cpp utils.cpp BLAS_LAPACK/R_BLAS_LAPACK.cpp BLAS_LAPACK/arma_BLAS_LAPACK.cpp PF/PF_logger.cpp for_tests.cpp PF/particles.cpp sample_funcs.cpp PF.cpp RcppExports.cpp bigglm_wrapper.cpp ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard/EKF_solver.cpp ddhazard/UKF_solver.cpp ddhazard/SMA_solver.cpp ddhazard/GMA_solver.cpp parallel_glm.cpp thread_pool.cpp
 SOURCES_F = biglm/boundedQRf.f BLAS_LAPACK/dchur.f
 CXX_STD = CXX11
 OBJECTS =$(SOURCES_CPP:.cpp=.o) $(SOURCES_F:.f=.o)

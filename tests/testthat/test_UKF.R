@@ -19,9 +19,8 @@ test_that("UKF on head_neck works with logit model", {
     data = head_neck_cancer,
     by = 1, Q_0 = diag(1, 2), a_0 = c(-3, 0),
     Q = diag(1e-1, 2),
-    control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-3,
-                   method = "UKF", save_data = F, save_risk_set = F,
-                   beta = 0, alpha = 1),
+    control = list(
+      eps = 10^-3, method = "UKF", beta = 0, alpha = 1),
     max_T = 30,
     id = head_neck_cancer$id, order = 1,
     verbose = F,

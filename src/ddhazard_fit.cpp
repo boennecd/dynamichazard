@@ -66,7 +66,7 @@ Rcpp::List ddhazard_fit_cpp(
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   // Intialize the solver for the E-step
-  ddhazard_data p_data(
+  std::unique_ptr<ddhazard_data> p_data(new problem_data_random_walk(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -75,17 +75,17 @@ Rcpp::List ddhazard_fit_cpp(
       weights,
       n_max, eps, verbose,
       order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-      criteria);
+      criteria));
   std::unique_ptr<Solver> solver;
 
   if(method == "EKF"){
     if(model == "logit"){
       solver.reset(new EKF_solver<logistic>(
-          p_data, model, NR_eps, NR_it_max, EKF_batch_size));
+          *p_data.get(), model, NR_eps, NR_it_max, EKF_batch_size));
 
     } else if (is_exponential_model(model)){
       solver.reset(new EKF_solver<exponential>(
-          p_data, model, NR_eps, NR_it_max, EKF_batch_size));
+          *p_data.get(), model, NR_eps, NR_it_max, EKF_batch_size));
 
     } else
       Rcpp::stop("EKF is not implemented for model '" + model  +"'");
@@ -97,11 +97,11 @@ Rcpp::List ddhazard_fit_cpp(
 
     if(model == "logit"){
       solver.reset(
-        new UKF_solver_New<logistic>(p_data, kappa, alpha, beta));
+        new UKF_solver_New<logistic>(*p_data.get(), kappa, alpha, beta));
 
     } else if (is_exponential_model(model)){
       solver.reset(
-        new UKF_solver_New<exponential>(p_data, kappa, alpha, beta));
+        new UKF_solver_New<exponential>(*p_data.get(), kappa, alpha, beta));
 
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with UKF");
@@ -110,27 +110,27 @@ Rcpp::List ddhazard_fit_cpp(
     if(model != "logit")
       Rcpp::stop("UKF_org is not implemented for model '" + model  +"'");
 
-    if(p_data.any_fixed_in_M_step)
+    if(p_data->any_fixed_in_M_step)
       Rcpp::stop("Fixed effects is not implemented with UKF_org");
 
-    solver.reset(new UKF_solver_Org(p_data, kappa));
+    solver.reset(new UKF_solver_Org(*p_data.get(), kappa));
 
   } else if (method == "SMA"){
     if(model == "logit"){
-      solver.reset(new SMA<logistic>(p_data, posterior_version));
+      solver.reset(new SMA<logistic>(*p_data.get(), posterior_version));
 
     } else if(is_exponential_model(model)){
-      solver.reset(new SMA<exponential>(p_data, posterior_version));
+      solver.reset(new SMA<exponential>(*p_data.get(), posterior_version));
 
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
 
   } else if (method == "GMA"){
     if(model == "logit"){
-      solver.reset(new GMA<logistic>(p_data, GMA_max_rep, GMA_NR_eps));
+      solver.reset(new GMA<logistic>(*p_data.get(), GMA_max_rep, GMA_NR_eps));
 
     }  else if(is_exponential_model(model)){
-      solver.reset(new GMA<exponential>(p_data, GMA_max_rep, GMA_NR_eps));
+      solver.reset(new GMA<exponential>(*p_data.get(), GMA_max_rep, GMA_NR_eps));
 
     } else
       Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
@@ -142,16 +142,18 @@ Rcpp::List ddhazard_fit_cpp(
   // declare further variables for estimation
   arma::mat a_prev;
   double old_log_like = 0.0;
-  if(p_data.criteria == "delta_coef"){
-    a_prev.copy_size(p_data.a_t_t_s);
+  if(p_data->criteria == "delta_coef"){
+    a_prev.copy_size(p_data->a_t_t_s);
     a_prev.zeros();
   }
 
-  arma::mat varying_only_F = p_data.F_;
-  if(p_data.any_fixed_in_E_step){
-    if(p_data.any_fixed_in_E_step){
-      varying_only_F.shed_rows(p_data.span_fixed_params->a, p_data.span_fixed_params->b);
-      varying_only_F.shed_cols(p_data.span_fixed_params->a, p_data.span_fixed_params->b);
+  arma::mat varying_only_F = p_data->F_;
+  if(p_data->any_fixed_in_E_step){
+    if(p_data->any_fixed_in_E_step){
+      varying_only_F.shed_rows(p_data->span_fixed_params->a,
+                               p_data->span_fixed_params->b);
+      varying_only_F.shed_cols(p_data->span_fixed_params->a,
+                               p_data->span_fixed_params->b);
     } else{
       varying_only_F = arma::mat();
     }
@@ -160,108 +162,108 @@ Rcpp::List ddhazard_fit_cpp(
   // main loop for estimation
   do
   {
-    p_data.em_iteration = it;
-    p_data.computation_stage = "Starting EM";
+    p_data->em_iteration = it;
+    p_data->computation_stage = "Starting EM";
 
-    if(p_data.debug){
-      my_debug_logger(p_data)
+    if(p_data->debug){
+      my_debug_logger(*p_data.get())
         << "##########################################";
-      my_debug_logger(p_data)
+      my_debug_logger(*p_data.get())
         << "Starting iteration " << it << " with the following values";
-      my_print(p_data, p_data.a_t_t_s.col(0), "a_0");
-      my_print(p_data, p_data.Q, "Q");
+      my_print(*p_data.get(), p_data->a_t_t_s.col(0), "a_0");
+      my_print(*p_data.get(), p_data->Q, "Q");
     }
 
     if((it + 1) % 25 == 0)
       Rcpp::checkUserInterrupt(); // this is expensive (on Windows)
 
-    if(p_data.any_dynamic){
-      p_data.V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
+    if(p_data->any_dynamic){
+      p_data->V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not
 
       // E-step: filtering
-      p_data.computation_stage = "E-step filtering";
+      p_data->computation_stage = "E-step filtering";
       solver->solve();
 
       // E-step: smoothing
-      p_data.computation_stage = "E-step smoothing";
-      if(p_data.debug){
-        my_debug_logger(p_data) << "Started smoothing";
+      p_data->computation_stage = "E-step smoothing";
+      if(p_data->debug){
+        my_debug_logger(*p_data.get()) << "Started smoothing";
       }
 
-      for (int t = p_data.d - 1; t > -1; t--){
+      for (int t = p_data->d - 1; t > -1; t--){
         // we need to compute the correlation matrix first
         if(t > 0){
-          p_data.lag_one_cov.slice(t - 1) = p_data.V_t_t_s.slice(t) *
-            p_data.B_s.slice(t - 1).t() + p_data.B_s.slice(t) * (
-                p_data.lag_one_cov.slice(t) - F_ * p_data.V_t_t_s.slice(t)) *
-                  p_data.B_s.slice(t - 1).t();
+          p_data->lag_one_cov.slice(t - 1) = p_data->V_t_t_s.slice(t) *
+            p_data->B_s.slice(t - 1).t() + p_data->B_s.slice(t) * (
+                p_data->lag_one_cov.slice(t) - F_ * p_data->V_t_t_s.slice(t)) *
+                  p_data->B_s.slice(t - 1).t();
         }
 
-        p_data.a_t_t_s.col(t) = p_data.a_t_t_s.unsafe_col(t) +
-          p_data.B_s.slice(t) *
-          (p_data.a_t_t_s.unsafe_col(t + 1) - p_data.a_t_less_s.unsafe_col(t));
-        p_data.V_t_t_s.slice(t) = p_data.V_t_t_s.slice(t) +
-          p_data.B_s.slice(t) * (p_data.V_t_t_s.slice(t + 1) -
-          p_data.V_t_less_s.slice(t)) * p_data.B_s.slice(t).t();
+        p_data->a_t_t_s.col(t) = p_data->a_t_t_s.unsafe_col(t) +
+          p_data->B_s.slice(t) *
+          (p_data->a_t_t_s.unsafe_col(t + 1) - p_data->a_t_less_s.unsafe_col(t));
+        p_data->V_t_t_s.slice(t) = p_data->V_t_t_s.slice(t) +
+          p_data->B_s.slice(t) * (p_data->V_t_t_s.slice(t + 1) -
+          p_data->V_t_less_s.slice(t)) * p_data->B_s.slice(t).t();
 
-        if(p_data.debug){
+        if(p_data->debug){
           std::stringstream ss;
-          ss << t << "|" <<  p_data.d;
-          my_print(p_data, p_data.a_t_t_s.col(t), "a_(" + ss.str() + ")");
-          my_print(p_data, p_data.V_t_t_s.slice(t), "V_(" + ss.str() + ")");
-          my_debug_logger(p_data)
+          ss << t << "|" <<  p_data->d;
+          my_print(*p_data.get(), p_data->a_t_t_s.col(t), "a_(" + ss.str() + ")");
+          my_print(*p_data.get(), p_data->V_t_t_s.slice(t), "V_(" + ss.str() + ")");
+          my_debug_logger(*p_data.get())
             << "Condition number of V_(" + ss.str() + ") is "
-            << arma::cond(p_data.V_t_t_s.slice(t));
+            << arma::cond(p_data->V_t_t_s.slice(t));
         }
       }
 
       // M-step
-      p_data.computation_stage = "M-step";
+      p_data->computation_stage = "M-step";
       if(est_Q_0){
-        Q_0 = p_data.V_t_t_s.slice(0);
+        Q_0 = p_data->V_t_t_s.slice(0);
       }
 
-      if(p_data.debug){
-        my_print(p_data, p_data.Q, "Q before changes in M-step");
+      if(p_data->debug){
+        my_print(*p_data.get(), p_data->Q, "Q before changes in M-step");
       }
 
       Q.zeros();
-      for (int t = 1; t < p_data.d + 1; t++){
-        delta_t = p_data.I_len[t - 1];
+      for (int t = 1; t < p_data->d + 1; t++){
+        delta_t = p_data->I_len[t - 1];
 
-        V_less = &p_data.V_t_t_s.slice(t - 1);
-        V = &p_data.V_t_t_s.slice(t);
-        a_less = p_data.a_t_t_s.unsafe_col(t - 1);
-        a = p_data.a_t_t_s.unsafe_col(t);
+        V_less = &p_data->V_t_t_s.slice(t - 1);
+        V = &p_data->V_t_t_s.slice(t);
+        a_less = p_data->a_t_t_s.unsafe_col(t - 1);
+        a = p_data->a_t_t_s.unsafe_col(t);
 
         if(M_step_formulation == "Fahrmier94"){
-          B = &p_data.B_s.slice(t - 1);
+          B = &p_data->B_s.slice(t - 1);
 
           Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
                   - F_ * *B * *V
                   - (F_ * *B * *V).t()
-                  + F_ * *V_less * p_data.T_F_) / delta_t;
+                  + F_ * *V_less * p_data->T_F_) / delta_t;
 
         } else if (M_step_formulation == "SmoothedCov"){
           /* this is not B but the lagged one smooth correlation.
            * Do not mind the variable name */
-          B = &p_data.lag_one_cov.slice(t - 1);
+          B = &p_data->lag_one_cov.slice(t - 1);
 
           Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
                   - F_ * *B
                   - (F_ * *B).t()
-                  + F_ * *V_less * p_data.T_F_) / delta_t;
+                  + F_ * *V_less * p_data->T_F_) / delta_t;
         } else
           Rcpp::stop("'M_step_formulation' of type '" +
             M_step_formulation + "' is not implemented");
 
       }
-      Q /= p_data.d;
+      Q /= p_data->d;
 
 
-      if(p_data.any_fixed_in_E_step){
-        Q.rows(*p_data.span_fixed_params).zeros();
-        Q.cols(*p_data.span_fixed_params).zeros();
+      if(p_data->any_fixed_in_E_step){
+        Q.rows(*p_data->span_fixed_params).zeros();
+        Q.cols(*p_data->span_fixed_params).zeros();
       }
 
       if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) >
@@ -288,79 +290,80 @@ Rcpp::List ddhazard_fit_cpp(
       Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
       if(order_ > 1){
-        arma::mat tmp_Q = Q(*p_data.span_current_cov,
-                            *p_data.span_current_cov);
+        arma::mat tmp_Q = Q(*p_data->span_current_cov,
+                            *p_data->span_current_cov);
         Q.zeros();
-        Q(*p_data.span_current_cov, *p_data.span_current_cov) = tmp_Q;
+        Q(*p_data->span_current_cov, *p_data->span_current_cov) = tmp_Q;
       }
     }
 
-    if(p_data.debug)
-      my_print(p_data, p_data.Q, "Q after changes in M-step");
+    if(p_data->debug)
+      my_print(*p_data.get(), p_data->Q, "Q after changes in M-step");
 
-    if(p_data.criteria == "delta_coef"){
-      if(p_data.any_fixed_in_E_step ||
-         p_data.any_dynamic){
+    if(p_data->criteria == "delta_coef"){
+      if(p_data->any_fixed_in_E_step ||
+         p_data->any_dynamic){
         conv_values.push_back(conv_criteria(
-            a_prev(*p_data.span_current_cov, arma::span::all),
-            p_data.a_t_t_s(*p_data.span_current_cov, arma::span::all)));
+            a_prev(*p_data->span_current_cov, arma::span::all),
+            p_data->a_t_t_s(*p_data->span_current_cov, arma::span::all)));
       } else
         conv_values.push_back(0.0);
 
     }
 
-    if(p_data.any_fixed_in_M_step){
-      arma::vec old = p_data.fixed_parems;
+    if(p_data->any_fixed_in_M_step){
+      arma::vec old = p_data->fixed_parems;
 
       if(model == "logit"){
         estimate_fixed_effects_M_step<bigglm_updateQR<logistic>>(
-          &p_data, fixed_effect_chunk_size);
+          p_data.get(), fixed_effect_chunk_size);
 
       } else if(is_exponential_model(model)){
         estimate_fixed_effects_M_step<bigglm_updateQR<exponential>>(
-          &p_data, fixed_effect_chunk_size);
+          p_data.get(), fixed_effect_chunk_size);
 
       } else
         Rcpp::stop("Fixed effects is not implemented for '" + model  +"'");
 
-      if(p_data.criteria == "delta_coef")
-        *(conv_values.end() -1) += conv_criteria(old, p_data.fixed_parems);
+      if(p_data->criteria == "delta_coef")
+        *(conv_values.end() -1) += conv_criteria(old, p_data->fixed_parems);
 
     }
 
     double log_like = 0.0;
-    if(p_data.criteria == "delta_likeli" || (verbose && it % 5 < verbose)){
-      arma::mat varying_only_a = p_data.a_t_t_s; // take copy
+    if(p_data->criteria == "delta_likeli" || (verbose && it % 5 < verbose)){
+      arma::mat varying_only_a = p_data->a_t_t_s; // take copy
       arma::vec fixed_effects_offsets;
 
-      if(p_data.any_fixed_in_M_step){
-        fixed_effects_offsets = p_data.fixed_terms.t() * p_data.fixed_parems;
+      if(p_data->any_fixed_in_M_step){
+        fixed_effects_offsets = p_data->fixed_terms.t() * p_data->fixed_parems;
 
-      } else if(p_data.any_fixed_in_E_step){
+      } else if(p_data->any_fixed_in_E_step){
+        // TODO: can use new setup to get coefficients here
         fixed_effects_offsets =
-          p_data.X(*p_data.span_fixed_params, arma::span::all).t() *
-          p_data.a_t_t_s(*p_data.span_fixed_params, arma::span::all).col(0);
+          p_data->X(*p_data->span_fixed_params, arma::span::all).t() *
+          p_data->a_t_t_s(*p_data->span_fixed_params, arma::span::all).col(0);
 
-        varying_only_a.shed_rows(p_data.span_fixed_params->a,
-                                 p_data.span_fixed_params->b);
+        varying_only_a.shed_rows(p_data->span_fixed_params->a,
+                                 p_data->span_fixed_params->b);
 
       } else
-        fixed_effects_offsets = arma::vec(p_data.X.n_cols, arma::fill::zeros);
+        fixed_effects_offsets = arma::vec(p_data->X.n_cols, arma::fill::zeros);
 
       log_like =
-        logLike_cpp(p_data.X(*p_data.span_current_cov_varying,
-                             arma::span::all),
+        logLike_cpp(p_data->X(*p_data->span_current_cov_varying,
+                              arma::span::all),
                     risk_obj,
                     varying_only_F,
-                    Q_0(*p_data.span_current_cov_varying,
-                        *p_data.span_current_cov_varying),
-                    Q(*p_data.span_current_cov_varying,
-                      *p_data.span_current_cov_varying),
+                    Q_0(*p_data->span_current_cov_varying,
+                        *p_data->span_current_cov_varying),
+                    Q(*p_data->span_current_cov_varying,
+                      *p_data->span_current_cov_varying),
                     varying_only_a,
-                    p_data.tstart, p_data.tstop,
+                    p_data->tstart, p_data->tstop,
                     fixed_effects_offsets, order_, model)[0];
 
-      if(p_data.criteria == "delta_likeli"){
+      if(p_data->criteria == "delta_likeli"){
         if(it == 0){
           conv_values.push_back(1e6); // something large
         } else
@@ -369,13 +372,13 @@ Rcpp::List ddhazard_fit_cpp(
       }
     }
 
-    if(!p_data.any_dynamic) // No reason to take further iterations
+    if(!p_data->any_dynamic) // No reason to take further iterations
       break;
 
     if(verbose && it % 5 < verbose){
       auto rcout_width = Rcpp::Rcout.width();
 
-      my_debug_logger(p_data)
+      my_debug_logger(*p_data.get())
         << "Iteration " <<  std::setw(5) << it + 1
         << " ended with conv criteria "
         << std::setw(15) << *(conv_values.end() -1)
@@ -387,9 +390,9 @@ Rcpp::List ddhazard_fit_cpp(
     if(*(conv_values.end() -1) < eps)
       break;
 
-    if(p_data.criteria == "delta_coef"){
-      a_prev = p_data.a_t_t_s;
-    } else if(p_data.criteria == "delta_likeli"){
+    if(p_data->criteria == "delta_coef"){
+      a_prev = p_data->a_t_t_s;
+    } else if(p_data->criteria == "delta_likeli"){
       old_log_like = log_like;
     }
   } while(++it < n_max);
@@ -399,11 +402,11 @@ Rcpp::List ddhazard_fit_cpp(
       "EM algorithm did not converge within the n_max number of iterations");
 
   return(Rcpp::List::create(
-      Rcpp::Named("V_t_d_s") = Rcpp::wrap(p_data.V_t_t_s),
-      Rcpp::Named("a_t_d_s") = Rcpp::wrap(p_data.a_t_t_s.t()),
-      Rcpp::Named("B_s") = Rcpp::wrap(p_data.B_s),
-      Rcpp::Named("lag_one_cov") = Rcpp::wrap(p_data.lag_one_cov),
-      Rcpp::Named("fixed_effects") = Rcpp::wrap(p_data.fixed_parems),
+      Rcpp::Named("V_t_d_s") = Rcpp::wrap(p_data->V_t_t_s),
+      Rcpp::Named("a_t_d_s") = Rcpp::wrap(p_data->a_t_t_s.t()),
+      Rcpp::Named("B_s") = Rcpp::wrap(p_data->B_s),
+      Rcpp::Named("lag_one_cov") = Rcpp::wrap(p_data->lag_one_cov),
+      Rcpp::Named("fixed_effects") = Rcpp::wrap(p_data->fixed_parems),
 
       Rcpp::Named("n_iter") = std::min(it + 1, n_max),
       Rcpp::Named("conv_values") = conv_values,

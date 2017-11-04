@@ -56,7 +56,7 @@ public:
 template<typename T>
 class EKF_filter_worker{
   void do_comps(const arma::uvec::const_iterator it, int i,
-                const arma::vec &i_a_t, const bool compute_z_and_H,
+                const coefs &coefs_it, const bool compute_z_and_H,
                 const int bin_number,
                 const double bin_tstart, const double bin_tstop);
   // Variables for computations
@@ -64,7 +64,7 @@ class EKF_filter_worker{
   ddhazard_data &org;
   arma::uvec::const_iterator first;
   const arma::uvec::const_iterator last;
-  const arma::vec &i_a_t;
+  const coefs &coefs_it;
   const bool compute_z_and_H;
   const int i_start;
   const int bin_number;
@@ -79,7 +79,7 @@ public:
   EKF_filter_worker(
     ddhazard_data_EKF &p_data,
     arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
-    const arma::vec &i_a_t_, const bool compute_z_and_H_,
+    const coefs &coefs_it, const bool compute_z_and_H_,
     const int i_start_, const int bin_number_,
     const double bin_tstart_, const double bin_tstop_);
 
@@ -91,14 +91,14 @@ template<typename T>
 EKF_filter_worker<T>::EKF_filter_worker(
   ddhazard_data_EKF &p_data,
   arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
-  const arma::vec &i_a_t_, const bool compute_z_and_H_,
+  const coefs &coefs_it, const bool compute_z_and_H_,
   const int i_start_, const int bin_number_,
   const double bin_tstart_, const double bin_tstop_)
 
   :
 
   dat(p_data), org(p_data.org), first(first_), last(last_),
-  i_a_t(i_a_t_), compute_z_and_H(compute_z_and_H_),
+  coefs_it(coefs_it), compute_z_and_H(compute_z_and_H_),
   i_start(i_start_), bin_number(bin_number_),
   bin_tstart(bin_tstart_), bin_tstop(bin_tstop_),
   u_(org.n_params_state_vec, arma::fill::zeros),
@@ -114,8 +114,10 @@ inline void EKF_filter_worker<T>::operator()(){
   for(arma::uvec::const_iterator it = first; it != last; it++, i++){
     const arma::vec x_(org.X.colptr(*it), org.n_params_state_vec, false);
     const double w = org.weights(*it);
-    const double offset = (org.any_fixed_in_M_step) ? arma::dot(org.fixed_parems, org.fixed_terms.col(*it)) : 0.;
-    const double eta = arma::dot(i_a_t, x_) + offset;
+    const double offset =
+      (org.any_fixed_in_M_step) ?
+      arma::dot(coefs_it.fixed_coefs, org.fixed_terms.col(*it)) : 0.;
+    const double eta = arma::dot(coefs_it.dynamic_coefs, x_) + offset;
     const bool do_die = org.is_event_in_bin(*it) == bin_number;
     const double at_risk_length =
       T::uses_at_risk_length ?
@@ -202,7 +204,7 @@ void EKF_solver<T>::solve(){
       ++n_NR_it;
 
       parallel_filter_step(
-        r_set.begin(), r_set.end(), i_a_t(*org.span_current_cov),
+        r_set.begin(), r_set.end(), org.get_coefs(t),
         t == org.d, t - 1, bin_tstart, bin_tstop);
 
       if(org.debug){
@@ -291,7 +293,7 @@ void EKF_solver<T>::solve(){
 template<typename T>
 void EKF_solver<T>::parallel_filter_step(
     arma::uvec::const_iterator first, arma::uvec::const_iterator last,
-    const arma::vec &i_a_t,
+    const coefs &coefs_it,
     const bool compute_H_and_z,
     const int bin_number,
     const double bin_tstart, const double bin_tstop){
@@ -327,7 +329,7 @@ void EKF_solver<T>::parallel_filter_step(
     std::advance(block_end, block_size);
 
     workers.emplace_back(
-      *p_dat.get(), block_start, block_end, i_a_t, compute_H_and_z,
+      *p_dat.get(), block_start, block_end, coefs_it, compute_H_and_z,
       i_start, bin_number, bin_tstart, bin_tstop);
 
     futures[i] = pool.submit(workers.back());
@@ -336,7 +338,7 @@ void EKF_solver<T>::parallel_filter_step(
   }
 
   worker_T( // compute last enteries on this thread
-    *p_dat.get(), block_start, last, i_a_t, compute_H_and_z,
+    *p_dat.get(), block_start, last, coefs_it, compute_H_and_z,
     i_start, bin_number, bin_tstart, bin_tstop)();
 
   for(unsigned long i = 0; i < num_blocks - 1; ++i)
