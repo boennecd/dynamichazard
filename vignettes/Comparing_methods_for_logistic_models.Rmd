@@ -7,7 +7,7 @@ header-includes:
 output:
   pdf_document:
     fig_caption: yes
-bibliography: pbc_data.bib
+bibliography: bibliography.bib
 csl: bib_style.csl
 vignette: >
   %\VignetteIndexEntry{Comparing methods for time varying logistic models}

@@ -45,19 +45,8 @@ print.ddhazard_boot <-
   }
 
 
-#' @title Print function for \code{ddhazard} result
-#'
-#' @param x object returned from \code{\link{ddhazard}}.
-#' @param var_indices variable indices to print for time-varying effects.
-#' @param time_indices time intervals to print for time-varying effects.
-#' @param digits number of digits to print.
-#' @param ... not used.
-#'
-#' @description
-#' The \code{sd} printed for time-varying effects are point-wise standard deviations from the smoothed covariance matrices.
-#'
 #' @export
-print.ddhazard<- function(x){
+print.ddhazard<- function(x, ...){
   cat("Call:", deparse(x$call), sep = "\n")
 
   cat("\n", sQuote(x$model), " model fitted with the ", sQuote(x$method),
