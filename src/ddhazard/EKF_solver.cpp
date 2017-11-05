@@ -41,11 +41,12 @@ public:
     NR_it_max(NR_it_max),
     EKF_batch_size(EKF_batch_size){
     if(org.any_dynamic || org.any_fixed_in_E_step){
-      u = arma::colvec(org.space_dim_in_arrays);
-      U = arma::mat(org.space_dim_in_arrays, org.space_dim_in_arrays);
+      u = arma::colvec(org.covar_dim);
+      U = arma::mat(org.covar_dim, org.covar_dim);
 
       z_dot = arma::mat(
-        org.space_dim_in_arrays, n_in_last_set);
+        org.space_dim, // TODO: can be changed to dimension of covariates
+        n_in_last_set, arma::fill::zeros);
       H_diag_inv = arma::vec(n_in_last_set);
     }
   }
@@ -56,7 +57,7 @@ public:
 template<typename T>
 class EKF_filter_worker{
   void do_comps(const arma::uvec::const_iterator it, int i,
-                const coefs &coefs_it, const bool compute_z_and_H,
+                const arma::vec &dynamic_coefs, const bool compute_z_and_H,
                 const int bin_number,
                 const double bin_tstart, const double bin_tstop);
   // Variables for computations
@@ -64,7 +65,7 @@ class EKF_filter_worker{
   ddhazard_data &org;
   arma::uvec::const_iterator first;
   const arma::uvec::const_iterator last;
-  const coefs &coefs_it;
+  const arma::vec &dynamic_coefs;
   const bool compute_z_and_H;
   const int i_start;
   const int bin_number;
@@ -79,7 +80,7 @@ public:
   EKF_filter_worker(
     ddhazard_data_EKF &p_data,
     arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
-    const coefs &coefs_it, const bool compute_z_and_H_,
+    const arma::vec &dynamic_coefs, const bool compute_z_and_H_,
     const int i_start_, const int bin_number_,
     const double bin_tstart_, const double bin_tstop_);
 
@@ -91,18 +92,18 @@ template<typename T>
 EKF_filter_worker<T>::EKF_filter_worker(
   ddhazard_data_EKF &p_data,
   arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
-  const coefs &coefs_it, const bool compute_z_and_H_,
+  const arma::vec &dynamic_coefs, const bool compute_z_and_H_,
   const int i_start_, const int bin_number_,
   const double bin_tstart_, const double bin_tstop_)
 
   :
 
   dat(p_data), org(p_data.org), first(first_), last(last_),
-  coefs_it(coefs_it), compute_z_and_H(compute_z_and_H_),
+  dynamic_coefs(dynamic_coefs), compute_z_and_H(compute_z_and_H_),
   i_start(i_start_), bin_number(bin_number_),
   bin_tstart(bin_tstart_), bin_tstop(bin_tstop_),
-  u_(org.n_params_state_vec, arma::fill::zeros),
-  U_(org.n_params_state_vec, org.n_params_state_vec, arma::fill::zeros)
+  u_(org.covar_dim, arma::fill::zeros),
+  U_(org.covar_dim, org.covar_dim, arma::fill::zeros)
 {};
 
 template<typename T>
@@ -112,12 +113,12 @@ inline void EKF_filter_worker<T>::operator()(){
   // compute local results
   int i = i_start;
   for(arma::uvec::const_iterator it = first; it != last; it++, i++){
-    const arma::vec x_(org.X.colptr(*it), org.n_params_state_vec, false);
+    const arma::vec x_(org.X.colptr(*it), org.covar_dim, false);
     const double w = org.weights(*it);
     const double offset =
       (org.any_fixed_in_M_step) ?
-      arma::dot(coefs_it.fixed_coefs, org.fixed_terms.col(*it)) : 0.;
-    const double eta = arma::dot(coefs_it.dynamic_coefs, x_) + offset;
+      arma::dot(org.fixed_parems, org.fixed_terms.col(*it)) : 0.;
+    const double eta = arma::dot(dynamic_coefs, x_) + offset;
     const bool do_die = org.is_event_in_bin(*it) == bin_number;
     const double at_risk_length =
       T::uses_at_risk_length ?
@@ -137,19 +138,20 @@ inline void EKF_filter_worker<T>::operator()(){
 
     if(compute_z_and_H){
       dat.H_diag_inv(i) = 1 / var;
-      dat.z_dot(*org.span_current_cov, i) = x_ * mu_eta;
+      arma::vec tmp(x_ * mu_eta);
+      dat.z_dot.col(i) = org.lp_map_inv(tmp).subview;
     }
   }
 
   // Update shared variable
   {
     std::lock_guard<std::mutex> lk(dat.m_U);
-    dat.U(*org.span_current_cov, *org.span_current_cov) +=  U_;
+    dat.U += U_;
   }
 
   {
     std::lock_guard<std::mutex> lk(dat.m_u);
-    dat.u(*org.span_current_cov) += u_;
+    dat.u += u_;
   }
 };
 
@@ -203,12 +205,13 @@ void EKF_solver<T>::solve(){
     while(true){
       ++n_NR_it;
 
+      arma::vec dynamic_coef(org.get_dynamic_coefs(t).subview);
       parallel_filter_step(
-        r_set.begin(), r_set.end(), org.get_coefs(t),
+        r_set.begin(), r_set.end(), dynamic_coef,
         t == org.d, t - 1, bin_tstart, bin_tstop);
 
       if(org.debug){
-        my_debug_logger(org) << "Score vector and diagonal of information matrix at time " << t << " are:";
+        my_debug_logger(org) << "Score vector and information matrix at time " << t << " are:";
         my_print(org, p_dat->u, "u");
         my_print(org, p_dat->U, "U");
       }
@@ -222,13 +225,16 @@ void EKF_solver<T>::solve(){
       }
 
       // E-step: scoring step: update values
+      auto U = org.lp_map_inv(p_dat->U);
       inv_sympd(
-        org.V_t_t_s.slice(t) , V_t_less_s_inv + p_dat->U, org.use_pinv,
+        org.V_t_t_s.slice(t) , V_t_less_s_inv + U.subview,
+        org.use_pinv,
         "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
 
+      auto u = org.lp_map_inv(p_dat->u);
       org.a_t_t_s.col(t) =
         org.V_t_t_s.slice(t) * (
-        p_dat->U * i_a_t + update_term + (org.LR * p_dat->u));
+            U.subview * i_a_t + update_term + (org.LR * u.subview));
 
       if(org.debug){
         my_print(org,i_a_t, "a^(" + std::to_string(n_NR_it - 1L) + ")");
@@ -269,9 +275,11 @@ void EKF_solver<T>::solve(){
     }
 
     if(t == org.d){
+      auto U = org.lp_map_inv(p_dat->U);
       arma::mat tmp_inv_mat;
-      inv(tmp_inv_mat, arma::eye<arma::mat>(size(p_dat->U)) +
-        p_dat->U * org.V_t_less_s.slice(t - 1),
+      inv(tmp_inv_mat,
+          arma::eye<arma::mat>(org.space_dim, org.space_dim) +
+            U.subview * org.V_t_less_s.slice(t - 1),
           org.use_pinv, "ddhazard_fit_cpp estimation error: Failed to invert intermediate for K_d matrix");
 
       p_dat->K_d = org.V_t_less_s.slice(t - 1) * (
@@ -284,7 +292,8 @@ void EKF_solver<T>::solve(){
         p_dat->z_dot  * diagmat(p_dat->H_diag_inv) -  p_dat->K_d;
 
       org.lag_one_cov.slice(t - 1) =
-        (arma::eye<arma::mat>(size(p_dat->U)) - p_dat->K_d * p_dat->z_dot.t()) *
+        (arma::eye<arma::mat>(org.space_dim, org.space_dim) -
+        p_dat->K_d * p_dat->z_dot.t()) *
         org.F_ * org.V_t_t_s.slice(t - 1);
     }
   }
@@ -293,7 +302,7 @@ void EKF_solver<T>::solve(){
 template<typename T>
 void EKF_solver<T>::parallel_filter_step(
     arma::uvec::const_iterator first, arma::uvec::const_iterator last,
-    const coefs &coefs_it,
+    const arma::vec &dynamic_coefs,
     const bool compute_H_and_z,
     const int bin_number,
     const double bin_tstart, const double bin_tstop){
@@ -329,7 +338,7 @@ void EKF_solver<T>::parallel_filter_step(
     std::advance(block_end, block_size);
 
     workers.emplace_back(
-      *p_dat.get(), block_start, block_end, coefs_it, compute_H_and_z,
+      *p_dat.get(), block_start, block_end, dynamic_coefs, compute_H_and_z,
       i_start, bin_number, bin_tstart, bin_tstop);
 
     futures[i] = pool.submit(workers.back());
@@ -338,7 +347,7 @@ void EKF_solver<T>::parallel_filter_step(
   }
 
   worker_T( // compute last enteries on this thread
-    *p_dat.get(), block_start, last, coefs_it, compute_H_and_z,
+    *p_dat.get(), block_start, last, dynamic_coefs, compute_H_and_z,
     i_start, bin_number, bin_tstart, bin_tstop)();
 
   for(unsigned long i = 0; i < num_blocks - 1; ++i)

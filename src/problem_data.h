@@ -8,10 +8,25 @@
 #include <omp.h>
 #endif
 
-struct coefs {
-  arma::vec dynamic_coefs;
-  arma::vec fixed_coefs;
+/* Object used for map function. We keep a unique pointer to a new object if it
+ * is created in the function to make sure the orginal object is
+ not destructed. */
+template <typename T_view, typename T_type>
+class map_res {
+  using ptr_T = std::unique_ptr<T_type>;
+
+public:
+  T_view subview;
+  ptr_T org_ptr;
+
+  map_res(T_view subview): subview(subview) {}
+  map_res(T_view subview, ptr_T &ptr): subview(subview) {
+    org_ptr = std::move(ptr);
+  }
 };
+
+using map_res_col = map_res<arma::subview_col<double>, arma::vec>;
+using map_res_mat = map_res<arma::subview<double>, arma::mat>;
 
 class problem_data {
 public:
@@ -23,10 +38,14 @@ public:
   const int d;
   const Rcpp::List risk_sets;
 
+  const unsigned int space_dim; // dimension of state space vector
+  const unsigned int covar_dim; // dimension of dynamic covariate vector
+
+  // TODO: only relevant for random walk models -- move to derived class
+  const int order;
   const int n_params_state_vec_fixed;
   const int n_params_state_vec_varying; // NB: not including order
   const int n_params_state_vec;         // NB: not including order
-  const int space_dim_in_arrays;
 
   // indicies for dot product for linear predictor. Includes both time-varying
   // effects and fixed effects estimated in the E-step
@@ -35,6 +54,8 @@ public:
   const std::unique_ptr<const arma::span> span_current_cov_varying;
   // indicies of fixed terms in state vector
   const std::unique_ptr<const arma::span> span_fixed_params;
+
+  // TODO: end of "only relevant ..."
 
   const arma::mat &F_;
   const arma::mat T_F_;
@@ -56,30 +77,34 @@ public:
   arma::mat &Q;
   arma::mat &Q_0;
 
-  problem_data(const int n_fixed_terms_in_state_vec_,
-               arma::mat &X_,
-               arma::mat &fixed_terms_,
-               const arma::vec &tstart_,
-               const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
+  problem_data(const int n_fixed_terms_in_state_vec,
+               arma::mat &X,
+               arma::mat &fixed_terms,
+               const arma::vec &tstart,
+               const arma::vec &tstop, const arma::ivec &is_event_in_bin,
                const arma::colvec &a_0,
-               arma::mat &Q_0_,
-               arma::mat &Q_,
+               arma::mat &Q_0,
+               arma::mat &Q,
                const Rcpp::List &risk_obj,
-               const arma::mat &F__,
+               const arma::mat &F_,
                const int n_max,
-               const int order_,
-               const int n_threads_):
-    any_dynamic(X_.n_elem > 0),
-    any_fixed_in_E_step(n_fixed_terms_in_state_vec_ > 0),
-    any_fixed_in_M_step(fixed_terms_.n_elem > 0),
+               const int order,
+               const int n_threads):
+    any_dynamic(X.n_elem > 0),
+    any_fixed_in_E_step(n_fixed_terms_in_state_vec > 0),
+    any_fixed_in_M_step(fixed_terms.n_elem > 0),
 
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
 
-    n_params_state_vec_fixed(n_fixed_terms_in_state_vec_),
-    n_params_state_vec_varying((a_0.size() - n_fixed_terms_in_state_vec_) / order_),
+    space_dim(a_0.size()),
+    covar_dim(X.n_rows),
+
+    order(order),
+    n_params_state_vec_fixed(n_fixed_terms_in_state_vec),
+    n_params_state_vec_varying((a_0.size() - n_fixed_terms_in_state_vec) / order),
     n_params_state_vec(n_params_state_vec_fixed + n_params_state_vec_varying),
-    space_dim_in_arrays(n_params_state_vec_varying * order_ + n_params_state_vec_fixed),
+
 
     // Seems like there is no empty span for arma
     // See: armadillo-code/include/armadillo_bits/span.hpp
@@ -96,22 +121,22 @@ public:
       any_fixed_in_E_step ?
         new arma::span(n_params_state_vec_varying, n_params_state_vec - 1) : nullptr),
 
-    F_(F__),
+    F_(F_),
     T_F_((any_dynamic || any_fixed_in_E_step) ? F_.t() : arma::mat()),
 
-    X(X_.begin(), X_.n_rows, X_.n_cols, false),
-    fixed_terms(fixed_terms_.begin(), fixed_terms_.n_rows, fixed_terms_.n_cols, false),
+    X(X.begin(), X.n_rows, X.n_cols, false),
+    fixed_terms(fixed_terms.begin(), fixed_terms.n_rows, fixed_terms.n_cols, false),
     I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
 
-    n_threads((n_threads_ > 0) ? n_threads_ : std::thread::hardware_concurrency()),
+    n_threads((n_threads > 0) ? n_threads : std::thread::hardware_concurrency()),
 
-    tstart(tstart_),
-    tstop(tstop_),
-    is_event_in_bin(is_event_in_bin_),
+    tstart(tstart),
+    tstop(tstop),
+    is_event_in_bin(is_event_in_bin),
     min_start(Rcpp::as<double>(risk_obj["min_start"])),
 
-    Q(Q_),
-    Q_0(Q_0_)
+    Q(Q),
+    Q_0(Q_0)
   {
 #ifdef _OPENMP
     omp_set_num_threads(n_threads);
@@ -119,7 +144,7 @@ public:
 #endif
   }
 
-  problem_data & operator=(const problem_data&) = delete;
+  problem_data& operator=(const problem_data&) = delete;
   problem_data(const problem_data&) = delete;
   problem_data() = delete;
 };
@@ -157,70 +182,70 @@ public:
   std::string computation_stage;
   int em_iteration;
 
-  ddhazard_data(const int n_fixed_terms_in_state_vec_,
-                arma::mat &X_,
-                arma::mat &fixed_terms_,
-                const arma::vec &tstart_,
-                const arma::vec &tstop_, const arma::ivec &is_event_in_bin_,
+  ddhazard_data(const int n_fixed_terms_in_state_vec,
+                arma::mat &X,
+                arma::mat &fixed_terms,
+                const arma::vec &tstart,
+                const arma::vec &tstop, const arma::ivec &is_event_in_bin,
                 const arma::colvec &a_0,
                 const arma::vec &fixed_parems_start,
-                arma::mat &Q_0_,
-                arma::mat &Q_,
+                arma::mat &Q_0,
+                arma::mat &Q,
                 const Rcpp::List &risk_obj,
-                const arma::mat &F__,
-                const double eps_fixed_parems_,
-                const int max_it_fixed_params_,
-                const arma::vec &weights_,
+                const arma::mat &F_,
+                const double eps_fixed_parems,
+                const int max_it_fixed_params,
+                const arma::vec &weights,
                 const int n_max, const double eps,
                 const bool verbose,
-                const int order_, const bool est_Q_0,
-                const bool debug_,
-                Rcpp::Nullable<Rcpp::NumericVector> LR_,
-                const int n_threads_,
-                const double denom_term_,
-                const bool use_pinv_,
-                const std::string criteria_):
+                const int order, const bool est_Q_0,
+                const bool debug,
+                Rcpp::Nullable<Rcpp::NumericVector> LR,
+                const int n_threads,
+                const double denom_term,
+                const bool use_pinv,
+                const std::string criteria):
     problem_data(
-      n_fixed_terms_in_state_vec_,
-      X_,
-      fixed_terms_,
-      tstart_,
-      tstop_, is_event_in_bin_,
+      n_fixed_terms_in_state_vec,
+      X,
+      fixed_terms,
+      tstart,
+      tstop, is_event_in_bin,
       a_0,
-      Q_0_,
-      Q_,
+      Q_0,
+      Q,
       risk_obj,
-      F__,
+      F_,
       n_max,
-      order_,
-      n_threads_),
-    weights(weights_),
+      order,
+      n_threads),
+    weights(weights),
 
     event_eps(d * std::numeric_limits<double>::epsilon()),
-    eps_fixed_parems(eps_fixed_parems_),
-    max_it_fixed_params(max_it_fixed_params_),
-    denom_term(denom_term_),
+    eps_fixed_parems(eps_fixed_parems),
+    max_it_fixed_params(max_it_fixed_params),
+    denom_term(denom_term),
 
-    debug(debug_),
-    LR(LR_.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR_)[0] : 1.0),
+    debug(debug),
+    LR(LR.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR)[0] : 1.0),
 
-    use_pinv(use_pinv_),
-    criteria(criteria_),
+    use_pinv(use_pinv),
+    criteria(criteria),
     fixed_parems(fixed_parems_start)
   {
     if(debug)
       Rcpp::Rcout << "Using " << n_threads << " threads" << std::endl;
 
     if(any_dynamic || any_fixed_in_E_step){
-      a_t_t_s = arma::mat(space_dim_in_arrays, d + 1);
-      a_t_less_s = arma::mat(space_dim_in_arrays, d);
-      V_t_t_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d + 1);
-      V_t_less_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
-      B_s = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
+      a_t_t_s = arma::mat(space_dim, d + 1);
+      a_t_less_s = arma::mat(space_dim, d);
+      V_t_t_s = arma::cube(space_dim, space_dim, d + 1);
+      V_t_less_s = arma::cube(space_dim, space_dim, d);
+      B_s = arma::cube(space_dim, space_dim, d);
 
       a_t_t_s.col(0) = a_0;
 
-      lag_one_cov = arma::cube(space_dim_in_arrays, space_dim_in_arrays, d);
+      lag_one_cov = arma::cube(space_dim, space_dim, d);
     }
   }
 
@@ -228,8 +253,15 @@ public:
   ddhazard_data(const ddhazard_data&) = delete;
   ddhazard_data() = delete;
 
-  virtual coefs get_coefs(unsigned int) = 0;
-  virtual arma::vec get_coefs(arma::vec&) = 0;
+  map_res_col get_dynamic_coefs(unsigned int);
+
+  /* maps from state space dimension to covariate dimension */
+  virtual map_res_col lp_map(arma::vec&) = 0;
+  virtual map_res_mat lp_map(arma::mat&) = 0;
+
+  /* inverse of the above */
+  virtual map_res_col lp_map_inv(arma::vec&) = 0;
+  virtual map_res_mat lp_map_inv(arma::mat&) = 0;
 };
 
 inline std::string debug_msg_prefix(const ddhazard_data &dat){
@@ -274,12 +306,14 @@ std::ostringstream& my_debug_logger::operator<<(const T &obj){
 }
 
 /* Concrete implementation of data class */
-class problem_data_random_walk : public ddhazard_data {
+class ddhazard_data_random_walk : public ddhazard_data {
 public:
   using ddhazard_data::ddhazard_data;
 
-  coefs get_coefs(unsigned int);
-  arma::vec get_coefs(arma::vec&);
+  map_res_col lp_map(arma::vec&);
+  map_res_mat lp_map(arma::mat&);
+  map_res_col lp_map_inv(arma::vec&);
+  map_res_mat lp_map_inv(arma::mat&);
 };
 
 #endif

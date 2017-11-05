@@ -186,15 +186,10 @@ void UKF_solver_New<T>::compute_sigma_points(
 
 template<class T>
 void UKF_solver_New<T>::solve(){
-  arma::vec offsets;
-  if(p_dat.any_fixed_in_M_step){
-    auto coefs_it = p_dat.get_coefs(1);
-    offsets =  coefs_it.fixed_coefs.t() * p_dat.fixed_terms;
-
-  } else {
-    offsets = arma::vec(p_dat.X.n_cols, arma::fill::zeros);
-
-  }
+  const arma::vec offsets =
+    (p_dat.any_fixed_in_M_step) ?
+    p_dat.fixed_parems.t() * p_dat.fixed_terms :
+    arma::vec(p_dat.X.n_cols, arma::fill::zeros);
 
   double bin_stop = p_dat.min_start;
   for (int t = 1; t < p_dat.d + 1; t++){
@@ -231,7 +226,7 @@ void UKF_solver_New<T>::solve(){
     arma::mat O(n_risk, sigma_points.n_cols);
     for(arma::uword i = 0; i < O.n_cols; ++i){
       arma::vec tmp(sigma_points.colptr(i), sigma_points.n_rows, false);
-      O.col(i) = p_dat.get_coefs(tmp).t() * p_dat.X.cols(r_set);
+      O.col(i) = p_dat.lp_map(tmp).subview.t() * p_dat.X.cols(r_set);
     }
     O.each_col() += offsets(r_set);
 

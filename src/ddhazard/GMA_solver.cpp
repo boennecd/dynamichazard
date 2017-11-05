@@ -8,6 +8,11 @@
 
 template<class T>
 void GMA<T>::solve(){
+  const arma::vec offsets =
+    (p_dat.any_fixed_in_M_step) ?
+    p_dat.fixed_parems.t() * p_dat.fixed_terms :
+    arma::vec(p_dat.X.n_cols, arma::fill::zeros);
+
   double bin_tstop = p_dat.min_start;
 
   for (int t = 1; t < p_dat.d + 1; t++){
@@ -17,8 +22,10 @@ void GMA<T>::solve(){
     bin_tstop += delta_t;
 
     // E-step: Prediction step
-    p_dat.a_t_less_s.col(t - 1) = p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
-    p_dat.V_t_less_s.slice(t - 1) = p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
+    p_dat.a_t_less_s.col(t - 1) =
+      p_dat.F_ *  p_dat.a_t_t_s.unsafe_col(t - 1);
+    p_dat.V_t_less_s.slice(t - 1) =
+      p_dat.F_ * p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ + delta_t * p_dat.Q;
 
     if(p_dat.debug){
       std::stringstream str;
@@ -33,21 +40,17 @@ void GMA<T>::solve(){
 
     // E-step: Correction step
     const arma::uvec r_set = get_risk_set(p_dat, t);
-    arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim_in_arrays, false);
-    arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim_in_arrays,
-                p_dat.space_dim_in_arrays, false);
+    arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim, false);
+    arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim,
+                p_dat.space_dim, false);
     a =  p_dat.a_t_less_s.col(t - 1);
     V = p_dat.V_t_less_s.slice(t - 1);
 
     arma::mat V_t_less_inv;
     inv_sympd(V_t_less_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
               "ddhazard_fit_cpp estimation error: Failed to invert covariance matrix after prediction step");
-    arma::vec grad_term = V_t_less_inv * (p_dat.LR * p_dat.a_t_less_s.col(t - 1));
-
-    const arma::vec offsets =
-      (p_dat.any_fixed_in_M_step) ?
-        p_dat.fixed_terms.cols(r_set).t() * p_dat.fixed_parems :
-        arma::vec(r_set.n_elem, arma::fill::zeros);
+    arma::vec grad_term =
+      V_t_less_inv * (p_dat.LR * p_dat.a_t_less_s.col(t - 1));
 
     const arma::vec w = p_dat.weights(r_set);
     const arma::mat X_t = p_dat.X.cols(r_set);
@@ -65,12 +68,13 @@ void GMA<T>::solve(){
 
     arma::vec h_1d(r_set.n_elem);
 
-    unsigned int k, q = X_t.n_rows;
+    unsigned int k, q = p_dat.covar_dim;
     for(k = 0; k < max_rep; k++){
       arma::mat X_cross(q, q, arma::fill::zeros);
       arma::vec a_old = a;
 
-      arma::vec eta = (a(*p_dat.span_current_cov).t() * X_t).t() + offsets;
+      arma::vec eta =
+        (p_dat.lp_map(a).subview.t() * X_t).t() + offsets(r_set);
 
 #ifdef _OPENMP
       int n_threads = std::max(1, std::min(omp_get_max_threads(),
@@ -112,27 +116,27 @@ void GMA<T>::solve(){
 
       if(p_dat.debug){
         my_print(p_dat, X_cross, "X^T(-p'')X");
-        my_debug_logger(p_dat) << "Condition number of X^T(-p'')X is " << arma::cond(X_cross);
+        my_debug_logger(p_dat) << "Condition number of X^T(-p'')X is " <<
+          arma::cond(X_cross);
       }
 
       {
-        arma::mat tmp = V_t_less_inv;
-        tmp(*p_dat.span_current_cov, *p_dat.span_current_cov) += X_cross;
+        arma::mat tmp = V_t_less_inv + p_dat.lp_map_inv(X_cross).subview;
         inv_sympd(V, tmp, p_dat.use_pinv,
                   "ddhazard_fit_cpp estimation error: Failed to invert Hessian");
       }
 
       {
-        arma::vec tmp = grad_term;
+        arma::vec tmp;
         if(1. - 1e-15 < p_dat.LR && p_dat.LR < 1. + 1e-15){
-          tmp(*p_dat.span_current_cov) +=
-            X_cross * a(*p_dat.span_current_cov) + X_t * h_1d;
+          tmp = X_cross * p_dat.lp_map(a).subview + X_t * h_1d;
+          tmp = p_dat.lp_map_inv(tmp).subview + grad_term;
 
         } else {
-          tmp(*p_dat.span_current_cov) +=
-            X_cross * a(*p_dat.span_current_cov) + X_t * (h_1d * p_dat.LR);
-
+          tmp = X_cross * p_dat.lp_map(a).subview + X_t * (h_1d * p_dat.LR);
+          tmp = p_dat.lp_map_inv(tmp).subview + grad_term;
           tmp += V_t_less_inv * ((1 - p_dat.LR) * a);
+
         }
         a =  V * tmp;
       }
@@ -176,10 +180,13 @@ void GMA<T>::solve(){
 
       my_print(p_dat, p_dat.a_t_t_s.col(t), "a_(" + str.str() + ")");
       my_print(p_dat, p_dat.V_t_t_s.slice(t), "V_(" + str.str() + ")\n");
-      my_debug_logger(p_dat) << "Condition number of V_(" + str.str() + ") is " << arma::cond(p_dat.V_t_t_s.slice(t));
+      my_debug_logger(p_dat) <<
+        "Condition number of V_(" + str.str() + ") is " <<
+          arma::cond(p_dat.V_t_t_s.slice(t));
     }
 
-    p_dat.B_s.slice(t - 1) = p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_inv;
+    p_dat.B_s.slice(t - 1) =
+      p_dat.V_t_t_s.slice(t - 1) * p_dat.T_F_ * V_t_less_inv;
   }
 }
 

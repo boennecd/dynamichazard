@@ -37,16 +37,10 @@ double SMA<T>::compute_length(
 
 template <class T>
 void SMA<T>::solve(){
-  arma::vec offsets;
-  if(p_dat.any_fixed_in_M_step){
-    auto coefs_it = p_dat.get_coefs(1);
-    offsets =  coefs_it.fixed_coefs.t() * p_dat.fixed_terms;
-
-  } else {
-    offsets = arma::vec(p_dat.X.n_cols, arma::fill::zeros);
-
-  }
-
+  const arma::vec offsets =
+    (p_dat.any_fixed_in_M_step) ?
+    p_dat.fixed_parems.t() * p_dat.fixed_terms :
+    arma::vec(p_dat.X.n_cols, arma::fill::zeros);
 
   double bin_tstop = p_dat.min_start;
   for (int t = 1; t < p_dat.d + 1; t++){
@@ -73,27 +67,27 @@ void SMA<T>::solve(){
 
     // E-step: scoring step
     arma::uvec r_set = get_risk_set(p_dat, t);
-    arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim_in_arrays, false);
-    arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim_in_arrays,
-                p_dat.space_dim_in_arrays, false);
+    arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim, false);
+    arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim,
+                p_dat.space_dim, false);
     a =  p_dat.a_t_less_s.col(t - 1);
     V = p_dat.V_t_less_s.slice(t - 1);
 
     if(method == "woodbury"){
       for(auto it = r_set.begin(); it != r_set.end(); it++){
 
-        const arma::vec x_(p_dat.X.colptr(*it), p_dat.n_params_state_vec, false);
+        arma::vec x_(p_dat.X.colptr(*it), p_dat.covar_dim, false);
         const double w = p_dat.weights(*it);
         const double offset = offsets(*it);
 
         // TODO: is there a BLAS dsymv for non-square but symetric matrix
         // vector product?
-        const arma::vec inter_vec =
-          V(arma::span::all, *p_dat.span_current_cov) * x_;
+        auto x_in_state_space = p_dat.lp_map_inv(x_);
+        const arma::vec inter_vec = V * x_in_state_space.subview;
 
-        const double f1 =
-          std::max(1./arma::dot(x_, inter_vec(*p_dat.span_current_cov)), 1e-10);
-        const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
+        const double f1 = std::max(
+          1./arma::as_scalar(x_in_state_space.subview.t() * inter_vec), 1e-10);
+        const double f2 = arma::as_scalar(x_.t() * p_dat.lp_map(a).subview);
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
 
@@ -121,7 +115,7 @@ void SMA<T>::solve(){
       arma::vec inter_vec(L.n_cols);
 
       for(auto it = r_set.begin(); it != r_set.end(); it++){
-        const arma::vec x_(p_dat.X.colptr(*it), p_dat.n_params_state_vec, false);
+        const arma::vec x_(p_dat.X.colptr(*it), p_dat.covar_dim, false);
         const double w = p_dat.weights(*it);
         const double offset = offsets(*it);
 
@@ -129,7 +123,7 @@ void SMA<T>::solve(){
 
         const double f1 =
           std::max(1./arma::dot(inter_vec, inter_vec), 1e-10);
-        const double f2 = arma::dot(x_, a.head(p_dat.n_params_state_vec));
+        const double f2 = arma::dot(x_, p_dat.lp_map(a).subview);
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
         const double at_risk_length =
@@ -146,8 +140,8 @@ void SMA<T>::solve(){
         tri_mat_times_vec(L_inv, inter_vec, true);
         a -=  (p_dat.LR * (f2 - c) * f1) * inter_vec;
 
-        arma::vec rank_1_update_vec(p_dat.space_dim_in_arrays, arma::fill::zeros);
-        rank_1_update_vec(*p_dat.span_current_cov) = x_ * sqrt(neg_second_d);
+        arma::vec rank_1_update_vec(x_ * sqrt(neg_second_d));
+        rank_1_update_vec = p_dat.lp_map_inv(rank_1_update_vec).subview;
         chol_rank_one_update(L, rank_1_update_vec);
         square_tri_inv(L, L_inv);
       }

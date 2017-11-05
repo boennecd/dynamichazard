@@ -30,7 +30,7 @@ class EKF_solver : public Solver{
 
   void parallel_filter_step(
       arma::uvec::const_iterator first, arma::uvec::const_iterator last,
-      const coefs &coefs_it,
+      const arma::vec &dynamic_coefs,
       const bool compute_H_and_z,
       const int bin_number,
       const double bin_tstart, const double bin_tstop);

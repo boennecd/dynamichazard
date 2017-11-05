@@ -66,7 +66,7 @@ Rcpp::List ddhazard_fit_cpp(
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   // Intialize the solver for the E-step
-  std::unique_ptr<ddhazard_data> p_data(new problem_data_random_walk(
+  std::unique_ptr<ddhazard_data> p_data(new ddhazard_data_random_walk(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -148,12 +148,16 @@ Rcpp::List ddhazard_fit_cpp(
   }
 
   arma::mat varying_only_F = p_data->F_;
+  arma::span span_fixed_params;
   if(p_data->any_fixed_in_E_step){
     if(p_data->any_fixed_in_E_step){
-      varying_only_F.shed_rows(p_data->span_fixed_params->a,
-                               p_data->span_fixed_params->b);
-      varying_only_F.shed_cols(p_data->span_fixed_params->a,
-                               p_data->span_fixed_params->b);
+      arma::uword a = p_data->covar_dim - p_data->n_params_state_vec_fixed;
+      arma::uword b = p_data->covar_dim - 1;
+      varying_only_F.shed_rows(a, b);
+      varying_only_F.shed_cols(a, b);
+
+      span_fixed_params = arma::span(a, b);
+
     } else{
       varying_only_F = arma::mat();
     }
@@ -262,8 +266,9 @@ Rcpp::List ddhazard_fit_cpp(
 
 
       if(p_data->any_fixed_in_E_step){
-        Q.rows(*p_data->span_fixed_params).zeros();
-        Q.cols(*p_data->span_fixed_params).zeros();
+
+        Q.rows(span_fixed_params).zeros();
+        Q.cols(span_fixed_params).zeros();
       }
 
       if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) >
@@ -290,10 +295,8 @@ Rcpp::List ddhazard_fit_cpp(
       Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
       if(order_ > 1){
-        arma::mat tmp_Q = Q(*p_data->span_current_cov,
-                            *p_data->span_current_cov);
-        Q.zeros();
-        Q(*p_data->span_current_cov, *p_data->span_current_cov) = tmp_Q;
+        arma::mat tmp_Q = p_data->lp_map(Q).subview;
+        Q = p_data->lp_map_inv(tmp_Q).subview;
       }
     }
 
@@ -303,9 +306,17 @@ Rcpp::List ddhazard_fit_cpp(
     if(p_data->criteria == "delta_coef"){
       if(p_data->any_fixed_in_E_step ||
          p_data->any_dynamic){
-        conv_values.push_back(conv_criteria(
-            a_prev(*p_data->span_current_cov, arma::span::all),
-            p_data->a_t_t_s(*p_data->span_current_cov, arma::span::all)));
+        arma::mat a1(p_data->covar_dim, a_prev.n_cols);
+        arma::mat a2(p_data->covar_dim, a_prev.n_cols);
+        for(arma::uword i = 0; i < a_prev.n_cols; ++i){
+          arma::vec tmp = a_prev.col(i);
+          a1.col(i) = p_data->lp_map(tmp).subview;
+          tmp = p_data->a_t_t_s.col(i);
+          a2.col(i) = p_data->lp_map(tmp).subview;
+        }
+
+        conv_values.push_back(conv_criteria(a1, a2));
+
       } else
         conv_values.push_back(0.0);
 
@@ -339,26 +350,23 @@ Rcpp::List ddhazard_fit_cpp(
         fixed_effects_offsets = p_data->fixed_terms.t() * p_data->fixed_parems;
 
       } else if(p_data->any_fixed_in_E_step){
-        // TODO: can use new setup to get coefficients here
         fixed_effects_offsets =
-          p_data->X(*p_data->span_fixed_params, arma::span::all).t() *
-          p_data->a_t_t_s(*p_data->span_fixed_params, arma::span::all).col(0);
-
-        varying_only_a.shed_rows(p_data->span_fixed_params->a,
-                                 p_data->span_fixed_params->b);
+          p_data->X(span_fixed_params, arma::span::all).t() *
+          p_data->a_t_t_s(span_fixed_params, arma::span::all).col(0);
+        varying_only_a.shed_rows(span_fixed_params.a, span_fixed_params.b);
 
       } else
         fixed_effects_offsets = arma::vec(p_data->X.n_cols, arma::fill::zeros);
 
+      arma::span span_only_varying(
+          0, p_data->covar_dim - p_data->n_params_state_vec_fixed);
+
       log_like =
-        logLike_cpp(p_data->X(*p_data->span_current_cov_varying,
-                              arma::span::all),
+        logLike_cpp(p_data->X(span_only_varying, arma::span::all),
                     risk_obj,
                     varying_only_F,
-                    Q_0(*p_data->span_current_cov_varying,
-                        *p_data->span_current_cov_varying),
-                    Q(*p_data->span_current_cov_varying,
-                      *p_data->span_current_cov_varying),
+                    Q_0(span_only_varying, span_only_varying),
+                    Q(span_only_varying, span_only_varying),
                     varying_only_a,
                     p_data->tstart, p_data->tstop,
                     fixed_effects_offsets, order_, model)[0];

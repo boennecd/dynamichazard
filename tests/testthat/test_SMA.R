@@ -159,9 +159,7 @@ test_that("Second order model gives previous found result for posterior approx",
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F,
-                   save_data = F, save_risk_set = F,
-                   method = "SMA"),
+    control = list(method = "SMA"),
     Q_0 = diag(1, 4), Q = diag(0.01, 2),
     max_T = 30, order = 2)
 
