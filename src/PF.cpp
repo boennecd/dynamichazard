@@ -384,7 +384,6 @@ Rcpp::List PF_smooth(
     const Rcpp::List &risk_obj,
     const arma::mat &F,
     const int n_max,
-    const int order,
     const int n_threads,
     const int N_fw_n_bw,
     const int N_smooth,
@@ -396,7 +395,7 @@ Rcpp::List PF_smooth(
     const std::string model){
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
-  PF_data data(
+  random_walk<PF_data> data(
       n_fixed_terms_in_state_vec,
       X,
       fixed_terms,
@@ -409,7 +408,6 @@ Rcpp::List PF_smooth(
       risk_obj,
       F,
       n_max,
-      order,
       n_threads,
       Q_tilde,
       N_fw_n_bw,

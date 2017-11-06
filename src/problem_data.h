@@ -3,6 +3,7 @@
 
 #include "arma_n_rcpp.h"
 #include <future>
+#include <type_traits>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -40,22 +41,7 @@ public:
 
   const unsigned int space_dim; // dimension of state space vector
   const unsigned int covar_dim; // dimension of dynamic covariate vector
-
-  // TODO: only relevant for random walk models -- move to derived class
-  const int order;
-  const int n_params_state_vec_fixed;
-  const int n_params_state_vec_varying; // NB: not including order
-  const int n_params_state_vec;         // NB: not including order
-
-  // indicies for dot product for linear predictor. Includes both time-varying
-  // effects and fixed effects estimated in the E-step
-  const std::unique_ptr<const arma::span> span_current_cov;
-  // indicies for varying parameters in dot product
-  const std::unique_ptr<const arma::span> span_current_cov_varying;
-  // indicies of fixed terms in state vector
-  const std::unique_ptr<const arma::span> span_fixed_params;
-
-  // TODO: end of "only relevant ..."
+  const int n_params_state_vec_fixed; // TODO: maybe move to derived class
 
   const arma::mat &F_;
   const arma::mat T_F_;
@@ -77,19 +63,19 @@ public:
   arma::mat &Q;
   arma::mat &Q_0;
 
-  problem_data(const int n_fixed_terms_in_state_vec,
-               arma::mat &X,
-               arma::mat &fixed_terms,
-               const arma::vec &tstart,
-               const arma::vec &tstop, const arma::ivec &is_event_in_bin,
-               const arma::colvec &a_0,
-               arma::mat &Q_0,
-               arma::mat &Q,
-               const Rcpp::List &risk_obj,
-               const arma::mat &F_,
-               const int n_max,
-               const int order,
-               const int n_threads):
+  problem_data(
+    const int n_fixed_terms_in_state_vec,
+    arma::mat &X,
+    arma::mat &fixed_terms,
+    const arma::vec &tstart,
+    const arma::vec &tstop, const arma::ivec &is_event_in_bin,
+    const arma::colvec &a_0,
+    arma::mat &Q_0,
+    arma::mat &Q,
+    const Rcpp::List &risk_obj,
+    const arma::mat &F_,
+    const int n_max,
+    const int n_threads) :
     any_dynamic(X.n_elem > 0),
     any_fixed_in_E_step(n_fixed_terms_in_state_vec > 0),
     any_fixed_in_M_step(fixed_terms.n_elem > 0),
@@ -99,27 +85,7 @@ public:
 
     space_dim(a_0.size()),
     covar_dim(X.n_rows),
-
-    order(order),
     n_params_state_vec_fixed(n_fixed_terms_in_state_vec),
-    n_params_state_vec_varying((a_0.size() - n_fixed_terms_in_state_vec) / order),
-    n_params_state_vec(n_params_state_vec_fixed + n_params_state_vec_varying),
-
-
-    // Seems like there is no empty span for arma
-    // See: armadillo-code/include/armadillo_bits/span.hpp
-    //      and https://stackoverflow.com/q/38155952/5861244
-    // Thus, I decided to use const std::unique_ptr<const> and set it to
-    // nullptr when the span should not be used
-    span_current_cov(
-      (any_dynamic || any_fixed_in_E_step) ?
-        new arma::span(0, n_params_state_vec - 1) : nullptr),
-    span_current_cov_varying(
-      any_dynamic ?
-        new arma::span(0, n_params_state_vec_varying - 1) : nullptr),
-    span_fixed_params(
-      any_fixed_in_E_step ?
-        new arma::span(n_params_state_vec_varying, n_params_state_vec - 1) : nullptr),
 
     F_(F_),
     T_F_((any_dynamic || any_fixed_in_E_step) ? F_.t() : arma::mat()),
@@ -147,7 +113,85 @@ public:
   problem_data& operator=(const problem_data&) = delete;
   problem_data(const problem_data&) = delete;
   problem_data() = delete;
+
+  /* maps from state space dimension to covariate dimension */
+  virtual map_res_col lp_map(arma::vec&) = 0;
+  virtual map_res_mat lp_map(arma::mat&) = 0;
+
+  /* inverse of the above */
+  virtual map_res_col lp_map_inv(arma::vec&) = 0;
+  virtual map_res_mat lp_map_inv(arma::mat&) = 0;
 };
+
+/* Concrete class for n-th order random walk model starting with problem data
+ * for n-th order random walk */
+template<class T>
+class random_walk : public T {
+  std::unique_ptr<arma::span> span_current_cov(){
+    std::unique_ptr<arma::span> out;
+    if(this->any_dynamic || this->any_fixed_in_E_step){
+      out.reset(new arma::span(
+          0,
+          (this->space_dim - this->n_params_state_vec_fixed) / order() +
+            this->n_params_state_vec_fixed - 1));
+    }
+
+    return out;
+  }
+
+  using ptr_vec = std::unique_ptr<arma::vec>;
+  using ptr_mat = std::unique_ptr<arma::mat>;
+
+public:
+  using T::T;
+
+  /* particular class function */
+  unsigned int order(){
+    unsigned int numerator = this->space_dim - this->n_params_state_vec_fixed;
+    if(numerator == 0)
+      return 1;
+
+    return numerator / (this->covar_dim - this->n_params_state_vec_fixed);
+  }
+
+  /* derived class function to override */
+  map_res_col lp_map(arma::vec &a) override {
+    auto span_use = (order() == 1) ? arma::span::all : *span_current_cov();
+    return map_res_col(a(span_use));
+  }
+
+  map_res_mat lp_map(arma::mat &M) override {
+    auto span_use = (order() == 1) ? arma::span::all : *span_current_cov();
+    return map_res_mat(M(span_use, span_use));
+  }
+
+  map_res_col lp_map_inv(arma::vec &a) override {
+    if(order() == 1)
+      return map_res_col(a(arma::span::all));
+
+    ptr_vec ptr(new arma::vec(this->space_dim, arma::fill::zeros));
+    arma::vec &out = *ptr.get();
+    out(*span_current_cov()) = a;
+
+    return map_res_col(out(arma::span::all), ptr);
+  }
+
+  map_res_mat lp_map_inv(arma::mat &M) override {
+    if(order() == 1)
+      return map_res_mat(M(arma::span::all, arma::span::all));
+
+    ptr_mat ptr(new arma::mat(this->space_dim, this->space_dim, arma::fill::zeros));
+    arma::mat &out = *ptr.get();
+    out(*span_current_cov(), *span_current_cov()) = M;
+
+    return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+  }
+};
+
+
+
+
+
 
 /* problem_data used in ddhazard_fit.cpp */
 class ddhazard_data : public problem_data {
@@ -198,7 +242,7 @@ public:
                 const arma::vec &weights,
                 const int n_max, const double eps,
                 const bool verbose,
-                const int order, const bool est_Q_0,
+                const bool est_Q_0,
                 const bool debug,
                 Rcpp::Nullable<Rcpp::NumericVector> LR,
                 const int n_threads,
@@ -217,7 +261,6 @@ public:
       risk_obj,
       F_,
       n_max,
-      order,
       n_threads),
     weights(weights),
 
@@ -252,16 +295,6 @@ public:
   ddhazard_data & operator=(const ddhazard_data&) = delete;
   ddhazard_data(const ddhazard_data&) = delete;
   ddhazard_data() = delete;
-
-  map_res_col get_dynamic_coefs(unsigned int);
-
-  /* maps from state space dimension to covariate dimension */
-  virtual map_res_col lp_map(arma::vec&) = 0;
-  virtual map_res_mat lp_map(arma::mat&) = 0;
-
-  /* inverse of the above */
-  virtual map_res_col lp_map_inv(arma::vec&) = 0;
-  virtual map_res_mat lp_map_inv(arma::mat&) = 0;
 };
 
 inline std::string debug_msg_prefix(const ddhazard_data &dat){
@@ -304,16 +337,5 @@ std::ostringstream& my_debug_logger::operator<<(const T &obj){
   os << debug_msg_prefix(*dat) << obj;
   return os;
 }
-
-/* Concrete implementation of data class */
-class ddhazard_data_random_walk : public ddhazard_data {
-public:
-  using ddhazard_data::ddhazard_data;
-
-  map_res_col lp_map(arma::vec&);
-  map_res_mat lp_map(arma::mat&);
-  map_res_col lp_map_inv(arma::vec&);
-  map_res_mat lp_map_inv(arma::mat&);
-};
 
 #endif

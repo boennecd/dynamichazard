@@ -173,7 +173,6 @@ public:
           const Rcpp::List &risk_obj,
           const arma::mat &F,
           const int n_max,
-          const int order,
           const int n_threads,
 
           // new arguments
@@ -195,7 +194,6 @@ public:
       risk_obj,
       F,
       n_max,
-      order,
       n_threads),
 
       N_fw_n_bw(N_fw_n_bw),

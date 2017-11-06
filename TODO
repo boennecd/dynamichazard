@@ -9,4 +9,5 @@ Make functions for `ddhazard` and `PF_EM` where you only take one iteration
 and can provide your own structural matrices
 Check documentation after latest set of changes
 Change the hatvalues section in ddhazard vignette
-Make error message with SMA if w/ generic multivariate autoregressive state-space
+Remove order argument to cpp code
+Q passed to cpp should be non-degenerated

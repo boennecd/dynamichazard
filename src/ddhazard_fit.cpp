@@ -24,7 +24,7 @@ Rcpp::List ddhazard_fit_cpp(
     const double eps_fixed_parems, const int max_it_fixed_params,
     const arma::uword n_max = 100, const double eps = 0.001,
     const arma::uword verbose = 0,
-    const int order_ = 1, const bool est_Q_0 = true,
+    const bool est_Q_0 = true,
     const std::string method = "EKF",
     Rcpp::Nullable<Rcpp::NumericVector> kappa = R_NilValue,
     Rcpp::Nullable<Rcpp::NumericVector> alpha = R_NilValue,
@@ -66,7 +66,7 @@ Rcpp::List ddhazard_fit_cpp(
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   // Intialize the solver for the E-step
-  std::unique_ptr<ddhazard_data> p_data(new ddhazard_data_random_walk(
+  std::unique_ptr<ddhazard_data> p_data(new random_walk<ddhazard_data>(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
       a_0, fixed_parems_start, Q_0, Q,
@@ -74,7 +74,7 @@ Rcpp::List ddhazard_fit_cpp(
       eps_fixed_parems, max_it_fixed_params,
       weights,
       n_max, eps, verbose,
-      order_, est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
+      est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
       criteria));
   std::unique_ptr<Solver> solver;
 
@@ -162,6 +162,9 @@ Rcpp::List ddhazard_fit_cpp(
       varying_only_F = arma::mat();
     }
   }
+
+  const unsigned int order =
+    dynamic_cast<random_walk<ddhazard_data>*>(p_data.get())->order();
 
   // main loop for estimation
   do
@@ -294,7 +297,7 @@ Rcpp::List ddhazard_fit_cpp(
       Q = (Q + Q.t()) / 2.0;
       Q_0 = (Q_0 + Q_0.t()) / 2.0;
 
-      if(order_ > 1){
+      if(order > 1){
         arma::mat tmp_Q = p_data->lp_map(Q).subview;
         Q = p_data->lp_map_inv(tmp_Q).subview;
       }
@@ -369,7 +372,7 @@ Rcpp::List ddhazard_fit_cpp(
                     Q(span_only_varying, span_only_varying),
                     varying_only_a,
                     p_data->tstart, p_data->tstop,
-                    fixed_effects_offsets, order_, model)[0];
+                    fixed_effects_offsets, order, model)[0];
 
       if(p_data->criteria == "delta_likeli"){
         if(it == 0){

@@ -71,7 +71,6 @@ test_that("PF_smooth gives same results", {
     risk_obj = risk_set,
     F = diag(1, n_vars + 1),
     n_max = 10,
-    order = 1,
     n_threads = 1,
     N_fw_n_bw = 20,
     N_smooth = 100,

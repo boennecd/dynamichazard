@@ -205,7 +205,7 @@ void EKF_solver<T>::solve(){
     while(true){
       ++n_NR_it;
 
-      arma::vec dynamic_coef(org.get_dynamic_coefs(t).subview);
+      arma::vec dynamic_coef(org.lp_map(i_a_t).subview);
       parallel_filter_step(
         r_set.begin(), r_set.end(), dynamic_coef,
         t == org.d, t - 1, bin_tstart, bin_tstop);
@@ -237,7 +237,7 @@ void EKF_solver<T>::solve(){
             U.subview * i_a_t + update_term + (org.LR * u.subview));
 
       if(org.debug){
-        my_print(org,i_a_t, "a^(" + std::to_string(n_NR_it - 1L) + ")");
+        my_print(org, i_a_t, "a^(" + std::to_string(n_NR_it - 1L) + ")");
         my_print(org, org.a_t_t_s.col(t),
                  "a^(" +  std::to_string(n_NR_it) + ")");
       }

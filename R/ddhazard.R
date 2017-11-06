@@ -291,7 +291,7 @@ ddhazard = function(formula, data,
     tryCatch({
       result <- ddhazard_no_validation(
         a_0 = a_0, Q_0 = Q_0, .F = .F, verbose = verbose, Q = Q,
-        risk_set= risk_set, X_Y = X_Y, order = order, model = model,
+        risk_set= risk_set, X_Y = X_Y, model = model,
         LR = control$LR * control$LR_decrease_fac^(k),
         n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
         weights = weights,
@@ -410,7 +410,7 @@ ddhazard = function(formula, data,
 }
 
 ddhazard_no_validation <- function(a_0, Q_0, .F, verbose, Q,
-                                   risk_set, X_Y, order, model, LR,
+                                   risk_set, X_Y, model, LR,
                                    n_fixed_terms_in_state_vec,
                                    weights = weights,
                                    control){
@@ -421,7 +421,6 @@ ddhazard_no_validation <- function(a_0, Q_0, .F, verbose, Q,
     X = X_Y$X, fixed_terms = X_Y$fixed_terms,
     fixed_parems_start = control$fixed_parems_start,
     tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2],
-    order_ = order,
     est_Q_0 = control$est_Q_0, method = control$method,
     model = model,
     kappa = control$kappa, alpha = control$alpha, beta = control$beta,

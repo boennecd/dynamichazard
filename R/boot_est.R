@@ -159,7 +159,7 @@ ddhazard_boot <- function(
           a_0 = a_0, Q_0 = ddhazard_fit$Q_0,
           .F = ddhazard_fit$F_, verbose = F, Q = ddhazard_fit$Q,
           risk_set= boot_risk_set, X_Y = boot_X_Y,
-          order = ddhazard_fit$order, model = ddhazard_fit$model,
+          model = ddhazard_fit$model,
           LR = l,
           n_fixed_terms_in_state_vec =
             ifelse(ddhazard_fit$control$fixed_terms_method == "E_step", n_fixed, 0),
