@@ -1,3 +1,7 @@
+if(getRversion() >= "2.15.1")
+  utils::globalVariables(c(".F", "L", "R", "m"))
+
+
 PF_effective_sample_size <- function(object){
   sapply(object[
     c("forward_clouds", "backward_clouds", "smoothed_clouds")],
@@ -175,11 +179,9 @@ PF_EM <- function(
     order = order, n_params = n_params, n_fixed = n_fixed,
     est_fixed_in_E = FALSE,
     Q_0 = if(missing(Q_0)) NULL else Q_0,
-    Q = if(missing(Q)) NULL else Q)
-
-  Q_0 = tmp$Q_0
-  Q = tmp$Q
-  .F = tmp$.F
+    Q = if(missing(Q)) NULL else Q,
+    a_0)
+  list2env(tmp, environment())
 
   if(trace > 0)
     report_pre_liminary_stats_before_EM(
@@ -194,7 +196,7 @@ PF_EM <- function(
     Q_0 = Q_0,
     Q = Q,
     a_0 = a_0,
-    .F = .F,
+    .F = .F, L = L, R = R, m = m,
     risk_obj = risk_set,
     n_max = control$n_max,
     n_threads = control$n_threads,
@@ -222,7 +224,7 @@ PF_EM <- function(
   Q_0,
   Q,
   a_0,
-  .F,
+  .F, L, R, m,
   risk_obj,
   n_max,
   n_threads,

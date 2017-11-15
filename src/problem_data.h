@@ -17,11 +17,11 @@ class map_res {
   using ptr_T = std::unique_ptr<T_type>;
 
 public:
-  T_view subview;
+  T_view sv; /* sv for (s)ub(v)iew */
   ptr_T org_ptr;
 
-  map_res(T_view subview): subview(subview) {}
-  map_res(T_view subview, ptr_T &ptr): subview(subview) {
+  map_res(T_view sv): sv(sv) {}
+  map_res(T_view sv, ptr_T &ptr): sv(sv) {
     org_ptr = std::move(ptr);
   }
 };
@@ -29,7 +29,18 @@ public:
 using map_res_col = map_res<arma::subview_col<double>, arma::vec>;
 using map_res_mat = map_res<arma::subview<double>, arma::mat>;
 
+enum side { left, both, right };
+
 class problem_data {
+protected:
+  const arma::mat &F_;
+  const arma::mat &R;
+  const arma::mat &L;
+  const arma::vec &m;
+
+  using ptr_vec = std::unique_ptr<arma::vec>;
+  using ptr_mat = std::unique_ptr<arma::mat>;
+
 public:
   // Constants
   const bool any_dynamic;         // Any time-varying coefficients?
@@ -42,9 +53,6 @@ public:
   const unsigned int space_dim; // dimension of state space vector
   const unsigned int covar_dim; // dimension of dynamic covariate vector
   const int n_params_state_vec_fixed; // TODO: maybe move to derived class
-
-  const arma::mat &F_;
-  const arma::mat T_F_;
 
   arma::mat X;
   arma::mat fixed_terms; // used if fixed terms are estimated in the M-step
@@ -70,12 +78,17 @@ public:
     const arma::vec &tstart,
     const arma::vec &tstop, const arma::ivec &is_event_in_bin,
     const arma::colvec &a_0,
+    const arma::mat &R,
+    const arma::mat &L,
+    const arma::vec &m,
     arma::mat &Q_0,
     arma::mat &Q,
     const Rcpp::List &risk_obj,
     const arma::mat &F_,
     const int n_max,
     const int n_threads) :
+    F_(F_), R(R), L(L), m(m),
+
     any_dynamic(X.n_elem > 0),
     any_fixed_in_E_step(n_fixed_terms_in_state_vec > 0),
     any_fixed_in_M_step(fixed_terms.n_elem > 0),
@@ -86,9 +99,6 @@ public:
     space_dim(a_0.size()),
     covar_dim(X.n_rows),
     n_params_state_vec_fixed(n_fixed_terms_in_state_vec),
-
-    F_(F_),
-    T_F_((any_dynamic || any_fixed_in_E_step) ? F_.t() : arma::mat()),
 
     X(X.begin(), X.n_rows, X.n_cols, false),
     fixed_terms(fixed_terms.begin(), fixed_terms.n_rows, fixed_terms.n_cols, false),
@@ -114,11 +124,77 @@ public:
   problem_data(const problem_data&) = delete;
   problem_data() = delete;
 
+  /* maps previous to next state */
+  map_res_col state_trans_map(arma::subview_col<double> a){
+    arma::vec tmp(a.colptr(0), a.n_elem, false);
+    return state_trans_map(tmp);
+  }
+  virtual map_res_col state_trans_map(arma::vec &a){
+    ptr_vec ptr(new arma::vec(F_ * a + m));
+    arma::vec &out = *ptr.get();
+    return map_res_col(out(arma::span::all), ptr);
+  }
+
+  virtual map_res_mat state_trans_map(arma::mat &M, side s = both){
+    ptr_mat ptr;
+
+    switch(s){
+    case  left:
+      ptr.reset(new arma::mat(F_ * M));
+      break;
+    case both:
+      ptr.reset(new arma::mat(F_ * M * F_.t()));
+      break;
+    case right:
+      ptr.reset(new arma::mat(     M * F_.t()));
+      break;
+    default:
+      Rcpp::stop("'Side' not implemented");
+    }
+
+    arma::mat &out = *ptr.get();
+    return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+  }
+
+  /* maps from errors to state space dimension */
+  map_res_col err_state_map(arma::subview_col<double> a){
+    arma::vec tmp(a.colptr(0), a.n_elem, false);
+    return err_state_map(tmp);
+  }
+  virtual map_res_col err_state_map(arma::vec &a){
+    ptr_vec ptr(new arma::vec(R * a));
+    arma::vec &out = *ptr.get();
+    return map_res_col(out(arma::span::all), ptr);
+  }
+
+  virtual map_res_mat err_state_map(arma::mat &M){
+    ptr_mat ptr(new arma::mat(R * M * R.t()));
+
+    arma::mat &out = *ptr.get();
+    return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+  }
+
+  /* inverse of the above */
+  virtual map_res_mat err_state_map_inv(arma::mat &M){
+   ptr_mat ptr(new arma::mat(R.t() * M * R));
+
+     arma::mat &out = *ptr.get();
+     return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+  }
+
   /* maps from state space dimension to covariate dimension */
+  map_res_col lp_map(arma::subview_col<double> a){
+    arma::vec tmp(a.colptr(0), a.n_elem, false);
+    return lp_map(tmp);
+  }
   virtual map_res_col lp_map(arma::vec&) = 0;
   virtual map_res_mat lp_map(arma::mat&) = 0;
 
   /* inverse of the above */
+  map_res_col lp_map_inv(arma::subview_col<double> a){
+   arma::vec tmp(a.colptr(0), a.n_elem, false);
+     return lp_map_inv(tmp);
+  }
   virtual map_res_col lp_map_inv(arma::vec&) = 0;
   virtual map_res_mat lp_map_inv(arma::mat&) = 0;
 };
@@ -233,6 +309,9 @@ public:
                 const arma::vec &tstop, const arma::ivec &is_event_in_bin,
                 const arma::colvec &a_0,
                 const arma::vec &fixed_parems_start,
+                const arma::mat &R,
+                const arma::mat &L,
+                const arma::vec &m,
                 arma::mat &Q_0,
                 arma::mat &Q,
                 const Rcpp::List &risk_obj,
@@ -256,6 +335,9 @@ public:
       tstart,
       tstop, is_event_in_bin,
       a_0,
+      R,
+      L,
+      m,
       Q_0,
       Q,
       risk_obj,

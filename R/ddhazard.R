@@ -1,3 +1,6 @@
+if(getRversion() >= "2.15.1")
+  utils::globalVariables(c("L", "R", "m", "indicies_fix"))
+
 #' @title Fitting dynamic hazard models
 #' @description  Function to fit dynamic hazard models using state space models.
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.
@@ -220,46 +223,9 @@ ddhazard = function(formula, data,
     order = order, n_params = n_params, n_fixed = n_fixed,
     est_fixed_in_E = est_fixed_in_E,
     Q_0 = if(missing(Q_0)) NULL else Q_0,
-    Q = if(missing(Q)) NULL else Q)
-
-  Q_0 = tmp$Q_0
-  Q = tmp$Q
-  .F = tmp$.F
-
-  #####
-  # Make changes to matrices if fixed effects are estimated in the E-step
-  if(est_fixed_in_E){
-    # We need to add entries to the various matrices and vectors
-    indicies_fix <- 1:n_fixed + n_params
-
-    Q_new <- .F # .F already has the right dimensions
-    Q_new[, ] <- 0
-    Q_new[-indicies_fix, -indicies_fix] <- Q
-    Q <- Q_new
-
-    Q_0_new <- .F
-    Q_0_new[, ] <- 0
-    Q_0_new[-indicies_fix, -indicies_fix] <- Q_0
-    if(length(indicies_fix) == 1){
-      Q_0_new[indicies_fix, indicies_fix] <- control$Q_0_term_for_fixed_E_step
-    } else
-      diag(Q_0_new[indicies_fix, indicies_fix]) <-
-        control$Q_0_term_for_fixed_E_step
-    Q_0 <- Q_0_new
-
-    if(order == 1){
-      a_0 <- c(a_0, control$fixed_parems_start)
-
-    } else if(order == 2){
-      first_half <- 1:(length(a_0)/2)
-      a_0 <- c(a_0[first_half], control$fixed_parems_start, a_0[-first_half])
-
-    } else
-      stop("Order of ", order, " not supported")
-
-    control$fixed_parems_start <- vector()
-
-  }
+    Q = if(missing(Q)) NULL else Q,
+    a_0 = a_0, control)
+  list2env(tmp, environment())
 
   if(verbose)
     report_pre_liminary_stats_before_EM(
@@ -291,7 +257,7 @@ ddhazard = function(formula, data,
     tryCatch({
       result <- ddhazard_no_validation(
         a_0 = a_0, Q_0 = Q_0, .F = .F, verbose = verbose, Q = Q,
-        risk_set= risk_set, X_Y = X_Y, model = model,
+        risk_set= risk_set, X_Y = X_Y, model = model, R = R, L = L, m = m,
         LR = control$LR * control$LR_decrease_fac^(k),
         n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
         weights = weights,
@@ -337,8 +303,6 @@ ddhazard = function(formula, data,
 
     result$lag_one_cov <-
       result$lag_one_cov[-indicies_fix, -indicies_fix, , drop = F]
-
-    result$Q  <- result$Q[-indicies_fix, -indicies_fix, drop = F]
 
     .F <- .F[-indicies_fix, -indicies_fix, drop = F]
   }
@@ -413,10 +377,11 @@ ddhazard_no_validation <- function(a_0, Q_0, .F, verbose, Q,
                                    risk_set, X_Y, model, LR,
                                    n_fixed_terms_in_state_vec,
                                    weights = weights,
-                                   control){
+                                   control, R, L, m){
   ddhazard_fit_cpp(
     a_0 = a_0, Q_0 = Q_0, F_ = .F, verbose = verbose,
     Q = Q, n_max = control$n_max,
+    R = R, L = L, m = m,
     risk_obj = risk_set, eps = control$eps,
     X = X_Y$X, fixed_terms = X_Y$fixed_terms,
     fixed_parems_start = control$fixed_parems_start,
@@ -443,7 +408,17 @@ ddhazard_no_validation <- function(a_0, Q_0, .F, verbose, Q,
 }
 
 get_state_eq_matrices <-  function(
-  order, n_params, n_fixed, est_fixed_in_E, Q_0, Q){
+  order, n_params, n_fixed, est_fixed_in_E, Q_0, Q, a_0, control){
+  #####
+  # Indices vector used later
+  state_dim <- n_params * order + n_fixed * est_fixed_in_E
+  indicies_cur <- 1:n_params
+  indicies_lag <- if(order == 2)
+    n_params + 1:n_params + ifelse(est_fixed_in_E, n_fixed, 0) else vector()
+  indicies_fix <- if(est_fixed_in_E) 1:n_fixed + n_params else vector()
+
+  #####
+  # Checks
   func <- function(x, n_elem, default){
     if(!is.null(x))
       return(x)
@@ -459,7 +434,6 @@ get_state_eq_matrices <-  function(
 
   Q_0 <- func(Q_0, n_params * order, 10)
   Q <- func(Q, n_params, 1)
-  .F <- get_F(order, n_params, n_fixed, est_fixed_in_E)
 
   if(is.vector(Q) && length(Q) == 1)
     Q <- matrix(Q)
@@ -467,38 +441,28 @@ get_state_eq_matrices <-  function(
   if(is.vector(Q_0) && length(Q_0) == 1)
     Q_0 <- matrix(Q_0)
 
-  if(ncol(.F) != n_params * order + n_fixed * est_fixed_in_E)
-    stop(".F does not have the correct dimension. Its dimension should be ",
-         n_params * order + n_fixed * est_fixed_in_E,
-         " but it has ", ncol(.F), " columns")
-
   if(ncol(Q) != n_params)
     stop("Q does not have the correct dimension. Its dimension should be ",
          n_params, " but it has ", ncol(Q), " columns")
 
-  if(ncol(Q_0) != n_params * order)
+  os <- n_params * order + (
+    if(est_fixed_in_E) c(0, length(indicies_fix))  else 0)
+  if(!ncol(Q_0) %in% os){
+    .str <- if(length(os) == 1) n_params * order else paste(os[1], "or", os[2])
     stop("Q_0 does not have the correct dimension. Its dimension should be ",
-         n_params * order,
+         .str,
          " but it has ", ncol(Q_0), " columns")
-
-  if(order > 1){
-    tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)
-    tmp[1:n_params, 1:n_params] <- Q
-    Q <- tmp
   }
 
-  return(list(Q = Q, Q_0 = Q_0, .F = .F))
-}
+  if(!order %in% 1:2)
+    stop("Method not implemented for order ", order)
 
-get_F <- function(order, n_params, n_fixed, est_fixed_in_E){
+  #####
+  # Get F matrix
   if(order == 1){
-    return(diag(rep(1, n_params + n_fixed * est_fixed_in_E)))
-  }
-  else if(order == 2){
-    indicies_cur <- 1:n_params
-    indicies_lag <- n_params + 1:n_params + ifelse(est_fixed_in_E, n_fixed, 0)
-    indicies_fix <- if(est_fixed_in_E) 1:n_fixed + n_params else vector()
+    .F <- diag(rep(1, n_params + n_fixed * est_fixed_in_E))
 
+  } else if(order == 2){
     .F = matrix(NA_real_,
                 nrow = 2 * n_params + n_fixed * est_fixed_in_E,
                 ncol = 2 * n_params + n_fixed * est_fixed_in_E)
@@ -514,9 +478,57 @@ get_F <- function(order, n_params, n_fixed, est_fixed_in_E){
         diag(.F[indicies_fix, indicies_fix]) <- 1 else
           .F[indicies_fix, indicies_fix] <- 1
     }
+  }
 
-    return(.F)
-  } else stop("Method not implemented for order ", order)
+  #####
+  # Setup for Q
+  if(order > 1){
+    # TODO: get rid of re-dedudant elements here
+    tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)
+    tmp[1:n_params, 1:n_params] <- Q
+    Q <- tmp
+  }
+
+  #####
+  # Setup for Q_0 and a_0
+  if(est_fixed_in_E){
+    # We need to add entries to the matrix and vector
+
+    if(ncol(Q_0) != n_params * order + length(indicies_fix)){
+      Q_0_new <- .F
+      Q_0_new[, ] <- 0
+      Q_0_new[-indicies_fix, -indicies_fix] <- Q_0
+      if(length(indicies_fix) == 1){
+        Q_0_new[indicies_fix, indicies_fix] <- control$Q_0_term_for_fixed_E_step
+      } else
+        diag(Q_0_new[indicies_fix, indicies_fix]) <-
+          control$Q_0_term_for_fixed_E_step
+      Q_0 <- Q_0_new
+    }
+
+    if(order == 1){
+      a_0 <- c(a_0, control$fixed_parems_start)
+
+    } else if(order == 2){
+      first_half <- 1:(length(a_0)/2)
+      a_0 <- c(a_0[first_half], control$fixed_parems_start, a_0[-first_half])
+
+    } else
+      stop("Order of ", order, " not supported")
+  }
+
+  #####
+  # Setup for other matrices and vectors
+  R <- matrix(0, state_dim, ncol(Q))
+  if(n_params > 0)
+    diag(R)[1:n_params] <- 1
+  L <- matrix(0, state_dim, state_dim)
+  if(n_params + n_fixed * est_fixed_in_E > 0)
+    diag(L)[1:(n_params +  n_fixed * est_fixed_in_E)] <- 1
+  m <- numeric(state_dim)
+
+  return(list(Q = Q, Q_0 = Q_0, .F = .F, R = R, L = L, m = m, a_0 = a_0,
+              indicies_fix = indicies_fix))
 }
 
 # TODO: remove other names at some future point after 0.5.0 changes

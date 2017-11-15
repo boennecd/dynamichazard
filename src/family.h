@@ -9,36 +9,36 @@
 template<class T>
 class family_base {
 public:
-  static double linkinv(
+  static inline double linkinv(
       const trunc_eta_res res, const double at_risk_length){
     return T::linkinv(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static double mu_eta(
+  static inline double mu_eta(
       const trunc_eta_res res, const double at_risk_length){
     return T::mu_eta(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static double var(
+  static inline double var(
       const trunc_eta_res res, const double at_risk_length){
     return T::var(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static double log_like(
+  static inline double log_like(
       const bool outcome, const trunc_eta_res res,
       const double at_risk_length){
     return T::log_like(
       outcome, res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static double d_log_like(
+  static inline double d_log_like(
       const bool outcome, const trunc_eta_res res,
       const double at_risk_length){
     return T::d_log_like(
       outcome, res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static double dd_log_like(
+  static inline double dd_log_like(
       const bool outcome, const trunc_eta_res res,
       const double at_risk_length){
     return T::dd_log_like(

@@ -88,7 +88,6 @@ test_that("Works with second order random walk and logit model", {
   fit <- fit[c("state_vars", "state_vecs", "Q", "lag_one_cov")]
   # save_to_test(fit, "E_step_sim_EKF_order_two")
 
-
   expect_equal(fit, read_to_test("E_step_sim_EKF_order_two"), tolerance = 0.1)
 })
 

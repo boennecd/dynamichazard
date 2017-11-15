@@ -1,3 +1,7 @@
+if(getRversion() >= "2.15.1")
+  utils::globalVariables(c("L", "R_mat", "m", "indicies_fix", "id", "Q_0",
+                           ".F", "Q", "model"))
+
 #' @title Bootstrap for \code{\link{ddhazard}}
 #' @param ddhazard_fit returned object from a \code{\link{ddhazard}} call.
 #' @param strata strata to sample within. These need to be on an individual by individual basis and not rows in the design matrix.
@@ -28,10 +32,10 @@ ddhazard_boot <- function(
   if(is.null(ddhazard_fit$risk_set) || is.null(ddhazard_fit$data))
     stop("Cannot bootstrap estimates when ddhazard has been called with control = list(save_risk_set = F, save_data = F, ...)")
 
-  id <- ddhazard_fit$id
+  list2env(ddhazard_fit[c("control", "id", "data", "order", "model")],
+           environment())
   X_Y <- get_design_matrix(
-    data = ddhazard_fit$data, Terms = ddhazard_fit$terms,
-    xlev = ddhazard_fit$xlev,
+    data = data, Terms = ddhazard_fit$terms, xlev = ddhazard_fit$xlev,
     has_fixed_intercept = ddhazard_fit$has_fixed_intercept)
 
   # find unique ids and whether the individuals do die
@@ -56,44 +60,29 @@ ddhazard_boot <- function(
   }
 
   # change starting value for fixed effects
-  ddhazard_fit$control$fixed_parems_start <- ddhazard_fit$fixed_effects
+  control$fixed_parems_start <- ddhazard_fit$fixed_effects
 
   # define indicies for fixed effects in the state space vector
   n_fixed <- ncol(X_Y$fixed_terms)
-  n_varying <- ncol(ddhazard_fit$state_vecs)/ddhazard_fit$order
+  n_varying <- ncol(ddhazard_fit$state_vecs)/order
   n_periods <- nrow(ddhazard_fit$state_vecs)
   n_out <- n_fixed +                           # number of parameters returned
-    n_varying * n_periods * ddhazard_fit$order # by statistic function
+    n_varying * n_periods * order              # by statistic function
 
-  # we need to make adjustments if fixed effects are estimated in the E-step
-  a_0 <- ddhazard_fit$state_vecs[1,]
-  if(ddhazard_fit$control$fixed_terms_method == "E_step" &&
-     n_fixed > 0){
-    indicies_fixed_coef_in_state <- 1:n_fixed +  n_varying
-
-    # we need to add indicies to Q
-    Q_new <- ddhazard_fit$Q_0 # this has the right dimension
-    Q_new[,] <- 0
-    Q_new[1:n_varying, 1:n_varying] <- ddhazard_fit$Q
-    ddhazard_fit$Q <- Q_new
-
-    # We need the right F matrix
-    ddhazard_fit$F_ <-  get_F(
-      ddhazard_fit$order, n_varying, n_fixed, T)
-
-    # and to a_0
-    if(ddhazard_fit$order == 1){
-      a_0 <- c(a_0, ddhazard_fit$control$fixed_parems_start)
-
-    } else if(ddhazard_fit$order == 2){
-      first_half <- 1:(length(a_0)/2)
-      a_0 <-
-        c(a_0[first_half], ddhazard_fit$control$fixed_parems_start, a_0[-first_half])
-
-    } else
-      stop("Method not implemented for order equal to ", ddhazard_fit$order)
-  } else
-    indicies_fixed_coef_in_state <- vector()
+  #####
+  # Find matrices for state equation
+  est_fixed_in_E <-
+    control$fixed_terms_method == "E_step" && n_fixed > 0
+  a_0 <- ddhazard_fit$state_vecs[1, ]
+  tmp <- get_state_eq_matrices(
+    order =  order, n_params = n_varying, n_fixed = n_fixed,
+    est_fixed_in_E = est_fixed_in_E,
+    Q_0 = ddhazard_fit$Q_0,
+    Q = ddhazard_fit$Q,
+    a_0 = a_0, control)
+  names(tmp)[names(tmp) == "R"] <- "R_mat" # re-name to not remove present R
+                                           # object
+  list2env(tmp, environment())
 
   # Define function for boot
   statistic <- function(data, ran.gen){
@@ -124,13 +113,12 @@ ddhazard_boot <- function(
       boot_risk_set$is_event_in[which_rows_are_included]
 
     # permutate if done on the first fit
-    if(ddhazard_fit$control$permu)
+    if(control$permu)
       eval(get_permu_data_exp(boot_X_Y[1:3], boot_risk_set, ws))
 
     # add fixed terms to design matrix if fixed terms are estimated in the
     # E-step
-    if(ddhazard_fit$control$fixed_terms_method == "E_step" &&
-       n_fixed > 0){
+    if(control$fixed_terms_method == "E_step" && n_fixed > 0){
       boot_X_Y$X <- cbind(boot_X_Y$X, boot_X_Y$fixed_terms)
       boot_X_Y$fixed_terms <- matrix(nrow = nrow(boot_X_Y$X), ncol = 0)
     }
@@ -156,20 +144,20 @@ ddhazard_boot <- function(
     for(l in LRs){
       tryCatch({
         suppressWarnings(est <- ddhazard_no_validation(
-          a_0 = a_0, Q_0 = ddhazard_fit$Q_0,
-          .F = ddhazard_fit$F_, verbose = F, Q = ddhazard_fit$Q,
+          a_0 = a_0, Q_0 = Q_0, L = L, R = R_mat, m = m,
+          .F = .F, verbose = F, Q = Q,
           risk_set= boot_risk_set, X_Y = boot_X_Y,
-          model = ddhazard_fit$model,
+          model = model,
           LR = l,
           n_fixed_terms_in_state_vec =
-            ifelse(ddhazard_fit$control$fixed_terms_method == "E_step", n_fixed, 0),
+            if(control$fixed_terms_method == "E_step") n_fixed else 0,
           weights = ws,
-          control = ddhazard_fit$control))
+          control = control))
 
-        out <- c(est$a_t_d_s[, !seq_len(ncol(est$a_t_d_s)) %in% indicies_fixed_coef_in_state])
+        out <- c(est$a_t_d_s[, !seq_len(ncol(est$a_t_d_s)) %in% indicies_fix])
         if(n_fixed > 0){
-          out <- if(ddhazard_fit$control$fixed_terms_method == "E_step")
-            c(out, est$a_t_d_s[1, indicies_fixed_coef_in_state]) else
+          out <- if(control$fixed_terms_method == "E_step")
+            c(out, est$a_t_d_s[1, indicies_fix]) else
               c(out, est$fixed_effects)
         }
         did_succed <- TRUE

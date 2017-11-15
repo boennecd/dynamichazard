@@ -17,6 +17,9 @@ Rcpp::List ddhazard_fit_cpp(
     const arma::vec &tstart, const arma::vec &tstop,
     const arma::colvec &a_0,
     const arma::vec &fixed_parems_start,
+    arma::mat R,
+    arma::mat L,
+    arma::vec m,
     arma::mat Q_0, // by value copy. This  is key cuz we will change it if est_Q_0 = T
     arma::mat Q, // similarly this is a copy
     const Rcpp::List &risk_obj,
@@ -69,7 +72,8 @@ Rcpp::List ddhazard_fit_cpp(
   std::unique_ptr<ddhazard_data> p_data(new random_walk<ddhazard_data>(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin,
-      a_0, fixed_parems_start, Q_0, Q,
+      a_0, fixed_parems_start,
+      R, L, m, Q_0, Q,
       risk_obj, F_,
       eps_fixed_parems, max_it_fixed_params,
       weights,
@@ -147,7 +151,7 @@ Rcpp::List ddhazard_fit_cpp(
     a_prev.zeros();
   }
 
-  arma::mat varying_only_F = p_data->F_;
+  arma::mat varying_only_F = F_;
   arma::span span_fixed_params;
   if(p_data->any_fixed_in_E_step){
     if(p_data->any_fixed_in_E_step){
@@ -234,7 +238,7 @@ Rcpp::List ddhazard_fit_cpp(
         my_print(*p_data.get(), p_data->Q, "Q before changes in M-step");
       }
 
-      Q.zeros();
+      Q = arma::zeros<arma::mat>(arma::size(F_));
       for (int t = 1; t < p_data->d + 1; t++){
         delta_t = p_data->I_len[t - 1];
 
@@ -242,37 +246,32 @@ Rcpp::List ddhazard_fit_cpp(
         V = &p_data->V_t_t_s.slice(t);
         a_less = p_data->a_t_t_s.unsafe_col(t - 1);
         a = p_data->a_t_t_s.unsafe_col(t);
+        arma::vec a_dt(a - p_data->state_trans_map(a_less).sv);
 
         if(M_step_formulation == "Fahrmier94"){
           B = &p_data->B_s.slice(t - 1);
 
-          Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-                  - F_ * *B * *V
-                  - (F_ * *B * *V).t()
-                  + F_ * *V_less * p_data->T_F_) / delta_t;
+          Q += ((a_dt * a_dt.t()) + *V
+                  - p_data->state_trans_map(*B, left).sv * *V
+                  - *V * p_data->state_trans_map(*B, left).sv.t()
+                  + p_data->state_trans_map(*V_less).sv) / delta_t;
 
         } else if (M_step_formulation == "SmoothedCov"){
           /* this is not B but the lagged one smooth correlation.
            * Do not mind the variable name */
           B = &p_data->lag_one_cov.slice(t - 1);
 
-          Q += ((a - F_ * a_less) * (a - F_ * a_less).t() + *V
-                  - F_ * *B
-                  - (F_ * *B).t()
-                  + F_ * *V_less * p_data->T_F_) / delta_t;
+          Q += ((a_dt * a_dt.t()) + *V
+                  - p_data->state_trans_map(*B, left).sv
+                  - p_data->state_trans_map(*B, left).sv.t()
+                  + p_data->state_trans_map(*V_less).sv) / delta_t;
         } else
           Rcpp::stop("'M_step_formulation' of type '" +
             M_step_formulation + "' is not implemented");
 
       }
       Q /= p_data->d;
-
-
-      if(p_data->any_fixed_in_E_step){
-
-        Q.rows(span_fixed_params).zeros();
-        Q.cols(span_fixed_params).zeros();
-      }
+      Q = p_data->err_state_map_inv(Q).sv;
 
       if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) >
            Q_warn_eps){
@@ -296,11 +295,6 @@ Rcpp::List ddhazard_fit_cpp(
       // Ensure that Q and Q_0 are symmetric
       Q = (Q + Q.t()) / 2.0;
       Q_0 = (Q_0 + Q_0.t()) / 2.0;
-
-      if(order > 1){
-        arma::mat tmp_Q = p_data->lp_map(Q).subview;
-        Q = p_data->lp_map_inv(tmp_Q).subview;
-      }
     }
 
     if(p_data->debug)
@@ -312,10 +306,8 @@ Rcpp::List ddhazard_fit_cpp(
         arma::mat a1(p_data->covar_dim, a_prev.n_cols);
         arma::mat a2(p_data->covar_dim, a_prev.n_cols);
         for(arma::uword i = 0; i < a_prev.n_cols; ++i){
-          arma::vec tmp = a_prev.col(i);
-          a1.col(i) = p_data->lp_map(tmp).subview;
-          tmp = p_data->a_t_t_s.col(i);
-          a2.col(i) = p_data->lp_map(tmp).subview;
+          a1.col(i) = p_data->lp_map(a_prev.col(i)).sv;
+          a2.col(i) = p_data->lp_map(p_data->a_t_t_s.col(i)).sv;
         }
 
         conv_values.push_back(conv_criteria(a1, a2));

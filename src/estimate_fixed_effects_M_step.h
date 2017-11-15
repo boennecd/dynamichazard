@@ -35,9 +35,9 @@ void estimate_fixed_effects_M_step(ddhazard_data * const p_data, arma::uword chu
     // Compute offsets from dynamic effects if needed
     arma::vec offsets;
     if(p_data->any_dynamic){
-      arma::vec tmp = p_data->a_t_t_s.col(t);
       offsets =
-        p_data->X.cols(r_set).t() * p_data->lp_map(tmp).subview;
+        p_data->X.cols(r_set).t() *
+        p_data->lp_map(p_data->a_t_t_s.col(t)).sv;
 
     } else {
       offsets = arma::vec(r_set.n_elem, arma::fill::zeros);

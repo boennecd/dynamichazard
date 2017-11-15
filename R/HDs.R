@@ -49,9 +49,6 @@
 #'   attribute in the original source.}
 #' }
 #'
-#' @usage
-#' data("hds", package = "dynamichazard")
-#'
 #' @source
 #' Raw data from \url{https://www.backblaze.com/b2/hard-drive-test-data.html}.
 #' Data have been processed to get a start-stop \code{data.frame} format.

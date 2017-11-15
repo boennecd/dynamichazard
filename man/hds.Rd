@@ -13,7 +13,7 @@
   \item{tstart,tstop}{start and stop times on the SMART 9 attribute scale.}
   \item{fails}{1 if the hard disk fails at \code{tstop}.}
   \item{size_tb}{hard disk size in terabytes.}
-  \item{smart_x}{the raw SMART attribute x value. E.g., \code{smart_12} is power cycle count.}
+  \item{smart_x}{the raw SMART attribute x value. E.g., \code{smart_12} is the power cycle count.}
   \item{smart_x_bin}{1 if the SMART attribute x value is non-zero.}
   \item{..._cumsum}{cumulative sum of the prefix \code{...}.}
   \item{n_fails}{number of failures in the orginal data. Hard disk should
@@ -28,7 +28,7 @@ Raw data from \url{https://www.backblaze.com/b2/hard-drive-test-data.html}.
 Data have been processed to get a start-stop \code{data.frame} format.
 }
 \usage{
-data("hds", package = "dynamichazard")
+hds
 }
 \description{
 A data set containing hard drive failures data from Backblaze in the

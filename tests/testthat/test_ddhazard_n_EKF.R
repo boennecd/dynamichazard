@@ -249,7 +249,6 @@ test_that("Permutating data does not change the results", {
   expect_true(is.character(
     all.equal(r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
 
-
   #####
   # With weigths
   set.seed(94884214)

@@ -1,17 +1,10 @@
 # R for travis: see documentation at https://docs.travis-ci.com/user/languages/r
 
-language: r:
-  - oldrel
-  - release
-  - devel
-
+language: R
 before_install:
   - tlmgr install algorithmicx
   - tlmgr install algorithms
   - tlmgr install xkeyval
-
-r_github_packages:
-  - testthat
 
 cache: packages
 #sudo: false

@@ -139,7 +139,7 @@ inline void EKF_filter_worker<T>::operator()(){
     if(compute_z_and_H){
       dat.H_diag_inv(i) = 1 / var;
       arma::vec tmp(x_ * mu_eta);
-      dat.z_dot.col(i) = org.lp_map_inv(tmp).subview;
+      dat.z_dot.col(i) = org.lp_map_inv(tmp).sv;
     }
   }
 
@@ -174,12 +174,13 @@ void EKF_solver<T>::solve(){
     double bin_tstart = bin_tstop;
     double delta_t = org.I_len[t - 1];
     bin_tstop += delta_t;
-
     // E-step: Prediction step
     org.a_t_less_s.col(t - 1) =
-      org.F_ *  org.a_t_t_s.unsafe_col(t - 1);
+      org.state_trans_map(org.a_t_t_s.col(t - 1)).sv;
+
     org.V_t_less_s.slice(t - 1) =
-      org.F_ * org.V_t_t_s.slice(t - 1) * org.T_F_ + delta_t * org.Q;
+      org.state_trans_map(org.V_t_t_s.slice(t - 1)).sv +
+      delta_t * org.err_state_map(org.Q).sv;
 
     if(org.debug){
       std::stringstream str;
@@ -205,7 +206,7 @@ void EKF_solver<T>::solve(){
     while(true){
       ++n_NR_it;
 
-      arma::vec dynamic_coef(org.lp_map(i_a_t).subview);
+      arma::vec dynamic_coef(org.lp_map(i_a_t).sv);
       parallel_filter_step(
         r_set.begin(), r_set.end(), dynamic_coef,
         t == org.d, t - 1, bin_tstart, bin_tstop);
@@ -227,14 +228,14 @@ void EKF_solver<T>::solve(){
       // E-step: scoring step: update values
       auto U = org.lp_map_inv(p_dat->U);
       inv_sympd(
-        org.V_t_t_s.slice(t) , V_t_less_s_inv + U.subview,
+        org.V_t_t_s.slice(t) , V_t_less_s_inv + U.sv,
         org.use_pinv,
         "ddhazard_fit_cpp estimation error: Failed to compute inverse for V_(t|t)");
 
       auto u = org.lp_map_inv(p_dat->u);
       org.a_t_t_s.col(t) =
         org.V_t_t_s.slice(t) * (
-            U.subview * i_a_t + update_term + (org.LR * u.subview));
+            U.sv * i_a_t + update_term + (org.LR * u.sv));
 
       if(org.debug){
         my_print(org, i_a_t, "a^(" + std::to_string(n_NR_it - 1L) + ")");
@@ -261,7 +262,8 @@ void EKF_solver<T>::solve(){
       i_a_t = org.a_t_t_s.col(t);
     }
 
-    org.B_s.slice(t - 1) = org.V_t_t_s.slice(t - 1) * org.T_F_ * V_t_less_s_inv;
+    org.B_s.slice(t - 1) =
+      org.state_trans_map(org.V_t_t_s.slice(t - 1), right).sv * V_t_less_s_inv;
 
     if(org.debug){
       std::stringstream str;
@@ -279,22 +281,24 @@ void EKF_solver<T>::solve(){
       arma::mat tmp_inv_mat;
       inv(tmp_inv_mat,
           arma::eye<arma::mat>(org.space_dim, org.space_dim) +
-            U.subview * org.V_t_less_s.slice(t - 1),
+            U.sv * org.V_t_less_s.slice(t - 1),
           org.use_pinv, "ddhazard_fit_cpp estimation error: Failed to invert intermediate for K_d matrix");
 
       p_dat->K_d = org.V_t_less_s.slice(t - 1) * (
         tmp_inv_mat * p_dat->z_dot * diagmat(p_dat->H_diag_inv));
       // Parenthesis is key here to avoid making a n x n matrix for large n
-      p_dat->K_d = (org.F_ * org.V_t_less_s.slice(t - 1) *
+      p_dat->K_d = (org.state_trans_map(
+        org.V_t_less_s.slice(t - 1), left).sv *
         p_dat->z_dot  * diagmat(p_dat->H_diag_inv) *
         p_dat->z_dot.t()) * p_dat->K_d;
-      p_dat->K_d = org.F_ * org.V_t_less_s.slice(t - 1) *
+      p_dat->K_d =
+        org.state_trans_map(org.V_t_less_s.slice(t - 1), left).sv *
         p_dat->z_dot  * diagmat(p_dat->H_diag_inv) -  p_dat->K_d;
 
       org.lag_one_cov.slice(t - 1) =
         (arma::eye<arma::mat>(org.space_dim, org.space_dim) -
         p_dat->K_d * p_dat->z_dot.t()) *
-        org.F_ * org.V_t_t_s.slice(t - 1);
+        org.state_trans_map(org.V_t_t_s.slice(t - 1), left).sv;
     }
   }
 }

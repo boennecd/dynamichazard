@@ -58,7 +58,7 @@ rhub::check(path = "C:\\Users\\User\\Dropbox\\skole_backup\\phd\\dynamichazard_0
 
 # ######
 # # To test a particular file
-# system.time(testthat::test_file("tests/testthat/testpredict.R"))
+# system.time(testthat::test_file("tests/testthat/test_PF.R")))
 #
 # # Or use:
 # test_that <- function(desc, code){
