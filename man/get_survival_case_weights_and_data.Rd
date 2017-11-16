@@ -15,7 +15,7 @@ get_survival_case_weights_and_data(formula, data, by, max_T, id, init_weights,
 
 \item{by}{interval length of the bins in which parameters are fixed.}
 
-\item{max_T}{end of the last interval inteval.}
+\item{max_T}{end of the last interval interval.}
 
 \item{id}{vector of ids for each row of the in the design matrix.}
 

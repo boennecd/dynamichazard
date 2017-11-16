@@ -77,9 +77,9 @@ if(packageVersion("testthat") >= "1.0.2.9000"){
         stringr::str_match(getwd(), ".+dynamichazard"),
         "/tests/testthat/previous_results/", file)))
 
-  expect_known_value <- testthat::expect_output_file
+  expect_known_value <- testthat::expect_equal_to_reference
   formals(expect_known_value)$update <- FALSE
-  expect_known_output <- testthat::expect_equal_to_reference
+  expect_known_output <- testthat::expect_output_file
   formals(expect_known_output)$update <- FALSE
 
 }

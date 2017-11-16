@@ -4,8 +4,9 @@ test_that("summary.ddhazard yields previous results and prints match previous va
   test_func <- function(fit, file, update, ...){
     .summary <- do.call(summary, c(list(object = fit), list(...)))
 
-    expect_known_value(.summary, paste0(file, "_object.RDS"), update)
-    expect_known_output(.summary, paste0(file, "_print"), update, print = TRUE)
+    expect_known_value(.summary, paste0(file, "_object.RDS"), update = update)
+    expect_known_output(
+      print(.summary), paste0(file, "_print"), update = update, print = FALSE)
 
     invisible(list(summary = .summary, fit = fit))
   }

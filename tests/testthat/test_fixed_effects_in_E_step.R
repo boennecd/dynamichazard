@@ -161,5 +161,5 @@ test_that("posterior_approx gives previous found values with fixed effects in E-
   # f1$fixed_effects
 
   f1 <- f1[c("state_vecs", "state_vecs")]
-  expect_known_output(f1, "posterior_approx_logit_fixed_E.RDS", update = FALSE)
+  expect_known_value(f1, "posterior_approx_logit_fixed_E.RDS", update = FALSE)
 })

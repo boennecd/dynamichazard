@@ -160,8 +160,7 @@ test_that("UKF with fixed effects works", {
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "fixed_effects")]
-  # save_to_test(fit, "fixed_terms_UKF_exp")
-  expect_known_output(fit, "fixed_terms_UKF_exp.RDS", update = FALSE)
+  expect_known_value(fit, "fixed_terms_UKF_exp.RDS", update = FALSE)
 })
 
 
@@ -181,7 +180,7 @@ test_that("posterior_approx gives previous found values with fixed effects in M-
   # f1$fixed_effects
 
   f1 <- f1[c("state_vecs", "state_vecs")]
-  expect_known_output(f1, "posterior_approx_logit_fixed_M.RDS", update = FALSE)
+  expect_known_value(f1, "posterior_approx_logit_fixed_M.RDS", update = FALSE)
 })
 
 

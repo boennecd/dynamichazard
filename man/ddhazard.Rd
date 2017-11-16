@@ -16,7 +16,7 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 
 \item{by}{interval length of the bins in which parameters are fixed.}
 
-\item{max_T}{end of the last interval inteval.}
+\item{max_T}{end of the last interval interval.}
 
 \item{id}{vector of ids for each row of the in the design matrix.}
 

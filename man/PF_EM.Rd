@@ -16,7 +16,7 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 
 \item{by}{interval length of the bins in which parameters are fixed.}
 
-\item{max_T}{end of the last interval inteval.}
+\item{max_T}{end of the last interval interval.}
 
 \item{id}{vector of ids for each row of the in the design matrix.}
 
@@ -50,7 +50,7 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 \item{\code{N_fw_n_bw}}{number of particles to use in forward and backward filter.}
 \item{\code{N_first}}{number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
 \item{\code{N_smooth}}{number of particles to use in particle smoother.}
-\item{\code{eps}}{convergence threhshold in EM method.}
+\item{\code{eps}}{convergence threshold in EM method.}
 \item{\code{n_max}}{maximum number of iterations of the EM algorithm.}
 \item{\code{n_threads}}{maximum number threads to use in the computations.}
 \item{\code{forward_backward_ESS_threshold}}{required effective sample size to not re-sample in the particle filters.}

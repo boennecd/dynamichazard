@@ -3,36 +3,36 @@ context("Testing print function")
 test_that("Print yields the expected results for object returned by ddhazard", {
   # /w logit
   expect_known_output(
-    ddhazard(
+    print(ddhazard(
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 1,
       control = list(eps = 1e-1),
       a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
-      max_T = 20, order = 1),
-    file =  "print_ddhazard", update = FALSE, print = TRUE)
+      max_T = 20, order = 1)),
+    file =  "print_ddhazard", update = FALSE, print = FALSE)
 
   # /w exponential
   expect_known_output(
-    ddhazard(
+    print(ddhazard(
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, model = "exponential",
       control = list(eps = 1e-1),
       a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
-      max_T = 20, order = 1),
-    file =  "print_ddhazard_exp", update = FALSE, print = TRUE)
+      max_T = 20, order = 1)),
+    file =  "print_ddhazard_exp", update = FALSE, print = FALSE)
 
   # /w UKF
   expect_known_output(
-    ddhazard(
+    print(ddhazard(
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, model = "exponential",
       control = list(eps = 1e-1, method = "UKF"),
       a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
-      max_T = 20, order = 1),
-    file =  "print_ddhazard_UKF", update = FALSE, print = TRUE)
+      max_T = 20, order = 1)),
+    file =  "print_ddhazard_UKF", update = FALSE, print = FALSE)
 })
 
 test_that("print.ddhazard_boot gives the expected output", {

@@ -16,7 +16,7 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 
 \item{by}{interval length of the bins in which parameters are fixed.}
 
-\item{max_T}{end of the last interval inteval.}
+\item{max_T}{end of the last interval interval.}
 
 \item{...}{arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used.}
 
