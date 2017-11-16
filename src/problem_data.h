@@ -285,7 +285,6 @@ public:
   const double LR;
 
   const bool use_pinv;
-  const std::string criteria;
 
   // Declare non constants. Some are intialize
   arma::vec fixed_parems;
@@ -326,8 +325,7 @@ public:
                 Rcpp::Nullable<Rcpp::NumericVector> LR,
                 const int n_threads,
                 const double denom_term,
-                const bool use_pinv,
-                const std::string criteria):
+                const bool use_pinv):
     problem_data(
       n_fixed_terms_in_state_vec,
       X,
@@ -355,7 +353,6 @@ public:
     LR(LR.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR)[0] : 1.0),
 
     use_pinv(use_pinv),
-    criteria(criteria),
     fixed_parems(fixed_parems_start)
   {
     if(debug)

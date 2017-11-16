@@ -7,7 +7,7 @@
 #' @details
 #'
 #' Details about the the SMART attributes can be found on
-#' \url{https://en.wikipedia.org/wiki/S.M.A.R.T.}. As stated in the orginal
+#' \url{https://en.wikipedia.org/wiki/S.M.A.R.T.}. As stated in the original
 #' source
 #'
 #' "Reported stats for the same SMART stat can vary in meaning based on the
@@ -41,7 +41,7 @@
 #'   \item{smart_x}{the raw SMART attribute x value. E.g., \code{smart_12} is the power cycle count.}
 #'   \item{smart_x_bin}{1 if the SMART attribute x value is non-zero.}
 #'   \item{..._cumsum}{cumulative sum of the prefix \code{...}.}
-#'   \item{n_fails}{number of failures in the orginal data. Hard disk should
+#'   \item{n_fails}{number of failures in the original data. Hard disk should
 #'   only fail once but this is not the case in the raw data.}
 #'   \item{n_records}{number of records in the original source.}
 #'   \item{min_date,max_date}{first and last date in the original source.}

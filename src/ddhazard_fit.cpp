@@ -78,8 +78,7 @@ Rcpp::List ddhazard_fit_cpp(
       eps_fixed_parems, max_it_fixed_params,
       weights,
       n_max, eps, verbose,
-      est_Q_0, debug, LR, n_threads, denom_term, use_pinv,
-      criteria));
+      est_Q_0, debug, LR, n_threads, denom_term, use_pinv));
   std::unique_ptr<Solver> solver;
 
   if(method == "EKF"){
@@ -146,7 +145,7 @@ Rcpp::List ddhazard_fit_cpp(
   // declare further variables for estimation
   arma::mat a_prev;
   double old_log_like = 0.0;
-  if(p_data->criteria == "delta_coef"){
+  if(criteria == "delta_coef"){
     a_prev.copy_size(p_data->a_t_t_s);
     a_prev.zeros();
   }
@@ -300,7 +299,7 @@ Rcpp::List ddhazard_fit_cpp(
     if(p_data->debug)
       my_print(*p_data.get(), p_data->Q, "Q after changes in M-step");
 
-    if(p_data->criteria == "delta_coef"){
+    if(criteria == "delta_coef"){
       if(p_data->any_fixed_in_E_step ||
          p_data->any_dynamic){
         arma::mat a1(p_data->covar_dim, a_prev.n_cols);
@@ -331,13 +330,13 @@ Rcpp::List ddhazard_fit_cpp(
       } else
         Rcpp::stop("Fixed effects is not implemented for '" + model  +"'");
 
-      if(p_data->criteria == "delta_coef")
+      if(criteria == "delta_coef")
         *(conv_values.end() -1) += conv_criteria(old, p_data->fixed_parems);
 
     }
 
     double log_like = 0.0;
-    if(p_data->criteria == "delta_likeli" || (verbose && it % 5 < verbose)){
+    if(criteria == "delta_likeli" || (verbose && it % 5 < verbose)){
       arma::mat varying_only_a = p_data->a_t_t_s; // take copy
       arma::vec fixed_effects_offsets;
 
@@ -366,7 +365,7 @@ Rcpp::List ddhazard_fit_cpp(
                     p_data->tstart, p_data->tstop,
                     fixed_effects_offsets, order, model)[0];
 
-      if(p_data->criteria == "delta_likeli"){
+      if(criteria == "delta_likeli"){
         if(it == 0){
           conv_values.push_back(1e6); // something large
         } else
@@ -393,9 +392,9 @@ Rcpp::List ddhazard_fit_cpp(
     if(*(conv_values.end() -1) < eps)
       break;
 
-    if(p_data->criteria == "delta_coef"){
+    if(criteria == "delta_coef"){
       a_prev = p_data->a_t_t_s;
-    } else if(p_data->criteria == "delta_likeli"){
+    } else if(criteria == "delta_likeli"){
       old_log_like = log_like;
     }
   } while(++it < n_max);

@@ -7,7 +7,7 @@ if(getRversion() >= "2.15.1")
 #' @param data \code{data.frame} or environment containing the outcome and co-variates.
 #' @param model \code{"logit"} or \code{"exponential"} for the logistic link function in the first case or for the continuous time model in the latter case.
 #' @param by interval length of the bins in which parameters are fixed.
-#' @param max_T end of the last interval inteval.
+#' @param max_T end of the last interval interval.
 #' @param id vector of ids for each row of the in the design matrix.
 #' @param a_0 vector \eqn{a_0} for the initial coefficient vector for the first iteration (optional). Default is estimates from static model (see \code{\link{static_glm}}).
 #' @param Q_0 covariance matrix for the prior distribution.

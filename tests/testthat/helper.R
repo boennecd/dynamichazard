@@ -46,18 +46,43 @@ if(interactive()){
 }
 
 # wrapper for expect_know_...
-trace(
-  what = testthat::expect_known_value, at = 2, print = FALSE,
-  tracer = quote(
-    file <- paste0(
-      stringr::str_match(getwd(), ".+dynamichazard"),
-      "/tests/testthat/previous_results/", file)))
-trace(
-  what = testthat::expect_known_output, at = 2, print = FALSE,
-  tracer = quote(
-    file <- paste0(
-      stringr::str_match(getwd(), ".+dynamichazard"),
-      "/tests/testthat/previous_results/", file)))
+if(packageVersion("testthat") >= "1.0.2.9000"){
+  trace(
+    what = testthat::expect_known_value, at = 2, print = FALSE,
+    tracer = quote(
+      file <- paste0(
+        stringr::str_match(getwd(), ".+dynamichazard"),
+        "/tests/testthat/previous_results/", file)))
+  trace(
+    what = testthat::expect_known_output, at = 2, print = FALSE,
+    tracer = quote(
+      file <- paste0(
+        stringr::str_match(getwd(), ".+dynamichazard"),
+        "/tests/testthat/previous_results/", file)))
+
+  expect_known_value <- testthat::expect_known_value
+  expect_known_output <- testthat::expect_known_output
+
+} else {
+  trace(
+    what = testthat::expect_output_file, at = 2, print = FALSE,
+    tracer = quote(
+      file <- paste0(
+        stringr::str_match(getwd(), ".+dynamichazard"),
+        "/tests/testthat/previous_results/", file)))
+  trace(
+    what = testthat::expect_equal_to_reference, at = 2, print = FALSE,
+    tracer = quote(
+      file <- paste0(
+        stringr::str_match(getwd(), ".+dynamichazard"),
+        "/tests/testthat/previous_results/", file)))
+
+  expect_known_value <- testthat::expect_output_file
+  formals(expect_known_value)$update <- FALSE
+  expect_known_output <- testthat::expect_equal_to_reference
+  formals(expect_known_output)$update <- FALSE
+
+}
 
 # And we may aswell just save it to a file
 save_to_test <- function(obj, file_name, tolerance = sqrt(.Machine$double.eps)){
