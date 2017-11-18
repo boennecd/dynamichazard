@@ -282,27 +282,22 @@ void UKF_solver_New<T>::solve(){
     O = O * O.t();
 
     // Compute intermediate matrix
-    arma::mat tmp_mat;
-    inv(tmp_mat, arma::diagmat(weights_vec_inv) + O, p_dat.use_pinv,
-        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    tmp_mat = O * tmp_mat;
+    arma::mat tmp_mat = arma::diagmat(weights_vec_c_inv) + O;
 
-    // Compute vector for state space vector
-    c_vec = c_vec -  tmp_mat * c_vec;
+    // Compute vector for state space vector update
+    c_vec = c_vec -  O * arma::solve(tmp_mat, c_vec);
 
     // ** 5: Compute L using the notation in vignette **
     // Re-compute intermediate matrix using the other weight vector
-    inv(tmp_mat, arma::diagmat(weights_vec_c_inv) + O, p_dat.use_pinv,
-        "ddhazard_fit_cpp estimation error: Failed to invert intermediate matrix in the scoring step");
-    tmp_mat = O * tmp_mat;
-
-    // compute matrix for co-variance
-    O = O - tmp_mat * O;
+    O = O - O * arma::solve(tmp_mat, O);
 
     // Substract mean to get delta sigma points
-    arma::mat delta_sigma_points = sigma_points.each_col() - p_dat.a_t_less_s.unsafe_col(t - 1);
+    arma::mat delta_sigma_points = sigma_points.each_col()
+      - p_dat.a_t_less_s.unsafe_col(t - 1);
 
-    p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) + p_dat.LR * delta_sigma_points * (weights_vec_cc % c_vec);
+    p_dat.a_t_t_s.col(t) =
+      p_dat.a_t_less_s.unsafe_col(t - 1) +
+      p_dat.LR * delta_sigma_points * (weights_vec_cc % c_vec);
 
     p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -
       (delta_sigma_points.each_row() % weights_vec_cc.t()) * O * (delta_sigma_points.each_row() % weights_vec_cc.t()).t();

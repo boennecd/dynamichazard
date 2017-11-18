@@ -501,7 +501,7 @@ The above formulation has the drawback that we have to invert $\ukfNotee{y}{y}{t
 $$\begin{aligned}
   \tilde{\vec{y}} &= \Delta \hmat{Y}^\top \widehat{\mat{H}}^{-1}(\vec{y}_t - \overline{\vec{y}}) \\ 
     \mat{G} &= \Delta\hmat{Y}^\top\widehat{\mat{H}}^{-1}\Delta\hmat{Y} \\
-  \vec{c} &= \tilde{\vec{y}} - \mat{G}\left( \diag{\vec{W}^{(m)}}^{-1} + \mat{G}\right)^{-1} \tilde{\vec{y}} \\ 
+  \vec{c} &= \tilde{\vec{y}} - \mat{G}\left( \diag{\vec{W}^{(c)}}^{-1} + \mat{G}\right)^{-1} \tilde{\vec{y}} \\ 
     \mat{L} &= \mat{G} - \mat{G}\left( \diag{\vec{W}^{(c)}}^{-1} + \mat{G}\right)^{-1} \mat{G} \\
   \emNotee{\vec{a}}{t}{t} &= \emNotee{\vec{a}}{t}{t - 1} + \Delta\hmat{A}\diag{\vec{W}^{(cc)}}\vec{c} \\
   \emNotee{\mat{V}}{t}{t} &= \emNotee{\mat{V}}{t}{t - 1} - 

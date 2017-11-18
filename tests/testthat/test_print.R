@@ -59,7 +59,7 @@ test_that("print.ddhazard_boot gives the expected output", {
 
   # plot(result, ddhazard_boot = boot_out) # needs bigger R
   expect_known_output(
-    print(boot_out, digits = 1), "boot_print", update = FALSE)
+    print(boot_out, digits = 1), "boot_print", update = FALSE, print = FALSE)
 
   #####
   # Without fixed effects
@@ -79,7 +79,8 @@ test_that("print.ddhazard_boot gives the expected output", {
   boot_out <- ddhazard_boot(result, R = 19)
 
   expect_known_output(
-    print(boot_out, digits = 1), "boot_print_w_o_fixed", update = FALSE)
+    print(boot_out, digits = 1), "boot_print_w_o_fixed", update = FALSE,
+    print = FALSE)
 })
 
 test_that("Print function for PF objects gives previous results", {
