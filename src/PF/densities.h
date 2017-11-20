@@ -70,7 +70,9 @@ public:
       auto tmp = get_bin_times(data, t);
       bin_start = tmp.start;
       bin_stop = tmp.stop;
-    }
+    } else
+      // avoid wmaybe-uninitialized
+      bin_start = bin_stop = std::numeric_limits<double>::quiet_NaN();
 
     auto jobs = get_work_blocks(r_set.begin(), r_set.end(), data.work_block_size);
     unsigned int n_jobs = jobs.size();
@@ -86,7 +88,9 @@ public:
     if(multithreaded){
       lock = new omp_lock_t;
       omp_init_lock(lock);
-    }
+    } else
+      // avoid wmaybe-uninitialized
+      lock = nullptr;
 #pragma omp parallel if(multithreaded)
 {
 #endif

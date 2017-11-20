@@ -16,7 +16,7 @@ arma::uvec sample_indices(const arma::uword size, arma::vec &probs){
 
 arma::uvec systematic_resampling(arma::vec &probs){
   return(systematic_resampling(probs.n_elem, probs));
-};
+}
 
 
 arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs){
@@ -47,7 +47,7 @@ arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs){
   }
 
   return ans;
-};
+}
 
 // --------------------------------------- //
 

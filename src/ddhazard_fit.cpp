@@ -163,6 +163,10 @@ Rcpp::List ddhazard_fit_cpp(
 
     } else{
       varying_only_F = arma::mat();
+
+      // avoid wmaybe-uninitialized
+      span_fixed_params = arma::span(0, 0);
+
     }
   }
 
@@ -229,13 +233,11 @@ Rcpp::List ddhazard_fit_cpp(
 
       // M-step
       p_data->computation_stage = "M-step";
-      if(est_Q_0){
+      if(est_Q_0)
         Q_0 = p_data->V_t_t_s.slice(0);
-      }
 
-      if(p_data->debug){
+      if(p_data->debug)
         my_print(*p_data.get(), p_data->Q, "Q before changes in M-step");
-      }
 
       Q = arma::zeros<arma::mat>(arma::size(F_));
       for (int t = 1; t < p_data->d + 1; t++){
@@ -353,7 +355,7 @@ Rcpp::List ddhazard_fit_cpp(
         fixed_effects_offsets = arma::vec(p_data->X.n_cols, arma::fill::zeros);
 
       arma::span span_only_varying(
-          0, p_data->covar_dim - p_data->n_params_state_vec_fixed);
+          0, p_data->covar_dim - p_data->n_params_state_vec_fixed - 1);
 
       log_like =
         logLike_cpp(p_data->X(span_only_varying, arma::span::all),

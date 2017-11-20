@@ -70,7 +70,7 @@ double SMA_hepler_logit_compute_length(
     const double w, const bool y){
   return SMA<logistic>::compute_length(
     offset, coef1, coef2, w, y, 0.);
-};
+}
 
 // [[Rcpp::export]]
 double SMA_hepler_exp_compute_length(
@@ -78,7 +78,7 @@ double SMA_hepler_exp_compute_length(
     const double w, const bool y, const double length){
   return SMA<exponential>::compute_length(
     offset, coef1, coef2, w, y, length);
-};
+}
 
 // -------------------------------------------------- //
 

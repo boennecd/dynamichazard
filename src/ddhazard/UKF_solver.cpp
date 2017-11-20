@@ -26,7 +26,7 @@ UKF_solver_Org::UKF_solver_Org(ddhazard_data &p_, Rcpp::Nullable<Rcpp::NumericVe
       w_i(1 / (2 * (m + k))),
       sqrt_m_k(std::sqrt(m + k)),
       sigma_points(arma::mat(m, 2 * m + 1))
-  {};
+  {}
 
 void UKF_solver_Org::solve(){
     double event_time = p_dat.min_start;
@@ -98,7 +98,7 @@ void UKF_solver_Org::solve(){
                     p_dat.state_trans_map(
                       p_dat.V_t_t_s.slice(t - 1), right).sv).t();
     }
-};
+}
 
 
 
@@ -170,7 +170,7 @@ UKF_solver_New<T>::UKF_solver_New(
       << w_i << ", "
       << lambda;
   }
-};
+}
 
 template<class T>
 void UKF_solver_New<T>::compute_sigma_points(
@@ -328,7 +328,7 @@ void UKF_solver_New<T>::solve(){
       p_dat.V_t_less_s.slice(t - 1),
       p_dat.state_trans_map(p_dat.V_t_t_s.slice(t - 1), left).sv).t();
   }
-};
+}
 
 template class UKF_solver_New<logistic>;
 template class UKF_solver_New<exponential>;

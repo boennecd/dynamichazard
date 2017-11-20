@@ -127,10 +127,9 @@ test_that("logLik for head_neck_cancer data set match previous results with fixe
 
   # print(log_like, digits = 16)
 
-  old <- structure(-254.7652723920431,
-                   class = "logLik")
+  old <- structure(-254.7652723920431, class = "logLik")
 
-  expect_equal(log_like, old)
+  expect_equal(log_like, old, tolerance = 5e-3)
 })
 
 test_that("logLik for head_neck_cancer data with only fixed match bigglm", {

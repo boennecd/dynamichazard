@@ -33,7 +33,7 @@ double SMA<T>::compute_length(
   }
 
   return c1;
-};
+}
 
 template <class T>
 void SMA<T>::solve(){
@@ -181,7 +181,7 @@ void SMA<T>::solve(){
       p_dat.state_trans_map(p_dat.V_t_t_s.slice(t - 1), right).sv *
       V_t_less_s_inv;
   }
-};
+}
 
 template class SMA<logistic>;
 template class SMA<exponential>;

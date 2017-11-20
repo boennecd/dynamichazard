@@ -5,12 +5,14 @@
 * Ubuntu 14.04.5 LTS (on travis-ci with codename: trusty)
   R version 3.4.2
 * win-builder (devel and release)
+* Local Ubuntu 17.04 (64-bit)
 * The following rhub platforms:
   debian-gcc-devel
   debian-gcc-patched
   debian-gcc-release
   fedora-clang-devel
   fedora-gcc-devel
+  linux-x86_64-rocker-gcc-san
   
 I use the build with codename trusty for the GCC 4.8.4 with C++11 support.
 

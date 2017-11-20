@@ -126,7 +126,7 @@ public:
 
   /* maps previous to next state */
   map_res_col state_trans_map(arma::subview_col<double> a){
-    arma::vec tmp(a.colptr(0), a.n_elem, false);
+    arma::vec tmp(&a.at(0, 0), a.n_rows, false);
     return state_trans_map(tmp);
   }
   virtual map_res_col state_trans_map(arma::vec &a){
@@ -158,7 +158,7 @@ public:
 
   /* maps from errors to state space dimension */
   map_res_col err_state_map(arma::subview_col<double> a){
-    arma::vec tmp(a.colptr(0), a.n_elem, false);
+    arma::vec tmp(&a.at(0, 0), a.n_rows, false);
     return err_state_map(tmp);
   }
   virtual map_res_col err_state_map(arma::vec &a){
@@ -184,7 +184,7 @@ public:
 
   /* maps from state space dimension to covariate dimension */
   map_res_col lp_map(arma::subview_col<double> a){
-    arma::vec tmp(a.colptr(0), a.n_elem, false);
+    arma::vec tmp(&a.at(0, 0), a.n_rows, false);
     return lp_map(tmp);
   }
   virtual map_res_col lp_map(arma::vec&) = 0;
@@ -192,8 +192,8 @@ public:
 
   /* inverse of the above */
   map_res_col lp_map_inv(arma::subview_col<double> a){
-   arma::vec tmp(a.colptr(0), a.n_elem, false);
-     return lp_map_inv(tmp);
+    arma::vec tmp(&a.at(0, 0), a.n_rows, false);
+    return lp_map_inv(tmp);
   }
   virtual map_res_col lp_map_inv(arma::vec&) = 0;
   virtual map_res_mat lp_map_inv(arma::mat&) = 0;

@@ -60,7 +60,7 @@ void sym_mat_rank_one_update(const double alpha, const arma::vec &x, arma::mat &
   int n = A.n_cols;
 
   R_BLAS_LAPACK::sym_mat_rank_one_update(&n, &alpha, x.memptr(), A.memptr());
-};
+}
 
 arma::vec sym_mat_times_vec(const arma::vec &x, const arma::mat &A){
   int n = A.n_cols;

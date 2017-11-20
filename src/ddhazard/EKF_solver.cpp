@@ -104,7 +104,7 @@ EKF_filter_worker<T>::EKF_filter_worker(
   bin_tstart(bin_tstart_), bin_tstop(bin_tstop_),
   u_(org.covar_dim, arma::fill::zeros),
   U_(org.covar_dim, org.covar_dim, arma::fill::zeros)
-{};
+{}
 
 template<typename T>
 inline void EKF_filter_worker<T>::operator()(){
@@ -153,7 +153,7 @@ inline void EKF_filter_worker<T>::operator()(){
     std::lock_guard<std::mutex> lk(dat.m_u);
     dat.u += u_;
   }
-};
+}
 
 template<typename T>
 EKF_solver<T>::EKF_solver(
@@ -163,7 +163,7 @@ EKF_solver<T>::EKF_solver(
   org(p), p_dat(new ddhazard_data_EKF(
       p, NR_eps, NR_it_max, EKF_batch_size)), model(model),
   max_threads((p.n_threads > 1) ? p.n_threads - 1 : 1)
-  {};
+  {}
 
 template<typename T>
 void EKF_solver<T>::solve(){
@@ -362,7 +362,7 @@ void EKF_solver<T>::parallel_filter_step(
   // reflecting the upper triangle to the lower triangle as we have used the
   // dsyr BLAS function
   p_dat->U = symmatu(p_dat->U);
-};
+}
 
 template class EKF_solver<logistic>;
 template class EKF_solver<exponential>;

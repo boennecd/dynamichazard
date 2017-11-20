@@ -58,7 +58,7 @@ namespace R_BLAS_LAPACK {
       str << "Got error code '" << info << "' when making rank one update of cholesky decomposition";
       Rcpp::stop(str.str());
     }
-  };
+  }
 
   void square_tri_inv(double *out, int n, int ldr){
     int info;
@@ -70,7 +70,7 @@ namespace R_BLAS_LAPACK {
       str << "Got error code '" << info << "' when making rank one update of cholesky decomposition";
       Rcpp::stop(str.str());
     }
-  };
+  }
 
   void symmetric_mat_chol(double *out, int n, int lda){
     int info;
@@ -82,7 +82,7 @@ namespace R_BLAS_LAPACK {
       str << "Got error code '" << info << "' when making cholesky decomposition of symmetric matrix";
       Rcpp::stop(str.str());
     }
-  };
+  }
 
   void tri_mat_times_vec(const double *A, double *x, int n, int lda, bool is_transpose){
     // Computes x <-- A * x where A is a triangular matrix

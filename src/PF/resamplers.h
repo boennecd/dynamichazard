@@ -121,6 +121,9 @@ public:
     if(is_forward){
       Q_numerator_chol_inv = &data.Q.chol_inv;
 
+      // avoid wmaybe-uninitialized
+      bw_w1 = bw_w2 = std::numeric_limits<double>::quiet_NaN();
+
     } else {
       bw_w1 = (double)(t + 1) / (t + 2);
       bw_w2 =              1. / (t + 2);
@@ -198,6 +201,10 @@ public:
     const arma::mat *Q_numerator_chol_inv;
     if(is_forward){
       Q_numerator_chol_inv = &data.Q.chol_inv;
+
+      // avoid wmaybe-uninitialized
+      bw_w1 = bw_w2 = std::numeric_limits<double>::quiet_NaN();
+      a_0_scaled = nullptr;
 
     } else {
       bw_w1 = (double)(t + 1) / (t + 2);

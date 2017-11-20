@@ -1,6 +1,4 @@
-[![Build Status on Travis](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard)
-[![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)
-[![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/dynamichazard)](http://cran.rstudio.com/web/packages/dynamichazard/index.html)
+[![Build Status](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard)
 
 dynamichazard
 =============
@@ -46,12 +44,8 @@ The analysis is given below with comments:
 
 ``` r
 library(dynamichazard)
-#> Loading required package: survival
 library(survival)
 library(JMbayes) # Contain the aids data set
-#> Loading required package: MASS
-#> Loading required package: nlme
-#> Loading required package: splines
 
 # We remove the data we dont neeed
 aids <- aids[aids$Time == aids$stop, ]
@@ -75,13 +69,12 @@ max(aids$stop[aids$event == 1]) # Last person with event
 fit <- ddhazard(
   Surv(stop, event) ~ AZT + gender + drug + prevOI,
   aids,
-  model = "exp_clip_time_w_jump", # The model I use from ddhazard. In short, 
-                                  # this model assumes that event times are 
-                                  # exponentially distributed
+  model = "exponential",          # piecewise constant exponentially distributed 
+                                  # arrivals times
   by = .5,                        # Length of time intervals in state space 
                                   # model
   max_T = 19,                     # Last period we observe when modeling
-  Q = diag(.1, 5),                # Covariance matrix for state equation in 
+  Q = diag(.01, 5),               # Covariance matrix for state equation in 
                                   # first iteration
   Q_0 = diag(10, 5),              # Covariance matrix for the prior
   control = list(
@@ -122,7 +115,7 @@ An example of a paper analyzing the CD4 count can be found in Guo & Carlin (2004
 Example - particle filter and smoother
 --------------------------------------
 
-A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data but where we model the outcomes as binary.
+A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data.
 
 ``` r
 options(ddhazard_max_threads = 7) # I am on a 8 core machine
@@ -131,10 +124,10 @@ set.seed(20170907)
 pf_fit <- PF_EM(
   Surv(stop, event) ~ AZT + gender + drug + prevOI,
   aids,
-  model = "logit", # model binary outcomes
+  model = "exponential",
   by = .5,  
   max_T = 19,
-  Q = diag(.05, 5),
+  Q = diag(.01, 5),
   Q_0 = diag(1, 5),
   control = list(
     # set number of particles
@@ -155,25 +148,25 @@ pf_fit <- PF_EM(
 
 # Compare estimates of Q
 pf_fit$Q
-#>              [,1]         [,2]         [,3]         [,4]         [,5]
-#> [1,]  0.027031377 -0.004636629 -0.013979750 -0.012463987  0.004370164
-#> [2,] -0.004636629  0.026500607 -0.003655805  0.008676322 -0.014540987
-#> [3,] -0.013979750 -0.003655805  0.048881239  0.007437342 -0.012723799
-#> [4,] -0.012463987  0.008676322  0.007437342  0.037928373 -0.025334120
-#> [5,]  0.004370164 -0.014540987 -0.012723799 -0.025334120  0.045920919
+#>               [,1]          [,2]         [,3]         [,4]          [,5]
+#> [1,]  0.0105942683 -2.876336e-04 -0.005015531 -0.005844878  2.189748e-03
+#> [2,] -0.0002876336  1.077249e-02 -0.002687863 -0.001557523  6.388349e-05
+#> [3,] -0.0050155312 -2.687863e-03  0.026827072  0.005267746 -3.234016e-03
+#> [4,] -0.0058448782 -1.557523e-03  0.005267746  0.015524746 -7.382447e-03
+#> [5,]  0.0021897480  6.388349e-05 -0.003234016 -0.007382447  1.315256e-02
 fit$Q
-#>              (Intercept)   AZTfailure   gendermale      drugddI
-#> (Intercept)  0.047943451 -0.002276844 -0.017820664 -0.009993567
-#> AZTfailure  -0.002276844  0.042550590 -0.004311827  0.001327104
-#> gendermale  -0.017820664 -0.004311827  0.057309540  0.001134381
-#> drugddI     -0.009993567  0.001327104  0.001134381  0.041761290
-#> prevOIAIDS  -0.015794509 -0.012788707 -0.017556331 -0.011020364
-#>              prevOIAIDS
-#> (Intercept) -0.01579451
-#> AZTfailure  -0.01278871
-#> gendermale  -0.01755633
-#> drugddI     -0.01102036
-#> prevOIAIDS   0.05301432
+#>               (Intercept)    AZTfailure    gendermale       drugddI
+#> (Intercept)  0.0092783394 -1.794496e-04 -2.810209e-04 -2.398848e-04
+#> AZTfailure  -0.0001794496  9.461514e-03 -1.764688e-05  1.034397e-05
+#> gendermale  -0.0002810209 -1.764688e-05  1.008643e-02  1.207075e-04
+#> drugddI     -0.0002398848  1.034397e-05  1.207075e-04  9.517421e-03
+#> prevOIAIDS  -0.0005509552 -3.233903e-04 -3.533003e-04 -2.702777e-04
+#>                prevOIAIDS
+#> (Intercept) -0.0005509552
+#> AZTfailure  -0.0003233903
+#> gendermale  -0.0003533003
+#> drugddI     -0.0002702777
+#> prevOIAIDS   0.0092743921
 
 # Look at coefficients. Crosses are 2.5%, 50% and 97.5% quantiles. The curves
 # are mean estimates
