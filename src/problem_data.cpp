@@ -1,5 +1,3 @@
-// TODO: delete this file
-
 #include "problem_data.h"
 
 using ptr_vec = std::unique_ptr<arma::vec>;
