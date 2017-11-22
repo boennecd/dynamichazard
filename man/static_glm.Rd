@@ -46,3 +46,11 @@ The returned list from the \code{\link{glm}} call or just coefficients depending
 \description{
 Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights.
 }
+\examples{
+library(dynamichazard)
+fit <- static_glm(
+ Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+ by = 50)
+fit$coefficients
+
+}

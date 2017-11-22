@@ -35,3 +35,13 @@ Plot of estimated state space variables from a \code{\link{ddhazard}} fit.
 \details{
 Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit.
 }
+\examples{
+library(dynamichazard)
+fit <- ddhazard(
+ Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+ Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
+ control = list(method = "GMA"))
+plot(fit)
+plot(fit, cov_index = 2)
+
+}

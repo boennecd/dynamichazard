@@ -21,3 +21,12 @@ Computes the log likelihood of (a potentially new) data set given the estimated:
 
 of the \code{ddhazard} object. Note that this is not the log likelihood of the observed data given the outcome.
 }
+\examples{
+library(dynamichazard)
+fit <- ddhazard(
+ Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+ Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
+ control = list(method = "GMA"))
+logLik(fit)
+
+}

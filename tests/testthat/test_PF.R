@@ -393,37 +393,3 @@ test_that("compute_summary_stats gives previous results", {
   test_func("local_tests/PF_head_neck_w_Brier_method",
             "local_tests/compute_summary_stats_w_Brier_method")
 })
-
-test_that("help page example runs and gives previous computed results", {
-  skip_on_cran()
-
-  .lung <- lung[!is.na(lung$ph.ecog), ]
-  set.seed(43588155)
-  pf_fit <- PF_EM(
-    Surv(time, status == 2) ~ ph.ecog + age,
-    data = .lung, by = 50, id = 1:nrow(.lung),
-    Q_0 = diag(1, 3), Q = diag(1, 3),
-    max_T = 800,
-    control = list(
-      N_fw_n_bw = 500,
-      N_first = 2500,
-      N_smooth = 2500,
-      n_max = 50,
-      n_threads = parallel::detectCores()))
-
-  .file <- "local_tests/survival_lung_example"
-  # save_to_test(pf_fit[names(pf_fit) != "call"], .file)
-  test_if_file_exists(
-    .file,
-    expect_equal(pf_fit[names(pf_fit) != "call"], read_to_test(.file), tolerance = 1.49e-08)
-  )
-
-  .file <- "survival_lung_example_cloud_means"
-  # save_to_test(get_means(pf_fit$clouds), file_name = .file)
-  expect_equal(get_means(pf_fit$clouds), read_to_test(.file), tolerance = 1.49e-08)
-
-  expect_no_error(plot(pf_fit, cov_index = 1))
-  expect_no_error(plot(pf_fit, cov_index = 2))
-  expect_no_error(plot(pf_fit, cov_index = 3))
-  expect_no_error(plot(pf_fit$log_likes))
-})

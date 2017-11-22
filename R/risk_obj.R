@@ -1,7 +1,7 @@
 #' @title Risk set on an equidistant distant grid
 #' @description Get the risk set at each bin over an equidistant distant grid.
 #'
-#' @param Y vector of outcome variable.
+#' @param Y vector of outcome variable returned from \code{\link{Surv}}.
 #' @param by length of each bin.
 #' @param max_T last observed time.
 #' @param id vector with ids where entries match with outcomes \code{Y}.
@@ -19,6 +19,17 @@
 #' \item{\code{is_event_in}}{indices for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins.}
 #' \item{\code{is_for_discrete_model}}{value of \code{is_for_discrete_model} argument.}
 #' }
+#'
+#' @examples
+#'# small toy example with time-varying covariates
+#'dat <- data.frame(
+#'  id     = c(1, 1, 2, 2),
+#'  tstart = c(0, 4, 0, 2),
+#'  tstop  = c(4, 6, 2, 4),
+#'  event  = c(0, 1, 0, 0))
+#'
+#'with(dat, get_risk_obj(Surv(tstart, tstop, event), by = 1, max_T = 6, id = id))
+#'
 #' @export
 get_risk_obj = function(
   Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,

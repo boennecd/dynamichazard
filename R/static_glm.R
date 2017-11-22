@@ -24,6 +24,22 @@
 #' @references
 #' Tutz, Gerhard, and Matthias Schmid. \emph{Nonparametric Modeling and Smooth Effects}. Modeling Discrete Time-to-Event Data. Springer International Publishing, 2016. 105-127.
 #'
+#' @examples
+#'library(dynamichazard)
+#'# small toy example with time-varying covariates
+#'dat <- data.frame(
+#'  id     = c(   1,    1, 2,     2),
+#'  tstart = c(   0,    4, 0,     2),
+#'  tstop  = c(   4,    6, 2,     6),
+#'  event  = c(   0,    1, 0,     0),
+#'  x1     = c(1.09, 1.29, 0, -1.16))
+#'
+#'get_survival_case_weights_and_data(
+#'  Surv(tstart, tstop, event) ~ x1, dat, by = 1, id = dat$id)$X
+#'get_survival_case_weights_and_data(
+#'  Surv(tstart, tstop, event) ~ x1, dat, by = 1, id = dat$id,
+#'  use_weights = FALSE)$X
+#'
 #' @export
 get_survival_case_weights_and_data = function(
   formula, data, by, max_T, id, init_weights, risk_obj,
@@ -154,6 +170,13 @@ get_survival_case_weights_and_data = function(
 #'
 #' @return
 #' The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}.
+#'
+#' @examples
+#'library(dynamichazard)
+#'fit <- static_glm(
+#'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+#'  by = 50)
+#'fit$coefficients
 #'
 #' @export
 static_glm = function(

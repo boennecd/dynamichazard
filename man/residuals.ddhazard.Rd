@@ -12,7 +12,7 @@
 
 \item{type}{type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details.}
 
-\item{data}{\code{data.frame} with data for the Pearson or raw residuals.}
+\item{data}{\code{data.frame} with data for the Pearson or raw residuals. This is only needed if the data set is not saved with the \code{object}. Must be the same data set used in the initial call to \code{\link{ddhazard}}.}
 
 \item{...}{not used.}
 }
@@ -38,3 +38,14 @@ Is the result of a call with a \code{type} argument of either \code{"std_space_e
 }
 }
 
+\examples{
+library(dynamichazard)
+fit <- ddhazard(
+ Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+ Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
+ control = list(method = "GMA"))
+resids <- residuals(fit, type = "pearson")$residuals
+head(resids[[1]])
+head(resids[[2]])
+
+}

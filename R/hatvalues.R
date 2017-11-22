@@ -14,6 +14,16 @@
 #' @seealso
 #' \code{\link{ddhazard}}
 #'
+#' @examples
+#'library(dynamichazard)
+#'fit <- ddhazard(
+#'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3000,
+#'  Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 100,
+#'  control = list(method = "GMA"))
+#'hvs <- hatvalues(fit)
+#'head(hvs[[1]])
+#'head(hvs[[2]])
+#'
 #' @export
 hatvalues.ddhazard <- function(model, ...){
   if(!model$model %in% c("logit"))

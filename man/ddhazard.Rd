@@ -99,6 +99,24 @@ The \code{control} argument allows you to pass a \code{list} to select additiona
 }
 }
 
+\examples{
+# example with first order model
+library(dynamichazard)
+fit <- ddhazard(
+ Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+ Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
+ control = list(method = "GMA"))
+plot(fit)
+
+# example with second order model
+fit <- ddhazard(
+ Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+ Q_0 = diag(1, 4), Q = diag(1e-4, 2), by = 50,
+ control = list(method = "GMA"),
+ order = 2)
+plot(fit)
+
+}
 \references{
 Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation for discrete time survival data}. Biometrika 81.2 (1994): 317-330.
 

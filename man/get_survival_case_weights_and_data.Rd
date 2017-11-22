@@ -42,6 +42,23 @@ This function use similar logic as the \code{ddhazard} for individuals with time
 
 If \code{use_weights = FALSE} then the two previously mentioned individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. al (2016).
 }
+\examples{
+library(dynamichazard)
+# small toy example with time-varying covariates
+dat <- data.frame(
+ id     = c(   1,    1, 2,     2),
+ tstart = c(   0,    4, 0,     2),
+ tstop  = c(   4,    6, 2,     6),
+ event  = c(   0,    1, 0,     0),
+ x1     = c(1.09, 1.29, 0, -1.16))
+
+get_survival_case_weights_and_data(
+ Surv(tstart, tstop, event) ~ x1, dat, by = 1, id = dat$id)$X
+get_survival_case_weights_and_data(
+ Surv(tstart, tstop, event) ~ x1, dat, by = 1, id = dat$id,
+ use_weights = FALSE)$X
+
+}
 \references{
 Tutz, Gerhard, and Matthias Schmid. \emph{Nonparametric Modeling and Smooth Effects}. Modeling Discrete Time-to-Event Data. Springer International Publishing, 2016. 105-127.
 }

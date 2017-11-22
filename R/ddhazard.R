@@ -85,6 +85,23 @@ if(getRversion() >= "2.15.1")
 #'
 #' Durbin, James, and Siem Jan Koopman. \emph{Time series analysis by state space methods}. No. 38. Oxford University Press, 2012.
 #'
+#' @examples
+#'# example with first order model
+#'library(dynamichazard)
+#'fit <- ddhazard(
+#'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+#'  Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
+#'  control = list(method = "GMA"))
+#'plot(fit)
+#'
+#'# example with second order model
+#'fit <- ddhazard(
+#'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+#'  Q_0 = diag(1, 4), Q = diag(1e-4, 2), by = 50,
+#'  control = list(method = "GMA"),
+#'  order = 2)
+#'plot(fit)
+#'
 #' @export
 ddhazard = function(formula, data,
                     model = "logit",
@@ -531,7 +548,7 @@ get_state_eq_matrices <-  function(
               indicies_fix = indicies_fix))
 }
 
-# TODO: remove other names at some future point after 0.5.0 changes
+# TODO: remove other exp_ names at some future point after 0.5.0 changes
 exp_model_names <- c(
   "exponential", "exp_bin", "exp_clip_time", "exp_clip_time_w_jump")
 

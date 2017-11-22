@@ -31,6 +31,19 @@ An object like from the \code{\link[boot]{boot}} function.
 \description{
 See the vignette \code{vignette("Bootstrap_illustration", "dynamichazard")}. The \code{do_stratify_with_event} may be useful when either cases or non-cases are very rare to ensure that the model estimation succeeds.
 }
+\examples{
+\dontrun{
+library(dynamichazard)
+set.seed(56219373)
+fit <- ddhazard(
+ Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3000,
+ Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 100,
+ control = list(method = "GMA"))
+bt <- ddhazard_boot(fit, R = 999)
+plot(fit, ddhazard_boot = bt, level = .9)
+}
+
+}
 \seealso{
 \code{\link{ddhazard}}, \code{\link[=plot.ddhazard]{plot}}
 }

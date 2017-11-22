@@ -11,6 +11,14 @@
 #' @param id the individual identifiers as in \code{\link{ddhazard}}.
 #' @param ... unused.
 #'
+#' @examples
+#'library(dynamichazard)
+#'fit <- ddhazard(
+#'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+#'  Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
+#'  control = list(method = "GMA"))
+#'logLik(fit)
+#'
 #' @export
 logLik.ddhazard = function(object, data = NULL, id, ...){
   data <- if(!is.null(object$data)) object$data else data

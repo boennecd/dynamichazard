@@ -21,6 +21,19 @@ if(getRversion() >= "2.15.1")
 #' @seealso
 #' \code{\link{ddhazard}}, \code{\link[=plot.ddhazard]{plot}}
 #'
+#'
+#' @examples
+#'\dontrun{
+#'library(dynamichazard)
+#'set.seed(56219373)
+#'fit <- ddhazard(
+#'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3000,
+#'  Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 100,
+#'  control = list(method = "GMA"))
+#'bt <- ddhazard_boot(fit, R = 999)
+#'plot(fit, ddhazard_boot = bt, level = .9)
+#'}
+#'
 #' @export
 ddhazard_boot <- function(
   ddhazard_fit,  strata, unique_id, R = 100,

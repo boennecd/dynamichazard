@@ -64,7 +64,9 @@ if(packageVersion("testthat") >= "1.0.2.9000"){
     tracer = qu)
 
   expect_known_value <- testthat::expect_known_value
+  formals(expect_known_value)$update <- FALSE
   expect_known_output <- testthat::expect_known_output
+  formals(expect_known_output)$update <- FALSE
 
 } else {
   trace(
@@ -146,7 +148,10 @@ options(warn=1)
 head_neck_cancer <- get_head_neck_cancer_data()
 pbc2 <- get_pbc2_data()
 
+if(exists("pbc", envir = environment(), inherits = FALSE))
+  rm(pbc, envir = environment())
 data("pbc", package = "survival")
+pbc_org <- pbc
 pbc <- pbc[, c("id", "time", "status", "age", "edema", "bili", "protime")]
 pbc <- pbc[complete.cases(pbc), ]
 

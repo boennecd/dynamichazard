@@ -20,6 +20,17 @@ Computes hat-"like" values from usual L2 penalized binary regression.
 \details{
 Computes hat-"like" values in each interval for each individual at risk in the interval. See the \code{vignette("ddhazard", "dynamichazard")} vignette for details.
 }
+\examples{
+library(dynamichazard)
+fit <- ddhazard(
+ Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3000,
+ Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 100,
+ control = list(method = "GMA"))
+hvs <- hatvalues(fit)
+head(hvs[[1]])
+head(hvs[[2]])
+
+}
 \seealso{
 \code{\link{ddhazard}}
 }

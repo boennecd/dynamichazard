@@ -3,7 +3,7 @@
 #'
 #' @param object result of \code{\link{ddhazard}} call.
 #' @param type type of residuals. Four possible values: \code{"std_space_error"}, \code{"space_error"}, \code{"pearson"} and \code{"raw"}. See the sections below for details.
-#' @param data \code{data.frame} with data for the Pearson or raw residuals.
+#' @param data \code{data.frame} with data for the Pearson or raw residuals. This is only needed if the data set is not saved with the \code{object}. Must be the same data set used in the initial call to \code{\link{ddhazard}}.
 #' @param ... not used.
 #'
 #' @section Pearson and raw residuals:
@@ -21,6 +21,16 @@
 #' \item{\code{Covariances}}{3D array with the smoothed co-variance matrix for each set of the state space errors.}
 #'}
 #'
+#' @examples
+#'library(dynamichazard)
+#'fit <- ddhazard(
+#'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
+#'  Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
+#'  control = list(method = "GMA"))
+#'resids <- residuals(fit, type = "pearson")$residuals
+#'head(resids[[1]])
+#'head(resids[[2]])
+#'
 #' @export
 residuals.ddhazard = function(
   object, type = c("std_space_error", "space_error", "pearson", "raw"),
@@ -30,15 +40,15 @@ residuals.ddhazard = function(
   if(!object$model %in% c("logit", exp_model_names))
     stop("Functions for model '",  object$model, "' is not implemented")
 
-  if(type %in% c("std_space_error", "space_error")){
+  if(type %in% c("std_space_error", "space_error"))
     return(space_errors(object, data, type == "std_space_error"))
-  }
 
   if(type == "pearson" || type == "raw"){
     if(type == "pearson" & !object$model %in% c("logit"))
       stop("Pearsons residuals is not implemented for model '", object$model, "'")
 
-    return(obs_res(object, if(is.null(object$data)) data else object$data, type))
+    return(
+      obs_res(object, if(is.null(object$data)) data else object$data, type))
   }
 
   stop("Method '", type, "' not implemented for residuals method")
