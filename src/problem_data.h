@@ -41,6 +41,67 @@ protected:
   using ptr_vec = std::unique_ptr<arma::vec>;
   using ptr_mat = std::unique_ptr<arma::mat>;
 
+  /* matrix maps */
+  static map_res_mat
+    mat_map
+    (const arma::mat &dsn_mat, const arma::mat &M, side s, bool tranpose){
+      ptr_mat ptr;
+
+      if(tranpose){
+        switch(s){
+        case  left:
+          ptr.reset(new arma::mat(dsn_mat.t() * M));
+          break;
+        case both:
+          ptr.reset(new arma::mat(dsn_mat.t() * M * dsn_mat));
+          break;
+        case right:
+          ptr.reset(new arma::mat(              M * dsn_mat));
+          break;
+        default:
+          Rcpp::stop("'Side' not implemented");
+        }
+      } else
+        switch(s){
+        case  left:
+          ptr.reset(new arma::mat(dsn_mat * M));
+          break;
+        case both:
+          ptr.reset(new arma::mat(dsn_mat * M * dsn_mat.t()));
+          break;
+        case right:
+          ptr.reset(new arma::mat(          M * dsn_mat.t()));
+          break;
+        default:
+          Rcpp::stop("'Side' not implemented");
+        }
+
+      arma::mat &out = *ptr.get();
+      return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+    }
+
+  /* vector maps */
+  virtual map_res_col err_state_map(arma::vec &a, ptr_vec &ptr){
+    ptr.reset(new arma::vec(R * a));
+    arma::vec &out = *ptr.get();
+    return map_res_col(out(arma::span::all), ptr);
+  }
+  virtual map_res_col state_trans_map(arma::vec &a, ptr_vec &ptr){
+    ptr.reset(new arma::vec(F_ * a + m));
+    arma::vec &out = *ptr.get();
+    return map_res_col(out(arma::span::all), ptr);
+  }
+  virtual map_res_col lp_map(arma::vec &a, ptr_vec &ptr){
+    ptr.reset(new arma::vec(L * a));
+    arma::vec &out = *ptr.get();
+    return map_res_col(out(arma::span::all), ptr);
+  }
+  virtual map_res_col lp_map_inv(arma::vec &a, ptr_vec &ptr){
+    ptr.reset(new arma::vec(L.t() * a));
+    arma::vec &out = *ptr.get();
+    return map_res_col(out(arma::span::all), ptr);
+  }
+
 public:
   // Constants
   const bool any_dynamic;         // Any time-varying coefficients?
@@ -126,77 +187,60 @@ public:
 
   /* maps previous to next state */
   map_res_col state_trans_map(arma::subview_col<double> a){
-    arma::vec tmp(&a.at(0, 0), a.n_rows, false);
-    return state_trans_map(tmp);
+    ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false));
+    return state_trans_map(*ptr.get(), ptr);
   }
-  virtual map_res_col state_trans_map(arma::vec &a){
-    ptr_vec ptr(new arma::vec(F_ * a + m));
-    arma::vec &out = *ptr.get();
-    return map_res_col(out(arma::span::all), ptr);
+  map_res_col state_trans_map(arma::vec &a){
+    ptr_vec ptr;
+    return state_trans_map(a, ptr);
   }
-
   virtual map_res_mat state_trans_map(arma::mat &M, side s = both){
-    ptr_mat ptr;
-
-    switch(s){
-    case  left:
-      ptr.reset(new arma::mat(F_ * M));
-      break;
-    case both:
-      ptr.reset(new arma::mat(F_ * M * F_.t()));
-      break;
-    case right:
-      ptr.reset(new arma::mat(     M * F_.t()));
-      break;
-    default:
-      Rcpp::stop("'Side' not implemented");
-    }
-
-    arma::mat &out = *ptr.get();
-    return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+    return mat_map(F_, M, s, false);
   }
 
   /* maps from errors to state space dimension */
   map_res_col err_state_map(arma::subview_col<double> a){
-    arma::vec tmp(&a.at(0, 0), a.n_rows, false);
-    return err_state_map(tmp);
+    ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false));
+    return err_state_map(*ptr.get(), ptr);
   }
-  virtual map_res_col err_state_map(arma::vec &a){
-    ptr_vec ptr(new arma::vec(R * a));
-    arma::vec &out = *ptr.get();
-    return map_res_col(out(arma::span::all), ptr);
+  map_res_col err_state_map(arma::vec &a){
+    ptr_vec ptr;
+    return err_state_map(a, ptr);
   }
-
-  virtual map_res_mat err_state_map(arma::mat &M){
-    ptr_mat ptr(new arma::mat(R * M * R.t()));
-
-    arma::mat &out = *ptr.get();
-    return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+  virtual map_res_mat err_state_map(arma::mat &M, side s = both){
+    return mat_map(R, M, s, false);
   }
 
   /* inverse of the above */
-  virtual map_res_mat err_state_map_inv(arma::mat &M){
-   ptr_mat ptr(new arma::mat(R.t() * M * R));
-
-     arma::mat &out = *ptr.get();
-     return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+  virtual map_res_mat err_state_map_inv(arma::mat &M, side s = both){
+    return mat_map(R, M, s, true);
   }
 
   /* maps from state space dimension to covariate dimension */
   map_res_col lp_map(arma::subview_col<double> a){
-    arma::vec tmp(&a.at(0, 0), a.n_rows, false);
-    return lp_map(tmp);
+    ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false));
+    return lp_map(*ptr.get(), ptr);
   }
-  virtual map_res_col lp_map(arma::vec&) = 0;
-  virtual map_res_mat lp_map(arma::mat&) = 0;
+  map_res_col lp_map(arma::vec &a){
+    ptr_vec ptr;
+    return lp_map(a, ptr);
+  }
+  virtual map_res_mat lp_map(arma::mat &M, side s = both){
+    return mat_map(L, M, s, false);
+  }
 
   /* inverse of the above */
   map_res_col lp_map_inv(arma::subview_col<double> a){
-    arma::vec tmp(&a.at(0, 0), a.n_rows, false);
-    return lp_map_inv(tmp);
+    ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false));
+    return lp_map_inv(*ptr.get(), ptr);
   }
-  virtual map_res_col lp_map_inv(arma::vec&) = 0;
-  virtual map_res_mat lp_map_inv(arma::mat&) = 0;
+  map_res_col lp_map_inv(arma::vec &a){
+    ptr_vec ptr;
+    return lp_map_inv(a, ptr);
+  }
+  virtual map_res_mat lp_map_inv(arma::mat &M, side s = both){
+    return mat_map(L, M, s, true);
+  }
 };
 
 /* Concrete class for n-th order random walk model starting with problem data
@@ -218,6 +262,23 @@ class random_walk : public T {
   using ptr_vec = std::unique_ptr<arma::vec>;
   using ptr_mat = std::unique_ptr<arma::mat>;
 
+  /* derived class functions to override */
+  map_res_col lp_map(arma::vec &a, ptr_vec &ptr) override {
+    auto span_use = (order() == 1) ? arma::span::all : *span_current_cov();
+    return map_res_col(a(span_use), ptr);
+  }
+
+  map_res_col lp_map_inv(arma::vec &a, ptr_vec &ptr) override {
+    if(order() == 1)
+      return map_res_col(a(arma::span::all), ptr);
+
+    ptr_vec ptr_new(new arma::vec(this->space_dim, arma::fill::zeros));
+    arma::vec &out = *ptr_new.get();
+    out(*span_current_cov()) = a;
+
+    return map_res_col(out(arma::span::all), ptr_new);
+  }
+
 public:
   using T::T;
 
@@ -230,29 +291,19 @@ public:
     return numerator / (this->covar_dim - this->n_params_state_vec_fixed);
   }
 
-  /* derived class function to override */
-  map_res_col lp_map(arma::vec &a) override {
-    auto span_use = (order() == 1) ? arma::span::all : *span_current_cov();
-    return map_res_col(a(span_use));
-  }
+  /* derived class functions to override */
+  map_res_mat lp_map(arma::mat &M, side s = both) override {
+    if(s != both)
+      Rcpp::stop("'Side' not implemented");
 
-  map_res_mat lp_map(arma::mat &M) override {
     auto span_use = (order() == 1) ? arma::span::all : *span_current_cov();
     return map_res_mat(M(span_use, span_use));
   }
 
-  map_res_col lp_map_inv(arma::vec &a) override {
-    if(order() == 1)
-      return map_res_col(a(arma::span::all));
+  map_res_mat lp_map_inv(arma::mat &M, side s = both) override {
+    if(s != both)
+      Rcpp::stop("'Side' not implemented");
 
-    ptr_vec ptr(new arma::vec(this->space_dim, arma::fill::zeros));
-    arma::vec &out = *ptr.get();
-    out(*span_current_cov()) = a;
-
-    return map_res_col(out(arma::span::all), ptr);
-  }
-
-  map_res_mat lp_map_inv(arma::mat &M) override {
     if(order() == 1)
       return map_res_mat(M(arma::span::all, arma::span::all));
 

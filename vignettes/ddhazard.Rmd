@@ -1057,7 +1057,7 @@ $$\log\Lparen{\proppCond{t_i}{\vec{\alpha}_0,\dots,\vec{\alpha}_d}} =
   -\int_0^{t_i}\exp\Lparen{\vec{x}_i(u)^\top\vec{\alpha}(u)}\, du$$
   
 which simplifies into the terms of $l_{ijt}$s when both the covariates $\vec{x}_i(t)$ and state space parameters $\vec{\alpha}(t)$ are piecewise constant. Further, $\mathcal{R}_t$ is the continuous risk set given by:
-$$\mathcal{R}_t = \Lbrace{(i,j) \in \mathbb{Z}_+\times\mathbb{Z}:\, t_{i,j-1} < t + 1 \wedge t_{ij} > t}$$
+$$\mathcal{R}_t = \Lbrace{(i,j) \in \mathbb{Z}_+\times\mathbb{Z}:\, t_{i,j-1} < t \wedge t_{ij} > t - 1}$$
 In words, the condition is that the $j$'th observation of individual $i$ is in the risk set if the observations 1) starts before the intervals ends and 2) ends after the interval starts. We change the risk sets $R_t$ and the likelihoods when we use the continuous time model to:
 
 $$l_{ijt}(\vec{\alpha}_t) = y_{ijt} \log h(\vec{x}_{ijt}^\top \vec{\alpha}_t) + (1 - y_{ijt}) 
