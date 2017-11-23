@@ -27,11 +27,23 @@ estimation method, `ddhazard`.
 
 > We also see that your version 0.4.0 had Additional issues: ...
 
-The error ASAN error does not appear on
+The ASAN error does not appear on
 
 * Local Ubuntu 17.04 (64-bit) both with ASAN and UBSAN with 
   gcc version 6.3.0
-  clang version 4.0.0
+  clang version 4.0
 * The linux-x86_64-rocker-gcc-san platform from rhub
 
 Sorry for not writing this in the previous submission.
+
+## Resubmission
+I see the errors on 
+https://www.stats.ox.ac.uk/pub/bdr/memtests/clang-ASAN/dynamichazard/00check.log
+https://www.stats.ox.ac.uk/pub/bdr/memtests/valgrind/dynamichazard/dynamichazard-Ex.Rout
+
+I cannot reproduce them on
+* Local Ubuntu 17.04 (64-bit) both with ASAN and UBSAN with
+  clang version 4.0
+* The linux-x86_64-rocker-gcc-san platform from rhub
+
+Though, I am quite sure I have fixed the error in this version.
