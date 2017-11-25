@@ -95,7 +95,7 @@ void GMA<T>::solve(){
           is_event[i], trunc_eta, at_risk_length[i]);
         double h_2d_neg = -  w[i] * T::dd_log_like(
           is_event[i], trunc_eta, at_risk_length[i]);
-        sym_mat_rank_one_update(h_2d_neg, X_t.col(i), my_X_cross);
+        sym_mat_rank_one_update(h_2d_neg, X_t.unsafe_col(i), my_X_cross);
       }
 
 #ifdef _OPENMP
