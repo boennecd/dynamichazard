@@ -880,7 +880,7 @@ $$\argmaxu{\vec{\gamma}}\expecpCond{
   \vec{a}_0^{(k-1)}, \vec{\gamma}^{(k-1)}, \mat{Q}^{(k-1)}, \mat{Q}_0, 
   \vec{y}_1,\dots,\vec{y}_d}$$
   
-where I temporarily add an additional argument in the log likelihood terms, $l_{ijt}$, for the fixed effects, and use the superscripts to differ between the hyperparameter estimates of different iterations of the EM-algorithm. The above is not easy to optimize. Thus, I make a zero-order Taylor expansion about $\emNotee{\vec{a}}{1}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ in the current implementation to get
+where I temporarily add an additional argument in the log likelihood terms, $l_{ijt}$, for the fixed effects, and use the superscripts to differentiate between the hyperparameter estimates of different iterations of the EM-algorithm. The above is not easy to optimize. Thus, I make a zero-order Taylor expansion about $\emNotee{\vec{a}}{1}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ in the current implementation to get
 
 $$
 \argmaxu{\vec{\gamma}} \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\emNotee{\vec{a}}{t}{d}, \vec{\gamma})
@@ -889,7 +889,7 @@ $$
 One advantage of doing this is that the problem can be solved with regular methods for GLMs when the model is from the exponential family. However, the design matrix will be big, as each individual will yield multiple rows because of different offsets from the time-varying parameters given by $\vec{x}_{ijt}^\top \emNotee{\vec{a}}{t}{d}$. To overcome this problem, I use the Fortran code from [@miller1992] to do a series of rank-one updates of the QR-decomposition used to solve the iteratively re-weighted least square problem. This is the same approach as in the biglm. The computational complexity of each update is $\bigO{c^2}$, where $c$ is the dimension of $\vec{\gamma}$.
 
 ### Alternative M-step method
-First, the method shown in the previous sections is the same as simultaneously making a Taylor approximation about the fixed coefficients, $\vec{\gamma}$, and the smoothed state vectors, $\emNotee{\vec{a}}{1}{d}, \emNotee{\vec{a}}{2}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ and making *one iteration* with the previous method. To see this let $\widetilde{E}$ denote the conditional expectation in the previous subsection and define $\tilde{l}_{ijt}(x) = y_{ijt} \log h(x) + (1 - y_{ijt}) \log \Lparen{1 - h(x)}$ where $h$ is the inverse link function. Further, I will focus on a single log likelihood term, $l_{ijt}$. Then a Taylor approximation about a working estimate of the fixed parameter $\vec{g}$ and the smoothed state vectors yields
+First, the method shown in the previous section is the same as simultaneously making a Taylor approximation about the fixed coefficients, $\vec{\gamma}$, and the smoothed state vectors, $\emNotee{\vec{a}}{1}{d}, \emNotee{\vec{a}}{2}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ and making *one iteration* with the previous method. To see this let $\widetilde{E}$ denote the conditional expectation in the previous subsection and define $\tilde{l}_{ijt}(x) = y_{ijt} \log h(x) + (1 - y_{ijt}) \log \Lparen{1 - h(x)}$ where $h$ is the inverse link function. Focussing on a single log likelihood term, $l_{ijt}$, a Taylor approximation about a working estimate of the fixed parameter $\vec{g}$ and the smoothed state vectors yields
 
 $$\begin{split}
 \widetilde{E}\Lparen{l_{ijt}({\vec{\alpha}_t}, \vec{\gamma})} 

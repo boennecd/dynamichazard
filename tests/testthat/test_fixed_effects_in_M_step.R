@@ -45,7 +45,7 @@ test_that("Get previous results with logit model with some fixed terms", {
 })
 
 
-test_that("Only fixed effects yields same results as bigglm with exponential model", {
+test_that("Only fixed effects yields same results as bigglm and static_glm with exponential model", {
   sims <- exp_sim_200
 
   form <- formula(survival::Surv(tstart, tstop, event) ~
@@ -53,7 +53,7 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
                     ddFixed(x3))
 
   suppressWarnings(res1 <- ddhazard(
-    form, data = sims$res, model = "exp_clip_time_w_jump", by = 1,
+    form, data = sims$res, model = "exponential", by = 1,
     id = sims$res$id, max_T = 10, control = list(
       eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3,
       fixed_terms_method = "M_step")))
@@ -64,12 +64,18 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
 
   suppressWarnings(res2 <- bigglm(
     update(form, Y ~ . - ddFixed_intercept() +
-             offset(log(pmin(tstop, t) - pmax(tstart, t - 1)))),
+             offset(log(pmin(tstop, 10) - tstart))),
     data = tmp_design$X, family = poisson(), chunksize = 1e3,
     tolerance = 1e-4))
 
   expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects))
                , tolerance = 1e-05)
+
+  res3 <- static_glm(
+    form, data = sims$res, max_T = 10, id = sims$res$id,
+    family = "exponential")$coefficients
+
+  expect_equal(res3, coef(res2))
 })
 
 test_that("Changing fixed effect control parems changes the result", {
@@ -184,7 +190,8 @@ test_that("posterior_approx gives previous found values with fixed effects in M-
 })
 
 
-test_that("Only fixed effects yields same results as bigglm with exponential model with weights", {
+test_that("Only fixed effects yields same results as bigglm and static_glm with exponential model with weights", {
+  sims <- exp_sim_200
   set.seed(2555647)
   ws <- runif(nrow(sims$res))
   ws <- ws * (nrow(sims$res) / sum(ws))
@@ -195,7 +202,7 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
                     ddFixed(x3))
 
   suppressWarnings(res1 <- ddhazard(
-    form, data = sims$res, model = "exp_clip_time_w_jump", by = 1,
+    form, data = sims$res, model = "exponential", by = 1,
     control = list(eps_fixed_parems = 1e-4, fixed_effect_chunk_size = 1e3,
                    fixed_terms_method = "M_step"),
     weights = sims$res$ws,  id = sims$res$id, max_T = 10))
@@ -206,10 +213,16 @@ test_that("Only fixed effects yields same results as bigglm with exponential mod
 
   suppressWarnings(res2 <- bigglm(
     update(form, Y ~ . -ddFixed_intercept() +
-             offset(log(pmin(tstop, t) - pmax(tstart, t - 1)))),
+             offset(log(pmin(tstop, 10) - tstart))),
            data = tmp_design$X, family = poisson(), chunksize = 1e3,
            tolerance = 1e-4, weights = ~ ws))
 
   expect_equal(unname(coef(res2)), unname(c(res1$fixed_effects))
                , tolerance = 1e-05)
+
+  res3 <- static_glm(
+    form, data = sims$res, max_T = 10, id = sims$res$id,
+    family = "exponential", weights = sims$res$ws)$coefficients
+
+  expect_equal(res3, coef(res2))
 })

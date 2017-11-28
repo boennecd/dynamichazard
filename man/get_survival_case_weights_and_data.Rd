@@ -30,7 +30,7 @@ get_survival_case_weights_and_data(formula, data, by, max_T, id, init_weights,
 \item{c_outcome, c_weights, c_end_t}{alternative names to use for the added columns described in the return section. Useful if you already have a column named \code{Y}, \code{t} or \code{weights}.}
 }
 \value{
-Returns a \code{data.frame} where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}.
+Returns a \code{data.frame} where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}. An element \code{Y} for the used \code{Surv} object is added if \code{is_for_discrete_model = FALSE}.
 }
 \description{
 Function used to get \code{data.frame} with weights for a static fit for survivals.

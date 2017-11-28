@@ -16,7 +16,7 @@
 #' If \code{use_weights = FALSE} then the two previously mentioned individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. al (2016).
 #'
 #' @return
-#' Returns a \code{data.frame} where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}.
+#' Returns a \code{data.frame} where the following is added (column names will differ if you specified them): column \code{Y} for the binary outcome, column \code{weights} for weights of each row and additional rows if applicable. A column \code{t} is added for the stop time of the bin if \code{use_weights = FALSE}. An element \code{Y} with the used \code{Surv} object is added if \code{is_for_discrete_model = FALSE}.
 #'
 #' @seealso
 #' \code{\link{ddhazard}}, \code{\link{static_glm}}
@@ -47,6 +47,9 @@ get_survival_case_weights_and_data = function(
   c_outcome = "Y",
   c_weights = "weights",
   c_end_t = "t"){
+  #####
+  # checks
+
   X_Y = get_design_matrix(formula, data, predictors = F)
   formula_used <- X_Y$formula_used
   attr(data, "class") <- c("data.table", attr(data, "class"))
@@ -69,22 +72,55 @@ get_survival_case_weights_and_data = function(
     data = data[, colnames(data) != c_end_t]
   }
 
-  compute_risk_obj <- missing(risk_obj) || is.null(risk_obj)
+  #####
+  # find data frame and return
 
+  # TODO: an expression is saved here as other code have passed a missing max_T
+  #       argument along where we do not need to evaluate max_T. Re-solve the
+  #       the issue higher up and make the evalutation here regardless of
+  #       whether we need max_T to simplify the code.
+  set_max_T_expr <- expression(
+    max_T <- ifelse(
+      missing(max_T), min(
+        max(X_Y$Y[X_Y$Y[, 3] == 1, 2]),
+        max(X_Y$Y[X_Y$Y[, 3] == 0, 2])),
+      max_T))
+
+  out <- if(is_for_discrete_model){
+    compute_risk_obj <- missing(risk_obj) || is.null(risk_obj)
+
+    if(missing(id) && compute_risk_obj){
+      warning("You did not parse and ID argument. This can affact result for discrete models with time-coefficients effects")
+      id = 1:nrow(data)
+    }
+
+    if(compute_risk_obj)
+      eval(set_max_T_expr)
+
+    .get_survival_case_weights_and_data_discrete(
+      risk_obj, compute_risk_obj, data, X_Y, by, max_T, use_weights, c_outcome,
+      c_end_t, c_weights, id, formula_used, init_weights)
+  } else{
+    eval(set_max_T_expr)
+
+    .get_survival_case_weights_and_data_continous(
+      X_Y, max_T, data, formula_used, c_outcome)
+  }
+
+  return(out)
+}
+
+
+.get_survival_case_weights_and_data_discrete <- function(
+  risk_obj, compute_risk_obj, data, X_Y, by, max_T, use_weights, c_outcome,
+  c_end_t, c_weights, id, formula_used, init_weights){
   if(!compute_risk_obj && nrow(data) <
      max(unlist(lapply(risk_obj$risk_sets, max))))
     stop("risk_obj has indicies out site of data. Likely the risk_set comes from a different data set")
 
   if(compute_risk_obj){
-    if(missing(id)){
-      warning("You did not parse and ID argument. This can affact result for discrete models with time-coefficients effects")
-      id = 1:nrow(data)
-    }
-
-    risk_obj <- get_risk_obj(
-      Y = X_Y$Y, by = by,
-      max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
-      id = id, is_for_discrete_model = is_for_discrete_model)
+    risk_obj <- get_risk_obj(Y = X_Y$Y, by = by, max_T = max_T, id = id,
+                             is_for_discrete_model = TRUE)
 
     risk_obj$event_times <- tail(risk_obj$event_times, -1)
   }
@@ -150,6 +186,27 @@ get_survival_case_weights_and_data = function(
   }
 
   list(X = X, formula_used = formula_used)
+}
+
+.get_survival_case_weights_and_data_continous <- function(
+  X_Y, max_T, data, formula_used, c_outcome){
+  # round times if needed
+  Y <- X_Y$Y
+  rm(X_Y)
+  for(i in 1:2){
+    ord <- order(Y[, i])
+    Y[, i] <- round_if_almost_eq(Y[, i], ord, max_T)
+  }
+
+  # keep only observations before max_T
+  is_before_max_T <- Y[, 1] < max_T
+  data <- data[is_before_max_T, ]
+  Y <- Y[is_before_max_T, ]
+
+  X <- eval(parse(text = paste0(
+    "cbind(", c_outcome, " = Y[, 3] & Y[, 2] <= max_T, data)")))
+
+  list(X = X, formula_used = formula_used, Y = Y)
 }
 
 
@@ -220,22 +277,20 @@ static_glm = function(
 
   } else if(family == "exponential"){
     family <- poisson()
-    # TODO: can be quicker when we just want the outcome
-    X_Y = get_design_matrix(formula, data)
-    X_Y$X <- X_Y$X[, -1] # remove the intercept
 
-    formula <- X_Y$formula_used
+    tmp = get_survival_case_weights_and_data(
+      formula = formula, data = data, by = by, max_T = max_T, id = id,
+      init_weights = weights, risk_obj = risk_obj,
+      is_for_discrete_model = FALSE)
 
-    is_before_max_T <- X_Y$Y[, 1] < max_T
-    data <- data[is_before_max_T, ]
-    X_Y$Y <- X_Y$Y[is_before_max_T, ]
+    formula <- tmp$formula_used
+    data <- tmp$X
+    Y <- tmp$Y
+    rm(tmp)
 
-    X <- cbind(Y = X_Y$Y[, 3] & (X_Y$Y[, 2] <= max_T),
-               data,
-               log_delta_time = log(pmin(X_Y$Y[, 2], max_T) - X_Y$Y[, 1]),
-               weights = rep(1, nrow(data)))
-
-    data <- X
+    data <- cbind(
+      data, weights = if(missing(weights)) rep(1, nrow(data)) else weights,
+      log_delta_time = log(pmin(Y[, 2], max_T) - Y[, 1]))
     formula <- update(formula, Y ~ . + offset(log_delta_time), data = data)
 
   } else
