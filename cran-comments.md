@@ -70,7 +70,7 @@ is partly given below
       ...
       
 What seems to be common is that we both construct a subview inside a parallel 
-region which uses the constructor in `subview_meat.hpp:37`. I do it in 
+region which uses the constructor in `subview_meat.hpp:37`. I did it in 
 `GMA_solver.cpp` at
 
   sym_mat_rank_one_update(h_2d_neg, X_t.col(i), my_X_cross);

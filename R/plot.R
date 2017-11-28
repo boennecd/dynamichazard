@@ -53,8 +53,8 @@ plot.ddhazard = function(x, xlab = "Time",
 
     n_plots <- length(cov_index)
     if(!add && do_alter_mfcol && n_plots > 1){
-      par_org <- par(no.readonly = TRUE)
-      on.exit(par(par_org))
+      org_mfcol <- par()$mfcol
+      on.exit(mfcol = org_mfcol)
       par(mfcol =
             if(n_plots <= 2) c(2,1) else
               if(n_plots <= 4) c(2,2) else

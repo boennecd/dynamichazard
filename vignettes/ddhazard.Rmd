@@ -70,6 +70,8 @@ knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
 \newcommand{\ukfNote}[2]{\mat{P}_{\vec{#1}, \vec{#2}}}
 \newcommand{\ukfNotee}[3]{\mat{P}_{\vec{#1}_{#3}, \vec{#2}_{#3}}}
 %
+\newcommand{\bigO}[1]{\mathcal{O}\Lparen{#1}}
+%
 \newcommand{\diag}[1]{\text{diag}{\Lparen{#1}}}
 \newcommand{\hvec}[1]{\widehat{\vec{#1}}}
 \newcommand{\hmat}[1]{\widehat{\mat{#1}}}
@@ -871,76 +873,98 @@ The fixed effect can be estimated in the E-step in a similar manner to [@harvey7
 In this package, we set the entries of $\mat{Q}_0$ and $\mat{Q}$ in the same way. Nothing else is changed in the E-step. Further, we set the all rows and columns of the fixed effects in $\mat{Q}$ to zero after the update in the M-step. This seems to work with the EKF for a large range of large diagonal elements $\mat{Q}_0$ (say $10^5$). However, the choice of the diagonal entry in $\mat{Q}_0$ for fixed effects do have an impact with the UKF. "*Large*" but not "*too large*" values tends to work. Though, what is large depends data set and model. The default for the diagonal elements of $\mat{Q_0}$ for the fixed effects can be altered by setting the `Q_0_term_for_fixed_E_step` of the list passed to the `control` argument of `ddhazard`. This method to estimate the fixed effect is used when you set the `fixed_terms_method = "E_step"` in the list passed to the `control` argument.
 
 ## Estimation in the M-step
-We start be re-stating the log likelihood and introducing new notation in the EM-algorithm. We need the new notation to show the M-step for the model with fixed effects that are estimated in the M-step. The log likelihood up to a normalization constant is: 
+The other method is to estimate the fixed parameters in the M-step. For this section, I define $\vec{\gamma}$ as the fixed parameters, $\vec{x}_{ijt}$ as the covariates corresponding to the time-varying parameters, and $\vec{z}_{ijt}$ as the covariates corresponding to the fixed parameters. The dot product between the fixed parameters and the corresponding covariates act as offsets in the filters because the linear predictor is $\vec{x}_{ijt}^\top \vec{\alpha}_t + \vec{z}_{ijt}^\top \vec{\gamma}$, where $\vec{\gamma}$ is fixed. Moreover, the formulas for $\vec{a}_0$ and $\mat{Q}$ in the M-step are not affected because the only relevant terms for fixed effects in the M-step are in the last line of the log likelihood. However, the optimization is not easily solved exactly in the M-step for the fixed parameters. The log likelihood we need to maximize in the M-step in the $k$'th iteration is
 
-$$\begin{aligned}
-	\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =    
-		\log L \Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} = & 
-		- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
-	&  - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top\mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  - \frac{1}{2} \log \deter{\mat{Q}_0} - \frac{d}{2} \log \deter{\mat{Q}} \\
-	&  + \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t})
-\end{aligned}$$
-
-$$l_{ijt}(\vec{\alpha}_t) = y_{ijt} \log h(\vec{x}_{ijt}^\top \vec{\alpha}_t) + (1 - y_{ijt}) 
-	\log \Lparen{1 - h(\vec{x}_{ij}^\top \vec{\alpha}_t)}$$
-	
-We perform the E-step by approximately integrating out the latent variables $\vec{\alpha}_0, \dots, \vec{\alpha}_d$ conditional on $\mat{Q}_0$ and the current estimates of $\mat{Q}^{(k-1)}$ and $\vec{a}_0^{(k-1)}$:
-$$\begin{aligned}
-  \xyzp{\widetilde{E}_k}{\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}} &= 
-  \expecpCond{\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}}
-    {\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)}} \\
-  &= \int_{\vec{\alpha}_0,\dots,\vec{\alpha}_d} \mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}
-    f_{\vec{\alpha}_0,\dots,\vec{\alpha}_d}({\vec{x}_0,\dots,\vec{x}_d};\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)}) 
-    d\vec{\alpha}_0\cdots d\vec{\alpha}_d
-\end{aligned}$$
-
-where $f_{\vec{\alpha}_0,\dots,\vec{\alpha}_d}(\cdot;\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)})$ is the conditional density function of the latent variables $\vec{\alpha}_0,\dots,\vec{\alpha}_d$ given $\mat{Q}_0,\mat{Q}^{(k-1)},\vec{a}_0^{(k-1)}$. The resulting expected likelihood can be summarized by the conditional means, $\emNote{\vec{a}}{0}{d}{k},\dots,\emNote{\vec{a}}{d}{d}{k}$, covariance matrices $\emNote{\mat{V}}{0}{d}{k},\dots,\emNote{\mat{V}}{d}{d}{k}$ and matrices $\mat{B}_1^{(k)},\dots,\mat{B}_d^{(k)}$ when we update $\mat{Q}^{(k)}$ and $\vec{a}_0^{(k)}$. Notice that the entries in $\vec{\alpha}_0$, $\mat{Q}$ and $\mat{Q}_0$ only appears in the first three lines of the log likelihood $\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}$. Hence, we only need these three sets of terms to update $\mat{Q}^{(k)}$ and $\vec{a}_0^{(k)}$. To stress this point, the conditional likelihood in the M-step is:
-
-$$\begin{aligned}
-  \xyzp{\widetilde{E}_k}{\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}} = & 
-    \widetilde{E}_k \left(- \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \right.\\
-	&  \hspace{20pt} - \frac{1}{2} \sum_{t = 1}^d \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}^\top \mat{Q}^{-1} \Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}} \\ 
-	&  \hspace{20pt} \left. - \frac{1}{2} \deter{\mat{Q}_0} - \frac{d}{2} \deter{\mat{Q}} \right) \\
-	&  + \xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t})}
-\end{aligned}$$
-
-Suppose now that some of the effects are fixed such that we replace the linear predictor $\vec{x}_{it}^\top\vec{\alpha}_t$ by $\tvec{x}_{ij}^\top\widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma}$ where $\vec{\gamma}$ is the fixed coefficients and $\bvec{x}_{it}$ are the corresponding covariates. Further, assume that $\emNote{\vec{a}}{0}{d}{k},\dots,\emNote{\vec{a}}{d}{d}{k}$, $\emNote{\mat{V}}{0}{d}{k},\dots,\emNote{\mat{V}}{d}{d}{k}$ and $\mat{B}_1^{(k)},\dots,\mat{B}_d^{(k)}$ are still "sufficient" output from the E-step for the M-step. The new definition of $l_{ijt}$ is:
-
-$$l_{ijt}(\widetilde{\vec{\alpha}}_t, \vec{\gamma}) = y_{ijt} \log h(\tvec{x}_{ij}^\top \widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma}) + (1 - y_{ijt}) 
-	\log \Lparen{1 - h(\tvec{x}_{ij}^\top \widetilde{\vec{\alpha}}_t + \bvec{x}_{ij}^\top\vec{\gamma})}$$
-
-We fix $\vec{\gamma}^{(k-1)}$ doing the E-step and estimate $\vec{\gamma}^{(k)}$ doing the M-step. Then the new expected log likelihood is: 
-$$\xyzp{\widetilde{E}_k}{\mathcal{L}\Lparen{\tvec{\alpha}_0, \dots, \tvec{\alpha}_{d}}} = 
-  \expecpCond{\mathcal{L}\Lparen{\tvec{\alpha}_0, \dots, \tvec{\alpha}_{d}}}
-    {\mat{Q}_0,\mat{Q}^{(k-1)},\tvec{a}_0^{(k-1)},\vec{\gamma}^{(k-1)}}$$
-    
-We observe that: 
-
-1. The $\bvec{x}_{ij}^\top\vec{\gamma}^{(k-1)}$ term acts like offsets in the E-step where $\vec{\gamma}^{(k-1)}$ is fixed. Thus, we only need to add these offsets to the linear predictors.
-2. $\vec{\gamma}^{(k)}$ is estimated separately from $\tvec{\alpha}_0^{(k)}$ and $\mat{Q}^{(k)}$ in the M-step. Thus, no changes are needed in the update formulas for $\mat{Q}^{(k)}$ and $\tvec{\alpha}_0^{(k)}$.
-
-However, the update of $\vec{\gamma}^{(k)}$ requires that we optimize
-
-$$\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\tvec{\alpha}_t, \vec{\gamma})}$$
-
-with respect to $\vec{\gamma}$. The update formulas are not as simple as for $\tvec{\alpha}_0^{(k)}$ and $\mat{Q}^{(k)}$ as the terms of $l_{ijt}$ are non-linear in the time-varying effects $\tvec{\alpha}_0\dots,\tvec{\alpha}_d$. A simple way to overcome this is to make a zero order Taylor expansion around the mean estimates $\emNote{\tvec{a}}{0}{d}{k},\dots,\emNote{\tvec{a}}{d}{d}{k}$:
-$$\xyzp{\widetilde{E}_k}{ \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\tvec{\alpha}_t}, \vec{\gamma})}
-  \approx \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\emNote{\tvec{a}}{t}{d}{k}, \vec{\gamma})$$
+$$\argmaxu{\vec{\gamma}}\expecpCond{
+  \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}({\vec{\alpha}_t}, \vec{\gamma})}{
+  \vec{a}_0^{(k-1)}, \vec{\gamma}^{(k-1)}, \mat{Q}^{(k-1)}, \mat{Q}_0, 
+  \vec{y}_1,\dots,\vec{y}_d}$$
   
-This expansion coincides with a first order Taylor expansion as the first order terms are zero. The advantages are:
+where I temporarily add an additional argument in the log likelihood terms, $l_{ijt}$, for the fixed effects, and use the superscripts to differ between the hyperparameter estimates of different iterations of the EM-algorithm. The above is not easy to optimize. Thus, I make a zero-order Taylor expansion about $\emNotee{\vec{a}}{1}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ in the current implementation to get
 
-3. $\tvec{x}_{ij}^\top \tvec{a}_t$ acts like offsets in the M-step when we estimate $\vec{\gamma}^{(k)}$.
-4. $\vec{\gamma}^{(k)}$ is estimated in the M-step as a generalized linear model with offsets. Weights are treated as in typical generalized linear models.
+$$
+\argmaxu{\vec{\gamma}} \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\emNotee{\vec{a}}{t}{d}, \vec{\gamma})
+$$
 
-The fixed effects will be estimated in the M-step when you set `fixed_terms_method = "M_step"` in the list passed to the `control` argument.
+One advantage of doing this is that the problem can be solved with regular methods for GLMs when the model is from the exponential family. However, the design matrix will be big, as each individual will yield multiple rows because of different offsets from the time-varying parameters given by $\vec{x}_{ijt}^\top \emNotee{\vec{a}}{t}{d}$. To overcome this problem, I use the Fortran code from [@miller1992] to do a series of rank-one updates of the QR-decomposition used to solve the iteratively re-weighted least square problem. This is the same approach as in the biglm. The computational complexity of each update is $\bigO{c^2}$, where $c$ is the dimension of $\vec{\gamma}$.
 
-### Implementation
-Point number 4 above implies that we can use a typical Newton Raphson algorithm to update the estimate of $\vec{\gamma}$ when we are using a distribution from the exponential family. This can be solved by a QR decomposition as done in `glm`. However, point 3 implies that every observation will have a different offset in every time interval the observation is in. Thus, we can end with a large design matrix. To overcome the potential memory issue this can cause, this package use the same Fortran function that the `bigglm` function in the `biglm` package uses. The Fortran function recursively performs a QR update for each row in the design matrix. Hence, we do not need to store the entire design matrix at any given point. The Fortran code is described in [@miller1992] and written by Miller. It is an updated version of the algorithm described in [@gentleman1972] which has a time complexity of $O(\vert\vec{\gamma}\vert^2)$ for the QR-update of each row in the design matrix\
+### Alternative M-step method
+First, the method shown in the previous sections is the same as simultaneously making a Taylor approximation about the fixed coefficients, $\vec{\gamma}$, and the smoothed state vectors, $\emNotee{\vec{a}}{1}{d}, \emNotee{\vec{a}}{2}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ and making *one iteration* with the previous method. To see this let $\widetilde{E}$ denote the conditional expectation in the previous subsection and define $\tilde{l}_{ijt}(x) = y_{ijt} \log h(x) + (1 - y_{ijt}) \log \Lparen{1 - h(x)}$ where $h$ is the inverse link function. Further, I will focus on a single log likelihood term, $l_{ijt}$. Then a Taylor approximation about a working estimate of the fixed parameter $\vec{g}$ and the smoothed state vectors yields
 
-The M-step recursively updates the $\vec{\gamma}$ starting with the previous estimated value. The estimation stops when $\rVert\vec{\gamma}^{(k)} - \vec{\gamma}^{(k - 1)}\lVert / (\rVert\vec{\gamma}^{(k - 1)}\lVert + \delta) < \epsilon$ where superscripts denote the iteration number, $\epsilon$ is the tolerance and $\delta$ is a small number. $\epsilon$ can be changed by setting  `eps_fixed_params` element of the list passed to the `control` argument of `ddhazard`. The estimation will stop if the criteria given by $\epsilon$ is not meet within a given number of iterations. The maximum number of iterations can be set by setting the `max_it_fixed_params` element of the `control` argument to `ddhazard`. The user is warned if the criteria is not meet within `max_it_fixed_params` iterations.
+$$\begin{split}
+\widetilde{E}\Lparen{l_{ijt}({\vec{\alpha}_t}, \vec{\gamma})} 
+  \hspace{-50pt} & \\
+% 
+  & \approx \widetilde{E}\left(
+    l_{ijt}(\emNotee{\vec{a}}{t}{d}, \vec{g}) + 
+    \tilde{l}_{ijt}^\prime(\eta_{ijt})\Lparen{\vec{\gamma} - \vec{g}}^\top
+      \vec{z}
+    \vphantom{
+    + \frac{1}{2}\tilde{l}_{ijt}^{\prime\prime}(\eta_{ijt})\Lparen{
+      \begin{pmatrix} 
+        \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d} \\ \vec{\gamma} - \vec{g}
+      \end{pmatrix}^\top
+      \begin{pmatrix}
+        \vec{x}\vec{x}^\top & \vec{z}\vec{x}^\top \\
+        \vec{x}\vec{z}^\top & \vec{z}\vec{z}^\top
+      \end{pmatrix}
+      \begin{pmatrix} 
+        \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d} \\ \vec{\gamma} - \vec{g}
+      \end{pmatrix}}}\right. \\
+%
+  & \hspace{50pt} \left. 
+  + \frac{1}{2}\tilde{l}_{ijt}^{\prime\prime}(\eta_{ijt})\Lparen{
+      \begin{pmatrix} 
+        \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d} \\ \vec{\gamma} - \vec{g}
+      \end{pmatrix}^\top
+      \begin{pmatrix}
+        \vec{x}\vec{x}^\top & \vec{z}\vec{x}^\top \\
+        \vec{x}\vec{z}^\top & \vec{z}\vec{z}^\top
+      \end{pmatrix}
+      \begin{pmatrix} 
+        \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d} \\ \vec{\gamma} - \vec{g}
+      \end{pmatrix}}
+  \right) \\
+%
+  & = \widetilde{E}\Lparen{
+    \tilde{l}_{ijt}^\prime(\eta_{ijt})\Lparen{\vec{\gamma} - \vec{g}}^\top\vec{z}
+    + \frac{1}{2}\tilde{l}_{ijt}^{\prime\prime}(\eta_{ijt})\Lparen{
+    \Lparen{\Lparen{\vec{\gamma} - \vec{g}}^\top\vec{z}}^2
+    + \Lparen{\Lparen{\vec{\alpha}_t - \emNotee{\vec{a}}{t}{d}}^\top\vec{x}}^2}
+    + \dots} \\
+%
+  & = 
+    \tilde{l}_{ijt}^\prime(\eta_{ijt})\Lparen{\vec{\gamma} - \vec{g}}^\top\vec{z}
+    + \frac{1}{2}\tilde{l}_{ijt}^{\prime\prime}(\eta_{ijt})
+    \Lparen{\Lparen{\vec{\gamma} - \vec{g}}^\top\vec{z}}^2 + \dots
+\end{split}$$
 
-Surely, other methods to solve the QR problem or fit a generalized linear model could be used that does not require us to store the entire design matrix and are faster and/or more stable. An example could be the algorithm described in [@hammarling08]. The current method is used since it has shown to work well in the `bigglm` function and as we assume that few parameters will be fixed. Thus, the $O(\vert\vec{\gamma}\vert^2)$ cost of doing the M-step should not be an issue.
+where $\eta_{ijt} = \vec{x}_{ijt}^\top \emNotee{\vec{a}}{t}{d} + \vec{z}_{ijt}^\top \vec{g}$ and I have temporarily set $\vec{x} = \vec{x}_{ijt}$ and $\vec{z} = \vec{z}_{ijt}$. The first order terms cancel out due the expectation and I have dropped terms that does not involve $\vec{\gamma}$ from line to line. This is the same problem that is solved in the iterative weighted least square problem described above. One alternative is to make a second order Taylor approximation *only* about the smoothed state vectors. This yields
+
+$$\begin{split}
+\widetilde{E}\Lparen{l_{ijt}({\vec{\alpha}_t}, \vec{\gamma})}  
+  \hspace{-50pt} & \\
+%
+   & \approx \widetilde{E}\Lparen{
+    l_{it}(\emNotee{\vec{a}}{t}{d}, \vec{\gamma}) +
+    \frac{1}{2}\Lparen{\Lparen{
+      \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d}}^\top
+      \vec{x}_{ijt}}^2
+    \left.\frac{\partial^2 \tilde{l}_{it}\Lparen{
+    \vec{z}_{ijt}^\top \vec{\gamma} + o}}{
+    \partial o^2} % end frac
+  \right|_{o = \vec{x}_{ijt}^\top\emNotee{\vec{a}}{t}{d}}} \\
+%
+ & = 
+  l_{ijt}(\emNotee{\vec{a}}{t}{d}, \vec{\gamma}) + 
+  \frac{1}{2}\vec{x}_{ijt}^\top \emNotee{\mat{V}}{t}{d}\vec{x}_{ijt}
+  \left.\frac{\partial^2 \tilde{l}_{it}\Lparen{
+    \vec{z}_{ijt}^\top \vec{\gamma} + o}}{
+    \partial o^2} % end frac
+  \right|_{o = \vec{x}_{ijt}^\top\emNotee{\vec{a}}{t}{d}}
+\end{split}$$
+
+This is not implemented in the current version of dynamichazard.
 
 ## Which method to use
 Neither the method that use the recursive least squares like method in the E-step, nor the zero order Taylor expansion in the M-step have performed consistently better on the data sets seen so far. Hence, both are valid alternatives at this point. Fixed terms can be estimated by wrapping the covariates in the formula of `ddhazard` in the `ddFixed` function. As an example, `ddhazard(Surv(tstart, tstop, y) ~ x1 + ddFixed(x2), ...)` will fit a model where `x1` is time-varying and `x2` is not.
