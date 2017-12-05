@@ -9,9 +9,9 @@
 #include <omp.h>
 #endif
 
-/* Object used for map function. We keep a unique pointer to a new object if it
- * is created in the function to make sure the orginal object is
- not destructed. */
+/* Object used for map function. The unique pointer need to be to a new object
+ * created in the functions to make sure the orginal object is not destructed.
+ */
 template <typename T_view, typename T_type>
 class map_res {
   using ptr_T = std::unique_ptr<T_type>;
