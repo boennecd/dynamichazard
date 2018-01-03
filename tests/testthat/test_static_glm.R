@@ -147,3 +147,102 @@ test_that("Gets same with different methods", {
     expect_equal(f4, f5, check.attributes = FALSE)
   }
 })
+
+test_that("get_survival_case_weights_and_data works when columns names are already used",{
+  dat <- data.frame(
+    id = c(1, 2, 3),
+    Y  = c(TRUE, FALSE, FALSE),
+    weights = c(9, 10, 2),
+    t  = c(2, 2, 2),
+    x  = c(2, 1, 0))
+
+  expect_warning(out <- get_survival_case_weights_and_data(
+    Surv(t, Y) ~ x, data = dat, by = 1, max_T = 2, use_weights = FALSE,
+    id = dat$id),
+    "Column called 'Y' is already in the data.frame. Will use'Y.1'instead", fixed = TRUE)
+
+  expect_equal(
+    out$X,
+    structure(list(
+      id = c(1, 2, 3, 1, 2, 3),
+      Y = c(TRUE, FALSE, FALSE, TRUE, FALSE, FALSE),
+      weights = c(9, 10, 2, 9, 10, 2),
+      t = c(2, 2, 2, 2, 2, 2),
+      x = c(2, 1, 0, 2, 1, 0),
+      Y.1 = c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE), t.1 = c(1, 1, 1, 2, 2, 2),
+      weights.1 = c(1, 1, 1, 1, 1, 1)),
+      .Names = c("id", "Y", "weights", "t", "x", "Y.1", "t.1", "weights.1"),
+      row.names = c(NA, -6L), class = "data.frame"))
+
+  expect_warning(
+    fit <- static_glm(Surv(t, Y) ~ -1 + x,
+                      data = dat, by = 1, max_T = 2, id = dat$id),
+    "Column called 'weights' is already in the data.frame. Will use'weights.1'instead.")
+
+  expect_equal(fit$coefficients,
+               glm(Y.1 ~ -1 + x, binomial(), out$X)$coefficients)
+})
+
+test_that("get_survival_case_weights_and_data works with observation in counting setup with `holes'",{
+  dat <- data.frame(
+    id     = c(1 , 1, 2),
+    tstart = c(0 , 3, 0),
+    tstop  = c(.5, 4, 4),
+    event  = c(  F, T, F),
+    x      = 1:3)
+
+  res <- get_survival_case_weights_and_data(
+    Surv(tstart, tstop, event) ~ x,
+    data = dat, by = 1, max_T = 4, id = dat$id,
+    use_weights = FALSE)
+
+  expect_equal(
+    res$X,
+    structure(list(
+      id = c(1, 2, 2, 2, 2, 1),
+      tstart = c(0, 0, 0, 0, 0, 3),
+      tstop = c(0.5, 4, 4, 4, 4, 4),
+      event = c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE),
+      x = c(1L, 3L, 3L, 3L, 3L, 2L),
+      Y = c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE),
+      t = c(1, 1, 2, 3, 4, 4),
+      weights = c(1, 1, 1, 1, 1, 1)),
+      .Names = c("id", "tstart", "tstop", "event", "x", "Y", "t", "weights"),
+      row.names = c(NA, -6L), class = "data.frame"))
+
+  res <- get_survival_case_weights_and_data(
+    Surv(tstart, tstop, event) ~ x,
+    data = dat, by = 1, max_T = 4, id = dat$id,
+    use_weights = TRUE)
+
+  expect_equal(
+    res$X,
+    structure(list(
+      Y = c(0, 0, 1), id = c(1, 2, 1),
+      tstart = c(0, 0, 3), tstop = c(0.5, 4, 4),
+      event = c(FALSE, FALSE, TRUE), x = c(1L, 3L, 2L), weights = c(1, 4, 1)),
+      .Names = c("Y", "id", "tstart", "tstop", "event", "x", "weights"),
+      row.names = c(NA, -3L), class = "data.frame"))
+
+  dat <- data.frame(
+    id     = c(1, 1  , 1  , 2),
+    tstart = c(0, 1.5, 3.5, 0),
+    tstop  = c(1, 2  , 4  , 4),
+    event  = c(F, F  , T  , F),
+    x      = 1:4)
+
+  res <- get_survival_case_weights_and_data(
+    Surv(tstart, tstop, event) ~ x,
+    data = dat, by = 1, max_T = 4, id = dat$id,
+    use_weights = FALSE)
+
+  expect_equal(
+    res$X,
+    structure(list(
+      id = c(1, 2, 2, 2, 2), tstart = c(0, 0, 0, 0, 0),
+      tstop = c(1, 4, 4, 4, 4), event = c(FALSE, FALSE, FALSE, FALSE, FALSE),
+      x = c(1L, 4L, 4L, 4L, 4L), Y = c(FALSE, FALSE, FALSE, FALSE, FALSE),
+      t = c(1, 1, 2, 3, 4), weights = c(1, 1, 1, 1, 1)),
+      .Names = c("id", "tstart", "tstop", "event", "x", "Y", "t", "weights"),
+      row.names = c(NA, -5L), class = "data.frame"))
+})

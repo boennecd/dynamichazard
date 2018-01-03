@@ -57,20 +57,9 @@ get_survival_case_weights_and_data = function(
   if(missing(init_weights))
     init_weights = rep(1, nrow(data))
 
-  if(any(colnames(data) == c_outcome)){
-    warning("Column called ", sQuote(c_outcome), " will be replaced")
-    data = data[, colnames(data) != c_outcome]
-  }
-
-  if(any(colnames(data) == c_weights)){
-    warning("Column called ", sQuote(c_weights), " will be replaced")
-    data = data[, colnames(data) != c_weights]
-  }
-
-  if(!use_weights && any(colnames(data) == c_end_t)){
-    warning("Column called ", sQuote(c_end_t), " will be replaced")
-    data = data[, colnames(data) != c_end_t]
-  }
+  c_outcome <- change_new_var_name(c_outcome, data = data)
+  c_weights <- change_new_var_name(c_weights, data = data)
+  c_end_t   <- change_new_var_name(c_end_t, data = data)
 
   #####
   # find data frame and return
@@ -108,6 +97,16 @@ get_survival_case_weights_and_data = function(
   }
 
   return(out)
+}
+
+change_new_var_name <- function(c_x, data){
+  if(any(names(data) == c_x)){
+    c_x_new <- tail(make.unique(c(names(data), c_x)), 1)
+    warning("Column called ", sQuote(c_x), " is already in the data.frame. Will use", sQuote(c_x_new), "instead.")
+
+    c_x_new
+  } else
+    c_x
 }
 
 
@@ -154,8 +153,8 @@ get_survival_case_weights_and_data = function(
       data[do_keep],
       list(weights = new_weights[do_keep]))
     X <- rbindlist(c(list(X), new_case_rows))
-    attr(X, "colnames")[c(1, ncol(X))] <- c(c_outcome, c_weights)
-    class(X) <- "data.frame"
+    X <- as.data.frame(X)
+    names(X)[c(1, ncol(X))] <- c(c_outcome, c_weights)
 
   } else {
     # TODO: change to more general setup that does not convert all columns to
@@ -261,19 +260,29 @@ static_glm = function(
     col_for_row_n <- colnames(data)[col_for_row_n]
   }
 
+  # find new column variable names if needed
+  c_outcome <- change_new_var_name("Y", data = data)
+  c_weights <- change_new_var_name("weights", data = data)
+  c_end_t   <- change_new_var_name("t", data = data)
+
   if(family %in% c("binomial", "logit")){
     family <- binomial()
 
     tmp = get_survival_case_weights_and_data(
       formula = formula, data = data, by = by, max_T = max_T, id = id,
-      init_weights = weights, risk_obj = risk_obj)
+      init_weights = weights, risk_obj = risk_obj,
+      c_outcome = c_outcome,
+      c_weights = c_weights,
+      c_end_t = c_end_t)
 
     formula <- tmp$formula_used
     X <- tmp$X
     rm(tmp)
 
     data <- X
-    formula <- update(formula, Y ~ ., data = data)
+    formula <- eval(substitute(
+      update(formula, Y ~ ., data = data),
+      list(Y = as.name(c_outcome))))
 
   } else if(family == "exponential"){
     family <- poisson()
@@ -281,17 +290,23 @@ static_glm = function(
     tmp = get_survival_case_weights_and_data(
       formula = formula, data = data, by = by, max_T = max_T, id = id,
       init_weights = weights, risk_obj = risk_obj,
-      is_for_discrete_model = FALSE)
+      is_for_discrete_model = FALSE,
+      c_outcome = c_outcome,
+      c_weights = c_weights,
+      c_end_t = c_end_t)
 
     formula <- tmp$formula_used
     data <- tmp$X
     Y <- tmp$Y
     rm(tmp)
 
-    data <- cbind(
-      data, weights = if(missing(weights)) rep(1, nrow(data)) else weights,
-      log_delta_time = log(pmin(Y[, 2], max_T) - Y[, 1]))
-    formula <- update(formula, Y ~ . + offset(log_delta_time), data = data)
+    data[[c_weights]] <- if(missing(weights))
+      rep(1, nrow(data)) else weights
+    data[["log_delta_time"]] <- log(pmin(Y[, 2], max_T) - Y[, 1])
+
+    eval(substitute(
+      formula <- update(formula, Y ~ . + offset(log_delta_time), data = data),
+      list(Y = as.name(c_outcome))))
 
   } else
     stop("family '", family, "' not implemented in static_glm")
@@ -309,7 +324,7 @@ static_glm = function(
 
 
       fit <- speedglm::speedglm.wfit(
-        X = mf, y = data$Y, weights = data$weights,
+        X = mf, y = data[[c_outcome]], weights = data[[c_weights]],
         family = family, offset = offset, ...)
 
       return(fit$coefficients)
@@ -317,15 +332,16 @@ static_glm = function(
 
     return(drop(speedglm::speedglm(
       formula = formula, data = data, family = family, model = model,
-      weights = data$weights, ...)))
+      weights = data[[c_weights]], ...)))
 
   } else if(method_use == "glm"){
     if(only_coef){
       ctrl <- do.call(glm.control, list(...))
 
       fit <- eval(bquote(
-        glm.fit(x = mf, y = data$Y, weights = data$weights,
-                family = family, control = .(ctrl), offset = offset)))
+        glm.fit(
+          x = mf, y = data[[.(c_outcome)]], weights = data[[.(c_weights)]],
+          family = family, control = .(ctrl), offset = offset)))
 
       return(fit$coefficients)
     }
@@ -333,7 +349,7 @@ static_glm = function(
     return(eval(bquote(
       glm(formula = .(formula), data = data,
           family = family, model = model,
-          weights = weights, ...))))
+          weights = .(data[[c_weights]]), ...))))
 
   } else if(method_use == "parallelglm" && only_coef){
     epsilon <- list(...)$epsilon
@@ -341,8 +357,8 @@ static_glm = function(
       epsilon <- glm.control()$epsilon
 
     out <- drop(
-      parallelglm(X = t(mf), Ys = data$Y,
-                  weights = data$weights, offsets = offset, beta0 = numeric(),
+      parallelglm(X = t(mf), Ys = data[[c_outcome]],
+                  weights = data[[c_weights]], offsets = offset, beta0 = numeric(),
                   family = family$family,
                   tol = epsilon, nthreads = n_threads))
 

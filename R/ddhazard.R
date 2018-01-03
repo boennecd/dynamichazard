@@ -602,7 +602,7 @@ get_start_values <- function(
       grepl("^ddFixed_intercept\\(", names(coefs), perl = TRUE)
 
     if(is.null(a_0)){
-      message("a_0 not supplied. One iteration IWLS of static glm model is used")
+      message("a_0 not supplied. IWLS estimates of static glm model is used")
       a_0 = rep(coefs[!is_fixed], order)
 
       if(verbose){

@@ -511,7 +511,7 @@ test_that("is_for_discrete_model logic work",{
 })
 
 #####
-# By hand test of risk_obj
+# "By hand" test of risk_obj
 
 # This is a useful illustration (I find)
 plot_exp <- expression({
@@ -599,7 +599,7 @@ test_that("Individuals are markeds as events in the correct bins", {
 })
 
 #####
-# Test randomize
+# Test randomize order
 
 set.seed(875080)
 X_Y <- get_design_matrix(
