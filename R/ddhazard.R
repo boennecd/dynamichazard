@@ -110,7 +110,8 @@ ddhazard = function(formula, data,
                     order = 1, weights,
                     control = list(),
                     verbose = F){
-
+  #####
+  # checks
   if (model %in% c("exp_bin", "exp_clip_time", "exp_clip_time_w_jump")){
     message(sQuote(model), " is not used after version 0.5.0.",
             " Use ", sQuote("exponential"), " instead.")
@@ -151,11 +152,23 @@ ddhazard = function(formula, data,
     is_for_discrete_model <- FALSE
 
   } else
-    stop("Model '", model, "' is not implemented")
+    stop("Model ", sQuote(model), " is not implemented")
 
-  X_Y = get_design_matrix(formula, data)
-  n_params = ncol(X_Y$X)
+  #####
+  # find risk set and design matrix
+  tmp <- get_design_matrix_and_risk_obj(
+    formula = formula, data = data, by = by,
+    max_T = if(missing(max_T)) NULL else max_T, verbose = verbose,
+    is_for_discrete_model = is_for_discrete_model, id = id)
 
+  X_Y <- tmp$X_Y
+  n_params <- tmp$n_params
+  n_fixed <- tmp$n_fixed
+  risk_set <- tmp$risk_set
+  rm(tmp)
+
+  #####
+  # set control arguments
   control_default <- list(
     kappa = NULL, alpha = 1, beta = 0,
     NR_eps = NULL, LR = 1, n_max = 10^2, eps = 1e-3,
@@ -202,19 +215,6 @@ ddhazard = function(formula, data,
 
   }
 
-  if(verbose)
-    message("Finding Risk set")
-
-  risk_set <-
-    get_risk_obj(
-      Y = X_Y$Y, by = by,
-      max_T = ifelse(
-        missing(max_T),
-        min(max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max(X_Y$Y[X_Y$Y[, 3] == 0, 2])),
-        max_T),
-      id = id, is_for_discrete_model = is_for_discrete_model)
-
-  n_fixed <- ncol(X_Y$fixed_terms)
   est_fixed_in_E <- control$fixed_terms_method == "E_step" && n_fixed > 0
 
   #####
@@ -660,4 +660,24 @@ report_pre_liminary_stats_before_EM <- function(
   message("Running EM")
 
   invisible()
+}
+
+get_design_matrix_and_risk_obj <- function(
+  formula, data, by, max_T = NULL, id, verbose = FALSE, is_for_discrete_model){
+  X_Y = get_design_matrix(formula, data)
+
+  if(verbose)
+    message("Finding Risk set")
+
+  risk_set <-
+    get_risk_obj(
+      Y = X_Y$Y, by = by,
+      max_T = ifelse(
+        is.null(max_T),
+        min(max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max(X_Y$Y[X_Y$Y[, 3] == 0, 2])),
+        max_T),
+      id = id, is_for_discrete_model = is_for_discrete_model)
+
+  list(X_Y = X_Y, risk_set = risk_set,
+       n_params = ncol(X_Y$X), n_fixed = ncol(X_Y$fixed_terms))
 }

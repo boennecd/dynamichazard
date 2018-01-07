@@ -104,26 +104,20 @@ PF_EM <- function(
   is_for_discrete_model <- model == "logit"
 
   #####
-  # find design matrix
-  X_Y = get_design_matrix(formula, data)
-  n_params = ncol(X_Y$X)
+  # find risk set and design matrix
+  tmp <- get_design_matrix_and_risk_obj(
+    formula = formula, data = data, by = by,
+    max_T = if(missing(max_T)) NULL else max_T, verbose = trace > 0,
+    is_for_discrete_model = is_for_discrete_model, id = id)
 
-  if(length(X_Y$fixed_terms) > 0)
-    stop("Fixed terms are not supported")
+  X_Y <- tmp$X_Y
+  n_params <- tmp$n_params
+  n_fixed <- tmp$n_fixed
+  risk_set <- tmp$risk_set
+  rm(tmp)
 
-  #####
-  # find risk set
-  if(trace > 0)
-    message("Finding Risk set")
-  risk_set <-
-    get_risk_obj(
-      Y = X_Y$Y, by = by,
-      max_T = ifelse(missing(max_T), max(X_Y$Y[X_Y$Y[, 3] == 1, 2]), max_T),
-      id = id, is_for_discrete_model = is_for_discrete_model)
-
-  n_fixed <- ncol(X_Y$fixed_terms)
   if(n_fixed > 0)
-    stop("Fixed effects are not implemented")
+    stop("Fixed terms are not supported")
 
   #####
   # set control variables
