@@ -125,6 +125,18 @@ arma::vec solve_w_precomputed_chol_test(const arma::mat &chol_decomp, const arma
   return(solve_w_precomputed_chol(chol_decomp, B));
 }
 
+// [[Rcpp::export]]
+arma::mat solve_LU_mat(const arma::mat &A, const arma::mat &B){
+  LU_factorization fac(A);
+  return fac.solve(B);
+}
+
+// [[Rcpp::export]]
+arma::vec solve_LU_vec(const arma::mat &A, const arma::vec &B){
+  LU_factorization fac(A);
+  return fac.solve(B);
+}
+
 // -------------------------------------------------- //
 
 #include "utils.h"

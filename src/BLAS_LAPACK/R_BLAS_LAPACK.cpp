@@ -233,4 +233,16 @@ namespace R_BLAS_LAPACK {
       const double *dy, const int *incy){
     return F77_NAME(ddot)(n, dx, incx, dy, incy);
   }
+
+  void dgetrf(
+      const int* m, const int* n, double* a, const int* lda,int* ipiv,
+      int* info){
+    F77_NAME(dgetrf)(m, n, a, lda, ipiv, info);
+  }
+
+  void dgetrs(
+      const char* trans, const int* n, const int* nrhs, const double* a,
+      const int* lda, const int* ipiv, double* b, const int* ldb, int* info){
+    F77_NAME(dgetrs)(trans, n, nrhs, a, lda, ipiv, b, ldb, info);
+  }
 }

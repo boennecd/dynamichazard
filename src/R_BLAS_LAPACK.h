@@ -44,4 +44,12 @@ namespace R_BLAS_LAPACK {
   double ddot(
       const int *n, const double *dx, const int *incx,
       const double *dy, const int *incy);
+
+  void dgetrf(
+      const int* m, const int* n, double* a, const int* lda,int* ipiv,
+      int* info);
+
+  void dgetrs(
+      const char* trans, const int* n, const int* nrhs, const double* a,
+      const int* lda, const int* ipiv, double* b, const int* ldb, int* info);
 }

@@ -18,6 +18,8 @@ if(interactive()){
   tri_mat_times_vec_test <- with(environment(ddhazard), tri_mat_times_vec_test)
   sym_mat_rank_one_update_test <- with(environment(ddhazard), sym_mat_rank_one_update_test)
   solve_w_precomputed_chol_test <- with(environment(ddhazard), solve_w_precomputed_chol_test)
+  solve_LU_mat <- with(environment(ddhazard), solve_LU_mat)
+  solve_LU_vec <- with(environment(ddhazard), solve_LU_vec)
 
   # test_SMA.R
   SMA_hepler_logit_compute_length <-

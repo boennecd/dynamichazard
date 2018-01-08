@@ -1,5 +1,7 @@
 #include "../arma_BLAS_LAPACK.h"
 #include "../R_BLAS_LAPACK.h"
+#include <sstream>
+#define MIN(a,b) (((a)<(b))?(a):(b))
 
 void chol_rank_one_update(arma::mat &R, arma::vec x){
   // WARNING:
@@ -99,6 +101,67 @@ arma::vec solve_w_precomputed_chol(const arma::mat &chol_decomp, const arma::vec
     chol_decomp.memptr(), out.memptr(), true, true  /* transpose */, n, 1);
   R_BLAS_LAPACK::triangular_sys_solve(
     chol_decomp.memptr(), out.memptr(), true, false /* don't transpose */, n, 1);
+
+  return out;
+}
+
+
+LU_factorization::LU_factorization(const arma::mat& A):
+  M(A.n_rows), N(A.n_cols), A_(new double[M * N]), IPIV_(new int[MIN(M, N)]){
+  // copy A
+  const double *a = A.memptr();
+  for(int i = 0; i < M * N; ++i, ++a)
+    A_[i] = *a;
+
+  int LDA = M, INFO;
+  R_BLAS_LAPACK::dgetrf(&M, &N, &A_[0], &LDA, &IPIV_[0], &INFO);
+
+  if(INFO < 0){
+    std::stringstream ss;
+    ss << "The " << -INFO << "-th argument to dgetrf had an illegal value";
+    Rcpp::stop(ss.str());
+  }
+  if(INFO > 0){
+    std::stringstream ss;
+    ss << "U(" << INFO << ", " << INFO << ") is exactly zero in dgetrf";
+    Rcpp::stop(ss.str());
+  }
+}
+
+arma::mat LU_factorization::solve(const arma::mat &B, bool tranpose){
+  // take copy
+  arma::mat out = B;
+
+  int NRHS = B.n_cols, LDA = N, LDB = B.n_rows, INFO;
+
+  R_BLAS_LAPACK::dgetrs(
+    tranpose ? "T" : "N", &N, &NRHS, &A_[0], &LDA, &IPIV_[0], out.memptr(),
+    &LDB, &INFO);
+
+  if(INFO < 0){
+    std::stringstream ss;
+    ss << "The " << -INFO << "-th argument to dgetrs had an illegal value";
+    Rcpp::stop(ss.str());
+  }
+
+  return out;
+}
+
+arma::vec LU_factorization::solve(const arma::vec& B, bool tranpose){
+  // take copy
+  arma::vec out = B;
+
+  int NRHS = 1, LDA = N, LDB = B.n_elem, INFO;
+
+  R_BLAS_LAPACK::dgetrs(
+    tranpose ? "T" : "N", &N, &NRHS, &A_[0], &LDA, &IPIV_[0], out.memptr(),
+    &LDB, &INFO);
+
+  if(INFO < 0){
+    std::stringstream ss;
+    ss << "The " << -INFO << "-th argument to dgetrs had an illegal value";
+    Rcpp::stop(ss.str());
+  }
 
   return out;
 }

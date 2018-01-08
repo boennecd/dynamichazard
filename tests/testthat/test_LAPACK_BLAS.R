@@ -204,3 +204,19 @@ test_that("solve_w_precomputed_chol_test gives solve solution", {
 # test_func(10)
 # test_func(100)
 # test_func(250)
+
+#####
+
+test_that("LU_factorization.solve gives correct answer for a vector and matrix", {
+  A <- matrix(c(
+     3, -7, -2,  2,
+    -3,  5,  1,  0,
+     6, -4,  0, -5,
+    -9,  5, -5, 12), byrow = TRUE, ncol = 4)
+
+  b <- c(-9, 5, 7, 11)
+  expect_equal(drop(solve_LU_vec(A, b)), solve(A, b))
+
+  B <- cbind(b, c(2, -3, 9, 7))
+  expect_equal(solve_LU_mat(A, B), solve(A, B), check.attributes = FALSE)
+})
