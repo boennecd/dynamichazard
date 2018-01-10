@@ -10,7 +10,7 @@ template<class T>
 void GMA<T>::solve(){
   const arma::vec offsets =
     (p_dat.any_fixed_in_M_step) ?
-    p_dat.fixed_parems.t() * p_dat.fixed_terms :
+    p_dat.fixed_terms.t() * p_dat.fixed_parems :
     arma::vec(p_dat.X.n_cols, arma::fill::zeros);
 
   double bin_tstop = p_dat.min_start;

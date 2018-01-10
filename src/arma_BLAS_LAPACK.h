@@ -26,13 +26,14 @@ arma::vec solve_w_precomputed_chol(const arma::mat&, const T&);
 class LU_factorization {
   const int M;
   const int N;
+  const bool has_elem;
   std::unique_ptr<double []> A_;
   std::unique_ptr<int []> IPIV_;
 
 public:
   LU_factorization(const arma::mat&);
-  arma::mat solve(const arma::mat&, bool tranpose = false);
-  arma::vec solve(const arma::vec&, bool tranpose = false);
+  arma::mat solve(const arma::mat&, bool tranpose = false) const;
+  arma::vec solve(const arma::vec&, bool tranpose = false) const;
 };
 
 #endif

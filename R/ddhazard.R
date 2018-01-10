@@ -329,9 +329,9 @@ ddhazard = function(formula, data,
 
   # Set names
   tmp_names = rep(rownames(X_Y$X), order)
-  colnames(result$a_t_d_s) = tmp_names
-  dimnames(result$V_t_d_s) = list(tmp_names, tmp_names, NULL)
-  dimnames(result$Q) = list(tmp_names, tmp_names)
+  colnames(result$a_t_d_s) <- tmp_names
+  dimnames(result$V_t_d_s) <- list(tmp_names, tmp_names, NULL)
+  dimnames(result$Q) <- list(rownames(X_Y$X), rownames(X_Y$X))
 
   result$fixed_effects <- c(result$fixed_effects)
   names(result$fixed_effects) <- fixed_names <- gsub(
@@ -344,7 +344,7 @@ ddhazard = function(formula, data,
     dimnames(result$Q_0) = list(.names, .names)
 
   } else
-    dimnames(result$Q_0) = dimnames(result$Q)
+    dimnames(result$Q_0) <- list(tmp_names, tmp_names)
 
   if(model == "logit") {
     family <- Module("dd_logistic")
@@ -495,15 +495,6 @@ get_state_eq_matrices <-  function(
         diag(.F[indicies_fix, indicies_fix]) <- 1 else
           .F[indicies_fix, indicies_fix] <- 1
     }
-  }
-
-  #####
-  # Setup for Q
-  if(order > 1){
-    # TODO: get rid of re-dedudant elements here
-    tmp <- matrix(0., nrow = order * n_params, ncol = order * n_params)
-    tmp[1:n_params, 1:n_params] <- Q
-    Q <- tmp
   }
 
   #####

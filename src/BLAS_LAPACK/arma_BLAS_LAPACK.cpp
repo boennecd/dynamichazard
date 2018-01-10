@@ -107,7 +107,11 @@ arma::vec solve_w_precomputed_chol(const arma::mat &chol_decomp, const arma::vec
 
 
 LU_factorization::LU_factorization(const arma::mat& A):
-  M(A.n_rows), N(A.n_cols), A_(new double[M * N]), IPIV_(new int[MIN(M, N)]){
+  M(A.n_rows), N(A.n_cols), has_elem(M > 0 && N > 0),
+  A_(new double[M * N]), IPIV_(new int[MIN(M, N)]){
+  if(!has_elem)
+    return;
+
   // copy A
   const double *a = A.memptr();
   for(int i = 0; i < M * N; ++i, ++a)
@@ -128,7 +132,10 @@ LU_factorization::LU_factorization(const arma::mat& A):
   }
 }
 
-arma::mat LU_factorization::solve(const arma::mat &B, bool tranpose){
+arma::mat LU_factorization::solve(const arma::mat &B, bool tranpose) const {
+  if(!has_elem && B.n_elem == 0)
+    return arma::mat();
+
   // take copy
   arma::mat out = B;
 
@@ -147,7 +154,10 @@ arma::mat LU_factorization::solve(const arma::mat &B, bool tranpose){
   return out;
 }
 
-arma::vec LU_factorization::solve(const arma::vec& B, bool tranpose){
+arma::vec LU_factorization::solve(const arma::vec& B, bool tranpose) const {
+  if(!has_elem && B.n_elem == 0)
+    return arma::vec();
+
   // take copy
   arma::vec out = B;
 

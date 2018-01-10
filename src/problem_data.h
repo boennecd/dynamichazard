@@ -2,6 +2,7 @@
 #define DDHAZARD_DATA
 
 #include "arma_n_rcpp.h"
+#include "arma_BLAS_LAPACK.h"
 #include <future>
 #include <type_traits>
 
@@ -12,6 +13,34 @@
 /* Object used for map function. The unique pointer need to be to a new object
  * created in the functions to make sure the orginal object is not destructed.
  */
+
+#define PROTECTED_MAP_FUNCS(name, vec_var, map_mat)          \
+virtual map_res_col name(arma::vec &a, ptr_vec &ptr) const { \
+  ptr.reset(new arma::vec(map_mat * vec_var));               \
+  arma::vec &out = *ptr.get();                               \
+  return map_res_col(out(arma::span::all), ptr);             \
+}
+
+# define GENERIC_MAP_FUNCS_VEC(name)                        \
+map_res_col name(arma::subview_col<double> a) const {       \
+  ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false)); \
+  return name(*ptr.get(), ptr);                             \
+}                                                           \
+map_res_col name(arma::vec &a) const {                      \
+  ptr_vec ptr;                                              \
+  return name(a, ptr);                                      \
+}                                                           \
+/* TODO: re-implement to avoid copy */                      \
+map_res_col name(const arma::vec &a) const {                \
+  ptr_vec ptr(new arma::vec(a));                            \
+  return name(*ptr.get(), ptr);                             \
+}
+
+# define GENERIC_MAP_FUNCS_MAT(name, dsn_mat, transpose)            \
+virtual map_res_mat name(const arma::mat &M, side s = both) const { \
+  return mat_map(dsn_mat, M, s, transpose);                         \
+}
+
 template <typename T_view, typename T_type>
 class map_res {
   using ptr_T = std::unique_ptr<T_type>;
@@ -37,6 +66,9 @@ protected:
   const arma::mat &R;
   const arma::mat &L;
   const arma::vec &m;
+
+  const LU_factorization F_LU;
+  const arma::mat F_inv; // TODO: use forward and backward solves with F_LU
 
   using ptr_vec = std::unique_ptr<arma::vec>;
   using ptr_mat = std::unique_ptr<arma::mat>;
@@ -81,23 +113,15 @@ protected:
     }
 
   /* vector maps */
-  virtual map_res_col err_state_map(arma::vec &a, ptr_vec &ptr){
-    ptr.reset(new arma::vec(R * a));
-    arma::vec &out = *ptr.get();
-    return map_res_col(out(arma::span::all), ptr);
-  }
-  virtual map_res_col state_trans_map(arma::vec &a, ptr_vec &ptr){
-    ptr.reset(new arma::vec(F_ * a + m));
-    arma::vec &out = *ptr.get();
-    return map_res_col(out(arma::span::all), ptr);
-  }
-  virtual map_res_col lp_map(arma::vec &a, ptr_vec &ptr){
-    ptr.reset(new arma::vec(L * a));
-    arma::vec &out = *ptr.get();
-    return map_res_col(out(arma::span::all), ptr);
-  }
-  virtual map_res_col lp_map_inv(arma::vec &a, ptr_vec &ptr){
-    ptr.reset(new arma::vec(L.t() * a));
+  PROTECTED_MAP_FUNCS(lp_map, a, L)
+  PROTECTED_MAP_FUNCS(lp_map_inv, a, L.t())
+
+  PROTECTED_MAP_FUNCS(err_state_map, a, R)
+  PROTECTED_MAP_FUNCS(err_state_map_inv, a, R.t())
+
+  PROTECTED_MAP_FUNCS(state_trans_map, arma::vec(a + m), F_)
+  virtual map_res_col state_trans_map_inv(arma::vec &a, ptr_vec &ptr) const {
+    ptr.reset(new arma::vec(F_LU.solve(arma::vec(a - m))));
     arma::vec &out = *ptr.get();
     return map_res_col(out(arma::span::all), ptr);
   }
@@ -113,6 +137,7 @@ public:
 
   const unsigned int space_dim; // dimension of state space vector
   const unsigned int covar_dim; // dimension of dynamic covariate vector
+  const unsigned int err_dim;   // dimension of state space error term
   const int n_params_state_vec_fixed; // TODO: maybe move to derived class
 
   arma::mat X;
@@ -131,6 +156,7 @@ public:
   // non-constants
   arma::mat &Q;
   arma::mat &Q_0;
+  arma::vec fixed_parems;
 
   problem_data(
     const int n_fixed_terms_in_state_vec,
@@ -147,8 +173,9 @@ public:
     const Rcpp::List &risk_obj,
     const arma::mat &F_,
     const int n_max,
-    const int n_threads) :
-    F_(F_), R(R), L(L), m(m),
+    const int n_threads,
+    const arma::vec &fixed_parems) :
+    F_(F_), R(R), L(L), m(m), F_LU(F_), F_inv(arma::inv(F_)),
 
     any_dynamic(X.n_elem > 0),
     any_fixed_in_E_step(n_fixed_terms_in_state_vec > 0),
@@ -159,6 +186,7 @@ public:
 
     space_dim(a_0.size()),
     covar_dim(X.n_rows),
+    err_dim(Q.n_cols),
     n_params_state_vec_fixed(n_fixed_terms_in_state_vec),
 
     X(X.begin(), X.n_rows, X.n_cols, false),
@@ -173,7 +201,8 @@ public:
     min_start(Rcpp::as<double>(risk_obj["min_start"])),
 
     Q(Q),
-    Q_0(Q_0)
+    Q_0(Q_0),
+    fixed_parems(fixed_parems)
   {
 #ifdef _OPENMP
     omp_set_num_threads(n_threads);
@@ -186,75 +215,117 @@ public:
   problem_data() = delete;
 
   /* maps previous to next state */
-  map_res_col state_trans_map(arma::subview_col<double> a){
-    ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false));
-    return state_trans_map(*ptr.get(), ptr);
-  }
-  map_res_col state_trans_map(arma::vec &a){
-    ptr_vec ptr;
-    return state_trans_map(a, ptr);
-  }
-  virtual map_res_mat state_trans_map(arma::mat &M, side s = both){
-    return mat_map(F_, M, s, false);
-  }
+  GENERIC_MAP_FUNCS_VEC(state_trans_map)
+  GENERIC_MAP_FUNCS_MAT(state_trans_map, F_, false)
+
+  /* inverse of the above */
+  GENERIC_MAP_FUNCS_VEC(state_trans_map_inv)
+  GENERIC_MAP_FUNCS_MAT(state_trans_map_inv, F_inv, false)
 
   /* maps from errors to state space dimension */
-  map_res_col err_state_map(arma::subview_col<double> a){
-    ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false));
-    return err_state_map(*ptr.get(), ptr);
-  }
-  map_res_col err_state_map(arma::vec &a){
-    ptr_vec ptr;
-    return err_state_map(a, ptr);
-  }
-  virtual map_res_mat err_state_map(arma::mat &M, side s = both){
-    return mat_map(R, M, s, false);
-  }
+  GENERIC_MAP_FUNCS_VEC(err_state_map)
+  GENERIC_MAP_FUNCS_MAT(err_state_map, R, false)
 
   /* inverse of the above */
-  virtual map_res_mat err_state_map_inv(arma::mat &M, side s = both){
-    return mat_map(R, M, s, true);
-  }
+  GENERIC_MAP_FUNCS_VEC(err_state_map_inv)
+  GENERIC_MAP_FUNCS_MAT(err_state_map_inv, R, true)
 
   /* maps from state space dimension to covariate dimension */
-  map_res_col lp_map(arma::subview_col<double> a){
-    ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false));
-    return lp_map(*ptr.get(), ptr);
-  }
-  map_res_col lp_map(arma::vec &a){
-    ptr_vec ptr;
-    return lp_map(a, ptr);
-  }
-  virtual map_res_mat lp_map(arma::mat &M, side s = both){
-    return mat_map(L, M, s, false);
-  }
+  GENERIC_MAP_FUNCS_VEC(lp_map)
+  GENERIC_MAP_FUNCS_MAT(lp_map, L, false)
 
   /* inverse of the above */
-  map_res_col lp_map_inv(arma::subview_col<double> a){
-    ptr_vec ptr(new arma::vec(&a.at(0, 0), a.n_rows, false));
-    return lp_map_inv(*ptr.get(), ptr);
-  }
-  map_res_col lp_map_inv(arma::vec &a){
-    ptr_vec ptr;
-    return lp_map_inv(a, ptr);
-  }
-  virtual map_res_mat lp_map_inv(arma::mat &M, side s = both){
-    return mat_map(L, M, s, true);
-  }
+  GENERIC_MAP_FUNCS_VEC(lp_map_inv)
+  GENERIC_MAP_FUNCS_MAT(lp_map_inv, L, true)
 };
 
 /* Concrete class for n-th order random walk model starting with problem data
  * for n-th order random walk */
+/* TODO: implement more overrides */
+
+# define RANDOM_WALK_VEC_MAP_TO_STATE(name, span_func)                       \
+map_res_col name(arma::vec &a, ptr_vec &ptr) const override {                \
+  if(order() == 1 && !this->any_fixed_in_E_step)                             \
+    return map_res_col(a(arma::span::all), ptr);                             \
+                                                                             \
+  ptr_vec ptr_new(new arma::vec(this->space_dim, arma::fill::zeros));        \
+  arma::vec &out = *ptr_new.get();                                           \
+  auto span_use_ptr = span_func();                                           \
+  if(span_use_ptr)                                                           \
+    out(*span_use_ptr) = a;                                                  \
+                                                                             \
+  return map_res_col(out(arma::span::all), ptr_new);                         \
+}
+
+# define RANDOM_WALK_VEC_MAP_FROM_STATE(name, span_func)                     \
+map_res_col name(arma::vec &a, ptr_vec &ptr) const override {                \
+  if(order() == 1 && !this->any_fixed_in_E_step)                             \
+    return map_res_col(a(arma::span::all), ptr);                             \
+                                                                             \
+  auto span_use_ptr = span_func();                                           \
+  if(!span_use_ptr){                                                         \
+    ptr_vec ptr_new(new arma::vec());                                        \
+    return map_res_col((*ptr_new)(arma::span::all), ptr_new);                \
+  }                                                                          \
+                                                                             \
+  return map_res_col(a(*span_use_ptr), ptr);                                 \
+}
+
+# define RANDOM_WALK_MAT_MAP_FROM_STATE(name, span_func)                   \
+map_res_mat name(const arma::mat &M, side s = both) const override {       \
+  if(s != both)                                                            \
+    Rcpp::stop("'Side' not implemented");                                  \
+                                                                           \
+  if(order() == 1 && !this->any_fixed_in_E_step)                           \
+    return map_res_mat(M(arma::span::all, arma::span::all));               \
+                                                                           \
+  auto span_use_ptr = span_func();                                         \
+  if(!span_use_ptr){                                                       \
+    ptr_mat ptr_new(new arma::mat());                                      \
+    return map_res_mat(                                                    \
+        (*ptr_new)(arma::span::all, arma::span::all), ptr_new);            \
+  }                                                                        \
+                                                                           \
+  return map_res_mat(M(*span_use_ptr, *span_use_ptr));                     \
+}
+
+# define RANDOM_WALK_MAT_MAP_TO_STATE(name, span_func)                     \
+map_res_mat name(const arma::mat &M, side s = both) const override {       \
+  if(s != both)                                                            \
+    Rcpp::stop("'Side' not implemented");                                  \
+  if(order() == 1 && !this->any_fixed_in_E_step)                           \
+    return map_res_mat(M(arma::span::all, arma::span::all));               \
+                                                                           \
+  ptr_mat ptr(                                                             \
+      new arma::mat(this->space_dim, this->space_dim, arma::fill::zeros)); \
+  arma::mat &out = *ptr.get();                                             \
+  auto span_use_ptr = span_func();                                         \
+  if(span_use_ptr)                                                         \
+    out(*span_use_ptr, *span_use_ptr) = M;                                 \
+                                                                           \
+  return map_res_mat(out(arma::span::all, arma::span::all), ptr);          \
+}
+
 template<class T>
 class random_walk : public T {
-  std::unique_ptr<arma::span> span_current_cov(){
+  /* Use std::unique_ptr as Armadillo does not have an "empty" span. A null
+   * pointer means empty.
+   * TODO: make private object once and avoid function calls                */
+  std::unique_ptr<arma::span> span_current_cov() const {
     std::unique_ptr<arma::span> out;
-    if(this->any_dynamic || this->any_fixed_in_E_step){
-      out.reset(new arma::span(
-          0,
-          (this->space_dim - this->n_params_state_vec_fixed) / order() +
-            this->n_params_state_vec_fixed - 1));
-    }
+    int b = (this->space_dim - this->n_params_state_vec_fixed) / order() +
+      this->n_params_state_vec_fixed - 1;
+    if(b >= 0 && (this->any_dynamic || this->any_fixed_in_E_step))
+      out.reset(new arma::span(0, b));
+
+    return out;
+  }
+
+  std::unique_ptr<arma::span> span_current_cov_varying_only() const {
+    std::unique_ptr<arma::span> out;
+    int b = (this->space_dim - this->n_params_state_vec_fixed) / order() - 1;
+    if(b >= 0 && this->any_dynamic)
+      out.reset(new arma::span(0, b));
 
     return out;
   }
@@ -263,27 +334,16 @@ class random_walk : public T {
   using ptr_mat = std::unique_ptr<arma::mat>;
 
   /* derived class functions to override */
-  map_res_col lp_map(arma::vec &a, ptr_vec &ptr) override {
-    auto span_use = (order() == 1) ? arma::span::all : *span_current_cov();
-    return map_res_col(a(span_use), ptr);
-  }
-
-  map_res_col lp_map_inv(arma::vec &a, ptr_vec &ptr) override {
-    if(order() == 1)
-      return map_res_col(a(arma::span::all), ptr);
-
-    ptr_vec ptr_new(new arma::vec(this->space_dim, arma::fill::zeros));
-    arma::vec &out = *ptr_new.get();
-    out(*span_current_cov()) = a;
-
-    return map_res_col(out(arma::span::all), ptr_new);
-  }
+  RANDOM_WALK_VEC_MAP_TO_STATE(err_state_map, span_current_cov_varying_only)
+  RANDOM_WALK_VEC_MAP_FROM_STATE(err_state_map_inv, span_current_cov_varying_only)
+  RANDOM_WALK_VEC_MAP_FROM_STATE(lp_map, span_current_cov)
+  RANDOM_WALK_VEC_MAP_TO_STATE(lp_map_inv, span_current_cov)
 
 public:
   using T::T;
 
   /* particular class function */
-  unsigned int order(){
+  unsigned int order() const {
     unsigned int numerator = this->space_dim - this->n_params_state_vec_fixed;
     if(numerator == 0)
       return 1;
@@ -291,28 +351,11 @@ public:
     return numerator / (this->covar_dim - this->n_params_state_vec_fixed);
   }
 
-  /* derived class functions to override */
-  map_res_mat lp_map(arma::mat &M, side s = both) override {
-    if(s != both)
-      Rcpp::stop("'Side' not implemented");
-
-    auto span_use = (order() == 1) ? arma::span::all : *span_current_cov();
-    return map_res_mat(M(span_use, span_use));
-  }
-
-  map_res_mat lp_map_inv(arma::mat &M, side s = both) override {
-    if(s != both)
-      Rcpp::stop("'Side' not implemented");
-
-    if(order() == 1)
-      return map_res_mat(M(arma::span::all, arma::span::all));
-
-    ptr_mat ptr(new arma::mat(this->space_dim, this->space_dim, arma::fill::zeros));
-    arma::mat &out = *ptr.get();
-    out(*span_current_cov(), *span_current_cov()) = M;
-
-    return map_res_mat(out(arma::span::all, arma::span::all), ptr);
-  }
+  /* derived class member functions to override */
+  RANDOM_WALK_MAT_MAP_TO_STATE(err_state_map, span_current_cov_varying_only)
+  RANDOM_WALK_MAT_MAP_FROM_STATE(err_state_map_inv, span_current_cov_varying_only)
+  RANDOM_WALK_MAT_MAP_FROM_STATE(lp_map, span_current_cov)
+  RANDOM_WALK_MAT_MAP_TO_STATE(lp_map_inv, span_current_cov)
 };
 
 
@@ -338,7 +381,6 @@ public:
   const bool use_pinv;
 
   // Declare non constants. Some are intialize
-  arma::vec fixed_parems;
   arma::mat a_t_t_s;
   arma::mat a_t_less_s;
 
@@ -392,7 +434,8 @@ public:
       risk_obj,
       F_,
       n_max,
-      n_threads),
+      n_threads,
+      fixed_parems_start),
     weights(weights),
 
     event_eps(d * std::numeric_limits<double>::epsilon()),
@@ -403,8 +446,7 @@ public:
     debug(debug),
     LR(LR.isNotNull() ? Rcpp::as< Rcpp::NumericVector >(LR)[0] : 1.0),
 
-    use_pinv(use_pinv),
-    fixed_parems(fixed_parems_start)
+    use_pinv(use_pinv)
   {
     if(debug)
       Rcpp::Rcout << "Using " << n_threads << " threads" << std::endl;
@@ -468,4 +510,11 @@ std::ostringstream& my_debug_logger::operator<<(const T &obj){
   return os;
 }
 
+#undef PROTECTED_MAP_FUNCS
+#undef GENERIC_MAP_FUNCS_VEC
+#undef GENERIC_MAP_FUNCS_MAT
+#undef RANDOM_WALK_VEC_MAP_TO_STATE
+#undef RANDOM_WALK_VEC_MAP_FROM_STATE
+#undef RANDOM_WALK_MAT_MAP_TO_STATE
+#undef RANDOM_WALK_MAT_MAP_FROM_STATE
 #endif

@@ -274,7 +274,8 @@ Rcpp::List ddhazard_fit_cpp(
       Q /= p_data->d;
       Q = p_data->err_state_map_inv(Q).sv;
 
-      if((test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) >
+      if(Q.n_elem > 0 and
+           (test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) >
            Q_warn_eps){
         std::ostringstream warning;
         warning << "Q - Q.t() maximal element difference was " << test_max_diff <<

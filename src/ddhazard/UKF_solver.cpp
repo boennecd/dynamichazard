@@ -191,7 +191,7 @@ template<class T>
 void UKF_solver_New<T>::solve(){
   const arma::vec offsets =
     (p_dat.any_fixed_in_M_step) ?
-    p_dat.fixed_parems.t() * p_dat.fixed_terms :
+    p_dat.fixed_terms.t() * p_dat.fixed_parems :
     arma::vec(p_dat.X.n_cols, arma::fill::zeros);
 
   double bin_stop = p_dat.min_start;
@@ -230,8 +230,8 @@ void UKF_solver_New<T>::solve(){
 
     arma::mat O(n_risk, sigma_points.n_cols);
     for(arma::uword i = 0; i < O.n_cols; ++i){
-      O.col(i) = p_dat.lp_map(sigma_points.col(i)).sv.t() *
-        p_dat.X.cols(r_set);
+      O.col(i) = (p_dat.lp_map(sigma_points.col(i)).sv.t() *
+        p_dat.X.cols(r_set)).t();
     }
     O.each_col() += offsets(r_set);
 

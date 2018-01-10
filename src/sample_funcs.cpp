@@ -64,10 +64,11 @@ arma::mat mvrnorm(const int m, const arma::vec mu, const arma::mat sigma_chol){
     &m /* M */, &n /* N */, &alpha /* ALPHA */,
     sigma_chol.memptr() /* A */, &n /* LDA */,
     Y.memptr() /* B */, &m /* LDB */);
-  return arma::repmat(mu, 1, m).t() + Y;
+
+  return arma::repmat(mu, 1, m) + Y.t();
 }
 
 arma::vec mvrnorm(const arma::vec mu, const arma::mat sigma_chol){
-  return mvrnorm(1, mu, sigma_chol).row(0);
+  return mvrnorm(1, mu, sigma_chol).col(0);
 }
 
