@@ -6,3 +6,5 @@ and can provide your own structural matrices
 Q passed to cpp should be non-degenerated
 Why is GMA slower than in commint 40d2cd438c79e1d77b28421d26b8289f40d3909c in speedtests?
 Make the forward particle filters avialable on its own for likelihood evaluation
+Make parallelglm use `src/family` and compute the QR decompostion in chunks as in `mgcv::bam`
+Compute fixed effect term before each E-step.

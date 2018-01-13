@@ -138,12 +138,13 @@ public:
 
   template<typename T>
   covarmat(T Q):
-    mat(Q), chol(arma::chol(mat)), chol_inv(arma::inv(arma::trimatu(chol))), inv(arma::inv(Q))
+    mat(Q), chol(arma::chol(mat)), chol_inv(arma::inv(arma::trimatu(chol))),
+    inv(arma::inv(Q))
   {}
 };
 
 // data holder for particle filtering
-class PF_data : public problem_data {
+class PF_data : public random_walk<problem_data> {
 public:
   /* Number of paprticles in forward and/or backward filter */
   const arma::uword N_fw_n_bw;
@@ -177,6 +178,7 @@ public:
           const arma::mat &F,
           const int n_max,
           const int n_threads,
+          const arma::vec &fixed_parems,
 
           // new arguments
           const arma::mat Q_tilde,
@@ -184,23 +186,11 @@ public:
           const arma::uword N_smooth,
           Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
           const unsigned int debug,
-          const arma::uword N_first):
-    problem_data(
+          const arma::uword N_first) :
+    random_walk<problem_data>(
       n_fixed_terms_in_state_vec,
-      X,
-      fixed_terms,
-      tstart,
-      tstop, is_event_in_bin,
-      a_0,
-      R,
-      L,
-      m,
-      Q_0,
-      Q,
-      risk_obj,
-      F,
-      n_max,
-      n_threads),
+      X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, m, Q_0, Q,
+      risk_obj, F, n_max, n_threads, fixed_parems),
 
       N_fw_n_bw(N_fw_n_bw),
       N_smooth(N_smooth),

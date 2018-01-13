@@ -74,8 +74,8 @@ template<typename densities, bool is_forward>
 class None_AUX_resampler : private resampler_base<systematic_resampling> {
 public:
   inline static nothing resampler(
-      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome,
-      bool &did_resample){
+      densities &dens_cal, const PF_data &data, cloud &PF_cloud,
+      unsigned int t, arma::uvec &outcome, bool &did_resample){
     /* Compute effective sample size (ESS) */
     arma::vec weights(PF_cloud.size());
     double ESS = 0;
@@ -104,7 +104,8 @@ template<typename densities, bool is_forward>
 class AUX_resampler_normal_approx_w_cloud_mean : private resampler_base<systematic_resampling> {
 public:
   inline static input_for_normal_apprx_w_cloud_mean resampler(
-      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome,
+      densities &dens_cal, const PF_data &data, cloud &PF_cloud,
+      unsigned int t, arma::uvec &outcome,
       bool &did_resample){
     /* Find weighted mean estimate */
     arma::vec alpha_bar = PF_cloud.get_weigthed_mean();
@@ -113,25 +114,22 @@ public:
     auto &Q = data.Q_proposal;
     auto ans = compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean
       <densities, is_forward>
-      (data, t, Q, alpha_bar, PF_cloud);
+      (dens_cal, data, t, Q, alpha_bar, PF_cloud);
 
-    const arma::mat *Q_numerator_chol_inv;
-    arma::vec *a_0_scaled;
-    double bw_w1, bw_w2;
+    const covarmat *Q_use;
+    arma::vec a_0_mean_term;
+    std::unique_ptr<LU_factorization> P_t_p_1_LU;
+    arma::mat P_t_F_top;
     if(is_forward){
-      Q_numerator_chol_inv = &data.Q.chol_inv;
-
-      // avoid wmaybe-uninitialized
-      bw_w1 = bw_w2 = std::numeric_limits<double>::quiet_NaN();
+      Q_use = &data.Q;
 
     } else {
-      bw_w1 = (double)(t + 1) / (t + 2);
-      bw_w2 =              1. / (t + 2);
-      arma::vec tmp_vec = data.a_0 * bw_w2;
-
-      a_0_scaled = new arma::vec(std::move(tmp_vec));
-      arma::mat tmp = data.Q.chol_inv / sqrt((double)(t + 1) / (t + 2));
-      Q_numerator_chol_inv = new arma::mat(std::move(tmp));
+      auto tmp = get_bw_sim_data(dens_cal, data, t);
+      std::swap(P_t_F_top, tmp.P_t);
+      P_t_F_top = data.state_trans_map(P_t_F_top, right).sv;
+      P_t_p_1_LU.reset(new LU_factorization(tmp.P_t_p_1));
+      std::swap(a_0_mean_term, tmp.a_0_mean_term);
+      Q_use = new covarmat(std::move(tmp.S_t));
 
     }
 
@@ -141,22 +139,27 @@ public:
     auto it_mu_j = ans.mu_js.begin();
     unsigned int n_elem = PF_cloud.size();
     for(unsigned int i = 0; i != n_elem; ++i, ++it_cl, ++it_mu_j){
-      double log_prob_y_given_state = densities::log_prob_y_given_state(
-        data, *it_mu_j, t);
+      double log_prob_y_given_state =
+        densities::log_prob_y_given_state(
+          data, data.err_state_map(*it_mu_j).sv, t);
       double log_prop_transition;
       if(is_forward){
         log_prop_transition = dmvnrm_log(
-          *it_mu_j, it_cl->get_state(), *Q_numerator_chol_inv);
+          *it_mu_j,
+          data.err_state_map_inv(it_cl->get_state()).sv,
+          Q_use->chol_inv);
 
       } else {
-        arma::vec mean = bw_w1 * it_cl->get_state() + *a_0_scaled;
-        log_prop_transition = dmvnrm_log(
-          *it_mu_j, mean, *Q_numerator_chol_inv);
+        arma::vec mean =
+          P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state());
+        mean = data.err_state_map_inv(mean).sv + a_0_mean_term;
+        log_prop_transition = dmvnrm_log(*it_mu_j, mean, Q_use->chol_inv);
 
       }
 
       double log_prop_proposal = dmvnrm_log(
-        *it_mu_j, *it_mu_j /* Notice same */, ans.sigma_chol_inv /* Notice Sigma*/);
+        *it_mu_j, *it_mu_j /* Notice same */,
+        ans.sigma_chol_inv /* Notice Sigma*/);
 
       it_cl->log_resampling_weight =
         it_cl->log_weight + log_prop_transition + log_prob_y_given_state
@@ -166,12 +169,14 @@ public:
     }
 
     if(!is_forward){
-      delete Q_numerator_chol_inv;
-      delete a_0_scaled;
+      delete Q_use;
 
     }
 
-    auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
+    auto norm_out =
+      normalize_log_resampling_weight
+      <true, true>
+      (PF_cloud, max_weight);
     outcome = sample(data, norm_out.weights, norm_out.ESS, did_resample);
 
     return ans;
@@ -188,32 +193,28 @@ template<typename densities, bool is_forward>
 class AUX_resampler_normal_approx_w_particles : private resampler_base<systematic_resampling> {
 public:
   inline static input_for_normal_apprx_w_particle_mean resampler(
-      const PF_data &data, cloud &PF_cloud, unsigned int t, arma::uvec &outcome,
-      bool &did_resample){
+      densities &dens_cal, const PF_data &data, cloud &PF_cloud,
+      unsigned int t, arma::uvec &outcome, bool &did_resample){
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
     auto ans = compute_mu_n_Sigma_from_normal_apprx_w_particles
       <densities, is_forward>
-      (data, t, Q, PF_cloud);
+      (dens_cal, data, t, Q, PF_cloud);
 
-    arma::vec *a_0_scaled;
-    double bw_w1, bw_w2;
-    const arma::mat *Q_numerator_chol_inv;
+    const covarmat *Q_use;
+    arma::vec a_0_mean_term;
+    std::unique_ptr<LU_factorization> P_t_p_1_LU;
+    arma::mat P_t_F_top;
     if(is_forward){
-      Q_numerator_chol_inv = &data.Q.chol_inv;
-
-      // avoid wmaybe-uninitialized
-      bw_w1 = bw_w2 = std::numeric_limits<double>::quiet_NaN();
-      a_0_scaled = nullptr;
+      Q_use = &data.Q;
 
     } else {
-      bw_w1 = (double)(t + 1) / (t + 2);
-      bw_w2 =              1. / (t + 2);
-      arma::vec tmp_vec = data.a_0 * bw_w2;
-
-      a_0_scaled = new arma::vec(std::move(tmp_vec));
-      arma::mat tmp = data.Q.chol_inv / sqrt((double)(t + 1) / (t + 2));
-      Q_numerator_chol_inv = new arma::mat(std::move(tmp));
+      auto tmp = get_bw_sim_data(dens_cal, data, t);
+      std::swap(P_t_F_top, tmp.P_t);
+      P_t_F_top = data.state_trans_map(P_t_F_top, right).sv;
+      P_t_p_1_LU.reset(new LU_factorization(tmp.P_t_p_1));
+      std::swap(a_0_mean_term, tmp.a_0_mean_term);
+      Q_use = new covarmat(std::move(tmp.S_t));
 
     }
 
@@ -230,22 +231,27 @@ public:
       auto it_ans = &ans[i];
 
       double log_prob_y_given_state = densities::log_prob_y_given_state(
-        data, it_ans->mu, t, r_set, false);
+        data, data.err_state_map(it_ans->mu).sv, t, r_set, false);
 
       double log_prop_transition;
       if(is_forward){
         log_prop_transition = dmvnrm_log(
-          it_ans->mu, it_cl->get_state(), *Q_numerator_chol_inv);
+          it_ans->mu,
+          // will failed if there are fixed effects in the state vector
+          data.err_state_map_inv(it_cl->get_state()).sv,
+          Q_use->chol_inv);
 
       } else {
-        arma::vec mean = bw_w1 * it_cl->get_state() + *a_0_scaled;
-        log_prop_transition = dmvnrm_log(
-          it_ans->mu, mean, *Q_numerator_chol_inv);
+        arma::vec mean =
+          P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state());
+        mean = data.err_state_map_inv(mean).sv + a_0_mean_term;
+        log_prop_transition = dmvnrm_log(it_ans->mu, mean, Q_use->chol_inv);
 
       }
 
       double log_prop_proposal = dmvnrm_log(
-        it_ans->mu, it_ans->mu /* Notice same */, it_ans->sigma_chol_inv /* Notice Sigma*/);
+        it_ans->mu, it_ans->mu /* Notice same */,
+        it_ans->sigma_chol_inv /* Notice Sigma*/);
 
       it_cl->log_resampling_weight =
       it_cl->log_weight + log_prop_transition + log_prob_y_given_state
@@ -261,8 +267,7 @@ public:
     }
 
     if(!is_forward){
-      delete Q_numerator_chol_inv;
-      delete a_0_scaled;
+      delete Q_use;
 
     }
 

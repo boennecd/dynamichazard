@@ -240,6 +240,8 @@ PF_EM <- function(
   fit_call[["F"]] <- fit_call[[".F"]]
   fit_call[["debug"]] <- max(0, trace - 1)
   fit_call[c("trace", "eps", "seed", ".F")] <- NULL
+  fit_call[["fixed_parems"]] <- numeric()
+  fit_call[["fixed_terms"]] <- matrix(nrow = 0, ncol = ncol(X))
 
   if(is.null(seed))
     seed <- .Random.seed

@@ -55,12 +55,14 @@ public:
   static std::vector<cloud> compute(const PF_data &data){
     std::vector<cloud> clouds;
     std::string direction_str = (is_forward) ? "forward" : "backward";
+    densities dens_calc = densities(data);
 
     if(data.debug > 0)
       data.log(1) << "Running " << direction_str << " filter"
                   << "\nSampling first particle at time "
                   << static_cast<std::string>(is_forward ? "0" : "d + 1");
-    clouds.push_back(importance_dens::sample_first_state_n_set_weights(data));
+    clouds.push_back(
+      importance_dens::sample_first_state_n_set_weights(dens_calc, data));
 
     int t = is_forward ? 1 : data.d;
     for(int iter = 1; iter <= data.d; ++iter){
@@ -72,7 +74,8 @@ public:
         data.log(1) << "Starting iteration " << t << ". Re-sampling weights";
       arma::uvec resample_idx;
       bool did_resample;
-      auto additional_resampler_out = resampler::resampler(data, clouds.back(), t, resample_idx, did_resample);
+      auto additional_resampler_out = resampler::resampler(
+        dens_calc, data, clouds.back(), t, resample_idx, did_resample);
 
       if(data.debug > 0){
         if(did_resample){
@@ -85,13 +88,13 @@ public:
       if(data.debug > 0)
         data.log(1) << "Sampling states";
       cloud new_cloud = importance_dens::sample(
-        data, clouds.back(), resample_idx, t, additional_resampler_out);
+        dens_calc, data, clouds.back(), resample_idx, t,
+        additional_resampler_out);
 
       /* update weights */
       if(data.debug > 0)
         data.log(1) << "Updating weights";
       {
-          densities dens_calc = densities();
           double max_weight =  -std::numeric_limits<double>::max();
           arma::uvec r_set = get_risk_set(data, t);
           unsigned int n_elem = new_cloud.size();
@@ -101,18 +104,18 @@ public:
           for(unsigned int i = 0; i < n_elem; ++i){
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
-              dens_calc.log_prob_y_given_state(data, it->get_state(), t, r_set, false);
-            double log_prob_state_given_previous =
+              dens_calc.log_prob_y_given_state(
+                data, it->get_state(), t, r_set, false);
+            double log_prob_state_given_other =
               is_forward ?
               dens_calc.log_prob_state_given_previous(
                 data, it->get_state(), it->parent->get_state(), t) :
-              /* Notice different order and t + 1 */
-              dens_calc.log_prob_state_given_previous(
-                data, it->parent->get_state(), it->get_state(), t + 1);
+              dens_calc.log_prob_state_given_next(
+                data, it->get_state(), it->parent->get_state(), t);
 
             it->log_unnormalized_weight = it->log_weight =
               /* nominator */
-              log_prob_y_given_state + log_prob_state_given_previous
+              log_prob_y_given_state + log_prob_state_given_other
               /* denoninator */
               - it->log_importance_dens;
 
@@ -126,8 +129,10 @@ public:
             }
 
             if(!is_forward){
-              it->log_weight += dens_calc.log_artificial_prior(data, *it, t);
-              it->log_weight -= dens_calc.log_artificial_prior(data, *it->parent, t + 1);
+              it->log_weight +=
+                dens_calc.log_artificial_prior(*it, t);
+              it->log_weight -=
+                dens_calc.log_artificial_prior(*it->parent, t + 1);
             }
 #ifdef _OPENMP
 #pragma omp critical(aux_lock)
@@ -147,9 +152,9 @@ public:
       /* Add cloud  */
       clouds.push_back(std::move(new_cloud));
 
-      if(is_forward){
+      if(is_forward)
         ++t;
-      } else
+      else
         --t;
     }
 
@@ -189,8 +194,10 @@ public:
     std::vector<cloud> &backward_clouds = result.backward_clouds;
     std::vector<cloud> &smoothed_clouds = result.smoothed_clouds;
 
-    forward_clouds = forward_filter::compute(data);
+    forward_clouds  = forward_filter::compute(data);
     backward_clouds = backward_filter::compute(data);
+
+    densities dens_calc = densities(data);
 
     if(data.debug > 0)
       data.log(1) << "Finished finding forward and backward clouds. Started smoothing";
@@ -212,13 +219,12 @@ public:
         data.log(1) << "Sampling states of previous and next state";
 
       cloud new_cloud = importance_dens::sample_smooth(
-        data, *fw_cloud, fw_idx, *bw_cloud, bw_idx, t);
+        dens_calc, data, *fw_cloud, fw_idx, *bw_cloud, bw_idx, t);
 
       /* update weight */
       if(data.debug > 0)
         data.log(1) << "Weighting particles";
       {
-          densities dens_calc = densities();
           double max_weight = -std::numeric_limits<double>::max();
           arma::uvec r_set = get_risk_set(data, t);
           unsigned int n_elem = new_cloud.size();
@@ -228,17 +234,18 @@ public:
           for(unsigned int i = 0; i < n_elem; ++i){
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
-              dens_calc.log_prob_y_given_state(data, it->get_state(), t, r_set, false);
+              dens_calc.log_prob_y_given_state(
+                data, it->get_state(), t, r_set, false);
             double log_prob_state_given_previous =
               dens_calc.log_prob_state_given_previous(
                 data, it->get_state(), it->parent->get_state(), t);
             double log_prob_next_given_state =
-              dens_calc.log_prob_state_given_previous(
-                /* notice different order and t + 1*/
-                data, it->child->get_state(), it->get_state(), t + 1);
+              dens_calc.log_prob_state_given_next(
+                data, it->get_state(), it->child->get_state(), t);
             double log_importance_dens = it->log_importance_dens;
             double log_artificial_prior = // TODO: have already been computed
-              dens_calc.log_artificial_prior(data, *it->child /* note child */, t + 1 /* note t + 1 */);
+              dens_calc.log_artificial_prior(
+                *it->child /* note child */, t + 1 /* note t + 1 */);
 
             it->log_unnormalized_weight = it->log_weight =
               /* nominator */
@@ -319,21 +326,18 @@ public:
       unsigned int n_elem_fw = fw_cloud->size();
       unsigned int n_elem_bw = bw_cloud->size();
 
-      std::vector<smoother_output::particle_pairs>
-        new_trans_like(n_elem_bw);
+      std::vector<smoother_output::particle_pairs> new_trans_like(n_elem_bw);
       cloud new_cloud(n_elem_bw);
 
 #ifdef _OPENMP
 #pragma omp parallel
 {
 #endif
-
-      densities dens_calc = densities();
-
+      densities dens_calc = densities(data);
 #ifdef _OPENMP
 #pragma omp for schedule(static)
 #endif
-      for(unsigned int i = 0; i < n_elem_bw; ++i){
+      for(unsigned int i = 0; i < n_elem_bw; ++i){ // loop over bw particle
         particle &bw_particle = (*bw_cloud)[i];
         smoother_output::particle_pairs pf_pairs;
         pf_pairs.transition_pairs.reserve(is_first_period ? 1 : n_elem_fw);
@@ -343,7 +347,8 @@ public:
           double log_like_transition = dens_calc.log_prob_state_given_previous(
             data, bw_particle.get_state(), data.a_0, t);
 
-            pf_pairs.transition_pairs.emplace_back(nullptr, log_like_transition);
+            pf_pairs.transition_pairs.emplace_back(
+              nullptr, log_like_transition);
             max_weight_inner = MAX(max_weight_inner, log_like_transition);
 
         } else {
@@ -361,7 +366,7 @@ public:
           }
         }
 
-        //  compute log sum of logs and normalize weights on transition_pairs
+        //  compute log sum of logs and normalize weights of transition_pairs
         double this_log_weight;
         {
           auto tmp =
@@ -372,33 +377,25 @@ public:
         }
 
         // add pairs
-#ifdef _OPENMP
+//#ifdef _OPENMP
 // Locks should not be needed. See https://stackoverflow.com/a/13955871
 // #pragma omp critical(smoother_lock_brier_one)
 // {
-#endif
+//#endif
         new_trans_like[i] = std::move(pf_pairs);
-#ifdef _OPENMP
+//#ifdef _OPENMP
 // }
-#endif
+//#endif
 
         double log_artificial_prior = // TODO: have already been computed
-          dens_calc.log_artificial_prior(data, bw_particle, t);
+          dens_calc.log_artificial_prior(bw_particle, t);
 
         // add likelihood from BW particle
         this_log_weight += bw_particle.log_weight - log_artificial_prior;
 
         // add particle to smooth cloud with weight
-#ifdef _OPENMP
-// Locks should not be needed. See https://stackoverflow.com/a/13955871
-// #pragma omp critical(smoother_lock_brier_two)
-// {
-#endif
         particle &new_p = new_cloud.set_particle(i, bw_particle.get_state());
         new_p.log_unnormalized_weight = new_p.log_weight = this_log_weight;
-#ifdef _OPENMP
-// }
-#endif
 
 #ifdef _OPENMP
 #pragma omp critical(smoother_lock_brier_three)
@@ -408,7 +405,7 @@ public:
 #ifdef _OPENMP
 }
 #endif
-      }
+      } // end loop over bw particle
 #ifdef _OPENMP
 } // end omp parallel
 #endif

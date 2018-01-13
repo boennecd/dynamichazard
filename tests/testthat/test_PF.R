@@ -68,6 +68,8 @@ test_that("PF_smooth gives same results", {
     m = numeric(length(a_0)),
     Q_0 = Q_0,
 
+    fixed_parems = numeric(),
+
     Q = Q,
     a_0 = a_0,
 

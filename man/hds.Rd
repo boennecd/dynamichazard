@@ -53,8 +53,7 @@ SMART 9 (Drive life in hours) reported a value that would make a drive 10+
 years old, which was not possible. In other words, it’s a good idea to have
 bounds checks when you process the data."
 
-Last value carried forward have been used for all covariates. See this
-github page for the processing steps
+See this github page for the processing steps
 \url{https://github.com/boennecd/backblaze_survival_analysis_prep}.
 }
 \keyword{datasets}

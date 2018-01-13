@@ -17,10 +17,24 @@
       Computes log(P(y | alpha_t))
     log_prob_state_given_previous
       Computes log(P(alpha_t | alpha_{t - 1}))
+    log_prob_state_given_next
+      Computes log(P(alpha_t | alpha_{t + 1}))
     log_artificial_prior
       Returns the log density of of artificial prior gamma_t(alpha_t)
     get_artificial_prior_covar
       Returns the artificial prior covariance matrix at time t
+    get_artificial_prior_covar_state_dim
+      Returns
+        P_t = \left\{
+           \begin{matrix}
+              R Q R^\top & t = 0 \\
+              F P_{t-1} F^\top + R Q R^\top & t > 0
+           \end{matrix}
+        \right.
+    get_artificial_prior_mean
+      Returns the artificial prior mean at time t
+    get_artificial_prior_mean_state_dim
+      Returns m_t = F^t a_0
     d_log_like
       Returns the first deriative of the log likelihood given outcome and the
       state for a given individual
@@ -29,26 +43,38 @@
 */
 
 /*
-  Class for binary outcomes with the logistic link function where state vectors
-  follows a first order random walk
+  base densinty class w/ template density functions
 */
 template<class outcome_dens>
-class first_order_random_walk_base {
+class pf_dens_base {
   using uword = arma::uword;
-  using chol_map = std::map<uword /* time */, const arma::mat /* inv chol cov matrix */>;
-  chol_map Q_t_chol_inv;
+  using time_mat_map = std::map<uword /* time */, const arma::mat>;
 
-  const arma::mat& get_Q_t_chol_inv(const PF_data &data, arma::uword t){
+  /* Maybe checkout this pot regarding thread safty of std::map
+   *   https://stackoverflow.com/q/8234633/5861244
+   * As of 11/01/2018 all threads will only need the same element t at the same
+   * time. Thus, we just need a lock so the first threat adds the element to
+   * start with and we should not have any issues from that point of         */
+  time_mat_map Q_t_chol_inv;
+  time_mat_map P_t;
+  std::map<uword /* time */, const arma::vec> m_t;
+
+  const PF_data &data_;
+
+  // TODO: change to pointers to avoid copies
+  const arma::mat& get_Q_t_chol_inv(uword t){
 #ifdef _OPENMP
 #pragma omp critical(get_Q_t_chol_inv_lock)
 {
 #endif
-    if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end()){
-      Q_t_chol_inv.insert(std::make_pair(
-          t,
-          arma::inv(arma::trimatu(arma::chol(get_artificial_prior_covar(
-            data, t))))));
-    }
+  if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end()){
+    Q_t_chol_inv.insert(std::make_pair(
+        t,
+        arma::inv(
+          arma::trimatu(
+            arma::chol(
+              get_artificial_prior_covar(t))))));
+  }
 #ifdef _OPENMP
 }
 #endif
@@ -57,14 +83,19 @@ class first_order_random_walk_base {
   }
 
 public:
+  pf_dens_base(const PF_data &data): data_(data) {};
+
+  /* static member functions */
   static double log_prob_y_given_state(
       const PF_data &data, const particle &p, int t){
     return(log_prob_y_given_state(data, p.get_state(), t));
   }
 
-  static double log_prob_y_given_state
-  (const PF_data &data, const arma::vec &coefs,
-   int t, arma::uvec &r_set, const bool multithreaded = true){
+  static double log_prob_y_given_state(
+      const PF_data &data, const arma::vec &state,
+      int t, arma::uvec &r_set, const bool multithreaded = true){
+    const arma::vec coefs = data.lp_map(state).sv;
+
     double bin_start, bin_stop;
     if(outcome_dens::uses_at_risk_length){
       auto tmp = get_bin_times(data, t);
@@ -105,6 +136,10 @@ public:
       auto &job = jobs[i];
       arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
       arma::vec eta =  get_linear_product(coefs, data.X, my_r_set);
+      if(data.any_fixed_in_M_step)
+        eta +=
+          get_linear_product(data.fixed_parems, data.fixed_terms, my_r_set);
+
       const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
       if(outcome_dens::uses_at_risk_length){
@@ -117,7 +152,7 @@ public:
       auto it_start = starts.begin();
       auto it_stops = stops.begin();
       unsigned int n = eta.n_elem;
-      for(arma::uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
+      for(uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
         double at_risk_length = 0;
         if(outcome_dens::uses_at_risk_length){
           at_risk_length = get_at_risk_length(
@@ -156,33 +191,99 @@ public:
                   << " with " << r_set.n_elem << " observations. "
                   << "The log likelihood is " << log_like
                   << " and the state is:" << std::endl
-                  << coefs.t();
+                  << state.t();
     }
 
     return log_like;
   }
 
-  static double log_prob_y_given_state
-  (const PF_data &data, const arma::vec &coefs,
-   int t, const bool multithreaded = true){
+  static double
+  log_prob_y_given_state(
+    const PF_data &data, const arma::vec &state,
+    int t, const bool multithreaded = true){
     arma::uvec r_set = get_risk_set(data, t);
 
-    return log_prob_y_given_state(data, coefs, t, r_set, multithreaded);
+    return log_prob_y_given_state(data, state, t, r_set, multithreaded);
   }
 
   static double log_prob_state_given_previous(
-      const PF_data &data, const arma::vec state, const arma::vec previous_state, int t){
-    return(dmvnrm_log(state, previous_state, data.Q.chol_inv));
+      const PF_data &data, const arma::vec state,
+      arma::vec previous_state, int t){
+    return(dmvnrm_log(
+        data.err_state_map_inv(state).sv,
+        data.err_state_map_inv(
+          data.state_trans_map    (previous_state).sv).sv,
+        data.Q.chol_inv));
   }
 
-  double log_artificial_prior(
-      const PF_data &data, const particle &p, int t){
-    return(dmvnrm_log(p.get_state(), data.a_0 /* note a_o */, get_Q_t_chol_inv(data, t)));
+  static double log_prob_state_given_next(
+      const PF_data &data, const arma::vec state,
+      arma::vec next_state, int t){
+    return(dmvnrm_log(
+        data.err_state_map_inv(state).sv,
+        data.err_state_map_inv(
+          data.state_trans_map_inv(    next_state).sv).sv,
+        data.Q.chol_inv));
   }
 
-  static arma::mat get_artificial_prior_covar(
-      const PF_data &data, int t){
-    return data.Q.mat * (t + 1);
+  /* non-static member functions*/
+  double log_artificial_prior(const particle &p, int t){
+    return(dmvnrm_log(
+        data_.err_state_map_inv(p.get_state()).sv,
+        get_artificial_prior_mean(t),
+        get_Q_t_chol_inv(t)));
+  }
+
+  // TODO: change to pointers to avoid copies
+  const arma::mat& get_artificial_prior_covar_state_dim(uword t){
+#ifdef _OPENMP
+#pragma omp critical(get_P_t_lock)
+{
+#endif
+  if(P_t.find(t) == P_t.end()){
+    arma::mat new_terms(data_.err_state_map(data_.Q.mat).sv);
+    arma::mat out(new_terms);
+    for(uword i = 1; i <= t; ++i){
+      out = new_terms + data_.state_trans_map(out).sv;
+
+      P_t.insert(std::make_pair(i, out));
+    }
+  }
+#ifdef _OPENMP
+}
+#endif
+
+    return P_t[t];
+  }
+
+  arma::mat get_artificial_prior_covar(uword t){
+    return data_.err_state_map_inv(
+      get_artificial_prior_covar_state_dim(t)).sv;
+  }
+
+  // TODO: change to pointers to avoid copies
+  const arma::vec& get_artificial_prior_mean_state_dim(uword t){
+#ifdef _OPENMP
+#pragma omp critical(get_m_t_lock)
+{
+#endif
+  if(m_t.find(t) == m_t.end()){
+    arma::vec out(data_.a_0);
+    for(uword i = 1; i <= t; ++i){
+      out = data_.state_trans_map(out).sv;
+
+      m_t.insert(std::make_pair(i, out));
+    }
+  }
+#ifdef _OPENMP
+}
+#endif
+
+    return m_t[t];
+  }
+
+  arma::vec get_artificial_prior_mean(uword t){
+    return data_.err_state_map_inv(get_artificial_prior_mean_state_dim(t)).sv;
   }
 };
 
@@ -192,15 +293,21 @@ public:
 */
 
 class logistic_dens :
-  public first_order_random_walk_base<logistic>,
-  public logistic {};
+  public pf_dens_base<logistic>,
+  public logistic {
+public:
+  using pf_dens_base<logistic>::pf_dens_base;
+};
 
 /*
   Class for exponentially distributed arrival times where state vectors follows
   a first order random walk
 */
 class exponential_dens :
-  public first_order_random_walk_base<exponential>,
-  public exponential {};
+  public pf_dens_base<exponential>,
+  public exponential {
+public:
+  using pf_dens_base<exponential>::pf_dens_base;
+};
 
 #endif
