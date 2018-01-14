@@ -51,7 +51,7 @@ arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs){
 
 // --------------------------------------- //
 
-arma::mat mvrnorm(const int m, const arma::vec mu, const arma::mat sigma_chol){
+arma::mat mvrnorm(const int m, const arma::mat &sigma_chol){
   const int n = sigma_chol.n_cols;
 
   Rcpp::NumericVector rng_draw = Rcpp::rnorm(m * n);
@@ -65,10 +65,19 @@ arma::mat mvrnorm(const int m, const arma::vec mu, const arma::mat sigma_chol){
     sigma_chol.memptr() /* A */, &n /* LDA */,
     Y.memptr() /* B */, &m /* LDB */);
 
-  return arma::repmat(mu, 1, m) + Y.t();
+  return Y.t();
 }
 
-arma::vec mvrnorm(const arma::vec mu, const arma::mat sigma_chol){
+arma::mat mvrnorm(
+    const int m, const arma::vec &mu, const arma::mat &sigma_chol){
+  return arma::repmat(mu, 1, m) + mvrnorm(m, sigma_chol);
+}
+
+arma::vec mvrnorm(const arma::vec &mu, const arma::mat &sigma_chol){
   return mvrnorm(1, mu, sigma_chol).col(0);
+}
+
+arma::vec mvrnorm(const arma::mat &sigma_chol){
+  return mvrnorm(1, sigma_chol).col(0);
 }
 

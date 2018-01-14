@@ -45,7 +45,7 @@ public:
       U = arma::mat(org.covar_dim, org.covar_dim);
 
       z_dot = arma::mat(
-        org.space_dim, // TODO: can be changed to dimension of covariates
+        org.state_dim, // TODO: can be changed to dimension of covariates
         n_in_last_set, arma::fill::zeros);
       H_diag_inv = arma::vec(n_in_last_set);
     }
@@ -115,9 +115,7 @@ inline void EKF_filter_worker<T>::operator()(){
   for(arma::uvec::const_iterator it = first; it != last; it++, i++){
     const arma::vec x_(org.X.colptr(*it), org.covar_dim, false);
     const double w = org.weights(*it);
-    const double offset =
-      (org.any_fixed_in_M_step) ?
-      arma::dot(org.fixed_parems, org.fixed_terms.col(*it)) : 0.;
+    const double offset = org.fixed_effects(*it);
     const double eta = arma::dot(dynamic_coefs, x_) + offset;
     const bool do_die = org.is_event_in_bin(*it) == bin_number;
     const double at_risk_length =
@@ -280,7 +278,7 @@ void EKF_solver<T>::solve(){
       auto U = org.lp_map_inv(p_dat->U);
       arma::mat tmp_inv_mat;
       inv(tmp_inv_mat,
-          arma::eye<arma::mat>(org.space_dim, org.space_dim) +
+          arma::eye<arma::mat>(org.state_dim, org.state_dim) +
             U.sv * org.V_t_less_s.slice(t - 1),
           org.use_pinv, "ddhazard_fit_cpp estimation error: Failed to invert intermediate for K_d matrix");
 
@@ -296,7 +294,7 @@ void EKF_solver<T>::solve(){
         p_dat->z_dot  * diagmat(p_dat->H_diag_inv) -  p_dat->K_d;
 
       org.lag_one_cov.slice(t - 1) =
-        (arma::eye<arma::mat>(org.space_dim, org.space_dim) -
+        (arma::eye<arma::mat>(org.state_dim, org.state_dim) -
         p_dat->K_d * p_dat->z_dot.t()) *
         org.state_trans_map(org.V_t_t_s.slice(t - 1), left).sv;
     }

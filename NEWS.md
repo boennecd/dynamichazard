@@ -1,3 +1,6 @@
+# dynamichazard 0.6.0
+* The covariance matrix in `ddhazard` objects are no longer degenrate (e.g., in the case where a second order random walk is used). Instead the dimension is equal to the dimension of the error term.
+
 # dynamichazard 0.5.0
 * Fixed issues with close to equal non-integer stop and start times.
 * Re-factored code to use more generic setup for distribution families.

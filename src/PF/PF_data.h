@@ -144,7 +144,7 @@ public:
 };
 
 // data holder for particle filtering
-class PF_data : public random_walk<problem_data> {
+class PF_data : public problem_data {
 public:
   /* Number of paprticles in forward and/or backward filter */
   const arma::uword N_fw_n_bw;
@@ -187,7 +187,7 @@ public:
           Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
           const unsigned int debug,
           const arma::uword N_first) :
-    random_walk<problem_data>(
+    problem_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, m, Q_0, Q,
       risk_obj, F, n_max, n_threads, fixed_parems),

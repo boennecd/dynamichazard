@@ -29,7 +29,9 @@ arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs);
     http://gallery.rcpp.org/articles/simulate-multivariate-normal/
 */
 
-arma::mat mvrnorm(arma::uword n, const arma::vec mu, const arma::mat sigma_chol);
-arma::vec mvrnorm(const arma::vec mu, const arma::mat sigma_chol);
+arma::mat mvrnorm(const int, const arma::mat&);
+arma::mat mvrnorm(const int, const arma::vec&, const arma::mat&);
+arma::vec mvrnorm(const arma::vec&, const arma::mat&);
+arma::vec mvrnorm(const arma::mat&);
 
 #endif

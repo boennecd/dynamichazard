@@ -60,6 +60,19 @@ using map_res_mat = map_res<arma::subview<double>, arma::mat>;
 
 enum side { left, both, right };
 
+/* problem_data is data holder class. It has some virtual map functions which
+ * can be overwritten for a particular class of problems. The methods are
+ * lp_map and lp_map_inv
+ *   returns e.g., (L alpha, L A L^\top) and (L^\top x, L^\top X L).
+ * err_state_map and err_state_map
+ *   returns e.g., (R epsilon, R Q R^\top) and (R^-1 alpha, R^\top A R)
+ * state_trans_map and state_trans_map_inv
+ *   returns e.g., (F (alpha + m), F A F^\top) and (F^-1(alpha - m),
+ *   F^-1 A (F^top)^-1)
+ *
+ * TODO: deal with non-invertible F cases where L^T L != I and similarly with
+ *       R                                                                   */
+
 class problem_data {
 protected:
   const arma::mat &F_;
@@ -135,13 +148,16 @@ public:
   const int d;
   const Rcpp::List risk_sets;
 
-  const unsigned int space_dim; // dimension of state space vector
+  const unsigned int state_dim; // dimension of state space vector
   const unsigned int covar_dim; // dimension of dynamic covariate vector
   const unsigned int err_dim;   // dimension of state space error term
   const int n_params_state_vec_fixed; // TODO: maybe move to derived class
 
+  /* these are not const due the arma::mat constructor does not allow
+   * copy_aux_mem = false with const pointer. They should not be changed
+   * though...                                                           */
   arma::mat X;
-  arma::mat fixed_terms; // used if fixed terms are estimated in the M-step
+  arma::mat fixed_terms;
 
   const std::vector<double> I_len;
 
@@ -157,6 +173,7 @@ public:
   arma::mat &Q;
   arma::mat &Q_0;
   arma::vec fixed_parems;
+  arma::vec fixed_effects;
 
   problem_data(
     const int n_fixed_terms_in_state_vec,
@@ -184,13 +201,14 @@ public:
     d(Rcpp::as<int>(risk_obj["d"])),
     risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
 
-    space_dim(a_0.size()),
+    state_dim(a_0.size()),
     covar_dim(X.n_rows),
     err_dim(Q.n_cols),
     n_params_state_vec_fixed(n_fixed_terms_in_state_vec),
 
     X(X.begin(), X.n_rows, X.n_cols, false),
-    fixed_terms(fixed_terms.begin(), fixed_terms.n_rows, fixed_terms.n_cols, false),
+    fixed_terms(fixed_terms.begin(), fixed_terms.n_rows,
+                fixed_terms.n_cols, false),
     I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])),
 
     n_threads((n_threads > 0) ? n_threads : std::thread::hardware_concurrency()),
@@ -202,7 +220,11 @@ public:
 
     Q(Q),
     Q_0(Q_0),
-    fixed_parems(fixed_parems)
+    fixed_parems(fixed_parems),
+    fixed_effects(
+      (any_fixed_in_M_step) ?
+                fixed_terms.t() * fixed_parems :
+                arma::vec(X.n_cols, arma::fill::zeros))
   {
 #ifdef _OPENMP
     omp_set_num_threads(n_threads);
@@ -243,26 +265,24 @@ public:
  * for n-th order random walk */
 /* TODO: implement more overrides */
 
-# define RANDOM_WALK_VEC_MAP_TO_STATE(name, span_func)                       \
+# define RANDOM_WALK_VEC_MAP_TO_STATE(name, span_use_ptr)                    \
 map_res_col name(arma::vec &a, ptr_vec &ptr) const override {                \
   if(order() == 1 && !this->any_fixed_in_E_step)                             \
     return map_res_col(a(arma::span::all), ptr);                             \
                                                                              \
-  ptr_vec ptr_new(new arma::vec(this->space_dim, arma::fill::zeros));        \
+  ptr_vec ptr_new(new arma::vec(this->state_dim, arma::fill::zeros));        \
   arma::vec &out = *ptr_new.get();                                           \
-  auto span_use_ptr = span_func();                                           \
   if(span_use_ptr)                                                           \
     out(*span_use_ptr) = a;                                                  \
                                                                              \
   return map_res_col(out(arma::span::all), ptr_new);                         \
 }
 
-# define RANDOM_WALK_VEC_MAP_FROM_STATE(name, span_func)                     \
+# define RANDOM_WALK_VEC_MAP_FROM_STATE(name, span_use_ptr)                  \
 map_res_col name(arma::vec &a, ptr_vec &ptr) const override {                \
   if(order() == 1 && !this->any_fixed_in_E_step)                             \
     return map_res_col(a(arma::span::all), ptr);                             \
                                                                              \
-  auto span_use_ptr = span_func();                                           \
   if(!span_use_ptr){                                                         \
     ptr_vec ptr_new(new arma::vec());                                        \
     return map_res_col((*ptr_new)(arma::span::all), ptr_new);                \
@@ -271,7 +291,7 @@ map_res_col name(arma::vec &a, ptr_vec &ptr) const override {                \
   return map_res_col(a(*span_use_ptr), ptr);                                 \
 }
 
-# define RANDOM_WALK_MAT_MAP_FROM_STATE(name, span_func)                   \
+# define RANDOM_WALK_MAT_MAP_FROM_STATE(name, span_use_ptr)                \
 map_res_mat name(const arma::mat &M, side s = both) const override {       \
   if(s != both)                                                            \
     Rcpp::stop("'Side' not implemented");                                  \
@@ -279,7 +299,6 @@ map_res_mat name(const arma::mat &M, side s = both) const override {       \
   if(order() == 1 && !this->any_fixed_in_E_step)                           \
     return map_res_mat(M(arma::span::all, arma::span::all));               \
                                                                            \
-  auto span_use_ptr = span_func();                                         \
   if(!span_use_ptr){                                                       \
     ptr_mat ptr_new(new arma::mat());                                      \
     return map_res_mat(                                                    \
@@ -289,7 +308,7 @@ map_res_mat name(const arma::mat &M, side s = both) const override {       \
   return map_res_mat(M(*span_use_ptr, *span_use_ptr));                     \
 }
 
-# define RANDOM_WALK_MAT_MAP_TO_STATE(name, span_func)                     \
+# define RANDOM_WALK_MAT_MAP_TO_STATE(name, span_use_ptr)                  \
 map_res_mat name(const arma::mat &M, side s = both) const override {       \
   if(s != both)                                                            \
     Rcpp::stop("'Side' not implemented");                                  \
@@ -297,9 +316,8 @@ map_res_mat name(const arma::mat &M, side s = both) const override {       \
     return map_res_mat(M(arma::span::all, arma::span::all));               \
                                                                            \
   ptr_mat ptr(                                                             \
-      new arma::mat(this->space_dim, this->space_dim, arma::fill::zeros)); \
+      new arma::mat(this->state_dim, this->state_dim, arma::fill::zeros)); \
   arma::mat &out = *ptr.get();                                             \
-  auto span_use_ptr = span_func();                                         \
   if(span_use_ptr)                                                         \
     out(*span_use_ptr, *span_use_ptr) = M;                                 \
                                                                            \
@@ -309,11 +327,12 @@ map_res_mat name(const arma::mat &M, side s = both) const override {       \
 template<class T>
 class random_walk : public T {
   /* Use std::unique_ptr as Armadillo does not have an "empty" span. A null
-   * pointer means empty.
-   * TODO: make private object once and avoid function calls                */
-  std::unique_ptr<arma::span> span_current_cov() const {
+   * pointer means empty.                                                   */
+  const std::unique_ptr<arma::span> span_current_cov {
+    get_span_current_cov() };
+  std::unique_ptr<arma::span> get_span_current_cov() const {
     std::unique_ptr<arma::span> out;
-    int b = (this->space_dim - this->n_params_state_vec_fixed) / order() +
+    int b = (this->state_dim - this->n_params_state_vec_fixed) / order() +
       this->n_params_state_vec_fixed - 1;
     if(b >= 0 && (this->any_dynamic || this->any_fixed_in_E_step))
       out.reset(new arma::span(0, b));
@@ -321,9 +340,11 @@ class random_walk : public T {
     return out;
   }
 
-  std::unique_ptr<arma::span> span_current_cov_varying_only() const {
+  const std::unique_ptr<arma::span> span_current_cov_varying_only {
+    get_span_current_cov_varying_only() };
+  std::unique_ptr<arma::span> get_span_current_cov_varying_only() const {
     std::unique_ptr<arma::span> out;
-    int b = (this->space_dim - this->n_params_state_vec_fixed) / order() - 1;
+    int b = (this->state_dim - this->n_params_state_vec_fixed) / order() - 1;
     if(b >= 0 && this->any_dynamic)
       out.reset(new arma::span(0, b));
 
@@ -344,7 +365,7 @@ public:
 
   /* particular class function */
   unsigned int order() const {
-    unsigned int numerator = this->space_dim - this->n_params_state_vec_fixed;
+    unsigned int numerator = this->state_dim - this->n_params_state_vec_fixed;
     if(numerator == 0)
       return 1;
 
@@ -452,15 +473,15 @@ public:
       Rcpp::Rcout << "Using " << n_threads << " threads" << std::endl;
 
     if(any_dynamic || any_fixed_in_E_step){
-      a_t_t_s = arma::mat(space_dim, d + 1);
-      a_t_less_s = arma::mat(space_dim, d);
-      V_t_t_s = arma::cube(space_dim, space_dim, d + 1);
-      V_t_less_s = arma::cube(space_dim, space_dim, d);
-      B_s = arma::cube(space_dim, space_dim, d);
+      a_t_t_s = arma::mat(state_dim, d + 1);
+      a_t_less_s = arma::mat(state_dim, d);
+      V_t_t_s = arma::cube(state_dim, state_dim, d + 1);
+      V_t_less_s = arma::cube(state_dim, state_dim, d);
+      B_s = arma::cube(state_dim, state_dim, d);
 
       a_t_t_s.col(0) = a_0;
 
-      lag_one_cov = arma::cube(space_dim, space_dim, d);
+      lag_one_cov = arma::cube(state_dim, state_dim, d);
     }
   }
 

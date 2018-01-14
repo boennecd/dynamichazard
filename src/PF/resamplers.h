@@ -151,9 +151,9 @@ public:
 
       } else {
         arma::vec mean =
-          P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state());
-        mean = data.err_state_map_inv(mean).sv + a_0_mean_term;
-        log_prop_transition = dmvnrm_log(*it_mu_j, mean, Q_use->chol_inv);
+          P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state()) + a_0_mean_term;
+        log_prop_transition = dmvnrm_log(
+          *it_mu_j, data.err_state_map_inv(mean).sv, Q_use->chol_inv);
 
       }
 
@@ -243,9 +243,9 @@ public:
 
       } else {
         arma::vec mean =
-          P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state());
-        mean = data.err_state_map_inv(mean).sv + a_0_mean_term;
-        log_prop_transition = dmvnrm_log(it_ans->mu, mean, Q_use->chol_inv);
+          P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state()) + a_0_mean_term;
+        log_prop_transition = dmvnrm_log(
+          it_ans->mu, data.err_state_map_inv(mean).sv, Q_use->chol_inv);
 
       }
 

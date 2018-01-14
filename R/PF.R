@@ -121,6 +121,9 @@ PF_EM <- function(
 
   #####
   # set control variables
+
+  # TODO: move seperate function and remove arguments that are not used by cpp
+  #       cpp code
   control_default <- list(
     eps = 1e-2,
     forward_backward_ESS_threshold = NULL,

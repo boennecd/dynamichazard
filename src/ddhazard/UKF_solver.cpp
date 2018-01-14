@@ -36,12 +36,12 @@ void UKF_solver_Org::solve(){
       event_time += delta_t;
 
       // Update sigma pooints
-      compute_sigma_points(p_dat.a_t_t_s.unsafe_col(t - 1),
+      compute_sigma_points(p_dat.a_t_t_s.col(t - 1),
                            sigma_points, p_dat.V_t_t_s.slice(t - 1));
 
       // E-step: Filter step
       // First we compute the mean
-      p_dat.a_t_less_s.col(t - 1) = w_0 * sigma_points.unsafe_col(0) +
+      p_dat.a_t_less_s.col(t - 1) = w_0 * sigma_points.col(0) +
         w_i * arma::sum(sigma_points.cols(1, sigma_points.n_cols - 1), 1);
 
       // Then the variance
@@ -50,8 +50,8 @@ void UKF_solver_Org::solve(){
         const double &w = i == 0 ? w_0 : w_i;
 
         p_dat.V_t_less_s.slice(t - 1) +=
-          (w * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
-          (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1)).t();
+          (w * (sigma_points.col(i) - p_dat.a_t_less_s.col(t - 1))) *
+          (sigma_points.col(i) - p_dat.a_t_less_s.col(t - 1)).t();
       }
 
       // Re-generate
@@ -67,20 +67,20 @@ void UKF_solver_Org::solve(){
       Z_t.for_each([](arma::mat::elem_type &val) { val = val / (1 + val); });
 
       // Compute y_bar, P_a_v and P_v_v
-      const arma::vec y_bar = w_0 * Z_t.unsafe_col(0) +
+      const arma::vec y_bar = w_0 * Z_t.col(0) +
         w_i * arma::sum(Z_t.cols(1, Z_t.n_cols - 1), 1);
 
-      arma::mat P_a_v = (w_0 * (sigma_points.unsafe_col(0) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
-        (Z_t.unsafe_col(0) - y_bar).t();
+      arma::mat P_a_v = (w_0 * (sigma_points.col(0) - p_dat.a_t_less_s.col(t - 1))) *
+        (Z_t.col(0) - y_bar).t();
 
-      arma::mat P_v_v = (w_0 * (Z_t.unsafe_col(0) - y_bar)) * (Z_t.unsafe_col(0) - y_bar).t() +
-        arma::diagmat(w_0 * Z_t.unsafe_col(0) % (1 - Z_t.unsafe_col(0)));
+      arma::mat P_v_v = (w_0 * (Z_t.col(0) - y_bar)) * (Z_t.col(0) - y_bar).t() +
+        arma::diagmat(w_0 * Z_t.col(0) % (1 - Z_t.col(0)));
 
       for(arma::uword i = 1; i < sigma_points.n_cols; ++i){
-        P_a_v += (w_i * (sigma_points.unsafe_col(i) - p_dat.a_t_less_s.unsafe_col(t - 1))) *
-          (Z_t.unsafe_col(i) - y_bar).t();
-        P_v_v += (w_i * (Z_t.unsafe_col(i) - y_bar)) * (Z_t.unsafe_col(i) - y_bar).t() +
-          arma::diagmat(w_i * Z_t.unsafe_col(i) % (1 - Z_t.unsafe_col(i)));
+        P_a_v += (w_i * (sigma_points.col(i) - p_dat.a_t_less_s.col(t - 1))) *
+          (Z_t.col(i) - y_bar).t();
+        P_v_v += (w_i * (Z_t.col(i) - y_bar)) * (Z_t.col(i) - y_bar).t() +
+          arma::diagmat(w_i * Z_t.col(i) % (1 - Z_t.col(i)));
       }
 
       P_v_v.diag() += p_dat.denom_term;
@@ -88,7 +88,7 @@ void UKF_solver_Org::solve(){
       // Compute new estimates
       inv_sympd(P_v_v, P_v_v, p_dat.use_pinv, "ddhazard_fit_cpp estimation error: Failed to invert P_v_v");
 
-      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.unsafe_col(t - 1) +
+      p_dat.a_t_t_s.col(t) = p_dat.a_t_less_s.col(t - 1) +
         P_a_v * (P_v_v * ((p_dat.is_event_in_bin(r_set) == t - 1) - y_bar));
 
       p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) - P_a_v * P_v_v * P_a_v.t();
@@ -183,17 +183,12 @@ void UKF_solver_New<T>::compute_sigma_points(
   s_points.col(0) = a_t;
   for(arma::uword i = 1; i < s_points.n_cols; ++i)
     if(i % 2 == 0)
-      s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2); else
-        s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.unsafe_col((i - 1) / 2);
+      s_points.col(i) = a_t + sqrt_m_lambda * cholesky_decomp.col((i - 1) / 2); else
+        s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.col((i - 1) / 2);
 }
 
 template<class T>
 void UKF_solver_New<T>::solve(){
-  const arma::vec offsets =
-    (p_dat.any_fixed_in_M_step) ?
-    p_dat.fixed_terms.t() * p_dat.fixed_parems :
-    arma::vec(p_dat.X.n_cols, arma::fill::zeros);
-
   double bin_stop = p_dat.min_start;
   for (int t = 1; t < p_dat.d + 1; t++){
     double bin_start = bin_stop;
@@ -233,7 +228,7 @@ void UKF_solver_New<T>::solve(){
       O.col(i) = (p_dat.lp_map(sigma_points.col(i)).sv.t() *
         p_dat.X.cols(r_set)).t();
     }
-    O.each_col() += offsets(r_set);
+    O.each_col() += p_dat.fixed_effects(r_set);
 
     arma::ivec do_die =
       arma::conv_to<arma::ivec>::from(p_dat.is_event_in_bin(r_set) == t - 1);
@@ -293,10 +288,10 @@ void UKF_solver_New<T>::solve(){
 
     // Substract mean to get delta sigma points
     arma::mat delta_sigma_points = sigma_points.each_col()
-      - p_dat.a_t_less_s.unsafe_col(t - 1);
+      - p_dat.a_t_less_s.col(t - 1);
 
     p_dat.a_t_t_s.col(t) =
-      p_dat.a_t_less_s.unsafe_col(t - 1) +
+      p_dat.a_t_less_s.col(t - 1) +
       p_dat.LR * delta_sigma_points * (weights_vec_cc % c_vec);
 
     p_dat.V_t_t_s.slice(t) = p_dat.V_t_less_s.slice(t - 1) -

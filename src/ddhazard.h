@@ -65,8 +65,8 @@ class UKF_solver_Org : public Solver{
     s_points.col(0) = a_t;
     for(arma::uword i = 1; i < s_points.n_cols; ++i)
       if(i % 2 == 0)
-        s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2); else
-          s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.unsafe_col((i - 1) / 2);
+        s_points.col(i) = a_t + sqrt_m_k * cholesky_decomp.col((i - 1) / 2); else
+          s_points.col(i) = a_t - sqrt_m_k * cholesky_decomp.col((i - 1) / 2);
   }
 
 public:

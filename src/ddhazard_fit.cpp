@@ -213,9 +213,9 @@ Rcpp::List ddhazard_fit_cpp(
                   p_data->B_s.slice(t - 1).t();
         }
 
-        p_data->a_t_t_s.col(t) = p_data->a_t_t_s.unsafe_col(t) +
+        p_data->a_t_t_s.col(t) = p_data->a_t_t_s.col(t) +
           p_data->B_s.slice(t) *
-          (p_data->a_t_t_s.unsafe_col(t + 1) - p_data->a_t_less_s.unsafe_col(t));
+          (p_data->a_t_t_s.col(t + 1) - p_data->a_t_less_s.col(t));
         p_data->V_t_t_s.slice(t) = p_data->V_t_t_s.slice(t) +
           p_data->B_s.slice(t) * (p_data->V_t_t_s.slice(t + 1) -
           p_data->V_t_less_s.slice(t)) * p_data->B_s.slice(t).t();
@@ -333,6 +333,9 @@ Rcpp::List ddhazard_fit_cpp(
       } else
         Rcpp::stop("Fixed effects is not implemented for '" + model  +"'");
 
+      // update fixed effects
+      p_data->fixed_effects = p_data->fixed_terms.t() * p_data->fixed_parems;
+
       if(criteria == "delta_coef")
         *(conv_values.end() -1) += conv_criteria(old, p_data->fixed_parems);
 
@@ -343,17 +346,14 @@ Rcpp::List ddhazard_fit_cpp(
       arma::mat varying_only_a = p_data->a_t_t_s; // take copy
       arma::vec fixed_effects_offsets;
 
-      if(p_data->any_fixed_in_M_step){
-        fixed_effects_offsets = p_data->fixed_terms.t() * p_data->fixed_parems;
-
-      } else if(p_data->any_fixed_in_E_step){
+      if(p_data->any_fixed_in_E_step){
         fixed_effects_offsets =
           p_data->X(span_fixed_params, arma::span::all).t() *
           p_data->a_t_t_s(span_fixed_params, arma::span::all).col(0);
         varying_only_a.shed_rows(span_fixed_params.a, span_fixed_params.b);
 
       } else
-        fixed_effects_offsets = arma::vec(p_data->X.n_cols, arma::fill::zeros);
+        fixed_effects_offsets = p_data->fixed_effects;
 
       arma::span span_only_varying(
           0, p_data->covar_dim - p_data->n_params_state_vec_fixed - 1);

@@ -136,9 +136,7 @@ public:
       auto &job = jobs[i];
       arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
       arma::vec eta =  get_linear_product(coefs, data.X, my_r_set);
-      if(data.any_fixed_in_M_step)
-        eta +=
-          get_linear_product(data.fixed_parems, data.fixed_terms, my_r_set);
+      eta += data.fixed_effects(my_r_set);
 
       const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 

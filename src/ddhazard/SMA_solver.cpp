@@ -37,11 +37,6 @@ double SMA<T>::compute_length(
 
 template <class T>
 void SMA<T>::solve(){
-  const arma::vec offsets =
-    (p_dat.any_fixed_in_M_step) ?
-    p_dat.fixed_terms.t() * p_dat.fixed_parems :
-    arma::vec(p_dat.X.n_cols, arma::fill::zeros);
-
   double bin_tstop = p_dat.min_start;
   for (int t = 1; t < p_dat.d + 1; t++){
     const double bin_number = t - 1;
@@ -69,9 +64,9 @@ void SMA<T>::solve(){
 
     // E-step: scoring step
     arma::uvec r_set = get_risk_set(p_dat, t);
-    arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.space_dim, false);
-    arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.space_dim,
-                p_dat.space_dim, false);
+    arma::vec a(p_dat.a_t_t_s.colptr(t), p_dat.state_dim, false);
+    arma::mat V(p_dat.V_t_t_s.slice(t).memptr(), p_dat.state_dim,
+                p_dat.state_dim, false);
     a =  p_dat.a_t_less_s.col(t - 1);
     V = p_dat.V_t_less_s.slice(t - 1);
 
@@ -80,7 +75,7 @@ void SMA<T>::solve(){
 
         arma::vec x_(p_dat.X.colptr(*it), p_dat.covar_dim, false);
         const double w = p_dat.weights(*it);
-        const double offset = offsets(*it);
+        const double offset = p_dat.fixed_effects(*it);
 
         // TODO: is there a BLAS dsymv for non-square but symetric matrix
         // vector product?
@@ -119,7 +114,7 @@ void SMA<T>::solve(){
       for(auto it = r_set.begin(); it != r_set.end(); it++){
         const arma::vec x_(p_dat.X.colptr(*it), p_dat.covar_dim, false);
         const double w = p_dat.weights(*it);
-        const double offset = offsets(*it);
+        const double offset = p_dat.fixed_effects(*it);
 
         tri_mat_times_vec(L_inv, x_, inter_vec, false);
 

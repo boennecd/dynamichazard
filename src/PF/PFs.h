@@ -45,8 +45,7 @@ template<
     template <typename, bool> class T_resampler,
     template <typename, bool> class T_importance_dens,
     class densities,
-    bool is_forward
->
+    bool is_forward>
 class AUX_PF : private PF_base {
   using resampler = T_resampler<densities, is_forward>;
   using importance_dens = T_importance_dens<densities, is_forward>;
@@ -170,8 +169,7 @@ public:
 template<
   template <typename, bool> class T_resampler,
   template <typename, bool> class T_importance_dens,
-  class densities
->
+  class densities>
 class PF_smoother_Fearnhead_O_N : private PF_base {
   using uword = arma::uword;
 
@@ -292,8 +290,7 @@ public:
 template<
   template <typename, bool> class T_resampler,
   template <typename, bool> class T_importance_dens,
-  class densities
->
+  class densities>
 class PF_smoother_Brier_O_N_square : private PF_base {
   using uword = arma::uword;
 
