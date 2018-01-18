@@ -1,5 +1,6 @@
 # dynamichazard 0.6.0
 * The covariance matrix in `ddhazard` objects are no longer degenrate (e.g., in the case where a second order random walk is used). Instead the dimension is equal to the dimension of the error term.
+* The seed argument in `PF_EM` has been moved from the `control` list. Further, there is a `PF_control` which should preferably be used to construct the object for the `control` argument of `PF`.
 
 # dynamichazard 0.5.0
 * Fixed issues with close to equal non-integer stop and start times.

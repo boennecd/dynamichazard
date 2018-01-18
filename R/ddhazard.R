@@ -221,18 +221,17 @@ ddhazard = function(formula, data,
   # Find starting values at time zero
   tmp <- get_start_values(
     formula = formula, data = data, max_T = max_T,
-    X_Y = X_Y, risk_set = risk_set, verbose = verbose,
-    n_threads = control$n_threads, model = model,
+    # TODO: avoid transpose here by transpoing earlier
+    X = t(X_Y$X), fixed_terms = t(X_Y$fixed_terms),
+
+    risk_set = risk_set,
+    verbose = verbose, n_threads = control$n_threads, model = model,
     a_0 = if(missing(a_0)) NULL else a_0,
     order = order,
     fixed_parems_start = control$fixed_parems_start)
 
   a_0 <- tmp$a_0
   control$fixed_parems_start <- tmp$fixed_parems_start
-
-  if(length(a_0) != n_params * order)
-    stop("a_0 does not have the correct length. Its length should be ",
-         n_params * order, " but it has length ", length(a_0))
 
   #####
   # Find matrices for state equation
@@ -245,8 +244,7 @@ ddhazard = function(formula, data,
   list2env(tmp, environment())
 
   if(verbose)
-    report_pre_liminary_stats_before_EM(
-      risk_set = risk_set, X_Y = X_Y)
+    report_pre_liminary_stats_before_EM(risk_set = risk_set, Y = X_Y$Y)
 
   if(control$permu){
     # Permuting is useful for e.g. the SMA
@@ -544,11 +542,11 @@ exp_model_names <- c(
   "exponential", "exp_bin", "exp_clip_time", "exp_clip_time_w_jump")
 
 get_start_values <- function(
-  formula, data, max_T, X_Y, risk_set, verbose = FALSE, n_threads, model,
-  order, a_0 = NULL, fixed_parems_start = NULL){
+  formula, data, max_T, X, fixed_terms, risk_set, verbose = FALSE, n_threads,
+  model, order, a_0 = NULL, fixed_parems_start = NULL){
 
-  n_params = ncol(X_Y$X)
-  n_fixed = ncol(X_Y$fixed_terms)
+  n_params = nrow(X)
+  n_fixed = nrow(fixed_terms)
 
   missing_a_0 <- is.null(a_0) && n_params > 0
   missing_fixed <- is.null(fixed_parems_start) && n_fixed > 0
@@ -570,13 +568,11 @@ get_start_values <- function(
 
   } else {
     glm_func <- function(fam)
-      static_glm(formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
-                 epsilon = sqrt(.Machine$double.eps) * 1e1,
-                 family = fam,
-                 speedglm = FALSE,
-                 only_coef = TRUE, mf = cbind(X_Y$X, X_Y$fixed_terms),
-                 method_use = "parallelglm",
-                 n_threads = n_threads)
+      static_glm(
+        formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
+        epsilon = sqrt(.Machine$double.eps) * 1e1, family = fam,
+        speedglm = FALSE, only_coef = TRUE, mf = cbind(t(X), t(fixed_terms)),
+        method_use = "parallelglm", n_threads = n_threads)
 
     if(model == "logit"){
       coefs = glm_func("binomial")
@@ -589,7 +585,7 @@ get_start_values <- function(
            ". Please, provide intial values for a_0")
 
     is_fixed <-
-      names(coefs) %in% colnames(X_Y$fixed_terms) |
+      names(coefs) %in% rownames(fixed_terms) |
       grepl("^ddFixed_intercept\\(", names(coefs), perl = TRUE)
 
     if(is.null(a_0)){
@@ -612,11 +608,16 @@ get_start_values <- function(
     }
   }
 
+  # check
+  if(length(a_0) != n_params * order)
+    stop("a_0 does not have the correct length. Its length should be ",
+         n_params * order, " but it has length ", length(a_0))
+
   return(list(a_0 = a_0, fixed_parems_start = fixed_parems_start))
 }
 
 report_pre_liminary_stats_before_EM <- function(
-  risk_set, X_Y){
+  risk_set, Y){
   tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
   colnames(tmp_tbl) = c("Risk size", "Num events")
 
@@ -637,7 +638,7 @@ report_pre_liminary_stats_before_EM <- function(
   tmp_tbl[, "Num events"] <- n_events
   tmp_tbl[, "Risk size"] <- unlist(lapply(risk_set$risk_sets, length))
 
-  message("Total number of included events are ", sum(tmp_tbl[, 2]), " of ",   sum(X_Y$Y[, 3]))
+  message("Total number of included events are ", sum(tmp_tbl[, 2]), " of ",   sum(Y[, 3]))
   message("Size of risk set and number of events in each risk set are ([Risk set size]:[# events]):")
 
   tmp_tbl[, 1] <- sprintf("%8s", tmp_tbl[, 1])

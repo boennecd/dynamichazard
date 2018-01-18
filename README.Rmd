@@ -124,7 +124,7 @@ pf_fit <- PF_EM(
   max_T = 19,
   Q = diag(.01, 5),
   Q_0 = diag(1, 5),
-  control = list(
+  control = PF_control(
     # set number of particles
     N_fw_n_bw = 1000, 
     N_first = 10000,
@@ -133,8 +133,7 @@ pf_fit <- PF_EM(
     smoother = "Brier_O_N_square", # Select smoother
     
     eps = .001, 
-    n_max = 20
-    )
+    n_max = 20)
   #, trace = 1 # comment back to get feedback during estimation
   )
 

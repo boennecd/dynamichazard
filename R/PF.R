@@ -1,7 +1,3 @@
-if(getRversion() >= "2.15.1")
-  utils::globalVariables(c(".F", "L", "R", "m"))
-
-
 PF_effective_sample_size <- function(object){
   sapply(object[
     c("forward_clouds", "backward_clouds", "smoothed_clouds")],
@@ -53,7 +49,7 @@ PF_effective_sample_size <- function(object){
 #'  data = .lung, by = 50, id = 1:nrow(.lung),
 #'  Q_0 = diag(1, 3), Q = diag(1, 3),
 #'  max_T = 800,
-#'  control = list(
+#'  control = PF_control(
 #'    N_fw_n_bw = 500,
 #'    N_first = 2500,
 #'    N_smooth = 2500,
@@ -80,13 +76,8 @@ PF_effective_sample_size <- function(object){
 #'cox}
 #' @export
 PF_EM <- function(
-  formula, data,
-  model = "logit",
-  by, max_T, id,
-  a_0, Q_0, Q,
-  order = 1,
-  control = list(),
-  trace = 0){
+  formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
+  control = PF_control(...), trace = 0, seed = .Random.seed, ...){
   #####
   # checks
   if(order != 1)
@@ -101,150 +92,64 @@ PF_EM <- function(
     id = 1:nrow(data)
   }
 
-  is_for_discrete_model <- model == "logit"
+  #####
+  # check if `control` has all the needed elements or if is called as in
+  # version 0.5.1 or earlier
+  if(!all(c(
+    "N_fw_n_bw", "N_smooth", "N_first", "eps",
+    "forward_backward_ESS_threshold", "method", "n_max", "n_threads",
+    "smoother") %in% names(control))){
+    # TODO: remove this warning some time post release 0.5.1
+    warning("Please, use the ", sQuote("PF_control"), " function for the ",
+            sQuote("control"), " argument.")
+    control <- do.call(PF_control, control)
+
+  }
 
   #####
   # find risk set and design matrix
-  tmp <- get_design_matrix_and_risk_obj(
+  static_args <- .get_PF_static_args(
     formula = formula, data = data, by = by,
-    max_T = if(missing(max_T)) NULL else max_T, verbose = trace > 0,
-    is_for_discrete_model = is_for_discrete_model, id = id)
+    max_T = if(missing(max_T)) NULL else max_T, id = id,
+    trace = trace, model, order = order)
 
-  X_Y <- tmp$X_Y
-  n_params <- tmp$n_params
-  n_fixed <- tmp$n_fixed
-  risk_set <- tmp$risk_set
-  rm(tmp)
-
-  if(n_fixed > 0)
+  if(nrow(static_args$fixed_terms) > 0)
     stop("Fixed terms are not supported")
 
   #####
-  # set control variables
-
-  # TODO: move seperate function and remove arguments that are not used by cpp
-  #       cpp code
-  control_default <- list(
-    eps = 1e-2,
-    forward_backward_ESS_threshold = NULL,
-    method = "AUX_normal_approx_w_particles",
-    n_max = 25,
-    N_fw_n_bw = NULL,
-    N_smooth = NULL,
-    N_first = NULL,
-    n_threads = getOption("ddhazard_max_threads"),
-    seed = .Random.seed,
-    smoother = "Fearnhead_O_N")
-
-  if(any(is.na(control_match <- match(names(control), names(control_default)))))
-    stop("These control parameters are not recognized: ",
-         paste0(names(control)[is.na(control_match)], collapse = "\t"))
-
-  control_default[control_match] <- control
-  control <- control_default
-
-  check_n_particles_expr <- function(N_xyz)
-    eval(bquote({
-      if(is.null(control[[.(N_xyz)]]))
-        stop("Please supply the number of particle for ", sQuote(paste0(
-          "control$", .(N_xyz))))
-    }), parent.frame())
-
-  check_n_particles_expr("N_first")
-  check_n_particles_expr("N_fw_n_bw")
-  check_n_particles_expr("N_smooth")
-
-  #####
-  # find starting values at time zero
-  tmp <- get_start_values(
-    formula = formula, data = data, max_T = max_T,
-    X_Y = X_Y, risk_set = risk_set, verbose = trace > 0,
-    n_threads = control$n_threads, model = model,
-    a_0 = if(missing(a_0)) NULL else a_0,
-    order = order,
-    fixed_parems_start = numeric())
-
-  a_0 <- tmp$a_0
-
-  if(length(a_0) != n_params * order)
-    stop("a_0 does not have the correct length. Its length should be ",
-         n_params * order, " but it has length ", length(a_0))
-
-  #####
   # find matrices for state equation
-  tmp <- get_state_eq_matrices(
-    order = order, n_params = n_params, n_fixed = n_fixed,
-    est_fixed_in_E = FALSE,
-    Q_0 = if(missing(Q_0)) NULL else Q_0,
-    Q = if(missing(Q)) NULL else Q,
-    a_0)
-  list2env(tmp, environment())
+  a_0 <- get_start_values(
+    formula = formula, data = data, max_T = max_T, X = static_args$X,
+    fixed_terms = static_args$fixed_terms, risk_set = static_args$risk_obj,
+    verbose = trace > 0, n_threads = control$n_threads, model = model,
+    a_0 = if(missing(a_0)) NULL else a_0, order = order,
+    fixed_parems_start = numeric())$a_0
 
-  if(trace > 0)
-    report_pre_liminary_stats_before_EM(
-      risk_set = risk_set, X_Y = X_Y)
+  model_args <- .get_state_eq_matrices_PF(
+    order = order, n_params = nrow(static_args$X),
+    n_fixed = static_args$n_fixed, Q_0 = if(missing(Q_0)) NULL else Q_0,
+    Q = if(missing(Q)) NULL else Q, a_0 = a_0)
 
-  out <- .PF_EM(
-    n_fixed_terms_in_state_vec = 0,
-    X = t(X_Y$X),
-    fixed_terms = t(X_Y$fixed_terms),
-    tstart = X_Y$Y[, 1],
-    tstop = X_Y$Y[, 2],
-    Q_0 = Q_0,
-    Q = Q,
-    a_0 = a_0,
-    .F = .F, L = L, R = R, m = m,
-    risk_obj = risk_set,
-    n_max = control$n_max,
-    n_threads = control$n_threads,
-    N_fw_n_bw = control$N_fw_n_bw,
-    N_smooth = control$N_smooth,
-    N_first = control$N_first,
-    forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
-    trace = trace,
-    method = control$method,
-    eps = control$eps,
-    seed = control$seed,
-    smoother = control$smoother,
-    model = model)
+  out <- do.call(.PF_EM, c(static_args, model_args, control, list(
+    trace = trace, seed = seed, fixed_parems = numeric())))
 
   out$call <- match.call()
   out
 }
 
 .PF_EM <- function(
-  n_fixed_terms_in_state_vec,
-  X,
-  fixed_terms,
-  tstart,
-  tstop,
-  Q_0,
-  Q,
-  a_0,
-  .F, L, R, m,
-  risk_obj,
-  n_max,
-  n_threads,
-  N_fw_n_bw,
-  N_smooth,
-  N_first,
-  eps,
-  forward_backward_ESS_threshold = NULL,
-  trace = 0,
-  method = "AUX_normal_approx_w_particles",
-  seed = NULL,
-  smoother,
-  model){
+  n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, Q_0, Q, a_0, .F,
+  L, R, m, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
+  forward_backward_ESS_threshold = NULL, debug = 0, trace,
+  method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
+  fixed_parems){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
   fit_call[[1]] <- as.name("PF_smooth")
   fit_call[["Q_tilde"]] <- bquote(diag(0, .(n_vars)))
   fit_call[["F"]] <- fit_call[[".F"]]
-  fit_call[["debug"]] <- max(0, trace - 1)
-  fit_call[c("trace", "eps", "seed", ".F")] <- NULL
-  fit_call[["fixed_parems"]] <- numeric()
-  fit_call[["fixed_terms"]] <- matrix(nrow = 0, ncol = ncol(X))
+  fit_call[c("eps", "seed", ".F", "trace")] <- NULL
 
   if(is.null(seed))
     seed <- .Random.seed
@@ -286,7 +191,8 @@ PF_EM <- function(
     a_0_old <- eval(fit_call$a_0, environment())
     Q_old <- eval(fit_call$Q, environment())
 
-    sum_stats <- compute_summary_stats(clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0)
+    sum_stats <- compute_summary_stats(
+      clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0)
     a_0 <- drop(sum_stats[[1]]$E_xs)
     Q <- matrix(0., length(a_0), length(a_0))
     for(j in 1:length(sum_stats))
@@ -339,3 +245,61 @@ PF_EM <- function(
     class = "PF_EM"))
 }
 
+#' @export
+PF_control <- function(
+  N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
+  eps = 1e-2, forward_backward_ESS_threshold = NULL,
+  method = "AUX_normal_approx_w_particles", n_max = 25,
+  n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N"){
+  control <- list(
+    N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
+    forward_backward_ESS_threshold = forward_backward_ESS_threshold,
+    method = method, n_max = n_max, n_threads = n_threads, smoother = smoother)
+
+  check_n_particles_expr <- function(N_xyz)
+    eval(bquote({
+      if(is.null(control[[.(N_xyz)]]))
+        stop("Please supply the number of particle in ", sQuote(paste0(
+          "PF_control(", .(N_xyz), ")")))
+    }), parent.frame())
+
+  check_n_particles_expr("N_first")
+  check_n_particles_expr("N_fw_n_bw")
+  check_n_particles_expr("N_smooth")
+
+  return(control)
+}
+
+
+.get_PF_static_args <- function(
+  formula, data, by, max_T = NULL, id, trace, model,
+  order){
+  # get design matrix and risk set
+  tmp <- get_design_matrix_and_risk_obj(
+    formula = formula, data = data, by = by,
+    max_T = if(is.null(max_T)) NULL else max_T, verbose = trace > 0,
+    is_for_discrete_model = model == "logit", id = id)
+
+  if(trace > 0)
+    report_pre_liminary_stats_before_EM(
+      risk_set = tmp$risk_set, X_Y = tmp$X_Y$Y)
+
+  # tranpose due to column-major storage and we want to look up individuals
+  tmp$X_Y$X           <- t(tmp$X_Y$X)
+  tmp$X_Y$fixed_terms <- t(tmp$X_Y$fixed_terms)
+
+  with(tmp, list(
+    n_fixed_terms_in_state_vec = 0, X = X_Y$X, fixed_terms = X_Y$fixed_terms,
+    tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], risk_obj = risk_set,
+    debug = max(0, trace - 1), model = model))
+}
+
+.get_state_eq_matrices_PF <- function(order, n_params, n_fixed, Q_0, Q, a_0){
+  call. <- match.call()
+  call.[["est_fixed_in_E"]] <- FALSE
+  call.[[1]] <- quote(get_state_eq_matrices)
+  out <- eval(call., envir = parent.frame())
+  out$indicies_fix <- NULL
+
+  out
+}

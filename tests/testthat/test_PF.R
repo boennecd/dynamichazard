@@ -280,22 +280,13 @@ test_that("PF_EM stops with correct error messages due to wrong or missing argum
   args$model <- "logit"
   expect_error(
     do.call(PF_EM, args), paste0(
+      "Please supply the number of particle in ",
+      sQuote("PF_control(N_first)")), fixed = TRUE)
+
+  args$control <- PF_control(N_fw_n_bw = 1, N_smooth = 1, N_first = 1)
+  expect_error(
+    do.call(PF_EM, args), paste0(
       "Fixed terms are not supported"))
-
-  args$formula <- survival::Surv(start, stop, event) ~ group
-  expect_error(
-    do.call(PF_EM, args), paste0(
-      "Please supply the number of particle for ", sQuote("control\\$N_first")))
-
-  args$control <- list(N_first = 1e3)
-  expect_error(
-    do.call(PF_EM, args), paste0(
-      "Please supply the number of particle for ", sQuote("control\\$N_fw_n_bw")))
-
-  args$control <- c(args$control, list(N_fw_n_bw = 1e3))
-  expect_error(
-    do.call(PF_EM, args), paste0(
-      "Please supply the number of particle for ", sQuote("control\\$N_smooth")))
 })
 
 test_that("PF_EM gives previous results on head neck data set", {
@@ -316,14 +307,14 @@ test_that("PF_EM gives previous results on head neck data set", {
       these_args$control <- c(these_args$control, smoother = .(smoother))
 
       set.seed(98612415)
-      result <- suppressWarnings( # Supressed as there is a warning about not converging
+      # Supressed as there is a warning about not converging
+      result <- suppressWarnings(
         do.call(PF_EM, these_args))
 
       #####
       # Test that result are reproducable
       r2 <- result$call
-      r2[["control"]] <- c(eval(r2$control, environment()),
-                           list(seed = result$seed))
+      r2[["seed"]] <- result$seed
       r2  <- suppressWarnings(eval(r2, environment()))
 
       result$call <- NULL

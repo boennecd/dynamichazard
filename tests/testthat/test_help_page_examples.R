@@ -136,12 +136,12 @@ test_that("PF_EM help page example runs and gives previous computed results", {
     data = .lung, by = 50, id = 1:nrow(.lung),
     Q_0 = diag(1, 3), Q = diag(1, 3),
     max_T = 800,
-    control = list(
+    control = PF_control(
       N_fw_n_bw = 500,
       N_first = 2500,
       N_smooth = 2500,
       n_max = 50,
-      n_threads = parallel::detectCores()))
+      n_threads = max(parallel::detectCores(), 2)))
 
   .file <- "local_tests/survival_lung_example"
   # save_to_test(pf_fit[names(pf_fit) != "call"], .file)

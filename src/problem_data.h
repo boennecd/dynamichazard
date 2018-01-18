@@ -70,8 +70,11 @@ enum side { left, both, right };
  *   returns e.g., (F (alpha + m), F A F^\top) and (F^-1(alpha - m),
  *   F^-1 A (F^top)^-1)
  *
- * TODO: deal with non-invertible F cases where L^T L != I and similarly with
- *       R                                                                   */
+ * It is assumed that L and R are potentially non-square matrices consisting of
+ * unit vectors. Further, F is assumed to be a non-singular square matrix.
+ *
+ * TODO: deal with more general L and R matrices or exploit the structure to
+ *       to reduce the computation time                                      */
 
 class problem_data {
 protected:
