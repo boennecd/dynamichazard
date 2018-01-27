@@ -73,6 +73,18 @@ solve_LU_vec <- function(A, B) {
     .Call(`_dynamichazard_solve_LU_vec`, A, B)
 }
 
+qr_qty_mat_test <- function(A, B) {
+    .Call(`_dynamichazard_qr_qty_mat_test`, A, B)
+}
+
+qr_qty_vec_test <- function(A, B) {
+    .Call(`_dynamichazard_qr_qty_vec_test`, A, B)
+}
+
+qr_R_test <- function(A) {
+    .Call(`_dynamichazard_qr_R_test`, A)
+}
+
 lambert_W0_test <- function(x) {
     .Call(`_dynamichazard_lambert_W0_test`, x)
 }
@@ -89,8 +101,12 @@ logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_ef
     .Call(`_dynamichazard_logLike_cpp`, X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }
 
-parallelglm <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthreads = 1L, it_max = 25L, trace = FALSE) {
-    .Call(`_dynamichazard_parallelglm`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace)
+parallelglm <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthreads = 1L, it_max = 25L, trace = FALSE, method = "Quick") {
+    .Call(`_dynamichazard_parallelglm`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, method)
+}
+
+parallelglm_QR_test <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthreads = 1L, it_max = 25L, trace = FALSE, block_size = 100L) {
+    .Call(`_dynamichazard_parallelglm_QR_test`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, block_size)
 }
 
 PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, R, L, m, Q_0, Q, Q_tilde, risk_obj, F, n_max, n_threads, fixed_parems, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother, model) {

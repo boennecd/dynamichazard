@@ -572,7 +572,7 @@ get_start_values <- function(
         formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
         epsilon = sqrt(.Machine$double.eps) * 1e1, family = fam,
         speedglm = FALSE, only_coef = TRUE, mf = cbind(t(X), t(fixed_terms)),
-        method_use = "parallelglm", n_threads = n_threads)
+        method_use = "parallelglm_quick", n_threads = n_threads)
 
     if(model == "logit"){
       coefs = glm_func("binomial")

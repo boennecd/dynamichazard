@@ -27,13 +27,29 @@ class LU_factorization {
   const int M;
   const int N;
   const bool has_elem;
-  std::unique_ptr<double []> A_;
-  std::unique_ptr<int []> IPIV_;
+  std::unique_ptr<double []> A;
+  std::unique_ptr<int []> IPIV;
 
 public:
   LU_factorization(const arma::mat&);
-  arma::mat solve(const arma::mat&, bool tranpose = false) const;
-  arma::vec solve(const arma::vec&, bool tranpose = false) const;
+  arma::mat solve(const arma::mat&, const bool transpose = false) const;
+  arma::vec solve(const arma::vec&, const bool transpose = false) const;
+};
+
+class QR_factorization {
+  const int M;
+  const int N;
+  std::unique_ptr<double []> qr;
+  int rank;
+  std::unique_ptr<double []> qraux;
+  std::unique_ptr<int []> pivot_;
+
+public:
+  QR_factorization(const arma::mat&);
+  arma::mat qy(const arma::mat&, const bool transpose = false) const;
+  arma::vec qy(const arma::vec&, const bool transpose = false) const;
+  arma::mat R() const;
+  arma::uvec pivot() const;
 };
 
 #endif

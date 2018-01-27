@@ -218,14 +218,19 @@ change_new_var_name <- function(c_x, data){
 #' @param speedglm depreciated.
 #' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{\link[speedglm]{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.
 #' @param mf model matrix for regression. Needed when \code{only_coef = TRUE}
-#' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.
+#' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm.wfit}} and \code{parallelglm_quick} and \code{parallelglm_QR} uses a parallel \code{C++} estimation method.
 #' @param n_threads number of threads to use when \code{method_use} is \code{"parallelglm"}.
 #'
 #' @description
 #' Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights.
 #'
+#' The \code{parallelglm_quick} and \code{parallelglm_QR} methods are similar to two methods used in \code{bam} function in the \code{mgcv} package (see the \code{`use.chol`} argument or Wood et al. 2015). \code{parallelglm_QR} is more stable but slower.
+#'
 #' @return
 #' The returned list from the \code{\link{glm}} call or just coefficients depending on the value of \code{only_coef}.
+#'
+#' @references
+#' Wood, S.N., Goude, Y. & Shaw S. (2015) Generalized additive models for large datasets. Journal of the Royal Statistical Society, Series C 64(1): 139-155.
 #'
 #' @examples
 #'library(dynamichazard)
@@ -234,11 +239,12 @@ change_new_var_name <- function(c_x, data){
 #'  by = 50)
 #'fit$coefficients
 #'
+#'
 #' @export
 static_glm = function(
   formula, data, by, max_T, ..., id, family = "logit", model = F, weights,
   risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
-  method_use = c("glm", "speedglm", "parallelglm"),
+  method_use = c("glm", "speedglm", "parallelglm_quick", "parallelglm_QR"),
   n_threads = getOption("ddhazard_max_threads")){
   if(only_coef && missing(mf))
     stop("mf must be supplied when only_coef = TRUE")
@@ -309,7 +315,7 @@ static_glm = function(
       list(Y = as.name(c_outcome))))
 
   } else
-    stop("family '", family, "' not implemented in static_glm")
+    stop("family ", sQuote("family"), " not implemented in static_glm")
 
   if(only_coef){
     new_order <- data[[col_for_row_n]]
@@ -351,15 +357,17 @@ static_glm = function(
           family = family, model = model,
           weights = .(data[[c_weights]]), ...))))
 
-  } else if(method_use == "parallelglm" && only_coef){
+  } else if(grepl("^parallelglm", method_use) && only_coef){
     epsilon <- list(...)$epsilon
     if(is.null(epsilon))
       epsilon <- glm.control()$epsilon
 
+    method. <- gsub("(^parallelglm_)([a-zA-Z]+$)", "\\2", method_use)
+
     out <- drop(
       parallelglm(X = t(mf), Ys = data[[c_outcome]],
                   weights = data[[c_weights]], offsets = offset, beta0 = numeric(),
-                  family = family$family,
+                  family = family$family, method = method.,
                   tol = epsilon, nthreads = n_threads))
 
     return(structure(out, names = dimnames(mf)[[2]]))

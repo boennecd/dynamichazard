@@ -7,7 +7,7 @@ sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
 
 test_that("Static glm yields expected number of events, correct rows and same result when supplying risk_obj", {
   form <- survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event
-  res <- dynamichazard::static_glm(
+  res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "binomial", model = T)
 
@@ -22,7 +22,7 @@ test_that("Static glm yields expected number of events, correct rows and same re
   design_mat = get_design_matrix(form, sims$res)
   risk_obj = get_risk_obj(Y = design_mat$Y, by = 1, max_T = 10,
                           id = sims$res$id)
-  res_own_risk_obj <- dynamichazard::static_glm(
+  res_own_risk_obj <- static_glm(
     form = form, data = sims$res, risk_obj = risk_obj)
 
   expect_equal(res_own_risk_obj$coefficients, res$coefficients)
@@ -35,7 +35,7 @@ test_that("static glm gives results with exponential that match previous computa
                             intercept_start = -3, sds = c(.1, rep(1, 3)))
 
   form <- survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event
-  res <- dynamichazard::static_glm(
+  res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "exponential", model = T)
 
@@ -46,7 +46,7 @@ test_that("static glm gives results with exponential that match previous computa
                c(-3.1239104299217413, 0.5945953199533323, 1.0979243555250271, -0.9534880608516028))
 
   # test with lower max_T
-  res_lower <- dynamichazard::static_glm(
+  res_lower <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 6, id = sims$res$id,
     family = "exponential", model = T)
 
@@ -58,7 +58,7 @@ test_that("static glm gives results with exponential that match previous computa
 
 test_that("design_matrix yields equal result with different values of use_weights", {
   form <- formula(survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event, data = sims$res)
-  res <- dynamichazard::static_glm(
+  res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "logit", model = T)
 
@@ -140,11 +140,13 @@ test_that("Gets same with different methods", {
 
     f3 <- get_fit("glm")
     f4 <- get_fit("speedglm")
-    f5 <- get_fit("parallelglm")
+    f5 <- get_fit("parallelglm_quick")
+    f6 <- get_fit("parallelglm_QR")
 
     expect_equal(f1$coefficients, f3)
     expect_equal(f3, f4, check.attributes = FALSE)
     expect_equal(f4, f5, check.attributes = FALSE)
+    expect_equal(f5, f6, check.attributes = FALSE)
   }
 })
 

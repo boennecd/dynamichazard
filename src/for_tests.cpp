@@ -137,6 +137,23 @@ arma::vec solve_LU_vec(const arma::mat &A, const arma::vec &B){
   return fac.solve(B);
 }
 
+// [[Rcpp::export]]
+arma::mat qr_qty_mat_test(const arma::mat &A, const arma::mat &B){
+  QR_factorization fac(A);
+  return fac.qy(B, true);
+}
+
+// [[Rcpp::export]]
+arma::vec qr_qty_vec_test(const arma::mat &A, const arma::vec &B){
+  QR_factorization fac(A);
+  return fac.qy(B, true);
+}
+
+// [[Rcpp::export]]
+arma::mat qr_R_test(const arma::mat &A){
+  return QR_factorization(A).R();
+}
+
 // -------------------------------------------------- //
 
 #include "utils.h"

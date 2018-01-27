@@ -5,7 +5,7 @@
 \title{EM estimation with particle filters}
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = list(), trace = 0)
+  control = PF_control(...), trace = 0, seed = .Random.seed, ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -72,7 +72,7 @@ pf_fit <- PF_EM(
  data = .lung, by = 50, id = 1:nrow(.lung),
  Q_0 = diag(1, 3), Q = diag(1, 3),
  max_T = 800,
- control = list(
+ control = PF_control(
    N_fw_n_bw = 500,
    N_first = 2500,
    N_smooth = 2500,

@@ -245,4 +245,19 @@ namespace R_BLAS_LAPACK {
       const int* lda, const int* ipiv, double* b, const int* ldb, int* info){
     F77_NAME(dgetrs)(trans, n, nrhs, a, lda, ipiv, b, ldb, info);
   }
+
+  void dormqr(const char* side, const char* trans,
+              const int* m, const int* n, const int* k,
+              const double* a, const int* lda,
+              const double* tau, double* c, const int* ldc,
+              double* work, const int* lwork, int* info){
+    F77_NAME(dormqr)(
+        side, trans, m, n, k, a, lda, tau, c, ldc, work, lwork, info);
+  }
+
+  void dgeqp3(const int* m, const int* n, double* a, const int* lda,
+              int* jpvt, double* tau, double* work, const int* lwork,
+              int* info){
+    F77_NAME(dgeqp3)(m, n, a, lda, jpvt, tau, work, lwork, info);
+  }
 }

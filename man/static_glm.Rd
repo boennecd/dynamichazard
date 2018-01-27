@@ -6,7 +6,7 @@
 \usage{
 static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
   weights, risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
-  method_use = c("glm", "speedglm", "parallelglm"),
+  method_use = c("glm", "speedglm", "parallelglm_quick", "parallelglm_QR"),
   n_threads = getOption("ddhazard_max_threads"))
 }
 \arguments{
@@ -36,7 +36,7 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 
 \item{mf}{model matrix for regression. Needed when \code{only_coef = TRUE}}
 
-\item{method_use}{method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm.wfit}} and \code{parallelglm} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.}
+\item{method_use}{method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm.wfit}} and \code{parallelglm_quick} and \code{parallelglm_QR} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.}
 
 \item{n_threads}{number of threads to use when \code{method_use} is \code{"parallelglm"}.}
 }
@@ -45,6 +45,8 @@ The returned list from the \code{\link{glm}} call or just coefficients depending
 }
 \description{
 Method to fit a static model corresponding to a \code{\link{ddhazard}} fit. The method uses weights to ease the memory requirements. See \code{\link{get_survival_case_weights_and_data}} for details on weights.
+
+The \code{parallelglm_quick} and \code{parallelglm_QR} methods are similar to two methods used in \code{bam} function in the \code{mgcv} package (see the \code{`use.chol`} argument or Wood et al. 2015). \code{parallelglm_QR} is more stable but slower.
 }
 \examples{
 library(dynamichazard)
@@ -53,4 +55,8 @@ fit <- static_glm(
  by = 50)
 fit$coefficients
 
+
+}
+\references{
+Wood, S.N., Goude, Y. & Shaw S. (2015) Generalized additive models for large datasets. Journal of the Royal Statistical Society, Series C 64(1): 139-155.
 }

@@ -20,6 +20,9 @@ if(interactive()){
   solve_w_precomputed_chol_test <- with(environment(ddhazard), solve_w_precomputed_chol_test)
   solve_LU_mat <- with(environment(ddhazard), solve_LU_mat)
   solve_LU_vec <- with(environment(ddhazard), solve_LU_vec)
+  qr_qty_mat_test <- with(environment(ddhazard), qr_qty_mat_test)
+  qr_qty_vec_test <- with(environment(ddhazard), qr_qty_vec_test)
+  qr_R_test <- with(environment(ddhazard), qr_R_test)
 
   # test_SMA.R
   SMA_hepler_logit_compute_length <-

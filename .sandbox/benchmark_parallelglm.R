@@ -24,8 +24,8 @@ sim_expr <- expression({
   epsilon <- if(one_it) .Machine$double.xmax else 1e-8
 })
 
-n <- 1e6
-q <- 10
+n <- 1e5
+q <- 25
 family <- "poisson"
 use_offset <- FALSE
 use_weights <- FALSE
@@ -38,12 +38,19 @@ microbenchmark::microbenchmark(
     weights = .weights, offset = offset,
     control = glm.control(epsilon = epsilon))$coefficients,
 
-  parallelglm = coef_parallelglm <- parallelglm(
+  parallelglm_chol = coef_parallelglm_Chol <- parallelglm(
     X = t(X), Ys = y,
     weights = .weights, offsets = offset, beta0 = numeric(),
-    family = family,
+    family = family, method = "Chol",
+    tol = epsilon, nthreads = 7),
+
+  parallelglm_QR = coef_parallelglm_QR <- parallelglm(
+    X = t(X), Ys = y,
+    weights = .weights, offsets = offset, beta0 = numeric(),
+    family = family, method = "QR",
     tol = epsilon, nthreads = 7),
 
   times = 3)
 
-expect_equal(coef_glm, drop(coef_parallelglm))
+expect_equal(coef_glm, drop(coef_parallelglm_Chol))
+expect_equal(coef_glm, drop(coef_parallelglm_QR))

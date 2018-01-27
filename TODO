@@ -3,11 +3,11 @@ Replace `save_to_test` and `read_to_test` with `testthat::expect_known_output`
 Make functions for `ddhazard` and `PF_EM` where you only take one iteration
 and can provide your own structural matrices
 Why is GMA slower than in commint 40d2cd438c79e1d77b28421d26b8289f40d3909c in speedtests?
-Make parallelglm use `src/family` and compute the QR decompostion in chunks as in `mgcv::bam`
+Make `parallelglm` use `src/family`
 Make wrapper to PF function for main setup steps to ease custom user setup + test. Make similar changes to ddhazard. Document these in NEWS.
 Make PF_data argument + test
 Make ESS function + test
-Make mean and quantile function + test
+Make mean and quantile function for pf_clouds + test
 Make sure plot works with forward filter only + test
 Make the forward particle filters avialable on its own for likelihood evaluation + test
 Make example of particle filtering w/ e.g., LME4

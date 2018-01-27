@@ -194,9 +194,7 @@ PF_EM <- function(
     sum_stats <- compute_summary_stats(
       clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0)
     a_0 <- drop(sum_stats[[1]]$E_xs)
-    Q <- matrix(0., length(a_0), length(a_0))
-    for(j in 1:length(sum_stats))
-      Q <- Q + sum_stats[[j]]$E_x_less_x_less_one_outers
+    Q <- Reduce("+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
     Q <- Q / length(sum_stats)
 
     fit_call$a_0 <- a_0
@@ -204,8 +202,7 @@ PF_EM <- function(
 
     #####
     # compute log likelihood and check for convergernce
-    log_like <- logLik(clouds)
-    log_likes[i] <- log_like
+    log_likes[i] <- log_like <- logLik(clouds)
 
     if(trace > 0)
       cat("The log likelihood in iteration ", i, " is ", log_like,
