@@ -314,6 +314,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// selection_matrix_map_mat_test
+arma::mat selection_matrix_map_mat_test(arma::mat L, arma::mat X, bool is_right, bool is_inv);
+RcppExport SEXP _dynamichazard_selection_matrix_map_mat_test(SEXP LSEXP, SEXP XSEXP, SEXP is_rightSEXP, SEXP is_invSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type L(LSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< bool >::type is_right(is_rightSEXP);
+    Rcpp::traits::input_parameter< bool >::type is_inv(is_invSEXP);
+    rcpp_result_gen = Rcpp::wrap(selection_matrix_map_mat_test(L, X, is_right, is_inv));
+    return rcpp_result_gen;
+END_RCPP
+}
+// selection_matrix_map_vec_test
+arma::vec selection_matrix_map_vec_test(arma::mat L, arma::vec X, bool is_inv);
+RcppExport SEXP _dynamichazard_selection_matrix_map_vec_test(SEXP LSEXP, SEXP XSEXP, SEXP is_invSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type L(LSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type X(XSEXP);
+    Rcpp::traits::input_parameter< bool >::type is_inv(is_invSEXP);
+    rcpp_result_gen = Rcpp::wrap(selection_matrix_map_vec_test(L, X, is_inv));
+    return rcpp_result_gen;
+END_RCPP
+}
 // lambert_W0_test
 double lambert_W0_test(const double x);
 RcppExport SEXP _dynamichazard_lambert_W0_test(SEXP xSEXP) {
@@ -390,9 +417,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// parallelglm_QR_test
-Rcpp::List parallelglm_QR_test(arma::mat& X, arma::vec& Ys, std::string family, arma::vec beta0, arma::vec& weights, arma::vec& offsets, double tol, int nthreads, int it_max, bool trace, int block_size);
-RcppExport SEXP _dynamichazard_parallelglm_QR_test(SEXP XSEXP, SEXP YsSEXP, SEXP familySEXP, SEXP beta0SEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP tolSEXP, SEXP nthreadsSEXP, SEXP it_maxSEXP, SEXP traceSEXP, SEXP block_sizeSEXP) {
+// parallelglm_QR_get_R_n_f
+Rcpp::List parallelglm_QR_get_R_n_f(arma::mat& X, arma::vec& Ys, std::string family, arma::vec beta0, arma::vec& weights, arma::vec& offsets, double tol, int nthreads, int it_max, bool trace, int block_size);
+RcppExport SEXP _dynamichazard_parallelglm_QR_get_R_n_f(SEXP XSEXP, SEXP YsSEXP, SEXP familySEXP, SEXP beta0SEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP tolSEXP, SEXP nthreadsSEXP, SEXP it_maxSEXP, SEXP traceSEXP, SEXP block_sizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -407,7 +434,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type it_max(it_maxSEXP);
     Rcpp::traits::input_parameter< bool >::type trace(traceSEXP);
     Rcpp::traits::input_parameter< int >::type block_size(block_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(parallelglm_QR_test(X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, block_size));
+    rcpp_result_gen = Rcpp::wrap(parallelglm_QR_get_R_n_f(X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, block_size));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -530,6 +557,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rep_vec
+arma::vec rep_vec(const arma::vec& col_vals, int n_rows);
+RcppExport SEXP _dynamichazard_rep_vec(SEXP col_valsSEXP, SEXP n_rowsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type col_vals(col_valsSEXP);
+    Rcpp::traits::input_parameter< int >::type n_rows(n_rowsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rep_vec(col_vals, n_rows));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 RcppExport SEXP _rcpp_module_boot_dd_exponential();
 RcppExport SEXP _rcpp_module_boot_dd_logistic();
@@ -556,17 +595,20 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_qr_qty_mat_test", (DL_FUNC) &_dynamichazard_qr_qty_mat_test, 2},
     {"_dynamichazard_qr_qty_vec_test", (DL_FUNC) &_dynamichazard_qr_qty_vec_test, 2},
     {"_dynamichazard_qr_R_test", (DL_FUNC) &_dynamichazard_qr_R_test, 1},
+    {"_dynamichazard_selection_matrix_map_mat_test", (DL_FUNC) &_dynamichazard_selection_matrix_map_mat_test, 4},
+    {"_dynamichazard_selection_matrix_map_vec_test", (DL_FUNC) &_dynamichazard_selection_matrix_map_vec_test, 3},
     {"_dynamichazard_lambert_W0_test", (DL_FUNC) &_dynamichazard_lambert_W0_test, 1},
     {"_dynamichazard_trunc_eta_exponential_test", (DL_FUNC) &_dynamichazard_trunc_eta_exponential_test, 3},
     {"_dynamichazard_trunc_eta_exponential_test_log_eps", (DL_FUNC) &_dynamichazard_trunc_eta_exponential_test_log_eps, 0},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
-    {"_dynamichazard_parallelglm_QR_test", (DL_FUNC) &_dynamichazard_parallelglm_QR_test, 11},
+    {"_dynamichazard_parallelglm_QR_get_R_n_f", (DL_FUNC) &_dynamichazard_parallelglm_QR_get_R_n_f, 11},
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 25},
     {"_dynamichazard_particle_filter", (DL_FUNC) &_dynamichazard_particle_filter, 25},
     {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 5},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {"_dynamichazard_round_if_almost_eq", (DL_FUNC) &_dynamichazard_round_if_almost_eq, 3},
+    {"_dynamichazard_rep_vec", (DL_FUNC) &_dynamichazard_rep_vec, 2},
     {"_rcpp_module_boot_dd_exponential", (DL_FUNC) &_rcpp_module_boot_dd_exponential, 0},
     {"_rcpp_module_boot_dd_logistic", (DL_FUNC) &_rcpp_module_boot_dd_logistic, 0},
     {NULL, NULL, 0}

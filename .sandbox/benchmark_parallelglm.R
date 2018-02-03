@@ -41,7 +41,7 @@ microbenchmark::microbenchmark(
   parallelglm_chol = coef_parallelglm_Chol <- parallelglm(
     X = t(X), Ys = y,
     weights = .weights, offsets = offset, beta0 = numeric(),
-    family = family, method = "Chol",
+    family = family, method = "quick",
     tol = epsilon, nthreads = 7),
 
   parallelglm_QR = coef_parallelglm_QR <- parallelglm(
@@ -54,3 +54,29 @@ microbenchmark::microbenchmark(
 
 expect_equal(coef_glm, drop(coef_parallelglm_Chol))
 expect_equal(coef_glm, drop(coef_parallelglm_QR))
+
+#####
+parallelglm_QR_get_R_n_f <-
+  asNamespace("dynamichazard")$parallelglm_QR_get_R_n_f
+
+n <- 1e4
+q <- 2
+family <- "poisson"
+use_offset <- FALSE
+use_weights <- FALSE
+one_it <- FALSE
+beta0 <- rep(0, q + 1)
+eval(sim_expr)
+
+args <- list(
+  X = t(X), Ys = y, weights = .weights, offsets = offset, beta0 = beta0,
+  family = family, nthreads = 7)
+
+
+options(digits = 3)
+microbenchmark::microbenchmark(
+  do.call(parallelglm_QR_get_R_n_f, c(args, list(block_size =   500))),
+  do.call(parallelglm_QR_get_R_n_f, c(args, list(block_size =  1000))),
+  do.call(parallelglm_QR_get_R_n_f, c(args, list(block_size =  5000))),
+  do.call(parallelglm_QR_get_R_n_f, c(args, list(block_size = 10000))),
+  times = 25)

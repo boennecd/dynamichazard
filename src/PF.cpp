@@ -426,28 +426,9 @@ Rcpp::List PF_smooth(
 
   random_walk<PF_data> data(
       n_fixed_terms_in_state_vec,
-      X,
-      fixed_terms,
-      tstart,
-      tstop,
-      is_event_in_bin,
-      a_0,
-      R,
-      L,
-      m,
-      Q_0,
-      Q,
-      risk_obj,
-      F,
-      n_max,
-      n_threads,
-      fixed_parems,
-      Q_tilde,
-      N_fw_n_bw,
-      N_smooth,
-      forward_backward_ESS_threshold,
-      debug,
-      N_first);
+      X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, m, Q_0, Q,
+      risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+      N_smooth, forward_backward_ESS_threshold, debug, N_first);
 
   Rcpp::List ans;
 

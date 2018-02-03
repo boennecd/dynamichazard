@@ -271,7 +271,7 @@ ddhazard = function(formula, data,
   for(k in k_vals){
     tryCatch({
       result <- ddhazard_no_validation(
-        a_0 = a_0, Q_0 = Q_0, .F = .F, verbose = verbose, Q = Q,
+        a_0 = a_0, Q_0 = Q_0, F. = F., verbose = verbose, Q = Q,
         risk_set= risk_set, X_Y = X_Y, model = model, R = R, L = L, m = m,
         LR = control$LR * control$LR_decrease_fac^(k),
         n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
@@ -319,7 +319,7 @@ ddhazard = function(formula, data,
     result$lag_one_cov <-
       result$lag_one_cov[-indicies_fix, -indicies_fix, , drop = F]
 
-    .F <- .F[-indicies_fix, -indicies_fix, drop = F]
+    F. <- F.[-indicies_fix, -indicies_fix, drop = F]
   }
 
   if(control$permu)
@@ -376,7 +376,7 @@ ddhazard = function(formula, data,
     data = if(control$save_data) data else NULL,
     weights = if(control$save_data) weights else NULL,
     id = if(control$save_data) id else NULL,
-    order = order, F_ = .F,
+    order = order, F_ = F.,
     method = control$method,
     model = model,
     est_Q_0 = control$est_Q_0,
@@ -388,13 +388,13 @@ ddhazard = function(formula, data,
     "class" = "ddhazard")
 }
 
-ddhazard_no_validation <- function(a_0, Q_0, .F, verbose, Q,
+ddhazard_no_validation <- function(a_0, Q_0, F., verbose, Q,
                                    risk_set, X_Y, model, LR,
                                    n_fixed_terms_in_state_vec,
                                    weights = weights,
                                    control, R, L, m){
   ddhazard_fit_cpp(
-    a_0 = a_0, Q_0 = Q_0, F_ = .F, verbose = verbose,
+    a_0 = a_0, Q_0 = Q_0, F_ = F., verbose = verbose,
     Q = Q, n_max = control$n_max,
     R = R, L = L, m = m,
     risk_obj = risk_set, eps = control$eps,
@@ -475,23 +475,23 @@ get_state_eq_matrices <-  function(
   #####
   # Get F matrix
   if(order == 1){
-    .F <- diag(rep(1, n_params + n_fixed * est_fixed_in_E))
+    F. <- diag(rep(1, n_params + n_fixed * est_fixed_in_E))
 
   } else if(order == 2){
-    .F = matrix(NA_real_,
+    F. = matrix(NA_real_,
                 nrow = 2 * n_params + n_fixed * est_fixed_in_E,
                 ncol = 2 * n_params + n_fixed * est_fixed_in_E)
-    .F[indicies_cur, indicies_cur] = diag(2, n_params)
-    .F[indicies_lag, indicies_cur] = diag(1, n_params)
-    .F[indicies_cur, indicies_lag] = diag(-1, n_params)
-    .F[indicies_lag, indicies_lag] = 0
+    F.[indicies_cur, indicies_cur] = diag(2, n_params)
+    F.[indicies_lag, indicies_cur] = diag(1, n_params)
+    F.[indicies_cur, indicies_lag] = diag(-1, n_params)
+    F.[indicies_lag, indicies_lag] = 0
 
     if(length(indicies_fix) > 0){
-      .F[indicies_fix, ] <- 0
-      .F[, indicies_fix] <- 0
+      F.[indicies_fix, ] <- 0
+      F.[, indicies_fix] <- 0
       if(length(indicies_fix) > 1)
-        diag(.F[indicies_fix, indicies_fix]) <- 1 else
-          .F[indicies_fix, indicies_fix] <- 1
+        diag(F.[indicies_fix, indicies_fix]) <- 1 else
+          F.[indicies_fix, indicies_fix] <- 1
     }
   }
 
@@ -501,7 +501,7 @@ get_state_eq_matrices <-  function(
     # We need to add entries to the matrix and vector
 
     if(ncol(Q_0) != n_params * order + length(indicies_fix)){
-      Q_0_new <- .F
+      Q_0_new <- F.
       Q_0_new[, ] <- 0
       Q_0_new[-indicies_fix, -indicies_fix] <- Q_0
       if(length(indicies_fix) == 1){
@@ -533,7 +533,7 @@ get_state_eq_matrices <-  function(
     diag(L)[1:(n_params +  n_fixed * est_fixed_in_E)] <- 1
   m <- numeric(state_dim)
 
-  return(list(Q = Q, Q_0 = Q_0, .F = .F, R = R, L = L, m = m, a_0 = a_0,
+  return(list(Q = Q, Q_0 = Q_0, F. = F., R = R, L = L, m = m, a_0 = a_0,
               indicies_fix = indicies_fix))
 }
 
@@ -593,7 +593,7 @@ get_start_values <- function(
       a_0 = rep(coefs[!is_fixed], order)
 
       if(verbose){
-        message("Starting value for time-varying coeffecients are:")
+        message("Starting values for time-varying coeffecients are:")
         print(a_0)
       }
     }
@@ -602,7 +602,7 @@ get_start_values <- function(
       fixed_parems_start <- coefs[is_fixed]
 
       if(verbose && length(fixed_parems_start) > 0){
-        message("Starting value for fixed coeffecients are:")
+        message("Starting values for fixed coeffecients are:")
         print(fixed_parems_start)
       }
     }

@@ -282,11 +282,6 @@ test_that("PF_EM stops with correct error messages due to wrong or missing argum
     do.call(PF_EM, args), paste0(
       "Please supply the number of particle in ",
       sQuote("PF_control(N_first)")), fixed = TRUE)
-
-  args$control <- PF_control(N_fw_n_bw = 1, N_smooth = 1, N_first = 1)
-  expect_error(
-    do.call(PF_EM, args), paste0(
-      "Fixed terms are not supported"))
 })
 
 test_that("PF_EM gives previous results on head neck data set", {

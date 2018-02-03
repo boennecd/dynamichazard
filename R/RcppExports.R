@@ -85,6 +85,14 @@ qr_R_test <- function(A) {
     .Call(`_dynamichazard_qr_R_test`, A)
 }
 
+selection_matrix_map_mat_test <- function(L, X, is_right, is_inv) {
+    .Call(`_dynamichazard_selection_matrix_map_mat_test`, L, X, is_right, is_inv)
+}
+
+selection_matrix_map_vec_test <- function(L, X, is_inv) {
+    .Call(`_dynamichazard_selection_matrix_map_vec_test`, L, X, is_inv)
+}
+
 lambert_W0_test <- function(x) {
     .Call(`_dynamichazard_lambert_W0_test`, x)
 }
@@ -105,8 +113,8 @@ parallelglm <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthr
     .Call(`_dynamichazard_parallelglm`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, method)
 }
 
-parallelglm_QR_test <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthreads = 1L, it_max = 25L, trace = FALSE, block_size = 100L) {
-    .Call(`_dynamichazard_parallelglm_QR_test`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, block_size)
+parallelglm_QR_get_R_n_f <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthreads = 1L, it_max = 25L, trace = FALSE, block_size = 10000L) {
+    .Call(`_dynamichazard_parallelglm_QR_get_R_n_f`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, block_size)
 }
 
 PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, R, L, m, Q_0, Q, Q_tilde, risk_obj, F, n_max, n_threads, fixed_parems, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother, model) {
@@ -127,5 +135,9 @@ get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_
 
 round_if_almost_eq <- function(x, x_ord, boundaries) {
     .Call(`_dynamichazard_round_if_almost_eq`, x, x_ord, boundaries)
+}
+
+rep_vec <- function(col_vals, n_rows) {
+    .Call(`_dynamichazard_rep_vec`, col_vals, n_rows)
 }
 

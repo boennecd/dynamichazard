@@ -113,17 +113,15 @@ PF_EM <- function(
     max_T = if(missing(max_T)) NULL else max_T, id = id,
     trace = trace, model, order = order)
 
-  if(nrow(static_args$fixed_terms) > 0)
-    stop("Fixed terms are not supported")
-
   #####
   # find matrices for state equation
-  a_0 <- get_start_values(
+  start_coefs <- get_start_values(
     formula = formula, data = data, max_T = max_T, X = static_args$X,
     fixed_terms = static_args$fixed_terms, risk_set = static_args$risk_obj,
     verbose = trace > 0, n_threads = control$n_threads, model = model,
-    a_0 = if(missing(a_0)) NULL else a_0, order = order,
-    fixed_parems_start = numeric())$a_0
+    a_0 = if(missing(a_0)) NULL else a_0, order = order)
+  a_0 <- start_coefs$a_0
+  fixed_parems <- start_coefs$fixed_parems_start
 
   model_args <- .get_state_eq_matrices_PF(
     order = order, n_params = nrow(static_args$X),
@@ -131,14 +129,14 @@ PF_EM <- function(
     Q = if(missing(Q)) NULL else Q, a_0 = a_0)
 
   out <- do.call(.PF_EM, c(static_args, model_args, control, list(
-    trace = trace, seed = seed, fixed_parems = numeric())))
+    trace = trace, seed = seed, fixed_parems = fixed_parems)))
 
   out$call <- match.call()
   out
 }
 
 .PF_EM <- function(
-  n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, Q_0, Q, a_0, .F,
+  n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, Q_0, Q, a_0, F.,
   L, R, m, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
@@ -148,8 +146,8 @@ PF_EM <- function(
   fit_call <- cl
   fit_call[[1]] <- as.name("PF_smooth")
   fit_call[["Q_tilde"]] <- bquote(diag(0, .(n_vars)))
-  fit_call[["F"]] <- fit_call[[".F"]]
-  fit_call[c("eps", "seed", ".F", "trace")] <- NULL
+  fit_call[["F"]] <- fit_call[["F."]]
+  fit_call[c("eps", "seed", "F.", "trace")] <- NULL
 
   if(is.null(seed))
     seed <- .Random.seed
@@ -164,6 +162,11 @@ PF_EM <- function(
 
       cat("a_0 is:\n")
       print(eval(fit_call$a_0, environment()))
+
+      if(length(fixed_parems) > 0){
+        cat("Fixed parameters are:\n")
+        print(fixed_parems)
+      }
 
       cat("chol(Q) is:\n")
       print(chol(eval(fit_call$Q, environment())))
@@ -187,7 +190,9 @@ PF_EM <- function(
     }
 
     #####
-    # update parameters
+    # update parameters in state equation
+    if(trace > 0)
+      cat("Updating parameters in state model...\n")
     a_0_old <- eval(fit_call$a_0, environment())
     Q_old <- eval(fit_call$Q, environment())
 
@@ -199,6 +204,18 @@ PF_EM <- function(
 
     fit_call$a_0 <- a_0
     fit_call$Q <- Q
+
+    #####
+    # Update fixed effects
+    if(length(fixed_parems) > 0){
+      if(trace > 0)
+        cat("Updating fixed effects...\n")
+
+      fit_call$fixed_parems <- fixed_parems <- .PF_update_fixed(
+        clouds = clouds$smoothed_clouds, risk_obj = risk_obj, model = model,
+        L = L, X = X, fixed_terms = fixed_terms, fixed_parems = fixed_parems,
+        nthreads = n_threads)
+    }
 
     #####
     # compute log likelihood and check for convergernce
@@ -229,16 +246,10 @@ PF_EM <- function(
     effective_sample_size <- PF_effective_sample_size(clouds)
 
   return(structure(list(
-    call = cl,
-    clouds = clouds,
-    a_0 = a_0,
-    Q = Q,
-    F = fit_call$.F,
-    summary_stats = sum_stats,
-    log_likes = log_likes[1:i],
-    n_iter = i,
-    effective_sample_size = effective_sample_size,
-    seed = seed),
+    call = cl, clouds = clouds, a_0 = a_0, fixed_effects = fixed_parems, Q = Q,
+    F = fit_call$F., L = L, R = R, summary_stats = sum_stats,
+    log_likes = log_likes[1:i], n_iter = i,
+    effective_sample_size = effective_sample_size, seed = seed),
     class = "PF_EM"))
 }
 
@@ -269,8 +280,7 @@ PF_control <- function(
 
 
 .get_PF_static_args <- function(
-  formula, data, by, max_T = NULL, id, trace, model,
-  order){
+  formula, data, by, max_T = NULL, id, trace, model, order){
   # get design matrix and risk set
   tmp <- get_design_matrix_and_risk_obj(
     formula = formula, data = data, by = by,
@@ -279,7 +289,7 @@ PF_control <- function(
 
   if(trace > 0)
     report_pre_liminary_stats_before_EM(
-      risk_set = tmp$risk_set, X_Y = tmp$X_Y$Y)
+      risk_set = tmp$risk_set, Y = tmp$X_Y$Y)
 
   # tranpose due to column-major storage and we want to look up individuals
   tmp$X_Y$X           <- t(tmp$X_Y$X)
@@ -299,4 +309,91 @@ PF_control <- function(
   out$indicies_fix <- NULL
 
   out
+}
+
+
+.PF_update_fixed <- function(
+  clouds, risk_obj,L, X, fixed_terms, fixed_parems, model, nthreads){
+  # TODO: move this check
+  if(!model %in% "logit")
+    stop(sQuote(model), " is not implemented with fixed effects")
+
+  family_arg <- switch (model, logit = "binomial")
+
+  n_ps <- sapply(lapply(clouds, "[[", "states"), ncol)
+  max_bit <- 400e6 # max byte to use on intermediate design matrix
+
+  out <- NULL
+  for(i in 1:length(clouds)){
+    cl <- clouds[[i]]
+    risk_set <- risk_obj$risk_sets[[i]]
+
+    n_i <- length(risk_set)
+    X_i <- X[, risk_set, drop = FALSE]
+    X_i <- t(X_i) # note the transpose. Improves speed later
+    fixed_terms_i <- fixed_terms[, risk_set, drop = FALSE]
+    y_i <- risk_obj$is_event_in[risk_set] == (i - 1)
+
+    n_ps_i <- n_ps[i]
+    good <- which(drop(cl$weights) >= 1e-7)
+    n_good <- length(good)
+
+    # make `chunk` vectors and matrices to exploit parallel implementation
+    chunk_size <- as.integer(max_bit /(8 * nrow(fixed_terms_i)))
+    n_per_chunk <- min(as.integer((chunk_size + n_i) / n_i), length(good))
+    fixed_terms_i_chunk <- matrix(
+      # use that matrices are stored in column-major order
+      rep(fixed_terms_i, n_per_chunk), nrow(fixed_terms_i),
+      dimnames = list(dimnames(fixed_terms_i)[[1]], NULL))
+    y_i_chunk <- rep(y_i, n_per_chunk)
+
+    # Find weights and offsets and make QR decompositions
+    particle_coefs <- L %*% cl$states
+    i_start <- 1L
+    while(i_start < n_good){
+      i_end <- min(i_start + n_per_chunk - 1L, n_good)
+      this_chunk <- good[i_start:i_end]
+
+      offset. <- drop(X_i %*% particle_coefs[, this_chunk, drop = FALSE])
+      weights. <- drop(rep_vec(cl$weights[this_chunk, ] * n_ps_i, n_i))
+
+      if(length(this_chunk) == n_per_chunk){
+        X_arg <- fixed_terms_i_chunk
+        y_arg <- y_i_chunk
+
+      } else {
+        chunk_idx <- 1:(length(this_chunk) * n_i)
+        X_arg <- fixed_terms_i_chunk[, chunk_idx, drop = FALSE]
+        y_arg <- y_i_chunk[chunk_idx]
+
+      }
+
+      out <- c(out, list(
+        parallelglm_QR_get_R_n_f(
+          X = X_arg, Ys = y_arg, family = family_arg, beta0 = fixed_parems,
+          weights = weights., offsets = offset., nthreads = nthreads)))
+
+      i_start <- i_end + 1L
+    }
+
+    f_stack <- do.call(c, lapply(out, "[[", "f"))
+    R_stack <- lapply(out, .get_R)
+    R_stack <- do.call(rbind, R_stack)
+
+    qr. <- qr(R_stack, LAPACK = TRUE)
+    f <- qr.qty(qr., f_stack)[1:nrow(fixed_terms_i)]
+
+    out <- list(list(
+      R = qr.R(qr.), f = f,
+      pivot = qr.$pivot - 1)) # less one to have zero index as cpp code
+  }
+
+  R <- .get_R(out[[1]])
+  drop(solve(t(R) %*% R, t(R) %*% out[[1]]$f))
+}
+
+.get_R <- function(o){
+  piv <- drop(o$pivot) + 1
+  piv[piv] <- 1:length(piv)
+  o$R[, piv, drop = FALSE]
 }

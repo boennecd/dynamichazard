@@ -14,11 +14,16 @@
  * created in the functions to make sure the orginal object is not destructed.
  */
 
-#define PROTECTED_MAP_FUNCS(name, vec_var, map_mat)          \
-virtual map_res_col name(arma::vec &a, ptr_vec &ptr) const { \
-  ptr.reset(new arma::vec(map_mat * vec_var));               \
-  arma::vec &out = *ptr.get();                               \
-  return map_res_col(out(arma::span::all), ptr);             \
+#define PROTECTED_MAP_FUNCS(name, vec_var, Smat)                              \
+virtual map_res_col name(arma::vec &a, ptr_vec &ptr) const {                  \
+  ptr.reset(new arma::vec(Smat.map(vec_var)));                                \
+  arma::vec &out = *ptr.get();                                                \
+  return map_res_col(out(arma::span::all), ptr);                              \
+}                                                                             \
+virtual map_res_col name##_inv(arma::vec &a, ptr_vec &ptr) const {            \
+  ptr.reset(new arma::vec(Smat.map_inv(vec_var)));                            \
+  arma::vec &out = *ptr.get();                                                \
+  return map_res_col(out(arma::span::all), ptr);                              \
 }
 
 # define GENERIC_MAP_FUNCS_VEC(name)                        \
@@ -67,7 +72,7 @@ enum side { left, both, right };
  * err_state_map and err_state_map
  *   returns e.g., (R epsilon, R Q R^\top) and (R^-1 alpha, R^\top A R)
  * state_trans_map and state_trans_map_inv
- *   returns e.g., (F (alpha + m), F A F^\top) and (F^-1(alpha - m),
+ *   returns e.g., (F alpha + m, F A F^\top) and (F^-1(alpha - m),
  *   F^-1 A (F^top)^-1)
  *
  * It is assumed that L and R are potentially non-square matrices consisting of
@@ -83,6 +88,8 @@ protected:
   const arma::mat &L;
   const arma::vec &m;
 
+  const selection_matrix R_Smat;
+  const selection_matrix L_Smat;
   const LU_factorization F_LU;
   const arma::mat F_inv; // TODO: use forward and backward solves with F_LU
 
@@ -127,15 +134,53 @@ protected:
       arma::mat &out = *ptr.get();
       return map_res_mat(out(arma::span::all, arma::span::all), ptr);
     }
+  static map_res_mat
+    mat_map
+    (const selection_matrix &Smat, const arma::mat &M, side s, bool is_inv){
+      ptr_mat ptr;
+
+      if(is_inv){
+        switch(s){
+        case  left:
+          ptr.reset(new arma::mat(             Smat.map_inv(M)       ));
+          break;
+        case both:
+          ptr.reset(new arma::mat(Smat.map_inv(Smat.map_inv(M), true)));
+          break;
+        case right:
+          ptr.reset(new arma::mat(Smat.map_inv(             M , true)));
+          break;
+        default:
+          Rcpp::stop("'Side' not implemented");
+        }
+      } else
+        switch(s){
+        case  left:
+          ptr.reset(new arma::mat(         Smat.map(M)       ));
+          break;
+        case both:
+          ptr.reset(new arma::mat(Smat.map(Smat.map(M), true)));
+          break;
+        case right:
+          ptr.reset(new arma::mat(Smat.map(         M , true)));
+          break;
+        default:
+          Rcpp::stop("'Side' not implemented");
+        }
+
+      arma::mat &out = *ptr.get();
+      return map_res_mat(out(arma::span::all, arma::span::all), ptr);
+    }
 
   /* vector maps */
-  PROTECTED_MAP_FUNCS(lp_map, a, L)
-  PROTECTED_MAP_FUNCS(lp_map_inv, a, L.t())
+  PROTECTED_MAP_FUNCS(lp_map, a, L_Smat)
+  PROTECTED_MAP_FUNCS(err_state_map, a, R_Smat)
 
-  PROTECTED_MAP_FUNCS(err_state_map, a, R)
-  PROTECTED_MAP_FUNCS(err_state_map_inv, a, R.t())
-
-  PROTECTED_MAP_FUNCS(state_trans_map, arma::vec(a + m), F_)
+  virtual map_res_col state_trans_map(arma::vec &a, ptr_vec &ptr) const {
+    ptr.reset(new arma::vec(F_ * a + m));
+    arma::vec &out = *ptr.get();
+    return map_res_col(out(arma::span::all), ptr);
+  }
   virtual map_res_col state_trans_map_inv(arma::vec &a, ptr_vec &ptr) const {
     ptr.reset(new arma::vec(F_LU.solve(arma::vec(a - m))));
     arma::vec &out = *ptr.get();
@@ -156,9 +201,9 @@ public:
   const unsigned int err_dim;   // dimension of state space error term
   const int n_params_state_vec_fixed; // TODO: maybe move to derived class
 
-  /* these are not const due the arma::mat constructor does not allow
+  /* these are not const due the arma::mat constructor which does not allow
    * copy_aux_mem = false with const pointer. They should not be changed
-   * though...                                                           */
+   * though...                                                              */
   arma::mat X;
   arma::mat fixed_terms;
 
@@ -195,7 +240,8 @@ public:
     const int n_max,
     const int n_threads,
     const arma::vec &fixed_parems) :
-    F_(F_), R(R), L(L), m(m), F_LU(F_), F_inv(arma::inv(F_)),
+    F_(F_), R(R), L(L), m(m), R_Smat(R), L_Smat(L), F_LU(F_),
+    F_inv(arma::inv(F_)),
 
     any_dynamic(X.n_elem > 0),
     any_fixed_in_E_step(n_fixed_terms_in_state_vec > 0),
@@ -249,19 +295,19 @@ public:
 
   /* maps from errors to state space dimension */
   GENERIC_MAP_FUNCS_VEC(err_state_map)
-  GENERIC_MAP_FUNCS_MAT(err_state_map, R, false)
+  GENERIC_MAP_FUNCS_MAT(err_state_map, R_Smat, false)
 
   /* inverse of the above */
   GENERIC_MAP_FUNCS_VEC(err_state_map_inv)
-  GENERIC_MAP_FUNCS_MAT(err_state_map_inv, R, true)
+  GENERIC_MAP_FUNCS_MAT(err_state_map_inv, R_Smat, true)
 
   /* maps from state space dimension to covariate dimension */
   GENERIC_MAP_FUNCS_VEC(lp_map)
-  GENERIC_MAP_FUNCS_MAT(lp_map, L, false)
+  GENERIC_MAP_FUNCS_MAT(lp_map, L_Smat, false)
 
   /* inverse of the above */
   GENERIC_MAP_FUNCS_VEC(lp_map_inv)
-  GENERIC_MAP_FUNCS_MAT(lp_map_inv, L, true)
+  GENERIC_MAP_FUNCS_MAT(lp_map_inv, L_Smat, true)
 };
 
 /* Concrete class for n-th order random walk model starting with problem data
@@ -270,7 +316,7 @@ public:
 
 # define RANDOM_WALK_VEC_MAP_TO_STATE(name, span_use_ptr)                    \
 map_res_col name(arma::vec &a, ptr_vec &ptr) const override {                \
-  if(order() == 1 && !this->any_fixed_in_E_step)                             \
+  if(order == 1 && !this->any_fixed_in_E_step)                               \
     return map_res_col(a(arma::span::all), ptr);                             \
                                                                              \
   ptr_vec ptr_new(new arma::vec(this->state_dim, arma::fill::zeros));        \
@@ -283,7 +329,7 @@ map_res_col name(arma::vec &a, ptr_vec &ptr) const override {                \
 
 # define RANDOM_WALK_VEC_MAP_FROM_STATE(name, span_use_ptr)                  \
 map_res_col name(arma::vec &a, ptr_vec &ptr) const override {                \
-  if(order() == 1 && !this->any_fixed_in_E_step)                             \
+  if(order == 1 && !this->any_fixed_in_E_step)                               \
     return map_res_col(a(arma::span::all), ptr);                             \
                                                                              \
   if(!span_use_ptr){                                                         \
@@ -299,13 +345,13 @@ map_res_mat name(const arma::mat &M, side s = both) const override {       \
   if(s != both)                                                            \
     Rcpp::stop("'Side' not implemented");                                  \
                                                                            \
-  if(order() == 1 && !this->any_fixed_in_E_step)                           \
+  if(order == 1 && !this->any_fixed_in_E_step)                             \
     return map_res_mat(M(arma::span::all, arma::span::all));               \
                                                                            \
   if(!span_use_ptr){                                                       \
     ptr_mat ptr_new(new arma::mat());                                      \
     return map_res_mat(                                                    \
-        (*ptr_new)(arma::span::all, arma::span::all), ptr_new);            \
+      (*ptr_new)(arma::span::all, arma::span::all), ptr_new);              \
   }                                                                        \
                                                                            \
   return map_res_mat(M(*span_use_ptr, *span_use_ptr));                     \
@@ -315,7 +361,7 @@ map_res_mat name(const arma::mat &M, side s = both) const override {       \
 map_res_mat name(const arma::mat &M, side s = both) const override {       \
   if(s != both)                                                            \
     Rcpp::stop("'Side' not implemented");                                  \
-  if(order() == 1 && !this->any_fixed_in_E_step)                           \
+  if(order == 1 && !this->any_fixed_in_E_step)                             \
     return map_res_mat(M(arma::span::all, arma::span::all));               \
                                                                            \
   ptr_mat ptr(                                                             \
@@ -329,13 +375,22 @@ map_res_mat name(const arma::mat &M, side s = both) const override {       \
 
 template<class T>
 class random_walk : public T {
+public:
+  const unsigned int order {
+    (this->state_dim - this->n_params_state_vec_fixed == 0) ?
+    1 :
+    (this->state_dim - this->n_params_state_vec_fixed) /
+      (this->covar_dim - this->n_params_state_vec_fixed)
+  };
+
+private:
   /* Use std::unique_ptr as Armadillo does not have an "empty" span. A null
    * pointer means empty.                                                   */
   const std::unique_ptr<arma::span> span_current_cov {
     get_span_current_cov() };
   std::unique_ptr<arma::span> get_span_current_cov() const {
     std::unique_ptr<arma::span> out;
-    int b = (this->state_dim - this->n_params_state_vec_fixed) / order() +
+    int b = (this->state_dim - this->n_params_state_vec_fixed) / order +
       this->n_params_state_vec_fixed - 1;
     if(b >= 0 && (this->any_dynamic || this->any_fixed_in_E_step))
       out.reset(new arma::span(0, b));
@@ -347,7 +402,7 @@ class random_walk : public T {
     get_span_current_cov_varying_only() };
   std::unique_ptr<arma::span> get_span_current_cov_varying_only() const {
     std::unique_ptr<arma::span> out;
-    int b = (this->state_dim - this->n_params_state_vec_fixed) / order() - 1;
+    int b = (this->state_dim - this->n_params_state_vec_fixed) / order - 1;
     if(b >= 0 && this->any_dynamic)
       out.reset(new arma::span(0, b));
 
@@ -363,23 +418,42 @@ class random_walk : public T {
   RANDOM_WALK_VEC_MAP_FROM_STATE(lp_map, span_current_cov)
   RANDOM_WALK_VEC_MAP_TO_STATE(lp_map_inv, span_current_cov)
 
+  map_res_col state_trans_map(arma::vec &a, ptr_vec &ptr) const override {
+    if(order == 1)
+      return map_res_col(a(arma::span::all), ptr);
+
+    return T::state_trans_map(a, ptr);
+  }
+  map_res_col state_trans_map_inv(arma::vec &a, ptr_vec &ptr) const override {
+    if(order == 1)
+      return map_res_col(a(arma::span::all), ptr);
+
+    return T::state_trans_map_inv(a, ptr);
+  }
+
 public:
   using T::T;
-
-  /* particular class function */
-  unsigned int order() const {
-    unsigned int numerator = this->state_dim - this->n_params_state_vec_fixed;
-    if(numerator == 0)
-      return 1;
-
-    return numerator / (this->covar_dim - this->n_params_state_vec_fixed);
-  }
 
   /* derived class member functions to override */
   RANDOM_WALK_MAT_MAP_TO_STATE(err_state_map, span_current_cov_varying_only)
   RANDOM_WALK_MAT_MAP_FROM_STATE(err_state_map_inv, span_current_cov_varying_only)
   RANDOM_WALK_MAT_MAP_FROM_STATE(lp_map, span_current_cov)
   RANDOM_WALK_MAT_MAP_TO_STATE(lp_map_inv, span_current_cov)
+
+  map_res_mat state_trans_map(
+    const arma::mat &M, side s = both) const override {
+    if(order == 1)
+      return map_res_mat(M(arma::span::all, arma::span::all));
+
+    return T::state_trans_map(M, s);
+  }
+  map_res_mat state_trans_map_inv(
+    const arma::mat &M, side s = both) const override {
+    if(order == 1)
+      return map_res_mat(M(arma::span::all, arma::span::all));
+
+    return T::state_trans_map_inv(M, s);
+  }
 };
 
 

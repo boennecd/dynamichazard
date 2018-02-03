@@ -1,6 +1,6 @@
 if(getRversion() >= "2.15.1")
   utils::globalVariables(c("L", "R_mat", "m", "indicies_fix", "id", "Q_0",
-                           ".F", "Q", "model"))
+                           "F.", "Q", "model"))
 
 #' @title Bootstrap for \code{\link{ddhazard}}
 #' @param ddhazard_fit returned object from a \code{\link{ddhazard}} call.
@@ -158,7 +158,7 @@ ddhazard_boot <- function(
       tryCatch({
         suppressWarnings(est <- ddhazard_no_validation(
           a_0 = a_0, Q_0 = Q_0, L = L, R = R_mat, m = m,
-          .F = .F, verbose = F, Q = Q,
+          F. = F., verbose = F, Q = Q,
           risk_set= boot_risk_set, X_Y = boot_X_Y,
           model = model,
           LR = l,

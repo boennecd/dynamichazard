@@ -58,7 +58,6 @@ test_that("trunc_lp_in_exponential_dist does not truncate when not needed", {
 
 
 test_that("round_if_almost_eq rounds to nearest boundary as expected", {
-  round_if_almost_eq <- asNamespace("dynamichazard")$round_if_almost_eq
   set.seed(56219385)
   n <- 1e3
 
@@ -88,4 +87,49 @@ test_that("round_if_almost_eq rounds to nearest boundary as expected", {
   x_ord <- order(x) - 1L
   x_trans <- drop(round_if_almost_eq(x, x_ord, boundaries = boundaries))
   expect_equal(x_trans, x)
+})
+
+test_that("rep_vec gives expected result", {
+  n_i <- 1e2
+  js <- rnorm(1e2)
+  expect_equal(c(sapply(js, "*", rep.int(1, n_i))), drop(rep_vec(js, n_i)))
+
+  # microbenchmark::microbenchmark(
+  #   R0 <- c(sapply(js, "*", rep.int(1, n_i))),
+  #   R1 <- c(sapply(js, rep, times = n_i)),
+  #   R2 <- c(t.default(matrix(1L, length(js), n_i) * js)),
+  #   R3 <- rep_vec(js, n_i))
+  # all.equal(R0, R1)
+  # all.equal(R1, R2)
+  # all.equal(R2, R3)
+})
+
+
+
+test_that("selection_matrix_map gives correct results", {
+  L <- matrix(0, 2, 3)
+  L[2, 1] <- L[1, 3] <- 1
+
+  x <- c(0.64, 0.41, 0.99)
+  X <- structure(c(
+    -0.08, -1.83, 1.99, -0.19, -1.55, 0.9, 0.1, 2.05, 0.04, 0.2, -0.03,
+    -0.37, -0.76, -0.16, 1.44, -1.03, -0.36, 0.2, -0.03, 0.54, 0.15, -0.09,
+    -0.18, 0.25), .Dim = c(3L, 8L))
+
+  expect_equal(
+    selection_matrix_map_vec_test(L, x, FALSE), L %*% x)
+  expect_equal(
+    selection_matrix_map_mat_test(L, X, FALSE, FALSE), L %*% X)
+  expect_equal(
+    selection_matrix_map_mat_test(L, t(X), TRUE, FALSE), t(X) %*% t(L))
+
+  x <- x[1:2]
+  X <- X[1:2, ]
+
+  expect_equal(
+    selection_matrix_map_vec_test(L, x, TRUE), t(L) %*% x)
+  expect_equal(
+    selection_matrix_map_mat_test(L, X, FALSE, TRUE), t(L) %*% X)
+  expect_equal(
+    selection_matrix_map_mat_test(L, t(X), TRUE, TRUE), t(X) %*% L)
 })

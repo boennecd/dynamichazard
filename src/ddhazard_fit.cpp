@@ -171,7 +171,7 @@ Rcpp::List ddhazard_fit_cpp(
   }
 
   const unsigned int order =
-    dynamic_cast<random_walk<ddhazard_data>*>(p_data.get())->order();
+    dynamic_cast<random_walk<ddhazard_data>*>(p_data.get())->order;
 
   // main loop for estimation
   do
@@ -188,8 +188,8 @@ Rcpp::List ddhazard_fit_cpp(
       my_print(*p_data.get(), p_data->Q, "Q");
     }
 
-    if((it + 1) % 25 == 0)
-      Rcpp::checkUserInterrupt(); // this is expensive (on Windows)
+    if((it + 1) % 5 == 0)
+      Rcpp::checkUserInterrupt();
 
     if(p_data->any_dynamic){
       p_data->V_t_t_s.slice(0) = Q_0; // Q_0 may have been updated or not

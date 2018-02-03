@@ -27,7 +27,8 @@ get_sims <- function(family, use_offset, use_weights, n, q){
 }
 
 test_that("parallel QR update gives same cofficiens results with one iteration", {
-  parallelglm_QR_test <- asNamespace("dynamichazard")$parallelglm_QR_test
+  parallelglm_QR_get_R_n_f <-
+    asNamespace("dynamichazard")$parallelglm_QR_get_R_n_f
 
   grid_vals <- expand.grid(
     family = c("binomial", "poisson"),
@@ -42,7 +43,7 @@ test_that("parallel QR update gives same cofficiens results with one iteration",
     sims <- with(
       vals, get_sims(family, use_offset, use_weights, 200, 2))
 
-    tmp <- with(sims, parallelglm_QR_test(
+    tmp <- with(sims, parallelglm_QR_get_R_n_f(
       t(X), y, vals$family, beta0, weights., offset,
       tol = .Machine$double.xmax, # one iteration,
       block_size = 100, nthreads = 1))

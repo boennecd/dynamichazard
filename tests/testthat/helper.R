@@ -9,45 +9,7 @@ if(interactive()){
   if(grepl("testthat$", getwd()))
     source("../../R/test_utils.R") else source("R/test_utils.R")
 
-  exp_model_names <- with(environment(ddhazard), exp_model_names)
-
-  # test_LAPACK_BLAS_wrapper.R
-  chol_rank_one_update_test <- with(environment(ddhazard), chol_rank_one_update_test)
-  square_tri_inv_test <- with(environment(ddhazard), square_tri_inv_test)
-  symmetric_mat_chol_test <- with(environment(ddhazard), symmetric_mat_chol_test)
-  tri_mat_times_vec_test <- with(environment(ddhazard), tri_mat_times_vec_test)
-  sym_mat_rank_one_update_test <- with(environment(ddhazard), sym_mat_rank_one_update_test)
-  solve_w_precomputed_chol_test <- with(environment(ddhazard), solve_w_precomputed_chol_test)
-  solve_LU_mat <- with(environment(ddhazard), solve_LU_mat)
-  solve_LU_vec <- with(environment(ddhazard), solve_LU_vec)
-  qr_qty_mat_test <- with(environment(ddhazard), qr_qty_mat_test)
-  qr_qty_vec_test <- with(environment(ddhazard), qr_qty_vec_test)
-  qr_R_test <- with(environment(ddhazard), qr_R_test)
-
-  # test_SMA.R
-  SMA_hepler_logit_compute_length <-
-    with(environment(ddhazard), SMA_hepler_logit_compute_length)
-  SMA_hepler_exp_compute_length <-
-    with(environment(ddhazard), SMA_hepler_exp_compute_length)
-
-  # testbigglm_wrapper.R
-  bigglm_updateQR_rcpp <- with(environment(ddhazard), bigglm_updateQR_rcpp)
-  bigglm_regcf_rcpp <- with(environment(ddhazard), bigglm_regcf_rcpp)
-
-  # testboot_est.R
-  get_frac_n_weights <- with(environment(ddhazard), get_frac_n_weights)
-
-  # testdesign_mat_and_risk_obj.R
-  get_permu_data_exp <-  with(environment(ddhazard), get_permu_data_exp)
-  get_permu_data_rev_exp <- with(environment(ddhazard), get_permu_data_rev_exp)
-  get_order_data_exp <-  with(environment(ddhazard), get_order_data_exp)
-  get_order_data_rev_exp <- with(environment(ddhazard), get_order_data_rev_exp)
-  get_design_matrix <- environment(ddhazard)$get_design_matrix
-
-  # test_cpp_utils.R
-  lambert_W0_test <- environment(ddhazard)$lambert_W0_test
-  trunc_eta_exponential_test <- environment(ddhazard)$trunc_eta_exponential_test
-  trunc_eta_exponential_test_log_eps <- environment(ddhazard)$trunc_eta_exponential_test_log_eps
+  list2env(as.list(asNamespace("dynamichazard")), envir = environment())
 }
 
 # wrapper for expect_know_...

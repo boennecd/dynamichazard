@@ -1,10 +1,15 @@
 set.seed(18)
-n_vars <- 3
-sims <- test_sim_func_exp(
-  n_series = 1e3, n_vars = n_vars, t_0 = 0, t_max = 20,
+n_vars <- 6
+is_fixed <- 2:7
+sims <- test_sim_func_logit(
+  n_series = 1e5, n_vars = n_vars, t_0 = 0, t_max = 30,
   x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
-  intercept_start = -3, sds = Q_true <- c(.05, rep(.2, n_vars)))
-Q_true <- diag(Q_true^2)
+  is_fixed = is_fixed,
+  tstart_sampl_func =
+    function(t_0, t_max)
+      max(t_0, runif(1, -t_max, t_max -2)),
+  intercept_start = -4, sds = Q_true <- c(.05, rep(.2, n_vars)))
+Q_true <- diag(Q_true[-is_fixed]^2)
 
 X_Y = get_design_matrix(Surv(tstart, tstop, event) ~ . - id, sims$res)
 risk_set <-
@@ -15,43 +20,70 @@ sum(sims$res$event)
 # xtabs(~ sims$res$tstop[sims$res$event == 1])
 matplot(sims$beta, type = "l", lty = 1)
 
-Q <- diag(1, n_vars + 1)
-Q_0 <- diag(sqrt(.1), n_vars + 1)
+Q <- diag(sqrt(.1), n_vars - length(is_fixed) + 1)
+Q_0 <- diag(1, n_vars - length(is_fixed) + 1)
 a_0 <- sims$betas[1, ]
+frm <- eval(parse(text = paste0(
+  "Surv(tstart, tstop, event) ~ x1 + ", paste0(
+    "ddFixed(x", is_fixed - 1, ")", collapse = " + "))))
 
 .t <- proc.time()
 ddfit <- ddhazard(
-  Surv(tstart, tstop, event) ~ . - id,
+  frm,
   data = sims$res,
-  max_T = 20,
+  max_T = 30,
   by = 1,
   id = sims$res$id,
   Q_0 = Q_0,
   model = "logit",
   Q = Q,
-  control = list(n_max = 10, eps = 1e-8, n_threads = 6))
+  control = list(n_max = 5, eps = 1e-8, n_threads = 6))
 proc.time() - .t
 
 plot(ddfit)
+
+
+
+
+
+
+library(profvis)
+(p <- profvis({
+  result <- PF_EM(
+    frm,
+    data = sims$res,
+    max_T = 30,
+    model = 'logit',
+    by = 1,
+    id = sims$res$id,
+    Q_0 = Q_0,
+    Q = Q,
+    control = PF_control(N_fw_n_bw = 1000, N_smooth = 1e4, N_first = 2e3,
+                         n_threads = 7,
+                         method = "AUX_normal_approx_w_cloud_mean",
+                         smoother = "Fearnhead_O_N",
+                         n_max = 2),
+    trace = 1)
+}))
 
 sink("tmp.txt")
 options(digits = 4)
 .t <- proc.time()
 result <- PF_EM(
-  Surv(tstart, tstop, event) ~ . - id,
+  frm,
   data = sims$res,
-  max_T = 20,
-  model = 'exponential',
+  max_T = 30,
+  model = 'logit',
   by = 1,
   id = sims$res$id,
   Q_0 = Q_0,
   Q = Q,
-  control = list(N_fw_n_bw = 1000, N_smooth = 2.5e3, N_first = 2e3,
-                 n_threads = 4,
-                 method = "bootstrap_filter",
-                 smoother = "Fearnhead_O_N",
-                 n_max = 10),
-  trace = 1)
+  control = PF_control(N_fw_n_bw = 1000, N_smooth = 1e3, N_first = 2e3,
+                       n_threads = 7,
+                       method = "AUX_normal_approx_w_cloud_mean",
+                       smoother = "Fearnhead_O_N",
+                       n_max = 1),
+  trace = 2)
 proc.time() - .t
 sink()
 
@@ -61,23 +93,31 @@ norm(result$Q - Q_true)
 diag(ddfit$Q - Q_true)
 diag(result$Q - Q_true)
 
-var(ddfit$state_vecs[1, ] - a_0)
-var(result$a_0 - a_0)
+var(ddfit$state_vecs[1, -is_fixed] - a_0[-is_fixed])
+var(result$a_0 - a_0[-is_fixed])
 
-b_idx <- 1:4 #1:5
+b_idx <- setdiff(1:ncol(sims$betas), is_fixed)
 ylim <- range(range(ddfit$state_vecs[, b_idx], sims$betas[, b_idx]))
 ylim[1] <- min(range(ddfit$state_vecs[, b_idx], sims$betas[, b_idx]), -4)
-matplot(0:20, sims$betas[, b_idx], lty = 1, type = "l", xlim = c(0, 21),
+matplot(0:30, sims$betas[, b_idx], lty = 1, type = "l", xlim = c(0, 21),
         ylim = ylim)
 plot_out <- plot(result, add = TRUE, lty = 2, cov_index = b_idx)
 plot(result, add = TRUE, qlvls = c(),
      type = "forward_clouds", lty = 3, cov_index = b_idx)
 plot(result, add = TRUE, qlvls = c(),
      type = "backward_clouds", lty = 3, cov_index = b_idx)
-matplot(0:20, ddfit$state_vecs[, b_idx], lty = 1, col = "brown", type = "l", add = TRUE)
+matplot(0:30, ddfit$state_vecs[, b_idx], lty = 1, col = "brown", type = "l", add = TRUE)
 
-sum((plot_out$mean - sims$betas[-1, ])^2)
-sum((ddfit$state_vecs[-1, ] - sims$betas[-1, ])^2)
+sum((plot_out$mean - sims$betas[-1, -is_fixed])^2)
+sum((ddfit$state_vecs[-1, -is_fixed] - sims$betas[-1, -is_fixed])^2)
+
+var(result$fixed_effects - sims$betas[1, is_fixed])
+var(ddfit$fixed_effects - sims$betas[1, is_fixed])
+
+
+
+
+
 
 
 

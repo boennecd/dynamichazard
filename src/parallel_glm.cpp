@@ -253,7 +253,7 @@ class parallelglm_class_QR {
 
   /* worker class for multithreading*/
   class worker {
-    static constexpr double zero_eps = 2.220446e-16;
+    static constexpr double zero_eps = 1e-100;
 
     const uword i_start, i_end;
     data_holder_base &data;
@@ -514,15 +514,24 @@ arma::vec parallelglm(
   return result;
 }
 
-// Exported to test the intermediate computations
 // [[Rcpp::export]]
-Rcpp::List parallelglm_QR_test(
+Rcpp::List parallelglm_QR_get_R_n_f(
     arma::mat &X, arma::vec &Ys, std::string family, arma::vec beta0,
     arma::vec &weights, arma::vec &offsets, double tol = 1e-8,
     int nthreads = 1, int it_max = 25, bool trace = false,
-    int block_size = 100){
+    int block_size = 10000){
   arma::uword p = X.n_rows;
   arma::uword n = X.n_cols;
+
+  if(p != beta0.n_elem)
+    Rcpp::stop("The number of rows in X does not match with the number of elements in beta0");
+  if(n != weights.n_elem)
+    Rcpp::stop("The number of cols in X does not match with the number of elements in weights");
+  if(n != offsets.n_elem)
+    Rcpp::stop("The number of cols in X does not match with the number of elements in offsets");
+  if(n != Ys.n_elem)
+    Rcpp::stop("The number of cols in X does not match with the number of elements in Ys");
+
   data_holder_base data(X, Ys, weights, offsets, nthreads, p, n, block_size);
   data.beta = &beta0;
 

@@ -154,6 +154,24 @@ arma::mat qr_R_test(const arma::mat &A){
   return QR_factorization(A).R();
 }
 
+// [[Rcpp::export]]
+arma::mat selection_matrix_map_mat_test(arma::mat L, arma::mat X, bool is_right, bool is_inv){
+  selection_matrix S_L(L);
+  if(is_inv)
+    return S_L.map_inv(X, is_right);
+
+  return S_L.map(X, is_right);
+}
+
+// [[Rcpp::export]]
+arma::vec selection_matrix_map_vec_test(arma::mat L, arma::vec X, bool is_inv){
+  selection_matrix S_L(L);
+  if(is_inv)
+    return S_L.map_inv(X);
+
+  return S_L.map(X);
+}
+
 // -------------------------------------------------- //
 
 #include "utils.h"

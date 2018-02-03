@@ -52,4 +52,24 @@ public:
   arma::uvec pivot() const;
 };
 
+/* TODO: move this class to another file which makes more sense... */
+
+class selection_matrix {
+  std::shared_ptr<arma::uvec> idx_n;
+  std::shared_ptr<arma::uvec> idx_m;
+  const arma::uword n;
+  const arma::uword m;
+public:
+  /* Pass L (n x m)*/
+  selection_matrix(const arma::mat&);
+
+  /* returns L * x or x * L^\top */
+  arma::vec map(const arma::vec&) const;
+  arma::mat map(const arma::mat&, const bool is_right = false) const;
+
+  /* returns L^\top * x or x * L */
+  arma::vec map_inv(const arma::vec&) const;
+  arma::mat map_inv(const arma::mat&, const bool is_right = false) const;
+};
+
 #endif

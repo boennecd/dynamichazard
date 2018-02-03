@@ -105,7 +105,8 @@ public:
       // avoid wmaybe-uninitialized
       bin_start = bin_stop = std::numeric_limits<double>::quiet_NaN();
 
-    auto jobs = get_work_blocks(r_set.begin(), r_set.end(), data.work_block_size);
+    auto jobs = get_work_blocks(
+      r_set.begin(), r_set.end(), data.work_block_size);
     unsigned int n_jobs = jobs.size();
 
     /* compute log likelihood */
