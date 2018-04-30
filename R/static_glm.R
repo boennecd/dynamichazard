@@ -1,4 +1,4 @@
-#' @title Get \code{data.frame} for discrete time survival models
+#' @title Get data.frame for Discrete Time Survival Models
 #' @description Function used to get \code{data.frame} with weights for a static fit for survivals.
 #'
 #' @inheritParams ddhazard
@@ -50,12 +50,11 @@ get_survival_case_weights_and_data = function(
   #####
   # checks
 
-  X_Y = get_design_matrix(formula, data, predictors = F)
+  X_Y <- get_design_matrix(formula, data, predictors = F)
   formula_used <- X_Y$formula_used
-  attr(data, "class") <- c("data.table", attr(data, "class"))
 
   if(missing(init_weights))
-    init_weights = rep(1, nrow(data))
+    init_weights <- rep(1, nrow(data))
 
   c_outcome <- change_new_var_name(c_outcome, data = data)
   c_weights <- change_new_var_name(c_weights, data = data)
@@ -99,6 +98,7 @@ get_survival_case_weights_and_data = function(
   return(out)
 }
 
+#' @importFrom utils tail
 change_new_var_name <- function(c_x, data){
   if(any(names(data) == c_x)){
     c_x_new <- tail(make.unique(c(names(data), c_x)), 1)
@@ -109,7 +109,7 @@ change_new_var_name <- function(c_x, data){
     c_x
 }
 
-
+#' @importFrom utils tail
 .get_survival_case_weights_and_data_discrete <- function(
   risk_obj, compute_risk_obj, data, X_Y, by, max_T, use_weights, c_outcome,
   c_end_t, c_weights, id, formula_used, init_weights){
@@ -126,7 +126,7 @@ change_new_var_name <- function(c_x, data){
 
   if(use_weights){
     new_weights = rep(0, nrow(data))
-    new_case_rows = list()
+    new_case_rows <- NULL
 
     for(i in seq_along(risk_obj$risk_sets)){
       time_ = risk_obj$event_times[i]
@@ -139,7 +139,7 @@ change_new_var_name <- function(c_x, data){
       new_case_rows <- c(
         new_case_rows, list(c(
           list(Y = rep(1, sum(is_case))),
-          data[r_set_is_case],
+          data[r_set_is_case, ],
           list(weights = init_weights[r_set_is_case]))))
 
       new_weights[r_set_not_case] = new_weights[r_set_not_case] + init_weights[r_set_not_case]
@@ -150,10 +150,9 @@ change_new_var_name <- function(c_x, data){
     do_keep <- which(do_keep)
     X = c(
       list(Y = rep(0, n_keep)),
-      data[do_keep],
+      data[do_keep, ],
       list(weights = new_weights[do_keep]))
-    X <- rbindlist(c(list(X), new_case_rows))
-    X <- as.data.frame(X)
+    X <- .rbind_list(c(list(X), new_case_rows))
     names(X)[c(1, ncol(X))] <- c(c_outcome, c_weights)
 
   } else {
@@ -209,16 +208,16 @@ change_new_var_name <- function(c_x, data){
 }
 
 
-#' @title  Static glm fit
+#' @title  Static glm Fit
 #' @inheritParams ddhazard
 #' @inheritParams get_survival_case_weights_and_data
 #' @param ... arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used.
 #' @param family \code{"logit"} or \code{"exponential"} for a static equivalent model of \code{\link{ddhazard}}.
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}.
 #' @param speedglm depreciated.
-#' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{\link[speedglm]{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.
+#' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm::speedglm.wfit} or \code{\link{glm.fit}} which will be faster.
 #' @param mf model matrix for regression. Needed when \code{only_coef = TRUE}
-#' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm.wfit}} and \code{parallelglm_quick} and \code{parallelglm_QR} uses a parallel \code{C++} estimation method.
+#' @param method_use method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{speedglm::speedglm} uses \code{speedglm::speedglm.wfit} and \code{parallelglm_quick} and \code{parallelglm_QR} uses a parallel \code{C++} estimation method.
 #' @param n_threads number of threads to use when \code{method_use} is \code{"parallelglm"}.
 #'
 #' @description

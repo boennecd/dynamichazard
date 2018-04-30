@@ -2,7 +2,7 @@
 % Please edit documentation in R/PF.R
 \name{PF_EM}
 \alias{PF_EM}
-\title{EM estimation with particle filters}
+\title{EM Estimation with Particle Filters and Smoothers}
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
   control = PF_control(...), trace = 0, seed = .Random.seed, ...)
@@ -31,6 +31,10 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 \item{control}{list of control variables (see the control section below).}
 
 \item{trace}{argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.}
+
+\item{seed}{seed to set at the start of every EM iteration.}
+
+\item{...}{optional way to pass arguments to \code{control}.}
 }
 \value{
 An object of class \code{PF_EM}.
@@ -41,23 +45,6 @@ Method to estimate the hyper parameters with an EM algorithm.
 \details{
 See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 }
-\section{Control}{
-
-The \code{control} argument allows you to pass a \code{list} to select additional parameters. See \code{vignette("Particle_filtering", "dynamichazard")} for details. Unspecified elements of the list will yield default values.
-\describe{
-\item{\code{method}}{method for forward, backward and smoothing filter.}
-\item{\code{smoother}}{smoother to use.}
-\item{\code{N_fw_n_bw}}{number of particles to use in forward and backward filter.}
-\item{\code{N_first}}{number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
-\item{\code{N_smooth}}{number of particles to use in particle smoother.}
-\item{\code{eps}}{convergence threshold in EM method.}
-\item{\code{n_max}}{maximum number of iterations of the EM algorithm.}
-\item{\code{n_threads}}{maximum number threads to use in the computations.}
-\item{\code{forward_backward_ESS_threshold}}{required effective sample size to not re-sample in the particle filters.}
-\item{\code{seed}}{seed to set at the start of every EM iteration.}
-}
-}
-
 \examples{
 #####
 # Fit model with lung data set from survival

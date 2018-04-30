@@ -2,7 +2,7 @@
 % Please edit documentation in R/shiny_app.R
 \name{ddhazard_app}
 \alias{ddhazard_app}
-\title{ddhazard demo}
+\title{ddhazard Demo}
 \usage{
 ddhazard_app(quietly = F, ...)
 }

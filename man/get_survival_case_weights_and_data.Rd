@@ -2,7 +2,7 @@
 % Please edit documentation in R/static_glm.R
 \name{get_survival_case_weights_and_data}
 \alias{get_survival_case_weights_and_data}
-\title{Get \code{data.frame} for discrete time survival models}
+\title{Get data.frame for Discrete Time Survival Models}
 \usage{
 get_survival_case_weights_and_data(formula, data, by, max_T, id, init_weights,
   risk_obj, use_weights = T, is_for_discrete_model = T, c_outcome = "Y",

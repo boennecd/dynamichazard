@@ -1,5 +1,4 @@
-[![Build Status on Travis](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard)
-[![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)		
+[![Build Status on Travis](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard) [![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)
 [![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/dynamichazard)](http://cran.rstudio.com/web/packages/dynamichazard/index.html)
 
 dynamichazard
@@ -22,8 +21,8 @@ Installation
 You can install dynamichazard from github with:
 
 ``` r
-install.packages("devtools")
-devtools::install_github("dynamichazard/boennecd")
+# install.packages("devtools")
+devtools::install_github("boennecd/dynamichazard")
 ```
 
 You can also download the package from CRAN by calling:
@@ -46,8 +45,21 @@ The analysis is given below with comments:
 
 ``` r
 library(dynamichazard)
-library(survival)
+#> Loading required package: survival
 library(JMbayes) # Contain the aids data set
+#> Loading required package: nlme
+#> Loading required package: doParallel
+#> Loading required package: foreach
+#> Loading required package: iterators
+#> Loading required package: parallel
+#> Loading required package: rstan
+#> Loading required package: ggplot2
+#> Loading required package: StanHeaders
+#> rstan (Version 2.17.3, GitRev: 2e1f913d3ca3)
+#> For execution on a local, multicore CPU with excess RAM we recommend calling
+#> options(mc.cores = parallel::detectCores()).
+#> To avoid recompilation of unchanged Stan programs, we recommend calling
+#> rstan_options(auto_write = TRUE)
 
 # We remove the data we dont neeed
 aids <- aids[aids$Time == aids$stop, ]
@@ -85,7 +97,7 @@ fit <- ddhazard(
     LR = .5,                      # Learning rate
     n_max = 20                    # Max number iterations in EM
     ))
-#> a_0 not supplied. One iteration IWLS of static glm model is used
+#> a_0 not supplied. IWLS estimates of static glm model is used
 
 # Plot the estimates. Dashed lines are 95% confidence bounds
 plot(fit)
@@ -131,7 +143,7 @@ pf_fit <- PF_EM(
   max_T = 19,
   Q = diag(.01, 5),
   Q_0 = diag(1, 5),
-  control = list(
+  control = PF_control(
     # set number of particles
     N_fw_n_bw = 1000, 
     N_first = 10000,
@@ -140,22 +152,21 @@ pf_fit <- PF_EM(
     smoother = "Brier_O_N_square", # Select smoother
     
     eps = .001, 
-    n_max = 20
-    )
+    n_max = 100)
   #, trace = 1 # comment back to get feedback during estimation
   )
-#> a_0 not supplied. One iteration IWLS of static glm model is used
-#> Warning in .PF_EM(n_fixed_terms_in_state_vec = 0, X = t(X_Y$X), fixed_terms
-#> = t(X_Y$fixed_terms), : Method did not converge.
+#> a_0 not supplied. IWLS estimates of static glm model is used
+#> Warning in (function (n_fixed_terms_in_state_vec, X, fixed_terms, tstart, :
+#> Method did not converge.
 
 # Compare estimates of Q
 pf_fit$Q
-#>               [,1]          [,2]         [,3]         [,4]          [,5]
-#> [1,]  0.0105942683 -2.876336e-04 -0.005015531 -0.005844878  2.189748e-03
-#> [2,] -0.0002876336  1.077249e-02 -0.002687863 -0.001557523  6.388349e-05
-#> [3,] -0.0050155312 -2.687863e-03  0.026827072  0.005267746 -3.234016e-03
-#> [4,] -0.0058448782 -1.557523e-03  0.005267746  0.015524746 -7.382447e-03
-#> [5,]  0.0021897480  6.388349e-05 -0.003234016 -0.007382447  1.315256e-02
+#>             [,1]         [,2]         [,3]        [,4]        [,5]
+#> [1,]  0.02804042 -0.013547965 -0.018003049 -0.03549065  0.03523118
+#> [2,] -0.01354797  0.019566602 -0.002454179  0.02523899 -0.02872706
+#> [3,] -0.01800305 -0.002454179  0.067308051  0.01908835 -0.02716883
+#> [4,] -0.03549065  0.025238993  0.019088346  0.06230997 -0.06580052
+#> [5,]  0.03523118 -0.028727060 -0.027168835 -0.06580052  0.07855140
 fit$Q
 #>               (Intercept)    AZTfailure    gendermale       drugddI
 #> (Intercept)  0.0092783394 -1.794496e-04 -2.810209e-04 -2.398848e-04

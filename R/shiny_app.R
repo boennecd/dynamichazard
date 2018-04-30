@@ -1,4 +1,4 @@
-#' @title ddhazard demo
+#' @title ddhazard Demo
 #'
 #' @description
 #' \code{ddhazard_app} runs a shiny app with demonstration of models.

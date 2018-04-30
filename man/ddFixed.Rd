@@ -3,7 +3,7 @@
 \name{ddFixed}
 \alias{ddFixed}
 \alias{ddFixed_intercept}
-\title{Auxiliary functions for fixed effects}
+\title{Auxiliary Functions for Fixed Effects}
 \usage{
 ddFixed(object)
 

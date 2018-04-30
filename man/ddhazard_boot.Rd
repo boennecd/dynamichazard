@@ -2,7 +2,7 @@
 % Please edit documentation in R/boot_est.R
 \name{ddhazard_boot}
 \alias{ddhazard_boot}
-\title{Bootstrap for \code{\link{ddhazard}}}
+\title{Bootstrap for ddhazard Object}
 \usage{
 ddhazard_boot(ddhazard_fit, strata, unique_id, R = 100,
   do_stratify_with_event = F, do_sample_weights = F,
@@ -42,6 +42,7 @@ fit <- ddhazard(
 bt <- ddhazard_boot(fit, R = 999)
 plot(fit, ddhazard_boot = bt, level = .9)
 }
+
 
 }
 \seealso{

@@ -2,7 +2,7 @@
 % Please edit documentation in R/predict.R
 \name{predict.ddhazard}
 \alias{predict.ddhazard}
-\title{Predict method for \code{\link{ddhazard}}}
+\title{Predict Method for ddhazard Object}
 \usage{
 \method{predict}{ddhazard}(object, new_data, type = c("response", "term"),
   tstart = "start", tstop = "stop", use_parallel = F, sds = F,

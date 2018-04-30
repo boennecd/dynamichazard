@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.PF_clouds}
 \alias{plot.PF_clouds}
-\title{Plot of clouds from a \code{PF_clouds} object}
+\title{Plot of Clouds From a PF_clouds Object}
 \usage{
 \method{plot}{PF_clouds}(x, y, type = c("smoothed_clouds", "forward_clouds",
   "backward_clouds"), ylim, add = FALSE, qlvls = c(0.05, 0.5, 0.95),

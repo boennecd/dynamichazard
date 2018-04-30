@@ -2,7 +2,7 @@
 % Please edit documentation in R/static_glm.R
 \name{static_glm}
 \alias{static_glm}
-\title{Static glm fit}
+\title{Static glm Fit}
 \usage{
 static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
   weights, risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
@@ -32,11 +32,11 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 
 \item{speedglm}{depreciated.}
 
-\item{only_coef}{\code{TRUE} if only coefficients should be returned. This will only call the \code{\link[speedglm]{speedglm.wfit}} or \code{\link{glm.fit}} which will be faster.}
+\item{only_coef}{\code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm::speedglm.wfit} or \code{\link{glm.fit}} which will be faster.}
 
 \item{mf}{model matrix for regression. Needed when \code{only_coef = TRUE}}
 
-\item{method_use}{method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{\link[speedglm]{speedglm}} uses \code{\link[speedglm]{speedglm.wfit}} and \code{parallelglm_quick} and \code{parallelglm_QR} uses a parallel \code{C++} version \code{\link{glm.fit}} which only gives the coefficients.}
+\item{method_use}{method to use for estimation. \code{\link{glm}} uses \code{\link{glm.fit}}, \code{speedglm::speedglm} uses \code{speedglm::speedglm.wfit} and \code{parallelglm_quick} and \code{parallelglm_QR} uses a parallel \code{C++} estimation method.}
 
 \item{n_threads}{number of threads to use when \code{method_use} is \code{"parallelglm"}.}
 }

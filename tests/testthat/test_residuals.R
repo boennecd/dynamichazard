@@ -210,7 +210,8 @@ test_that("Gets previous results with Rossi", {
   skip_on_cran()
 
   if(interactive()){
-    diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+    root <- gsub("(.+dynamichazard)(.*)", "\\1", getwd())
+    diag_data_path <- paste0(root, "/vignettes/Diagnostics")
   } else{
     diag_data_path <- "."
   }
@@ -236,8 +237,8 @@ test_that("Get prevoius residuals with whas500", {
   skip_on_cran()
 
   if(interactive()){
-    diag_data_path <- paste0(
-      stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+    root <- gsub("(.+dynamichazard)(.*)", "\\1", getwd())
+    diag_data_path <- paste0(root, "/vignettes/Diagnostics")
   } else{
     diag_data_path <- "."
   }

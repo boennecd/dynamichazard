@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.ddhazard}
 \alias{plot.ddhazard}
-\title{Plots for \code{\link{ddhazard}} object}
+\title{Plots for ddhazard Object}
 \usage{
 \method{plot}{ddhazard}(x, xlab = "Time", ylab = "Hazard", type = "cov",
   plot_type = "l", cov_index, ylim, col = "black", add = F,

@@ -101,7 +101,7 @@ get_design_matrix = function(
        terms = Terms, has_fixed_intercept = has_fixed_intercept, xlev = xlev)
 }
 
-#' Auxiliary functions for fixed effects
+#' Auxiliary Functions for Fixed Effects
 #' @description
 #' Functions used in formula of \code{\link{ddhazard}} for time-invariant effects. \code{ddFixed_intercept} is only used for the intercept.
 #'

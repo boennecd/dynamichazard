@@ -1,4 +1,4 @@
-#' @title Hard Drive failures.
+#' @title Hard Drive Failures
 #'
 #' @description
 #' A data set containing hard drive failures data from Backblaze in the

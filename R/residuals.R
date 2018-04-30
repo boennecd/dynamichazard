@@ -1,4 +1,4 @@
-#' @title Residuals method for \code{\link{ddhazard}}
+#' @title Residuals Method for ddhazard Object
 #' @description Residuals method for the result of a \code{\link{ddhazard}} call.
 #'
 #' @param object result of \code{\link{ddhazard}} call.

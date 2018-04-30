@@ -2,7 +2,7 @@
 % Please edit documentation in R/loglike.R
 \name{logLik.PF_clouds}
 \alias{logLik.PF_clouds}
-\title{Log likelihood of a \code{PF_clouds} object}
+\title{Log Likelihood of a PF_clouds Object}
 \usage{
 \method{logLik}{PF_clouds}(object, ...)
 }

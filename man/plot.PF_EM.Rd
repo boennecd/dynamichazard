@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.PF_EM}
 \alias{plot.PF_EM}
-\title{Plot for a \code{PF_EM} object}
+\title{Plot for a PF_EM Object}
 \usage{
 \method{plot}{PF_EM}(x, y, ...)
 }

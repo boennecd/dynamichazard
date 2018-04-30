@@ -3,8 +3,6 @@ context("Running test_PF")
 test_that("dmvnrm_log_test gives correct likelihood", {
   skip_if_not_installed("mvtnorm")
 
-  dmvnrm_log_test <- asNamespace("dynamichazard")$dmvnrm_log_test
-
   for(i in 1:10){
     n <- 5
     mu <- rnorm(n)
@@ -33,8 +31,6 @@ get_means <- function(result){
 
 test_that("PF_smooth gives same results", {
   skip_on_cran()
-
-  PF_smooth <- asNamespace("dynamichazard")$PF_smooth
 
   n_vars <- 2
   set.seed(78095324)
@@ -223,8 +219,6 @@ test_that("PF_smooth gives same results", {
 test_that("Import and export PF cloud from Rcpp gives the same", {
   skip_on_cran()
 
-  PF_cloud_to_rcpp_and_back <- asNamespace("dynamichazard")$PF_cloud_to_rcpp_and_back
-
   #####
   # Without transition_likelihoods
   test_func <- function(has_transition){
@@ -343,8 +337,6 @@ test_that("PF_EM gives previous results on head neck data set", {
 
 test_that("compute_summary_stats gives previous results", {
   skip_on_cran()
-
-  compute_summary_stats <- asNamespace("dynamichazard")$compute_summary_stats
 
   Q_0 <- diag(1, 2)
   Q <- diag(0.1, 2)

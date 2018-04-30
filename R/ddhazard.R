@@ -1,7 +1,7 @@
 if(getRversion() >= "2.15.1")
   utils::globalVariables(c("L", "R", "m", "indicies_fix"))
 
-#' @title Fitting dynamic hazard models
+#' @title Fitting Dynamic Hazard Models
 #' @description  Function to fit dynamic hazard models using state space models.
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.
 #' @param data \code{data.frame} or environment containing the outcome and co-variates.
@@ -54,28 +54,26 @@ if(getRversion() >= "2.15.1")
 #'
 #' @return
 #' A list with class \code{ddhazard}. The list contains
-#' \describe{
-#' \item{\code{formula}}{the passed formula.}
-#' \item{\code{call}}{the matched call.}
-#' \item{\code{state_vecs}}{2D matrix with the estimated state vectors (regression parameters) in each bin.}
-#' \item{\code{state_vars}}{3D array with smoothed variance estimates for each state vector.}
-#' \item{\code{lag_one_cov}}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF.}
-#' \item{\code{n_risk}}{the number of observations in each interval.}
-#' \item{\code{times}}{the interval borders.}
-#' \item{\code{risk_set}}{the object from \code{\link{get_risk_obj}} if saved.}
-#' \item{\code{data}}{the \code{data} argument if saved.}
-#' \item{\code{weights}}{\code{weights} used in estimation if saved.}
-#' \item{\code{id}}{ids used to match rows in \code{data} to individuals.}
-#' \item{\code{order}}{order of the random walk.}
-#' \item{\code{F_}}{matrix which map from one state vector to the next.}
-#' \item{\code{method}}{method used in the E-step.}
-#' \item{\code{est_Q_0}}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm.}
-#' \item{\code{family}}{Rcpp \code{\link{Module}} with C++ functions used for estimation given the \code{model} argument.}
-#' \item{\code{discrete_hazard_func}}{the hazard function corresponding to the \code{model} argument.}
-#' \item{\code{terms}}{the \code{\link{terms}} object used.}
-#' \item{\code{has_fixed_intercept}}{\code{TRUE} if the model has a time-invariant intercept.}
-#' \item{\code{xlev}}{a record of the levels of the factors used in fitting.}
-#'}
+#' \item{formula}{the passed formula.}
+#' \item{call}{the matched call.}
+#' \item{state_vecs}{2D matrix with the estimated state vectors (regression parameters) in each bin.}
+#' \item{state_vars}{3D array with smoothed variance estimates for each state vector.}
+#' \item{lag_one_cov}{3D array with lagged correlation matrix for each for each change in the state vector. Only present when the model is logit and the method is EKF.}
+#' \item{n_risk}{the number of observations in each interval.}
+#' \item{times}{the interval borders.}
+#' \item{risk_set}{the object from \code{\link{get_risk_obj}} if saved.}
+#' \item{data}{the \code{data} argument if saved.}
+#' \item{weights}{\code{weights} used in estimation if saved.}
+#' \item{id}{ids used to match rows in \code{data} to individuals.}
+#' \item{order}{order of the random walk.}
+#' \item{F_}{matrix which map from one state vector to the next.}
+#' \item{method}{method used in the E-step.}
+#' \item{est_Q_0}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm.}
+#' \item{family}{Rcpp \code{\link{Module}} with C++ functions used for estimation given the \code{model} argument.}
+#' \item{discrete_hazard_func}{the hazard function corresponding to the \code{model} argument.}
+#' \item{terms}{the \code{\link{terms}} object used.}
+#' \item{has_fixed_intercept}{\code{TRUE} if the model has a time-invariant intercept.}
+#' \item{xlev}{a record of the levels of the factors used in fitting.}
 #'
 #' @seealso
 #' \code{\link[=plot.ddhazard]{plot}}, \code{\link[=residuals.ddhazard]{residuals}}, \code{\link[=predict.ddhazard]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}
@@ -616,8 +614,7 @@ get_start_values <- function(
   return(list(a_0 = a_0, fixed_parems_start = fixed_parems_start))
 }
 
-report_pre_liminary_stats_before_EM <- function(
-  risk_set, Y){
+report_pre_liminary_stats_before_EM <- function(risk_set, Y){
   tmp_tbl = matrix(NA_real_, nrow = risk_set$d, ncol = 2)
   colnames(tmp_tbl) = c("Risk size", "Num events")
 

@@ -1,4 +1,4 @@
-#' @title Hat values for \code{\link{ddhazard}} object
+#' @title Hat Values for ddhazard Object
 #'
 #' @description Computes hat-"like" values from usual L2 penalized binary regression.
 #'

@@ -2,7 +2,7 @@
 % Please edit documentation in R/residuals.R
 \name{residuals.ddhazard}
 \alias{residuals.ddhazard}
-\title{Residuals method for \code{\link{ddhazard}}}
+\title{Residuals Method for ddhazard Object}
 \usage{
 \method{residuals}{ddhazard}(object, type = c("std_space_error",
   "space_error", "pearson", "raw"), data = NULL, ...)

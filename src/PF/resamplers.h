@@ -139,6 +139,7 @@ public:
     auto it_mu_j = ans.mu_js.begin();
     unsigned int n_elem = PF_cloud.size();
     for(unsigned int i = 0; i != n_elem; ++i, ++it_cl, ++it_mu_j){
+      // TODO: should maybe be the approximation...
       double log_prob_y_given_state =
         densities::log_prob_y_given_state(
           data, data.err_state_map(*it_mu_j).sv, t);
@@ -230,6 +231,7 @@ public:
       auto it_cl = &PF_cloud[i];
       auto it_ans = &ans[i];
 
+      // TODO: should maybe be the approximation...
       double log_prob_y_given_state = densities::log_prob_y_given_state(
         data, data.err_state_map(it_ans->mu).sv, t, r_set, false);
 

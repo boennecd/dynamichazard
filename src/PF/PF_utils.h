@@ -239,7 +239,8 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
 
     arma::vec eta =  get_linear_product(coefs, data.X, my_r_set);
-    eta += data.fixed_effects(my_r_set);
+    arma::vec offsets = data.fixed_effects(my_r_set);
+    eta += offsets;
     const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
     if(densities::uses_at_risk_length){
@@ -248,6 +249,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     }
 
     auto it_eta = eta.begin();
+    auto it_off = offsets.begin();
     auto it_is_event = is_event.begin();
     auto it_r = my_r_set.begin();
     auto it_start = starts.begin();
@@ -258,7 +260,8 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
         Sigma = ... + R^T L^T X^T (-G) X L R
         mu    = R^T L^T X^T (-G) X L \bar{alpha} + R^T L^T X^T (-g)
     */
-    for(arma::uword i = 0; i < n_elem; ++i, ++it_eta, ++it_is_event, ++it_r){
+    for(arma::uword i = 0; i < n_elem;
+        ++i, ++it_eta, ++it_is_event, ++it_r, ++it_off){
       double at_risk_length = 0;
       if(densities::uses_at_risk_length){
         at_risk_length = get_at_risk_length(
@@ -277,7 +280,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
       arma::vec x_err_space = data.err_state_map_inv(
         data.lp_map_inv(data.X.col(*it_r)).sv).sv;
       sym_mat_rank_one_update(neg_G, x_err_space, my_Sigma_inv);
-      my_mu += x_err_space * ((*it_eta * neg_G) + g);
+      my_mu += x_err_space * (((*it_eta - *it_off) * neg_G) + g);
     }
   }
 
@@ -358,11 +361,20 @@ static input_for_normal_apprx_w_cloud_mean
 #pragma omp  parallel for schedule(static)
 #endif
     for(unsigned int i = 0; i < n_elem; ++i){
-      arma::vec tmp = data.err_state_map_inv(cl[i].get_state()).sv;
-      arma::vec mu_j =
-        solve_w_precomputed_chol(Q.chol, tmp) + ans.mu;
-      if(!is_forward)
-        mu_j += *mu_term;
+      arma::vec mu_j;
+      if(is_forward){
+        mu_j = data.state_trans_map(cl[i].get_state()).sv;
+        mu_j = data.err_state_map_inv(mu_j).sv;
+        mu_j = solve_w_precomputed_chol(Q.chol, mu_j) + ans.mu;
+
+      } else {
+        mu_j = data.err_state_map_inv(cl[i].get_state()).sv;
+        mu_j = solve_w_precomputed_chol(Q.chol, mu_j);
+        mu_j = data.state_trans_map_inv(data.err_state_map(mu_j).sv).sv;
+        mu_j = data.err_state_map_inv(mu_j).sv      + ans.mu + *mu_term;
+
+      }
+
       mu_j = solve_w_precomputed_chol(ans.Sigma_inv_chol, mu_j);
 
       ans.mu_js[i] = std::move(mu_j);
@@ -420,15 +432,22 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 #endif
   for(unsigned int i = 0; i < size; ++i){
     mu_iterator iter = b + i;
-    arma::vec this_state = Func::get_elem(iter);
+    const arma::vec &this_state = Func::get_elem(iter);
     auto inter = compute_mu_n_Sigma_from_normal_apprx
       <densities, 5, false>(data, t, *Q_use, this_state, r_set);
 
-    arma::vec tmp = data.err_state_map_inv(this_state).sv;
-    arma::vec mu =
-      solve_w_precomputed_chol(Q.chol, tmp) + inter.mu;
-    if(!is_forward)
-      mu = data.err_state_map(mu).sv + *mu_term;
+    arma::vec mu;
+    if(is_forward){
+      mu = data.state_trans_map(this_state).sv;
+      mu = solve_w_precomputed_chol(Q.chol, mu) + inter.mu;
+
+    } else {
+      mu = data.err_state_map_inv(this_state).sv;
+      mu = solve_w_precomputed_chol(Q.chol, mu);
+      mu = data.state_trans_map_inv(data.err_state_map(mu).sv).sv;
+      mu = data.err_state_map_inv(mu).sv      + inter.mu + *mu_term;
+
+    }
 
     mu = solve_w_precomputed_chol(inter.Sigma_inv_chol, mu);
 

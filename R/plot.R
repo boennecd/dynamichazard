@@ -1,4 +1,4 @@
-#' @title Plots for \code{\link{ddhazard}} object
+#' @title Plots for ddhazard Object
 #' @description Plot of estimated state space variables from a \code{\link{ddhazard}} fit.
 #'
 #' @param x result of \code{\link{ddhazard}} call.
@@ -26,6 +26,8 @@
 #'plot(fit)
 #'plot(fit, cov_index = 2)
 #'
+#' @importFrom graphics par plot lines
+#' @importFrom grDevices col2rgb rgb
 #' @export
 plot.ddhazard = function(x, xlab = "Time",
                              ylab = "Hazard",
@@ -132,7 +134,7 @@ plot.ddhazard = function(x, xlab = "Time",
   stop("Type '", type, "' is not implemented for plot.ddhazard")
 }
 
-#' @title State space error plot
+#' @title State Space Error Plot
 #' @description Plot function for state space errors from \code{\link{ddhazard}} fit.
 #'
 #' @param x result of \code{\link[=residuals.ddhazard]{residuals}} with a `type` argument which yields state space errors.
@@ -144,6 +146,7 @@ plot.ddhazard = function(x, xlab = "Time",
 #' @param x_tick_loc,x_tick_mark \code{at} and \code{labels} arguments passed to \code{axis}.
 #' @param ... arguments passed to \code{\link{plot.default}}.
 #'
+#' @importFrom graphics abline axis par plot points
 #' @export
 plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
                                          p_cex = par()$cex * .2, pch = 16,
@@ -182,7 +185,7 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
   invisible()
 }
 
-#' @title Plot of clouds from a \code{PF_clouds} object
+#' @title Plot of Clouds From a PF_clouds Object
 #' @description
 #' Plots mean curve along with quantiles through time for the forward, backward or smoothed clouds.
 #'
@@ -200,6 +203,7 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
 #' @return
 #' List with quantile levels and mean curve.
 #'
+#' @importFrom graphics matplot matpoints
 #' @export
 plot.PF_clouds <- function(
   x, y,
@@ -259,7 +263,7 @@ plot.PF_clouds <- function(
   invisible(list(mean = .mean, qs = qs))
 }
 
-#' @title Plot for a \code{PF_EM} object
+#' @title Plot for a PF_EM Object
 #' @description
 #' Short hand to call \code{\link{plot.PF_clouds}}.
 #'

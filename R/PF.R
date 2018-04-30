@@ -7,30 +7,17 @@ PF_effective_sample_size <- function(object){
   })
 }
 
-#' @title EM estimation with particle filters
+#' @title EM Estimation with Particle Filters and Smoothers
 #' @description Method to estimate the hyper parameters with an EM algorithm.
 #'
 #' @inheritParams ddhazard
 #' @param trace argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.
 #' @param model either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.
+#' @param seed seed to set at the start of every EM iteration.
+#' @param ... optional way to pass arguments to \code{control}.
 #'
 #' @details
 #' See \code{vignette("Particle_filtering", "dynamichazard")} for details.
-#'
-#' @section Control:
-#' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See \code{vignette("Particle_filtering", "dynamichazard")} for details. Unspecified elements of the list will yield default values.
-#' \describe{
-#' \item{\code{method}}{method for forward, backward and smoothing filter.}
-#' \item{\code{smoother}}{smoother to use.}
-#' \item{\code{N_fw_n_bw}}{number of particles to use in forward and backward filter.}
-#' \item{\code{N_first}}{number of particles to use at time \eqn{0} and time \eqn{d + 1}.}
-#' \item{\code{N_smooth}}{number of particles to use in particle smoother.}
-#' \item{\code{eps}}{convergence threshold in EM method.}
-#' \item{\code{n_max}}{maximum number of iterations of the EM algorithm.}
-#' \item{\code{n_threads}}{maximum number threads to use in the computations.}
-#' \item{\code{forward_backward_ESS_threshold}}{required effective sample size to not re-sample in the particle filters.}
-#' \item{\code{seed}}{seed to set at the start of every EM iteration.}
-#'}
 #'
 #' @return
 #' An object of class \code{PF_EM}.
@@ -135,6 +122,7 @@ PF_EM <- function(
   out
 }
 
+#' @importFrom graphics plot
 .PF_EM <- function(
   n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, Q_0, Q, a_0, F.,
   L, R, m, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
@@ -253,6 +241,28 @@ PF_EM <- function(
     class = "PF_EM"))
 }
 
+
+#' @title Auxiliary for Controlling Particle Fitting
+#'
+#' @description
+#' Auxiliary for additional settings with \code{\link{PF_EM}}.
+#'
+#' @param N_fw_n_bw number of particles to use in forward and backward filter.
+#' @param N_smooth number of particles to use in particle smoother.
+#' @param N_first number of particles to use at time \eqn{0} and time \eqn{d + 1}.
+#' @param eps convergence threshold in EM method.
+#' @param forward_backward_ESS_threshold required effective sample size to not re-sample in the particle filters.
+#' @param method method for forward, backward and smoothing filter.
+#' @param n_max maximum number of iterations of the EM algorithm.
+#' @param n_threads maximum number threads to use in the computations.
+#' @param smoother smoother to use.
+#'
+#' @return
+#' A list with components named as the arguments.
+#'
+#' @seealso
+#' \code{\link{PF_EM}}
+#'
 #' @export
 PF_control <- function(
   N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,

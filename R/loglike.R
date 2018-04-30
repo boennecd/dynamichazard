@@ -1,4 +1,4 @@
-#' @title Log likelihood of mean path of \code{\link{ddhazard}} object
+#' @title Log Likelihood of Mean Path of ddhazard Object
 #'
 #' @description
 #' Computes the log likelihood of (a potentially new) data set given the estimated:
@@ -69,7 +69,7 @@ logLik.ddhazard = function(object, data = NULL, id, ...){
   val
 }
 
-#' @title Log likelihood of a \code{PF_clouds} object
+#' @title Log Likelihood of a PF_clouds Object
 #' @param object an object of class \code{PF_clouds}.
 #' @param ... unused.
 #' @description
@@ -78,6 +78,7 @@ logLik.ddhazard = function(object, data = NULL, id, ...){
 #' @return
 #' The log-likelihood value given the observed data and set of parameter used when simulating the clouds.
 #'
+#' @importFrom utils tail
 #' @export
 logLik.PF_clouds <- function(object, ...){
   sum(tail(

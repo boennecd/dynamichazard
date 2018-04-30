@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.ddhazard_space_errors}
 \alias{plot.ddhazard_space_errors}
-\title{State space error plot}
+\title{State Space Error Plot}
 \usage{
 \method{plot}{ddhazard_space_errors}(x, mod, cov_index = NA, t_index = NA,
   p_cex = par()$cex * 0.2, pch = 16, ylab = "Std. state space error",

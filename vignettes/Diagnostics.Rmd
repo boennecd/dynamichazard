@@ -61,8 +61,8 @@ knit_print.matrix <- function(x, ..., digits = getOption("digits"), row.names = 
     rep("", ncol(x)) else colnames(x)
   # The long table does not do well with the ( or [ symbol 
   # See http://tex.stackexchange.com/questions/228755/undefined-control-sequence-on-left-parenthesis-after-midrule-in-longtable
-  col.names[1] <- stringr::str_replace(col.names[1], "^\\(", "\\\\relax(")
-  col.names[1] <- stringr::str_replace(col.names[1], "^\\[", "\\\\relax[")
+  col.names[1] <- gsub("^\\(", "\\\\relax(", col.names[1], perl = TRUE)
+  col.names[1] <- gsub("^\\[", "\\\\relax[", col.names[1], perl = TRUE)
   res <- paste(c(
     "", "", knitr::kable(x, ..., row.names = row.names, col.names = col.names, 
                          escape = escape, digits = digits)),

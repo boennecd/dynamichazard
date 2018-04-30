@@ -2,7 +2,7 @@
 % Please edit documentation in R/risk_obj.R
 \name{get_risk_obj}
 \alias{get_risk_obj}
-\title{Risk set on an equidistant distant grid}
+\title{Risk Set on an Equidistant Distant Grid}
 \usage{
 get_risk_obj(Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
   min_chunk = 5000)
@@ -24,14 +24,12 @@ get_risk_obj(Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
 }
 \value{
 a list with the following elements
-\describe{
-\item{\code{risk_sets}}{list of lists with one for each bin. Each of the sub lists have indices that corresponds to the entries of \code{Y} that are at risk in the bin.}
-\item{\code{min_start}}{start time of the first bin.}
-\item{\code{I_len}}{length of each bin.}
-\item{\code{d}}{number of bins.}
-\item{\code{is_event_in}}{indices for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins.}
-\item{\code{is_for_discrete_model}}{value of \code{is_for_discrete_model} argument.}
-}
+\item{risk_sets}{list of lists with one for each bin. Each of the sub lists have indices that corresponds to the entries of \code{Y} that are at risk in the bin.}
+\item{min_start}{start time of the first bin.}
+\item{I_len}{length of each bin.}
+\item{d}{number of bins.}
+\item{is_event_in}{indices for which bin an observation \code{Y} is an event. \code{-1} if the individual does not die in any of the bins.}
+\item{is_for_discrete_model}{value of \code{is_for_discrete_model} argument.}
 }
 \description{
 Get the risk set at each bin over an equidistant distant grid.

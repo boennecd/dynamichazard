@@ -3,7 +3,8 @@ context("Running tests for hatvalues")
 #####
 # Load data
 if(interactive()){
-  diag_data_path <- paste0(stringr::str_extract(getwd(), ".+dynamichazard"), "/vignettes/Diagnostics")
+  root <- gsub("(.+dynamichazard)(.*)", "\\1", getwd())
+  diag_data_path <- paste0(root, "/vignettes/Diagnostics")
 } else{
   diag_data_path <- "."
 }

@@ -8,9 +8,6 @@ src/**/*.o
 src/**/*.so
 src/**/*.dll
 *.log
-
-vignettes/figures
-revdep
 .commit
 
 **/*.log
@@ -19,6 +16,7 @@ revdep
 **/tex2pdf*/
 **/Rplots.pdf
 
+vignettes/*.md
 vignettes/*_cache/
 vignettes/Prebuild/*_cache/
 vignettes/pandoc*.pdf
@@ -33,7 +31,7 @@ vignettes/Prebuild/Particle_filtering/*
 !vignettes/Prebuild/Particle_filtering/Particle_filtering.pdf
 !vignettes/Prebuild/Particle_filtering/Particle_filtering.tex
 
-sandbox/*
+.sandbox/*
 **/Rprof.out
 **/Sweave.sty
 README_cache

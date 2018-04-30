@@ -1,9 +1,5 @@
 context("Testing cpp sampling functions")
 
-sample_indices <- asNamespace("dynamichazard")$sample_indices_test
-mvrnorm <- asNamespace("dynamichazard")$mvrnorm_test
-systematic_resampling_test <- asNamespace("dynamichazard")$systematic_resampling_test
-
 test_that("sample_indices give the same as R with same seed", {
   probs <- 1:20 / sum(1:20)
 
@@ -15,7 +11,7 @@ test_that("sample_indices give the same as R with same seed", {
     .new <- .Random.seed
 
     .Random.seed <<- x
-    cpp_res <- sample_indices(length(probs), probs)
+    cpp_res <- sample_indices_test(length(probs), probs)
 
     expect_equal(R_res - 1, drop(cpp_res))
     expect_equal(.new, .Random.seed)
@@ -27,7 +23,7 @@ test_that("sample_indices give the same as R with same seed", {
     .new <- .Random.seed
 
     .Random.seed <<- x
-    cpp_res <- sample_indices(2 * length(probs), probs)
+    cpp_res <- sample_indices_test(2 * length(probs), probs)
 
     expect_equal(R_res - 1, drop(cpp_res))
     expect_equal(.new, .Random.seed)
@@ -41,10 +37,10 @@ test_that("mvrnorm gives the same results with same seed", {
   diag(Sigma) <- 1:n
 
   x <- .Random.seed
-  r1 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
+  r1 <- mvrnorm_test(mu = mu, sigma_chol = chol(Sigma))
   .new <- .Random.seed
   .Random.seed <<- x
-  r2 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
+  r2 <- mvrnorm_test(mu = mu, sigma_chol = chol(Sigma))
 
   expect_equal(r1, r2)
   expect_equal(.new, .Random.seed)
@@ -60,7 +56,8 @@ test_that("mvrnorm gives expected sample mean and variance", {
     A <- matrix(runif(n^2)*2-1, ncol=n)
     Sigma <- t(A) %*% A
 
-    samp <- t(replicate(1000, drop(mvrnorm(mu = mu, sigma_chol = chol(Sigma)))))
+    samp <- t(replicate(1000, drop(
+      mvrnorm_test(mu = mu, sigma_chol = chol(Sigma)))))
 
     expect_equal(colMeans(samp), mu, tolerance = .1)
     expect_equal(cov(samp), Sigma, tolerance = .25)
@@ -74,9 +71,9 @@ test_that("different seed gives different results", {
   diag(Sigma) <- 1:n
 
   set.seed(1)
-  r1 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
+  r1 <- mvrnorm_test(mu = mu, sigma_chol = chol(Sigma))
   set.seed(2)
-  r2 <- mvrnorm(mu = mu, sigma_chol = chol(Sigma))
+  r2 <- mvrnorm_test(mu = mu, sigma_chol = chol(Sigma))
 
   expect_false(isTRUE(all.equal(r1, r2)))
 })

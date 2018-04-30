@@ -147,7 +147,8 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12,
     # class(iwlm) <- "biglm"
 
     betaold <- beta
-    beta <- bigglm_regcf_rcpp(D = D, rbar = rbar, thetab = thetab, ss = ss, checked = checked, tol = tol)
+    beta <- bigglm_regcf_rcpp(D = D, rbar = rbar, thetab = thetab, ss = ss,
+                              checked = checked, tol = tol)
 
 
     # beta <- coef(iwlm)
@@ -260,6 +261,8 @@ test_that("I did not mess up with get_data_func", {
 })
 
 test_that("bigglm and my c++ version yields similar results", {
+  skip_if_not_installed("biglm")
+
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
 
   for(model in c("logit", "exp_bin", "exp_clip_time")){
@@ -277,6 +280,8 @@ test_that("bigglm and my c++ version yields similar results", {
 })
 
 test_that("bigglm and my c++ version yields similar results with offsets", {
+  skip_if_not_installed("biglm")
+
   set.seed(195834)
   sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
@@ -296,6 +301,8 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
 })
 
 test_that("bigglm and my c++ version yields similar with weights", {
+  skip_if_not_installed("biglm")
+
   set.seed(888572)
   ws <- runif(nrow(sims$res))
   ws <- ws * (nrow(sims$res) / sum(ws))

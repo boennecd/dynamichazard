@@ -1,4 +1,4 @@
-#' Predict method for \code{\link{ddhazard}}
+#' Predict Method for ddhazard Object
 #'
 #' @description Predict method for \code{\link{ddhazard}}.
 #'
@@ -71,7 +71,7 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms){
   # we have to format the string to a regexp
   term_names_org = c("(Intercept)", attr(object$formula,"term.labels"))
   # add escape version of charecters
-  term_names = stringr::str_replace_all(term_names_org, "(\\W)", "\\\\\\1")
+  term_names = gsub("(\\W)", "\\\\\\1", term_names_org, perl = TRUE)
 
   var_names <- colnames(object$state_vecs)
   if(object$order == 2)
@@ -113,6 +113,7 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms){
   return(list(terms = terms_res, sds = sds_res, fixed_terms = fixed_terms))
 }
 
+#' @importFrom utils tail
 predict_response <- function(
   object, new_data, m, tstart, tstop, use_parallel, sds, fixed_terms,
   max_threads){

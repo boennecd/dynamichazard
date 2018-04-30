@@ -2,7 +2,7 @@ if(getRversion() >= "2.15.1")
   utils::globalVariables(c("L", "R_mat", "m", "indicies_fix", "id", "Q_0",
                            "F.", "Q", "model"))
 
-#' @title Bootstrap for \code{\link{ddhazard}}
+#' @title Bootstrap for ddhazard Object
 #' @param ddhazard_fit returned object from a \code{\link{ddhazard}} call.
 #' @param strata strata to sample within. These need to be on an individual by individual basis and not rows in the design matrix.
 #' @param unique_id unique ids where entries match entries of \code{strata}.
@@ -34,6 +34,8 @@ if(getRversion() >= "2.15.1")
 #'plot(fit, ddhazard_boot = bt, level = .9)
 #'}
 #'
+#'
+#' @importFrom boot boot
 #' @export
 ddhazard_boot <- function(
   ddhazard_fit,  strata, unique_id, R = 100,
@@ -194,27 +196,26 @@ ddhazard_boot <- function(
   # bootstrap
   data <- rep(1, length(unique_id))
   names(data) <- unique_id
-  boot_est <-
-    boot::boot(data = data,
-               statistic = statistic,
-               R = R,
-               sim = ifelse(do_sample_weights, "parametric", "ordinary"),
-               ran.gen = function(data, ...){
-                 f <- function(data){
-                   tmp <- runif(length(data))
-                   tmp <- tmp * (length(data)/ sum(tmp))
-                   names(tmp) <- names(data)
-                   tmp
-                 }
+  boot_est <- boot(
+    data = data,
+    statistic = statistic,
+    R = R,
+    sim = ifelse(do_sample_weights, "parametric", "ordinary"),
+    ran.gen = function(data, ...){
+      f <- function(data){
+        tmp <- runif(length(data))
+        tmp <- tmp * (length(data)/ sum(tmp))
+        names(tmp) <- names(data)
+        tmp
+      }
 
-                 out <- vector()
-                 for(l in levels(strata)){
-                   out <- c(out, f(data[strata == l]))
-                 }
+      out <- vector()
+      for(l in levels(strata))
+        out <- c(out, f(data[strata == l]))
 
-                 return(out)
-                },
-                strata = strata)
+      return(out)
+    },
+    strata = strata)
 
   n_fails <- sum(apply(boot_est$t, 1, function(x) any(is.na(x))))
   if(n_fails == R){

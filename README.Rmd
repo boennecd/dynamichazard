@@ -8,11 +8,8 @@ csl: vignettes/bib_style.csl
 
 ```{r setup, echo = FALSE, cache=FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "README-",
-  dpi = 124
-)
+  collapse = TRUE, comment = "#>", fig.path = "README-", dpi = 124, 
+  error = FALSE)
 ```
 
 [![Build Status on Travis](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard)
@@ -37,8 +34,8 @@ For more details, see the ddhazard vignette at https://cran.r-project.org/web/pa
 You can install dynamichazard from github with:
 
 ```R
-install.packages("devtools")
-devtools::install_github("dynamichazard/boennecd")
+# install.packages("devtools")
+devtools::install_github("boennecd/dynamichazard")
 ```
 
 You can also download the package from CRAN by calling:
@@ -59,7 +56,6 @@ The analysis is given below with comments:
 
 ```{r ddhazard_fit, cache = TRUE}
 library(dynamichazard)
-library(survival)
 library(JMbayes) # Contain the aids data set
 
 # We remove the data we dont neeed
@@ -133,7 +129,7 @@ pf_fit <- PF_EM(
     smoother = "Brier_O_N_square", # Select smoother
     
     eps = .001, 
-    n_max = 20)
+    n_max = 100)
   #, trace = 1 # comment back to get feedback during estimation
   )
 

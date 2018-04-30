@@ -2,7 +2,7 @@
 % Please edit documentation in R/loglike.R
 \name{logLik.ddhazard}
 \alias{logLik.ddhazard}
-\title{Log likelihood of mean path of \code{\link{ddhazard}} object}
+\title{Log Likelihood of Mean Path of ddhazard Object}
 \usage{
 \method{logLik}{ddhazard}(object, data = NULL, id, ...)
 }

@@ -1,5 +1,5 @@
 # from boot.print
-#' @title Summary statistics for a \code{ddhazard_boot} object
+#' @title Summary Statistics for a ddhazard_boot Object
 #'
 #' @param x returned object from a \code{\link{ddhazard_boot}} call.
 #' @param digits the number of digits to be printed in the summary statistics.
@@ -92,6 +92,7 @@ print.summary.ddhazard <- function(x, digits = getOption("digits"), ...){
   invisible(x)
 }
 
+#' @importFrom utils tail
 #' @export
 print.PF_EM <- function(x, ...){
   cat("Call:\n", paste0(deparse(x$call), collapse = "\n"),
@@ -114,6 +115,7 @@ print.PF_clouds <- function(x, ...){
   invisible(x)
 }
 
+#' @importFrom utils head
 #' @export
 print.ddhazard_space_errors <- function(x, ...){
   type <- if(x$standardize)

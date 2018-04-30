@@ -1,11 +1,4 @@
 #' @useDynLib dynamichazard, .registration = TRUE
-#' @importFrom Rcpp sourceCpp loadModule
-#' @importFrom graphics abline axis lines par plot points
-#' @import stats
-#' @importFrom utils capture.output tail head object.size
-#' @importFrom grDevices col2rgb rgb
-#' @importFrom survival Surv
-#' @importFrom boot boot
-#' @importFrom stringr str_replace_all
-#' @importFrom data.table rbindlist
+#' @importFrom Rcpp sourceCpp
+#' @import stats survival
 NULL

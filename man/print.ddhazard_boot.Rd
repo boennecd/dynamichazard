@@ -2,7 +2,7 @@
 % Please edit documentation in R/print.R
 \name{print.ddhazard_boot}
 \alias{print.ddhazard_boot}
-\title{Summary statistics for a \code{ddhazard_boot} object}
+\title{Summary Statistics for a ddhazard_boot Object}
 \usage{
 \method{print}{ddhazard_boot}(x, digits = getOption("digits"),
   index = 1L:ncol(boot.out$t), ...)

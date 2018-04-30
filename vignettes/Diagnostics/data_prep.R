@@ -3,7 +3,6 @@
 
 ## Load libaries
 library(survival)
-library(stringr)
 library(plyr)
 library(doBy)
 

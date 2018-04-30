@@ -3,7 +3,7 @@
 \docType{data}
 \name{hds}
 \alias{hds}
-\title{Hard Drive failures.}
+\title{Hard Drive Failures}
 \format{A \code{data.frame} with the following columns:
 \describe{
   \item{serial_number}{Serial number for the hard disk which the row belongs

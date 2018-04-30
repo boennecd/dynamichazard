@@ -2,7 +2,7 @@
 % Please edit documentation in R/hatvalues.R
 \name{hatvalues.ddhazard}
 \alias{hatvalues.ddhazard}
-\title{Hat values for \code{\link{ddhazard}} object}
+\title{Hat Values for ddhazard Object}
 \usage{
 \method{hatvalues}{ddhazard}(model, ...)
 }

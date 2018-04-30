@@ -3,24 +3,18 @@
 \.log$
 ^\.git
 ^\.Rprofile
-
 ^\.commit$
-^\.sandbox
 
 \.o$
 \.txt$
 Rplots\.pdf$
 dynamichazard\.dll$
-useful_scripts$
-testfuture\.R$
 ^\.travis\.yml$
-pbc_data\.Rmd$
-Sim_study_with_logit\.Rmd$
 release_questions\.R$
 cran-comments\.md$
-revdep/
 
 ^README
+^README_cache
 
 vignettes/\.jss
 vignettes/figure
@@ -32,10 +26,8 @@ vignettes/Diagnostics/Rossi_ex\.html
 vignettes/Diagnostics/Rossi_source\.url
 vignettes/Diagnostics/Rossi\.txt
 
-Examples
-sandbox
-speedtest
+^\.sandbox
+^speedtest
 tests/testthat/previous_results/local_tests
-README_cache
 data-raw
 TODO
