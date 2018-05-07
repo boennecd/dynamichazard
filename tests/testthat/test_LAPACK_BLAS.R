@@ -221,6 +221,18 @@ test_that("LU_factorization.solve gives correct answer for a vector and matrix",
   expect_equal(solve_LU_mat(A, B), solve(A, B), check.attributes = FALSE)
 })
 
+#####
+
+test_that("LU_factorization inverse gives correct answer", {
+  A <- matrix(c(
+     3, -7, -2,  2,
+    -3,  5,  1,  0,
+     6, -4,  0, -5,
+    -9,  5, -5, 12), byrow = TRUE, ncol = 4)
+
+  expect_equal(solve_LU_inv(A), solve(A))
+})
+
 
 #####
 

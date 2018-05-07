@@ -260,4 +260,9 @@ namespace R_BLAS_LAPACK {
               int* info){
     F77_NAME(dgeqp3)(m, n, a, lda, jpvt, tau, work, lwork, info);
   }
+
+  void dgetri(const int* n, double* a, const int* lda,
+              int* ipiv, double* work, const int* lwork, int* info){
+    F77_NAME(dgetri)(n, a, lda, ipiv, work, lwork, info);
+  }
 }

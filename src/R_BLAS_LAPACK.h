@@ -62,4 +62,7 @@ namespace R_BLAS_LAPACK {
   void dgeqp3(const int* m, const int* n, double* a, const int* lda,
               int* jpvt, double* tau, double* work, const int* lwork,
               int* info);
+
+  void dgetri(const int*, double*, const int*,
+              int*, double*, const int*, int*);
 }

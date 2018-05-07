@@ -65,6 +65,10 @@ solve_w_precomputed_chol_test <- function(chol_decomp, B) {
     .Call(`_dynamichazard_solve_w_precomputed_chol_test`, chol_decomp, B)
 }
 
+solve_LU_inv <- function(A) {
+    .Call(`_dynamichazard_solve_LU_inv`, A)
+}
+
 solve_LU_mat <- function(A, B) {
     .Call(`_dynamichazard_solve_LU_mat`, A, B)
 }
@@ -103,6 +107,10 @@ trunc_eta_exponential_test <- function(eta, at_risk_length, is_event) {
 
 trunc_eta_exponential_test_log_eps <- function() {
     .Call(`_dynamichazard_trunc_eta_exponential_test_log_eps`)
+}
+
+linear_mapper_test <- function(A, x, X, z, Z, type, R) {
+    .Call(`_dynamichazard_linear_mapper_test`, A, x, X, z, Z, type, R)
 }
 
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model) {

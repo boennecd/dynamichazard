@@ -139,7 +139,7 @@ arma::vec rep_vec(const arma::vec &col_vals, int n_rows){
 
 
 selection_matrix::selection_matrix(const arma::mat &A):
-  n(A.n_rows), m(A.n_cols) {
+  n(A.n_rows), m(A.n_cols), A(A) {
   std::vector<arma::uword> idx_m_val;
   std::vector<arma::uword> idx_n_val;
 

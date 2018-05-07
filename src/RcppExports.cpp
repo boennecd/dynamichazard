@@ -255,6 +255,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// solve_LU_inv
+arma::mat solve_LU_inv(const arma::mat& A);
+RcppExport SEXP _dynamichazard_solve_LU_inv(SEXP ASEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_LU_inv(A));
+    return rcpp_result_gen;
+END_RCPP
+}
 // solve_LU_mat
 arma::mat solve_LU_mat(const arma::mat& A, const arma::mat& B);
 RcppExport SEXP _dynamichazard_solve_LU_mat(SEXP ASEXP, SEXP BSEXP) {
@@ -372,6 +383,23 @@ BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     rcpp_result_gen = Rcpp::wrap(trunc_eta_exponential_test_log_eps());
+    return rcpp_result_gen;
+END_RCPP
+}
+// linear_mapper_test
+Rcpp::List linear_mapper_test(const arma::mat& A, const arma::vec x, const arma::mat X, const arma::vec z, const arma::mat Z, std::string type, const arma::mat R);
+RcppExport SEXP _dynamichazard_linear_mapper_test(SEXP ASEXP, SEXP xSEXP, SEXP XSEXP, SEXP zSEXP, SEXP ZSEXP, SEXP typeSEXP, SEXP RSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type z(zSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< std::string >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type R(RSEXP);
+    rcpp_result_gen = Rcpp::wrap(linear_mapper_test(A, x, X, z, Z, type, R));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -590,6 +618,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_tri_mat_times_vec_test", (DL_FUNC) &_dynamichazard_tri_mat_times_vec_test, 4},
     {"_dynamichazard_sym_mat_rank_one_update_test", (DL_FUNC) &_dynamichazard_sym_mat_rank_one_update_test, 3},
     {"_dynamichazard_solve_w_precomputed_chol_test", (DL_FUNC) &_dynamichazard_solve_w_precomputed_chol_test, 2},
+    {"_dynamichazard_solve_LU_inv", (DL_FUNC) &_dynamichazard_solve_LU_inv, 1},
     {"_dynamichazard_solve_LU_mat", (DL_FUNC) &_dynamichazard_solve_LU_mat, 2},
     {"_dynamichazard_solve_LU_vec", (DL_FUNC) &_dynamichazard_solve_LU_vec, 2},
     {"_dynamichazard_qr_qty_mat_test", (DL_FUNC) &_dynamichazard_qr_qty_mat_test, 2},
@@ -600,6 +629,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_lambert_W0_test", (DL_FUNC) &_dynamichazard_lambert_W0_test, 1},
     {"_dynamichazard_trunc_eta_exponential_test", (DL_FUNC) &_dynamichazard_trunc_eta_exponential_test, 3},
     {"_dynamichazard_trunc_eta_exponential_test_log_eps", (DL_FUNC) &_dynamichazard_trunc_eta_exponential_test_log_eps, 0},
+    {"_dynamichazard_linear_mapper_test", (DL_FUNC) &_dynamichazard_linear_mapper_test, 7},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
     {"_dynamichazard_parallelglm_QR_get_R_n_f", (DL_FUNC) &_dynamichazard_parallelglm_QR_get_R_n_f, 11},

@@ -126,6 +126,12 @@ arma::vec solve_w_precomputed_chol_test(const arma::mat &chol_decomp, const arma
 }
 
 // [[Rcpp::export]]
+arma::mat solve_LU_inv(const arma::mat &A){
+  LU_factorization fac(A);
+  return fac.solve();
+}
+
+// [[Rcpp::export]]
 arma::mat solve_LU_mat(const arma::mat &A, const arma::mat &B){
   LU_factorization fac(A);
   return fac.solve(B);
@@ -196,6 +202,57 @@ Rcpp::List trunc_eta_exponential_test(
 double trunc_eta_exponential_test_log_eps(){
   return trunc_eta_exponential_log_eps;
 }
+
+// -------------------------------------------------- //
+
+#include "lin_maps.h"
+
+// [[Rcpp::export]]
+Rcpp::List linear_mapper_test(
+    const arma::mat &A, const arma::vec x, const arma::mat X,
+    const arma::vec z, const arma::mat Z, std::string type,
+    const arma::mat R){
+  bool has_R = R.n_elem > 0;
+  std::unique_ptr<linear_mapper> ptr;
+
+         if (type == "dens_mapper"){
+    ptr.reset(new dens_mapper(A));
+  } else if (type == "select_mapper"){
+    ptr.reset(new select_mapper(A));
+  } else if (type == "inv_mapper"){
+    ptr.reset(new inv_mapper(A));
+  } else if (type == "inv_sub_mapper"){
+    ptr.reset(new inv_sub_mapper(A, R));
+  } else
+    Rcpp::stop("type not implemented");
+
+  if(!has_R)
+    return Rcpp::List::create(
+      Rcpp::Named("A") = ptr->map(),
+
+      Rcpp::Named("A_x")     = arma::vec(ptr->map(x       , false).sv),
+      Rcpp::Named("A_T_z")   = arma::vec(ptr->map(z       , true ).sv),
+
+      Rcpp::Named("A_X")     = arma::mat(ptr->map(X, left , false).sv),
+      Rcpp::Named("X_A_T")   = arma::mat(ptr->map(X, right, false).sv),
+      Rcpp::Named("A_X_A_T") = arma::mat(ptr->map(X, both , false).sv),
+
+      Rcpp::Named("A_T_Z")   = arma::mat(ptr->map(Z, left , true ).sv),
+      Rcpp::Named("Z_A")     = arma::mat(ptr->map(Z, right, true ).sv),
+      Rcpp::Named("A_T_Z_A") = arma::mat(ptr->map(Z, both , true ).sv)
+    );
+
+  return Rcpp::List::create(
+    Rcpp::Named("A") = ptr->map(),
+
+    Rcpp::Named("A_x")     = arma::vec(ptr->map(x       , false).sv),
+
+    Rcpp::Named("A_X")     = arma::mat(ptr->map(X, left , false).sv),
+    Rcpp::Named("X_A_T")   = arma::mat(ptr->map(X, right, false).sv),
+    Rcpp::Named("A_X_A_T") = arma::mat(ptr->map(X, both , false).sv)
+  );
+}
+
 
 
 

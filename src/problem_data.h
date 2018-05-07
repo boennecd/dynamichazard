@@ -3,6 +3,7 @@
 
 #include "arma_n_rcpp.h"
 #include "arma_BLAS_LAPACK.h"
+#include "lin_maps.h"
 #include <future>
 #include <type_traits>
 
@@ -46,25 +47,6 @@ virtual map_res_mat name(const arma::mat &M, side s = both) const { \
   return mat_map(dsn_mat, M, s, transpose);                         \
 }
 
-template <typename T_view, typename T_type>
-class map_res {
-  using ptr_T = std::unique_ptr<T_type>;
-
-public:
-  T_view sv; /* sv for (s)ub(v)iew */
-  ptr_T org_ptr;
-
-  map_res(T_view sv): sv(sv) {}
-  map_res(T_view sv, ptr_T &ptr): sv(sv) {
-    org_ptr = std::move(ptr);
-  }
-};
-
-using map_res_col = map_res<arma::subview_col<double>, arma::vec>;
-using map_res_mat = map_res<arma::subview<double>, arma::mat>;
-
-enum side { left, both, right };
-
 /* problem_data is data holder class. It has some virtual map functions which
  * can be overwritten for a particular class of problems. The methods are
  * lp_map and lp_map_inv
@@ -86,7 +68,7 @@ protected:
   const arma::mat &F_;
   const arma::mat &R;
   const arma::mat &L;
-  const arma::vec &m;
+  const arma::vec &m; // TODO: remove
 
   const selection_matrix R_Smat;
   const selection_matrix L_Smat;

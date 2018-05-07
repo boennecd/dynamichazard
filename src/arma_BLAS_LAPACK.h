@@ -32,6 +32,7 @@ class LU_factorization {
 
 public:
   LU_factorization(const arma::mat&);
+  arma::mat solve() const;
   arma::mat solve(const arma::mat&, const bool transpose = false) const;
   arma::vec solve(const arma::vec&, const bool transpose = false) const;
 };
@@ -60,6 +61,8 @@ class selection_matrix {
   const arma::uword n;
   const arma::uword m;
 public:
+  const arma::mat& A;
+
   /* Pass L (n x m)*/
   selection_matrix(const arma::mat&);
 

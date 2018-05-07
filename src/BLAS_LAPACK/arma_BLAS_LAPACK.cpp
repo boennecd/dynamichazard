@@ -136,6 +136,27 @@ LU_factorization::LU_factorization(const arma::mat& A):
   }
 }
 
+arma::mat LU_factorization::solve() const {
+  if(!has_elem)
+    return arma::mat();
+
+  if(M != N)
+    Rcpp::stop("Non-square matrix in `LU_factorization::solve()`");
+
+  // take copy
+  arma::mat out(&A[0], N, N);
+
+  int LWORK = N * N, INFO, LDA = N;
+  double WORK[LWORK];
+
+  // see https://stackoverflow.com/a/3520106/5861244 for example
+  R_BLAS_LAPACK::dgetri(
+    &N, &out[0], &LDA, &IPIV[0], &WORK[0], &LWORK, &INFO);
+  LAPACK_CHECK_ILLEGAL(INFO, dgetri)
+
+  return out;
+}
+
 arma::mat LU_factorization::solve(
     const arma::mat &B, const bool transpose) const {
   if(!has_elem && B.n_elem == 0)
