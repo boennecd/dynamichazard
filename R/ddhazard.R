@@ -526,9 +526,10 @@ get_state_eq_matrices <-  function(
   R <- matrix(0, state_dim, ncol(Q))
   if(n_params > 0)
     diag(R)[1:n_params] <- 1
-  L <- matrix(0, state_dim, state_dim)
+  ncol_L <- n_params +  n_fixed * est_fixed_in_E
+  L <- matrix(0, ncol_L, state_dim)
   if(n_params + n_fixed * est_fixed_in_E > 0)
-    diag(L)[1:(n_params +  n_fixed * est_fixed_in_E)] <- 1
+    diag(L)[1:ncol_L] <- 1
   m <- numeric(state_dim)
 
   return(list(Q = Q, Q_0 = Q_0, F. = F., R = R, L = L, m = m, a_0 = a_0,

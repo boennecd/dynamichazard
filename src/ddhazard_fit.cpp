@@ -247,15 +247,15 @@ Rcpp::List ddhazard_fit_cpp(
         V = &p_data->V_t_t_s.slice(t);
         a_less = p_data->a_t_t_s.unsafe_col(t - 1);
         a = p_data->a_t_t_s.unsafe_col(t);
-        arma::vec a_dt(a - p_data->state_trans_map(a_less).sv);
+        arma::vec a_dt(a - p_data->state_trans->map(a_less).sv);
 
         if(M_step_formulation == "Fahrmier94"){
           B = &p_data->B_s.slice(t - 1);
 
           Q += ((a_dt * a_dt.t()) + *V
-                  - p_data->state_trans_map(*B, left).sv * *V
-                  - *V * p_data->state_trans_map(*B, left).sv.t()
-                  + p_data->state_trans_map(*V_less).sv) / delta_t;
+                  - p_data->state_trans->map(*B, left).sv * *V
+                  - *V * p_data->state_trans->map(*B, left).sv.t()
+                  + p_data->state_trans->map(*V_less).sv) / delta_t;
 
         } else if (M_step_formulation == "SmoothedCov"){
           /* this is not B but the lagged one smooth correlation.
@@ -263,16 +263,16 @@ Rcpp::List ddhazard_fit_cpp(
           B = &p_data->lag_one_cov.slice(t - 1);
 
           Q += ((a_dt * a_dt.t()) + *V
-                  - p_data->state_trans_map(*B, left).sv
-                  - p_data->state_trans_map(*B, left).sv.t()
-                  + p_data->state_trans_map(*V_less).sv) / delta_t;
+                  - p_data->state_trans->map(*B, left).sv
+                  - p_data->state_trans->map(*B, left).sv.t()
+                  + p_data->state_trans->map(*V_less).sv) / delta_t;
         } else
           Rcpp::stop("'M_step_formulation' of type '" +
             M_step_formulation + "' is not implemented");
 
       }
       Q /= p_data->d;
-      Q = p_data->err_state_map_inv(Q).sv;
+      Q = p_data->err_state_inv->map(Q).sv;
 
       if(Q.n_elem > 0 and
            (test_max_diff = static_cast<arma::mat>(Q - Q.t()).max()) >
@@ -308,8 +308,8 @@ Rcpp::List ddhazard_fit_cpp(
         arma::mat a1(p_data->covar_dim, a_prev.n_cols);
         arma::mat a2(p_data->covar_dim, a_prev.n_cols);
         for(arma::uword i = 0; i < a_prev.n_cols; ++i){
-          a1.col(i) = p_data->lp_map(a_prev.col(i)).sv;
-          a2.col(i) = p_data->lp_map(p_data->a_t_t_s.col(i)).sv;
+          a1.col(i) = p_data->state_lp->map(a_prev.col(i)).sv;
+          a2.col(i) = p_data->state_lp->map(p_data->a_t_t_s.col(i)).sv;
         }
 
         conv_values.push_back(conv_criteria(a1, a2));

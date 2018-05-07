@@ -37,7 +37,7 @@ void estimate_fixed_effects_M_step(ddhazard_data * const p_data, arma::uword chu
     if(p_data->any_dynamic){
       offsets =
         p_data->X.cols(r_set).t() *
-        p_data->lp_map(p_data->a_t_t_s.col(t)).sv;
+        p_data->state_lp->map(p_data->a_t_t_s.col(t)).sv;
 
     } else {
       offsets = arma::vec(r_set.n_elem, arma::fill::zeros);

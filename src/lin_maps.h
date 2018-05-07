@@ -4,6 +4,10 @@
 #include "arma_n_rcpp.h"
 #include "arma_BLAS_LAPACK.h"
 
+/* Object used for map function. The unique pointer need to be to a new object
+ * created in the functions to make sure the orginal object is not destructed.
+ */
+
 template <typename T_view, typename T_type>
 class map_res {
   using ptr_T = std::unique_ptr<T_type>;

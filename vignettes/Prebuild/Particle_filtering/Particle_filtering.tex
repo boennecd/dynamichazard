@@ -373,7 +373,8 @@ We get the following backward version of equation~\eqref{eqn:TaylorProposalForwa
 %
 	\matLarrow{\Sigma}_t^{-1} &=
 		\mat{R}^{+}\matLarrow{P}_t^{-1}\mat{R}^{+\top} +
-		\mat{X}_t^\top\Lparen{-\mat{G}_t\Lparen{\mat{F}^{-1}\vecb{\alpha}_{t + 1}}}
+		\mat{X}_t^\top\Lparen{-\mat{G}_t\Lparen{
+		    \mat{R}^{+}\mat{F}^{-1}\vecb{\alpha}_{t + 1}}}
 		\mat{X}_t + 
 		\mat{R}^{+}\mat{F}^{-1}\mat{R}^{+\top}\mat{Q}^{-1}
 		\mat{R}^{+}\mat{F}^{-\top}\mat{R}^{+\top}  \\
@@ -920,7 +921,7 @@ The smoother is selected with the \verb|smoother| argument. \verb|"Fearnhead_O_N
 The \emph{Systematic Resampling} \citep{kitagawa96} is used in all re-sampling steps. See \cite{douc05} for a comparison of re-sampling methods. The rest of the arguments to \verb|PF_EM| are similar to those of the \verb|ddhazard| function.
 
 \subsection{Linear maps}
-The methods describe above involves many linear maps. These are implemented with \verb|C++| virtual methods and can be overwritten for a particular problem to decrease the computation. An alternative would have been to use a sparse matrix implementation. A.s. an example we have a mapping matrix $\mat{A}$ which \verb|C++| function is name \verb|map|. E.g., this could $\mat{F}$ with name \verb|state_trans|. Then the following operations are implemented 
+The methods describe above involves many linear maps. These are implemented with \verb|C++| abstract class with specialized \verb|map| member functions for particular problem to decrease the computation. An alternative would have been to use a sparse matrix implementation. A.s. an example we have a mapping matrix $\mat{A}$ which \verb|C++| abstract member on the main data object used in the package called \verb|xyz|. E.g., this could $\mat{F}$ with name \verb|state_trans|. Then the following operations are implemented 
 
 \begin{itemize}
 \item \verb|map()|: Returns $\mat{A}$.
@@ -934,7 +935,7 @@ These are implemented for %
 %
 \begin{center}
 \begin{tabular}{ l l } 
- \verb|C++| function name & Matrix $\mat{A}$ \\
+ \verb|C++| member name & Matrix $\mat{A}$ \\
  \hline
  \verb|err_state|           & $\mat{R}$ \\
  \verb|err_state_inv|       & $\mat{R}^{+} = \mat{R}^\top$ \\
@@ -948,11 +949,11 @@ These are implemented for %
 
 Further, we will need function to compute terms $\mat{R}^{+}\matLarrow{P}_t^{-1}\vecLarrow{m}_t$ and $\mat{R}^{+}\mat{P}_t^{-1}\mat{R}$ for equation~\eqref{eqn:bw_approx}. This is done with the virtual method \verb|uncond_mean| and \verb|uncond_covar|. These will computed once using equation~\eqref{eqn:bwTransProp}. 
 
-The motivation for making functions for these is e.g., in the dense matrix case we reduce the computational cost of $\mat{R}^{+}\mat{F}\mat{Z}$ to $\bigO{\dimRng\dimState^2}$ from $\bigO{\dimState^3}$. Further, since the methods are virtual, then we can specialize for specific types of model. E.g., the first order random walk has%
+The motivation for making functions for these is e.g., in the dense matrix case we reduce the computational cost of $\mat{R}^{+}\mat{F}\mat{R}^{+\top}\mat{Z}$ to $\bigO{\dimRng^3}$ from $\bigO{\dimState^3}$. Further, since the methods are virtual, then we can specialize for specific types of model. E.g., the first order random walk has%
 %
 \begin{center}
 \begin{tabular}{ l l } 
- \verb|C++| function name & Matrix $\mat{A}$ \\
+ \verb|C++| member name & Matrix $\mat{A}$ \\
  \hline
  \verb|err_state|           & $\mat{R} = \mat{I}_\dimRng$ \\
  \verb|err_state_inv|       & $\mat{R}^{+} = \mat{I}_\dimRng$ \\

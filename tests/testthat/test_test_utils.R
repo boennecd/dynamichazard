@@ -85,3 +85,59 @@ test_that("Sim functions gives previous results", {
   expect_equal(sim_logit, read_to_test("util_sim_logit"), tolerance = 1.490116e-08)
   expect_equal(sim_exp, read_to_test("util_sim_exp"), tolerance = 1.490116e-08)
 })
+
+test_that("`linear_mapper`s gives expected result", {
+  A <- structure(
+    c(0.157, 0.025, 1.14, -2.055, -0.376, -0.837, -0.414,
+      -0.627, 0.272, -0.574, 0.526, -0.088, 0.566, 0.809, -0.198),
+    .Dim = c(5L, 3L))
+  x <- rnorm(3)
+  z <- rnorm(5)
+  X <- matrix(rnorm(3 * 3), 3)
+  Z <- matrix(rnorm(5 * 5), 5)
+
+  test_expr <- quote({
+    expect_equal(out$A, mat)
+    expect_equal(out$A_x, mat %*% x)
+    if(has_z)
+      expect_equal(out$A_T_z, t(mat) %*% z)
+
+    expect_equal(out$A_X, mat %*% X)
+    expect_equal(out$X_A_T, X %*% t(mat))
+    expect_equal(out$A_X_A_T, mat %*% X %*% t(mat))
+
+    if(has_z) {
+      expect_equal(out$A_T_Z, t(mat) %*% Z)
+      expect_equal(out$Z_A, Z %*% mat)
+      expect_equal(out$A_T_Z_A, t(mat) %*% Z %*% mat)
+    }
+  })
+
+  out <- linear_mapper_test(
+    A, x, X, z, Z, type = "dens_mapper", R = matrix()[0, 0, drop = FALSE])
+  eval(do.call(substitute, list(
+    test_expr, list(mat = quote(A), has_z = TRUE))))
+
+  R <- diag(5)[, c(1, 4, 5)]
+  out <- linear_mapper_test(
+    R, x, X, z, Z, type = "select_mapper", R = matrix()[0, 0, drop = FALSE])
+  eval(do.call(substitute, list(
+    test_expr, list(mat = quote(R), has_z = TRUE))))
+
+  C <- matrix(c(
+     7,  2,  1,
+     0,  3, -1,
+    -3,  4, -2), byrow = TRUE, ncol = 3)
+  out <- linear_mapper_test(
+    C, x, X, x, t(X), type = "inv_mapper", R = matrix()[0, 0, drop = FALSE])
+  eval(do.call(substitute, list(test_expr, list(
+    z = quote(x), Z = t(X), mat = quote(solve(C)), has_z = TRUE))))
+
+  R <- diag(3)[, c(1, 3)]
+  X <- X[1:2, 1:2]
+  x <- x[1:2]
+  out <- linear_mapper_test(
+    C, x, X, x, t(X), type = "inv_sub_mapper", R = R)
+  eval(do.call(substitute, list(test_expr, list(
+    mat = quote(t(R) %*% solve(C) %*% R), has_z = FALSE))))
+})

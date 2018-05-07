@@ -18,10 +18,10 @@ void GMA<T>::solve(){
 
     // E-step: Prediction step
     p_dat.a_t_less_s.col(t - 1) =
-      p_dat.state_trans_map(p_dat.a_t_t_s.col(t - 1)).sv;
+      p_dat.state_trans->map(p_dat.a_t_t_s.col(t - 1)).sv;
     p_dat.V_t_less_s.slice(t - 1) =
-      p_dat.state_trans_map(p_dat.V_t_t_s.slice(t - 1)).sv +
-      delta_t * p_dat.err_state_map(p_dat.Q).sv;
+      p_dat.state_trans->map(p_dat.V_t_t_s.slice(t - 1)).sv +
+      delta_t * p_dat.err_state->map(p_dat.Q).sv;
 
     if(p_dat.debug){
       std::stringstream str;
@@ -70,7 +70,7 @@ void GMA<T>::solve(){
       arma::mat X_cross(q, q, arma::fill::zeros);
       arma::vec a_old = a;
 
-      arma::vec eta = (p_dat.lp_map(a).sv.t() * X_t).t() + fixed_effects_t;
+      arma::vec eta = (p_dat.state_lp->map(a).sv.t() * X_t).t() + fixed_effects_t;
 
 #ifdef _OPENMP
       int n_threads = std::max(1, std::min(omp_get_max_threads(),
@@ -113,7 +113,7 @@ void GMA<T>::solve(){
       }
 
       {
-        arma::mat tmp = V_t_less_inv + p_dat.lp_map_inv(X_cross).sv;
+        arma::mat tmp = V_t_less_inv + p_dat.state_lp_inv->map(X_cross).sv;
         inv_sympd(V, tmp, p_dat.use_pinv,
                   "ddhazard_fit_cpp estimation error: Failed to invert Hessian");
       }
@@ -121,12 +121,12 @@ void GMA<T>::solve(){
       {
         arma::vec tmp;
         if(1. - 1e-15 < p_dat.LR && p_dat.LR < 1. + 1e-15){
-          tmp = X_cross * p_dat.lp_map(a).sv + X_t * h_1d;
-          tmp = p_dat.lp_map_inv(tmp).sv + grad_term;
+          tmp = X_cross * p_dat.state_lp->map(a).sv + X_t * h_1d;
+          tmp = p_dat.state_lp_inv->map(tmp).sv + grad_term;
 
         } else {
-          tmp = X_cross * p_dat.lp_map(a).sv + X_t * (h_1d * p_dat.LR);
-          tmp = p_dat.lp_map_inv(tmp).sv + grad_term;
+          tmp = X_cross * p_dat.state_lp->map(a).sv + X_t * (h_1d * p_dat.LR);
+          tmp = p_dat.state_lp_inv->map(tmp).sv + grad_term;
           tmp += V_t_less_inv * ((1 - p_dat.LR) * a);
 
         }
@@ -178,7 +178,7 @@ void GMA<T>::solve(){
     }
 
     p_dat.B_s.slice(t - 1) =
-      p_dat.state_trans_map(p_dat.V_t_t_s.slice(t - 1), right).sv *
+      p_dat.state_trans->map(p_dat.V_t_t_s.slice(t - 1), right).sv *
       V_t_less_inv;
   }
 }

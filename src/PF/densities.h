@@ -94,7 +94,7 @@ public:
   static double log_prob_y_given_state(
       const PF_data &data, const arma::vec &state,
       int t, arma::uvec &r_set, const bool multithreaded = true){
-    const arma::vec coefs = data.lp_map(state).sv;
+    const arma::vec coefs = data.err_state_inv->map(state).sv;
 
     double bin_start, bin_stop;
     if(outcome_dens::uses_at_risk_length){
@@ -209,9 +209,9 @@ public:
       const PF_data &data, const arma::vec state,
       arma::vec previous_state, int t){
     return(dmvnrm_log(
-        data.err_state_map_inv(state).sv,
-        data.err_state_map_inv(
-          data.state_trans_map    (previous_state).sv).sv,
+        data.err_state_inv->map(state).sv,
+        data.err_state_inv->map(
+          data.state_trans->map    (previous_state).sv).sv,
         data.Q.chol_inv));
   }
 
@@ -219,16 +219,16 @@ public:
       const PF_data &data, const arma::vec state,
       arma::vec next_state, int t){
     return(dmvnrm_log(
-        data.err_state_map_inv(state).sv,
-        data.err_state_map_inv(
-          data.state_trans_map_inv(    next_state).sv).sv,
+        data.err_state_inv->map(state).sv,
+        data.err_state_inv->map(
+          data.state_trans_inv->map(    next_state).sv).sv,
         data.Q.chol_inv));
   }
 
   /* non-static member functions*/
   double log_artificial_prior(const particle &p, int t){
     return(dmvnrm_log(
-        data_.err_state_map_inv(p.get_state()).sv,
+        data_.err_state_inv->map(p.get_state()).sv,
         get_artificial_prior_mean(t),
         get_Q_t_chol_inv(t)));
   }
@@ -240,10 +240,10 @@ public:
 {
 #endif
   if(P_t.find(t) == P_t.end()){
-    arma::mat new_terms(data_.err_state_map(data_.Q.mat).sv);
+    arma::mat new_terms(data_.err_state->map(data_.Q.mat).sv);
     arma::mat out(new_terms);
     for(uword i = 1; i <= t; ++i){
-      out = new_terms + data_.state_trans_map(out).sv;
+      out = new_terms + data_.state_trans->map(out).sv;
 
       P_t.insert(std::make_pair(i, out));
     }
@@ -256,7 +256,7 @@ public:
   }
 
   arma::mat get_artificial_prior_covar(uword t){
-    return data_.err_state_map_inv(
+    return data_.err_state_inv->map(
       get_artificial_prior_covar_state_dim(t)).sv;
   }
 
@@ -269,7 +269,7 @@ public:
   if(m_t.find(t) == m_t.end()){
     arma::vec out(data_.a_0);
     for(uword i = 1; i <= t; ++i){
-      out = data_.state_trans_map(out).sv;
+      out = data_.state_trans->map(out).sv;
 
       m_t.insert(std::make_pair(i, out));
     }
@@ -282,7 +282,7 @@ public:
   }
 
   arma::vec get_artificial_prior_mean(uword t){
-    return data_.err_state_map_inv(get_artificial_prior_mean_state_dim(t)).sv;
+    return data_.err_state_inv->map(get_artificial_prior_mean_state_dim(t)).sv;
   }
 };
 

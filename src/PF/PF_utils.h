@@ -200,7 +200,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
   /* Compute the terms that does not depend on the outcome */
   /* Sigma^-1 = (Q + \tilde{Q})^{-1} */
   arma::uword p = data.err_dim;
-  arma::vec coefs = data.lp_map(alpha_bar).sv;
+  arma::vec coefs = data.err_state_inv->map(alpha_bar).sv;
   arma::mat Sigma_inv = Q.inv;
 
   ans.mu = arma::vec(p, arma::fill::zeros);
@@ -277,8 +277,8 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
       double neg_G = - densities::dd_log_like(
         *it_is_event, trunc_eta, at_risk_length);
 
-      arma::vec x_err_space = data.err_state_map_inv(
-        data.lp_map_inv(data.X.col(*it_r)).sv).sv;
+      arma::vec x_err_space = data.err_state_inv->map(
+        data.err_state->map(data.X.col(*it_r)).sv).sv;
       sym_mat_rank_one_update(neg_G, x_err_space, my_Sigma_inv);
       my_mu += x_err_space * (((*it_eta - *it_off) * neg_G) + g);
     }
@@ -363,15 +363,15 @@ static input_for_normal_apprx_w_cloud_mean
     for(unsigned int i = 0; i < n_elem; ++i){
       arma::vec mu_j;
       if(is_forward){
-        mu_j = data.state_trans_map(cl[i].get_state()).sv;
-        mu_j = data.err_state_map_inv(mu_j).sv;
+        mu_j = data.state_trans->map(cl[i].get_state()).sv;
+        mu_j = data.err_state_inv->map(mu_j).sv;
         mu_j = solve_w_precomputed_chol(Q.chol, mu_j) + ans.mu;
 
       } else {
-        mu_j = data.err_state_map_inv(cl[i].get_state()).sv;
+        mu_j = data.err_state_inv->map(cl[i].get_state()).sv;
         mu_j = solve_w_precomputed_chol(Q.chol, mu_j);
-        mu_j = data.state_trans_map_inv(data.err_state_map(mu_j).sv).sv;
-        mu_j = data.err_state_map_inv(mu_j).sv      + ans.mu + *mu_term;
+        mu_j = data.state_trans_inv->map(data.err_state->map(mu_j).sv).sv;
+        mu_j = data.err_state_inv->map(mu_j).sv      + ans.mu + *mu_term;
 
       }
 
@@ -438,14 +438,14 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
     arma::vec mu;
     if(is_forward){
-      mu = data.state_trans_map(this_state).sv;
+      mu = data.state_trans->map(this_state).sv;
       mu = solve_w_precomputed_chol(Q.chol, mu) + inter.mu;
 
     } else {
-      mu = data.err_state_map_inv(this_state).sv;
+      mu = data.err_state_inv->map(this_state).sv;
       mu = solve_w_precomputed_chol(Q.chol, mu);
-      mu = data.state_trans_map_inv(data.err_state_map(mu).sv).sv;
-      mu = data.err_state_map_inv(mu).sv      + inter.mu + *mu_term;
+      mu = data.state_trans_inv->map(data.err_state->map(mu).sv).sv;
+      mu = data.err_state_inv->map(mu).sv      + inter.mu + *mu_term;
 
     }
 
@@ -566,16 +566,16 @@ bw_sim_data get_bw_sim_data(
   P_t = dens_cal.get_artificial_prior_covar_state_dim(t);
   P_t_p_1 = dens_cal.get_artificial_prior_covar_state_dim(t + 1);
   /* TODO: make a factorizationa and re-use later */
-  S_t = arma::solve(P_t_p_1, data.err_state_map(data.Q.mat).sv);
-  S_t = data.state_trans_map_inv(S_t, right).sv;
-  S_t = data.state_trans_map(P_t, right).sv * S_t;
+  S_t = arma::solve(P_t_p_1, data.err_state->map(data.Q.mat).sv);
+  S_t = data.state_trans_inv->map(S_t, right).sv;
+  S_t = data.state_trans->map(P_t, right).sv * S_t;
 
   // compute mean term from initial state
   a_0_mean_term = S_t * arma::solve(
     P_t, dens_cal.get_artificial_prior_mean_state_dim(t));
 
   // reduce to error dimension and return
-  S_t = data.err_state_map_inv(S_t).sv;
+  S_t = data.err_state_inv->map(S_t).sv;
 
   return out;
 }

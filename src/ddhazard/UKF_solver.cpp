@@ -95,7 +95,7 @@ void UKF_solver_Org::solve(){
 
       p_dat.B_s.slice(t - 1) =
         arma::solve(p_dat.V_t_less_s.slice(t - 1),
-                    p_dat.state_trans_map(
+                    p_dat.state_trans->map(
                       p_dat.V_t_t_s.slice(t - 1), right).sv).t();
     }
 }
@@ -197,10 +197,10 @@ void UKF_solver_New<T>::solve(){
 
     // E-step: Prediction
     p_dat.a_t_less_s.col(t - 1) =
-      p_dat.state_trans_map(p_dat.a_t_t_s.col(t - 1)).sv;
+      p_dat.state_trans->map(p_dat.a_t_t_s.col(t - 1)).sv;
     p_dat.V_t_less_s.slice(t - 1) =
-      p_dat.state_trans_map(p_dat.V_t_t_s.slice(t - 1)).sv +
-      delta_t * p_dat.err_state_map(p_dat.Q).sv;
+      p_dat.state_trans->map(p_dat.V_t_t_s.slice(t - 1)).sv +
+      delta_t * p_dat.err_state->map(p_dat.Q).sv;
 
     // Re-generate
     if(p_dat.debug){
@@ -225,7 +225,7 @@ void UKF_solver_New<T>::solve(){
 
     arma::mat O(n_risk, sigma_points.n_cols);
     for(arma::uword i = 0; i < O.n_cols; ++i){
-      O.col(i) = (p_dat.lp_map(sigma_points.col(i)).sv.t() *
+      O.col(i) = (p_dat.state_lp->map(sigma_points.col(i)).sv.t() *
         p_dat.X.cols(r_set)).t();
     }
     O.each_col() += p_dat.fixed_effects(r_set);
@@ -321,7 +321,7 @@ void UKF_solver_New<T>::solve(){
     // X^T = A^-1 B^T <=> A X^T = B^T
     p_dat.B_s.slice(t - 1) = arma::solve(
       p_dat.V_t_less_s.slice(t - 1),
-      p_dat.state_trans_map(p_dat.V_t_t_s.slice(t - 1), left).sv).t();
+      p_dat.state_trans->map(p_dat.V_t_t_s.slice(t - 1), left).sv).t();
   }
 }
 

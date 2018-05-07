@@ -96,14 +96,14 @@ class importance_dens_no_y_dependence :
   static double log_importance_dens_smooth(
       const PF_data &data, const particle &p, int t){
     arma::vec mean =
-      data.err_state_map_inv(
-        data.state_trans_map    (p.parent->get_state()).sv).sv +
-      data.err_state_map_inv(
-        data.state_trans_map_inv(p.child->get_state()).sv).sv;
+      data.err_state_inv->map(
+        data.state_trans->map    (p.parent->get_state()).sv).sv +
+      data.err_state_inv->map(
+        data.state_trans_inv->map(p.child->get_state()).sv).sv;
     mean *= .5;
 
     return dmvnrm_log(
-      data.err_state_map_inv(p.get_state()).sv,
+      data.err_state_inv->map(p.get_state()).sv,
       mean,
       data.Q_proposal_smooth.chol_inv);
   }
@@ -123,7 +123,7 @@ public:
     } else {
       auto tmp = get_bw_sim_data(dens_calc, data, t);
       std::swap(P_t_F_top, tmp.P_t);
-      P_t_F_top = data.state_trans_map(P_t_F_top, right).sv;
+      P_t_F_top = data.state_trans->map(P_t_F_top, right).sv;
       P_t_p_1_LU.reset(new LU_factorization(tmp.P_t_p_1));
       std::swap(a_0_mean_term, tmp.a_0_mean_term);
       Q_use = new covarmat(std::move(tmp.S_t));
@@ -150,7 +150,7 @@ public:
       }
 
       arma::vec err = mvrnorm(Q_use->chol);
-      ans.new_particle(data.err_state_map(err).sv + mu, &cl[*it]);
+      ans.new_particle(data.err_state->map(err).sv + mu, &cl[*it]);
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(err, Q_use->chol_inv);
@@ -181,14 +181,14 @@ public:
       const particle &bw_p = bw_cloud[*it_bw];
 
       arma::vec mu =
-        data.err_state_map_inv(
-          data.state_trans_map    (fw_p.get_state()).sv).sv +
-        data.err_state_map_inv(
-          data.state_trans_map_inv(bw_p.get_state()).sv).sv;
+        data.err_state_inv->map(
+          data.state_trans->map    (fw_p.get_state()).sv).sv +
+        data.err_state_inv->map(
+          data.state_trans_inv->map(bw_p.get_state()).sv).sv;
       mu *= .5;
 
       arma::vec err = mvrnorm(data.Q_proposal_smooth.chol);
-      ans.new_particle(data.err_state_map(err).sv + mu, &fw_p, &bw_p);
+      ans.new_particle(data.err_state->map(err).sv + mu, &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens = log_importance_dens_smooth(data, p, t);
@@ -267,7 +267,7 @@ public:
 
       // TODO: has issues with degenrate distribution (e.g., AR(2) model)
       arma::vec err = mvrnorm(mu_j, inter_output.Sigma_chol);
-      ans.new_particle(data.err_state_map(err).sv, &cl[*it]);
+      ans.new_particle(data.err_state->map(err).sv, &cl[*it]);
 
       particle &p = ans[i];
       p.log_importance_dens =
@@ -282,10 +282,10 @@ public:
   static cloud sample_smooth(SAMPLE_SMOOTH_ARGS){
     /* Find weighted mean estimate */
     arma::vec alpha_bar =
-      data.err_state_map_inv(
-        data.state_trans_map    (fw_cloud.get_weigthed_mean()).sv).sv +
-      data.err_state_map_inv(
-        data.state_trans_map_inv(bw_cloud.get_weigthed_mean()).sv).sv;
+      data.err_state_inv->map(
+        data.state_trans->map    (fw_cloud.get_weigthed_mean()).sv).sv +
+      data.err_state_inv->map(
+        data.state_trans_inv->map(bw_cloud.get_weigthed_mean()).sv).sv;
     alpha_bar *= .5;
 
     /* compute parts of the terms for the mean and covariance */
@@ -307,17 +307,17 @@ public:
       const particle &bw_p = bw_cloud[*it_bw];
 
       arma::vec mu_j =
-        data.err_state_map_inv(
-          data.state_trans_map    (fw_p.get_state()).sv).sv +
-        data.err_state_map_inv(
-          data.state_trans_map_inv(bw_p.get_state()).sv).sv;
+        data.err_state_inv->map(
+          data.state_trans->map    (fw_p.get_state()).sv).sv +
+        data.err_state_inv->map(
+          data.state_trans_inv->map(bw_p.get_state()).sv).sv;
       mu_j *= .5;
       mu_j = solve_w_precomputed_chol(Q.chol, mu_j) + inter_output.mu;
       mu_j = solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mu_j);
 
       // TODO: has issues with degenrate distribution (e.g., AR(2) model)
       arma::vec err = mvrnorm(mu_j, inter_output.Sigma_chol);
-      ans.new_particle(data.err_state_map(err).sv, &fw_p, &bw_p);
+      ans.new_particle(data.err_state->map(err).sv, &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens =
@@ -385,7 +385,7 @@ public:
 
       // TODO: has issues with degenrate distribution (e.g., AR(2) model)
       arma::vec err = mvrnorm(inter_o.mu, inter_o.Sigma_chol);
-      ans.new_particle(data.err_state_map(err).sv, &cl[*it]);
+      ans.new_particle(data.err_state->map(err).sv, &cl[*it]);
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(
@@ -413,10 +413,10 @@ public:
       const particle &bw_p = bw_cloud[*(begin_bw + i)];
 
       mu_j =
-        data.err_state_map_inv(
-          data.state_trans_map    (fw_p.get_state()).sv).sv +
-        data.err_state_map_inv(
-          data.state_trans_map_inv(bw_p.get_state()).sv).sv;
+        data.err_state_inv->map(
+          data.state_trans->map    (fw_p.get_state()).sv).sv +
+        data.err_state_inv->map(
+          data.state_trans_inv->map(bw_p.get_state()).sv).sv;
       mu_j *= .5;
     }
 
@@ -439,7 +439,7 @@ public:
       const particle &bw_p = bw_cloud[*it_bw];
 
       arma::vec err = mvrnorm(it_inter->mu, it_inter->Sigma_chol);
-      ans.new_particle(data.err_state_map(err).sv, &fw_p, &bw_p);
+      ans.new_particle(data.err_state->map(err).sv, &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens =

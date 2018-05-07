@@ -126,7 +126,7 @@ public:
     } else {
       auto tmp = get_bw_sim_data(dens_cal, data, t);
       std::swap(P_t_F_top, tmp.P_t);
-      P_t_F_top = data.state_trans_map(P_t_F_top, right).sv;
+      P_t_F_top = data.state_trans->map(P_t_F_top, right).sv;
       P_t_p_1_LU.reset(new LU_factorization(tmp.P_t_p_1));
       std::swap(a_0_mean_term, tmp.a_0_mean_term);
       Q_use = new covarmat(std::move(tmp.S_t));
@@ -142,19 +142,19 @@ public:
       // TODO: should maybe be the approximation...
       double log_prob_y_given_state =
         densities::log_prob_y_given_state(
-          data, data.err_state_map(*it_mu_j).sv, t);
+          data, data.err_state->map(*it_mu_j).sv, t);
       double log_prop_transition;
       if(is_forward){
         log_prop_transition = dmvnrm_log(
           *it_mu_j,
-          data.err_state_map_inv(it_cl->get_state()).sv,
+          data.err_state_inv->map(it_cl->get_state()).sv,
           Q_use->chol_inv);
 
       } else {
         arma::vec mean =
           P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state()) + a_0_mean_term;
         log_prop_transition = dmvnrm_log(
-          *it_mu_j, data.err_state_map_inv(mean).sv, Q_use->chol_inv);
+          *it_mu_j, data.err_state_inv->map(mean).sv, Q_use->chol_inv);
 
       }
 
@@ -212,7 +212,7 @@ public:
     } else {
       auto tmp = get_bw_sim_data(dens_cal, data, t);
       std::swap(P_t_F_top, tmp.P_t);
-      P_t_F_top = data.state_trans_map(P_t_F_top, right).sv;
+      P_t_F_top = data.state_trans->map(P_t_F_top, right).sv;
       P_t_p_1_LU.reset(new LU_factorization(tmp.P_t_p_1));
       std::swap(a_0_mean_term, tmp.a_0_mean_term);
       Q_use = new covarmat(std::move(tmp.S_t));
@@ -233,21 +233,21 @@ public:
 
       // TODO: should maybe be the approximation...
       double log_prob_y_given_state = densities::log_prob_y_given_state(
-        data, data.err_state_map(it_ans->mu).sv, t, r_set, false);
+        data, data.err_state->map(it_ans->mu).sv, t, r_set, false);
 
       double log_prop_transition;
       if(is_forward){
         log_prop_transition = dmvnrm_log(
           it_ans->mu,
           // will failed if there are fixed effects in the state vector
-          data.err_state_map_inv(it_cl->get_state()).sv,
+          data.err_state_inv->map(it_cl->get_state()).sv,
           Q_use->chol_inv);
 
       } else {
         arma::vec mean =
           P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state()) + a_0_mean_term;
         log_prop_transition = dmvnrm_log(
-          it_ans->mu, data.err_state_map_inv(mean).sv, Q_use->chol_inv);
+          it_ans->mu, data.err_state_inv->map(mean).sv, Q_use->chol_inv);
 
       }
 

@@ -46,10 +46,10 @@ void SMA<T>::solve(){
 
     // E-step: Prediction step
     p_dat.a_t_less_s.col(t - 1) =
-      p_dat.state_trans_map(p_dat.a_t_t_s.col(t - 1)).sv;
+      p_dat.state_trans->map(p_dat.a_t_t_s.col(t - 1)).sv;
     p_dat.V_t_less_s.slice(t - 1) =
-      p_dat.state_trans_map(p_dat.V_t_t_s.slice(t - 1)).sv +
-      delta_t * p_dat.err_state_map(p_dat.Q).sv;
+      p_dat.state_trans->map(p_dat.V_t_t_s.slice(t - 1)).sv +
+      delta_t * p_dat.err_state->map(p_dat.Q).sv;
 
     if(p_dat.debug){
       std::stringstream str;
@@ -79,12 +79,12 @@ void SMA<T>::solve(){
 
         // TODO: is there a BLAS dsymv for non-square but symetric matrix
         // vector product?
-        auto x_in_state_space = p_dat.lp_map_inv(x_);
+        auto x_in_state_space = p_dat.state_lp_inv->map(x_);
         const arma::vec inter_vec = V * x_in_state_space.sv;
 
         const double f1 = std::max(
           1./arma::as_scalar(x_in_state_space.sv.t() * inter_vec), 1e-10);
-        const double f2 = arma::as_scalar(x_.t() * p_dat.lp_map(a).sv);
+        const double f2 = arma::as_scalar(x_.t() * p_dat.state_lp->map(a).sv);
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
 
@@ -120,7 +120,7 @@ void SMA<T>::solve(){
 
         const double f1 =
           std::max(1./arma::dot(inter_vec, inter_vec), 1e-10);
-        const double f2 = arma::dot(x_, p_dat.lp_map(a).sv);
+        const double f2 = arma::dot(x_, p_dat.state_lp->map(a).sv);
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
         const double at_risk_length =
@@ -138,7 +138,7 @@ void SMA<T>::solve(){
         a -=  (p_dat.LR * (f2 - c) * f1) * inter_vec;
 
         arma::vec rank_1_update_vec(x_ * sqrt(neg_second_d));
-        rank_1_update_vec = p_dat.lp_map_inv(rank_1_update_vec).sv;
+        rank_1_update_vec = p_dat.state_lp_inv->map(rank_1_update_vec).sv;
         chol_rank_one_update(L, rank_1_update_vec);
         square_tri_inv(L, L_inv);
       }
@@ -173,7 +173,7 @@ void SMA<T>::solve(){
     inv_sympd(V_t_less_s_inv, p_dat.V_t_less_s.slice(t - 1), p_dat.use_pinv,
               "ddhazard_fit_cpp estimation error: Failed to invert V_(t|t-1)");
     p_dat.B_s.slice(t - 1) =
-      p_dat.state_trans_map(p_dat.V_t_t_s.slice(t - 1), right).sv *
+      p_dat.state_trans->map(p_dat.V_t_t_s.slice(t - 1), right).sv *
       V_t_less_s_inv;
   }
 }
