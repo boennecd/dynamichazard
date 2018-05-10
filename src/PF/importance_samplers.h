@@ -54,8 +54,8 @@ public:
       mean = &data.a_0;
 
     } else {
-      Q_chol = &data.uncond_covar_state(data.d).chol;
-      mean = &data.uncond_mean_state(data.d);
+      Q_chol = &data.uncond_covar_state(data.d + 1).chol;
+      mean = &data.uncond_mean_state(data.d + 1);
 
     }
 

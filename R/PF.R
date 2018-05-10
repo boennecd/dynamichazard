@@ -340,7 +340,6 @@ PF_control <- function(
 
     n_i <- length(risk_set)
     X_i <- X[, risk_set, drop = FALSE]
-    X_i <- t(X_i) # note the transpose. Improves speed later
     fixed_terms_i <- fixed_terms[, risk_set, drop = FALSE]
     y_i <- risk_obj$is_event_in[risk_set] == (i - 1)
 
@@ -364,7 +363,7 @@ PF_control <- function(
       i_end <- min(i_start + n_per_chunk - 1L, n_good)
       this_chunk <- good[i_start:i_end]
 
-      offset. <- drop(X_i %*% particle_coefs[, this_chunk, drop = FALSE])
+      offset. <-  drop(particle_coefs[, this_chunk, drop = FALSE] %*% X_i)
       weights. <- drop(rep_vec(cl$weights[this_chunk, ] * n_ps_i, n_i))
 
       if(length(this_chunk) == n_per_chunk){

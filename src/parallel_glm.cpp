@@ -6,6 +6,7 @@
 
 #include "arma_n_rcpp.h"
 #include "thread_pool.h"
+#include "parallel_qr.h"
 #include "arma_BLAS_LAPACK.h"
 
 #define COMPUTE_ARGS                                           \
@@ -207,52 +208,13 @@ public:
 
 /* Class to fit glm using QR updated in chunks */
 
-/* Let x = QR. Then this is a data holder for the R matrix and f = Q^\top y.
- * dev is deviance computed for the chunk computed with the current
- * coefficient vector                                                        */
-struct R_f {
-  const arma::mat R;
-  const arma::uvec pivot;
-  const arma::vec f;
-  const double dev;
 
-  arma::mat R_rev_piv() const {
-    arma::uvec piv = pivot;
-    piv(piv) = arma::regspace<arma::uvec>(0, 1, piv.n_elem - 1);
-    return R.cols(piv);
-  }
-};
-
-/* function to combine results */
-R_f R_f_combine(std::vector<R_f> &R_fs){
-  R_f *R_fs_i = &R_fs.back();
-  arma::mat R_stack = R_fs_i->R_rev_piv();
-  arma::vec f_stack = std::move(R_fs_i->f);
-  double  dev = R_fs_i->dev;
-  R_fs.pop_back();
-
-  while(!R_fs.empty()){
-    R_fs_i = &R_fs.back();
-    R_stack = arma::join_cols(R_stack, R_fs_i->R_rev_piv());
-    f_stack = arma::join_cols(f_stack, std::move(R_fs_i->f));
-    dev += R_fs_i->dev;
-
-    R_fs.pop_back();
-  }
-
-  /* make new QR decomp and compute new f*/
-  QR_factorization qr(R_stack);
-  arma::vec f = qr.qy(f_stack, true).subvec(0, R_stack.n_cols - 1);
-
-  return R_f { qr.R(), qr.pivot(), std::move(f), dev };
-}
 
 template<typename family>
 class parallelglm_class_QR {
   using uword = arma::uword;
 
-  /* worker class for multithreading*/
-  class worker {
+  class glm_qr_data_generator : public qr_data_generator {
     static constexpr double zero_eps = 1e-100;
 
     const uword i_start, i_end;
@@ -260,11 +222,11 @@ class parallelglm_class_QR {
     const bool first_it;
 
   public:
-    worker(uword i_start, uword i_end, data_holder_base &data, bool first_it):
+    glm_qr_data_generator
+    (uword i_start, uword i_end, data_holder_base &data, bool first_it):
     i_start(i_start), i_end(i_end), data(data), first_it(first_it) {}
 
-    R_f operator()(){
-
+    qr_work_chunk get_chunk() const override {
       /* assign objects for later use */
       arma::span my_span(i_start, i_end);
       uword n = i_end - i_start + 1;
@@ -295,7 +257,6 @@ class parallelglm_class_QR {
         (weight > 0) %
           ((-zero_eps < mu_eta_val) + (mu_eta_val < zero_eps) != 2));
 
-      /* compute deviance */
       const double *mu_i = mu.begin();
       const double *wt_i = weight.begin();
       const double  *y_i = y.begin();
@@ -304,27 +265,23 @@ class parallelglm_class_QR {
       for(uword i = 0; i < n; ++i, ++mu_i, ++wt_i, ++y_i)
         dev += family::dev_resids(*y_i, *mu_i, *wt_i);
 
-      /* make QR decomposition */
       mu = mu(good);
       eta = eta(good);
       mu_eta_val = mu_eta_val(good);
       arma::vec var = mu;
       var.transform(family::variance);
 
+      /* compute X and working responses and return */
       arma::vec z = (eta - offset(good)) + (y(good) - mu) / mu_eta_val;
       arma::vec w = arma::sqrt(
         (weight(good) % arma::square(mu_eta_val)) / var);
 
-      /* find QR */
       X = X.cols(good);
       X = X.t();
       X.each_col() %= w;
-      QR_factorization qr(X);
-
       z %= w;
-      arma::vec f = qr.qy(z, true).subvec(0, data.p - 1);
 
-      return R_f { qr.R(), qr.pivot(), std::move(f), dev };
+      return { std::move(X), std::move(z), dev};
     }
   };
 
@@ -346,9 +303,10 @@ public:
       arma::vec beta_old = beta;
       data.beta = &beta;
 
-      R_f R_f_out = get_R_f(data, i == 0);
+      R_F R_f_out = get_R_f(data, i == 0);
       arma::mat R = R_f_out.R_rev_piv();
-      beta = arma::solve(R.t() * R, R.t() * R_f_out.f);
+      // TODO: replace with forward and backward solve...
+      beta = arma::solve(R.t() * R, R.t() * R_f_out.F.col(0));
 
       if(trace){
         Rcpp::Rcout << "it " << i << "\n"
@@ -372,36 +330,23 @@ public:
     return beta;
   }
 
-  static R_f get_R_f(data_holder_base &data, bool first_it){
+  static R_F get_R_f(data_holder_base &data, bool first_it){
     uword n = data.X.n_cols;
 
     // Compute the number of blocks to create
-    uword num_blocks=(n + data.block_size - 1) / data.block_size;
-    std::vector<std::future<R_f> > futures(num_blocks-1);
-    thread_pool pool(std::min(num_blocks - 1, data.max_threads));
-
-    std::vector<worker> workers;
-    workers.reserve(num_blocks - 1);
+    uword num_blocks = (n + data.block_size - 1) / data.block_size;
+    std::vector<std::unique_ptr<qr_data_generator>> generators;
+    generators.reserve(num_blocks);
 
     // declare outsite of loop to ref after loop
     uword i_start = 0;
-    for(uword i = 0; i < num_blocks - 1; ++i, i_start += data.block_size){
-      workers.emplace_back(i_start, i_start + data.block_size - 1, data, first_it);
+    for(uword i = 0; i < num_blocks; ++i, i_start += data.block_size)
+      generators.emplace_back(
+        new glm_qr_data_generator(
+              i_start, std::min(n - 1, i_start + data.block_size - 1),
+              data, first_it));
 
-      futures[i] = pool.submit(workers.back());
-    }
-
-    // compute last enteries on this thread
-    std::vector<R_f> R_fs;
-    R_fs.push_back(worker(i_start, n - 1, data, first_it)());
-
-    for(unsigned long i = 0; i < num_blocks - 1; ++i)
-    {
-      R_fs.push_back(futures[i].get());
-    }
-
-    // Find final R, f and deviance
-    return R_f_combine(R_fs);
+    return qr_parallel(std::move(generators), data.max_threads).compute();
   }
 };
 
@@ -535,18 +480,18 @@ Rcpp::List parallelglm_QR_get_R_n_f(
   data_holder_base data(X, Ys, weights, offsets, nthreads, p, n, block_size);
   data.beta = &beta0;
 
-  std::unique_ptr<R_f> res;
+  std::unique_ptr<R_F> res;
   if(family == BINOMIAL){
-    res.reset(new R_f(parallelglm_class_QR<glm_families::binomial>::get_R_f(
+    res.reset(new R_F(parallelglm_class_QR<glm_families::binomial>::get_R_f(
       data, false /* note the false */)));
   } else if(family == POISSON){
-    res.reset(new R_f(parallelglm_class_QR<glm_families::poisson>::get_R_f(
+    res.reset(new R_F(parallelglm_class_QR<glm_families::poisson>::get_R_f(
       data, false /* note the false */)));
   }
 
   return Rcpp::List::create(
     Rcpp::Named("R") =  Rcpp::wrap(res->R),
     Rcpp::Named("pivot") =  Rcpp::wrap(res->pivot),
-    Rcpp::Named("f") =  Rcpp::wrap(res->f),
+    Rcpp::Named("f") =  Rcpp::wrap(res->F),
     Rcpp::Named("dev") =  Rcpp::wrap(res->dev));
 }

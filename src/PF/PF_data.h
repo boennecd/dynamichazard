@@ -163,7 +163,7 @@ protected:
   virtual void set_maps(){
     arma::vec m_t, m_t_p_1 = a_0;
     arma::mat Q_state = err_state->map(Q.mat).sv;
-    arma::mat P_t, P_t_p_1 = Q_state;
+    arma::mat P_t, P_t_p_1 = Q_0.mat;
     for(int t = 0; t <= d + 1; ++t){
 
       // move and update
