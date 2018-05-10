@@ -21,20 +21,6 @@
       Computes log(P(alpha_t | alpha_{t + 1}))
     log_artificial_prior
       Returns the log density of of artificial prior gamma_t(alpha_t)
-    get_artificial_prior_covar
-      Returns the artificial prior covariance matrix at time t
-    get_artificial_prior_covar_state_dim
-      Returns
-        P_t = \left\{
-           \begin{matrix}
-              R Q R^\top & t = 0 \\
-              F P_{t-1} F^\top + R Q R^\top & t > 0
-           \end{matrix}
-        \right.
-    get_artificial_prior_mean
-      Returns the artificial prior mean at time t
-    get_artificial_prior_mean_state_dim
-      Returns m_t = F^t a_0
     d_log_like
       Returns the first deriative of the log likelihood given outcome and the
       state for a given individual
@@ -48,39 +34,7 @@
 template<class outcome_dens>
 class pf_dens_base {
   using uword = arma::uword;
-  using time_mat_map = std::map<uword /* time */, const arma::mat>;
-
-  /* Maybe checkout this pot regarding thread safty of std::map
-   *   https://stackoverflow.com/q/8234633/5861244
-   * As of 11/01/2018 all threads will only need the same element t at the same
-   * time. Thus, we just need a lock so the first threat adds the element to
-   * start with and we should not have any issues from that point of         */
-  time_mat_map Q_t_chol_inv;
-  time_mat_map P_t;
-  std::map<uword /* time */, const arma::vec> m_t;
-
   const PF_data &data_;
-
-  // TODO: change to pointers to avoid copies
-  const arma::mat& get_Q_t_chol_inv(uword t){
-#ifdef _OPENMP
-#pragma omp critical(get_Q_t_chol_inv_lock)
-{
-#endif
-  if(Q_t_chol_inv.find(t) == Q_t_chol_inv.end()){
-    Q_t_chol_inv.insert(std::make_pair(
-        t,
-        arma::inv(
-          arma::trimatu(
-            arma::chol(
-              get_artificial_prior_covar(t))))));
-  }
-#ifdef _OPENMP
-}
-#endif
-
-    return Q_t_chol_inv[t];
-  }
 
 public:
   pf_dens_base(const PF_data &data): data_(data) {};
@@ -229,60 +183,8 @@ public:
   double log_artificial_prior(const particle &p, int t){
     return(dmvnrm_log(
         data_.err_state_inv->map(p.get_state()).sv,
-        get_artificial_prior_mean(t),
-        get_Q_t_chol_inv(t)));
-  }
-
-  // TODO: change to pointers to avoid copies
-  const arma::mat& get_artificial_prior_covar_state_dim(uword t){
-#ifdef _OPENMP
-#pragma omp critical(get_P_t_lock)
-{
-#endif
-  if(P_t.find(t) == P_t.end()){
-    arma::mat new_terms(data_.err_state->map(data_.Q.mat).sv);
-    arma::mat out(new_terms);
-    for(uword i = 1; i <= t; ++i){
-      out = new_terms + data_.state_trans->map(out).sv;
-
-      P_t.insert(std::make_pair(i, out));
-    }
-  }
-#ifdef _OPENMP
-}
-#endif
-
-    return P_t[t];
-  }
-
-  arma::mat get_artificial_prior_covar(uword t){
-    return data_.err_state_inv->map(
-      get_artificial_prior_covar_state_dim(t)).sv;
-  }
-
-  // TODO: change to pointers to avoid copies
-  const arma::vec& get_artificial_prior_mean_state_dim(uword t){
-#ifdef _OPENMP
-#pragma omp critical(get_m_t_lock)
-{
-#endif
-  if(m_t.find(t) == m_t.end()){
-    arma::vec out(data_.a_0);
-    for(uword i = 1; i <= t; ++i){
-      out = data_.state_trans->map(out).sv;
-
-      m_t.insert(std::make_pair(i, out));
-    }
-  }
-#ifdef _OPENMP
-}
-#endif
-
-    return m_t[t];
-  }
-
-  arma::vec get_artificial_prior_mean(uword t){
-    return data_.err_state_inv->map(get_artificial_prior_mean_state_dim(t)).sv;
+        data_.uncond_mean_state(t),
+        data_.uncond_covar_state(t).chol_inv));
   }
 };
 

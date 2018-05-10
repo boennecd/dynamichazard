@@ -47,16 +47,15 @@ public:
     cloud ans;
     ans.reserve(data.N_first);
     const arma::mat *Q_chol;
-    arma::vec mean;
+    const arma::vec *mean;
 
     if(is_forward){
       Q_chol = &data.Q_0.chol;
-      mean = data.a_0;
+      mean = &data.a_0;
 
     } else {
-      Q_chol = new arma::mat(
-        arma::chol(dens_calc.get_artificial_prior_covar(data.d)));
-      mean = dens_calc.get_artificial_prior_mean_state_dim(data.d);
+      Q_chol = &data.uncond_covar_state(data.d).chol;
+      mean = &data.uncond_mean_state(data.d);
 
     }
 
@@ -66,18 +65,15 @@ public:
                   << " with chol(covariance matrix):" << std::endl
                   << *Q_chol
                   << "and mean:" << std::endl
-                  << mean;
+                  << *mean;
     }
 
     double log_weight = log(1. / data.N_first);
     for(arma::uword i = 0; i < data.N_first; ++i){
       arma::vec err = mvrnorm(*Q_chol);
-      ans.new_particle(err + mean, nullptr);
+      ans.new_particle(err + *mean, nullptr);
       ans[i].log_weight = log_weight;
     }
-
-    if(!is_forward)
-      delete Q_chol;
 
     return(ans);
   }
@@ -121,12 +117,7 @@ public:
       Q_use = &data.Q_proposal;
 
     } else {
-      auto tmp = get_bw_sim_data(dens_calc, data, t);
-      std::swap(P_t_F_top, tmp.P_t);
-      P_t_F_top = data.state_trans->map(P_t_F_top, right).sv;
-      P_t_p_1_LU.reset(new LU_factorization(tmp.P_t_p_1));
-      std::swap(a_0_mean_term, tmp.a_0_mean_term);
-      Q_use = new covarmat(std::move(tmp.S_t));
+      Q_use = &data.bw_covar(t);
 
     }
 
@@ -144,8 +135,7 @@ public:
         mu = cl[*it].get_state();
 
       } else {
-        mu =
-          P_t_F_top * P_t_p_1_LU->solve(cl[*it].get_state()) + a_0_mean_term;
+        mu = data.bw_mean(t, cl[*it].get_state());
 
       }
 
@@ -154,11 +144,6 @@ public:
 
       particle &p = ans[i];
       p.log_importance_dens = dmvnrm_log(err, Q_use->chol_inv);
-
-    }
-
-    if(!is_forward){
-      delete Q_use;
 
     }
 

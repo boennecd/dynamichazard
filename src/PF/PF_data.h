@@ -131,9 +131,13 @@ private:
 /* data class for pre-computed factorization */
 class covarmat {
 public:
+  /* Covar matrix: Q */
   const arma::mat mat;
+  /* C in Q = C^\topC in  */
   const arma::mat chol;
+  /* C^{-1} */
   const arma::mat chol_inv;
+  /* Q^{-1} */
   const arma::mat inv;
 
   template<typename T>
@@ -145,16 +149,66 @@ public:
 
 // data holder for particle filtering
 class PF_data : public problem_data {
+  using uword = arma::uword;
+
+  std::map<const uword, const std::unique_ptr<linear_mapper>> bw_mean_maps;
+  std::map<const uword, const arma::vec> bw_mean_const_term;
+  std::map<const uword, const covarmat> bw_covar_map;
+  std::map<const uword, const arma::vec> uncond_mean_state_map;
+  std::map<const uword, const covarmat>  uncond_covar_state_map;
+  std::map<const uword, const arma::vec> uncond_mean_map;
+  std::map<const uword, const arma::mat> uncond_covar_map;
+
+protected:
+  virtual void set_maps(){
+    arma::vec m_t, m_t_p_1 = a_0;
+    arma::mat Q_state = err_state->map(Q.mat).sv;
+    arma::mat P_t, P_t_p_1 = Q_state;
+    for(int t = 0; t <= d + 1; ++t){
+
+      // move and update
+      m_t = std::move(m_t_p_1);
+      P_t = std::move(P_t_p_1);
+      m_t_p_1 = state_trans->map(m_t).sv;
+      P_t_p_1 = state_trans->map(P_t).sv + Q_state;
+
+      // insert map elements
+      uncond_mean_state_map.insert(std::make_pair(t + 1L, m_t_p_1));
+      uncond_covar_state_map.insert(std::make_pair(t + 1L, covarmat(P_t_p_1)));
+
+      arma::mat S_t =
+        arma::solve(P_t_p_1, err_state->map(Q.mat).sv);
+      S_t = state_trans_inv->map(S_t, right).sv;
+      S_t = state_trans->map(P_t, right).sv * S_t;
+
+      arma::mat tmp = arma::solve(P_t_p_1.t(), state_trans->map());
+      bw_mean_maps.insert(std::make_pair(
+          t, std::unique_ptr<dens_mapper>(
+              new dens_mapper(arma::mat(P_t * tmp.t())))));
+
+      bw_mean_const_term.insert(std::make_pair(
+          t, S_t * arma::solve(P_t, m_t)));
+
+      bw_covar_map.insert(std::make_pair(t, std::move(S_t)));
+
+      uncond_mean_map.insert(std::make_pair(
+          t, err_state_inv->map(arma::vec(arma::solve(P_t, m_t))).sv));
+
+      uncond_covar_map.insert(std::make_pair(
+          t, err_state_inv->map(arma::mat(P_t.i())).sv));
+    }
+  }
+
 public:
   /* Number of paprticles in forward and/or backward filter */
-  const arma::uword N_fw_n_bw;
-  const arma::uword N_smooth;
+  const uword N_fw_n_bw;
+  const uword N_smooth;
   const double forward_backward_ESS_threshold;
 
   /* Inital state, number of particles to draw at time 0 and d + 1 and debug level */
   const arma::vec &a_0;
   const unsigned int debug; /* < 1 is no info and greater values yields more info */
-  const arma::uword N_first;
+  const uword N_first;
   const unsigned long work_block_size;
 
   /* pre-computed factorization */
@@ -182,11 +236,11 @@ public:
 
           // new arguments
           const arma::mat Q_tilde,
-          const arma::uword N_fw_n_bw,
-          const arma::uword N_smooth,
+          const uword N_fw_n_bw,
+          const uword N_smooth,
           Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
           const unsigned int debug,
-          const arma::uword N_first) :
+          const uword N_first) :
     problem_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, m, Q_0, Q,
@@ -212,6 +266,7 @@ public:
 #ifdef _OPENMP
     omp_init_lock(&PF_logger::lock);
 #endif
+    set_maps();
     }
 
   ~PF_data(){
@@ -227,6 +282,30 @@ public:
   PF_data & operator=(const PF_data&) = delete;
   PF_data(const PF_data&) = delete;
   PF_data() = delete;
+
+  const arma::vec bw_mean(const uword t, const arma::vec &a) const {
+    return bw_mean_maps.at(t)->map(a).sv + bw_mean_const_term.at(t);
+  }
+
+  const covarmat& bw_covar(const uword t) const {
+    return bw_covar_map.at(t);
+  }
+
+  const arma::vec& uncond_mean_state(const uword t) const {
+    return uncond_mean_state_map.at(t);
+  }
+
+  const covarmat& uncond_covar_state(const uword t) const {
+    return uncond_covar_state_map.at(t);
+  }
+
+  const arma::vec& uncond_mean(const int t) const {
+    return uncond_mean_map.at(t);
+  }
+
+  const arma::mat& uncond_covar(const uword t) const {
+    return uncond_covar_map.at(t);
+  }
 };
 
 #endif

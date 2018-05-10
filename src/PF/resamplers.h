@@ -124,12 +124,7 @@ public:
       Q_use = &data.Q;
 
     } else {
-      auto tmp = get_bw_sim_data(dens_cal, data, t);
-      std::swap(P_t_F_top, tmp.P_t);
-      P_t_F_top = data.state_trans->map(P_t_F_top, right).sv;
-      P_t_p_1_LU.reset(new LU_factorization(tmp.P_t_p_1));
-      std::swap(a_0_mean_term, tmp.a_0_mean_term);
-      Q_use = new covarmat(std::move(tmp.S_t));
+      Q_use = &data.bw_covar(t);
 
     }
 
@@ -151,8 +146,7 @@ public:
           Q_use->chol_inv);
 
       } else {
-        arma::vec mean =
-          P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state()) + a_0_mean_term;
+        arma::vec mean = data.bw_mean(t, it_cl->get_state());
         log_prop_transition = dmvnrm_log(
           *it_mu_j, data.err_state_inv->map(mean).sv, Q_use->chol_inv);
 
@@ -167,11 +161,6 @@ public:
         - log_prop_proposal;
 
       max_weight = MAX(it_cl->log_resampling_weight, max_weight);
-    }
-
-    if(!is_forward){
-      delete Q_use;
-
     }
 
     auto norm_out =
@@ -210,12 +199,7 @@ public:
       Q_use = &data.Q;
 
     } else {
-      auto tmp = get_bw_sim_data(dens_cal, data, t);
-      std::swap(P_t_F_top, tmp.P_t);
-      P_t_F_top = data.state_trans->map(P_t_F_top, right).sv;
-      P_t_p_1_LU.reset(new LU_factorization(tmp.P_t_p_1));
-      std::swap(a_0_mean_term, tmp.a_0_mean_term);
-      Q_use = new covarmat(std::move(tmp.S_t));
+      Q_use = &data.bw_covar(t);
 
     }
 
@@ -244,8 +228,7 @@ public:
           Q_use->chol_inv);
 
       } else {
-        arma::vec mean =
-          P_t_F_top * P_t_p_1_LU->solve(it_cl->get_state()) + a_0_mean_term;
+        arma::vec mean = data.bw_mean(t, it_cl->get_state());
         log_prop_transition = dmvnrm_log(
           it_ans->mu, data.err_state_inv->map(mean).sv, Q_use->chol_inv);
 
@@ -266,11 +249,6 @@ public:
 #ifdef _OPENMP
 }
 #endif
-    }
-
-    if(!is_forward){
-      delete Q_use;
-
     }
 
     auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);

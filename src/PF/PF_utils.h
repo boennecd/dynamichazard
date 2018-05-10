@@ -335,13 +335,11 @@ static input_for_normal_apprx_w_cloud_mean
     cloud &cl /* set mu_js when cloud is passed to */){
     const covarmat *Q_use;
     const arma::mat tmp;
-    arma::vec *mu_term;
+    const arma::vec *mu_term;
     if(!is_forward){
-      // Add the covariance matrix of the artificial prior
-      arma::mat art_covar = dens_calc.get_artificial_prior_covar(t);
-      Q_use = new covarmat(arma::inv(Q.inv + arma::inv(art_covar)));
-      mu_term = new arma::vec(arma::solve(
-        art_covar, dens_calc.get_artificial_prior_mean(t)));
+      Q_use = new covarmat(arma::inv(
+        data.state_trans_err_inv->map(Q.inv).sv + data.uncond_covar(t)));
+      mu_term = &data.uncond_mean(t);
 
     } else {
       Q_use = &Q;
@@ -382,7 +380,6 @@ static input_for_normal_apprx_w_cloud_mean
 
     if(!is_forward){
       delete Q_use;
-      delete mu_term;
 
     }
 
@@ -408,13 +405,11 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
   const covarmat &Q, mu_iterator begin, const unsigned int size){
   const covarmat *Q_use;
   arma::mat Q_art_chol;
-  arma::vec *mu_term;
+  const arma::vec *mu_term;
   if(!is_forward){
     // Add the covariance matrix of the artificial prior
-    arma::mat art = dens_calc.get_artificial_prior_covar_state_dim(t);
-    Q_use = new covarmat(arma::inv(Q.inv + arma::inv(art)));
-    mu_term = new arma::vec(arma::solve(
-      art, dens_calc.get_artificial_prior_mean_state_dim(t)));
+    Q_use = new covarmat(arma::inv(Q.inv + data.uncond_covar(t)));
+    mu_term = &data.uncond_mean(t);
 
   } else {
     Q_use = &Q;
@@ -458,7 +453,6 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
   if(!is_forward){
     delete Q_use;
-    delete mu_term;
 
   }
 
@@ -539,46 +533,6 @@ Rcpp::List get_rcpp_list_from_cloud(
 
 smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list);
 
-/* ------------------------------------------- */
-
-/* function to get data to perform computation for backward filter */
-
-struct bw_sim_data {
-  /* these are in the state space */
-  arma::vec a_0_mean_term;
-  arma::mat P_t;
-  arma::mat P_t_p_1;
-  /* is in the error space */
-  arma::mat S_t;
-};
-
-template<class densities>
-bw_sim_data get_bw_sim_data(
-  densities &dens_cal, const PF_data &data, const int t){
-  // declare output and make references
-  bw_sim_data out;
-  arma::vec &a_0_mean_term = out.a_0_mean_term;
-  arma::mat &P_t = out.P_t;
-  arma::mat &P_t_p_1 = out.P_t_p_1;
-  arma::mat &S_t = out.S_t;
-
-  // compute covariance objects
-  P_t = dens_cal.get_artificial_prior_covar_state_dim(t);
-  P_t_p_1 = dens_cal.get_artificial_prior_covar_state_dim(t + 1);
-  /* TODO: make a factorizationa and re-use later */
-  S_t = arma::solve(P_t_p_1, data.err_state->map(data.Q.mat).sv);
-  S_t = data.state_trans_inv->map(S_t, right).sv;
-  S_t = data.state_trans->map(P_t, right).sv * S_t;
-
-  // compute mean term from initial state
-  a_0_mean_term = S_t * arma::solve(
-    P_t, dens_cal.get_artificial_prior_mean_state_dim(t));
-
-  // reduce to error dimension and return
-  S_t = data.err_state_inv->map(S_t).sv;
-
-  return out;
-}
 
 #undef USE_PRIOR_IN_BW_FILTER_DEFAULT
 #undef MAX

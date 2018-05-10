@@ -14,22 +14,46 @@
 
 class problem_data {
 protected:
-  virtual std::unique_ptr<linear_mapper> set_state_trans(const arma::mat &F){
+  virtual
+  std::unique_ptr<linear_mapper> set_state_trans(const arma::mat &F){
     return std::unique_ptr<dens_mapper>(new dens_mapper(F));
   }
-  virtual std::unique_ptr<linear_mapper> set_state_trans_inv(const arma::mat &F){
+
+  virtual
+  std::unique_ptr<linear_mapper> set_state_trans_inv(const arma::mat &F){
     return std::unique_ptr<inv_mapper>(new inv_mapper(F));
   }
-  virtual std::unique_ptr<linear_mapper> set_err_state(const arma::mat &R){
+
+  virtual
+  std::unique_ptr<linear_mapper> set_state_trans_err
+  (const arma::mat &F, const arma::mat R){
+    arma::mat tmp = R.t() * F;
+    return std::unique_ptr<dens_mapper>(new dens_mapper(tmp));
+  }
+
+  virtual
+  std::unique_ptr<linear_mapper> set_state_trans_err_inv
+  (const arma::mat &F, const arma::mat R){
+    return std::unique_ptr<inv_sub_mapper>(new inv_sub_mapper(F, R));
+  }
+
+  virtual
+  std::unique_ptr<linear_mapper> set_err_state(const arma::mat &R){
     return std::unique_ptr<select_mapper>(new select_mapper(R));
   }
-  virtual std::unique_ptr<linear_mapper> set_err_state_inv(const arma::mat &R){
+
+  virtual
+  std::unique_ptr<linear_mapper> set_err_state_inv(const arma::mat &R){
     return std::unique_ptr<select_mapper>(new select_mapper(arma::mat(R.t())));
   }
-  virtual std::unique_ptr<linear_mapper> set_state_lp(const arma::mat &L){
+
+  virtual
+  std::unique_ptr<linear_mapper> set_state_lp(const arma::mat &L){
     return std::unique_ptr<select_mapper>(new select_mapper(L));
   }
-  virtual std::unique_ptr<linear_mapper> set_state_lp_inv(const arma::mat &L){
+
+  virtual
+  std::unique_ptr<linear_mapper> set_state_lp_inv(const arma::mat &L){
     return std::unique_ptr<select_mapper>(new select_mapper(arma::mat(L.t())));
   }
 
@@ -72,6 +96,9 @@ public:
   // maps
   const std::unique_ptr<linear_mapper> state_trans;
   const std::unique_ptr<linear_mapper> state_trans_inv;
+  const std::unique_ptr<linear_mapper> state_trans_err;
+  const std::unique_ptr<linear_mapper> state_trans_err_inv;
+
   const std::unique_ptr<linear_mapper> err_state;
   const std::unique_ptr<linear_mapper> err_state_inv;
 
@@ -130,8 +157,12 @@ public:
 
     state_trans(set_state_trans(F_)),
     state_trans_inv(set_state_trans_inv(F_)),
+    state_trans_err(set_state_trans_err(F_, R)),
+    state_trans_err_inv(set_state_trans_err_inv(F_, R)),
+
     err_state(set_err_state(R)),
     err_state_inv(set_err_state_inv(R)),
+
     state_lp(set_state_lp(L)),
     state_lp_inv(set_state_lp_inv(L))
   {
@@ -166,13 +197,31 @@ private:
     if(order == 1)
       return std::unique_ptr<select_mapper>(new select_mapper(F));
 
-    return std::unique_ptr<dens_mapper>(new dens_mapper(F));
+    return T::set_state_trans(F);
   }
-  std::unique_ptr<linear_mapper> set_state_trans_inv(const arma::mat &F) override {
+
+  std::unique_ptr<linear_mapper> set_state_trans_inv
+  (const arma::mat &F) override {
     if(order == 1)
       return std::unique_ptr<select_mapper>(new select_mapper(F));
 
-    return std::unique_ptr<inv_mapper>(new inv_mapper(F));
+    return T::set_state_trans_inv(F);
+  }
+
+  std::unique_ptr<linear_mapper> set_state_trans_err
+  (const arma::mat &F, const arma::mat R) override {
+    if(order == 1)
+      return std::unique_ptr<select_mapper>(new select_mapper(F));
+
+    return T::set_state_trans_err(F, R);
+  }
+
+  std::unique_ptr<linear_mapper> set_state_trans_err_inv
+  (const arma::mat &F, const arma::mat R) override {
+    if(order == 1)
+      return std::unique_ptr<select_mapper>(new select_mapper(F));
+
+    return T::set_state_trans_err_inv(F, R);
   }
 
 public:

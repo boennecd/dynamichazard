@@ -136,7 +136,7 @@ The model is:
 %
 \end{equation}%
 %
-where I  denote the conditional densities as $\vec{y}_t \sim \optorC{g}{\cdot}{\mat{R}^{+}\vec{\alpha}_t}$ and $\vec{\alpha}_t \sim \optorC{f}{\cdot}{\vec{\alpha}_{t-1}}$. We are in a survival analysis setting where the simplest model has an indicator of death of individual $i$ in time $t$ such that $y_{it} \in \Lbrace{0, 1}$ where $\eta_{it}$ is the linear predictor where we use the logistic function as the link function. For each $t=1,\dots,\nPeriods$, we a have risk set given by $R_t \subseteq \Lbrace{1,2,\dots,n}$. Further, We let $n_t = \vert R_t \vert$ and $\nMax = \max_{t = 1,\dots \nPeriods} = n_t$. The observed outcomes are denoted by $\vec{y}_t = \Lbrace{y_{it}}_{i \in R_t}$. $\mat{X}_t$ is the design matrix of the covariates and $\vec{\alpha}_t$ is the vector of time-varying coefficients. The problems we are looking at have $\nMax \gg \dimState \geq \dimRng$ (e.g. $\nMax = 100000$ and $\dimRng = 20$).
+where I  denote the conditional densities as $\vec{y}_t \sim \optorC{g}{\cdot}{\mat{R}^{+}\vec{\alpha}_t}$ and $\vec{\alpha}_t \sim \optorC{f}{\cdot}{\vec{\alpha}_{t-1}}$. We are in a survival analysis setting where the simplest model has an indicator of death of individual $i$ in time $t$ such that $y_{it} \in \Lbrace{0, 1}$ where $\eta_{it}$ is the linear predictor where we use the logistic function as the link function. For each $t=1,\dots,\nPeriods$, we a have risk set given by $R_t \subseteq \Lbrace{1,2,\dots,n}$. Further, we let $n_t = \vert R_t \vert$ and $\nMax = \max_{t = 1,\dots \nPeriods} = n_t$. The observed outcomes are denoted by $\vec{y}_t = \Lbrace{y_{it}}_{i \in R_t}$. $\mat{X}_t$ is the design matrix of the covariates and $\vec{\alpha}_t$ is the vector of time-varying coefficients. The problems we are looking at have $\nMax \gg \dimState \geq \dimRng$ (e.g. $\nMax = 100000$ and $\dimRng = 20$).
 
 Superscript $+$ denotes the Moore-Penrose inverse, %
 the $i$'th row of $\mat{X}_t$ is $\vec{x}_{it}$, $\vec{x}_{it},\vec{\epsilon}_t\in\mathbb{R}^\dimRng$%
@@ -329,7 +329,7 @@ We need to specify the artificial prior $\gamma_t\Lparen{\vec{\alpha}_t}$. \cite
 	\propC{\vec{\alpha}_t}{\vec{\alpha}_{t+1}} &=
 	\normalC{\vec{\alpha}_t}{\vecLarrow{a}_t}{\matLarrow{S}_t} \\
 %
-	\matLarrow{S}_t &= \matLarrow{P}_t\mat{F}^\top\matLarrow{P}_{t + 1}^{-1}\mat{Q}\Lparen{\mat{F}^\top}^{-1} \\
+	\matLarrow{S}_t &= \matLarrow{P}_t\mat{F}^\top\matLarrow{P}_{t + 1}^{-1}\mat{R}\mat{Q}\mat{R}^\top\Lparen{\mat{F}^\top}^{-1} \\
 %
 	\vecLarrow{a}_t &=
 		\matLarrow{P}_t\mat{F}^\top\matLarrow{P}_{t + 1}^{-1}\vec{\alpha}_{t+1}
@@ -416,7 +416,7 @@ The re-sampling weights can be computed similarly to the forward filter using th
 We need to specify the importance density $\IDAproxC{\cdot}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}}$ (see \citet[page 453] {fearnhead10}). Again, we can use a idea similar to those in the appendix of \cite{fearnhead10} and choose%
 %
 {\scriptsize%
-\begin{equation}\begin{split}
+\begin{equation}\begin{split}\label{eqn:approx_smooth}
 	\IDAproxC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}}  &=   %
 		\normalC{\vec{\xi}_t}{\vecLRarrow{\mu}_t}{\matLRarrow{\Sigma}_t} \\
 %
@@ -921,7 +921,7 @@ The smoother is selected with the \verb|smoother| argument. \verb|"Fearnhead_O_N
 The \emph{Systematic Resampling} \citep{kitagawa96} is used in all re-sampling steps. See \cite{douc05} for a comparison of re-sampling methods. The rest of the arguments to \verb|PF_EM| are similar to those of the \verb|ddhazard| function.
 
 \subsection{Linear maps}
-The methods describe above involves many linear maps. These are implemented with \verb|C++| abstract class with specialized \verb|map| member functions for particular problem to decrease the computation. An alternative would have been to use a sparse matrix implementation. A.s. an example we have a mapping matrix $\mat{A}$ which \verb|C++| abstract member on the main data object used in the package called \verb|xyz|. E.g., this could $\mat{F}$ with name \verb|state_trans|. Then the following operations are implemented 
+The methods describe above involves many linear maps. These are implemented with \verb|C++| abstract classes with specialized \verb|map| member functions for particular problem to decrease the computation. An alternative would have been to use a sparse matrix implementation. A.s. an example we have a mapping matrix $\mat{A}$ which \verb|C++| abstract member on the main data object used in the package called \verb|xyz|. E.g., this could $\mat{F}$ with name \verb|state_trans|. Then the following operations are implemented 
 
 \begin{itemize}
 \item \verb|map()|: Returns $\mat{A}$.
@@ -945,9 +945,21 @@ These are implemented for %
  \verb|state_trans_inv_err| & $\mat{R}^{+}\mat{F}^{-1}\mat{R}^{+\top} = 
   \mat{R}^\top\mat{F}^{-1}\mat{R}$
 \end{tabular}
-\end{center}
-
-Further, we will need function to compute terms $\mat{R}^{+}\matLarrow{P}_t^{-1}\vecLarrow{m}_t$ and $\mat{R}^{+}\mat{P}_t^{-1}\mat{R}$ for equation~\eqref{eqn:bw_approx}. This is done with the virtual method \verb|uncond_mean| and \verb|uncond_covar|. These will computed once using equation~\eqref{eqn:bwTransProp}. 
+\end{center}%
+%
+Further, we will need function to compute terms %
+%
+$$
+	\matLarrow{P}_t\mat{F}^\top\matLarrow{P}_{t + 1}^{-1}\vec{\alpha}_{t+1}
+		+ \matLarrow{S}_t\matLarrow{P}_t^{-1} \vecLarrow{m}_t
+$$%
+%
+for an arbitrary $\vec{\alpha}_{t+1}$, %
+$\matLarrow{S}_t = \matLarrow{P}_t\mat{F}^\top\matLarrow{P}_{t + 1}^{-1}\mat{R}\mat{Q}\mat{R}^\top\Lparen{\mat{F}^\top}^{-1}$, %
+$\mat{R}^{+}\matLarrow{P}_t^{-1}\vecLarrow{m}_t$, and $\mat{R}^{+}\matLarrow{P}_t^{-1}\mat{R}$ for equation~\eqref{eqn:bwTransProp} and \eqref{eqn:bw_approx}. This is done with the virtual methods 
+\texttt{bw\_mean(signed int t, const arma::vec \&a)}, %
+\texttt{bw\_covar(signed int t)}, %
+\texttt{uncond\_mean(signed int t)}, and \texttt{uncond\_covar(signed int t)}. These will computed once using equation~\eqref{eqn:bwTransProp}. 
 
 The motivation for making functions for these is e.g., in the dense matrix case we reduce the computational cost of $\mat{R}^{+}\mat{F}\mat{R}^{+\top}\mat{Z}$ to $\bigO{\dimRng^3}$ from $\bigO{\dimState^3}$. Further, since the methods are virtual, then we can specialize for specific types of model. E.g., the first order random walk has%
 %
@@ -965,6 +977,30 @@ The motivation for making functions for these is e.g., in the dense matrix case 
 \end{center}%
 % 
 where $\mat{I}_\dimRng$ is an $r$ dimensional identity matrix. Thus, there is a $\bigO{1}$ cost of all the above operations. 
+
+\subsection{Approximations}
+The approximations in equation~\eqref{eqn:TaylorProposalForward},~\eqref{eqn:bw_approx}~and~\eqref{eqn:approx_smooth} can be done as follow 
+
+\begin{enumerate}
+	\item Taylor develop around a given value $\vec{\xi}_t$ and compute %
+	$\vec{k} = \mat{X}_t^\top
+		\Lparen{
+			-\mat{G}_t\Lparen{\vec{\xi}_{t}}
+			\mat{X}_t\vecb{\xi}_{t} +
+			\vec{g}_t\Lparen{\vec{\xi}_{t}}
+		}$, %
+		$\mat{K} = \mat{X}_t^\top\Lparen{-\mat{G}_t\Lparen{\vec{\xi}_{t}}}\mat{X}_t$.
+	\item Given one or two additional pairs of means and covariances $(\mat{S}_1, \vec{a}_1)$, $(\mat{S}_2, \vec{a}_2)$ then compute %
+	%
+	\begin{align*}
+		\mat{\Sigma}^{-1} &= \mat{S}_1^{-1} + \mat{S}_2^{-1} + \mat{K} \\
+		\vec{\mu} &= \mat{\Sigma}\Lparen{
+		    \mat{S}_1^{-1}\vec{a}_1 + 
+		    \mat{S}_2^{-1}\vec{a}_2 + \vec{k}}
+	\end{align*}
+\end{enumerate}
+
+So a common task in equation~\eqref{eqn:TaylorProposalForward},~\eqref{eqn:bw_approx}~and~\eqref{eqn:approx_smooth} is to compute $\mat{\Sigma}^{-1}$ and $\vec{k}$ for one two $\mat{S}_i$ matrices which is done by a single method.
 
 
 
