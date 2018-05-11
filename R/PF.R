@@ -350,10 +350,11 @@ PF_control <- function(
     # make `chunk` vectors and matrices to exploit parallel implementation
     chunk_size <- as.integer(max_bit /(8 * nrow(fixed_terms_i)))
     n_per_chunk <- min(as.integer((chunk_size + n_i) / n_i), length(good))
-    fixed_terms_i_chunk <- matrix(
-      # use that matrices are stored in column-major order
-      rep(fixed_terms_i, n_per_chunk), nrow(fixed_terms_i),
-      dimnames = list(dimnames(fixed_terms_i)[[1]], NULL))
+    fixed_terms_i_chunk <-
+      matrix(
+        # use that matrices are stored in column-major order
+        rep(fixed_terms_i, n_per_chunk), nrow(fixed_terms_i),
+        dimnames = list(dimnames(fixed_terms_i)[[1]], NULL))
     y_i_chunk <- rep(y_i, n_per_chunk)
 
     # Find weights and offsets and make QR decompositions
@@ -363,7 +364,8 @@ PF_control <- function(
       i_end <- min(i_start + n_per_chunk - 1L, n_good)
       this_chunk <- good[i_start:i_end]
 
-      offset. <-  drop(particle_coefs[, this_chunk, drop = FALSE] %*% X_i)
+      offset. <-  drop(
+        crossprod(X_i, particle_coefs[, this_chunk, drop = FALSE]))
       weights. <- drop(rep_vec(cl$weights[this_chunk, ] * n_ps_i, n_i))
 
       if(length(this_chunk) == n_per_chunk){

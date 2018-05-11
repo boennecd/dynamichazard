@@ -8,6 +8,7 @@
 #include "thread_pool.h"
 #include "parallel_qr.h"
 #include "arma_BLAS_LAPACK.h"
+#include "family.h"
 
 #define COMPUTE_ARGS                                           \
   arma::mat &X,                                                \
@@ -15,6 +16,7 @@
   arma::vec &Ys,                                               \
   arma::vec &weights,                                          \
   arma::vec &offsets,                                          \
+  std::unique_ptr<glm_base> family,                            \
   double tol,                                                  \
   int nthreads,                                                \
   int it_max,                                                  \
@@ -23,7 +25,6 @@
 #define BINOMIAL "binomial"
 #define POISSON "poisson"
 
-/* base data holder class */
 /* data holder class */
 class data_holder_base {
 public:
@@ -36,22 +37,22 @@ public:
   arma::vec &offsets;
 
   const arma::uword max_threads, p, n;
+  const std::unique_ptr<glm_base> family;
   const arma::uword block_size;
 
   data_holder_base(
     arma::mat &X, arma::vec &Ys, arma::vec &weights, arma::vec &offsets,
     const arma::uword max_threads, const arma::uword p, const arma::uword n,
-    arma::uword block_size = 10000):
+    std::unique_ptr<glm_base> family, arma::uword block_size = 10000):
     X(X), Ys(Ys), weights(weights), offsets(offsets),
-    max_threads(max_threads), p(p), n(n), block_size(block_size)
+    max_threads(max_threads), p(p), n(n), family(std::move(family)),
+    block_size(block_size)
   {}
 };
 
 /* Similar function glm.fit in r-source/src/library/stats/R/glm.R
  * It only returns the coefficient vector. Computes X^\top W X and may be less
  * stable */
-
-template<typename family>
 class parallelglm_class_quick {
   using uword = arma::uword;
 
@@ -88,7 +89,7 @@ class parallelglm_class_quick {
         const double *y = data.Ys.begin() + i_start;
         const double *weight = data.weights.begin() + i_start;
         for(uword i = 0; i < etas.n_elem; ++i, ++eta, ++weight, ++y)
-          *eta = family::initialize(*y, *weight);
+          *eta = data.family->glm_initialize(*y, *weight);
 
       } else
         etas = (data.beta->t() * my_X).t() + data.offsets(my_span);
@@ -105,9 +106,9 @@ class parallelglm_class_quick {
         if(*weight <= 0.)
           continue;
 
-        double mu = family::linkinv(*eta);
-        double varmu  = family::variance(mu);
-        double mu_eta_val = family::mu_eta(*eta);
+        double mu = data.family->glm_linkinv(*eta);
+        double varmu  = data.family->glm_variance(mu);
+        double mu_eta_val = data.family->glm_mu_eta(*eta);
 
         if(std::abs(mu_eta_val) < sqrt(std::numeric_limits<double>::epsilon()))
           continue;
@@ -168,7 +169,8 @@ public:
   static arma::vec compute(COMPUTE_ARGS){
     uword p = X.n_rows;
     uword n = X.n_cols;
-    data_holder data(X, Ys, weights, offsets, nthreads, p, n);
+    data_holder data(
+        X, Ys, weights, offsets, nthreads, p, n, std::move(family));
 
     if(p != beta0.n_elem or
          n != weights.n_elem or
@@ -207,10 +209,6 @@ public:
 };
 
 /* Class to fit glm using QR updated in chunks */
-
-
-
-template<typename family>
 class parallelglm_class_QR {
   using uword = arma::uword;
 
@@ -243,15 +241,18 @@ class parallelglm_class_QR {
         const double *y_i = y.begin();
         const double *wt = weight.begin();
         for(uword i = 0; i < n; ++i, ++eta_i, ++wt, ++y_i)
-          *eta_i = family::initialize(*y_i, *wt);
+          *eta_i =data.family->glm_initialize(*y_i, *wt);
 
       } else
         eta = (data.beta->t() * X).t() + offset;
 
       /* compute values for QR computation */
       arma::vec mu = eta, mu_eta_val = eta;
-      mu.transform(family::linkinv);
-      mu_eta_val.transform(family::mu_eta);
+      double *m = mu.begin(), *mev = mu_eta_val.begin();
+      for(uword i = 0; i < mu.n_elem; ++i, ++m, ++mev){
+        *m = data.family->glm_linkinv(*m);
+        *mev = data.family->glm_mu_eta(*mev);
+      }
 
       arma::uvec good = arma::find(
         (weight > 0) %
@@ -263,13 +264,14 @@ class parallelglm_class_QR {
 
       double dev = 0;
       for(uword i = 0; i < n; ++i, ++mu_i, ++wt_i, ++y_i)
-        dev += family::dev_resids(*y_i, *mu_i, *wt_i);
+        dev += data.family->glm_dev_resids(*y_i, *mu_i, *wt_i);
 
       mu = mu(good);
       eta = eta(good);
       mu_eta_val = mu_eta_val(good);
       arma::vec var = mu;
-      var.transform(family::variance);
+      for(auto v = var.begin(); v != var.end(); ++v)
+        *v = data.family->glm_variance(*v);
 
       /* compute X and working responses and return */
       arma::vec z = (eta - offset(good)) + (y(good) - mu) / mu_eta_val;
@@ -289,7 +291,8 @@ public:
   static arma::vec compute(COMPUTE_ARGS){
     uword p = X.n_rows;
     uword n = X.n_cols;
-    data_holder_base data(X, Ys, weights, offsets, nthreads, p, n);
+    data_holder_base data(
+        X, Ys, weights, offsets, nthreads, p, n, std::move(family));
 
     if(p != beta0.n_elem or
          n != weights.n_elem or
@@ -354,77 +357,26 @@ public:
 
 /* glm families */
 namespace glm_families {
-  struct binomial {
-    static inline double dev_resids(double y, double mu, double wt){
-      return - 2 * wt * (y * log(mu) + (1 - y) * log(1 - mu));
-    }
 
-    static inline double linkfun(double mu){
-      return log(mu / (1 - mu));
-    }
 
-    static inline double linkinv(double eta){
-      return 1 / (1 + exp(-eta));
-    }
 
-    static inline double variance(double mu){
-      return mu * (1 - mu);
-    }
-
-    static inline double mu_eta(double eta){
-      double exp_eta = exp(-eta);
-      return (eta < -30 || eta > 30) ?
-        std::numeric_limits<double>::epsilon() :
-        exp_eta /((1 + exp_eta) * (1 + exp_eta));
-    }
-
-    static inline double initialize(double y, double weight){
-      return linkfun((weight * y + 0.5)/(weight + 1));
-    }
-  };
-
-  struct poisson {
-    static inline double dev_resids(double y, double mu, double wt){
-      if(y > 0)
-        return 2 * (wt * (y * log(y/mu) - (y - mu)));
-
-      return 2 * mu * wt;
-    }
-
-    static inline double linkfun(double mu){
-      return log(mu);
-    }
-
-    static inline double linkinv(double eta){
-      return std::max(exp(eta), std::numeric_limits<double>::epsilon());
-    }
-
-    static inline double variance(double mu){
-      return mu;
-    }
-
-    static inline double mu_eta(double eta){
-      return std::max(exp(eta), std::numeric_limits<double>::epsilon());
-    }
-
-    static inline double initialize(double y, double weight){
-      return linkfun(y + 0.1);
-    }
-  };
 }
 
-template<template<typename> class TMethod>
+template<class TMethod>
 arma::vec parallelglm_fit(
     arma::mat &X, arma::vec &Ys, std::string family, arma::vec beta0,
     arma::vec &weights, arma::vec &offsets, double tol, int nthreads,
     int it_max, bool trace){
   arma::vec result;
   if(family == BINOMIAL)
-    result = TMethod<glm_families::binomial>::compute(
-      X, beta0, Ys, weights, offsets, tol, nthreads, it_max, trace);
+    result = TMethod::compute(
+      X, beta0, Ys, weights, offsets,
+      std::unique_ptr<glm_base>(new logistic()), tol, nthreads, it_max, trace);
   else if(family == POISSON)
-    result = TMethod<glm_families::poisson>::compute(
-      X, beta0, Ys, weights, offsets, tol, nthreads, it_max, trace);
+    result = TMethod::compute(
+      X, beta0, Ys, weights, offsets,
+      std::unique_ptr<glm_base>(new exponential()), tol, nthreads, it_max,
+      trace);
   else
     Rcpp::stop("'family' not implemented");
 
@@ -477,15 +429,23 @@ Rcpp::List parallelglm_QR_get_R_n_f(
   if(n != Ys.n_elem)
     Rcpp::stop("The number of cols in X does not match with the number of elements in Ys");
 
-  data_holder_base data(X, Ys, weights, offsets, nthreads, p, n, block_size);
-  data.beta = &beta0;
+
 
   std::unique_ptr<R_F> res;
   if(family == BINOMIAL){
-    res.reset(new R_F(parallelglm_class_QR<glm_families::binomial>::get_R_f(
+    data_holder_base data(
+        X, Ys, weights, offsets, nthreads, p, n,
+        std::unique_ptr<glm_base>(new logistic()), block_size);
+    data.beta = &beta0;
+    res.reset(new R_F(parallelglm_class_QR::get_R_f(
       data, false /* note the false */)));
+
   } else if(family == POISSON){
-    res.reset(new R_F(parallelglm_class_QR<glm_families::poisson>::get_R_f(
+    data_holder_base data(
+        X, Ys, weights, offsets, nthreads, p, n,
+        std::unique_ptr<glm_base>(new exponential()), block_size);
+    data.beta = &beta0;
+    res.reset(new R_F(parallelglm_class_QR::get_R_f(
       data, false /* note the false */)));
   }
 
