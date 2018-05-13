@@ -6,6 +6,9 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#define BINOMIAL "binomial"
+#define POISSON "poisson"
+
 class glm_base {
 public:
   virtual double glm_dev_resids(double, double, double) const = 0;
@@ -19,6 +22,8 @@ public:
   virtual double glm_mu_eta(double) const = 0;
 
   virtual double glm_initialize(double, double) const = 0;
+
+  virtual std::string name() const = 0;
 };
 
 template<class T>
@@ -143,6 +148,10 @@ public:
   double glm_initialize(double y, double weight) const override {
     return glm_linkfun((weight * y + 0.5)/(weight + 1));
   }
+
+  std::string name() const override {
+    return BINOMIAL;
+  }
 };
 
 
@@ -221,6 +230,10 @@ public:
 
   double glm_initialize(double y, double weight) const override {
     return glm_linkfun(y + 0.1);
+  }
+
+  std::string name() const override {
+    return POISSON;
   }
 };
 

@@ -25,40 +25,38 @@ qr_parallel::qr_parallel(
   generators(std::move(generators)), max_threads(max_threads) {}
 
 R_F qr_parallel::compute(){
-  std::vector<R_F> R_Fs;
-  {
-    /* compute each QR */
-    signed int num_blocks = generators.size();
-    std::vector<std::future<R_F> > futures(num_blocks);
-    thread_pool pool(std::min(num_blocks, max_threads));
+  /* compute each QR */
+  signed int num_blocks = generators.size();
+  std::vector<std::future<R_F> > futures(num_blocks);
+  thread_pool pool(std::min(num_blocks, max_threads));
 
-    signed int i = 0;
-    while(!generators.empty()){
-      futures[i] = pool.submit(worker(std::move(generators.back())));
-      generators.pop_back();
-      ++i;
+  signed int i = 0;
+  while(!generators.empty()){
+    futures[i] = pool.submit(worker(std::move(generators.back())));
+    generators.pop_back();
+    ++i;
 
-    }
-
-    /* gather results */
-    for(i = 0; i < num_blocks; ++i)
-      R_Fs.push_back(futures[i].get());
   }
 
-  /* combine results */
-  R_F *R_Fs_i = &R_Fs.back();
-  arma::mat R_stack = R_Fs_i->R_rev_piv();
-  arma::vec F_stack = std::move(R_Fs_i->F);
-  double  dev = R_Fs_i->dev;
-  R_Fs.pop_back();
+  /* gather results */
+  bool is_first;
+  arma::mat R_stack;
+  arma::vec F_stack;
+  double dev = 0;
 
-  while(!R_Fs.empty()){
-    R_Fs_i = &R_Fs.back();
-    R_stack = arma::join_cols(R_stack, R_Fs_i->R_rev_piv());
-    F_stack = arma::join_cols(F_stack, std::move(R_Fs_i->F));
-    dev += R_Fs_i->dev;
+  for(i = 0; i < num_blocks; ++i){
+    R_F R_Fs_i = futures[i].get();
+    if(is_first){
+      R_stack = R_Fs_i.R_rev_piv();
+      F_stack = std::move(R_Fs_i.F);
+      dev = R_Fs_i.dev;
+      is_first = false;
+      continue;
+    }
 
-    R_Fs.pop_back();
+    R_stack = arma::join_cols(R_stack, R_Fs_i.R_rev_piv());
+    F_stack = arma::join_cols(F_stack, std::move(R_Fs_i.F));
+    dev += R_Fs_i.dev;
   }
 
   /* make new QR decomp and compute new F */

@@ -2,7 +2,7 @@
  * `bam` method in the `mgcv` package.
  *
  * TODO: there is some redundancy in the parallel_glm classes. Make a base
- *       class which the other two derives from.                             */
+ *       class which the other two derives from?                             */
 
 #include "arma_n_rcpp.h"
 #include "thread_pool.h"
@@ -21,9 +21,6 @@
   int nthreads,                                                \
   int it_max,                                                  \
   bool trace
-
-#define BINOMIAL "binomial"
-#define POISSON "poisson"
 
 /* data holder class */
 class data_holder_base {
@@ -66,7 +63,7 @@ class parallelglm_class_quick {
     using data_holder_base::data_holder_base;
   };
 
-  /* worker class for multithreading*/
+  /* worker class for multithreading */
   class worker{
     const uword i_start, i_end;
     data_holder &data;
@@ -229,9 +226,9 @@ class parallelglm_class_QR {
       arma::span my_span(i_start, i_end);
       uword n = i_end - i_start + 1;
 
-      arma::vec y     (data.Ys.begin()      + i_start, n, false);
-      arma::vec weight(data.weights.begin() + i_start, n, false);
-      arma::vec offset(data.offsets.begin() + i_start, n, false);
+      arma::vec y     (data.Ys.begin()      + i_start           , n, false);
+      arma::vec weight(data.weights.begin() + i_start           , n, false);
+      arma::vec offset(data.offsets.begin() + i_start           , n, false);
       arma::mat X     (data.X.begin() + i_start * data.p, data.p, n);
 
       arma::vec eta;
@@ -341,7 +338,7 @@ public:
     std::vector<std::unique_ptr<qr_data_generator>> generators;
     generators.reserve(num_blocks);
 
-    // declare outsite of loop to ref after loop
+    // setup generators
     uword i_start = 0;
     for(uword i = 0; i < num_blocks; ++i, i_start += data.block_size)
       generators.emplace_back(
@@ -353,14 +350,6 @@ public:
   }
 };
 
-
-
-/* glm families */
-namespace glm_families {
-
-
-
-}
 
 template<class TMethod>
 arma::vec parallelglm_fit(
@@ -409,49 +398,4 @@ arma::vec parallelglm(
     Rcpp::stop("'method' not implemented");
 
   return result;
-}
-
-// [[Rcpp::export]]
-Rcpp::List parallelglm_QR_get_R_n_f(
-    arma::mat &X, arma::vec &Ys, std::string family, arma::vec beta0,
-    arma::vec &weights, arma::vec &offsets, double tol = 1e-8,
-    int nthreads = 1, int it_max = 25, bool trace = false,
-    int block_size = 10000){
-  arma::uword p = X.n_rows;
-  arma::uword n = X.n_cols;
-
-  if(p != beta0.n_elem)
-    Rcpp::stop("The number of rows in X does not match with the number of elements in beta0");
-  if(n != weights.n_elem)
-    Rcpp::stop("The number of cols in X does not match with the number of elements in weights");
-  if(n != offsets.n_elem)
-    Rcpp::stop("The number of cols in X does not match with the number of elements in offsets");
-  if(n != Ys.n_elem)
-    Rcpp::stop("The number of cols in X does not match with the number of elements in Ys");
-
-
-
-  std::unique_ptr<R_F> res;
-  if(family == BINOMIAL){
-    data_holder_base data(
-        X, Ys, weights, offsets, nthreads, p, n,
-        std::unique_ptr<glm_base>(new logistic()), block_size);
-    data.beta = &beta0;
-    res.reset(new R_F(parallelglm_class_QR::get_R_f(
-      data, false /* note the false */)));
-
-  } else if(family == POISSON){
-    data_holder_base data(
-        X, Ys, weights, offsets, nthreads, p, n,
-        std::unique_ptr<glm_base>(new exponential()), block_size);
-    data.beta = &beta0;
-    res.reset(new R_F(parallelglm_class_QR::get_R_f(
-      data, false /* note the false */)));
-  }
-
-  return Rcpp::List::create(
-    Rcpp::Named("R") =  Rcpp::wrap(res->R),
-    Rcpp::Named("pivot") =  Rcpp::wrap(res->pivot),
-    Rcpp::Named("f") =  Rcpp::wrap(res->F),
-    Rcpp::Named("dev") =  Rcpp::wrap(res->dev));
 }

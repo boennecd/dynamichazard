@@ -26,47 +26,6 @@ get_sims <- function(family, use_offset, use_weights, n, q){
   list(X = X, y = y, offset = offset, weights. = weights.)
 }
 
-test_that("parallel QR update gives same cofficiens results with one iteration", {
-  grid_vals <- expand.grid(
-    family = c("binomial", "poisson"),
-    use_offset = c(TRUE, FALSE),
-    use_weights = c(TRUE, FALSE),
-    stringsAsFactors = FALSE)
-
-  beta0 <- rep(0, 3)
-
-  for(i in 1:nrow(grid_vals)){
-    vals <- grid_vals[i, ]
-    sims <- with(
-      vals, get_sims(family, use_offset, use_weights, 200, 2))
-
-    tmp <- with(sims, parallelglm_QR_get_R_n_f(
-      t(X), y, vals$family, beta0, weights., offset,
-      tol = .Machine$double.xmax, # one iteration,
-      block_size = 100, nthreads = 1))
-    piv <- drop(tmp$pivot)
-    piv[piv + 1] <- seq_along(piv)
-    beta_par <- lm.fit(tmp$R[, piv, drop = FALSE], tmp$f)$coefficients
-
-    glm_out <- with(
-      sims, {
-        fa <- get(vals$family)
-
-        etastart <- drop(X %*% beta0) + offset
-        mustart <- fa()$linkinv(etastart)
-
-        suppressWarnings(
-          glm.fit(X, y, family = fa(), etastart = etastart,
-                  mustart = mustart,
-                  control = glm.control(maxit = 1), offset = offset,
-                  weights = weights.))
-      })
-
-    expect_equal(glm_out$coefficients, beta_par, check.attributes = FALSE,
-                 label = paste(c(vals), collapse = " "))
-  }
-})
-
 test_that("glm and parallelglm gives the same", {
   set.seed(4611691)
   grid_vals <- expand.grid(

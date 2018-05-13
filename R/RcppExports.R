@@ -121,10 +121,6 @@ parallelglm <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthr
     .Call(`_dynamichazard_parallelglm`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, method)
 }
 
-parallelglm_QR_get_R_n_f <- function(X, Ys, family, beta0, weights, offsets, tol = 1e-8, nthreads = 1L, it_max = 25L, trace = FALSE, block_size = 10000L) {
-    .Call(`_dynamichazard_parallelglm_QR_get_R_n_f`, X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace, block_size)
-}
-
 PF_smooth <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, R, L, m, Q_0, Q, Q_tilde, risk_obj, F, n_max, n_threads, fixed_parems, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother, model) {
     .Call(`_dynamichazard_PF_smooth`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, R, L, m, Q_0, Q, Q_tilde, risk_obj, F, n_max, n_threads, fixed_parems, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, method, smoother, model)
 }
@@ -135,6 +131,10 @@ particle_filter <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, 
 
 compute_summary_stats <- function(rcpp_list, n_threads, a_0, Q, Q_0) {
     .Call(`_dynamichazard_compute_summary_stats`, rcpp_list, n_threads, a_0, Q, Q_0)
+}
+
+pf_fixed_effect_iteration <- function(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, block_size = 10000L) {
+    .Call(`_dynamichazard_pf_fixed_effect_iteration`, X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, block_size)
 }
 
 get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model = TRUE) {
