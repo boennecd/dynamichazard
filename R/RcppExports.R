@@ -133,8 +133,16 @@ compute_summary_stats <- function(rcpp_list, n_threads, a_0, Q, Q_0) {
     .Call(`_dynamichazard_compute_summary_stats`, rcpp_list, n_threads, a_0, Q, Q_0)
 }
 
-pf_fixed_effect_iteration <- function(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, block_size = 10000L) {
-    .Call(`_dynamichazard_pf_fixed_effect_iteration`, X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, block_size)
+test_copy_mat <- function(X, n_times) {
+    .Call(`_dynamichazard_test_copy_mat`, X, n_times)
+}
+
+test_copy_vec <- function(x, n_times) {
+    .Call(`_dynamichazard_test_copy_vec`, x, n_times)
+}
+
+pf_fixed_effect_iteration <- function(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, max_bytes = 20000000L) {
+    .Call(`_dynamichazard_pf_fixed_effect_iteration`, X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, max_bytes)
 }
 
 get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model = TRUE) {

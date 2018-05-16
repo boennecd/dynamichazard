@@ -50,7 +50,8 @@ PF_effective_sample_size <- function(object){
 #'plot(pf_fit, cov_index = 3)
 #'
 #'# Plot log-likelihood
-#'plot(pf_fit$log_likes)}
+#'plot(pf_fit$log_likes)
+#'}
 #'
 #'#####
 #'# Can be compared with this example from ?coxph in R 3.4.1. Though, the above
@@ -61,6 +62,59 @@ PF_effective_sample_size <- function(object){
 #'  Surv(time, status) ~ ph.ecog + tt(age), data= .lung,
 #'  tt=function(x,t,...) pspline(x + t/365.25))
 #'cox}
+#'
+#'
+#'\dontrun{
+#'######
+#'# example with fixed effects
+#'
+#'# prepare data
+#'temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))
+#'pbc2 <- tmerge(temp, temp, id=id, death = event(time, status))
+#'pbc2 <- tmerge(pbc2, pbcseq, id=id, albumin = tdc(day, albumin),
+#'               protime = tdc(day, protime), bili = tdc(day, bili))
+#'pbc2 <- pbc2[, c("id", "tstart", "tstop", "death", "sex", "edema",
+#'                 "age", "albumin", "protime", "bili")]
+#'pbc2 <- within(pbc2, {
+#'  log_albumin <- log(albumin)
+#'  log_protime <- log(protime)
+#'  log_bili <- log(bili)
+#'})
+#'
+#'# standardize
+#'for(c. in c("age", "log_albumin", "log_protime", "log_bili"))
+#'  pbc2[[c.]] <- drop(scale(pbc2[[c.]]))
+#'
+#'# fit model with extended Kalman filter
+#'ddfit <- ddhazard(
+#'  Surv(tstart, tstop, death == 2) ~ ddFixed_intercept() + ddFixed(age) +
+#'    ddFixed(edema) + ddFixed(log_albumin) + ddFixed(log_protime) + log_bili,
+#'  pbc2, Q_0 = 100, Q = 1e-2, by = 100, id = pbc2$id,
+#'  model = "exponential", max_T = 3600,
+#'  control = list(eps = 1e-5, NR_eps = 1e-4, n_max = 1e4))
+#'summary(ddfit)
+#'
+#'# fit model with particle filter
+#'set.seed(88235076)
+#'ppfit <- PF_EM(
+#'  Surv(tstart, tstop, death == 2) ~ ddFixed_intercept() + ddFixed(age) +
+#'    ddFixed(edema) + ddFixed(log_albumin) + ddFixed(log_protime) + log_bili,
+#'  pbc2, Q_0 = 100, Q = ddfit$Q * 100, # use estimate from before
+#'  by = 100, id = pbc2$id,
+#'  model = "exponential", max_T = 3600,
+#'  control = PF_control(
+#'    N_fw_n_bw = 250, N_smooth = 500, N_first = 1000, eps = 1e-3,
+#'    method = "AUX_normal_approx_w_cloud_mean",
+#'    n_max = 25, # just take a few iterations as an example
+#'    n_threads = parallel::detectCores() - 2L), trace = TRUE)
+#'
+#'# compare results
+#'plot(ddfit)
+#'plot(ppfit)
+#'sqrt(ddfit$Q * 100)
+#'sqrt(ppfit$Q)
+#'rbind(ddfit$fixed_effects, ppfit$fixed_effects)
+#'}
 #' @export
 PF_EM <- function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
@@ -325,11 +379,13 @@ PF_control <- function(
 .PF_update_fixed <- function(
   clouds, risk_obj, L, X, fixed_terms, fixed_parems, model, nthreads,
   tstart, tstop){
-  # TODO: move this check
-  if(!model %in% "logit")
+  if(!model %in% c("logit", "exponential"))
     stop(sQuote(model), " is not implemented with fixed effects")
 
-  family_arg <- switch (model, logit = "binomial")
+  family_arg <- switch(
+    model,
+    logit = "binomial",
+    exponential = "poisson")
 
   out <- NULL
   for(i in 1:length(clouds)){
@@ -341,11 +397,11 @@ PF_control <- function(
     y_i <- risk_obj$is_event_in[risk_set] == (i - 1)
 
     good <- which(drop(cl$weights) >= 1e-7)
-    dts <- pmax(
-      pmin(tstop[risk_set], risk_obj$event_times[i + 1]),
-      risk_obj$event_times[i])
+    dts <-
+      pmin(tstop[risk_set], risk_obj$event_times[i + 1]) -
+      pmax(tstart[risk_set], risk_obj$event_times[i])
 
-    ws <- cl$weights[good]
+    ws <- cl$weights[good] # TODO: maybe scale up the weights at this point?
     particle_coefs <- L %*% cl$states[, good, drop = FALSE]
 
     out <- c(out, list(

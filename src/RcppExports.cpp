@@ -530,9 +530,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// test_copy_mat
+Rcpp::NumericMatrix test_copy_mat(const arma::mat& X, const int n_times);
+RcppExport SEXP _dynamichazard_test_copy_mat(SEXP XSEXP, SEXP n_timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const int >::type n_times(n_timesSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_copy_mat(X, n_times));
+    return rcpp_result_gen;
+END_RCPP
+}
+// test_copy_vec
+Rcpp::NumericVector test_copy_vec(const arma::vec& x, const int n_times);
+RcppExport SEXP _dynamichazard_test_copy_vec(SEXP xSEXP, SEXP n_timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const int >::type n_times(n_timesSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_copy_vec(x, n_times));
+    return rcpp_result_gen;
+END_RCPP
+}
 // pf_fixed_effect_iteration
-Rcpp::List pf_fixed_effect_iteration(const arma::mat& X, const arma::vec& Y, const arma::vec& dts, const arma::mat& cloud, const arma::vec& cl_weights, const arma::mat& ran_vars, const arma::vec& beta, std::string family, int max_threads, int block_size);
-RcppExport SEXP _dynamichazard_pf_fixed_effect_iteration(SEXP XSEXP, SEXP YSEXP, SEXP dtsSEXP, SEXP cloudSEXP, SEXP cl_weightsSEXP, SEXP ran_varsSEXP, SEXP betaSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP block_sizeSEXP) {
+Rcpp::List pf_fixed_effect_iteration(const arma::mat& X, const arma::vec& Y, const arma::vec& dts, const arma::mat& cloud, const arma::vec& cl_weights, const arma::mat& ran_vars, const arma::vec& beta, std::string family, int max_threads, const long int max_bytes);
+RcppExport SEXP _dynamichazard_pf_fixed_effect_iteration(SEXP XSEXP, SEXP YSEXP, SEXP dtsSEXP, SEXP cloudSEXP, SEXP cl_weightsSEXP, SEXP ran_varsSEXP, SEXP betaSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP max_bytesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -545,8 +569,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type beta(betaSEXP);
     Rcpp::traits::input_parameter< std::string >::type family(familySEXP);
     Rcpp::traits::input_parameter< int >::type max_threads(max_threadsSEXP);
-    Rcpp::traits::input_parameter< int >::type block_size(block_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(pf_fixed_effect_iteration(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, block_size));
+    Rcpp::traits::input_parameter< const long int >::type max_bytes(max_bytesSEXP);
+    rcpp_result_gen = Rcpp::wrap(pf_fixed_effect_iteration(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, max_bytes));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -634,6 +658,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 25},
     {"_dynamichazard_particle_filter", (DL_FUNC) &_dynamichazard_particle_filter, 25},
     {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 5},
+    {"_dynamichazard_test_copy_mat", (DL_FUNC) &_dynamichazard_test_copy_mat, 2},
+    {"_dynamichazard_test_copy_vec", (DL_FUNC) &_dynamichazard_test_copy_vec, 2},
     {"_dynamichazard_pf_fixed_effect_iteration", (DL_FUNC) &_dynamichazard_pf_fixed_effect_iteration, 10},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {"_dynamichazard_round_if_almost_eq", (DL_FUNC) &_dynamichazard_round_if_almost_eq, 3},

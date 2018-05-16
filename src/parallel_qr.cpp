@@ -39,7 +39,7 @@ R_F qr_parallel::compute(){
   }
 
   /* gather results */
-  bool is_first;
+  bool is_first = true;
   arma::mat R_stack;
   arma::vec F_stack;
   double dev = 0;

@@ -335,6 +335,29 @@ test_that("PF_EM gives previous results on head neck data set", {
   test_func(smoother = "Brier_O_N_square", "PF_head_neck_w_Brier_method")
 })
 
+test_that("PF_EM gives previous results on head neck data set with fixed effects and the logit model", {
+  skip_on_cran()
+  skip_if(!dir.exists("previous_results/local_tests"))
+
+  set.seed(61364778)
+  pp_fit <- suppressWarnings(
+    # we take to few iterations so there will be a warning
+    PF_EM(
+      formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+      data = head_neck_cancer,
+      by = 1, Q_0 = 10, Q = 0.01,
+      control = PF_control(
+        N_fw_n_bw = 200, N_smooth = 2e3, N_first = 2e3,
+        n_max = 3,
+        method = "AUX_normal_approx_w_cloud_mean",
+        n_threads = max(parallel::detectCores(), 2)),
+      max_T = 30))
+
+  expect_known_value(pp_fit[!names(pp_fit) %in%
+                             c("clouds", "call", "summary_stats")],
+                     "local_tests/pf_logit_w_fixed.RDS")
+})
+
 test_that("compute_summary_stats gives previous results", {
   skip_on_cran()
 

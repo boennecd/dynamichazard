@@ -106,24 +106,25 @@ Bootstrapping only slightly changes the confidence bounds. It seems that:
 An example of a paper analyzing the CD4 count can be found in [@guo2004]. They also fit a static model (time-invariant coefficients) of the survival times with an exponential model. The estimates are comparable with those above as expected.
 
 ## Example - particle filter and smoother
-A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data.
+A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data. We only use a time-varying effect for gender this time.
 
 ```{r pf_fit, cache=TRUE}
 options(ddhazard_max_threads = 7) # I am on a 8 core machine
 
 set.seed(20170907)
 pf_fit <- PF_EM(
-  Surv(stop, event) ~ AZT + gender + drug + prevOI,
+  Surv(stop, event) ~ ddFixed_intercept() + ddFixed(AZT) + gender + 
+    ddFixed(drug) + ddFixed(prevOI),
   aids,
   model = "exponential",
   by = .5,  
   max_T = 19,
-  Q = diag(.01, 5),
-  Q_0 = diag(1, 5),
+  Q = .01,
+  Q_0 = 1,
   control = PF_control(
     # set number of particles
     N_fw_n_bw = 1000, 
-    N_first = 10000,
+    N_first = 1000,
     N_smooth = 1, # Does not matter with Brier_O_N_square
     
     smoother = "Brier_O_N_square", # Select smoother
@@ -132,16 +133,13 @@ pf_fit <- PF_EM(
     n_max = 100)
   #, trace = 1 # comment back to get feedback during estimation
   )
+```
 
+```{r pf_plots}
 # Compare estimates of Q
-pf_fit$Q
-fit$Q
-
-# Look at coefficients. Crosses are 2.5%, 50% and 97.5% quantiles. The curves
-# are mean estimates
-par(mfcol = c(2, 3))
-for(i in 1:5)
-  plot(pf_fit, cov_index = i)
+pf_fit$Q / .5
+plot(pf_fit)
+plot(pf_fit$log_likes) # log-likelihoods
 ```
 
 

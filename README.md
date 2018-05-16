@@ -129,24 +129,25 @@ An example of a paper analyzing the CD4 count can be found in Guo & Carlin (2004
 Example - particle filter and smoother
 --------------------------------------
 
-A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data.
+A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data. We only use a time-varying effect for gender this time.
 
 ``` r
 options(ddhazard_max_threads = 7) # I am on a 8 core machine
 
 set.seed(20170907)
 pf_fit <- PF_EM(
-  Surv(stop, event) ~ AZT + gender + drug + prevOI,
+  Surv(stop, event) ~ ddFixed_intercept() + ddFixed(AZT) + gender + 
+    ddFixed(drug) + ddFixed(prevOI),
   aids,
   model = "exponential",
   by = .5,  
   max_T = 19,
-  Q = diag(.01, 5),
-  Q_0 = diag(1, 5),
+  Q = .01,
+  Q_0 = 1,
   control = PF_control(
     # set number of particles
     N_fw_n_bw = 1000, 
-    N_first = 10000,
+    N_first = 1000,
     N_smooth = 1, # Does not matter with Brier_O_N_square
     
     smoother = "Brier_O_N_square", # Select smoother
@@ -156,39 +157,23 @@ pf_fit <- PF_EM(
   #, trace = 1 # comment back to get feedback during estimation
   )
 #> a_0 not supplied. IWLS estimates of static glm model is used
-#> Warning in (function (n_fixed_terms_in_state_vec, X, fixed_terms, tstart, :
-#> Method did not converge.
-
-# Compare estimates of Q
-pf_fit$Q
-#>             [,1]         [,2]         [,3]        [,4]        [,5]
-#> [1,]  0.02804042 -0.013547965 -0.018003049 -0.03549065  0.03523118
-#> [2,] -0.01354797  0.019566602 -0.002454179  0.02523899 -0.02872706
-#> [3,] -0.01800305 -0.002454179  0.067308051  0.01908835 -0.02716883
-#> [4,] -0.03549065  0.025238993  0.019088346  0.06230997 -0.06580052
-#> [5,]  0.03523118 -0.028727060 -0.027168835 -0.06580052  0.07855140
-fit$Q
-#>               (Intercept)    AZTfailure    gendermale       drugddI
-#> (Intercept)  0.0092783394 -1.794496e-04 -2.810209e-04 -2.398848e-04
-#> AZTfailure  -0.0001794496  9.461514e-03 -1.764688e-05  1.034397e-05
-#> gendermale  -0.0002810209 -1.764688e-05  1.008643e-02  1.207075e-04
-#> drugddI     -0.0002398848  1.034397e-05  1.207075e-04  9.517421e-03
-#> prevOIAIDS  -0.0005509552 -3.233903e-04 -3.533003e-04 -2.702777e-04
-#>                prevOIAIDS
-#> (Intercept) -0.0005509552
-#> AZTfailure  -0.0003233903
-#> gendermale  -0.0003533003
-#> drugddI     -0.0002702777
-#> prevOIAIDS   0.0092743921
-
-# Look at coefficients. Crosses are 2.5%, 50% and 97.5% quantiles. The curves
-# are mean estimates
-par(mfcol = c(2, 3))
-for(i in 1:5)
-  plot(pf_fit, cov_index = i)
 ```
 
-![](README-pf_fit-1.png)
+``` r
+# Compare estimates of Q
+pf_fit$Q / .5
+#>            [,1]
+#> [1,] 0.04297984
+plot(pf_fit)
+```
+
+![](README-pf_plots-1.png)
+
+``` r
+plot(pf_fit$log_likes) # log-likelihoods
+```
+
+![](README-pf_plots-2.png)
 
 For more details, see the "Particle filters in the dynamichazard package" vignette at <https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf>
 

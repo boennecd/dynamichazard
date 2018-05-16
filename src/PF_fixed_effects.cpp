@@ -93,13 +93,16 @@ public:
     }
     uword n = X.n_cols;
     arma::vec weight(n);
+    arma::vec offset(n);
 
-    for(arma::uword i = 0; i < n_particles; ++i)
+
+    for(arma::uword i = 0; i < n_particles; ++i){
       weight.subvec(i * data.n_obs, (i + 1L) * data.n_obs - 1L).fill(
           data.cl_weights[istart + i]);
+      offset.subvec(i * data.n_obs, (i + 1L) * data.n_obs - 1L) =
+        data.ran_vars.t() * data.cloud.col(istart + i);
 
-    arma::vec offset =
-      arma::vectorise(data.cloud.cols(istart, iend).t() * data.ran_vars);
+    }
 
     if(data.family->name() == POISSON){
       offset += arma::log(dts);
@@ -151,12 +154,25 @@ public:
 
 
 // [[Rcpp::export]]
+Rcpp::NumericMatrix test_copy_mat(const arma::mat &X, const int n_times){
+  return(Rcpp::wrap(arma_copy(X, n_times)));
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericVector test_copy_vec(const arma::vec &x, const int n_times){
+  return(Rcpp::wrap(arma_copy(x, n_times)));
+}
+
+// [[Rcpp::export]]
 Rcpp::List pf_fixed_effect_iteration(
     const arma::mat &X, const arma::vec &Y, const arma::vec &dts,
     const arma::mat &cloud, const arma::vec &cl_weights,
     const arma::mat &ran_vars, const arma::vec &beta,
-    std::string family, int max_threads, int block_size = 10000){
-  arma::uword max_blocks = 1L + block_size / X.n_cols;
+    std::string family, int max_threads, const long int max_bytes = 20000000){
+  arma::uword n_particles = cloud.n_cols;
+  arma::uword max_blocks = std::min(
+    std::max(1L, (long int)(max_bytes / (X.n_rows * X.n_cols * 8L))),
+    (long int)n_particles);
 
   std::unique_ptr<data_holder> dat;
   if(family == BINOMIAL){
@@ -173,7 +189,6 @@ Rcpp::List pf_fixed_effect_iteration(
     Rcpp::stop("Family not implemented");
 
   /* setup generators */
-  arma::uword n_particles = cloud.n_cols;
   std::vector<std::unique_ptr<qr_data_generator>> generators;
 
   for(arma::uword i_start = 0L; i_start < n_particles; i_start += max_blocks)

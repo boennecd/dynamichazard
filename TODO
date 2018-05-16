@@ -11,3 +11,5 @@ make mean and quantile function for pf_clouds + test
 make sure plot works with forward filter only + test
 make the forward particle filters avialable on its own for likelihood evaluation + test
 make example of particle filtering w/ e.g., LME4
+make `AUX_normal_approx_w_cloud_mean` the default with `PF_control`
+also scale Q as in ddhazard
