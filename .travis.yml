@@ -2,6 +2,7 @@
 
 language: R
 before_install:
+  - sudo apt-get install ghostscript
   - tlmgr install algorithmicx
   - tlmgr install algorithms
   - tlmgr install xkeyval

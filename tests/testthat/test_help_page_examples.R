@@ -143,16 +143,14 @@ test_that("PF_EM help page example runs and gives previous computed results", {
       n_max = 50,
       n_threads = max(parallel::detectCores(), 2)))
 
-  .file <- "local_tests/survival_lung_example"
-  # save_to_test(pf_fit[names(pf_fit) != "call"], .file)
-  test_if_file_exists(
-    .file,
-    expect_equal(pf_fit[names(pf_fit) != "call"], read_to_test(.file),
-                 tolerance = 1.49e-08))
+  if(dir.exists("previous_results/local_tests"))
+    expect_known_value(
+      pf_fit[names(pf_fit) != "call"], "local_tests/survival_lung_example.RDS",
+      tolerance = 1.49e-08)
 
-  .file <- "survival_lung_example_cloud_means"
-  # save_to_test(get_means(pf_fit$clouds), file_name = .file)
-  expect_equal(get_means(pf_fit$clouds), read_to_test(.file), tolerance = 1.49e-08)
+  expect_known_value(
+    get_means(pf_fit$clouds), "survival_lung_example_cloud_means.RDS",
+    tolerance = 1.49e-08)
 
   expect_no_error(plot(pf_fit, cov_index = 1))
   expect_no_error(plot(pf_fit, cov_index = 2))

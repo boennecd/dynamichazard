@@ -6,7 +6,7 @@
 \usage{
 PF_control(N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
   eps = 0.01, forward_backward_ESS_threshold = NULL,
-  method = "AUX_normal_approx_w_particles", n_max = 25,
+  method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N")
 }
 \arguments{

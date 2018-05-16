@@ -1,4 +1,5 @@
 # dynamichazard 0.6.0
+* Fixed effects is estimated faster with `PF_EM` and can be estimated with `model = "exponential"`.
 * The covariance matrix in `ddhazard` objects are no longer degenrate (e.g., in the case where a second order random walk is used). Instead the dimension is equal to the dimension of the error term.
 * The seed argument in `PF_EM` has been moved from the `control` list. Further, there is a `PF_control` which should preferably be used to construct the object for the `control` argument of `PF`.
 * A more stable and parallel estimation method have been added to `static_glm`.

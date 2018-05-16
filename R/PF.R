@@ -321,7 +321,7 @@ PF_EM <- function(
 PF_control <- function(
   N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
   eps = 1e-2, forward_backward_ESS_threshold = NULL,
-  method = "AUX_normal_approx_w_particles", n_max = 25,
+  method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N"){
   control <- list(
     N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
