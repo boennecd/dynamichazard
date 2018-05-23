@@ -164,6 +164,19 @@ pf_fit <- PF_EM(
 pf_fit$Q / .5
 #>            [,1]
 #> [1,] 0.04297984
+fit$Q
+#>               (Intercept)    AZTfailure    gendermale       drugddI
+#> (Intercept)  0.0092783394 -1.794496e-04 -2.810209e-04 -2.398848e-04
+#> AZTfailure  -0.0001794496  9.461514e-03 -1.764688e-05  1.034397e-05
+#> gendermale  -0.0002810209 -1.764688e-05  1.008643e-02  1.207075e-04
+#> drugddI     -0.0002398848  1.034397e-05  1.207075e-04  9.517421e-03
+#> prevOIAIDS  -0.0005509552 -3.233903e-04 -3.533003e-04 -2.702777e-04
+#>                prevOIAIDS
+#> (Intercept) -0.0005509552
+#> AZTfailure  -0.0003233903
+#> gendermale  -0.0003533003
+#> drugddI     -0.0002702777
+#> prevOIAIDS   0.0092743921
 plot(pf_fit)
 ```
 

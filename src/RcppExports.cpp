@@ -515,9 +515,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// compute_summary_stats
-Rcpp::List compute_summary_stats(const Rcpp::List& rcpp_list, unsigned int n_threads, const arma::vec& a_0, const arma::mat& Q, const arma::mat& Q_0);
-RcppExport SEXP _dynamichazard_compute_summary_stats(SEXP rcpp_listSEXP, SEXP n_threadsSEXP, SEXP a_0SEXP, SEXP QSEXP, SEXP Q_0SEXP) {
+// compute_summary_stats_first_o_RW
+Rcpp::List compute_summary_stats_first_o_RW(const Rcpp::List& rcpp_list, unsigned int n_threads, const arma::vec& a_0, const arma::mat& Q, const arma::mat& Q_0);
+RcppExport SEXP _dynamichazard_compute_summary_stats_first_o_RW(SEXP rcpp_listSEXP, SEXP n_threadsSEXP, SEXP a_0SEXP, SEXP QSEXP, SEXP Q_0SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -526,7 +526,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type a_0(a_0SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type Q(QSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type Q_0(Q_0SEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_summary_stats(rcpp_list, n_threads, a_0, Q, Q_0));
+    rcpp_result_gen = Rcpp::wrap(compute_summary_stats_first_o_RW(rcpp_list, n_threads, a_0, Q, Q_0));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -657,7 +657,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 25},
     {"_dynamichazard_particle_filter", (DL_FUNC) &_dynamichazard_particle_filter, 25},
-    {"_dynamichazard_compute_summary_stats", (DL_FUNC) &_dynamichazard_compute_summary_stats, 5},
+    {"_dynamichazard_compute_summary_stats_first_o_RW", (DL_FUNC) &_dynamichazard_compute_summary_stats_first_o_RW, 5},
     {"_dynamichazard_test_copy_mat", (DL_FUNC) &_dynamichazard_test_copy_mat, 2},
     {"_dynamichazard_test_copy_vec", (DL_FUNC) &_dynamichazard_test_copy_vec, 2},
     {"_dynamichazard_pf_fixed_effect_iteration", (DL_FUNC) &_dynamichazard_pf_fixed_effect_iteration, 10},

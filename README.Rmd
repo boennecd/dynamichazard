@@ -138,6 +138,7 @@ pf_fit <- PF_EM(
 ```{r pf_plots}
 # Compare estimates of Q
 pf_fit$Q / .5
+fit$Q
 plot(pf_fit)
 plot(pf_fit$log_likes) # log-likelihoods
 ```

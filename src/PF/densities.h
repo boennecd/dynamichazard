@@ -1,8 +1,6 @@
 #ifndef DENSITIES
 #define DENSITIES
 
-#include "PF_data.h"
-#include "particles.h"
 #include "dmvnrm.h"
 #include "PF_utils.h"
 #include "../family.h"

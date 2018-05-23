@@ -20,3 +20,89 @@
 \newcommand\algorithmicinput{\textbf{Input:}}
 \newcommand\INPUT{\item[\algorithmicinput]}
 \newcommand\Or{\textbf{or}}
+
+\newcommand{\impDep}{implicitly depends on the covariate matrices and risk sets}
+
+
+\renewcommand{\vec}[1]{\bm{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+%
+\newcommand{\Lparen}[1]{\left( #1\right)}
+\newcommand{\Lbrack}[1]{\left[ #1\right]}
+\newcommand{\Lbrace}[1]{\left \{ #1\right \}}
+\newcommand{\Lceil}[1]{\left \lceil #1\right \rceil}
+\newcommand{\Lfloor}[1]{\left \lfloor #1\right \rfloor}
+\newcommand{\LVert}[1]{\left\rVert #1\right\lVert}
+%
+\newcommand{\propp}[1]{P\Lparen{#1}}
+\newcommand{\proppCond}[2]{P\Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\expecp}[1]{E\Lparen{#1}}
+\newcommand{\expecpCond}[2]{E\Lparen{\left. #1  \right\vert  #2}}
+%
+\newcommand{\varp}[1]{\textrm{Var}\Lparen{#1}}
+\newcommand{\varpCond}[2]{\textrm{Var} \Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\corpCond}[2]{\textrm{Cor} \Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\covp}[1]{\textrm{Cov} \Lparen{#1}}
+\newcommand{\covpCond}[2]{\textrm{Cov} \Lparen{\left. #1 \right\vert  #2}}
+%
+\newcommand{\emNotee}[3]{#1_{\left. #2 \right\vert #3}}
+\newcommand{\emNote}[4]{#1_{\left. #2 \right\vert #3}^{(#4)}}
+%
+\newcommand{\ukfNote}[2]{\mat{P}_{\vec{#1}, \vec{#2}}}
+\newcommand{\ukfNotee}[3]{\mat{P}_{\vec{#1}_{#3}, \vec{#2}_{#3}}}
+%
+\newcommand{\bigO}[1]{\mathcal{O}\Lparen{#1}}
+%
+\newcommand{\diag}[1]{\text{diag}{\Lparen{#1}}}
+\newcommand{\hvec}[1]{\widehat{\vec{#1}}}
+\newcommand{\hmat}[1]{\widehat{\mat{#1}}}
+\newcommand{\tmat}[1]{\widetilde{\mat{#1}}}
+\newcommand{\tvec}[1]{\widetilde{\vec{#1}}}
+\newcommand{\bvec}[1]{\bar{\vec{#1}}}
+%
+\newcommand{\deter}[1]{\left| #1 \right|}
+%
+\newcommand{\MyInd}[2]{\Lparen{#1}_{#2}}
+%
+\newcommand{\xyzp}[2]{#1\Lparen{#2}}
+\newcommand{\xyzpCond}[3]{#1\Lparen{\left. #2  \right\vert  #3}}
+%
+%
+% \newcommand{\argmaxu}[1]{\underset{#1}{\text{argmax}}}
+% \newcommand{\argminu}[1]{\underset{#1}{\text{argmin}}}
+%
+\newcommand{\argmaxu}[1]{\underset{#1}{\argmax}\:}
+\newcommand{\argminu}[1]{\underset{#1}{\argmin}\:}
+%
+%
+\newcommand{\qr}[1]{\text{qr}\Lparen{#1}}
+\newcommand{\cholup}[1]{\text{cholupdate}\Lparen{#1}}
+%
+%
+\newcommand\algGMAscore[1]{
+\begin{aligned}
+	 #1&\Lparen{\emNotee{\mat{V}}{t}{t-1}^{-1} + \mat{X}_t^\top (-c''(\vec{\alpha}^{(k-1)})\mat{X}_t}^{-1}
+	 \left(\zeta_0 \vphantom{\Lparen{-c''(\vec{\alpha}^{(k-1)})}}
+		 \emNotee{\mat{V}}{t}{t-1}^{-1} \emNotee{\vec{a}}{t}{t-1} + \zeta_0 \mat{X}_t^\top c'(\vec{\alpha}^{(k-1)})
+		\right. \\
+		&\hspace{50pt}\left. + \Lparen{\mat{X}_t^\top\Lparen{-c''(\vec{\alpha}^{(k-1)})}\mat{X}_t + (1-\zeta_0)   \emNotee{\mat{V}}{t}{t-1}^{-1}} \vec{a}^{(k - 1)} \right)
+\end{aligned}}
+%
+\newcommand\algGMApPrime{
+\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'} \right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}
+%
+\newcommand\algGMApPrimePrime{
+\left. \frac{\partial\log\proppCond{\vec{y}_t}{\vec{e}'}}{\partial \vec{e}'\partial \Lparen{\vec{e}'}^\top}\right|_{\vec{e}' = \mat{X}_t \vec{\alpha}}}
+%
+\newcommand\eqnGblModeTerma{
+\begin{pmatrix}
+  	\vec{h}'\Lparen{\mat{X}_t  \vec{a}^{(k-1)}}\varpCond{\vec{Y}_t}{\mat{X}_t\vec{\alpha}^{(k-1)}}^{-1/2} & \mat{0} \\
+	\mat{0} &  \emNotee{\mat{V}}{t}{t-1}^{-1/2}
+\end{pmatrix}}
+\newcommand\eqnGblModeTermb{
+\begin{pmatrix}\mat{X}_t \\ \mat{I} \end{pmatrix}}
+\newcommand\eqnGblModeTermc{
+\begin{pmatrix} \vec{b} \\  \emNotee{\vec{\alpha}}{t}{t-1} \end{pmatrix}}

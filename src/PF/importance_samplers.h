@@ -1,11 +1,10 @@
 #ifndef IMPORTANCE_SAMPLERS
 #define IMPORTANCE_SAMPLERS
 
-#include "PF_data.h"
-#include "particles.h"
+#include "PF_utils.h"
 #include "../sample_funcs.h"
 #include "dmvnrm.h"
-#include "PF_utils.h"
+
 
 #define SAMPLE_SMOOTH_ARGS   \
   densities &dens_calc,      \

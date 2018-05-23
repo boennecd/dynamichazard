@@ -1,10 +1,8 @@
 #ifndef RESAMPLERS
 #define RESAMPLERS
 
-#include "PF_data.h"
-#include "particles.h"
-#include "../sample_funcs.h"
 #include "PF_utils.h"
+#include "../sample_funcs.h"
 #include "../utils.h"
 
 

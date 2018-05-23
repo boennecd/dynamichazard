@@ -1,10 +1,8 @@
 #ifndef AUX_PF_H
 #define AUX_PF_H
 
-#include "PF_data.h"
-#include "particles.h"
-#include "../sample_funcs.h"
 #include "PF_utils.h"
+#include "../sample_funcs.h"
 #include "../utils.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))

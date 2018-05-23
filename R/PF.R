@@ -194,6 +194,8 @@ PF_EM <- function(
   if(is.null(seed))
     seed <- .Random.seed
 
+  type <- "random_walk"
+
   log_likes <- rep(NA_real_, n_max)
   log_like <- log_like_max <- -Inf
   for(i in 1:n_max){
@@ -238,14 +240,17 @@ PF_EM <- function(
     a_0_old <- eval(fit_call$a_0, environment())
     Q_old <- eval(fit_call$Q, environment())
 
-    sum_stats <- compute_summary_stats(
-      clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0)
-    a_0 <- drop(sum_stats[[1]]$E_xs)
-    Q <- Reduce("+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
-    Q <- Q / length(sum_stats)
+    if(type == "random_walk"){
+      sum_stats <- compute_summary_stats_first_o_RW(
+        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0)
+      a_0 <- drop(sum_stats[[1]]$E_xs)
+      Q <- Reduce("+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
+      Q <- Q / length(sum_stats)
 
-    fit_call$a_0 <- a_0
-    fit_call$Q <- Q
+      fit_call$a_0 <- a_0
+      fit_call$Q <- Q
+    } else
+      stop(sQuote("type"), " not implemented")
 
     #####
     # Update fixed effects

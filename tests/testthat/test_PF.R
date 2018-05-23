@@ -358,7 +358,7 @@ test_that("PF_EM gives previous results on head neck data set with fixed effects
                      "local_tests/pf_logit_w_fixed.RDS")
 })
 
-test_that("compute_summary_stats gives previous results", {
+test_that("compute_summary_stats_first_o_RW gives previous results", {
   skip_on_cran()
 
   Q_0 <- diag(1, 2)
@@ -374,8 +374,8 @@ test_that("compute_summary_stats gives previous results", {
 
           #####
           # Test that multithreaded version gives the same
-          sum_stats <- compute_summary_stats(cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0)
-          s2 <- compute_summary_stats(cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0)
+          sum_stats <- compute_summary_stats_first_o_RW(cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0)
+          s2 <- compute_summary_stats_first_o_RW(cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0)
 
           expect_equal(sum_stats, s2)
 
