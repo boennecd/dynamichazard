@@ -6,9 +6,9 @@
 /* see https://stackoverflow.com/a/18776112/5861244 */
 inline void
   copy
-  (double *out, const double *org, const signed int org_n_elem,
-   signed int n_times){
-    signed int num_copied = org_n_elem, num_total = org_n_elem * n_times;
+  (double *out, const double *org, const unsigned int org_n_elem,
+   unsigned int n_times){
+    unsigned int num_copied = org_n_elem, num_total = org_n_elem * n_times;
     memcpy(out, org, num_copied * sizeof(double));
 
     while(num_copied * 2 <= num_total) {
@@ -148,7 +148,10 @@ public:
     X.each_col() %= w;
     z %= w;
 
-    return { std::move(X), std::move(z), dev};
+    arma::mat dev_mat(1, 1);
+    dev_mat(0,0) = dev;
+
+    return { std::move(X), std::move(z), dev_mat };
   }
 };
 
@@ -168,11 +171,11 @@ Rcpp::List pf_fixed_effect_iteration(
     const arma::mat &X, const arma::vec &Y, const arma::vec &dts,
     const arma::mat &cloud, const arma::vec &cl_weights,
     const arma::mat &ran_vars, const arma::vec &beta,
-    std::string family, int max_threads, const long int max_bytes = 20000000){
+    std::string family, int max_threads, const unsigned int max_bytes = 20000000){
   arma::uword n_particles = cloud.n_cols;
   arma::uword max_blocks = std::min(
-    std::max(1L, (long int)(max_bytes / (X.n_rows * X.n_cols * 8L))),
-    (long int)n_particles);
+    std::max(max_bytes / (X.n_rows * X.n_cols * 8L), (long unsigned int)1L),
+    (long unsigned int)n_particles);
 
   std::unique_ptr<data_holder> dat;
   if(family == BINOMIAL){

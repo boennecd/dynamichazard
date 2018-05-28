@@ -7,7 +7,8 @@
 struct qr_work_chunk {
   arma::mat X;
   arma::mat Y;
-  double dev; // deviance
+  arma::mat dev; /* used different. Either Y^\top Y in the multivaraite case
+                  * and the deviance (a scalar) in the GLM case */
 };
 
 class qr_data_generator {
@@ -21,8 +22,8 @@ public:
 struct R_F {
   const arma::mat R;
   const arma::uvec pivot;
-  const arma::vec F;
-  const double dev;
+  const arma::mat F;
+  const arma::mat dev;
 
   arma::mat R_rev_piv() const;
 };
@@ -40,10 +41,10 @@ class qr_parallel {
   };
 
   ptr_vec generators;
-  const signed int max_threads;
+  const unsigned int max_threads;
 
 public:
-  qr_parallel(ptr_vec, const signed int);
+  qr_parallel(ptr_vec, const unsigned int);
 
   R_F compute();
 };

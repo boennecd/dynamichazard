@@ -23,7 +23,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // ddhazard_fit_cpp
-Rcpp::List ddhazard_fit_cpp(arma::mat& X, arma::mat& fixed_terms, const arma::vec& weights, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, const arma::vec& fixed_parems_start, arma::mat R, arma::mat L, arma::vec m, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const double eps_fixed_parems, const int max_it_fixed_params, const arma::uword n_max, const double eps, const arma::uword verbose, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, Rcpp::Nullable<Rcpp::NumericVector> NR_eps, Rcpp::Nullable<Rcpp::NumericVector> LR, const std::string model, const std::string M_step_formulation, const int fixed_effect_chunk_size, const bool debug, const unsigned int NR_it_max, const int n_threads, const double denom_term, const int n_fixed_terms_in_state_vec, const bool use_pinv, const std::string criteria, const std::string posterior_version, const signed int GMA_max_rep, const double GMA_NR_eps, const int EKF_batch_size);
+Rcpp::List ddhazard_fit_cpp(arma::mat& X, arma::mat& fixed_terms, const arma::vec& weights, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, const arma::vec& fixed_parems_start, arma::mat R, arma::mat L, arma::vec m, arma::mat Q_0, arma::mat Q, const Rcpp::List& risk_obj, const arma::mat& F_, const double eps_fixed_parems, const int max_it_fixed_params, const arma::uword n_max, const double eps, const arma::uword verbose, const bool est_Q_0, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> kappa, Rcpp::Nullable<Rcpp::NumericVector> alpha, Rcpp::Nullable<Rcpp::NumericVector> beta, Rcpp::Nullable<Rcpp::NumericVector> NR_eps, Rcpp::Nullable<Rcpp::NumericVector> LR, const std::string model, const std::string M_step_formulation, const int fixed_effect_chunk_size, const bool debug, const unsigned int NR_it_max, const int n_threads, const double denom_term, const int n_fixed_terms_in_state_vec, const bool use_pinv, const std::string criteria, const std::string posterior_version, const unsigned int GMA_max_rep, const double GMA_NR_eps, const int EKF_batch_size);
 RcppExport SEXP _dynamichazard_ddhazard_fit_cpp(SEXP XSEXP, SEXP fixed_termsSEXP, SEXP weightsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP fixed_parems_startSEXP, SEXP RSEXP, SEXP LSEXP, SEXP mSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP risk_objSEXP, SEXP F_SEXP, SEXP eps_fixed_paremsSEXP, SEXP max_it_fixed_paramsSEXP, SEXP n_maxSEXP, SEXP epsSEXP, SEXP verboseSEXP, SEXP est_Q_0SEXP, SEXP methodSEXP, SEXP kappaSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP NR_epsSEXP, SEXP LRSEXP, SEXP modelSEXP, SEXP M_step_formulationSEXP, SEXP fixed_effect_chunk_sizeSEXP, SEXP debugSEXP, SEXP NR_it_maxSEXP, SEXP n_threadsSEXP, SEXP denom_termSEXP, SEXP n_fixed_terms_in_state_vecSEXP, SEXP use_pinvSEXP, SEXP criteriaSEXP, SEXP posterior_versionSEXP, SEXP GMA_max_repSEXP, SEXP GMA_NR_epsSEXP, SEXP EKF_batch_sizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -65,7 +65,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool >::type use_pinv(use_pinvSEXP);
     Rcpp::traits::input_parameter< const std::string >::type criteria(criteriaSEXP);
     Rcpp::traits::input_parameter< const std::string >::type posterior_version(posterior_versionSEXP);
-    Rcpp::traits::input_parameter< const signed int >::type GMA_max_rep(GMA_max_repSEXP);
+    Rcpp::traits::input_parameter< const unsigned int >::type GMA_max_rep(GMA_max_repSEXP);
     Rcpp::traits::input_parameter< const double >::type GMA_NR_eps(GMA_NR_epsSEXP);
     Rcpp::traits::input_parameter< const int >::type EKF_batch_size(EKF_batch_sizeSEXP);
     rcpp_result_gen = Rcpp::wrap(ddhazard_fit_cpp(X, fixed_terms, weights, tstart, tstop, a_0, fixed_parems_start, R, L, m, Q_0, Q, risk_obj, F_, eps_fixed_parems, max_it_fixed_params, n_max, eps, verbose, est_Q_0, method, kappa, alpha, beta, NR_eps, LR, model, M_step_formulation, fixed_effect_chunk_size, debug, NR_it_max, n_threads, denom_term, n_fixed_terms_in_state_vec, use_pinv, criteria, posterior_version, GMA_max_rep, GMA_NR_eps, EKF_batch_size));
@@ -555,7 +555,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // pf_fixed_effect_iteration
-Rcpp::List pf_fixed_effect_iteration(const arma::mat& X, const arma::vec& Y, const arma::vec& dts, const arma::mat& cloud, const arma::vec& cl_weights, const arma::mat& ran_vars, const arma::vec& beta, std::string family, int max_threads, const long int max_bytes);
+Rcpp::List pf_fixed_effect_iteration(const arma::mat& X, const arma::vec& Y, const arma::vec& dts, const arma::mat& cloud, const arma::vec& cl_weights, const arma::mat& ran_vars, const arma::vec& beta, std::string family, int max_threads, const unsigned int max_bytes);
 RcppExport SEXP _dynamichazard_pf_fixed_effect_iteration(SEXP XSEXP, SEXP YSEXP, SEXP dtsSEXP, SEXP cloudSEXP, SEXP cl_weightsSEXP, SEXP ran_varsSEXP, SEXP betaSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP max_bytesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -569,7 +569,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type beta(betaSEXP);
     Rcpp::traits::input_parameter< std::string >::type family(familySEXP);
     Rcpp::traits::input_parameter< int >::type max_threads(max_threadsSEXP);
-    Rcpp::traits::input_parameter< const long int >::type max_bytes(max_bytesSEXP);
+    Rcpp::traits::input_parameter< const unsigned int >::type max_bytes(max_bytesSEXP);
     rcpp_result_gen = Rcpp::wrap(pf_fixed_effect_iteration(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, max_bytes));
     return rcpp_result_gen;
 END_RCPP

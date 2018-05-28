@@ -327,6 +327,7 @@ Rcpp::List compute_summary_stats_first_o_RW(
   PF_summary_stats_RW stats;
   {
     auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
+
     stats = compute_summary_stats_first_o_RW(sm_output, a_0, Q, Q_0);
   }
 

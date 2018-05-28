@@ -70,63 +70,13 @@ static arma::mat get_E_x_less_x_less_one_outer_at_one(
 }
 
 static PF_summary_stats_RW compute_summary_stats_first_o_RW(
-    const std::vector<cloud> &smoothed_clouds,
-    const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0){
-  PF_summary_stats_RW ans;
-  std::vector<arma::vec> &E_xs = ans.E_xs;
-  std::vector<arma::mat> &E_x_less_x_less_one_outers = ans.E_x_less_x_less_one_outers;
-
-  unsigned int n_periods = smoothed_clouds.size();
-  unsigned int n_elem = smoothed_clouds[0][0].get_state().n_elem;
-
-  auto it_cl = smoothed_clouds.begin();
-  for(unsigned int i = 0; i < n_periods; ++i, ++it_cl){
-    const bool is_first = i == 0;
-    const bool is_last = i == n_periods - 1;
-
-    unsigned int n_part = it_cl->size();
-    arma::vec E_x(n_elem, arma::fill::zeros);
-    arma::mat E_x_less_x_less_one_outer(n_elem, n_elem, arma::fill::zeros);
-
-    auto it_p = it_cl->begin();
-    for(unsigned int j = 0; j < n_part; ++j, ++it_p){
-      double weight = exp(it_p->log_weight);
-
-      E_x += weight * it_p->get_state();
-      if(is_last || is_first)
-        continue;
-
-      arma::vec inter = it_p->get_state() - it_p->parent->get_state();
-      sym_mat_rank_one_update(weight, inter, E_x_less_x_less_one_outer);
-    }
-
-    if(is_last){
-      --it_cl;
-      for(auto it_p = it_cl->begin(); it_p != it_cl->end(); ++it_p){
-        arma::vec inter = it_p->child->get_state() - it_p->get_state();
-        sym_mat_rank_one_update(exp(it_p->log_weight), inter, E_x_less_x_less_one_outer);
-      }
-
-    } else if(is_first){
-      E_x_less_x_less_one_outer =
-        get_E_x_less_x_less_one_outer_at_one(a_0, Q, Q_0, *it_cl);
-    }
-
-    E_xs.push_back(std::move(E_x));
-    E_x_less_x_less_one_outer = arma::symmatu(E_x_less_x_less_one_outer);
-    E_x_less_x_less_one_outers.push_back(std::move(E_x_less_x_less_one_outer));
-  }
-
-  return ans;
-}
-
-static PF_summary_stats_RW compute_summary_stats_first_o_RW(
-    const std::vector<std::vector<smoother_output::particle_pairs>> &transition_likelihoods,
+    const smoother_output::trans_like_obj &transition_likelihoods,
     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
     const cloud &first_smoothed_cloud){
   PF_summary_stats_RW ans;
   std::vector<arma::vec> &E_xs = ans.E_xs;
-  std::vector<arma::mat> &E_x_less_x_less_one_outers = ans.E_x_less_x_less_one_outers;
+  std::vector<arma::mat> &E_x_less_x_less_one_outers =
+    ans.E_x_less_x_less_one_outers;
 
   unsigned int n_periods = transition_likelihoods.size();
   unsigned int n_elem = transition_likelihoods[0][0].p->get_state().n_elem;
@@ -144,49 +94,48 @@ static PF_summary_stats_RW compute_summary_stats_first_o_RW(
 #pragma omp parallel if(!is_first)
 {
 #endif
-  arma::vec my_E_x(n_elem, arma::fill::zeros);
-  arma::mat my_E_x_less_x_less_one_outer(n_elem, n_elem, arma::fill::zeros);
+    arma::vec my_E_x(n_elem, arma::fill::zeros);
+    arma::mat my_E_x_less_x_less_one_outer(n_elem, n_elem, arma::fill::zeros);
 
 #ifdef _OPENMP
 #pragma omp for schedule(static)
 #endif
-  for(unsigned int j = 0; j < n_part; ++j){
-    auto it_elem = it_trans_begin + j;
-    const particle *this_p = it_elem->p;
-    double weight_outer = exp(this_p->log_weight);
-    my_E_x += weight_outer * this_p->get_state();
+    for(unsigned int j = 0; j < n_part; ++j){
+      auto it_elem = it_trans_begin + j;
+      const particle *this_p = it_elem->p;
+      my_E_x += exp(it_elem->log_weight) * this_p->get_state();
 
-    if(is_first)
-      continue;
+      if(is_first)
+        continue;
 
-    for(auto it_pair = it_elem->transition_pairs.begin();
-        it_pair != it_elem->transition_pairs.end(); ++it_pair){
-      const particle *pair_p = it_pair->p;
-      double weight_inner = exp(this_p->log_weight + it_pair->log_weight);
+      for(auto it_pair = it_elem->transition_pairs.begin();
+          it_pair != it_elem->transition_pairs.end(); ++it_pair){
+        const particle *pair_p = it_pair->p;
+        double weight_inner = exp(it_elem->log_weight + it_pair->log_weight);
 
-      arma::vec inter =  this_p->get_state() - pair_p->get_state();
-      sym_mat_rank_one_update(weight_inner, inter, my_E_x_less_x_less_one_outer);
+        arma::vec inter =  this_p->get_state() - pair_p->get_state();
+        sym_mat_rank_one_update(weight_inner, inter, my_E_x_less_x_less_one_outer);
+      }
     }
-  }
 #ifdef _OPENMP
 #pragma omp critical(compute_summary_stats_first_o_RW_w_tran_like)
 {
 #endif
-  E_x += my_E_x;
-  E_x_less_x_less_one_outer += my_E_x_less_x_less_one_outer;
+    E_x += my_E_x;
+    E_x_less_x_less_one_outer += my_E_x_less_x_less_one_outer;
 #ifdef _OPENMP
 }
 }
 #endif
 
-if(is_first){
-  E_x_less_x_less_one_outer =
-    get_E_x_less_x_less_one_outer_at_one(a_0, Q, Q_0, first_smoothed_cloud);
-}
+    if(is_first){
+      E_x_less_x_less_one_outer =
+        get_E_x_less_x_less_one_outer_at_one(a_0, Q, Q_0, first_smoothed_cloud);
+    }
 
-E_xs.push_back(std::move(E_x));
-E_x_less_x_less_one_outer = arma::symmatu(E_x_less_x_less_one_outer);
-E_x_less_x_less_one_outers.push_back(std::move(E_x_less_x_less_one_outer));
+    E_xs.push_back(std::move(E_x));
+    E_x_less_x_less_one_outer = arma::symmatu(E_x_less_x_less_one_outer);
+    E_x_less_x_less_one_outers.push_back(std::move(E_x_less_x_less_one_outer));
   }
 
   return ans;
@@ -196,12 +145,10 @@ PF_summary_stats_RW
   compute_summary_stats_first_o_RW
   (const smoother_output &sm_output, const arma::vec &a_0, const arma::mat &Q,
    const arma::mat &Q_0){
-    if(sm_output.transition_likelihoods.size() == 0){
-      return(compute_summary_stats_first_o_RW(
-          sm_output.smoothed_clouds, a_0, Q, Q_0));
-    }
+
+    std::shared_ptr<smoother_output::trans_like_obj> trans_obj_ptr =
+      sm_output.get_transition_likelihoods(true);
 
     return(compute_summary_stats_first_o_RW(
-        sm_output.transition_likelihoods, a_0, Q, Q_0,
-        sm_output.smoothed_clouds.front()));
+        *trans_obj_ptr, a_0, Q, Q_0, sm_output.smoothed_clouds.front()));
 }

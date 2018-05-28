@@ -33,7 +33,8 @@ protected:
 
 /*
   Auxiliary particle filter as described in:
-    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
+    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing
+    algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 
   The forward filter returns a particle cloud for time 0, 1, ..., d
   The backward filter returns a particle cloud for time d + 1, d, ..., 1
@@ -161,7 +162,8 @@ public:
 
 /*
   O(N) smoother from:
-    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
+    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing
+    algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
 
 template<
@@ -282,7 +284,9 @@ public:
 
 /*
   O(N^2) smoother from:
-    Briers, M., Doucet, A., & Maskell, S. (2010). Smoothing algorithms for state–space models. Annals of the Institute of Statistical Mathematics, 62(1), 61-89.
+    Briers, M., Doucet, A., & Maskell, S. (2010). Smoothing algorithms for
+    state–space models. Annals of the Institute of Statistical Mathematics,
+    62(1), 61-89.
 */
 
 template<
@@ -298,7 +302,10 @@ public:
     std::vector<cloud> &forward_clouds = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
     std::vector<cloud> &smoothed_clouds = result.smoothed_clouds;
-    auto &transition_likelihoods = result.transition_likelihoods;
+    std::shared_ptr<smoother_output::trans_like_obj> trans_ptr =
+      result.get_transition_likelihoods(false);
+
+    smoother_output::trans_like_obj &transition_likelihoods = *trans_ptr;
 
     forward_clouds = forward_filter::compute(data);
     backward_clouds = backward_filter::compute(data);
@@ -334,7 +341,8 @@ public:
 #endif
       for(unsigned int i = 0; i < n_elem_bw; ++i){ // loop over bw particle
         particle &bw_particle = (*bw_cloud)[i];
-        smoother_output::particle_pairs pf_pairs;
+        smoother_output::particle_pairs
+          pf_pairs(&bw_particle, bw_particle.log_weight);
         pf_pairs.transition_pairs.reserve(is_first_period ? 1 : n_elem_fw);
 
         double max_weight_inner = -std::numeric_limits<double>::max();

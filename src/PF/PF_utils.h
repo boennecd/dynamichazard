@@ -500,29 +500,39 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
  Output class for smoothers
 */
 
-struct smoother_output {
+class smoother_output {
+public:
   struct pair {
     const particle *p;
     double log_weight;
 
-    // added to be able to use std::Vector<>::emplace_back
-    pair(particle *p, double log_weight):
-      p(p), log_weight(log_weight) {}
-
-    pair():
-      p(nullptr),
-      log_weight(std::numeric_limits<double>::quiet_NaN()) {}
+    pair(const particle *p = nullptr,
+         double log_weight = std::numeric_limits<double>::quiet_NaN());
   };
 
   struct particle_pairs {
-    std::vector<pair> transition_pairs;
     const particle *p;
+    double log_weight;
+    std::vector<pair> transition_pairs;
+
+    particle_pairs(const particle*, const double, std::vector<pair>&&);
+    particle_pairs(const particle*, const double);
+    particle_pairs();
   };
+
+  using trans_like_obj = std::vector<std::vector<particle_pairs>>;
 
   std::vector<cloud> forward_clouds;
   std::vector<cloud> backward_clouds;
   std::vector<cloud> smoothed_clouds;
-  std::vector<std::vector<particle_pairs>> transition_likelihoods;
+
+  smoother_output();
+
+  std::shared_ptr<trans_like_obj>
+    get_transition_likelihoods(const bool do_make_if_len_0 = false) const;
+
+private:
+  std::shared_ptr<trans_like_obj> transition_likelihoods;
 };
 
 Rcpp::List get_rcpp_list_from_cloud(

@@ -21,16 +21,16 @@ R_F qr_parallel::worker::operator()(){
 }
 
 qr_parallel::qr_parallel(
-  ptr_vec generators, const signed int max_threads):
+  ptr_vec generators, const unsigned int max_threads):
   generators(std::move(generators)), max_threads(max_threads) {}
 
 R_F qr_parallel::compute(){
   /* compute each QR */
-  signed int num_blocks = generators.size();
+  unsigned int num_blocks = generators.size();
   std::vector<std::future<R_F> > futures(num_blocks);
   thread_pool pool(std::min(num_blocks, max_threads));
 
-  signed int i = 0;
+  unsigned int i = 0;
   while(!generators.empty()){
     futures[i] = pool.submit(worker(std::move(generators.back())));
     generators.pop_back();
@@ -42,7 +42,7 @@ R_F qr_parallel::compute(){
   bool is_first = true;
   arma::mat R_stack;
   arma::vec F_stack;
-  double dev = 0;
+  arma::mat dev;
 
   for(i = 0; i < num_blocks; ++i){
     R_F R_Fs_i = futures[i].get();

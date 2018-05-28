@@ -59,7 +59,8 @@ Rcpp::List get_rcpp_list_from_cloud(
         Rcpp::Named("child_idx") = Rcpp::wrap(child_idx),
         Rcpp::Named("weights") = Rcpp::wrap(weights),
         Rcpp::Named("states") = Rcpp::wrap(states),
-        Rcpp::Named("log_unnormalized_weights") = Rcpp::wrap(log_unnormalized_weights)
+        Rcpp::Named("log_unnormalized_weights") =
+          Rcpp::wrap(log_unnormalized_weights)
       );
   }
 
@@ -72,7 +73,9 @@ Rcpp::List get_rcpp_list_from_cloud(
 
   // Set-up the transition_likelihoods element
   Rcpp::List transitions; // List with final output
-  auto &transition_likelihoods = sm_output.transition_likelihoods;
+  std::shared_ptr<smoother_output::trans_like_obj> trans_ptr =
+    sm_output.get_transition_likelihoods(false);
+  smoother_output::trans_like_obj &transition_likelihoods = *trans_ptr;
   if(transition_likelihoods.size() > 0){
     transitions = Rcpp::List(transition_likelihoods.size());
 
@@ -207,59 +210,62 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
     rcpp_list["smoothed_clouds"], &fw_clouds, &bw_clouds);
 
   // Set transition likelihoods
-  std::vector<std::vector<smoother_output::particle_pairs>>
-    &transition_likelihoods = ans.transition_likelihoods;
-    const Rcpp::List transitions((SEXP)rcpp_list["transition_likelihoods"]);
-    if(transitions.size() > 0){
-      unsigned int n_periods = transitions.size();
-      transition_likelihoods.resize(n_periods);
+  std::shared_ptr<smoother_output::trans_like_obj> trans_ptr =
+    ans.get_transition_likelihoods(false);
+  smoother_output::trans_like_obj &transition_likelihoods = *trans_ptr;
+  const Rcpp::List transitions((SEXP)rcpp_list["transition_likelihoods"]);
+  if(transitions.size() > 0){
+    unsigned int n_periods = transitions.size();
+    transition_likelihoods.resize(n_periods);
 
-      auto it_trans = transitions.begin();
-      auto it_ans = transition_likelihoods.begin();
-      // Time loop
-      for(unsigned int i = 0; i < n_periods; ++i, ++it_trans, ++it_ans){
-        cloud &fw_cloud = fw_clouds[i]; // starts at time 0
-        cloud &sm_cloud = smooth_clouds[i]; // starts at time 1
+    auto it_trans = transitions.begin();
+    auto it_ans = transition_likelihoods.begin();
+    // Time loop
+    for(unsigned int i = 0; i < n_periods; ++i, ++it_trans, ++it_ans){
+      cloud &fw_cloud = fw_clouds[i]; // starts at time 0
+      cloud &sm_cloud = smooth_clouds[i]; // starts at time 1
 
-        const Rcpp::List inner_list(*it_trans);
-        const Rcpp::IntegerVector bw_idx((SEXP)inner_list["bw_idx"]);
-        const Rcpp::IntegerMatrix fw_idx((SEXP)inner_list["fw_idx"]);
-        const Rcpp::NumericMatrix weights((SEXP)inner_list["weights"]);
+      const Rcpp::List inner_list(*it_trans);
+      const Rcpp::IntegerVector bw_idx((SEXP)inner_list["bw_idx"]);
+      const Rcpp::IntegerMatrix fw_idx((SEXP)inner_list["fw_idx"]);
+      const Rcpp::NumericMatrix weights((SEXP)inner_list["weights"]);
 
-        unsigned int n_bw = bw_idx.size();
-        unsigned int n_fw = fw_idx.nrow();
+      unsigned int n_bw = bw_idx.size();
+      unsigned int n_fw = fw_idx.nrow();
 
-        std::vector<smoother_output::particle_pairs> &new_elems = *it_ans;
-        new_elems.resize(n_bw);
+      std::vector<smoother_output::particle_pairs> &new_elems = *it_ans;
+      new_elems.resize(n_bw);
 
-        // Loop over first index of pair of particles
-        auto it_elems_begin = new_elems.begin();
-        const int *it_bw_begin = &bw_idx[0];
-        const int *it_fw_begin = &fw_idx(0,0);
-        const double *it_w_begin = &weights(0,0);
+      // Loop over first index of pair of particles
+      auto it_elems_begin = new_elems.begin();
+      const int *it_bw_begin = &bw_idx[0];
+      const int *it_fw_begin = &fw_idx(0,0);
+      const double *it_w_begin = &weights(0,0);
 #ifdef _OPENMP
-        int n_threads_use = std::min(omp_get_max_threads(), (int)n_bw / 200 + 1);
+      int n_threads_use = std::min((long int)omp_get_max_threads(),
+                                   ((int)n_bw - 1L) / 200L + 1L);
 #pragma omp parallel for schedule(static) num_threads(n_threads_use) if(n_threads_use > 1)
 #endif
-        for(unsigned int j = 0; j < n_bw; ++j){
-          auto it_elems = it_elems_begin + j;
-          std::vector<smoother_output::pair> &transition_pairs =
-            it_elems->transition_pairs;
+      for(unsigned int j = 0; j < n_bw; ++j){
+        auto it_elems = it_elems_begin + j;
+        std::vector<smoother_output::pair> &transition_pairs =
+          it_elems->transition_pairs;
 
-          it_elems->p = get_cloud_idx(sm_cloud, *(it_bw_begin + j));
+        it_elems->p = get_cloud_idx(sm_cloud, *(it_bw_begin + j));
+        it_elems->log_weight = it_elems->p->log_weight;
 
-          transition_pairs.resize(n_fw);
-          auto it_trans_pair = transition_pairs.begin();
-          // Loop over second index of pair of particles
-          const int *it_fw = it_fw_begin + j * n_fw;
-          const double *it_w = it_w_begin + j * n_fw;
-          for(unsigned int k = 0; k < n_fw; ++k, ++it_fw, ++it_w, ++it_trans_pair){
-            it_trans_pair->p = get_cloud_idx(fw_cloud, *it_fw);
-            it_trans_pair->log_weight = log(*it_w);
-          }
+        transition_pairs.resize(n_fw);
+        auto it_trans_pair = transition_pairs.begin();
+        // Loop over second index of pair of particles
+        const int *it_fw = it_fw_begin + j * n_fw;
+        const double *it_w = it_w_begin + j * n_fw;
+        for(unsigned int k = 0; k < n_fw; ++k, ++it_fw, ++it_w, ++it_trans_pair){
+          it_trans_pair->p = get_cloud_idx(fw_cloud, *it_fw);
+          it_trans_pair->log_weight = log(*it_w);
         }
       }
     }
+  }
 
-    return ans;
+  return ans;
 }

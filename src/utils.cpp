@@ -153,7 +153,6 @@ selection_matrix::selection_matrix(const arma::mat &A):
       if(found_one)
         Rcpp::stop("A does not seem to be a selection matrix.");
 
-
       idx_n_val.push_back(i);
       idx_m_val.push_back(j);
 

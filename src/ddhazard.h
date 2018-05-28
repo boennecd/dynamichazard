@@ -145,7 +145,7 @@ class GMA : public Solver
   bool have_failed_once = false;
 
 public:
-  GMA(ddhazard_data &p, signed int max_rep, double NR_eps):
+  GMA(ddhazard_data &p, unsigned int max_rep, double NR_eps):
   p_dat(p), max_rep((unsigned int)max_rep), NR_eps(NR_eps)
   { };
 

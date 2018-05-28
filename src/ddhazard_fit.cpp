@@ -45,7 +45,7 @@ Rcpp::List ddhazard_fit_cpp(
     const bool use_pinv = false,
     const std::string criteria = "delta_coef",
     const std::string posterior_version = "cholesky",
-    const signed int GMA_max_rep = 10,
+    const unsigned int GMA_max_rep = 10,
     const double GMA_NR_eps = 0.1,
     const int EKF_batch_size = 5000L){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) &&

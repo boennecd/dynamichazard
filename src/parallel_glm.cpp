@@ -280,7 +280,9 @@ class parallelglm_class_QR {
       X.each_col() %= w;
       z %= w;
 
-      return { std::move(X), std::move(z), dev};
+      arma::mat dev_mat; dev_mat = dev; /* make 1 x 1 matrix */
+
+      return { std::move(X), std::move(z), dev_mat};
     }
   };
 
@@ -304,9 +306,13 @@ public:
       data.beta = &beta;
 
       R_F R_f_out = get_R_f(data, i == 0);
+      /* TODO: can maybe done smarter using that R is triangular befor
+       *       permutation */
       arma::mat R = R_f_out.R_rev_piv();
-      // TODO: replace with forward and backward solve...
-      beta = arma::solve(R.t() * R, R.t() * R_f_out.F.col(0));
+      beta = arma::solve(R.t(), R.t() * R_f_out.F.col(0),
+                         arma::solve_opts::no_approx);
+      beta = arma::solve(R    , beta,
+                         arma::solve_opts::no_approx);
 
       if(trace){
         Rcpp::Rcout << "it " << i << "\n"
@@ -318,7 +324,7 @@ public:
       }
 
       double devold = dev;
-      dev = R_f_out.dev;
+      dev = R_f_out.dev(0, 0);
 
       if(std::abs(dev - devold) / (1e-2 + std::abs(dev)) < tol)
         break;
