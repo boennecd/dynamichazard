@@ -41,7 +41,7 @@ PF_effective_sample_size <- function(object){
 #'    N_first = 2500,
 #'    N_smooth = 2500,
 #'    n_max = 50,
-#'    n_threads = parallel::detectCores()),
+#'    n_threads = max(parallel::detectCores(logical = FALSE), 1)),
 #'  trace = 1)
 #'
 #'# Plot state vector estimates
@@ -106,7 +106,7 @@ PF_effective_sample_size <- function(object){
 #'    N_fw_n_bw = 250, N_smooth = 500, N_first = 1000, eps = 1e-3,
 #'    method = "AUX_normal_approx_w_cloud_mean",
 #'    n_max = 25, # just take a few iterations as an example
-#'    n_threads = parallel::detectCores() - 2L), trace = TRUE)
+#'    n_threads = max(parallel::detectCores(logical = FALSE), 1), trace = TRUE)
 #'
 #'# compare results
 #'plot(ddfit)

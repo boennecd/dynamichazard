@@ -130,7 +130,7 @@ test_that("PF_smooth gives same results", {
       # Test that multithreaded version gives the same
       set.seed(30302129)
       old_args <- args
-      args$n_threads <- max(2, parallel:::detectCores())
+      args$n_threads <- max(parallel::detectCores(logical = FALSE), 1)
 
       result_multi <- .(fit_quote)
       expect_equal(result_multi, result)
@@ -285,9 +285,9 @@ test_that("PF_EM gives previous results on head neck data set", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2),
-    control = list(N_fw_n_bw = 200, N_smooth = 1e3, N_first = 2e3,
-                   n_max = 5,
-                   n_threads = max(parallel::detectCores(), 2)),
+    control = list(
+      N_fw_n_bw = 200, N_smooth = 1e3, N_first = 2e3, n_max = 5,
+      n_threads =  max(parallel::detectCores(logical = FALSE), 1)),
     max_T = 45)
 
   test_func <- function(smoother, file_name){
@@ -350,7 +350,7 @@ test_that("PF_EM gives previous results on head neck data set with fixed effects
         N_fw_n_bw = 200, N_smooth = 2e3, N_first = 2e3,
         n_max = 3,
         method = "AUX_normal_approx_w_cloud_mean",
-        n_threads = max(parallel::detectCores(), 2)),
+        n_threads = max(parallel::detectCores(logical = FALSE), 1)),
       max_T = 30))
 
   expect_known_value(pp_fit[!names(pp_fit) %in%

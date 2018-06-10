@@ -96,10 +96,17 @@ public:
           double max_weight =  -std::numeric_limits<double>::max();
           arma::uvec r_set = get_risk_set(data, t);
           unsigned int n_elem = new_cloud.size();
+
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel
+{
 #endif
-          for(unsigned int i = 0; i < n_elem; ++i){
+          double my_max_weight = -std::numeric_limits<double>::max();
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+          for(unsigned int i = 0; i < n_elem; ++i){ // loop over new particles
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
               dens_calc.log_prob_y_given_state(
@@ -132,15 +139,20 @@ public:
               it->log_weight -=
                 dens_calc.log_artificial_prior(*it->parent, t + 1);
             }
+
+            my_max_weight = MAX(it->log_weight, my_max_weight);
+
+          } // end loop over new particle
+
 #ifdef _OPENMP
 #pragma omp critical(aux_lock)
 {
 #endif
-            max_weight = MAX(it->log_weight, max_weight);
+          max_weight = MAX(my_max_weight, max_weight);
 #ifdef _OPENMP
 }
+} // end omp parallel
 #endif
-          }
 
           normalize_log_weights<false, true>(new_cloud, max_weight);
       }
@@ -226,10 +238,17 @@ public:
           double max_weight = -std::numeric_limits<double>::max();
           arma::uvec r_set = get_risk_set(data, t);
           unsigned int n_elem = new_cloud.size();
+
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel
+{
 #endif
-          for(unsigned int i = 0; i < n_elem; ++i){
+          double my_max_weight = -std::numeric_limits<double>::max();
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+          for(unsigned int i = 0; i < n_elem; ++i){ // loop over smooth clouds
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
               dens_calc.log_prob_y_given_state(
@@ -253,15 +272,18 @@ public:
               - (log_importance_dens + it->parent->log_resampling_weight +
                   it->child->log_resampling_weight + log_artificial_prior);
 
+            my_max_weight = MAX(it->log_weight, my_max_weight);
+          } // end over smooth clouds
+
 #ifdef _OPENMP
 #pragma omp critical(smoother_lock)
 {
 #endif
-            max_weight = MAX(it->log_weight, max_weight);
+          max_weight = MAX(max_weight, my_max_weight);
 #ifdef _OPENMP
 }
+} // end omp parallel
 #endif
-          }
 
           normalize_log_weights<false, true>(new_cloud, max_weight);
       }
@@ -336,6 +358,7 @@ public:
 {
 #endif
       densities dens_calc = densities(data);
+      double my_max_weight = -std::numeric_limits<double>::max();
 #ifdef _OPENMP
 #pragma omp for schedule(static)
 #endif
@@ -400,16 +423,16 @@ public:
         particle &new_p = new_cloud.set_particle(i, bw_particle.get_state());
         new_p.log_unnormalized_weight = new_p.log_weight = this_log_weight;
 
+        my_max_weight = MAX(my_max_weight, this_log_weight);
+      } // end loop over bw particle
+
 #ifdef _OPENMP
 #pragma omp critical(smoother_lock_brier_three)
 {
 #endif
-        max_weight = MAX(max_weight, this_log_weight);
+      max_weight = MAX(max_weight, my_max_weight);
 #ifdef _OPENMP
 }
-#endif
-      } // end loop over bw particle
-#ifdef _OPENMP
 } // end omp parallel
 #endif
 

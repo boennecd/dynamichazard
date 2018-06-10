@@ -19,7 +19,8 @@ cat_l <- if(quietly) function(...) { invisible() } else cat
 print_l <- if(quietly) function(...) { invisible() } else print
 
 t_max <- 30
-start_fun <- function(t_0 = t_0, t_max = t_max) max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
+start_fun <- function(t_0 = t_0, t_max = t_max)
+  max(0, runif(1, t_0 - t_max, t_max - 1 - 1e-8))
 
 # Starting arguments
 start_args <- list(
@@ -31,7 +32,7 @@ start_args <- list(
   use_extra_correction = F, beta = 0, alpha = 1,
   SMA_version = "woodbury", GMA_max_rep = 25,
   GMA_NR_eps = 2, more_options = F, debug = FALSE,
-  n_threads = max(1, parallel::detectCores() - 2))
+  n_threads = max(1, parallel::detectCores(logical = FALSE)))
 
 if(exists("input_args")){
   if(any(is.na(arg_match <- match(names(input_args), names(start_args)))))

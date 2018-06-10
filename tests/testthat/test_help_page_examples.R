@@ -141,7 +141,7 @@ test_that("PF_EM help page example runs and gives previous computed results", {
       N_first = 2500,
       N_smooth = 2500,
       n_max = 50,
-      n_threads = max(parallel::detectCores(), 2)))
+      n_threads = max(parallel::detectCores(logical = FALSE), 1)))
 
   if(dir.exists("previous_results/local_tests"))
     expect_known_value(
@@ -204,7 +204,7 @@ test_that("Second example on PF help page gives the same result", {
       N_fw_n_bw = 250, N_smooth = 500, N_first = 1000, eps = 1e-3,
       method = "AUX_normal_approx_w_cloud_mean",
       n_max = 25, # just take a few iterations as an example
-      n_threads = parallel::detectCores() - 2L)))
+      n_threads = max(parallel::detectCores(logical = FALSE), 1))))
 
   expect_known_value(ppfit[!names(ppfit) %in%
                              c("clouds", "call", "summary_stats")],
