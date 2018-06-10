@@ -208,8 +208,8 @@ ddhazard = function(formula, data,
          " is not implemented")
 
   if(control$denom_term <= 0){
-    stop("Method not implemented with penalty term (control$denom_term) equal to ",
-         control$denom_term)
+    stop("Method not implemented with penalty term ",
+         sQuote("control$denom_term"), " equal to ", control$denom_term)
 
   }
 

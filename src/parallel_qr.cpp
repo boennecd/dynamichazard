@@ -1,5 +1,4 @@
 #include "parallel_qr.h"
-#include "thread_pool.h"
 #include "arma_BLAS_LAPACK.h"
 
 arma::mat R_F::R_rev_piv() const {
@@ -22,29 +21,28 @@ R_F qr_parallel::worker::operator()(){
 
 qr_parallel::qr_parallel(
   ptr_vec generators, const unsigned int max_threads):
-  generators(std::move(generators)), max_threads(max_threads) {}
-
-R_F qr_parallel::compute(){
-  /* compute each QR */
-  unsigned int num_blocks = generators.size();
-  std::vector<std::future<R_F> > futures(num_blocks);
-  thread_pool pool(std::min(num_blocks, max_threads));
-
-  unsigned int i = 0;
-  while(!generators.empty()){
-    futures[i] = pool.submit(worker(std::move(generators.back())));
-    generators.pop_back();
-    ++i;
-
+  pool(std::max((unsigned int)1L, max_threads))
+  {
+    futures.reserve(generators.size());
+    while(!generators.empty()){
+      submit(std::move(generators.back()));
+      generators.pop_back();
+    }
   }
 
+void qr_parallel::submit(std::unique_ptr<qr_data_generator> generator){
+  futures.push_back(pool.submit(worker(std::move(generator))));
+}
+
+R_F qr_parallel::compute(){
   /* gather results */
   bool is_first = true;
   arma::mat R_stack;
   arma::vec F_stack;
   arma::mat dev;
 
-  for(i = 0; i < num_blocks; ++i){
+  unsigned int num_blocks = futures.size();
+  for(unsigned int i = 0; i < num_blocks; ++i){
     R_F R_Fs_i = futures[i].get();
     if(is_first){
       R_stack = R_Fs_i.R_rev_piv();

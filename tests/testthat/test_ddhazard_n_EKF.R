@@ -24,7 +24,7 @@ test_that("Invalid penalty terms throw error", {
       data = head_neck_cancer,
       by = 1, # Use by month intervals
       control = list(denom_term = 0)),
-    regexp = "Method not implemented with penalty term \\(control\\$denom_term\\) equal to 0")
+    regexp = "Method not implemented with penalty term 'control\\$denom_term' equal to 0")
 
   expect_error(
     ddhazard(
@@ -32,7 +32,7 @@ test_that("Invalid penalty terms throw error", {
       data = head_neck_cancer,
       by = 1, # Use by month intervals
       control = list(denom_term = -1)),
-    regexp = "Method not implemented with penalty term \\(control\\$denom_term\\) equal to -1")
+    regexp = "Method not implemented with penalty term 'control\\$denom_term' equal to -1")
 })
 
 test_that("Get expected warning when no Q or Q_0 is passed", {

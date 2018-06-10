@@ -2,6 +2,7 @@
 #define QR_PARALLEL
 
 #include "arma_n_rcpp.h"
+#include "thread_pool.h"
 #include <memory>
 
 struct qr_work_chunk {
@@ -40,11 +41,13 @@ class qr_parallel {
     R_F operator()();
   };
 
-  ptr_vec generators;
-  const unsigned int max_threads;
+  thread_pool pool;
+  std::vector<std::future<R_F> > futures;
 
 public:
   qr_parallel(ptr_vec, const unsigned int);
+
+  void submit(std::unique_ptr<qr_data_generator>);
 
   R_F compute();
 };
