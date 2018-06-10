@@ -87,7 +87,7 @@ test_that("Print function for PF objects gives previous results", {
   skip_on_cran()
 
   .lung <- lung[!is.na(lung$ph.ecog), ]
-  set.seed(43588155)
+  set.seed(43588158)
   pf_fit <- suppressWarnings(PF_EM(
     Surv(time, status == 2) ~ ph.ecog + age,
     data = .lung, by = 50, id = 1:nrow(.lung),

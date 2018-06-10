@@ -175,8 +175,8 @@ Rcpp::List pf_fixed_effect_iteration(
     const unsigned int max_bytes = 20000000){
   arma::uword n_particles = cloud.n_cols;
   arma::uword max_blocks = std::min(
-    std::max(max_bytes / (X.n_rows * X.n_cols * 8L), (long unsigned int)1L),
-    (long unsigned int)n_particles);
+    std::max((long int)(max_bytes / (X.n_rows * X.n_cols * 8L)), 1L),
+    (long int)n_particles);
 
   std::unique_ptr<data_holder> dat;
   if(family == BINOMIAL){

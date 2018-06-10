@@ -1,9 +1,19 @@
 # dynamichazard 0.6.0
-* Fixed effects is estimated faster with `PF_EM` and can be estimated with `model = "exponential"`.
-* The covariance matrix in `ddhazard` objects are no longer degenrate (e.g., in the case where a second order random walk is used). Instead the dimension is equal to the dimension of the error term.
-* The seed argument in `PF_EM` has been moved from the `control` list. Further, there is a `PF_control` which should preferably be used to construct the object for the `control` argument of `PF`.
+* Fixed effects is estimated faster with `PF_EM` and can be estimated 
+with `model = "exponential"`.
+* The covariance matrix in `ddhazard` objects are no longer degenrate (e.g., 
+in the case where a second order random walk is used). Instead the dimension 
+is equal to the dimension of the error term.
+* The seed argument in `PF_EM` has been moved from the `control` list. Further, 
+there is a `PF_control` which should preferably be used to construct the object 
+for the `control` argument of `PF`.
 * A more stable and parallel estimation method have been added to `static_glm`.
-* `PF_EM` uses $Q_0$ instead of $Q_0$ for the artificial prior and a bug have been fixed for sampling in the initial state in the backward filter. This have changed the output.
+* `PF_EM` uses $Q_0$ instead of $Q_0$ for the artificial prior and a bug have 
+been fixed for sampling in the initial state in the backward filter. This have 
+changed the output.
+* Fixed bug in `PF_EM` with seed argument. The new way to get reproducible is 
+to call `f1 <- PF_EM(...); .GlobalEnv$.Random.seed" <- f1$seed; f2 <- eval(f1$call)`
+kinda as in `simulate.lm`.
 
 # dynamichazard 0.5.0
 * Fixed issues with close to equal non-integer stop and start times.

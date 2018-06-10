@@ -118,7 +118,7 @@ PF_effective_sample_size <- function(object){
 #' @export
 PF_EM <- function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = .Random.seed, ...){
+  control = PF_control(...), trace = 0, seed = NULL, ...){
   #####
   # checks
   if(order != 1)
@@ -191,8 +191,18 @@ PF_EM <- function(
   fit_call[["F"]] <- fit_call[["F."]]
   fit_call[c("eps", "seed", "F.", "trace")] <- NULL
 
-  if(is.null(seed))
-    seed <- .Random.seed
+  #####
+  # set the seed as in r-source/src/library/stats/R/lm.R `simulate.lm`
+  if(is.null(seed)){
+    if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+      runif(1)                     # initialize the RNG if necessary
+    seed <- get(".Random.seed", envir = .GlobalEnv)
+
+  } else {
+    set.seed(seed)
+    seed <- get(".Random.seed", envir = .GlobalEnv)
+
+  }
 
   type <- "random_walk"
 
@@ -220,7 +230,7 @@ PF_EM <- function(
 
     #####
     # find clouds
-    set.seed(seed)
+    assign(".Random.seed", seed, envir = .GlobalEnv)
     clouds <- eval(fit_call, envir = parent.frame())
 
     if(trace > 0){

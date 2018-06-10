@@ -291,19 +291,21 @@ test_that("PF_EM gives previous results on head neck data set", {
     max_T = 45)
 
   test_func <- function(smoother, file_name){
+    f1 <- paste0("local_tests/", file_name)
+    f2 <- paste0(file_name, "_cloud_means")
+
     q <- bquote({
       these_args <- args
       these_args$control <- c(these_args$control, smoother = .(smoother))
 
       set.seed(98612415)
       # Supressed as there is a warning about not converging
-      result <- suppressWarnings(
-        do.call(PF_EM, these_args))
+      result <- suppressWarnings(do.call(PF_EM, these_args))
 
       #####
       # Test that result are reproducable
       r2 <- result$call
-      r2[["seed"]] <- result$seed
+      assign(".Random.seed", result$seed, envir = .GlobalEnv)
       r2  <- suppressWarnings(eval(r2, environment()))
 
       result$call <- NULL
@@ -315,17 +317,15 @@ test_that("PF_EM gives previous results on head neck data set", {
       result <- result[c("a_0", "Q", "clouds", "summary_stats", "log_likes",
                          "n_iter", "effective_sample_size", "seed")]
 
-      .file <- paste0("local_tests/", .(file_name))
-      # save_to_test(result, .file)
+      # save_to_test(result, .(f1))
       test_if_file_exists(
-        .file,
-        expect_equal(result, read_to_test(.file), tolerance = 1.49e-08))
+        .(f1),
+        expect_equal(result, read_to_test(.(f1)), tolerance = 1.49e-08))
 
       # Compute clouds means to test against
-      .file <- paste0(.(file_name), "_cloud_means")
-
-      # save_to_test(get_means(result$clouds), file_name = .file)
-      expect_equal(get_means(result$clouds), read_to_test(.file), tolerance = 1.49e-08)
+      # save_to_test(get_means(result$clouds), file_name = .(f2))
+      expect_equal(get_means(result$clouds), read_to_test(.(f2)),
+                   tolerance = 1.49e-08)
     })
 
     eval(q, envir = parent.frame())

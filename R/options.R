@@ -8,6 +8,7 @@ cur_load = if(exists(".onLoad()")) .onLoad else function() { NULL }
 
   op <- options()
 
+  # TODO: avoid this by doing as e.g., in `boot::boot` by using `getOption`
   op.dynhazard <- list(
     ddhazard_max_threads = -1)
   toset <- !(names(op.dynhazard) %in% names(op))
