@@ -30,7 +30,7 @@ std::shared_ptr<smoother_output::trans_like_obj>
     auto out_begin = out->begin();
     auto clo_begin = smoothed_clouds.begin();
 #ifdef _OPENMP
-#pragma omp for schedule(static)
+#pragma omp parallel for schedule(static)
 #endif
     for(unsigned int i = 0; i < n_clouds; ++i){
       auto clo = clo_begin + i;

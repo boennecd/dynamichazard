@@ -126,16 +126,27 @@ public:
 
     }
 
-    /* Compute sampling weights*/
+    /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
-    auto it_cl = PF_cloud.begin();
-    auto it_mu_j = ans.mu_js.begin();
     unsigned int n_elem = PF_cloud.size();
-    for(unsigned int i = 0; i != n_elem; ++i, ++it_cl, ++it_mu_j){
+    arma::uvec r_set = get_risk_set(data, t);
+#ifdef _OPENMP
+#pragma omp parallel
+{
+#endif
+    double my_max_weight = -std::numeric_limits<double>::max();
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+    for(unsigned int i = 0; i < n_elem; ++i){ // loop over cloud elements
+      auto it_cl = PF_cloud.begin() + i;
+      auto it_mu_j = ans.mu_js.begin() + i;
+
       // TODO: should maybe be the approximation...
       double log_prob_y_given_state =
         densities::log_prob_y_given_state(
-          data, data.err_state->map(*it_mu_j).sv, t);
+          data, data.err_state->map(*it_mu_j).sv, t, r_set, false);
       double log_prop_transition;
       if(is_forward){
         log_prop_transition = dmvnrm_log(
@@ -158,8 +169,18 @@ public:
         it_cl->log_weight + log_prop_transition + log_prob_y_given_state
         - log_prop_proposal;
 
-      max_weight = MAX(it_cl->log_resampling_weight, max_weight);
-    }
+      my_max_weight = MAX(it_cl->log_resampling_weight, my_max_weight);
+    } // end loop over cloud elements
+
+#ifdef _OPENMP
+#pragma omp critical(aux_resampler_normal_approx_w_cloud_mean_lock)
+{
+#endif
+    max_weight = MAX(my_max_weight, max_weight);
+#ifdef _OPENMP
+}
+} // end omp parallel
+#endif
 
     auto norm_out =
       normalize_log_resampling_weight
@@ -207,9 +228,15 @@ public:
     unsigned int n_elem = PF_cloud.size();
     arma::uvec r_set = get_risk_set(data, t);
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel
+{
 #endif
-    for(unsigned int i = 0; i < n_elem; ++i){
+    double my_max_weight = -std::numeric_limits<double>::max();
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
+#endif
+    for(unsigned int i = 0; i < n_elem; ++i){ // loop over cloud elements
       auto it_cl = &PF_cloud[i];
       auto it_ans = &ans[i];
 
@@ -239,15 +266,20 @@ public:
       it_cl->log_resampling_weight =
       it_cl->log_weight + log_prop_transition + log_prob_y_given_state
         - log_prop_proposal;
+
+      my_max_weight = MAX(it_cl->log_resampling_weight, my_max_weight);
+    } // end loop over cloud elements
+
 #ifdef _OPENMP
-#pragma omp critical(resampler_aux_norm_particle_lock)
+#pragma omp critical(aux_resampler_normal_approx_w_particles_lock)
 {
 #endif
-      max_weight = MAX(it_cl->log_resampling_weight, max_weight);
+    max_weight = MAX(my_max_weight, max_weight);
 #ifdef _OPENMP
 }
+} // end omp parallel
 #endif
-    }
+
 
     auto norm_out = normalize_log_resampling_weight<true, true>(PF_cloud, max_weight);
     outcome = sample(data, norm_out.weights, norm_out.ESS, did_resample);

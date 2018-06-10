@@ -64,7 +64,7 @@ static PF_summary_stats_RW compute_summary_stats_first_o_RW(
   E_x_less_x_less_one_outers.resize(n_periods);
 
 #ifdef _OPENMP
-#pragma omp for schedule(static)
+#pragma omp parallel for schedule(static)
 #endif
   for(unsigned int i = 0; i < n_periods; ++i){
     auto it_trans = transition_likelihoods.begin() + i;

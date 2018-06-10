@@ -171,7 +171,8 @@ Rcpp::List pf_fixed_effect_iteration(
     const arma::mat &X, const arma::vec &Y, const arma::vec &dts,
     const arma::mat &cloud, const arma::vec &cl_weights,
     const arma::mat &ran_vars, const arma::vec &beta,
-    std::string family, int max_threads, const unsigned int max_bytes = 20000000){
+    std::string family, int max_threads,
+    const unsigned int max_bytes = 20000000){
   arma::uword n_particles = cloud.n_cols;
   arma::uword max_blocks = std::min(
     std::max(max_bytes / (X.n_rows * X.n_cols * 8L), (long unsigned int)1L),
