@@ -34,25 +34,10 @@ std::shared_ptr<smoother_output::trans_like_obj>
 #endif
     for(unsigned int i = 0; i < n_clouds; ++i){
       auto clo = clo_begin + i;
-      bool is_last = (i + 1 == n_clouds);
-      if(is_last)
-        --clo;
 
       std::vector<particle_pairs> &new_elem = *(i + out_begin);
       new_elem.reserve(clo->size());
       for(cloud::const_iterator pa = clo->begin(); pa != clo->end(); ++pa){
-        if(is_last){
-          /* got way better effect sample size this way */
-          std::vector<pair> pairs(1);
-          pairs[0].p = &(*pa);
-          pairs[0].log_weight = 0;
-          new_elem.emplace_back(
-            pa->child /* notice */, pa->log_weight /* notice */,
-            std::move(pairs));
-
-          continue;
-        }
-
         std::vector<pair> pairs(1);
         pairs[0].p = pa->parent;
         pairs[0].log_weight = 0;

@@ -5,7 +5,7 @@
 \title{EM Estimation with Particle Filters and Smoothers}
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = .Random.seed, ...)
+  control = PF_control(...), trace = 0, seed = NULL, ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -64,7 +64,7 @@ pf_fit <- PF_EM(
    N_first = 2500,
    N_smooth = 2500,
    n_max = 50,
-   n_threads = parallel::detectCores()),
+   n_threads = max(parallel::detectCores(logical = FALSE), 1)),
  trace = 1)
 
 # Plot state vector estimates
@@ -129,7 +129,7 @@ ppfit <- PF_EM(
    N_fw_n_bw = 250, N_smooth = 500, N_first = 1000, eps = 1e-3,
    method = "AUX_normal_approx_w_cloud_mean",
    n_max = 25, # just take a few iterations as an example
-   n_threads = parallel::detectCores() - 2L), trace = TRUE)
+   n_threads = max(parallel::detectCores(logical = FALSE), 1), trace = TRUE)
 
 # compare results
 plot(ddfit)

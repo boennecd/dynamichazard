@@ -216,7 +216,20 @@ public:
     auto bw_cloud = backward_clouds.rbegin();
     ++bw_cloud; // first index is time 1 -- we need index 2 to start with
 
-    for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){
+    for(int t = 1; t <= data.d /* note the leq */;
+        ++t, ++fw_cloud, ++bw_cloud){
+      // TODO: maybe use backward cloud at time t == 1
+      if(t == data.d){ // we can use the forward particle cloud
+        ++fw_cloud; // need time d cloud
+        cloud last_cloud = *fw_cloud; // copy
+
+        debug_msg_after_weighting(data, last_cloud);
+
+        smoothed_clouds.push_back(std::move(last_cloud));
+
+        continue;
+      }
+
       /* re-sample */
       if(data.debug > 0)
         data.log(1) << "Started smoothing at time " << t
@@ -342,7 +355,31 @@ public:
 
     double max_weight = -std::numeric_limits<double>::max();
     for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){
-      const bool is_first_period = t == 1;
+      // TODO: maybe use backward cloud at time t == 1
+      if(t == data.d){ // we can use the forward particle cloud
+        ++fw_cloud; // need time d cloud
+        cloud last_cloud = *fw_cloud; // copy
+
+        std::vector<smoother_output::particle_pairs> last_trans_like;
+        last_trans_like.reserve(last_cloud.size());
+
+        for(cloud::const_iterator pa = last_cloud.begin();
+            pa != last_cloud.end(); ++pa){
+          std::vector<smoother_output::pair> pairs(1);
+          pairs[0].p = pa->parent;
+          pairs[0].log_weight = 0;
+          last_trans_like.emplace_back(
+            &(*pa), pa->log_weight, std::move(pairs));
+        }
+
+        debug_msg_after_weighting(data, last_cloud);
+
+        /* Add new elements */
+        transition_likelihoods.push_back(std::move(last_trans_like));
+        smoothed_clouds.push_back(std::move(last_cloud));
+
+        continue;
+      }
 
       if(data.debug > 0)
         data.log(1) << "Started smoothing at time " << t;
@@ -366,30 +403,20 @@ public:
         particle &bw_particle = (*bw_cloud)[i];
         smoother_output::particle_pairs
           pf_pairs(&bw_particle, bw_particle.log_weight);
-        pf_pairs.transition_pairs.reserve(is_first_period ? 1 : n_elem_fw);
+        pf_pairs.transition_pairs.reserve(n_elem_fw);
 
         double max_weight_inner = -std::numeric_limits<double>::max();
-        if(is_first_period){
+        for(auto fw_particle = fw_cloud->begin();
+            fw_particle != fw_cloud->end();
+            ++fw_particle){
+          // compute un-normalized weight of pair
           double log_like_transition = dens_calc.log_prob_state_given_previous(
-            data, bw_particle.get_state(), data.a_0, t);
+            data, bw_particle.get_state(), fw_particle->get_state(), t);
+          double this_term = fw_particle->log_weight + log_like_transition;
 
-            pf_pairs.transition_pairs.emplace_back(
-              nullptr, log_like_transition);
-            max_weight_inner = MAX(max_weight_inner, log_like_transition);
-
-        } else {
-          for(auto fw_particle = fw_cloud->begin();
-              fw_particle != fw_cloud->end();
-              ++fw_particle){
-            // compute un-normalized weight of pair
-            double log_like_transition = dens_calc.log_prob_state_given_previous(
-              data, bw_particle.get_state(), fw_particle->get_state(), t);
-            double this_term = fw_particle->log_weight + log_like_transition;
-
-            // add pair information and update max log term seen so far
-            pf_pairs.transition_pairs.emplace_back(&(*fw_particle), this_term);
-            max_weight_inner = MAX(max_weight_inner, this_term);
-          }
+          // add pair information and update max log term seen so far
+          pf_pairs.transition_pairs.emplace_back(&(*fw_particle), this_term);
+          max_weight_inner = MAX(max_weight_inner, this_term);
         }
 
         //  compute log sum of logs and normalize weights of transition_pairs
@@ -447,7 +474,7 @@ public:
 
       debug_msg_after_weighting(data, new_cloud);
 
-      /* Add new elements  */
+      /* Add new elements */
       transition_likelihoods.push_back(std::move(new_trans_like));
       smoothed_clouds.push_back(std::move(new_cloud));
     }
