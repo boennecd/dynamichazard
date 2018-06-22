@@ -278,8 +278,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
       double neg_G = - densities::dd_log_like(
         *it_is_event, trunc_eta, at_risk_length);
 
-      arma::vec x_err_space = data.err_state_inv->map(
-        data.err_state->map(data.X.col(*it_r)).sv).sv;
+      arma::vec x_err_space = data.X.col(*it_r);
       sym_mat_rank_one_update(neg_G, x_err_space, my_Sigma_inv);
       my_mu += x_err_space * (((*it_eta - *it_off) * neg_G) + g);
     }

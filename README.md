@@ -132,7 +132,7 @@ Example - particle filter and smoother
 A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data. We only use a time-varying effect for gender this time.
 
 ``` r
-options(ddhazard_max_threads = 7) # I am on a 8 core machine
+options(ddhazard_max_threads = 4) # I use a quad-core machine
 
 set.seed(20170907)
 pf_fit <- PF_EM(
@@ -163,7 +163,7 @@ pf_fit <- PF_EM(
 # Compare estimates of Q
 pf_fit$Q / .5
 #>            [,1]
-#> [1,] 0.04297984
+#> [1,] 0.04169318
 fit$Q
 #>               (Intercept)    AZTfailure    gendermale       drugddI
 #> (Intercept)  0.0092783394 -1.794496e-04 -2.810209e-04 -2.398848e-04

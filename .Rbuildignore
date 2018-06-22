@@ -13,6 +13,8 @@ dynamichazard\.dll$
 release_questions\.R$
 cran-comments\.md$
 
+src/pf/est_params_generic.cpp
+
 ^README
 ^README_cache
 

@@ -151,11 +151,19 @@ public:
 class PF_data : public problem_data {
   using uword = arma::uword;
 
+  /* Pre-computed matrices and mapping function for Taylor approximation used
+   * in the [b]ack[w]ard filter */
   std::map<const uword, const std::unique_ptr<linear_mapper>> bw_mean_maps;
   std::map<const uword, const arma::vec> bw_mean_const_term;
   std::map<const uword, const covarmat> bw_covar_map;
+
+  /* Unconditional mean variance for the entire state */
   std::map<const uword, const arma::vec> uncond_mean_state_map;
   std::map<const uword, const covarmat>  uncond_covar_state_map;
+
+  /* uncondtional mean and covariance matrix for the terms that are affected
+   * by the inovations. E.g.,
+   *   R^\top\alpha */
   std::map<const uword, const arma::vec> uncond_mean_map;
   std::map<const uword, const arma::mat> uncond_covar_map;
 

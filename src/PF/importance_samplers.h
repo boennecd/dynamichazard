@@ -82,7 +82,8 @@ public:
  Bootstrap filter
 
  See:
-  Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
+  Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing
+  algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
 
 template<typename densities, bool is_forward>
@@ -109,9 +110,6 @@ public:
     ans.reserve(data.N_fw_n_bw);
 
     const covarmat *Q_use;
-    arma::vec a_0_mean_term;
-    std::unique_ptr<LU_factorization> P_t_p_1_LU;
-    arma::mat P_t_F_top;
     if(is_forward){
       Q_use = &data.Q_proposal;
 
@@ -165,10 +163,8 @@ public:
       const particle &bw_p = bw_cloud[*it_bw];
 
       arma::vec mu =
-        data.err_state_inv->map(
-          data.state_trans->map    (fw_p.get_state()).sv).sv +
-        data.err_state_inv->map(
-          data.state_trans_inv->map(bw_p.get_state()).sv).sv;
+        data.state_trans    ->map(fw_p.get_state()).sv +
+        data.state_trans_inv->map(bw_p.get_state()).sv;
       mu *= .5;
 
       arma::vec err = mvrnorm(data.Q_proposal_smooth.chol);
@@ -187,7 +183,8 @@ public:
   Sampler which makes a normal approximation for the observed outcome made
   around the mean of the previous periods particle cloud. See the second
   example on page 462-463 of:
-    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing algorithm with linear computational cost. Biometrika, 97(2), 447-464.
+    Fearnhead, P., Wyncoll, D., & Tawn, J. (2010). A sequential smoothing
+    algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
 
 template<typename densities, bool is_forward>
@@ -249,13 +246,12 @@ public:
       auto it = resample_idx.begin() + i;
       arma::vec &mu_j = inter_output.mu_js[*it];
 
-      // TODO: has issues with degenrate distribution (e.g., AR(2) model)
-      arma::vec err = mvrnorm(mu_j, inter_output.Sigma_chol);
-      ans.new_particle(data.err_state->map(err).sv, &cl[*it]);
+      arma::vec err = mvrnorm(inter_output.Sigma_chol);
+      ans.new_particle(mu_j + data.err_state->map(err).sv, &cl[*it]);
 
       particle &p = ans[i];
       p.log_importance_dens =
-        dmvnrm_log(err, mu_j, inter_output.sigma_chol_inv);
+        dmvnrm_log(err, inter_output.sigma_chol_inv);
 
       debug_msg_while_sampling(data, p, mu_j);
     }
@@ -266,10 +262,8 @@ public:
   static cloud sample_smooth(SAMPLE_SMOOTH_ARGS){
     /* Find weighted mean estimate */
     arma::vec alpha_bar =
-      data.err_state_inv->map(
-        data.state_trans->map    (fw_cloud.get_weigthed_mean()).sv).sv +
-      data.err_state_inv->map(
-        data.state_trans_inv->map(bw_cloud.get_weigthed_mean()).sv).sv;
+      data.state_trans    ->map(fw_cloud.get_weigthed_mean()).sv +
+      data.state_trans_inv->map(bw_cloud.get_weigthed_mean()).sv;
     alpha_bar *= .5;
 
     /* compute parts of the terms for the mean and covariance */
@@ -300,15 +294,14 @@ public:
       mu_j = solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mu_j);
 
       // TODO: has issues with degenrate distribution (e.g., AR(2) model)
-      arma::vec err = mvrnorm(mu_j, inter_output.Sigma_chol);
-      ans.new_particle(data.err_state->map(err).sv, &fw_p, &bw_p);
+      arma::vec err = mvrnorm(inter_output.Sigma_chol);
+      ans.new_particle(data.err_state->map(err).sv + mu_j, &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens =
-        dmvnrm_log(err, mu_j, inter_output.sigma_chol_inv);
+        dmvnrm_log(err, inter_output.sigma_chol_inv);
 
       debug_msg_while_sampling(data, p, mu_j);
-
     }
 
     return(ans);
@@ -368,12 +361,11 @@ public:
       auto &inter_o = inter_output[*it];
 
       // TODO: has issues with degenrate distribution (e.g., AR(2) model)
-      arma::vec err = mvrnorm(inter_o.mu, inter_o.Sigma_chol);
-      ans.new_particle(data.err_state->map(err).sv, &cl[*it]);
+      arma::vec err = mvrnorm(inter_o.Sigma_chol);
+      ans.new_particle(data.err_state->map(err).sv + inter_o.mu, &cl[*it]);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(
-        err, inter_o.mu, inter_o.sigma_chol_inv);
+      p.log_importance_dens = dmvnrm_log(err, inter_o.sigma_chol_inv);
 
       debug_msg_while_sampling(data, p, inter_o.mu, inter_o.Sigma_chol);
     }
@@ -397,10 +389,8 @@ public:
       const particle &bw_p = bw_cloud[*(begin_bw + i)];
 
       mu_j =
-        data.err_state_inv->map(
-          data.state_trans->map    (fw_p.get_state()).sv).sv +
-        data.err_state_inv->map(
-          data.state_trans_inv->map(bw_p.get_state()).sv).sv;
+        data.state_trans    ->map(fw_p.get_state()).sv +
+        data.state_trans_inv->map(bw_p.get_state()).sv;
       mu_j *= .5;
     }
 
@@ -422,12 +412,13 @@ public:
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
-      arma::vec err = mvrnorm(it_inter->mu, it_inter->Sigma_chol);
-      ans.new_particle(data.err_state->map(err).sv, &fw_p, &bw_p);
+      arma::vec err = mvrnorm(it_inter->Sigma_chol);
+      ans.new_particle(
+        data.err_state->map(err).sv + it_inter->mu, &fw_p, &bw_p);
 
       particle &p = ans[i];
       p.log_importance_dens =
-        dmvnrm_log(err, it_inter->mu, it_inter->sigma_chol_inv);
+        dmvnrm_log(err, it_inter->sigma_chol_inv);
 
       debug_msg_while_sampling(data, p, it_inter->mu, it_inter->Sigma_chol);
     }
