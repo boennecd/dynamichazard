@@ -16,13 +16,16 @@ inline bool is_exponential_model(std::string model){
 class Solver {
 public:
   virtual void solve() = 0;
+
+  // create a virtual, default destructor
+  virtual ~Solver() = default;
 };
 
 // Classes for EKF method
 class ddhazard_data_EKF;
 
 template<typename T>
-class EKF_solver : public Solver{
+class EKF_solver : public Solver {
   ddhazard_data &org;
   std::unique_ptr<ddhazard_data_EKF> p_dat;
   const std::string model;
@@ -80,7 +83,7 @@ public:
 
 
 template<class T>
-class UKF_solver_New : public Solver{
+class UKF_solver_New : public Solver {
 protected:
   ddhazard_data &p_dat;
   const arma::uword m;

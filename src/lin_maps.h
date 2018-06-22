@@ -39,6 +39,9 @@ protected:
 public:
   virtual const arma::mat& map() const = 0;
 
+  // create a virtual, default destructor
+  virtual ~linear_mapper() = default;
+
   map_res_col map(arma::vec &x, const bool transpose = false) const {
     ptr_vec ptr;
     return map_(x, transpose, ptr);

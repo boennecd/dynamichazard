@@ -175,6 +175,9 @@ public:
   problem_data& operator=(const problem_data&) = delete;
   problem_data(const problem_data&) = delete;
   problem_data() = delete;
+
+  // create a virtual, default destructor
+  virtual ~problem_data() = default;
 };
 
 /* Concrete class for n-th order random walk model starting with problem data

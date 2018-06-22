@@ -95,7 +95,7 @@ get_rune_time_summary <- function(n, p){
         Q = diag(1e-1, p + 1L),
         control = list(method = "UKF"))),
     
-    times = 5
+    times = 1
   ))
   
   cat("(n, p) = (", n, ", ", p, ")",
