@@ -58,11 +58,9 @@ get_risk_obj = function(
   # set exactly to boundaries where values are very close and difference is
   # likely due to floating point operations
   start_order = order(start, method = "radix") - 1L
-  start <-
-    round_if_almost_eq(start, start_order, c(min_start, event_times_in))
+  start <- round_if_almost_eq(start, start_order, c(min_start, event_times_in))
   stop_order = order(stop, method = "radix") - 1L
-  stop <-
-    round_if_almost_eq(stop, stop_order, c(min_start, event_times_in))
+  stop <- round_if_almost_eq(stop, stop_order, c(min_start, event_times_in))
 
   if(n_threads == 1 || min_chunk > n_ids){
     return(

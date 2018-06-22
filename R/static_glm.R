@@ -192,7 +192,7 @@ change_new_var_name <- function(c_x, data){
   Y <- X_Y$Y
   rm(X_Y)
   for(i in 1:2){
-    ord <- order(Y[, i])
+    ord <- order(Y[, i]) - 1L
     Y[, i] <- round_if_almost_eq(Y[, i], ord, max_T)
   }
 

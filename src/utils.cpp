@@ -95,8 +95,27 @@ arma::vec round_if_almost_eq(
 
   double bound_abs = std::abs(*it_bound);
   bool is_relative_test = bound_abs > threshold;
+  bool is_first_it = true;
+  arma::uword idx_max = x.n_elem - 1L;
+  double x_old;
   for(auto i = x_ord.begin(); i != x_ord.end(); ++i){
+    if(*i > idx_max)
+      Rcpp::stop("`x_ord` out of bounds");
+
     double *this_x = x_out_begin + *i;
+
+    /* check x_ord gives the correct order */
+    if(is_first_it){
+      is_first_it = false;
+
+    } else {
+      if(*this_x < x_old)
+        Rcpp::stop("`x_ord` does not seem to give the correct order of `x`");
+
+    }
+    x_old = *this_x;
+
+    /* compute test value */
     double test_val =
       is_relative_test ?
       (*this_x - *it_bound) / bound_abs :
