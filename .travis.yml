@@ -5,10 +5,10 @@ language: R
 # libgsl0ldbl is for gsl
 before_install:
   - sudo apt-get install ghostscript
+  - sudo apt-get install libgsl0ldbl
   - tlmgr install algorithmicx
   - tlmgr install algorithms
   - tlmgr install xkeyval
-  - sudo apt-get libgsl0ldbl
 
 cache: packages
 #sudo: false
