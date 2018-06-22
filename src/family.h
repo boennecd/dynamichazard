@@ -24,6 +24,9 @@ public:
   virtual double glm_initialize(double, double) const = 0;
 
   virtual std::string name() const = 0;
+
+  // create a virtual, default destructor
+  virtual ~glm_base() = default;
 };
 
 template<class T>
@@ -64,6 +67,9 @@ public:
     return T::dd_log_like(
       outcome, res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
+
+  // create a virtual, default destructor
+  virtual ~family_base() = default;
 };
 
 class logistic : public family_base<logistic>, public glm_base {
