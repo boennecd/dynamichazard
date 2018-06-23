@@ -287,7 +287,7 @@ which has an $\bigO{\nPart}$ cost of sampling. Another options is to set%
 \begin{split}
 	\partic{\beta}{t}{j} &\propto  \propC{\vec{y}_t}{\partic{\vec{\alpha}}{t-1}{j}}\partic{w}{t-1}{j} \\
 %
-	& = \approx \partic{w}{t-1}{j} \int_{\mathbb{R}^\dimRng}
+	& \approx \partic{w}{t-1}{j} \int_{\mathbb{R}^\dimRng}
 		\normalC{\vec{\xi}_t}{\mat{R}^{+}\mat{F}\partic{\vec{\alpha}}{t-1}{j}}{\mat{Q}}
 		\optorC{g}{\vec{y}_t}{\vec{\xi}_t}
 		\partial \vec{\xi}_t \\
@@ -545,7 +545,7 @@ We can also use a bootstrap like filter by sampling from%
 %
 \For{$t=1,\dots, \nPeriods$}
 \Procedure{Re-sample}{}
-\State Compute re-sampling weights $\partic{\beta}{t}{j}$ and re-sample according to $\partic{\beta}{t}{j}$ to get indices $j_1,\dots j_\nPart$.
+\State Compute re-sampling weights $\partic{\beta}{t}{j}$ and re-sample according to $\partic{\beta}{t}{j}$ to get indices $j_1,\dots j_\nPart$. If we do not re-sample then set $\partic{\beta}{t}{j} = 1$.
 \EndProcedure
 %
 \Procedure{Propagate}{}
@@ -553,7 +553,7 @@ We can also use a bootstrap like filter by sampling from%
 \EndProcedure
 %
 \Procedure{Re-weight}{}
-\State Re-weight particles using:
+\State Re-weight particles using ($\partic{w}{t-1}{j_i}/\partic{\beta}{t}{j_i}$ is added due to the auxiliary particle filter):
 \StateX \begin{equation}\label{eqn:forwardWeight}
 	\partic{w}{t}{i} \propto \frac{
 		\propC{\vec{y}_t}{\partic{\vec{\alpha}}{t}{i}}
@@ -602,7 +602,7 @@ We can also use a bootstrap like filter by sampling from%
 %
 \For{$t=\nPeriods,\dots, 1$}
 \Procedure{Re-sample}{}
-\State Compute re-sampling weights $\particB{\beta}{t}{k}$ and re-sample according to $\particB{\beta}{t}{k}$ to get indices $k_1,\dots k_\nPart$.
+\State Compute re-sampling weights $\particB{\beta}{t}{k}$ and re-sample according to $\particB{\beta}{t}{k}$ to get indices $k_1,\dots k_\nPart$. If we do not re-sample then set $\particB{\beta}{t}{k} = 1$.
 \EndProcedure
 %
 \Procedure{Propagate}{}
@@ -610,17 +610,17 @@ We can also use a bootstrap like filter by sampling from%
 \EndProcedure
 %
 \Procedure{Re-weight}{}
-\State Re-weight particles using {\footnotesize (see \citet[page 72]{briers10} and add the ratio of prior probability and re-sampling weight)}:
+\State Re-weight particles using (see \citet[page 72]{briers10} and $\particB{w}{t + 1}{k_i}/\partic{\beta}{t}{k_i}$ is added due to the auxiliary particle filter):
 \StateX \begin{equation}\label{eqn:backwardWeight}
 	\particB{w}{t}{i} \propto \frac{
 		\propC{\vec{y}_t}{\particB{\vec{\alpha}}{t}{i}}
 		\propC{\particB{\vec{\alpha}}{t + 1}{k_i}}{\particB{\vec{\alpha}}{t}{i}}
-		\particB{w}{t + 1}{k_i}
 		\gamma_t\Lparen{\particB{\vec{\alpha}}{t}{i}}
+		\particB{w}{t + 1}{k_i}
 	}{ % \frag arg1 end
 		\IDC{\particB{\vec{\alpha}}{t}{i}}{\particB{\vec{\alpha}}{t + 1}{k_i}, \vec{y}_t}
-		\partic{\beta}{t}{k_i}
 		\gamma_{t + 1}\Lparen{\particB{\vec{\alpha}}{t + 1}{k_i}}
+		\partic{\beta}{t}{k_i}
 	}
 \end{equation}
 \EndProcedure
