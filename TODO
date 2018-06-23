@@ -2,14 +2,10 @@ test that residuals works for second order random walk
 replace `save_to_test` and `read_to_test` with `testthat::expect_known_output`
 make functions for `ddhazard` and `PF_EM` where you only take one iteration
 and can provide your own structural matrices
-Why is GMA slower than in commint 40d2cd438c79e1d77b28421d26b8289f40d3909c in speedtests?
-make `parallelglm` use `src/family`
-make wrapper to PF function for main setup steps to ease custom user setup + test. Make similar changes to ddhazard. Document these in NEWS.
-make PF_data argument + test
-make ESS function + test
-make mean and quantile function for pf_clouds + test
-make sure plot works with forward filter only + test
-make the forward particle filters avialable on its own for likelihood evaluation + test
+make PF_data argument
+make ESS function
+make mean and quantile function for pf_clouds
+make sure plot works with forward filter only
+make the forward particle filters avialable on its own for likelihood evaluation
 make example of particle filtering w/ e.g., LME4
-make `AUX_normal_approx_w_cloud_mean` the default with `PF_control`
-also scale Q as in ddhazard
+also scale Q as in ddhazard in the particle filter

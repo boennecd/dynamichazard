@@ -21,7 +21,7 @@
 #'}
 #'
 #' @section Response:
-#' The result with \code{type = "response"} is a list with the elements below. The function check if there are columns in \code{new_data} which's names match \code{tstart} and \code{tstop}. If not, then each row in new data will get a predicted probability of dying in every bin.
+#' The result with \code{type = "response"} is a list with the elements below. The function check if there are columns in \code{new_data} which names match \code{tstart} and \code{tstop}. If not, then each row in new data will get a predicted probability of dying in every bin.
 #' \describe{
 #' \item{\code{fits}}{fitted probability of dying.}
 #' \item{\code{istart}}{vector with the index of the first bin the elements in \code{fits} is in.}
