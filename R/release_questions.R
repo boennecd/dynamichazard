@@ -10,7 +10,7 @@ release_questions <- function() {
     "Have you checked reverse dependencies?",
     "Have you set args = c('--compact-vignettes=gs+qpdf')",
     "Have you cleaned up the TODO file?",
-    "Are 'ARMA_NO_DEBUG' and 'ARMA_DONT_PRINT_ERRORS' defined in arma_n_rcpp.h'?",
+    "Is 'ARMA_NO_DEBUG' defined in arma_n_rcpp.h'?",
     "Have you run non-cran tests with ubsan and asan?"
   )
 }
