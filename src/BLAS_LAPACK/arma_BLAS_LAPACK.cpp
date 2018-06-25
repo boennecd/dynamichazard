@@ -147,7 +147,7 @@ arma::mat LU_factorization::solve() const {
   arma::mat out(&A[0], N, N);
 
   int LWORK = N * N, INFO, LDA = N;
-  double dwo[LWORK];
+  std::unique_ptr<double []>  dwo(new double[LWORK]);
 
   // see https://stackoverflow.com/a/3520106/5861244 for example
   R_BLAS_LAPACK::dgetri(
