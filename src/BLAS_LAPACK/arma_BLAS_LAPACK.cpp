@@ -147,11 +147,11 @@ arma::mat LU_factorization::solve() const {
   arma::mat out(&A[0], N, N);
 
   int LWORK = N * N, INFO, LDA = N;
-  double WORK[LWORK];
+  double dwo[LWORK];
 
   // see https://stackoverflow.com/a/3520106/5861244 for example
   R_BLAS_LAPACK::dgetri(
-    &N, &out[0], &LDA, &IPIV[0], &WORK[0], &LWORK, &INFO);
+    &N, &out[0], &LDA, &IPIV[0], &dwo[0], &LWORK, &INFO);
   LAPACK_CHECK_ILLEGAL(INFO, dgetri)
 
   return out;
@@ -215,9 +215,9 @@ QR_factorization::QR_factorization(const arma::mat &A):
   LAPACK_CHECK_ILLEGAL(info, dgeqp3)
 
   lwork = (int) tmp;
-  std::unique_ptr<double []> work(new double[lwork]);
+  std::unique_ptr<double []> dwo(new double[lwork]);
   R_BLAS_LAPACK::dgeqp3(
-    &M, &N, &qr[0], &M, &pivot_[0], &qraux[0], &work[0], &lwork, &info);
+    &M, &N, &qr[0], &M, &pivot_[0], &qraux[0], &dwo[0], &lwork, &info);
   LAPACK_CHECK_ILLEGAL(info, dgeqp3)
 
   rank = MIN(M, N);
