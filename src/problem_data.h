@@ -44,7 +44,34 @@ protected:
 
   virtual
   std::unique_ptr<linear_mapper> set_err_state_inv(const arma::mat &R){
-    return std::unique_ptr<select_mapper>(new select_mapper(arma::mat(R.t())));
+    /* yielded and UBSAN error when R has no columns or rows in `Rcpparmadillo`
+     * version 0.8.500.0 at in commit 9ae4dc1aeeba
+       #0 0x7f5b21117053 in arma::Mat<double>::at(unsigned int, unsigned
+          int) const /home/ben/R_check_clang/lib/R/library/RcppArmadillo/include/armadillo_bits/Mat_meat.hpp:5516:3
+       #1 0x7f5b21117053 in void
+          arma::op_strans::apply_mat_noalias<double, arma::Mat<double>
+          >(arma::Mat<double>&, arma::Mat<double> const&)
+          /home/ben/R_check_clang/lib/R/library/RcppArmadillo/include/armadillo_bits/op_strans_meat.hpp:128
+       #2 0x7f5b211167ac in void arma::op_strans::apply_mat<double,
+          arma::Mat<double> >(arma::Mat<double>&, arma::Mat<double> const&)
+          /home/ben/R_check_clang/lib/R/library/RcppArmadillo/include/armadillo_bits/op_strans_meat.hpp:212:5
+       #3 0x7f5b211167ac in void
+          arma::op_strans::apply_proxy<arma::Mat<double>
+          >(arma::Mat<arma::Mat<double>::elem_type>&, arma::Mat<double> const&)
+          /home/ben/R_check_clang/lib/R/library/RcppArmadillo/include/armadillo_bits/op_strans_meat.hpp:239
+       #4 0x7f5b21199168 in void arma::op_htrans::apply<arma::Mat<double>
+          >(arma::Mat<arma::Mat<double>::elem_type>&,
+          arma::Op<arma::Mat<double>, arma::op_htrans> const&,
+          arma::arma_not_cx<arma::Mat<double>::elem_type>::result const*)
+          /home/ben/R_check_clang/lib/R/library/RcppArmadillo/include/armadillo_bits/op_htrans_meat.hpp:288:3
+       #5 0x7f5b21199168 in arma::Mat<double>::Mat<arma::Mat<double>,
+          arma::op_htrans>(arma::Op<arma::Mat<double>, arma::op_htrans> const&)
+          /home/ben/R_check_clang/lib/R/library/RcppArmadillo/include/armadillo_bits/Mat_meat.hpp:4593
+     */
+    arma::mat use;
+    if(R.n_cols > 0 and R.n_rows > 0)
+      use = R.t();
+    return std::unique_ptr<select_mapper>(new select_mapper(use));
   }
 
   virtual
@@ -54,7 +81,10 @@ protected:
 
   virtual
   std::unique_ptr<linear_mapper> set_state_lp_inv(const arma::mat &L){
-    return std::unique_ptr<select_mapper>(new select_mapper(arma::mat(L.t())));
+    arma::mat use;
+    if(L.n_cols > 0 and L.n_rows > 0)
+      use = L.t();
+    return std::unique_ptr<select_mapper>(new select_mapper(arma::mat(use)));
   }
 
 public:

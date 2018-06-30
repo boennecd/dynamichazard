@@ -7,7 +7,6 @@ biglm_func <- function(formula, data, model = "logit", maxit=8, tolerance=1e-12,
   # beta <- start
   # etafun <- function(x) if(is.null(beta)) rep(0,nrow(x)) else x%*%beta
 
-
   converged<-FALSE
   for (i in 1:maxit){
     firstchunk <- TRUE
@@ -265,13 +264,17 @@ test_that("bigglm and my c++ version yields similar results", {
 
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10)
 
-  for(model in c("logit", "exp_bin", "exp_clip_time")){
-    suppressWarnings(bigglm_res <- biglm::bigglm(
-      form, get_data_func,
-      family = if(model == "logit") binomial() else poisson()))
+  for(model in c("logit", "exponential")){
+    did_fail <- tryCatch(
+      bigglm_res <- biglm::bigglm(
+        form, get_data_func,
+        family = if(model == "logit") binomial() else poisson()),
+      error = function(...) TRUE)
+    if(isTRUE(did_fail))
+      skip("bigglm failed (likely biglm error in 0.9-1 release)")
 
-  # matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
-  # abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
+    # matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
+    # abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
 
     suppressWarnings(b <- biglm_func(form, get_data_func, model = model))
 
@@ -284,12 +287,16 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
 
   set.seed(195834)
   sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
-  form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
+  form <- formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
-  for(model in c("logit", "exp_clip_time_w_jump")){
-    suppressWarnings(bigglm_res <- biglm::bigglm(
-      form, get_data_func,
-      family = if(model == "logit") binomial() else poisson()))
+  for(model in c("logit", "exponential")){
+    did_fail <- tryCatch(
+      bigglm_res <- biglm::bigglm(
+        form, get_data_func,
+        family = if(model == "logit") binomial() else poisson()),
+      error = function(...) TRUE)
+    if(isTRUE(did_fail))
+      skip("bigglm failed (likely biglm error in 0.9-1 release)")
 
     # matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
     # abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
@@ -311,11 +318,15 @@ test_that("bigglm and my c++ version yields similar with weights", {
   sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
-  for(model in c("logit", "exp_clip_time_w_jump")){
-    suppressWarnings(bigglm_res <- biglm::bigglm(
-      form, get_data_func,
-      family = if(model == "logit") binomial() else poisson(),
-      weights = ~ ws))
+  for(model in c("logit", "exponential")){
+    did_fail <- tryCatch(
+      bigglm_res <- biglm::bigglm(
+        form, get_data_func,
+        family = if(model == "logit") binomial() else poisson(),
+        weights = ~ ws),
+      error = function(...) TRUE)
+    if(isTRUE(did_fail))
+      skip("bigglm failed (likely biglm error in 0.9-1 release)")
 
     # matplot(sims$betas, col = rainbow(ncol(sims$betas)), type = "l")
     # abline(h = coef(bigglm_res), col = rainbow(ncol(sims$betas)))
