@@ -45,7 +45,7 @@ protected:
   virtual
   std::unique_ptr<linear_mapper> set_err_state_inv(const arma::mat &R){
     /* yielded and UBSAN error when R has no columns or rows in `Rcpparmadillo`
-     * version 0.8.500.0 at in commit 9ae4dc1aeeba
+     * version 0.8.500.0 in commit 9ae4dc1aeeba of this package
        #0 0x7f5b21117053 in arma::Mat<double>::at(unsigned int, unsigned
           int) const /home/ben/R_check_clang/lib/R/library/RcppArmadillo/include/armadillo_bits/Mat_meat.hpp:5516:3
        #1 0x7f5b21117053 in void

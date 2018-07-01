@@ -22,3 +22,13 @@ I use the build with codename trusty for the GCC 4.8.4 which has C++11 support.
 ## R CMD check results
 All platforms have a note about the package size expect the win-builder with the 
 devel version.
+
+## Resubmission
+This is a resubmission. In this version I have:
+
+ * Skipped some of the tests on r-patched-linux-x86_64 and 
+   r-release-linux-x86_64. The test failed due to errors in the biglm package 
+   version 0.9-1. I could not reproduce the errors but now the tests do not fail 
+   if the calls to `biglm::bigglm` fails.
+ * Fixed the UBSAN error. I could re-produce it after I upgraded to 
+   clang-6.0.
