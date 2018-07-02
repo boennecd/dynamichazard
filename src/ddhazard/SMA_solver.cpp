@@ -2,18 +2,18 @@
 #include "../arma_BLAS_LAPACK.h"
 #include "../family.h"
 
-template <class T>
-double SMA<T>::compute_length(
+double SMA::compute_length(
     const double offset, const double coef1, const double coef2,
-    const double w, const bool is_event, const double length){
+    const double w, const bool is_event, const double length,
+    family_base &f){
   double c0 = 0.;
   double c1;
 
   for(int i = 0; i < 100; i++){
     const double eta = c0 + offset;
-    auto trunc_eta = T::truncate_eta(is_event, eta, exp(eta), length);
-    const double d1 = T::d_log_like(is_event, trunc_eta, length);
-    const double d2 = T::dd_log_like(is_event, trunc_eta, length);
+    auto trunc_eta = f.truncate_eta(is_event, eta, exp(eta), length);
+    const double d1 = f.d_log_like(is_event, trunc_eta, length);
+    const double d2 = f.dd_log_like(is_event, trunc_eta, length);
 
     double &&intermediate =
       (2. * coef1 * c0 + coef2 - w * d1) / (2. * coef1 - w * d2);
@@ -35,9 +35,9 @@ double SMA<T>::compute_length(
   return c1;
 }
 
-template <class T>
-void SMA<T>::solve(){
+void SMA::solve(){
   double bin_tstop = p_dat.min_start;
+  const bool uses_at_risk_length = fam.uses_at_risk_length();
   for (int t = 1; t < p_dat.d + 1; t++){
     const double bin_number = t - 1;
     const double bin_tstart = bin_tstop;
@@ -89,14 +89,14 @@ void SMA<T>::solve(){
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
 
         const double at_risk_length =
-          T::uses_at_risk_length  ?
+          uses_at_risk_length  ?
           get_at_risk_length(
             p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart) : 0;
 
         const double c = compute_length(
-          offset, f1 / 2., -f2 * f1, w, is_event, at_risk_length);
+          offset, f1 / 2., -f2 * f1, w, is_event, at_risk_length, fam);
         double eta = c + offset;
-        const double neg_second_d = - w * T::dd_log_like(
+        const double neg_second_d = - w * fam.dd_log_like(
           is_event, eta, exp(eta), at_risk_length);
 
         a -= (p_dat.LR * (f2 - c) * f1) * inter_vec;
@@ -124,14 +124,14 @@ void SMA<T>::solve(){
 
         const bool is_event = p_dat.is_event_in_bin(*it) == bin_number;
         const double at_risk_length =
-          T::uses_at_risk_length  ?
+          uses_at_risk_length  ?
           get_at_risk_length(
             p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart) : 0;
 
         const double c = compute_length(
-          offset, f1 / 2., -f2 * f1, w, is_event, at_risk_length);
+          offset, f1 / 2., -f2 * f1, w, is_event, at_risk_length, fam);
         double eta = c + offset;
-        const double neg_second_d = - w * T::dd_log_like(
+        const double neg_second_d = - w * fam.dd_log_like(
           is_event, eta, exp(eta), at_risk_length);
 
         tri_mat_times_vec(L_inv, inter_vec, true);
@@ -177,7 +177,3 @@ void SMA<T>::solve(){
       V_t_less_s_inv;
   }
 }
-
-template class SMA<logistic>;
-template class SMA<exponential>;
-

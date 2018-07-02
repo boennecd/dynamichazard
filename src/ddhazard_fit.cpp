@@ -79,35 +79,27 @@ Rcpp::List ddhazard_fit_cpp(
       weights,
       n_max, eps, verbose,
       est_Q_0, debug, LR, n_threads, denom_term, use_pinv));
+
   std::unique_ptr<Solver> solver;
+  std::unique_ptr<family_base> fam;
+
+  if(model == "logit"){
+    fam.reset(new logistic());
+
+  } else if (is_exponential_model(model)){
+    fam.reset(new exponential());
+
+  } else
+    Rcpp::stop("EKF is not implemented for model '" + model  +"'");
 
   if(method == "EKF"){
-    if(model == "logit"){
-      solver.reset(new EKF_solver<logistic>(
-          *p_data.get(), model, NR_eps, NR_it_max, EKF_batch_size));
-
-    } else if (is_exponential_model(model)){
-      solver.reset(new EKF_solver<exponential>(
-          *p_data.get(), model, NR_eps, NR_it_max, EKF_batch_size));
-
-    } else
-      Rcpp::stop("EKF is not implemented for model '" + model  +"'");
+    solver.reset(new EKF_solver(
+        *p_data.get(), model, NR_eps, NR_it_max, EKF_batch_size,
+        *fam.get()));
 
   } else if (method == "UKF"){
-    if(model != "logit" &&
-       !is_exponential_model(model))
-      Rcpp::stop("UKF is not implemented for model '" + model  +"'");
-
-    if(model == "logit"){
-      solver.reset(
-        new UKF_solver_New<logistic>(*p_data.get(), kappa, alpha, beta));
-
-    } else if (is_exponential_model(model)){
-      solver.reset(
-        new UKF_solver_New<exponential>(*p_data.get(), kappa, alpha, beta));
-
-    } else
-      Rcpp::stop("Model '", model ,"' is not implemented with UKF");
+    solver.reset(
+      new UKF_solver_New(*p_data.get(), kappa, alpha, beta, *fam.get()));
 
   } else if (method == "UKF_org"){
     if(model != "logit")
@@ -119,24 +111,10 @@ Rcpp::List ddhazard_fit_cpp(
     solver.reset(new UKF_solver_Org(*p_data.get(), kappa));
 
   } else if (method == "SMA"){
-    if(model == "logit"){
-      solver.reset(new SMA<logistic>(*p_data.get(), posterior_version));
-
-    } else if(is_exponential_model(model)){
-      solver.reset(new SMA<exponential>(*p_data.get(), posterior_version));
-
-    } else
-      Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
+    solver.reset(new SMA(*p_data.get(), posterior_version, *fam.get()));
 
   } else if (method == "GMA"){
-    if(model == "logit"){
-      solver.reset(new GMA<logistic>(*p_data.get(), GMA_max_rep, GMA_NR_eps));
-
-    }  else if(is_exponential_model(model)){
-      solver.reset(new GMA<exponential>(*p_data.get(), GMA_max_rep, GMA_NR_eps));
-
-    } else
-      Rcpp::stop("Model '", model ,"' is not implemented with rank one posterior approximation");
+    solver.reset(new GMA(*p_data.get(), GMA_max_rep, GMA_NR_eps, *fam.get()));
 
   } else
     Rcpp::stop("method '" + method  + "'is not implemented");
@@ -322,16 +300,8 @@ Rcpp::List ddhazard_fit_cpp(
     if(p_data->any_fixed_in_M_step){
       arma::vec old = p_data->fixed_parems;
 
-      if(model == "logit"){
-        estimate_fixed_effects_M_step<bigglm_updateQR<logistic>>(
-          p_data.get(), fixed_effect_chunk_size);
-
-      } else if(is_exponential_model(model)){
-        estimate_fixed_effects_M_step<bigglm_updateQR<exponential>>(
-          p_data.get(), fixed_effect_chunk_size);
-
-      } else
-        Rcpp::stop("Fixed effects is not implemented for '" + model  +"'");
+      estimate_fixed_effects_M_step(
+        p_data.get(), fixed_effect_chunk_size, *fam.get());
 
       // update fixed effects
       p_data->fixed_effects = p_data->fixed_terms.t() * p_data->fixed_parems;

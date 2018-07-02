@@ -41,19 +41,18 @@ protected:
 */
 
 template<
-    template <typename, bool> class T_resampler,
-    template <typename, bool> class T_importance_dens,
-    class densities,
+    template <bool> class T_resampler,
+    template <bool> class T_importance_dens,
     bool is_forward>
 class AUX_PF : private PF_base {
-  using resampler = T_resampler<densities, is_forward>;
-  using importance_dens = T_importance_dens<densities, is_forward>;
+  using resampler = T_resampler<is_forward>;
+  using importance_dens = T_importance_dens<is_forward>;
 
 public:
-  static std::vector<cloud> compute(const PF_data &data){
+  static std::vector<cloud>
+  compute(const PF_data &data, pf_base_dens &dens_calc){
     std::vector<cloud> clouds;
     std::string direction_str = (is_forward) ? "forward" : "backward";
-    densities dens_calc = densities(data);
 
     if(data.debug > 0)
       data.log(1) << "Running " << direction_str << " filter"
@@ -110,13 +109,13 @@ public:
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
               dens_calc.log_prob_y_given_state(
-                data, it->get_state(), t, r_set, false);
+                it->get_state(), t, r_set, false);
             double log_prob_state_given_other =
               is_forward ?
               dens_calc.log_prob_state_given_previous(
-                data, it->get_state(), it->parent->get_state(), t) :
+                it->get_state(), it->parent->get_state(), t) :
               dens_calc.log_prob_state_given_next(
-                data, it->get_state(), it->parent->get_state(), t);
+                it->get_state(), it->parent->get_state(), t);
 
             it->log_unnormalized_weight = it->log_weight =
               /* nominator */
@@ -179,9 +178,8 @@ public:
 */
 
 template<
-  template <typename, bool> class T_resampler,
-  template <typename, bool> class T_importance_dens,
-  class densities>
+  template <bool> class T_resampler,
+  template <bool> class T_importance_dens>
 class PF_smoother_Fearnhead_O_N : private PF_base {
   using uword = arma::uword;
 
@@ -198,16 +196,15 @@ class PF_smoother_Fearnhead_O_N : private PF_base {
   }
 
 public:
-  static smoother_output compute(const PF_data &data){
+  static smoother_output
+  compute(const PF_data &data, pf_base_dens &dens_calc){
     smoother_output result;
     std::vector<cloud> &forward_clouds = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
     std::vector<cloud> &smoothed_clouds = result.smoothed_clouds;
 
-    forward_clouds  = forward_filter::compute(data);
-    backward_clouds = backward_filter::compute(data);
-
-    densities dens_calc = densities(data);
+    forward_clouds  = forward_filter::compute(data, dens_calc);
+    backward_clouds = backward_filter::compute(data, dens_calc);
 
     if(data.debug > 0)
       data.log(1) << "Finished finding forward and backward clouds. Started smoothing";
@@ -265,13 +262,13 @@ public:
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
               dens_calc.log_prob_y_given_state(
-                data, it->get_state(), t, r_set, false);
+                it->get_state(), t, r_set, false);
             double log_prob_state_given_previous =
               dens_calc.log_prob_state_given_previous(
-                data, it->get_state(), it->parent->get_state(), t);
+                it->get_state(), it->parent->get_state(), t);
             double log_prob_next_given_state =
               dens_calc.log_prob_state_given_next(
-                data, it->get_state(), it->child->get_state(), t);
+                it->get_state(), it->child->get_state(), t);
             double log_importance_dens = it->log_importance_dens;
             double log_artificial_prior = // TODO: have already been computed
               dens_calc.log_artificial_prior(
@@ -311,10 +308,10 @@ public:
   }
 
   using forward_filter =
-    AUX_PF<T_resampler, T_importance_dens, densities, true>;
+    AUX_PF<T_resampler, T_importance_dens, true>;
   using backward_filter =
-    AUX_PF<T_resampler, T_importance_dens, densities, false>;
-  using importance_dens = T_importance_dens<densities, false /* arg should not matter*/>;
+    AUX_PF<T_resampler, T_importance_dens, false>;
+  using importance_dens = T_importance_dens<false /* arg should not matter*/>;
 };
 
 /*
@@ -325,14 +322,14 @@ public:
 */
 
 template<
-  template <typename, bool> class T_resampler,
-  template <typename, bool> class T_importance_dens,
-  class densities>
+  template <bool> class T_resampler,
+  template <bool> class T_importance_dens>
 class PF_smoother_Brier_O_N_square : private PF_base {
   using uword = arma::uword;
 
 public:
-  static smoother_output compute(const PF_data &data){
+  static smoother_output
+  compute(const PF_data &data, pf_base_dens &dens_calc){
     smoother_output result;
     std::vector<cloud> &forward_clouds = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
@@ -342,8 +339,8 @@ public:
 
     smoother_output::trans_like_obj &transition_likelihoods = *trans_ptr;
 
-    forward_clouds = forward_filter::compute(data);
-    backward_clouds = backward_filter::compute(data);
+    forward_clouds = forward_filter::compute(data, dens_calc);
+    backward_clouds = backward_filter::compute(data, dens_calc);
 
     if(data.debug > 0)
       data.log(1) << "Finished finding forward and backward clouds. Started smoothing";
@@ -394,7 +391,6 @@ public:
 #pragma omp parallel
 {
 #endif
-      densities dens_calc = densities(data);
       double my_max_weight = -std::numeric_limits<double>::max();
 #ifdef _OPENMP
 #pragma omp for schedule(static)
@@ -411,7 +407,7 @@ public:
             ++fw_particle){
           // compute un-normalized weight of pair
           double log_like_transition = dens_calc.log_prob_state_given_previous(
-            data, bw_particle.get_state(), fw_particle->get_state(), t);
+            bw_particle.get_state(), fw_particle->get_state(), t);
           double this_term = fw_particle->log_weight + log_like_transition;
 
           // add pair information and update max log term seen so far
@@ -483,9 +479,9 @@ public:
   }
 
   using forward_filter =
-    AUX_PF<T_resampler, T_importance_dens, densities, true>;
+    AUX_PF<T_resampler, T_importance_dens, true>;
   using backward_filter =
-    AUX_PF<T_resampler, T_importance_dens, densities, false>;
+    AUX_PF<T_resampler, T_importance_dens, false>;
 };
 
 

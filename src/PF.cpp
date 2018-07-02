@@ -37,61 +37,55 @@
 
 template<
   template <
-    template <typename, bool> class,
-    template <typename, bool> class,
-    class>
-  class smoother,
-  class dens>
+    template <bool> class,
+    template <bool> class>
+  class smoother>
 class PF_smooth_smoother_n_dens {
   using bootstrap_filter_sm =
     smoother<
       None_AUX_resampler,
-      importance_dens_no_y_dependence,
-      dens>;
+      importance_dens_no_y_dependence>;
 
   using PF_w_normal_approx_sm =
     smoother<
       None_AUX_resampler,
-      importance_dens_normal_approx_w_cloud_mean,
-      dens>;
+      importance_dens_normal_approx_w_cloud_mean>;
 
   using AUX_w_normal_approx_sm =
     smoother<
       AUX_resampler_normal_approx_w_cloud_mean,
-      importance_dens_normal_approx_w_cloud_mean,
-      dens>;
+      importance_dens_normal_approx_w_cloud_mean>;
 
   using PF_w_particles_sm =
     smoother<
       None_AUX_resampler,
-      importance_dens_normal_approx_w_particles,
-      dens>;
+      importance_dens_normal_approx_w_particles>;
 
   using AUX_w_particles_sm =
     smoother<
       AUX_resampler_normal_approx_w_particles,
-      importance_dens_normal_approx_w_particles,
-      dens>;
+      importance_dens_normal_approx_w_particles>;
 
 public:
   static Rcpp::List compute(
-      const PF_data &data, const std::string method){
+      const PF_data &data, const std::string method,
+      pf_base_dens &dens_calc){
     /* Get the smoothed particles at time 1, 2, ..., d */
     smoother_output result;
     if (method == BOOT_FILTER) {
-      result = bootstrap_filter_sm::compute(data);
+      result = bootstrap_filter_sm::compute(data, dens_calc);
 
     } else if (method == PF_APPROX_CLOUD_MEAN){
-      result = PF_w_normal_approx_sm::compute(data);
+      result = PF_w_normal_approx_sm::compute(data, dens_calc);
 
     } else if (method == AUX_APPROX_CLOUD_MEAN){
-      result = AUX_w_normal_approx_sm::compute(data);
+      result = AUX_w_normal_approx_sm::compute(data, dens_calc);
 
     } else if (method == PF_APPROX_PARTICLE){
-      result = PF_w_particles_sm::compute(data);
+      result = PF_w_particles_sm::compute(data, dens_calc);
 
     }  else if (method == AUX_APPROX_PARTICLE){
-      result = AUX_w_particles_sm::compute(data);
+      result = AUX_w_particles_sm::compute(data, dens_calc);
 
     } else {
       std::stringstream stream;
@@ -104,24 +98,24 @@ public:
   }
 };
 
-template<class dens>
 class PF_smooth_dens {
   using Fearnhead_O_N  =
-    PF_smooth_smoother_n_dens<PF_smoother_Fearnhead_O_N, dens>;
+    PF_smooth_smoother_n_dens<PF_smoother_Fearnhead_O_N>;
 
   using Brier_O_N_square  =
-    PF_smooth_smoother_n_dens<PF_smoother_Brier_O_N_square, dens>;
+    PF_smooth_smoother_n_dens<PF_smoother_Brier_O_N_square>;
 
 public:
   static Rcpp::List compute(
-      const PF_data &data, const std::string smoother, const std::string method){
+      const PF_data &data, const std::string smoother,
+      const std::string method, pf_base_dens &dens_calc){
     Rcpp::List ans;
 
     if(smoother == "Fearnhead_O_N"){
-      ans = Fearnhead_O_N::compute(data, method);
+      ans = Fearnhead_O_N::compute(data, method, dens_calc);
 
     } else if (smoother == "Brier_O_N_square"){
-      ans = Brier_O_N_square::compute(data, method);
+      ans = Brier_O_N_square::compute(data, method, dens_calc);
 
     } else {
       std::stringstream stream;
@@ -158,11 +152,12 @@ Rcpp::List PF_smooth(
 
   Rcpp::List ans;
 
+  std::unique_ptr<pf_base_dens> dens_calc;
   if(model == "logit"){
-    ans = PF_smooth_dens<logistic_dens>::compute(data, smoother, method);
+    dens_calc.reset(new logistic_dens(data));
 
   } else if (model == "exponential"){
-    ans = PF_smooth_dens<exponential_dens>::compute(data, smoother, method);
+    dens_calc.reset(new exponential_dens(data));
 
   } else {
     std::stringstream stream;
@@ -171,68 +166,67 @@ Rcpp::List PF_smooth(
 
   }
 
+  ans = PF_smooth_dens::compute(
+    data, smoother, method, *dens_calc.get());
+
   return(ans);
 }
 
 /* --------------------------------------- */
 
 
-template<class dens, bool is_forward>
+template<bool is_forward>
 class PF_single_direction {
   using bootstrap_filter =
     AUX_PF<
       None_AUX_resampler,
       importance_dens_no_y_dependence,
-      dens,
       is_forward>;
 
   using PF_w_normal_approx =
     AUX_PF<
       None_AUX_resampler,
       importance_dens_normal_approx_w_cloud_mean,
-      dens,
       is_forward>;
 
   using AUX_w_normal_approx =
     AUX_PF<
       AUX_resampler_normal_approx_w_cloud_mean,
       importance_dens_normal_approx_w_cloud_mean,
-      dens,
       is_forward>;
 
   using PF_w_particles =
     AUX_PF<
       None_AUX_resampler,
       importance_dens_normal_approx_w_particles,
-      dens,
       is_forward>;
 
   using AUX_w_particles =
     AUX_PF<
       AUX_resampler_normal_approx_w_particles,
       importance_dens_normal_approx_w_particles,
-      dens,
       is_forward>;
 
 public:
   static Rcpp::List compute(
-      const PF_data &data, const std::string method){
+      const PF_data &data, const std::string method,
+      pf_base_dens &dens_calc){
     /* Get the smoothed particles at time 1, 2, ..., d */
     std::vector<cloud> result;
     if (method == BOOT_FILTER) {
-      result = bootstrap_filter::compute(data);
+      result = bootstrap_filter::compute(data, dens_calc);
 
     } else if (method == PF_APPROX_CLOUD_MEAN){
-      result = PF_w_normal_approx::compute(data);
+      result = PF_w_normal_approx::compute(data, dens_calc);
 
     } else if (method == AUX_APPROX_CLOUD_MEAN){
-      result = AUX_w_normal_approx::compute(data);
+      result = AUX_w_normal_approx::compute(data, dens_calc);
 
     } else if (method == PF_APPROX_PARTICLE){
-      result = PF_w_particles::compute(data);
+      result = PF_w_particles::compute(data, dens_calc);
 
     }  else if (method == AUX_APPROX_PARTICLE){
-      result = AUX_w_particles::compute(data);
+      result = AUX_w_particles::compute(data, dens_calc);
 
     } else {
       std::stringstream stream;
@@ -246,13 +240,13 @@ public:
   }
 };
 
-template<class dens>
 Rcpp::List PF_single_direction_compute(
-    const PF_data &data, const bool is_forward, const std::string method){
+    const PF_data &data, const bool is_forward, const std::string method,
+    pf_base_dens &dens_calc){
   if(is_forward)
-    return PF_single_direction<dens, true>::compute(data, method);
+    return PF_single_direction<true>::compute(data, method, dens_calc);
 
-  return PF_single_direction<dens, false>::compute(data, method);
+  return PF_single_direction<false>::compute(data, method, dens_calc);
 }
 
 // [[Rcpp::export]]
@@ -298,13 +292,12 @@ Rcpp::List particle_filter(
 
   Rcpp::List ans;
 
+  std::unique_ptr<pf_base_dens> dens_calc;
   if(model == "logit"){
-    ans =
-      PF_single_direction_compute<logistic_dens>(data, is_forward, method);
+    dens_calc.reset(new logistic_dens(data));
 
   } else if (model == "exponential"){
-    ans =
-      PF_single_direction_compute<exponential_dens>(data, is_forward, method);
+    dens_calc.reset(new exponential_dens(data));
 
   } else {
     std::stringstream stream;
@@ -312,6 +305,9 @@ Rcpp::List particle_filter(
     Rcpp::stop(stream.str());
 
   }
+
+  ans =
+    PF_single_direction_compute(data, is_forward, method, *dens_calc.get());
 
   return(ans);
 }

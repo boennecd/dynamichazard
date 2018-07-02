@@ -1,6 +1,8 @@
 #include "arma_n_rcpp.h"
 #include "family.h"
 
+/* TODO: make functions that takes in arma::vec and avoid `mapply` */
+
 template<class family>
 class family_wrapper {
   static const std::string my_name;
@@ -11,30 +13,36 @@ public:
   }
 
   static double linkinv(const double eta, const double at_risk_length){
-    return family::linkinv(eta, exp(eta), at_risk_length);
+    family fam;
+    return fam.linkinv(eta, exp(eta), at_risk_length);
   }
 
   static double mu_eta(const double eta, const double at_risk_length){
-    return family::mu_eta(eta, exp(eta), at_risk_length);
+    family fam;
+    return fam.mu_eta(eta, exp(eta), at_risk_length);
   }
 
   static double var(const double eta, const double at_risk_length){
-    return family::var(eta, exp(eta), at_risk_length);
+    family fam;
+    return fam.var(eta, exp(eta), at_risk_length);
   }
 
   static double log_like(
       const bool outcome, const double eta, const double at_risk_length){
-    return family::log_like(outcome, eta, exp(eta), at_risk_length);
+    family fam;
+    return fam.log_like(outcome, eta, exp(eta), at_risk_length);
   }
 
   static double d_log_like(
       const bool outcome, const double eta, const double at_risk_length){
-    return family::d_log_like(outcome, eta, exp(eta), at_risk_length);
+    family fam;
+    return fam.d_log_like(outcome, eta, exp(eta), at_risk_length);
   }
 
   static double dd_log_like(
       const bool outcome, const double eta, const double at_risk_length){
-    return family::dd_log_like(outcome, eta, exp(eta), at_risk_length);
+    family fam;
+    return fam.dd_log_like(outcome, eta, exp(eta), at_risk_length);
   }
 };
 

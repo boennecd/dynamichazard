@@ -11,30 +11,19 @@ protected:
   const arma::ivec &is_event_in_bin;
   const arma::uword n_parems;
   const arma::vec &fixed_effects_offsets;
+  family_base &fam;
+  const bool uses_at_risk_length;
 
 public:
-  logLike_link_term_helper(const arma::mat &X_,
-                           const arma::vec &tstart_,
-                           const arma::vec &tstop_,
-                           const arma::ivec &is_event_in_bin_,
-                           const arma::vec &fixed_effects_offsets_):
+  logLike_link_term_helper(
+    const arma::mat &X_, const arma::vec &tstart_, const arma::vec &tstop_,
+    const arma::ivec &is_event_in_bin_,
+    const arma::vec &fixed_effects_offsets_, family_base &fam):
     X(X_), tstart(tstart_), tstop(tstop_),
     is_event_in_bin(is_event_in_bin_), n_parems(X.n_rows),
-    fixed_effects_offsets(fixed_effects_offsets_)
+    fixed_effects_offsets(fixed_effects_offsets_), fam(fam),
+    uses_at_risk_length(fam.uses_at_risk_length())
   {}
-
-  virtual double link_logLik_terms(
-      const arma::vec &a_t,
-      const arma::uvec &risk_set,
-      const double &bin_start, const double &bin_stop,
-      const int bin_number) = 0;
-};
-
-
-template<typename family_T>
-class logLike_link_term_helper_T : public logLike_link_term_helper {
-public:
-  using logLike_link_term_helper::logLike_link_term_helper;
 
   double link_logLik_terms(
       const arma::vec &a_t,
@@ -47,11 +36,11 @@ public:
       const double eta = fixed_effects_offsets(*it) +
         (n_parems > 0 ? arma::dot(a_t.head(n_parems), X.col(*it)) : 0.);
       const double at_risk_length =
-        family_T::uses_at_risk_length ?
+        uses_at_risk_length ?
         get_at_risk_length(tstop(*it), bin_stop, tstart(*it), bin_start) :
         0.;
 
-      res += family_T::log_like(
+      res += fam.log_like(
         bin_number == is_event_in_bin(*it), eta, exp(eta), at_risk_length);
     }
 
@@ -108,17 +97,19 @@ std::vector<double>
       - n_parems / 2.0 * (log(2.0) + log(M_PI));
   }
 
-  std::unique_ptr<logLike_link_term_helper> helper;
+  std::unique_ptr<family_base> fam;
   if(model == "logit"){
-    helper.reset(new logLike_link_term_helper_T<logistic>(
-        X, tstart, tstop, is_event_in_bin, fixed_effects_offsets));
+    fam.reset(new logistic());
 
   } else if (is_exponential_model(model)){
-    helper.reset(new logLike_link_term_helper_T<exponential>(
-        X, tstart, tstop, is_event_in_bin, fixed_effects_offsets));
+    fam.reset(new exponential());
 
   } else
     Rcpp::stop("Model '" + model + "' not implemented for logLike method");
+
+  logLike_link_term_helper helper(
+      X, tstart, tstop, is_event_in_bin, fixed_effects_offsets,
+      *fam.get());
 
   double log_det_Q, dum;
   arma::log_det(log_det_Q, dum, Q);
@@ -143,7 +134,7 @@ std::vector<double>
     const arma::uvec &risk_set = Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
 
     logLike +=
-      helper->link_logLik_terms(a_t, risk_set, bin_Start, bin_stop, t - 1);
+      helper.link_logLik_terms(a_t, risk_set, bin_Start, bin_stop, t - 1);
   }
 
   return std::vector<double>{logLike, t_0_logLike};

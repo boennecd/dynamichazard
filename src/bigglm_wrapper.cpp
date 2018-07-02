@@ -1,5 +1,5 @@
 #include "bigglm_wrapper.h"
-#include "family.h"
+#include "R_ext/RS.h"		/* for F77_... */
 
 extern "C"
 {
@@ -17,8 +17,8 @@ extern "C"
                             *      +    THETAB(NP), SSERR
                             * ...
                             */
-  void includ_(int *, int *, double *, double *, double *,
-               double *, double *, double *, double *, int *);
+  void F77_NAME(includ)(int *, int *, double *, double *, double *,
+                        double *, double *, double *, double *, int *);
 
   /*
   * The Fortran code is:
@@ -30,8 +30,8 @@ extern "C"
                           *      +     BETA(NP)
                           * ...
                           */
-  void regcf_(int *, int *, double *, double *, double *,
-              double *, double *, int *, int *);
+  void F77_NAME(regcf)(int *, int *, double *, double *, double *,
+                       double *, double *, int *, int *);
 }
 
 
@@ -47,75 +47,72 @@ int binomialCoeff(int n, int k)
 
 
 
-template<class T>
-arma::vec bigglm_updateQR<T>::linkinv(
+arma::vec bigglm_updateQR::linkinv(
     const arma::vec &eta, const arma::vec &exp_eta,
-    const arma::vec &at_risk_length){
+    const arma::vec &at_risk_length, family_base &fam){
   arma::vec out(eta.n_elem);
 
   double *i_out = out.memptr();
   const double *i_eta = eta.memptr();
   const double *i_exp_eta = exp_eta.memptr();
 
-  if(T::uses_at_risk_length){
+  if(fam.uses_at_risk_length()){
     const double *i_at = at_risk_length.memptr();
     for(arma::uword i = 0; i < out.n_elem;
         ++i, ++i_out, ++i_eta, ++i_exp_eta, ++i_at)
-      *i_out = T::linkinv(*i_eta, *i_exp_eta, *i_at);
+      *i_out = fam.linkinv(*i_eta, *i_exp_eta, *i_at);
 
   } else {
     for(arma::uword i = 0; i < out.n_elem; ++i, ++i_out, ++i_eta, ++i_exp_eta)
-      *i_out = T::linkinv(*i_eta, *i_exp_eta, 0);
+      *i_out = fam.linkinv(*i_eta, *i_exp_eta, 0);
 
   }
 
   return(out);
 }
 
-template<class T>
-arma::vec bigglm_updateQR<T>::d_mu_d_eta(
+arma::vec bigglm_updateQR::d_mu_d_eta(
     const arma::vec &eta, const arma::vec &exp_eta,
-    const arma::vec &at_risk_length){
+    const arma::vec &at_risk_length, family_base &fam){
   arma::vec out(eta.n_elem);
 
   double *i_out = out.memptr();
   const double *i_eta = eta.memptr();
   const double *i_exp_eta = exp_eta.memptr();
 
-  if(T::uses_at_risk_length){
+  if(fam.uses_at_risk_length()){
     const double *i_at = at_risk_length.memptr();
     for(arma::uword i = 0; i < out.n_elem;
     ++i, ++i_out, ++i_eta, ++i_exp_eta, ++i_at)
-      *i_out = T::mu_eta(*i_eta, *i_exp_eta, *i_at);
+      *i_out = fam.mu_eta(*i_eta, *i_exp_eta, *i_at);
 
   } else {
     for(arma::uword i = 0; i < out.n_elem; ++i, ++i_out, ++i_eta, ++i_exp_eta)
-      *i_out = T::mu_eta(*i_eta, *i_exp_eta, 0);
+      *i_out = fam.mu_eta(*i_eta, *i_exp_eta, 0);
 
   }
 
   return(out);
 }
 
-template<class T>
-arma::vec bigglm_updateQR<T>::variance(
+arma::vec bigglm_updateQR::variance(
     const arma::vec &eta, const arma::vec &exp_eta,
-    const arma::vec &at_risk_length){
+    const arma::vec &at_risk_length, family_base &fam){
   arma::vec out(eta.n_elem);
 
   double *i_out = out.memptr();
   const double *i_eta = eta.memptr();
   const double *i_exp_eta = exp_eta.memptr();
 
-  if(T::uses_at_risk_length){
+  if(fam.uses_at_risk_length()){
     const double *i_at = at_risk_length.memptr();
     for(arma::uword i = 0; i < out.n_elem;
     ++i, ++i_out, ++i_eta, ++i_exp_eta, ++i_at)
-      *i_out = T::var(*i_eta, *i_exp_eta, *i_at);
+      *i_out = fam.var(*i_eta, *i_exp_eta, *i_at);
 
   } else {
     for(arma::uword i = 0; i < out.n_elem; ++i, ++i_out, ++i_eta, ++i_exp_eta)
-      *i_out = T::var(*i_eta, *i_exp_eta, 0);
+      *i_out = fam.var(*i_eta, *i_exp_eta, 0);
 
   }
 
@@ -123,20 +120,19 @@ arma::vec bigglm_updateQR<T>::variance(
 }
 
 
-template<class T>
-void bigglm_updateQR<T>::update(qr_obj &qr, // Previous/starting value. Will be overwritten
+void bigglm_updateQR::update(qr_obj &qr, // Previous/starting value. Will be overwritten
             const arma::mat &X, const arma::vec &eta,
             const arma::vec &offset, const arma::vec &at_risk_length,
             arma::vec &y, // y will not be altered
-            const arma::vec &w)
+            const arma::vec &w, family_base &fam)
 {
   arma::vec eta_plus_off = eta + offset;
   arma::vec exp_eta = arma::exp(eta_plus_off);
-  arma::vec mu = linkinv(eta_plus_off, exp_eta, at_risk_length);
-  arma::vec dmu = d_mu_d_eta(eta_plus_off, exp_eta, at_risk_length);
+  arma::vec mu = linkinv(eta_plus_off, exp_eta, at_risk_length, fam);
+  arma::vec dmu = d_mu_d_eta(eta_plus_off, exp_eta, at_risk_length, fam);
   arma::vec z = eta + (y - mu) / dmu; // note that offset is not added as in bigglm.function
   arma::vec ww = w % dmu % dmu /
-    variance(eta_plus_off, exp_eta, at_risk_length);
+    variance(eta_plus_off, exp_eta, at_risk_length, fam);
 
   int n_parems = X.n_rows;
   int nrbar = qr.rbar->n_elem;
@@ -160,9 +156,10 @@ void bigglm_updateQR<T>::update(qr_obj &qr, // Previous/starting value. Will be 
     //    REAL(y)+i, REAL(D), REAL(Rbar), REAL(thetab),
     //    REAL(sse), &ier);
 
-    includ_(&n_parems, &nrbar, w_ptr, x_row.memptr(),
-            y_ptr, qr.D->memptr(), qr.rbar->memptr(), qr.thetab->memptr(),
-            &qr.ss, &ier);
+    F77_CALL(includ)(
+        &n_parems, &nrbar, w_ptr, x_row.memptr(),
+        y_ptr, qr.D->memptr(), qr.rbar->memptr(), qr.thetab->memptr(),
+        &qr.ss, &ier);
   }
 }
 
@@ -173,9 +170,9 @@ arma::vec bigglm_regcf(qr_obj &qr){
   int dum_arg1 = (p * p / 2);
   int dum_arg2 = 1;
 
-  regcf_(&p, &dum_arg1, qr.D->memptr(), qr.rbar->memptr(),
-         qr.thetab->memptr(), qr.tol->memptr(), beta.memptr(),
-         &p, &dum_arg2);
+  F77_CALL(regcf)(&p, &dum_arg1, qr.D->memptr(), qr.rbar->memptr(),
+                  qr.thetab->memptr(), qr.tol->memptr(), beta.memptr(),
+                  &p, &dum_arg2);
 
   return beta;
 }
@@ -194,6 +191,3 @@ arma::vec bigglm_regcf_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
 
   return(bigglm_regcf(qr));
 }
-
-template class bigglm_updateQR<logistic>;
-template class bigglm_updateQR<exponential>;

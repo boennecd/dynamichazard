@@ -6,20 +6,20 @@
 #include "dmvnrm.h"
 
 
-#define SAMPLE_SMOOTH_ARGS   \
-  densities &dens_calc,      \
-  const PF_data &data,       \
-  cloud &fw_cloud,           \
-  const arma::uvec &fw_idx,  \
-  cloud &bw_cloud,           \
-  const arma::uvec &bw_idx,  \
+#define SAMPLE_SMOOTH_ARGS                                \
+  pf_base_dens &dens_calc,                                \
+  const PF_data &data,                                    \
+  cloud &fw_cloud,                                        \
+  const arma::uvec &fw_idx,                               \
+  cloud &bw_cloud,                                        \
+  const arma::uvec &bw_idx,                               \
   const unsigned int t
 
-#define SAMPLE_COMMON_ARGS        \
-  densities &dens_calc,           \
-  const PF_data &data,            \
-  cloud &cl,                      \
-  const arma::uvec &resample_idx, \
+#define SAMPLE_COMMON_ARGS                                     \
+  pf_base_dens &dens_calc,                                     \
+  const PF_data &data,                                         \
+  cloud &cl,                                                   \
+  const arma::uvec &resample_idx,                              \
   const unsigned int t
 
 /*
@@ -38,11 +38,11 @@
 
 /* base class importance samplers */
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 class importance_dens_base {
 public:
   static cloud sample_first_state_n_set_weights
-  (densities &dens_calc, const PF_data &data){
+  (pf_base_dens &dens_calc, const PF_data &data){
     cloud ans;
     ans.reserve(data.N_first);
     const arma::mat *Q_chol;
@@ -86,9 +86,9 @@ public:
   algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 class importance_dens_no_y_dependence :
-  public importance_dens_base<densities, is_forward>{
+  public importance_dens_base<is_forward>{
   static double log_importance_dens_smooth(
       const PF_data &data, const particle &p, int t){
     arma::vec mean =
@@ -187,9 +187,9 @@ public:
     algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 class importance_dens_normal_approx_w_cloud_mean  :
-  public importance_dens_base<densities, is_forward> {
+  public importance_dens_base<is_forward> {
   inline static void debug_msg_before_sampling(
       const PF_data &data,
       const input_for_normal_apprx &inter_output){
@@ -227,7 +227,7 @@ public:
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
     auto inter_output = compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean
-      <densities, is_forward>
+      <is_forward>
       (dens_calc, data, t, Q, alpha_bar, cl);
 
     return(sample(dens_calc, data, cl, resample_idx, t, inter_output));
@@ -269,8 +269,8 @@ public:
     /* compute parts of the terms for the mean and covariance */
     auto &Q = data.Q_proposal_smooth;
     auto inter_output =
-      compute_mu_n_Sigma_from_normal_apprx<densities, 2, true>(
-        data, t, Q, alpha_bar);
+      compute_mu_n_Sigma_from_normal_apprx<2, true>(
+          dens_calc, data, t, Q, alpha_bar);
 
     /* Sample */
     debug_msg_before_sampling(data, inter_output);
@@ -313,9 +313,9 @@ public:
   around the mean of the parent particle.
 */
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 class importance_dens_normal_approx_w_particles  :
-  public importance_dens_base<densities, is_forward> {
+  public importance_dens_base<is_forward> {
 
   inline static void debug_msg_while_sampling(
       const PF_data &data, const particle &p, const arma::vec &mu, const arma::mat Sigma_chol){
@@ -343,7 +343,7 @@ public:
     auto &Q = data.Q_proposal;
     auto inter_output =
       compute_mu_n_Sigma_from_normal_apprx_w_particles
-      <densities, is_forward>
+      <is_forward>
       (dens_calc, data, t, Q, cl);
 
     return(sample(dens_calc, data, cl, resample_idx, t, inter_output));
@@ -398,7 +398,7 @@ public:
     auto &Q = data.Q_proposal_smooth;
     auto inter_output =
       compute_mu_n_Sigma_from_normal_apprx_w_particles
-      <densities, is_forward>
+      <is_forward>
       (dens_calc, data, t, Q, mus);
 
     /* Sample */

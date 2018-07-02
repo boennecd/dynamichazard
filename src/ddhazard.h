@@ -4,6 +4,7 @@
 // [[Rcpp::plugins(cpp11)]]
 #include "problem_data.h"
 #include "arma_n_rcpp.h"
+#include "family.h"
 
 inline bool is_exponential_model(std::string model){
   return(model == "exp_bin" ||
@@ -24,12 +25,12 @@ public:
 // Classes for EKF method
 class ddhazard_data_EKF;
 
-template<typename T>
 class EKF_solver : public Solver {
   ddhazard_data &org;
   std::unique_ptr<ddhazard_data_EKF> p_dat;
   const std::string model;
   unsigned long const max_threads;
+  family_base &fam;
 
   void parallel_filter_step(
       arma::uvec::const_iterator first, arma::uvec::const_iterator last,
@@ -42,7 +43,7 @@ public:
   EKF_solver(
     ddhazard_data&, const std::string,
     Rcpp::Nullable<Rcpp::NumericVector>, const unsigned int,
-    const int);
+    const int, family_base &fam);
 
   void solve();
 };
@@ -57,9 +58,8 @@ class UKF_solver_Org : public Solver{
   const double sqrt_m_k;
   arma::mat sigma_points;
 
-  inline void compute_sigma_points(const arma::vec &a_t,
-                                   arma::mat &s_points,
-                                   const arma::mat &P_x_x){
+  inline void compute_sigma_points(
+      const arma::vec &a_t, arma::mat &s_points, const arma::mat &P_x_x){
     arma::mat cholesky_decomp;
     if(!arma::chol(cholesky_decomp, P_x_x, "lower")){
       Rcpp::stop("ddhazard_fit_cpp estimation error: Cholesky decomposition failed");
@@ -73,7 +73,8 @@ class UKF_solver_Org : public Solver{
   }
 
 public:
-  UKF_solver_Org(ddhazard_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_);
+  UKF_solver_Org(
+    ddhazard_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &k_);
 
   void solve();
 };
@@ -82,7 +83,6 @@ public:
 
 
 
-template<class T>
 class UKF_solver_New : public Solver {
 protected:
   ddhazard_data &p_dat;
@@ -103,28 +103,29 @@ protected:
   arma::vec weights_vec_c;
   arma::vec weights_vec_c_inv;
   arma::vec weights_vec_cc;
+  family_base &fam;
 
   void compute_sigma_points(const arma::vec&, arma::mat&, const arma::mat&);
 
 public:
   UKF_solver_New(ddhazard_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
                  Rcpp::Nullable<Rcpp::NumericVector> &alpha,
-                 Rcpp::Nullable<Rcpp::NumericVector> &beta);
+                 Rcpp::Nullable<Rcpp::NumericVector> &beta,
+                 family_base &fam);
 
   void solve();
 };
 
 // Solver with approximation at the posterior mode sequentially
-
-template<class T>
 class SMA : public Solver
 {
   ddhazard_data &p_dat;
   std::string method;
+  family_base &fam;
 
 public:
-  SMA(ddhazard_data &p_, std::string method_):
-  p_dat(p_), method(method_)
+  SMA(ddhazard_data &p_, std::string method_, family_base &fam):
+  p_dat(p_), method(method_), fam(fam)
   {
     if(method != "woodbury" && method != "cholesky")
       Rcpp::stop("Method '", method, "' not implemented");
@@ -134,33 +135,33 @@ public:
 
   static double compute_length(
       const double, const double, const double,
-      const double, const bool, const double);
+      const double, const bool, const double, family_base &);
 };
 
 // Solver with approximation at the posterior mode sequentially
-
-template<class T>
 class GMA : public Solver
 {
   ddhazard_data &p_dat;
   const unsigned int max_rep;
   const double NR_eps;
   bool have_failed_once = false;
+  family_base &fam;
 
 public:
-  GMA(ddhazard_data &p, unsigned int max_rep, double NR_eps):
-  p_dat(p), max_rep((unsigned int)max_rep), NR_eps(NR_eps)
+  GMA(ddhazard_data &p, unsigned int max_rep, double NR_eps, family_base &fam):
+  p_dat(p), max_rep((unsigned int)max_rep), NR_eps(NR_eps), fam(fam)
   { };
 
   void solve();
 };
 
 
-std::vector<double> logLike_cpp(const arma::mat&, const Rcpp::List&,
-                                const arma::mat&, const arma::mat&,
-                                arma::mat Q, const arma::mat&,
-                                const arma::vec&, const arma::vec&,
-                                const arma::vec &,
-                                const int, const std::string);
+std::vector<double> logLike_cpp(
+    const arma::mat&, const Rcpp::List&,
+    const arma::mat&, const arma::mat&,
+    arma::mat Q, const arma::mat&,
+    const arma::vec&, const arma::vec&,
+    const arma::vec&,
+    const int, const std::string);
 
 #endif

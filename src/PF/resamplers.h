@@ -72,11 +72,11 @@ protected:
  in the forward particle filter.
 */
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 class None_AUX_resampler : private resampler_base<systematic_resampling> {
 public:
   inline static nothing resampler(
-      densities &dens_cal, const PF_data &data, cloud &PF_cloud,
+      pf_base_dens &dens_calc, const PF_data &data, cloud &PF_cloud,
       unsigned int t, arma::uvec &outcome, bool &did_resample){
     /* Compute effective sample size (ESS) */
     arma::vec weights(PF_cloud.size());
@@ -103,11 +103,11 @@ public:
     algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 class AUX_resampler_normal_approx_w_cloud_mean : private resampler_base<systematic_resampling> {
 public:
   inline static input_for_normal_apprx_w_cloud_mean resampler(
-      densities &dens_cal, const PF_data &data, cloud &PF_cloud,
+      pf_base_dens &dens_calc, const PF_data &data, cloud &PF_cloud,
       unsigned int t, arma::uvec &outcome, bool &did_resample){
     /* Find weighted mean estimate */
     arma::vec alpha_bar = PF_cloud.get_weigthed_mean();
@@ -115,8 +115,8 @@ public:
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
     auto ans = compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean
-      <densities, is_forward>
-      (dens_cal, data, t, Q, alpha_bar, PF_cloud);
+      <is_forward>
+      (dens_calc, data, t, Q, alpha_bar, PF_cloud);
 
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
@@ -136,8 +136,8 @@ public:
       auto it_mu_j = ans.mu_js.begin() + i;
 
       double log_prob_y_given_state =
-        densities::log_prob_y_given_state(
-          data, data.err_state->map(*it_mu_j).sv, t, r_set, false);
+        dens_calc.log_prob_y_given_state(
+          data.err_state->map(*it_mu_j).sv, t, r_set, false);
       double log_prop_transition;
       if(is_forward){
         log_prop_transition = dmvnrm_log(
@@ -191,17 +191,17 @@ public:
     algorithm with linear computational cost. Biometrika, 97(2), 447-464.
 */
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 class AUX_resampler_normal_approx_w_particles : private resampler_base<systematic_resampling> {
 public:
   inline static input_for_normal_apprx_w_particle_mean resampler(
-      densities &dens_cal, const PF_data &data, cloud &PF_cloud,
+      pf_base_dens &dens_calc, const PF_data &data, cloud &PF_cloud,
       unsigned int t, arma::uvec &outcome, bool &did_resample){
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
     auto ans = compute_mu_n_Sigma_from_normal_apprx_w_particles
-      <densities, is_forward>
-      (dens_cal, data, t, Q, PF_cloud);
+      <is_forward>
+      (dens_calc, data, t, Q, PF_cloud);
 
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
@@ -221,8 +221,8 @@ public:
       auto it_cl = &PF_cloud[i];
       auto it_ans = &ans[i];
 
-      double log_prob_y_given_state = densities::log_prob_y_given_state(
-        data, data.err_state->map(it_ans->mu).sv, t, r_set, false);
+      double log_prob_y_given_state = dens_calc.log_prob_y_given_state(
+        data.err_state->map(it_ans->mu).sv, t, r_set, false);
 
       double log_prop_transition;
       if(is_forward){

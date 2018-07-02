@@ -266,9 +266,9 @@ test_that("bigglm and my c++ version yields similar results", {
 
   for(model in c("logit", "exponential")){
     did_fail <- tryCatch(
-      bigglm_res <- biglm::bigglm(
+      suppressWarnings(bigglm_res <- biglm::bigglm(
         form, get_data_func,
-        family = if(model == "logit") binomial() else poisson()),
+        family = if(model == "logit") binomial() else poisson())),
       error = function(...) TRUE)
     if(isTRUE(did_fail))
       skip("bigglm failed (likely biglm error in 0.9-1 release)")
@@ -291,9 +291,9 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
 
   for(model in c("logit", "exponential")){
     did_fail <- tryCatch(
-      bigglm_res <- biglm::bigglm(
+      suppressWarnings(bigglm_res <- biglm::bigglm(
         form, get_data_func,
-        family = if(model == "logit") binomial() else poisson()),
+        family = if(model == "logit") binomial() else poisson())),
       error = function(...) TRUE)
     if(isTRUE(did_fail))
       skip("bigglm failed (likely biglm error in 0.9-1 release)")
@@ -320,10 +320,10 @@ test_that("bigglm and my c++ version yields similar with weights", {
 
   for(model in c("logit", "exponential")){
     did_fail <- tryCatch(
-      bigglm_res <- biglm::bigglm(
+      suppressWarnings(bigglm_res <- biglm::bigglm(
         form, get_data_func,
         family = if(model == "logit") binomial() else poisson(),
-        weights = ~ ws),
+        weights = ~ ws)),
       error = function(...) TRUE)
     if(isTRUE(did_fail))
       skip("bigglm failed (likely biglm error in 0.9-1 release)")

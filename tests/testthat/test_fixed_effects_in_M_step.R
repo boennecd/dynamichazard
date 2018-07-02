@@ -22,9 +22,9 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
     use_weights = F, max_T = 10)
 
   did_fail <- tryCatch(
-    res2 <- bigglm(
+    suppressWarnings(res2 <- bigglm(
       update(form, Y ~ . - ddFixed_intercept()), data = tmp_design$X,
-      family = binomial(), chunksize = 1e3),
+      family = binomial(), chunksize = 1e3)),
     error = function(...) TRUE)
   if(isTRUE(did_fail))
     skip("bigglm failed (likely biglm error in 0.9-1 release)")

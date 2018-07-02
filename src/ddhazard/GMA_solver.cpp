@@ -6,9 +6,9 @@
 #include "omp.h"
 #endif
 
-template<class T>
-void GMA<T>::solve(){
+void GMA::solve(){
   double bin_tstop = p_dat.min_start;
+  const bool uses_at_risk_length = fam.uses_at_risk_length();
 
   for (int t = 1; t < p_dat.d + 1; t++){
     const double bin_number = t - 1;
@@ -55,7 +55,7 @@ void GMA<T>::solve(){
     const arma::uvec is_event = p_dat.is_event_in_bin(r_set) == bin_number;
     arma::vec at_risk_length(r_set.n_elem);
     int i = 0;
-    if(T::uses_at_risk_length){
+    if(uses_at_risk_length){
       for(auto it = r_set.begin(); it < r_set.end(); it++, i++){
         at_risk_length[i] = get_at_risk_length(
           p_dat.tstop(*it), bin_tstop, p_dat.tstart(*it), bin_tstart);
@@ -84,11 +84,11 @@ void GMA<T>::solve(){
 #pragma omp for schedule(static)
 #endif
       for(arma::uword i = 0; i < r_set.n_elem; i++){
-        auto trunc_eta = T::truncate_eta(
+        auto trunc_eta = fam.truncate_eta(
           is_event[i], eta[i], exp(eta[i]), at_risk_length[i]);
-        h_1d[i] =  w[i] * T::d_log_like(
+        h_1d[i] =  w[i] * fam.d_log_like(
           is_event[i], trunc_eta, at_risk_length[i]);
-        double h_2d_neg = -  w[i] * T::dd_log_like(
+        double h_2d_neg = -  w[i] * fam.dd_log_like(
           is_event[i], trunc_eta, at_risk_length[i]);
         sym_mat_rank_one_update(h_2d_neg, X_t.unsafe_col(i), my_X_cross);
       }
@@ -182,6 +182,3 @@ void GMA<T>::solve(){
       V_t_less_inv;
   }
 }
-
-template class GMA<logistic>;
-template class GMA<exponential>;

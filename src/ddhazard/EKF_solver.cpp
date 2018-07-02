@@ -54,12 +54,12 @@ public:
 
 
 
-template<typename T>
 class EKF_filter_worker{
   void do_comps(const arma::uvec::const_iterator it, int i,
                 const arma::vec &dynamic_coefs, const bool compute_z_and_H,
                 const int bin_number,
                 const double bin_tstart, const double bin_tstop);
+
   // Variables for computations
   ddhazard_data_EKF &dat;
   ddhazard_data &org;
@@ -71,6 +71,7 @@ class EKF_filter_worker{
   const int bin_number;
   const double bin_tstart;
   const double bin_tstop;
+  family_base &fam;
 
   // local variables to compute temporary result
   arma::colvec u_;
@@ -82,36 +83,36 @@ public:
     arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
     const arma::vec &dynamic_coefs, const bool compute_z_and_H_,
     const int i_start_, const int bin_number_,
-    const double bin_tstart_, const double bin_tstop_);
+    const double bin_tstart_, const double bin_tstop_,
+    family_base &fam);
 
   void operator()();
 };
 
 // worker class for parallel computation
-template<typename T>
-EKF_filter_worker<T>::EKF_filter_worker(
+EKF_filter_worker::EKF_filter_worker(
   ddhazard_data_EKF &p_data,
   arma::uvec::const_iterator first_, const arma::uvec::const_iterator last_,
   const arma::vec &dynamic_coefs, const bool compute_z_and_H_,
   const int i_start_, const int bin_number_,
-  const double bin_tstart_, const double bin_tstop_)
+  const double bin_tstart_, const double bin_tstop_, family_base &fam)
 
   :
 
   dat(p_data), org(p_data.org), first(first_), last(last_),
   dynamic_coefs(dynamic_coefs), compute_z_and_H(compute_z_and_H_),
   i_start(i_start_), bin_number(bin_number_),
-  bin_tstart(bin_tstart_), bin_tstop(bin_tstop_),
+  bin_tstart(bin_tstart_), bin_tstop(bin_tstop_), fam(fam),
   u_(org.covar_dim, arma::fill::zeros),
   U_(org.covar_dim, org.covar_dim, arma::fill::zeros)
 {}
 
-template<typename T>
-inline void EKF_filter_worker<T>::operator()(){
+inline void EKF_filter_worker::operator()(){
   // potentially intialize variables and set entries to zeroes in any case
 
   // compute local results
   int i = i_start;
+  const bool uses_at_risk_length = fam.uses_at_risk_length();
   for(arma::uvec::const_iterator it = first; it != last; it++, i++){
     const arma::vec x_(org.X.colptr(*it), org.covar_dim, false);
     const double w = org.weights(*it);
@@ -119,15 +120,15 @@ inline void EKF_filter_worker<T>::operator()(){
     const double eta = arma::dot(dynamic_coefs, x_) + offset;
     const bool do_die = org.is_event_in_bin(*it) == bin_number;
     const double at_risk_length =
-      T::uses_at_risk_length ?
+      uses_at_risk_length ?
         get_at_risk_length(
           org.tstop(*it), bin_tstop, org.tstart(*it), bin_tstart) :
         0.;
 
-    auto trunc_res = T::truncate_eta(do_die, eta, exp(eta), at_risk_length);
-    const double mu = T::linkinv(trunc_res, at_risk_length);
-    const double mu_eta = T::mu_eta(trunc_res, at_risk_length);
-    const double var = T::var(trunc_res, at_risk_length);
+    auto trunc_res = fam.truncate_eta(do_die, eta, exp(eta), at_risk_length);
+    const double mu = fam.linkinv(trunc_res, at_risk_length);
+    const double mu_eta = fam.mu_eta(trunc_res, at_risk_length);
+    const double var = fam.var(trunc_res, at_risk_length);
 
     /* Update local score and Hessian */
     u_ += x_ * (w * mu_eta * (do_die - mu) / (var + org.denom_term));
@@ -153,18 +154,17 @@ inline void EKF_filter_worker<T>::operator()(){
   }
 }
 
-template<typename T>
-EKF_solver<T>::EKF_solver(
+
+EKF_solver::EKF_solver(
   ddhazard_data &p, const std::string model,
   Rcpp::Nullable<Rcpp::NumericVector> NR_eps,
-  const unsigned int NR_it_max, const int EKF_batch_size) :
+  const unsigned int NR_it_max, const int EKF_batch_size, family_base &fam) :
   org(p), p_dat(new ddhazard_data_EKF(
       p, NR_eps, NR_it_max, EKF_batch_size)), model(model),
-  max_threads((p.n_threads > 1) ? p.n_threads - 1 : 1)
+  max_threads((p.n_threads > 1) ? p.n_threads - 1 : 1), fam(fam)
   {}
 
-template<typename T>
-void EKF_solver<T>::solve(){
+void EKF_solver::solve(){
   double bin_tstop = org.min_start;
 
   for (int t = 1; t < org.d + 1; t++){
@@ -301,14 +301,12 @@ void EKF_solver<T>::solve(){
   }
 }
 
-template<typename T>
-void EKF_solver<T>::parallel_filter_step(
+void EKF_solver::parallel_filter_step(
     arma::uvec::const_iterator first, arma::uvec::const_iterator last,
     const arma::vec &dynamic_coefs,
     const bool compute_H_and_z,
     const int bin_number,
     const double bin_tstart, const double bin_tstop){
-  using worker_T = EKF_filter_worker<T>;
 
   // Set entries to zero
   p_dat->U.zeros();
@@ -329,7 +327,8 @@ void EKF_solver<T>::parallel_filter_step(
   std::vector<std::future<void> > futures(num_blocks - 1);
   thread_pool pool(num_blocks-1);
 
-  std::vector<worker_T> workers;
+  std::vector<EKF_filter_worker> workers;
+  workers.reserve(num_blocks - 1);
 
   // declare outsite of loop to ref after loop
   arma::uvec::const_iterator block_start = first;
@@ -341,16 +340,16 @@ void EKF_solver<T>::parallel_filter_step(
 
     workers.emplace_back(
       *p_dat.get(), block_start, block_end, dynamic_coefs, compute_H_and_z,
-      i_start, bin_number, bin_tstart, bin_tstop);
+      i_start, bin_number, bin_tstart, bin_tstop, fam);
 
     futures[i] = pool.submit(workers.back());
     i_start += block_size;
     block_start = block_end;
   }
 
-  worker_T( // compute last enteries on this thread
+  EKF_filter_worker( // compute last enteries on this thread
     *p_dat.get(), block_start, last, dynamic_coefs, compute_H_and_z,
-    i_start, bin_number, bin_tstart, bin_tstop)();
+    i_start, bin_number, bin_tstart, bin_tstop, fam)();
 
   for(unsigned long i = 0; i < num_blocks - 1; ++i)
   {
@@ -361,12 +360,3 @@ void EKF_solver<T>::parallel_filter_step(
   // dsyr BLAS function
   p_dat->U = symmatu(p_dat->U);
 }
-
-template class EKF_solver<logistic>;
-template class EKF_solver<exponential>;
-
-
-
-
-
-

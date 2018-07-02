@@ -3,6 +3,7 @@
 
 #include <memory>
 #include "arma_n_rcpp.h"
+#include "family.h"
 
 // Functions and classes for fixed effects. Similar to object in bigglm
 int binomialCoeff(int n, int k);
@@ -25,26 +26,23 @@ public:
 };
 
 
-template<typename T>
-class bigglm_updateQR{
+class bigglm_updateQR {
   // match logic in update.bigqr
   static arma::vec linkinv(
-      const arma::vec&, const arma::vec&, const arma::vec&);
+      const arma::vec&, const arma::vec&, const arma::vec&, family_base&);
 
   static arma::vec d_mu_d_eta(
-      const arma::vec&, const arma::vec&, const arma::vec&);
+      const arma::vec&, const arma::vec&, const arma::vec&, family_base&);
 
   static arma::vec variance(
-      const arma::vec&, const arma::vec&, const arma::vec&);
+      const arma::vec&, const arma::vec&, const arma::vec&, family_base&);
 
 public:
   static void update(
       qr_obj &qr, // Previous/starting value. Will be overwritten
       const arma::mat&, const arma::vec&,
       const arma::vec&, const arma::vec&,
-      arma::vec &, const arma::vec&);
-
-  typedef T family;
+      arma::vec &, const arma::vec&, family_base&);
 };
 
 arma::vec bigglm_regcf(qr_obj &qr);

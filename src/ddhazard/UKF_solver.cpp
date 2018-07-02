@@ -118,11 +118,11 @@ void UKF_solver_Org::solve(){
 // We re-generate the sigma points as suggested in:
 // Menegaz, Henrique Marra Taira. "Unscented kalman filtering on euclidean and
 // riemannian manifolds." (2016).
-template<class T>
-UKF_solver_New<T>::UKF_solver_New(
+UKF_solver_New::UKF_solver_New(
   ddhazard_data &p_, Rcpp::Nullable<Rcpp::NumericVector> &kappa,
   Rcpp::Nullable<Rcpp::NumericVector> &alpha,
-  Rcpp::Nullable<Rcpp::NumericVector> &beta):
+  Rcpp::Nullable<Rcpp::NumericVector> &beta,
+  family_base &fam):
   p_dat(p_),
   m(p_.a_t_t_s.n_rows),
 
@@ -130,16 +130,17 @@ UKF_solver_New<T>::UKF_solver_New(
   k(!kappa.isNull() ?
       Rcpp::as< Rcpp::NumericVector >(kappa)[0] :
       m * (1 + pow(a, 2) * (.1 - 1)) / (pow(a, 2) * (1 - .1))),
-      b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 2.0),
-      lambda(pow(a, 2) * (m + k) - m),
+  b(!beta.isNull() ? Rcpp::as< Rcpp::NumericVector >(beta)[0] : 2.0),
+  lambda(pow(a, 2) * (m + k) - m),
 
-      w_0(lambda / (m + lambda)),
-      w_0_c(w_0 + 1 - pow(a, 2) + b),
-      w_0_cc(w_0 + 1 - a),
-      w_i(1 / (2 * (m + lambda))),
-      sqrt_m_lambda(std::sqrt(m + lambda)),
+  w_0(lambda / (m + lambda)),
+  w_0_c(w_0 + 1 - pow(a, 2) + b),
+  w_0_cc(w_0 + 1 - a),
+  w_i(1 / (2 * (m + lambda))),
+  sqrt_m_lambda(std::sqrt(m + lambda)),
 
-      sigma_points(arma::mat(m, 2 * m + 1))
+  sigma_points(arma::mat(m, 2 * m + 1)),
+  fam(fam)
 {
   if(w_0 == 0)
     Rcpp::stop("UKF not implemented for hyperparameters that yield zero weight on first sigma point");
@@ -172,8 +173,7 @@ UKF_solver_New<T>::UKF_solver_New(
   }
 }
 
-template<class T>
-void UKF_solver_New<T>::compute_sigma_points(
+void UKF_solver_New::compute_sigma_points(
     const arma::vec &a_t, arma::mat &s_points, const arma::mat &P_x_x){
   arma::mat cholesky_decomp;
   if(!arma::chol(cholesky_decomp, P_x_x, "lower")){
@@ -187,9 +187,10 @@ void UKF_solver_New<T>::compute_sigma_points(
         s_points.col(i) = a_t - sqrt_m_lambda * cholesky_decomp.col((i - 1) / 2);
 }
 
-template<class T>
-void UKF_solver_New<T>::solve(){
+void UKF_solver_New::solve(){
   double bin_stop = p_dat.min_start;
+  const bool uses_at_risk_length = fam.uses_at_risk_length();
+
   for (int t = 1; t < p_dat.d + 1; t++){
     double bin_start = bin_stop;
     double delta_t = p_dat.I_len[t - 1];
@@ -236,7 +237,7 @@ void UKF_solver_New<T>::solve(){
     arma::vec starts = p_dat.tstart(r_set);
     arma::vec stops = p_dat.tstop(r_set);
 
-    if(T::uses_at_risk_length){
+    if(uses_at_risk_length){
       for(arma::uword i = 0; i < n_risk; i++){
 
           at_risk_length[i] = get_at_risk_length(
@@ -255,10 +256,10 @@ void UKF_solver_New<T>::solve(){
       double *sqrt_w_i = sqrt_weights_to_sds.memptr();
       for(arma::uword i = 0; i < n_risk;
           i++, die_i++, at_i++, O_i_j++, sqrt_w_i++){
-        auto trunc_eta = T::truncate_eta(*die_i, *O_i_j, exp(*O_i_j), *at_i);
+        auto trunc_eta = fam.truncate_eta(*die_i, *O_i_j, exp(*O_i_j), *at_i);
 
-        *O_i_j = T::linkinv(trunc_eta, *at_i);
-        *sqrt_w_i += w_c * T::var(trunc_eta, *at_i);
+        *O_i_j = fam.linkinv(trunc_eta, *at_i);
+        *sqrt_w_i += w_c * fam.var(trunc_eta, *at_i);
       }
 
       y_bar += w * O.col(j);
@@ -324,6 +325,3 @@ void UKF_solver_New<T>::solve(){
       p_dat.state_trans->map(p_dat.V_t_t_s.slice(t - 1), left).sv).t();
   }
 }
-
-template class UKF_solver_New<logistic>;
-template class UKF_solver_New<exponential>;

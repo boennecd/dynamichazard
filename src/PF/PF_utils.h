@@ -3,7 +3,7 @@
 
 #include <tuple>
 #include "particles.h"
-#include "PF_data.h"
+#include "densities.h"
 #include "../arma_BLAS_LAPACK.h"
 #include "../utils.h"
 
@@ -100,42 +100,6 @@ struct nothing {};
 
 /* ------------------------------------------- */
 
-template<typename iterator>
-class work_block {
-public:
-  iterator start;
-  iterator end;
-  const unsigned long block_size;
-
-  work_block(iterator start, iterator end, const unsigned long block_size):
-    start(start), end(end), block_size(block_size) {}
-};
-
-template<typename iterator>
-std::vector<work_block<iterator>> get_work_blocks(
-    iterator begin, iterator end, const unsigned long block_size){
-  unsigned long const length = std::distance(begin, end);
-  unsigned long const num_blocks= (length + block_size - 1) / block_size;
-
-  std::vector<work_block<iterator>> ans;
-  ans.reserve(num_blocks);
-
-  iterator block_start = begin;
-  for(unsigned long i = 0; i < num_blocks - 1; ++i){
-    iterator block_end = block_start;
-    std::advance(block_end, block_size);
-
-    ans.emplace_back(block_start, block_end, block_size);
-    block_start = block_end;
-  }
-
-  ans.emplace_back(block_start, end, std::distance(block_start, end));
-
-  return ans;
-}
-
-/* ------------------------------------------- */
-
 /* The function below takes in a state \bar{\alpha} and returns
  * mu = R^\top L^\top X^\top ((-G(\bar{\alpha})) X L \bar{\alpha}
  *       + g(\bar{\alpha}))
@@ -151,8 +115,9 @@ struct input_for_normal_apprx {
   arma::mat sigma_chol_inv;
 };
 
-template<typename densities, unsigned int debug_lvl, bool multithread>
+template<unsigned int debug_lvl, bool multithread>
 static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
+    pf_base_dens &dens_calc,
     const PF_data &data,
     const unsigned int t,
     const covarmat &Q,
@@ -168,12 +133,13 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
 
   return(
     compute_mu_n_Sigma_from_normal_apprx
-    <densities, debug_lvl, multithread>
-    (data, t, Q, alpha_bar, r_set));
+    <debug_lvl, multithread>
+    (dens_calc, data, t, Q, alpha_bar, r_set));
 }
 
-template<typename densities, unsigned int debug_lvl, bool multithread>
+template<unsigned int debug_lvl, bool multithread>
 static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
+    pf_base_dens &dens_calc,
     const PF_data &data,
     const unsigned int t,
     const covarmat &Q,
@@ -189,7 +155,8 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
   input_for_normal_apprx ans;
 
   double bin_start, bin_stop;
-  if(densities::uses_at_risk_length){
+  const bool uses_at_risk_length = dens_calc.uses_at_risk_length();
+  if(uses_at_risk_length){
     auto tmp = get_bin_times(data, t);
     bin_start = tmp.start;
     bin_stop = tmp.stop;
@@ -244,7 +211,7 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     eta += offsets;
     const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
-    if(densities::uses_at_risk_length){
+    if(uses_at_risk_length){
       starts = data.tstart(my_r_set);
       stops = data.tstop(my_r_set);
     }
@@ -264,18 +231,18 @@ static input_for_normal_apprx compute_mu_n_Sigma_from_normal_apprx(
     for(arma::uword i = 0; i < n_elem;
         ++i, ++it_eta, ++it_is_event, ++it_r, ++it_off){
       double at_risk_length = 0;
-      if(densities::uses_at_risk_length){
+      if(uses_at_risk_length){
         at_risk_length = get_at_risk_length(
           *(it_stops++) /* increament here */, bin_stop,
           *(it_start++) /* increament here */, bin_start);
 
       }
 
-      auto trunc_eta = densities::truncate_eta(
+      auto trunc_eta = dens_calc.truncate_eta(
         *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
-      double g = densities::d_log_like(
+      double g = dens_calc.d_log_like(
         *it_is_event, trunc_eta, at_risk_length);
-      double neg_G = - densities::dd_log_like(
+      double neg_G = - dens_calc.dd_log_like(
         *it_is_event, trunc_eta, at_risk_length);
 
       arma::vec x_err_space = data.X.col(*it_r);
@@ -327,11 +294,11 @@ struct input_for_normal_apprx_w_cloud_mean : public input_for_normal_apprx {
     input_for_normal_apprx(other) {}
 };
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 static input_for_normal_apprx_w_cloud_mean
   compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean(
-    densities &dens_calc, const PF_data &data, const unsigned int t,
-    const covarmat &Q, const arma::vec &alpha_bar,
+    pf_base_dens &dens_calc, const PF_data &data,
+    const unsigned int t, const covarmat &Q, const arma::vec &alpha_bar,
     cloud &cl /* set mu_js when cloud is passed to */){
     const covarmat *Q_use;
     const arma::mat tmp;
@@ -350,8 +317,8 @@ static input_for_normal_apprx_w_cloud_mean
 
     input_for_normal_apprx_w_cloud_mean ans =
       compute_mu_n_Sigma_from_normal_apprx
-      <densities, 2, true>
-      (data, t, *Q_use, alpha_bar);
+      <2, true>
+      (dens_calc, data, t, *Q_use, alpha_bar);
 
     auto n_elem = cl.size();
     ans.mu_js = std::vector<arma::vec>(n_elem);
@@ -397,11 +364,12 @@ struct input_for_normal_apprx_w_particle_mean_element {
 using input_for_normal_apprx_w_particle_mean =
   std::vector<input_for_normal_apprx_w_particle_mean_element>;
 
-template<typename densities, typename mu_iterator,
+template<typename mu_iterator,
          typename Func, bool is_forward>
 static input_for_normal_apprx_w_particle_mean
 compute_mu_n_Sigma_from_normal_apprx_w_particles(
-  densities &dens_calc, const PF_data &data, const unsigned int t,
+  pf_base_dens &dens_calc, const PF_data &data,
+  const unsigned int t,
   const covarmat &Q, mu_iterator begin, const unsigned int size){
   const covarmat *Q_use;
   arma::mat Q_art_chol;
@@ -429,7 +397,7 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
     mu_iterator iter = b + i;
     const arma::vec &this_state = Func::get_elem(iter);
     auto inter = compute_mu_n_Sigma_from_normal_apprx
-      <densities, 5, false>(data, t, *Q_use, this_state, r_set);
+      <5, false>(dens_calc, data, t, *Q_use, this_state, r_set);
 
     arma::vec mu;
     if(is_forward){
@@ -459,11 +427,11 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
   return ans;
 }
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 static input_for_normal_apprx_w_particle_mean
 compute_mu_n_Sigma_from_normal_apprx_w_particles(
-  densities &dens_calc, const PF_data &data, const unsigned int t, const covarmat &Q,
-  cloud &cl){
+  pf_base_dens &dens_calc, const PF_data &data,
+  const unsigned int t, const covarmat &Q, cloud &cl){
   struct Func{
     static inline const arma::vec get_elem(cloud::iterator &it){
       return it->get_state();
@@ -472,15 +440,15 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
   return(
     compute_mu_n_Sigma_from_normal_apprx_w_particles
-    <densities, cloud::iterator, Func, is_forward>
+    <cloud::iterator, Func, is_forward>
     (dens_calc, data, t, Q, cl.begin(), cl.size()));
 }
 
-template<typename densities, bool is_forward>
+template<bool is_forward>
 static input_for_normal_apprx_w_particle_mean
 compute_mu_n_Sigma_from_normal_apprx_w_particles(
-  densities &dens_calc, const PF_data &data, const unsigned int t, const covarmat &Q,
-  std::vector<arma::vec> &states){
+  pf_base_dens &dens_calc, const PF_data &data,
+  const unsigned int t, const covarmat &Q, std::vector<arma::vec> &states){
   struct Func{
     static inline arma::vec& get_elem(std::vector<arma::vec>::iterator &it){
       return *it;
@@ -489,7 +457,7 @@ compute_mu_n_Sigma_from_normal_apprx_w_particles(
 
   return(
     compute_mu_n_Sigma_from_normal_apprx_w_particles
-    <densities, std::vector<arma::vec>::iterator, Func, is_forward>
+    <std::vector<arma::vec>::iterator, Func, is_forward>
     (dens_calc, data, t, Q, states.begin(), states.size()));
 }
 

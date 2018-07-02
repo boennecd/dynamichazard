@@ -2,8 +2,10 @@
 #define DENSITIES
 
 #include "dmvnrm.h"
-#include "PF_utils.h"
+#include "PF_data.h"
+#include "get_work_blocks.h"
 #include "../family.h"
+#include "particles.h"
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -26,30 +28,49 @@
       Same as d_log_like for the second derivative
 */
 
-/*
-  base densinty class w/ template density functions
-*/
-template<class outcome_dens>
-class pf_dens_base {
+class pf_base_dens : public virtual family_base {
   using uword = arma::uword;
-  const PF_data &data_;
+
+protected:
+  const PF_data &data;
 
 public:
-  pf_dens_base(const PF_data &data): data_(data) {};
+  pf_base_dens(const PF_data &data): data(data) {};
+  virtual ~pf_base_dens() = default;
 
-  /* static member functions */
-  static double log_prob_y_given_state(
-      const PF_data &data, const particle &p, int t){
-    return(log_prob_y_given_state(data, p.get_state(), t));
+  double log_prob_state_given_previous(
+      const arma::vec state, arma::vec previous_state, int t){
+    return(dmvnrm_log(
+        data.err_state_inv->map(state).sv,
+        data.err_state_inv->map(
+            data.state_trans->map    (previous_state).sv).sv,
+            data.Q.chol_inv));
   }
 
-  static double log_prob_y_given_state(
-      const PF_data &data, const arma::vec &state,
-      int t, arma::uvec &r_set, const bool multithreaded = true){
+  double log_prob_state_given_next(
+      const arma::vec state, arma::vec next_state, int t){
+    return(dmvnrm_log(
+        data.err_state_inv->map(state).sv,
+        data.err_state_inv->map(
+            data.state_trans_inv->map(    next_state).sv).sv,
+            data.Q.chol_inv));
+  }
+
+  double log_artificial_prior(const particle &p, int t){
+    return(dmvnrm_log(
+        data.err_state_inv->map(p.get_state()).sv,
+        data.uncond_mean_state(t),
+        data.uncond_covar_state(t).chol_inv));
+  }
+
+  double log_prob_y_given_state(
+      const arma::vec &state, int t, arma::uvec &r_set,
+      const bool multithreaded = true) const {
     const arma::vec coefs = data.err_state_inv->map(state).sv;
+    bool uses_at_risk_len = uses_at_risk_length();
 
     double bin_start, bin_stop;
-    if(outcome_dens::uses_at_risk_length){
+    if(uses_at_risk_len){
       auto tmp = get_bin_times(data, t);
       bin_start = tmp.start;
       bin_stop = tmp.stop;
@@ -62,11 +83,11 @@ public:
     unsigned int n_jobs = jobs.size();
 
     /* compute log likelihood */
-    double log_like = 0;
+    double result = 0;
 #ifdef _OPENMP
     /*
-      Use lock as critical section will not do if this function is called in
-      nested parallel setup. See https://stackoverflow.com/a/20447843
+    Use lock as critical section will not do if this function is called in
+    nested parallel setup. See https://stackoverflow.com/a/20447843
     */
     omp_lock_t *lock;
     if(multithreaded){
@@ -78,7 +99,7 @@ public:
 #pragma omp parallel if(multithreaded)
 {
 #endif
-    double my_log_like = 0;
+    double my_result = 0;
     arma::vec starts;
     arma::vec stops;
 
@@ -93,120 +114,89 @@ public:
 
       const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
-      if(outcome_dens::uses_at_risk_length){
-        starts = data.tstart(my_r_set);
-        stops = data.tstop(my_r_set);
-      }
+          if(uses_at_risk_len){
+            starts = data.tstart(my_r_set);
+            stops = data.tstop(my_r_set);
+          }
 
-      auto it_eta = eta.begin();
-      auto it_is_event = is_event.begin();
-      auto it_start = starts.begin();
-      auto it_stops = stops.begin();
-      unsigned int n = eta.n_elem;
-      for(uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
-        double at_risk_length = 0;
-        if(outcome_dens::uses_at_risk_length){
-          at_risk_length = get_at_risk_length(
-            *(it_stops++) /* increament here */, bin_stop,
-            *(it_start++) /* increament here */, bin_start);
-        }
+          auto it_eta = eta.begin();
+          auto it_is_event = is_event.begin();
+          auto it_start = starts.begin();
+          auto it_stops = stops.begin();
+          unsigned int n = eta.n_elem;
+          for(uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
+            double at_risk_length = 0;
+            if(uses_at_risk_len){
+              at_risk_length = get_at_risk_length(
+                *(it_stops++) /* increament here */, bin_stop,
+                *(it_start++) /* increament here */, bin_start);
+            }
 
-        auto trunc_eta = outcome_dens::truncate_eta(
-          *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
-        my_log_like += outcome_dens::log_like(
-          *it_is_event, trunc_eta, at_risk_length);
-      }
+            auto trunc_eta = truncate_eta(
+              *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
+            my_result += log_like(
+              *it_is_event, trunc_eta, at_risk_length);
+          }
     }
 
 #ifdef _OPENMP
-    if(multithreaded)
-      omp_set_lock(lock);
+  if(multithreaded)
+    omp_set_lock(lock);
 #endif
 
-    log_like += my_log_like;
+    result += my_result;
 
 #ifdef _OPENMP
-    if(multithreaded)
-      omp_unset_lock(lock);
+  if(multithreaded)
+    omp_unset_lock(lock);
 #endif
 #ifdef _OPENMP
 }
-    if(multithreaded){
-      omp_destroy_lock(lock);
-      delete lock;
-    }
+if(multithreaded){
+  omp_destroy_lock(lock);
+  delete lock;
+}
 #endif
 
     if(data.debug > 4){
       data.log(5) << "Computing log(P(y_t|alpha_t)) at time " << t
                   << " with " << r_set.n_elem << " observations. "
-                  << "The log likelihood is " << log_like
+                  << "The log likelihood is " << result
                   << " and the state is:" << std::endl
                   << state.t();
     }
 
-    return log_like;
+    return result;
   }
 
-  static double
-  log_prob_y_given_state(
-    const PF_data &data, const arma::vec &state,
-    int t, const bool multithreaded = true){
-    arma::uvec r_set = get_risk_set(data, t);
+  double
+    log_prob_y_given_state(
+      const arma::vec &state, int t, const bool multithreaded = true){
+      arma::uvec r_set = get_risk_set(data, t);
 
-    return log_prob_y_given_state(data, state, t, r_set, multithreaded);
-  }
+      return log_prob_y_given_state(state, t, r_set, multithreaded);
+    }
 
-  static double log_prob_state_given_previous(
-      const PF_data &data, const arma::vec state,
-      arma::vec previous_state, int t){
-    return(dmvnrm_log(
-        data.err_state_inv->map(state).sv,
-        data.err_state_inv->map(
-          data.state_trans->map    (previous_state).sv).sv,
-        data.Q.chol_inv));
-  }
-
-  static double log_prob_state_given_next(
-      const PF_data &data, const arma::vec state,
-      arma::vec next_state, int t){
-    return(dmvnrm_log(
-        data.err_state_inv->map(state).sv,
-        data.err_state_inv->map(
-          data.state_trans_inv->map(    next_state).sv).sv,
-        data.Q.chol_inv));
-  }
-
-  /* non-static member functions*/
-  double log_artificial_prior(const particle &p, int t){
-    return(dmvnrm_log(
-        data_.err_state_inv->map(p.get_state()).sv,
-        data_.uncond_mean_state(t),
-        data_.uncond_covar_state(t).chol_inv));
+  double log_prob_y_given_state(const particle &p, int t){
+    return(log_prob_y_given_state(p.get_state(), t));
   }
 };
 
-/*
-  Class for binary outcomes with the logistic link function where state vectors
-  follows a first order random walk
-*/
+/* Class for binary outcomes with logistic link */
 
 class logistic_dens :
-  public pf_dens_base<logistic>,
-  public logistic {
+  public virtual pf_base_dens,
+  public virtual logistic {
 public:
-  using pf_dens_base<logistic>::pf_dens_base;
+  logistic_dens(const PF_data &data): pf_base_dens(data) {};
 };
 
-/*
-  Class for exponentially distributed arrival times where state vectors follows
-  a first order random walk
-*/
+/* Class for piece-wise constant exponentially distributed arrival times */
 class exponential_dens :
-  public pf_dens_base<exponential>,
-  public exponential {
+  public virtual pf_base_dens,
+  public virtual exponential {
 public:
-  using pf_dens_base<exponential>::pf_dens_base;
+  exponential_dens(const PF_data &data): pf_base_dens(data) {};
 };
 
 #endif

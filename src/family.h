@@ -29,42 +29,65 @@ public:
   virtual ~glm_base() = default;
 };
 
-template<class T>
 class family_base {
 public:
-  static inline double linkinv(
-      const trunc_eta_res res, const double at_risk_length){
-    return T::linkinv(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
+  virtual bool uses_at_risk_length() const = 0;
+
+  virtual trunc_eta_res truncate_eta(
+      const bool outcome, const double eta, const double exp_eta,
+      const double at_risk_length) const = 0;
+
+  virtual double linkinv(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const = 0;
+  double linkinv(
+      const trunc_eta_res res, const double at_risk_length) const {
+    return linkinv(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
+  };
+
+  virtual double mu_eta(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const = 0;
+  double mu_eta(
+      const trunc_eta_res res, const double at_risk_length) const {
+    return mu_eta(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static inline double mu_eta(
-      const trunc_eta_res res, const double at_risk_length){
-    return T::mu_eta(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
+  virtual double var(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const = 0;
+  double var(
+      const trunc_eta_res res, const double at_risk_length) const {
+    return var(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static inline double var(
-      const trunc_eta_res res, const double at_risk_length){
-    return T::var(res.eta_trunc, res.exp_eta_trunc, at_risk_length);
-  }
-
-  static inline double log_like(
+  virtual double log_like(
+      const bool outcome, const double eta,
+      const double exp_eta, const double at_risk_length) const = 0;
+  double log_like(
       const bool outcome, const trunc_eta_res res,
-      const double at_risk_length){
-    return T::log_like(
+      const double at_risk_length) const {
+    return log_like(
       outcome, res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static inline double d_log_like(
+  virtual double d_log_like(
+      const bool outcome, const double eta,
+      const double exp_eta, const double at_risk_length) const = 0;
+  double d_log_like(
       const bool outcome, const trunc_eta_res res,
-      const double at_risk_length){
-    return T::d_log_like(
+      const double at_risk_length) const {
+    return d_log_like(
       outcome, res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
-  static inline double dd_log_like(
+  virtual double dd_log_like(
+      const bool outcome, const double eta,
+      const double exp_eta, const double at_risk_length) const = 0;
+  double dd_log_like(
       const bool outcome, const trunc_eta_res res,
-      const double at_risk_length){
-    return T::dd_log_like(
+      const double at_risk_length) const {
+    return dd_log_like(
       outcome, res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
@@ -72,13 +95,15 @@ public:
   virtual ~family_base() = default;
 };
 
-class logistic : public family_base<logistic>, public glm_base {
+class logistic : public virtual family_base, public virtual glm_base {
 public:
-  const static bool uses_at_risk_length = false;
+  bool uses_at_risk_length() const override {
+    return false;
+  }
 
-  static inline trunc_eta_res truncate_eta(
+  trunc_eta_res truncate_eta(
       const bool outcome, const double eta, const double exp_eta,
-      const double at_risk_length){
+      const double at_risk_length) const override {
     trunc_eta_res ans;
     ans.eta_trunc = MIN(MAX(eta, -20), 20);
 
@@ -86,44 +111,41 @@ public:
     return ans;
   }
 
-  using family_base<logistic>::linkinv;
-  static inline double linkinv(
-      const double eta, const double exp_eta, const double at_risk_length){
+  double linkinv(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
     return 1 / (1 + 1 / exp_eta);
   }
 
-  using family_base<logistic>::mu_eta;
-  static inline double mu_eta(
-      const double eta, const double exp_eta, const double at_risk_length){
+  double mu_eta(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
     double denom = 1 + exp_eta;
     return (exp_eta / denom) / denom;
   }
 
-  using family_base<logistic>::var;
-  static inline double var(
-      const double eta, const double exp_eta, const double at_risk_length){
+  double var(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
     return mu_eta(eta, exp_eta, at_risk_length);
   }
 
-  using family_base<logistic>::log_like;
-  static inline double log_like(
+  double log_like(
       const bool outcome, const double eta,
-      const double exp_eta, const double at_risk_length){
+      const double exp_eta, const double at_risk_length) const override {
     double p = linkinv(eta, exp_eta, at_risk_length);
     return outcome ? log(p) : log(1 - p);
   }
 
-  using family_base<logistic>::d_log_like;
-  static inline double d_log_like(
+  double d_log_like(
       const bool outcome, const double eta,
-      const double exp_eta, const double at_risk_length){
+      const double exp_eta, const double at_risk_length) const override {
     return (exp_eta * (outcome - 1) + outcome) / (exp_eta + 1);
   }
 
-  using family_base<logistic>::dd_log_like;
-  static inline double dd_log_like(
+  double dd_log_like(
       const bool outcome, const double eta,
-      const double exp_eta, const double at_risk_length){
+      const double exp_eta, const double at_risk_length) const override {
     return - mu_eta(eta, exp_eta, at_risk_length);
   }
 
@@ -161,52 +183,51 @@ public:
 };
 
 
-class exponential : public family_base<exponential>, public glm_base {
+class exponential : public virtual family_base, public virtual glm_base  {
 public:
-  const static bool uses_at_risk_length = true;
+  bool uses_at_risk_length() const override {
+    return true;
+  }
 
-  static inline trunc_eta_res truncate_eta(
+  trunc_eta_res truncate_eta(
       const bool outcome, const double eta, const double exp_eta,
-      const double at_risk_length){
+      const double at_risk_length) const override {
     return trunc_eta_exponential(outcome, eta, exp_eta, at_risk_length);
   }
 
-  using family_base<exponential>::linkinv;
-  static inline double linkinv(
-      const double eta, const double exp_eta, const double at_risk_length){
+  double linkinv(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
     return exp_eta * at_risk_length;
   }
 
-  using family_base<exponential>::mu_eta;
-  static inline double mu_eta(
-      const double eta, const double exp_eta, const double at_risk_length){
+  double mu_eta(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
     return linkinv(eta, exp_eta, at_risk_length);
   }
 
-  using family_base<exponential>::var;
-  static inline double var(
-      const double eta, const double exp_eta, const double at_risk_length){
+  double var(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
     return linkinv(eta, exp_eta, at_risk_length);
   }
 
-  using family_base<exponential>::log_like;
-  static inline double log_like(
+  double log_like(
       const bool outcome, const double eta,
-      const double exp_eta, const double at_risk_length){
+      const double exp_eta, const double at_risk_length) const override {
     return outcome * eta - exp_eta * at_risk_length;
   }
 
-  using family_base<exponential>::d_log_like;
-  static inline double d_log_like(
+  double d_log_like(
       const bool outcome, const double eta,
-      const double exp_eta, const double at_risk_length){
+      const double exp_eta, const double at_risk_length) const override {
     return outcome - exp_eta * at_risk_length;
   }
 
-  using family_base<exponential>::dd_log_like;
-  static inline double dd_log_like(
+  double dd_log_like(
       const bool outcome, const double eta,
-      const double exp_eta, const double at_risk_length){
+      const double exp_eta, const double at_risk_length) const override {
     return - exp_eta * at_risk_length;
   }
 

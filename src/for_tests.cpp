@@ -33,9 +33,7 @@ double dmvnrm_log_test(
 #include "ddhazard.h"
 #include "family.h"
 #include "estimate_fixed_effects_M_step.h"
-
-using bigglm_updateQR_logit   = bigglm_updateQR<logistic>;
-using bigglm_updateQR_poisson = bigglm_updateQR<exponential>;
+#include "bigglm_wrapper.h"
 
 // [[Rcpp::export]]
 void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
@@ -56,11 +54,13 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
   qr.tol = std::shared_ptr<arma::vec>(&tol, [](arma::vec*x) -> void { });
 
   if(model == "logit"){
-    return(bigglm_updateQR_logit::update(
-        qr, X, eta, offset, at_risk_length, y, w));
+    logistic fam;
+    return(bigglm_updateQR::update(
+        qr, X, eta, offset, at_risk_length, y, w, fam));
   } else if (is_exponential_model(model)){
-    return(bigglm_updateQR_poisson::update(
-        qr, X, eta, offset, at_risk_length, y, w));
+    exponential fam;
+    return(bigglm_updateQR::update(
+        qr, X, eta, offset, at_risk_length, y, w, fam));
   }
 }
 
@@ -68,16 +68,18 @@ void bigglm_updateQR_rcpp(arma::vec &D, arma::vec &rbar, arma::vec &thetab,
 double SMA_hepler_logit_compute_length(
     const double offset, const double coef1, const double coef2,
     const double w, const bool y){
-  return SMA<logistic>::compute_length(
-    offset, coef1, coef2, w, y, 0.);
+  logistic f;
+  return SMA::compute_length(
+    offset, coef1, coef2, w, y, 0., f);
 }
 
 // [[Rcpp::export]]
 double SMA_hepler_exp_compute_length(
     const double offset, const double coef1, const double coef2,
     const double w, const bool y, const double length){
-  return SMA<exponential>::compute_length(
-    offset, coef1, coef2, w, y, length);
+  exponential f;
+  return SMA::compute_length(
+    offset, coef1, coef2, w, y, length, f);
 }
 
 // -------------------------------------------------- //
