@@ -226,9 +226,8 @@ public:
 
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
-    auto inter_output = compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean
-      <is_forward>
-      (dens_calc, data, t, Q, alpha_bar, cl);
+    auto inter_output = taylor_normal_approx_w_cloud_mean
+      (dens_calc, data, t, Q, alpha_bar, cl, is_forward);
 
     return(sample(dens_calc, data, cl, resample_idx, t, inter_output));
   }
@@ -269,8 +268,8 @@ public:
     /* compute parts of the terms for the mean and covariance */
     auto &Q = data.Q_proposal_smooth;
     auto inter_output =
-      compute_mu_n_Sigma_from_normal_apprx<2, true>(
-          dens_calc, data, t, Q, alpha_bar);
+      taylor_normal_approx(
+          dens_calc, data, t, Q, alpha_bar, 2, true);
 
     /* Sample */
     debug_msg_before_sampling(data, inter_output);
@@ -342,9 +341,8 @@ public:
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
     auto inter_output =
-      compute_mu_n_Sigma_from_normal_apprx_w_particles
-      <is_forward>
-      (dens_calc, data, t, Q, cl);
+      taylor_normal_approx_w_particles
+      (dens_calc, data, t, Q, cl, is_forward);
 
     return(sample(dens_calc, data, cl, resample_idx, t, inter_output));
   }
@@ -397,9 +395,8 @@ public:
     /* compute means and covariances */
     auto &Q = data.Q_proposal_smooth;
     auto inter_output =
-      compute_mu_n_Sigma_from_normal_apprx_w_particles
-      <is_forward>
-      (dens_calc, data, t, Q, mus);
+      taylor_normal_approx_w_particles
+      (dens_calc, data, t, Q, mus, is_forward);
 
     /* Sample */
     cloud ans;

@@ -114,9 +114,8 @@ public:
 
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
-    auto ans = compute_mu_n_Sigma_from_normal_apprx_w_cloud_mean
-      <is_forward>
-      (dens_calc, data, t, Q, alpha_bar, PF_cloud);
+    auto ans = taylor_normal_approx_w_cloud_mean
+      (dens_calc, data, t, Q, alpha_bar, PF_cloud, is_forward);
 
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
@@ -199,9 +198,8 @@ public:
       unsigned int t, arma::uvec &outcome, bool &did_resample){
     /* compute means and covariances */
     auto &Q = data.Q_proposal;
-    auto ans = compute_mu_n_Sigma_from_normal_apprx_w_particles
-      <is_forward>
-      (dens_calc, data, t, Q, PF_cloud);
+    auto ans = taylor_normal_approx_w_particles
+      (dens_calc, data, t, Q, PF_cloud, is_forward);
 
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
