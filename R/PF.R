@@ -169,8 +169,31 @@ PF_EM <- function(
     n_fixed = static_args$n_fixed, Q_0 = if(missing(Q_0)) NULL else Q_0,
     Q = if(missing(Q)) NULL else Q, a_0 = a_0)
 
-  out <- do.call(.PF_EM, c(static_args, model_args, control, list(
-    trace = trace, seed = seed, fixed_parems = fixed_parems)))
+  # TODO: delete
+  out <- do.call(
+    .PF_EM, c(static_args, model_args, control, list(
+      trace = trace, seed = seed, fixed_parems = fixed_parems)))
+
+  # #####
+  # # build up call with symbols to get neater call stack incase of an error
+  # . <- quote
+  # fit_call <- list(
+  #   .(.PF_EM), trace = .(trace), seed = .(seed),
+  #   fixed_parems = .(fixed_parems))
+  #
+  # names. <- names(static_args)
+  # fit_call[names.] <- lapply(names., function(nam)
+  #   substitute(static_args$x, list(x = as.symbol(nam))))
+  #
+  # names. <- names(model_args)
+  # fit_call[names.] <- lapply(names., function(nam)
+  #   substitute(model_args$x, list(x = as.symbol(nam))))
+  #
+  # names. <- names(control)
+  # fit_call[names.] <- lapply(names., function(nam)
+  #   substitute(control$x, list(x = as.symbol(nam))))
+  #
+  # out <- eval(as.call(fit_call), envir = environment())
 
   out$call <- match.call()
   out
@@ -187,8 +210,16 @@ PF_EM <- function(
   n_vars <- nrow(X)
   fit_call <- cl
   fit_call[[1]] <- as.name("PF_smooth")
+
+  # TODO: delete
   fit_call[["Q_tilde"]] <- bquote(diag(0, .(n_vars)))
   fit_call[["F"]] <- fit_call[["F."]]
+
+  # fit_call[["Q_tilde"]] <- diag(0, n_vars)
+  # fit_call[["F"]]   <- eval(fit_call[["F."]] , parent.frame())
+  # fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
+  # fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
+
   fit_call[c("eps", "seed", "F.", "trace")] <- NULL
 
   #####
@@ -215,7 +246,7 @@ PF_EM <- function(
       cat("#######################\nStarting EM iteration", i, "\n")
 
       cat("a_0 is:\n")
-      print(eval(fit_call$a_0, environment()))
+      print(fit_call$a_0)
 
       if(length(fixed_parems) > 0){
         cat("Fixed parameters are:\n")
@@ -223,7 +254,7 @@ PF_EM <- function(
       }
 
       cat("chol(Q) is:\n")
-      print(chol(eval(fit_call$Q, environment())))
+      print(chol(fit_call$Q, environment()))
     }
     log_like_old <- log_like
     log_like_max <- max(log_like, log_like_max)
@@ -247,12 +278,17 @@ PF_EM <- function(
     # update parameters in state equation
     if(trace > 0)
       cat("Updating parameters in state model...\n")
+
+    # TODO: delete
     a_0_old <- eval(fit_call$a_0, environment())
     Q_old <- eval(fit_call$Q, environment())
 
+    # a_0_old <- fit_call$a_0
+    # Q_old <- fit_call$Q
+
     if(type == "random_walk"){
       sum_stats <- compute_summary_stats_first_o_RW(
-        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0)
+        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
       a_0 <- drop(sum_stats[[1]]$E_xs)
       Q <- Reduce("+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
       Q <- Q / length(sum_stats)

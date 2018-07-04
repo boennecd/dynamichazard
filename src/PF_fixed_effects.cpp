@@ -61,17 +61,17 @@ struct data_holder {
     { }
 };
 
-class generator : public qr_data_generator {
+class pf_fixed_generator : public qr_data_generator {
   using uword = arma::uword;
   static constexpr double zero_eps = 1e-100;
 
-  data_holder &data; /* non-const to use non-copy constructor later */
+  data_holder &data; /* non-const to use non-copy constructor later for arma objects */
   const uword istart, iend;
 
 public:
-  generator
+  pf_fixed_generator
   (data_holder &data, const uword istart, const uword iend):
-  data(data), istart(istart), iend(iend) {}
+  data(data), istart(istart), iend(iend) { }
 
   qr_work_chunk get_chunk() const override {
     /* assign objects for later use */
@@ -94,7 +94,6 @@ public:
     uword n = X.n_cols;
     arma::vec weight(n);
     arma::vec offset(n);
-
 
     for(arma::uword i = 0; i < n_particles; ++i){
       weight.subvec(i * data.n_obs, (i + 1L) * data.n_obs - 1L).fill(
@@ -194,9 +193,8 @@ Rcpp::List pf_fixed_effect_iteration(
 
   /* setup generators */
   std::vector<std::unique_ptr<qr_data_generator>> generators;
-
   for(arma::uword i_start = 0L; i_start < n_particles; i_start += max_blocks)
-    generators.emplace_back(new generator(
+    generators.emplace_back(new pf_fixed_generator(
         *dat.get(), i_start, std::min(
             n_particles - 1L, i_start + max_blocks - 1L)));
 

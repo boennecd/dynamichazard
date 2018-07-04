@@ -232,29 +232,25 @@ Rcpp::List linear_mapper_test(
     return Rcpp::List::create(
       Rcpp::Named("A") = ptr->map(),
 
-      Rcpp::Named("A_x")     = arma::vec(ptr->map(x       , false).sv),
-      Rcpp::Named("A_T_z")   = arma::vec(ptr->map(z       , true ).sv),
+      Rcpp::Named("A_x")     = arma::vec(ptr->map(x       , dont_trans).sv),
+      Rcpp::Named("A_T_z")   = arma::vec(ptr->map(z       , trans     ).sv),
 
-      Rcpp::Named("A_X")     = arma::mat(ptr->map(X, left , false).sv),
-      Rcpp::Named("X_A_T")   = arma::mat(ptr->map(X, right, false).sv),
-      Rcpp::Named("A_X_A_T") = arma::mat(ptr->map(X, both , false).sv),
+      Rcpp::Named("A_X")     = arma::mat(ptr->map(X, left , dont_trans).sv),
+      Rcpp::Named("X_A_T")   = arma::mat(ptr->map(X, right, dont_trans).sv),
+      Rcpp::Named("A_X_A_T") = arma::mat(ptr->map(X, both , dont_trans).sv),
 
-      Rcpp::Named("A_T_Z")   = arma::mat(ptr->map(Z, left , true ).sv),
-      Rcpp::Named("Z_A")     = arma::mat(ptr->map(Z, right, true ).sv),
-      Rcpp::Named("A_T_Z_A") = arma::mat(ptr->map(Z, both , true ).sv)
+      Rcpp::Named("A_T_Z")   = arma::mat(ptr->map(Z, left , trans     ).sv),
+      Rcpp::Named("Z_A")     = arma::mat(ptr->map(Z, right, trans     ).sv),
+      Rcpp::Named("A_T_Z_A") = arma::mat(ptr->map(Z, both , trans     ).sv)
     );
 
   return Rcpp::List::create(
     Rcpp::Named("A") = ptr->map(),
 
-    Rcpp::Named("A_x")     = arma::vec(ptr->map(x       , false).sv),
+    Rcpp::Named("A_x")     = arma::vec(ptr->map(x       , dont_trans).sv),
 
-    Rcpp::Named("A_X")     = arma::mat(ptr->map(X, left , false).sv),
-    Rcpp::Named("X_A_T")   = arma::mat(ptr->map(X, right, false).sv),
-    Rcpp::Named("A_X_A_T") = arma::mat(ptr->map(X, both , false).sv)
+    Rcpp::Named("A_X")     = arma::mat(ptr->map(X, left , dont_trans).sv),
+    Rcpp::Named("X_A_T")   = arma::mat(ptr->map(X, right, dont_trans).sv),
+    Rcpp::Named("A_X_A_T") = arma::mat(ptr->map(X, both , dont_trans).sv)
   );
 }
-
-
-
-

@@ -212,18 +212,6 @@ Rcpp::List get_rcpp_list_from_cloud(
 
 smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list);
 
-struct PF_summary_stats_RW {
-  /* E[X_t] */
-  std::vector<arma::vec> E_xs;
-  /* E[(X_t - FX_{t-1})(X_t - FX_{t-1})^T] */
-  std::vector<arma::mat> E_x_less_x_less_one_outers;
-};
-
-PF_summary_stats_RW
-  compute_summary_stats_first_o_RW
-  (const smoother_output&, const arma::vec&, const arma::mat&,
-   const arma::mat&);
-
 #undef USE_PRIOR_IN_BW_FILTER_DEFAULT
 #undef MAX
 #endif

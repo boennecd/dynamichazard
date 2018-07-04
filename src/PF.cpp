@@ -2,6 +2,7 @@
 #include "PF/importance_samplers.h"
 #include "PF/resamplers.h"
 #include "PF/densities.h"
+#include "PF/est_params.h"
 
 #define BOOT_FILTER "bootstrap_filter"
 #define PF_APPROX_CLOUD_MEAN "PF_normal_approx_w_cloud_mean"
@@ -315,7 +316,8 @@ Rcpp::List particle_filter(
 // [[Rcpp::export]]
 Rcpp::List compute_summary_stats_first_o_RW(
     const Rcpp::List &rcpp_list, unsigned int n_threads,
-    const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0){
+    const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
+    const arma::mat &R){
 #ifdef _OPENMP
   omp_set_num_threads(n_threads);
 #endif
@@ -338,4 +340,25 @@ Rcpp::List compute_summary_stats_first_o_RW(
   }
 
   return ans;
+}
+
+// [[Rcpp::export]]
+Rcpp::List PF_est_params_dens(
+    const Rcpp::List &rcpp_list, unsigned int n_threads,
+    const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
+    const arma::mat &R){
+  const unsigned long int max_bytes = 5000000;
+  PF_parameters new_params;
+
+  {
+    auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
+
+    new_params = est_params_dens(
+      sm_output, a_0, Q, Q_0, R, n_threads, max_bytes);
+  }
+
+  return Rcpp::List::create(
+    Rcpp::Named("a_0")     = new_params.a_0,
+    Rcpp::Named("R_top_F") = new_params.R_top_F,
+    Rcpp::Named("E_xs")    = new_params.Q);
 }

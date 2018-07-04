@@ -364,6 +364,7 @@ test_that("compute_summary_stats_first_o_RW gives previous results", {
   Q_0 <- diag(1, 2)
   Q <- diag(0.1, 2)
   a_0 <- c(-3.6, 0)
+  R <- diag(1, 2)
 
   test_func <- function(data_file, test_file){
     q <- bquote({
@@ -374,8 +375,10 @@ test_that("compute_summary_stats_first_o_RW gives previous results", {
 
           #####
           # Test that multithreaded version gives the same
-          sum_stats <- compute_summary_stats_first_o_RW(cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0)
-          s2 <- compute_summary_stats_first_o_RW(cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0)
+          sum_stats <- compute_summary_stats_first_o_RW(
+            cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
+          s2 <- compute_summary_stats_first_o_RW(
+            cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
 
           expect_equal(sum_stats, s2)
 

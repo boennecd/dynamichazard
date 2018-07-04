@@ -5,9 +5,9 @@ using map_res_mat = map_res<arma::subview<double>, arma::mat>;
 
 /* dens_mapper */
 map_res_col
-  dens_mapper::map_(const arma::vec &x, const bool transpose, ptr_vec &ptr) const
+  dens_mapper::map_(const arma::vec &x, do_trans transpose, ptr_vec &ptr) const
   {
-    if(transpose){
+    if(transpose == trans){
       ptr.reset(new arma::vec(A.t() * x));
     } else
       ptr.reset(new arma::vec(A * x));
@@ -22,11 +22,11 @@ const arma::mat& dens_mapper::map() const
 }
 
 map_res_mat dens_mapper::map
-  (const arma::mat &X, side s, const bool transpose) const
+  (const arma::mat &X, side s, do_trans transpose) const
   {
     ptr_mat ptr;
 
-    if(transpose){
+    if(transpose == trans){
       switch(s){
       case  left:
         ptr.reset(new arma::mat(A.t() * X));
@@ -64,9 +64,9 @@ map_res_mat dens_mapper::map
 
 /* select_mapper */
 map_res_col
-  select_mapper::map_(const arma::vec &x, const bool transpose, ptr_vec &ptr) const
+  select_mapper::map_(const arma::vec &x, do_trans transpose, ptr_vec &ptr) const
   {
-    if(transpose){
+    if(transpose == trans){
       ptr.reset(new arma::vec(A.map_inv(x)));
     } else
       ptr.reset(new arma::vec(A.map    (x)));
@@ -81,11 +81,11 @@ const arma::mat& select_mapper::map() const
 }
 
 map_res_mat select_mapper::map
-  (const arma::mat &X, side s, const bool transpose) const
+  (const arma::mat &X, side s, do_trans transpose) const
   {
     ptr_mat ptr;
 
-    if(transpose){
+    if(transpose == trans){
       switch(s){
       case  left:
         ptr.reset(new arma::mat(          A.map_inv(X)));
@@ -124,7 +124,7 @@ map_res_mat select_mapper::map
 
 /* inv_mapper */
 map_res_col
-  inv_mapper::map_(const arma::vec &x, const bool transpose, ptr_vec &ptr) const
+  inv_mapper::map_(const arma::vec &x, do_trans transpose, ptr_vec &ptr) const
   {
     ptr.reset(new arma::vec(A_LU.solve(x, transpose)));
 
@@ -138,11 +138,11 @@ const arma::mat& inv_mapper::map() const
 }
 
 map_res_mat inv_mapper::map
-  (const arma::mat &X, side s, const bool transpose) const
+  (const arma::mat &X, side s, do_trans transpose) const
   {
     ptr_mat ptr;
 
-    if(transpose){
+    if(transpose == trans){
       switch(s){
       case  left:
         ptr.reset(new arma::mat(A_LU.solve(X    , true)));
@@ -186,7 +186,7 @@ map_res_mat inv_mapper::map
 /* inv_sub_mapper
  * TODO: This could like be done smarter... */
 map_res_col
-  inv_sub_mapper::map_(const arma::vec &x, const bool transpose, ptr_vec &ptr) const
+  inv_sub_mapper::map_(const arma::vec &x, do_trans transpose, ptr_vec &ptr) const
   {
     ptr.reset(new arma::vec(R.map_inv(A_LU.solve(R.map(x), transpose))));
 
@@ -200,11 +200,11 @@ const arma::mat& inv_sub_mapper::map() const
 }
 
 map_res_mat inv_sub_mapper::map
-  (const arma::mat &X, side s, const bool transpose) const
+  (const arma::mat &X, side s, do_trans transpose) const
   {
     ptr_mat ptr;
 
-    if(transpose){
+    if(transpose == trans){
       Rcpp::stop("transpose not implemented in `inv_sub_mapper::map`");
 
     } else {

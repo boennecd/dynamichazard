@@ -26,6 +26,7 @@ using map_res_col = map_res<arma::subview_col<double>, arma::vec>;
 using map_res_mat = map_res<arma::subview<double>, arma::mat>;
 
 enum side { left, both, right };
+enum do_trans { dont_trans = 0, trans = 1 };
 
 /* Compute products with matrix B */
 class linear_mapper {
@@ -34,7 +35,8 @@ protected:
   using ptr_mat = std::unique_ptr<arma::mat>;
 
   virtual
-    map_res_col map_(const arma::vec&, const bool, ptr_vec&) const = 0;
+    map_res_col map_(
+        const arma::vec&, do_trans, ptr_vec&) const = 0;
 
 public:
   virtual const arma::mat& map() const = 0;
@@ -42,33 +44,35 @@ public:
   // create a virtual, default destructor
   virtual ~linear_mapper() = default;
 
-  map_res_col map(arma::vec &x, const bool transpose = false) const {
+  map_res_col map(arma::vec &x, do_trans transpose = dont_trans) const {
     ptr_vec ptr;
     return map_(x, transpose, ptr);
   }
-  map_res_col map(arma::subview_col<double> x, const bool transpose = false) const {
+  map_res_col map(arma::subview_col<double> x,
+                  do_trans transpose = dont_trans) const {
     ptr_vec ptr;
     return map_(x, transpose, ptr);
   }
-  map_res_col map(const arma::vec &x, const bool transpose = false) const {
+  map_res_col map(const arma::vec &x, do_trans transpose = dont_trans) const {
     /* TODO: re-implement to avoid copy */
     ptr_vec ptr(new arma::vec(x));
     return map_(x, transpose, ptr);
   }
 
   virtual map_res_mat map(const arma::mat&, side s = both,
-                          const bool transpose = false) const = 0;
+                          do_trans transpose = dont_trans) const = 0;
 };
 
 
 
 
 #define PROTECTED_OVERIDES                                           \
-map_res_col map_(const arma::vec&, const bool, ptr_vec&) const override;
+map_res_col map_(const arma::vec&, do_trans, ptr_vec&) const override;
 
 #define PUBLIC_OVERIDES                                        \
 const arma::mat& map() const override;                         \
-map_res_mat map(const arma::mat&, side, const bool) const override;
+using linear_mapper::map;                                      \
+map_res_mat map(const arma::mat&, side, do_trans) const override;
 
 
 

@@ -1,54 +1,10 @@
-#include "PF_utils.h"
+#include "est_params.h"
 #include "../arma_BLAS_LAPACK.h"
 #include "../R_BLAS_LAPACK.h"
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-// static arma::mat get_E_x_less_x_less_one_outer_at_one(
-//     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
-//     const cloud &cl){
-//   const int n_elem = a_0.n_elem;
-//   const unsigned int n_particles = cl.size();
-//   auto cl_begin = cl.begin();
-//
-//   arma::mat ans(n_elem, n_elem, arma::fill::zeros);
-//   const arma::mat S_inv = arma::inv(Q) + arma::inv(Q_0);
-//   const arma::vec a_0_term = solve(Q_0, a_0);
-//
-//   const arma::mat Q_chol = arma::chol(Q);
-//   const arma::mat S_inv_chol = arma::chol(S_inv);
-//
-//   for(unsigned int i = 0; i < n_particles; ++i){
-//     auto it_p = cl_begin + i;
-//     const arma::vec &state = it_p->get_state();
-//     arma::vec m = a_0_term + solve_w_precomputed_chol(Q_chol, state);
-//     m = solve_w_precomputed_chol(S_inv_chol, m);
-//     double weight = exp(it_p->log_weight);
-//     double neg_weight = -weight;
-//     const static int inc = 1;
-//
-//     // Could use dsyrk and dsyr2k
-//     // This parts only sets the upper triangular part of the matrix
-//     sym_mat_rank_one_update(weight, state, ans);
-//     sym_mat_rank_one_update(weight, m, ans);
-//     R_BLAS_LAPACK::dger(
-//       &n_elem /* M */, &n_elem /* N */, &neg_weight /* ALPHA */,
-//       state.memptr() /* X */, &inc /* INCX*/,
-//       m.memptr() /* Y */, &inc /* INCY */,
-//       ans.memptr() /* A */, &n_elem /* LDA */);
-//     R_BLAS_LAPACK::dger(
-//       &n_elem, &n_elem, &neg_weight,
-//       m.memptr() /* swapped */, &inc ,
-//       state.memptr() /* swapped */, &inc,
-//       ans.memptr(), &n_elem);
-//   }
-//
-//   ans += arma::inv(S_inv);
-//
-//   return ans;
-// }
 
 static PF_summary_stats_RW compute_summary_stats_first_o_RW(
     const smoother_output::trans_like_obj &transition_likelihoods,
