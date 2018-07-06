@@ -143,7 +143,7 @@ public:
       (weight(good) % arma::square(mu_eta_val)) / var);
 
     X = X.cols(good);
-    X = X.t();
+    arma::inplace_trans(X);
     X.each_col() %= w;
     z %= w;
 

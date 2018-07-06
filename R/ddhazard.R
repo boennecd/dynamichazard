@@ -101,13 +101,9 @@ if(getRversion() >= "2.15.1")
 #'plot(fit)
 #'
 #' @export
-ddhazard = function(formula, data,
-                    model = "logit",
-                    by, max_T, id,
-                    a_0, Q_0, Q = Q_0,
-                    order = 1, weights,
-                    control = list(),
-                    verbose = F){
+ddhazard = function(
+  formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0, order = 1,
+  weights, control = list(), verbose = F){
   #####
   # checks
   if (model %in% c("exp_bin", "exp_clip_time", "exp_clip_time_w_jump")){
@@ -270,7 +266,7 @@ ddhazard = function(formula, data,
     tryCatch({
       result <- ddhazard_no_validation(
         a_0 = a_0, Q_0 = Q_0, F. = F., verbose = verbose, Q = Q,
-        risk_set= risk_set, X_Y = X_Y, model = model, R = R, L = L, m = m,
+        risk_set= risk_set, X_Y = X_Y, model = model, R = R, L = L,
         LR = control$LR * control$LR_decrease_fac^(k),
         n_fixed_terms_in_state_vec = ifelse(est_fixed_in_E, n_fixed, 0),
         weights = weights,
@@ -386,15 +382,13 @@ ddhazard = function(formula, data,
     "class" = "ddhazard")
 }
 
-ddhazard_no_validation <- function(a_0, Q_0, F., verbose, Q,
-                                   risk_set, X_Y, model, LR,
-                                   n_fixed_terms_in_state_vec,
-                                   weights = weights,
-                                   control, R, L, m){
+ddhazard_no_validation <- function(
+  a_0, Q_0, F., verbose, Q, risk_set, X_Y, model, LR, n_fixed_terms_in_state_vec,
+  weights = weights, control, R, L){
   ddhazard_fit_cpp(
     a_0 = a_0, Q_0 = Q_0, F_ = F., verbose = verbose,
     Q = Q, n_max = control$n_max,
-    R = R, L = L, m = m,
+    R = R, L = L,
     risk_obj = risk_set, eps = control$eps,
     X = X_Y$X, fixed_terms = X_Y$fixed_terms,
     fixed_parems_start = control$fixed_parems_start,
@@ -523,17 +517,17 @@ get_state_eq_matrices <-  function(
 
   #####
   # Setup for other matrices and vectors
-  R <- matrix(0, state_dim, ncol(Q))
+  R <- matrix(0, state_dim, n_params)
   if(n_params > 0)
     diag(R)[1:n_params] <- 1
   ncol_L <- n_params +  n_fixed * est_fixed_in_E
   L <- matrix(0, ncol_L, state_dim)
   if(n_params + n_fixed * est_fixed_in_E > 0)
     diag(L)[1:ncol_L] <- 1
-  m <- numeric(state_dim)
 
-  return(list(Q = Q, Q_0 = Q_0, F. = F., R = R, L = L, m = m, a_0 = a_0,
-              indicies_fix = indicies_fix))
+  return(list(
+    Q = Q, Q_0 = Q_0, F. = F., R = R, L = L, a_0 = a_0,
+    indicies_fix = indicies_fix))
 }
 
 # TODO: remove other exp_ names at some future point after 0.5.0 changes

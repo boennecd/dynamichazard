@@ -5,17 +5,16 @@ using particle_pairs = smoother_output::particle_pairs;
 using pair_iterator = std::vector<const particle_pairs*>::const_iterator;
 
 class update_parameters_data {
-  using trans_like = std::vector<std::vector<particle_pairs>>;
-
   /* function to create a list of pointers to be used in loops later */
-  std::vector<const smoother_output::particle_pairs*> set_pairs(){
-    unsigned long int total_n_pairs = 0;
-    for(auto i = tr.begin(); i != tr.end(); ++i)
+  std::vector<const smoother_output::particle_pairs*>
+  set_pairs(){ /* Just store two start and end iterators */
+    std::vector<const particle_pairs*>::size_type total_n_pairs = 0L;
+    for(auto i = tr->begin(); i != tr->end(); ++i)
       total_n_pairs += i->size();
 
     std::vector<const particle_pairs*> out(total_n_pairs);
     auto ptr = out.begin();
-    for(auto i = tr.begin(); i != tr.end(); ++i)
+    for(auto i = tr->begin(); i != tr->end(); ++i)
       for(auto j = i->begin(); j != i->end(); ++j, ++ptr)
         *ptr = &(*j);
 
@@ -23,7 +22,7 @@ class update_parameters_data {
   }
 
 public:
-  const trans_like &tr;
+  std::shared_ptr<smoother_output::trans_like_obj> tr;
   select_mapper R;
   const unsigned int n_periods;
   const unsigned int n_elem_X;
@@ -33,24 +32,24 @@ public:
 
   update_parameters_data
     (const smoother_output &sm_output, const arma::mat &R):
-    tr(*sm_output.get_transition_likelihoods().get()),
-    R(R), n_periods(tr.size()),
-    n_elem_X(tr[0][0].p->get_state().n_elem),
-    n_elem_Y(this->R.map(tr[0][0].p->get_state(), trans).sv.n_elem),
+    tr(sm_output.get_transition_likelihoods(true)),
+    R(R), n_periods(tr->size()),
+    n_elem_X(tr->operator[](0)[0].p->get_state().n_elem),
+    n_elem_Y(
+      this->R.map(tr->operator[](0)[0].p->get_state(), trans).sv.n_elem),
     pairs(set_pairs())
     {}
 };
 
 /* generator for chunks for QR decomposition */
-class generator : public qr_data_generator {
+class generator_dens : public qr_data_generator {
   const update_parameters_data &dat;
   pair_iterator i_start;
   pair_iterator i_end;
   const unsigned long int n_pairs;
 
 public:
-
-  generator
+  generator_dens
     (const update_parameters_data &dat, pair_iterator i_start,
      pair_iterator i_end, const unsigned long int n_pairs):
     dat(dat), i_start(i_start), i_end(i_end), n_pairs(n_pairs) { }
@@ -89,7 +88,11 @@ public:
     Y = Y.cols(keep);
     X = X.cols(keep);
 
-    return { std::move(X), std::move(Y), Y.t() * Y};
+    arma::inplace_trans(X);
+    arma::inplace_trans(Y);
+    arma::mat dev = Y.t() * Y;
+
+    return { std::move(X), std::move(Y), std::move(dev) };
   }
 };
 
@@ -116,7 +119,7 @@ PF_parameters
       } while (n_pairs < max_per_block && i_end != dat.pairs.end());
 
       qr_calc.submit(std::unique_ptr<qr_data_generator>(
-        new generator(dat, i_start, i_end, n_pairs)));
+        new generator_dens(dat, i_start, i_end, n_pairs)));
       i_start = i_end;
     }
 
@@ -146,7 +149,7 @@ PF_parameters
     // update a_0
     /* TODO: needs to be updated for higher order models. Need Full F matrix */
     inv_mapper inv_map(out.R_top_F);
-    const std::vector<particle_pairs> &first_particles = dat.tr[0];
+    const std::vector<particle_pairs> &first_particles = dat.tr->operator[](0);
     out.a_0 = arma::zeros<arma::vec>(a_0.n_elem);
 
     for(auto i = first_particles.begin(); i != first_particles.end(); ++i)

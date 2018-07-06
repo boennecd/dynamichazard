@@ -14,6 +14,8 @@ PF_effective_sample_size <- function(object){
 #' @param trace argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.
 #' @param model either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.
 #' @param seed seed to set at the start of every EM iteration.
+#' @param type type of state model. Either \code{"RW"} for a [R]andom [W]alk or
+#' "VAR" for [V]ector [A]uto[R]egression.
 #' @param ... optional way to pass arguments to \code{control}.
 #'
 #' @details
@@ -118,7 +120,7 @@ PF_effective_sample_size <- function(object){
 #' @export
 PF_EM <- function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = NULL, ...){
+  control = PF_control(...), trace = 0, seed = NULL, type = "RW", ...){
   #####
   # checks
   if(order != 1)
@@ -132,6 +134,9 @@ PF_EM <- function(
       warning("You did not parse and Id argument")
     id = 1:nrow(data)
   }
+
+  if(!type %in% c("RW", "VAR"))
+    stop("Invalid ", sQuote("type"), " argument")
 
   #####
   # check if `control` has all the needed elements or if is called as in
@@ -168,32 +173,28 @@ PF_EM <- function(
     order = order, n_params = nrow(static_args$X),
     n_fixed = static_args$n_fixed, Q_0 = if(missing(Q_0)) NULL else Q_0,
     Q = if(missing(Q)) NULL else Q, a_0 = a_0)
+  model_args$L <- NULL
 
-  # TODO: delete
-  out <- do.call(
-    .PF_EM, c(static_args, model_args, control, list(
-      trace = trace, seed = seed, fixed_parems = fixed_parems)))
+  #####
+  # build up call with symbols to get neater call stack incase of an error
+  . <- quote
+  fit_call <- list(
+    .(.PF_EM), trace = .(trace), seed = .(seed),
+    fixed_parems = .(fixed_parems), type = .(type))
 
-  # #####
-  # # build up call with symbols to get neater call stack incase of an error
-  # . <- quote
-  # fit_call <- list(
-  #   .(.PF_EM), trace = .(trace), seed = .(seed),
-  #   fixed_parems = .(fixed_parems))
-  #
-  # names. <- names(static_args)
-  # fit_call[names.] <- lapply(names., function(nam)
-  #   substitute(static_args$x, list(x = as.symbol(nam))))
-  #
-  # names. <- names(model_args)
-  # fit_call[names.] <- lapply(names., function(nam)
-  #   substitute(model_args$x, list(x = as.symbol(nam))))
-  #
-  # names. <- names(control)
-  # fit_call[names.] <- lapply(names., function(nam)
-  #   substitute(control$x, list(x = as.symbol(nam))))
-  #
-  # out <- eval(as.call(fit_call), envir = environment())
+  names. <- names(static_args)
+  fit_call[names.] <- lapply(names., function(nam)
+    substitute(static_args$x, list(x = as.symbol(nam))))
+
+  names. <- names(model_args)
+  fit_call[names.] <- lapply(names., function(nam)
+    substitute(model_args$x, list(x = as.symbol(nam))))
+
+  names. <- names(control)
+  fit_call[names.] <- lapply(names., function(nam)
+    substitute(control$x, list(x = as.symbol(nam))))
+
+  out <- eval(as.call(fit_call), envir = environment())
 
   out$call <- match.call()
   out
@@ -202,25 +203,21 @@ PF_EM <- function(
 #' @importFrom graphics plot
 .PF_EM <- function(
   n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, Q_0, Q, a_0, F.,
-  L, R, m, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
+  R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
-  fixed_parems){
+  fixed_parems, type){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
   fit_call[[1]] <- as.name("PF_smooth")
 
-  # TODO: delete
-  fit_call[["Q_tilde"]] <- bquote(diag(0, .(n_vars)))
-  fit_call[["F"]] <- fit_call[["F."]]
+  fit_call[["Q_tilde"]] <- diag(0, n_vars)
+  fit_call[["F"]]   <- eval(fit_call[["F."]] , parent.frame())
+  fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
+  fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
 
-  # fit_call[["Q_tilde"]] <- diag(0, n_vars)
-  # fit_call[["F"]]   <- eval(fit_call[["F."]] , parent.frame())
-  # fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
-  # fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
-
-  fit_call[c("eps", "seed", "F.", "trace")] <- NULL
+  fit_call[c("eps", "seed", "F.", "trace", "type")] <- NULL
 
   #####
   # set the seed as in r-source/src/library/stats/R/lm.R `simulate.lm`
@@ -254,7 +251,7 @@ PF_EM <- function(
       }
 
       cat("chol(Q) is:\n")
-      print(chol(fit_call$Q, environment()))
+      print(chol(fit_call$Q))
     }
     log_like_old <- log_like
     log_like_max <- max(log_like, log_like_max)
@@ -278,13 +275,9 @@ PF_EM <- function(
     # update parameters in state equation
     if(trace > 0)
       cat("Updating parameters in state model...\n")
-
-    # TODO: delete
-    a_0_old <- eval(fit_call$a_0, environment())
-    Q_old <- eval(fit_call$Q, environment())
-
-    # a_0_old <- fit_call$a_0
-    # Q_old <- fit_call$Q
+    a_0_old <- fit_call$a_0
+    Q_old <- fit_call$Q
+    F_old <- fit_call$F
 
     if(type == "random_walk"){
       sum_stats <- compute_summary_stats_first_o_RW(
@@ -295,6 +288,14 @@ PF_EM <- function(
 
       fit_call$a_0 <- a_0
       fit_call$Q <- Q
+    } else if (type == "dens") {
+      new_params <- PF_est_params_dens(
+        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
+      fit_call$a_0 <- a_0 <- drop(new_params$a_0)
+      fit_call$F <- new_params$R_top_F # TODO: need to change for higher order
+                                       #       models
+      fit_call$Q <- (Q <- new_params$Q) / length(clouds$smoothed_clouds)
+
     } else
       stop(sQuote("type"), " not implemented")
 
@@ -306,7 +307,7 @@ PF_EM <- function(
 
       fit_call$fixed_parems <- fixed_parems <- .PF_update_fixed(
         clouds = clouds$smoothed_clouds, risk_obj = risk_obj, model = model,
-        L = L, X = X, fixed_terms = fixed_terms, fixed_parems = fixed_parems,
+        R = R, X = X, fixed_terms = fixed_terms, fixed_parems = fixed_parems,
         nthreads = n_threads, tstart = tstart, tstop = tstop)
     }
 
@@ -340,12 +341,11 @@ PF_EM <- function(
 
   return(structure(list(
     call = cl, clouds = clouds, a_0 = a_0, fixed_effects = fixed_parems, Q = Q,
-    F = fit_call$F., L = L, R = R, summary_stats = sum_stats,
+    F = fit_call$F., R = R, summary_stats = sum_stats,
     log_likes = log_likes[1:i], n_iter = i,
     effective_sample_size = effective_sample_size, seed = seed),
     class = "PF_EM"))
 }
-
 
 #' @title Auxiliary for Controlling Particle Fitting
 #'
@@ -428,7 +428,7 @@ PF_control <- function(
 
 
 .PF_update_fixed <- function(
-  clouds, risk_obj, L, X, fixed_terms, fixed_parems, model, nthreads,
+  clouds, risk_obj, R, X, fixed_terms, fixed_parems, model, nthreads,
   tstart, tstop){
   if(!model %in% c("logit", "exponential"))
     stop(sQuote(model), " is not implemented with fixed effects")
@@ -439,6 +439,7 @@ PF_control <- function(
     exponential = "poisson")
 
   out <- NULL
+  R_top <- t(R)
   for(i in 1:length(clouds)){
     cl <- clouds[[i]]
     risk_set <- risk_obj$risk_sets[[i]]
@@ -453,7 +454,7 @@ PF_control <- function(
       pmax(tstart[risk_set], risk_obj$event_times[i])
 
     ws <- cl$weights[good] # TODO: maybe scale up the weights at this point?
-    particle_coefs <- L %*% cl$states[, good, drop = FALSE]
+    particle_coefs <- R_top %*% cl$states[, good, drop = FALSE]
 
     out <- c(out, list(
       pf_fixed_effect_iteration(

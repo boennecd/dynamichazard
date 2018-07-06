@@ -159,7 +159,7 @@ ddhazard_boot <- function(
     for(l in LRs){
       tryCatch({
         suppressWarnings(est <- ddhazard_no_validation(
-          a_0 = a_0, Q_0 = Q_0, L = L, R = R_mat, m = m,
+          a_0 = a_0, Q_0 = Q_0, R = R_mat, L = L,
           F. = F., verbose = F, Q = Q,
           risk_set= boot_risk_set, X_Y = boot_X_Y,
           model = model,

@@ -5,7 +5,7 @@
 \title{EM Estimation with Particle Filters and Smoothers}
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = NULL, ...)
+  control = PF_control(...), trace = 0, seed = NULL, type = "RW", ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -33,6 +33,9 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 \item{trace}{argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.}
 
 \item{seed}{seed to set at the start of every EM iteration.}
+
+\item{type}{Type of state model. Either \code{"RW"} for a [R]andom [W]alk or
+"VAR" for [V]ector [A]uto[R]egression.}
 
 \item{...}{optional way to pass arguments to \code{control}.}
 }

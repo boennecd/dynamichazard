@@ -60,8 +60,6 @@ test_that("PF_smooth gives same results", {
     tstop = X_Y$Y[2, ],
 
     R = diag(1, ncol(Q)),
-    L = diag(1, length(a_0)),
-    m = numeric(length(a_0)),
     Q_0 = Q_0,
 
     fixed_parems = numeric(),

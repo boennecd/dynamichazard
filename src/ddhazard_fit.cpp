@@ -19,7 +19,6 @@ Rcpp::List ddhazard_fit_cpp(
     const arma::vec &fixed_parems_start,
     arma::mat R,
     arma::mat L,
-    arma::vec m,
     arma::mat Q_0, // by value copy. This  is key cuz we will change it if est_Q_0 = T
     arma::mat Q, // similarly this is a copy
     const Rcpp::List &risk_obj,
@@ -70,14 +69,9 @@ Rcpp::List ddhazard_fit_cpp(
 
   // Intialize the solver for the E-step
   std::unique_ptr<ddhazard_data> p_data(new random_walk<ddhazard_data>(
-      n_fixed_terms_in_state_vec,
-      X, fixed_terms, tstart, tstop, is_event_in_bin,
-      a_0, fixed_parems_start,
-      R, L, m, Q_0, Q,
-      risk_obj, F_,
-      eps_fixed_parems, max_it_fixed_params,
-      weights,
-      n_max, eps, verbose,
+      n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop,
+      is_event_in_bin, a_0, fixed_parems_start, R, L, Q_0, Q, risk_obj, F_,
+      eps_fixed_parems, max_it_fixed_params,weights, n_max, eps, verbose,
       est_Q_0, debug, LR, n_threads, denom_term, use_pinv));
 
   std::unique_ptr<Solver> solver;

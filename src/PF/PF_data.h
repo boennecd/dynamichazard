@@ -233,7 +233,6 @@ public:
           const arma::colvec &a_0,
           const arma::mat &R,
           const arma::mat &L,
-          const arma::vec &m,
           arma::mat &Q_0,
           arma::mat &Q,
           const Rcpp::List &risk_obj,
@@ -251,7 +250,7 @@ public:
           const uword N_first) :
     problem_data(
       n_fixed_terms_in_state_vec,
-      X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, m, Q_0, Q,
+      X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, Q_0, Q,
       risk_obj, F, n_max, n_threads, fixed_parems),
 
       N_fw_n_bw(N_fw_n_bw),

@@ -18,8 +18,6 @@
   const arma::vec &tstop,                                             \
   const arma::colvec &a_0,                                            \
   const arma::mat &R,                                                 \
-  const arma::mat &L,                                                 \
-  const arma::vec &m,                                                 \
   arma::mat &Q_0,                                                     \
   arma::mat &Q,                                                       \
   const arma::mat Q_tilde,                                            \
@@ -134,7 +132,7 @@ public:
 Rcpp::List PF_smooth(
     const int n_fixed_terms_in_state_vec, arma::mat &X, arma::mat &fixed_terms,
     const arma::vec &tstart, const arma::vec &tstop, const arma::colvec &a_0,
-    const arma::mat &R, const arma::mat &L, const arma::vec &m, arma::mat &Q_0,
+    const arma::mat &R, arma::mat &Q_0,
     arma::mat &Q, const arma::mat Q_tilde, const Rcpp::List &risk_obj,
     const arma::mat &F, const int n_max, const int n_threads,
     const arma::vec &fixed_parems, const int N_fw_n_bw, const int N_smooth,
@@ -147,7 +145,7 @@ Rcpp::List PF_smooth(
 
   random_walk<PF_data> data(
       n_fixed_terms_in_state_vec,
-      X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, m, Q_0, Q,
+      X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
       risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
       N_smooth, forward_backward_ESS_threshold, debug, N_first);
 
@@ -254,7 +252,7 @@ Rcpp::List PF_single_direction_compute(
 Rcpp::List particle_filter(
     const int n_fixed_terms_in_state_vec, arma::mat &X, arma::mat &fixed_terms,
     const arma::vec &tstart, const arma::vec &tstop, const arma::colvec &a_0,
-    const arma::mat &R, const arma::mat &L, const arma::vec &m, arma::mat &Q_0,
+    const arma::mat &R, arma::mat &Q_0,
     arma::mat &Q, const arma::mat Q_tilde, const Rcpp::List &risk_obj,
     const arma::mat &F, const int n_max, const int n_threads,
     const arma::vec &fixed_parems, const int N_fw_n_bw, const int N_smooth,
@@ -267,29 +265,10 @@ Rcpp::List particle_filter(
     Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   random_walk<PF_data> data(
-      n_fixed_terms_in_state_vec,
-      X,
-      fixed_terms,
-      tstart,
-      tstop,
-      is_event_in_bin,
-      a_0,
-      R,
-      L,
-      m,
-      Q_0,
-      Q,
-      risk_obj,
-      F,
-      n_max,
-      n_threads,
-      fixed_parems,
-      Q_tilde,
-      N_fw_n_bw,
-      N_smooth,
-      forward_backward_ESS_threshold,
-      debug,
-      N_first);
+      n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop,
+      is_event_in_bin, a_0, R, R.t(), Q_0, Q, risk_obj, F, n_max, n_threads,
+      fixed_parems, Q_tilde, N_fw_n_bw, N_smooth,
+      forward_backward_ESS_threshold, debug, N_first);
 
   Rcpp::List ans;
 
@@ -360,5 +339,5 @@ Rcpp::List PF_est_params_dens(
   return Rcpp::List::create(
     Rcpp::Named("a_0")     = new_params.a_0,
     Rcpp::Named("R_top_F") = new_params.R_top_F,
-    Rcpp::Named("E_xs")    = new_params.Q);
+    Rcpp::Named("Q")       = new_params.Q);
 }
