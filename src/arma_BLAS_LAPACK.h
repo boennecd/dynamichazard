@@ -56,6 +56,7 @@ public:
 /* TODO: move this class to another file which makes more sense... */
 
 class selection_matrix {
+  /* TODO: why are these shared_ptr. Is this needed */
   std::shared_ptr<arma::uvec> idx_n;
   std::shared_ptr<arma::uvec> idx_m;
   const arma::uword n;
@@ -73,6 +74,9 @@ public:
   /* returns L^\top * x or x * L */
   arma::vec map_inv(const arma::vec&) const;
   arma::mat map_inv(const arma::mat&, const bool is_right = false) const;
+
+  const arma::uvec& non_zero_row_idx() const;
+  const arma::uvec& non_zero_col_idx() const;
 };
 
 #endif

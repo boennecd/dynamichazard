@@ -79,9 +79,9 @@ test_that("PF_smooth gives same results", {
     debug = 0,
     method = "PF",
     smoother = "Fearnhead_O_N",
-    model = "logit")
+    model = "logit", type = "RW")
 
-  test_func <- function(fit_quote, test_file_name, update = FALSE){
+  test_func <- function(test_file_name, update = FALSE){
     get_func <- quote(
       function(x){
         cloud <- bquote(.(substitute(x)))
@@ -91,10 +91,17 @@ test_that("PF_smooth gives same results", {
         })
       })
 
+    cl <- list(quote(PF_smooth))
+    cl[names(args)] <- lapply(names(args), function(x)
+      substitute(args$z, list(z = as.symbol(x))))
+    cl <- as.call(cl)
+
     q <- bquote({
       set.seed(30302129)
       old_seed <- .Random.seed
-      result <- .(fit_quote)
+
+      result <- .(cl)
+
       expect_false(all(old_seed == .Random.seed))
 
       #####
@@ -120,7 +127,7 @@ test_that("PF_smooth gives same results", {
       #####
       # Changing the seed changes the result
       set.seed(1)
-      result_new_seed <- .(fit_quote)
+      result_new_seed <- .(cl)
 
       expect_false(isTRUE(all.equal(result, result_new_seed)))
 
@@ -130,7 +137,7 @@ test_that("PF_smooth gives same results", {
       old_args <- args
       args$n_threads <- max(parallel::detectCores(logical = FALSE), 1)
 
-      result_multi <- .(fit_quote)
+      result_multi <- .(cl)
       expect_equal(result_multi, result)
 
       args <- old_args
@@ -160,58 +167,34 @@ test_that("PF_smooth gives same results", {
 
   #####
   # Simple PF
-  test_func(
-    quote({
-      args$method <- "bootstrap_filter"
-      do.call(PF_smooth, args)
-    }),
-    test_file_name = "bootstrap_filter")
+  args$method <- "bootstrap_filter"
+  test_func(test_file_name = "bootstrap_filter")
 
   #####
   # Normal approximation in importance density with mean from previous cloud
-  test_func(
-    quote({
-      args$method <- "PF_normal_approx_w_cloud_mean"
-      do.call(PF_smooth, args)
-    }),
-    test_file_name = "PF_normal_approx_w_cloud_mean")
+  args$method <- "PF_normal_approx_w_cloud_mean"
+  test_func(test_file_name = "PF_normal_approx_w_cloud_mean")
 
   #####
   # Normal approximation in AUX filter with mean from previous cloud
-  test_func(
-    quote({
-      args$method <- "AUX_normal_approx_w_cloud_mean"
-      do.call(PF_smooth, args)
-    }),
-    test_file_name = "AUX_normal_approx_w_cloud_mean")
+  args$method <- "AUX_normal_approx_w_cloud_mean"
+  test_func(test_file_name = "AUX_normal_approx_w_cloud_mean")
 
   #####
   # Normal approximation in importance density with mean from parent and child particle
-  test_func(
-    quote({
-      args$method <- "PF_normal_approx_w_particles"
-      do.call(PF_smooth, args)
-    }),
-    test_file_name = "PF_normal_approx_w_particles")
+  args$method <- "PF_normal_approx_w_particles"
+  test_func(test_file_name = "PF_normal_approx_w_particles")
 
   #####
   # Normal approximation in AUX filter with mean from parent and child particle
-  test_func(
-    quote({
-      args$method <- "AUX_normal_approx_w_particles"
-      do.call(PF_smooth, args)
-    }),
-    test_file_name = "AUX_normal_approx_w_particles")
+  args$method <- "AUX_normal_approx_w_particles"
+  test_func(test_file_name = "AUX_normal_approx_w_particles")
 
   #####
   # Test O(n^2) method from Brier et al
-  test_func(
-    quote({
-      args$method <- "AUX_normal_approx_w_particles"
-      args$smoother <- "Brier_O_N_square"
-      do.call(PF_smooth, args)
-    }),
-    test_file_name = "Brier_AUX_normal_w_particles")
+  args$method <- "AUX_normal_approx_w_particles"
+  args$smoother <- "Brier_O_N_square"
+  test_func(test_file_name = "Brier_AUX_normal_w_particles")
 })
 
 test_that("Import and export PF cloud from Rcpp gives the same", {

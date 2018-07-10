@@ -223,3 +223,11 @@ arma::mat selection_matrix::map_inv(
   out.cols(*idx_m.get()) = x.cols(*idx_n.get());
   return out;
 }
+
+const arma::uvec& selection_matrix::non_zero_row_idx() const {
+  return *idx_n.get();
+}
+
+const arma::uvec& selection_matrix::non_zero_col_idx() const {
+  return *idx_m.get();
+}

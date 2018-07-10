@@ -123,10 +123,11 @@ PF_EM <- function(
   control = PF_control(...), trace = 0, seed = NULL, type = "RW", ...){
   #####
   # checks
-  if(order != 1)
+  if(length(order) == 1 && order != 1)
     stop(sQuote('order'), " not equal to 1 is not supported")
 
-  if(!model %in% c("logit", "exponential"))
+  if(is.character(model) && length(model) == 1 &&
+     !model %in% c("logit", "exponential"))
     stop(sQuote('model'), " is not supported")
 
   if(missing(id)){
@@ -135,7 +136,8 @@ PF_EM <- function(
     id = 1:nrow(data)
   }
 
-  if(!type %in% c("RW", "VAR"))
+  if(is.character(type) && length(type) == 1 &&
+     !type %in% c("RW", "VAR"))
     stop("Invalid ", sQuote("type"), " argument")
 
   #####
@@ -174,6 +176,8 @@ PF_EM <- function(
     n_fixed = static_args$n_fixed, Q_0 = if(missing(Q_0)) NULL else Q_0,
     Q = if(missing(Q)) NULL else Q, a_0 = a_0)
   model_args$L <- NULL
+  if(type == "VAR")
+    model_args$F. <- diag(1e-4, ncol(model_args$F.))
 
   #####
   # build up call with symbols to get neater call stack incase of an error
@@ -217,7 +221,7 @@ PF_EM <- function(
   fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
   fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
 
-  fit_call[c("eps", "seed", "F.", "trace", "type")] <- NULL
+  fit_call[c("eps", "seed", "F.", "trace")] <- NULL
 
   #####
   # set the seed as in r-source/src/library/stats/R/lm.R `simulate.lm`
@@ -231,8 +235,6 @@ PF_EM <- function(
     seed <- get(".Random.seed", envir = .GlobalEnv)
 
   }
-
-  type <- "random_walk"
 
   log_likes <- rep(NA_real_, n_max)
   log_like <- log_like_max <- -Inf
@@ -279,7 +281,7 @@ PF_EM <- function(
     Q_old <- fit_call$Q
     F_old <- fit_call$F
 
-    if(type == "random_walk"){
+    if(type == "RW"){
       sum_stats <- compute_summary_stats_first_o_RW(
         clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
       a_0 <- drop(sum_stats[[1]]$E_xs)
@@ -288,7 +290,7 @@ PF_EM <- function(
 
       fit_call$a_0 <- a_0
       fit_call$Q <- Q
-    } else if (type == "dens") {
+    } else if (type == "VAR") {
       new_params <- PF_est_params_dens(
         clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
       fit_call$a_0 <- a_0 <- drop(new_params$a_0)

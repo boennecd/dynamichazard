@@ -134,10 +134,8 @@ test_that("`linear_mapper`s gives expected result", {
     z = quote(x), Z = t(X), mat = quote(solve(C)), has_z = TRUE))))
 
   R <- diag(3)[, c(1, 3)]
-  X <- X[1:2, 1:2]
-  x <- x[1:2]
   out <- linear_mapper_test(
     C, x, X, x, t(X), type = "inv_sub_mapper", R = R)
   eval(do.call(substitute, list(test_expr, list(
-    mat = quote(t(R) %*% solve(C) %*% R), has_z = FALSE))))
+    mat = quote(t(R) %*% solve(C)), has_z = FALSE))))
 })

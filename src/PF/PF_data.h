@@ -157,15 +157,14 @@ class PF_data : public problem_data {
   std::map<const uword, const arma::vec> bw_mean_const_term;
   std::map<const uword, const covarmat> bw_covar_map;
 
-  /* Unconditional mean variance for the entire state */
-  std::map<const uword, const arma::vec> uncond_mean_state_map;
-  std::map<const uword, const covarmat>  uncond_covar_state_map;
+  /* Pre-computed objects for the artificial prior */
+  std::map<const uword, const arma::vec> uncond_means;
+  std::map<const uword, const covarmat>  uncond_covarmats;
 
-  /* uncondtional mean and covariance matrix for the terms that are affected
-   * by the inovations. E.g.,
-   *   R^\top\alpha */
-  std::map<const uword, const arma::vec> uncond_mean_map;
-  std::map<const uword, const arma::mat> uncond_covar_map;
+  /* uncondtional mean and covariance matrix terms in backward filter's
+   * and smoother's proposal distribution in the Taylor approximation */
+  std::map<const uword, const arma::vec> uncond_mean_terms;
+  std::map<const uword, const arma::mat> uncond_covs_inv;
 
 protected:
   virtual void set_maps(){
@@ -181,8 +180,8 @@ protected:
       P_t_p_1 = state_trans->map(P_t).sv + Q_state;
 
       // insert map elements
-      uncond_mean_state_map.insert(std::make_pair(t + 1L, m_t_p_1));
-      uncond_covar_state_map.insert(std::make_pair(t + 1L, covarmat(P_t_p_1)));
+      uncond_means.insert(std::make_pair(t + 1L, m_t_p_1));
+      uncond_covarmats.insert(std::make_pair(t + 1L, covarmat(P_t_p_1)));
 
       arma::mat S_t =
         arma::solve(P_t_p_1, err_state->map(Q.mat).sv);
@@ -199,11 +198,11 @@ protected:
 
       bw_covar_map.insert(std::make_pair(t, std::move(S_t)));
 
-      uncond_mean_map.insert(std::make_pair(
-          t, err_state_inv->map(arma::vec(arma::solve(P_t, m_t))).sv));
+      uncond_mean_terms.insert(std::make_pair(
+          t, arma::vec(arma::solve(P_t, m_t))));
 
-      uncond_covar_map.insert(std::make_pair(
-          t, err_state_inv->map(arma::mat(P_t.i())).sv));
+      uncond_covs_inv.insert(std::make_pair(
+          t, arma::mat(P_t.i())));
     }
   }
 
@@ -268,12 +267,12 @@ public:
       Q(Q),
       Q_0(Q_0),
       Q_proposal(Q + Q_tilde),
-      Q_proposal_smooth((Q + Q_tilde) * .5)
+      Q_proposal_smooth((Q + Q_tilde))
     {
 #ifdef _OPENMP
-    omp_init_lock(&PF_logger::lock);
+      omp_init_lock(&PF_logger::lock);
 #endif
-    set_maps();
+      set_maps();
     }
 
   ~PF_data(){
@@ -299,19 +298,19 @@ public:
   }
 
   const arma::vec& uncond_mean_state(const uword t) const {
-    return uncond_mean_state_map.at(t);
+    return uncond_means.at(t);
   }
 
   const covarmat& uncond_covar_state(const uword t) const {
-    return uncond_covar_state_map.at(t);
+    return uncond_covarmats.at(t);
   }
 
-  const arma::vec& uncond_mean(const int t) const {
-    return uncond_mean_map.at(t);
+  const arma::vec& uncond_mean_term(const int t) const {
+    return uncond_mean_terms.at(t);
   }
 
-  const arma::mat& uncond_covar(const uword t) const {
-    return uncond_covar_map.at(t);
+  const arma::mat& uncond_covar_inv(const uword t) const {
+    return uncond_covs_inv.at(t);
   }
 };
 

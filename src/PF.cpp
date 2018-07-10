@@ -10,28 +10,6 @@
 #define PF_APPROX_PARTICLE "PF_normal_approx_w_particles"
 #define AUX_APPROX_PARTICLE "AUX_normal_approx_w_particles"
 
-#define PF_COMMON_ARGS                                                \
-  const int n_fixed_terms_in_state_vec,                               \
-  arma::mat &X,                                                       \
-  arma::mat &fixed_terms,                                             \
-  const arma::vec &tstart,                                            \
-  const arma::vec &tstop,                                             \
-  const arma::colvec &a_0,                                            \
-  const arma::mat &R,                                                 \
-  arma::mat &Q_0,                                                     \
-  arma::mat &Q,                                                       \
-  const arma::mat Q_tilde,                                            \
-  const Rcpp::List &risk_obj,                                         \
-  const arma::mat &F,                                                 \
-  const int n_max,                                                    \
-  const int n_threads,                                                \
-  const arma::vec &fixed_parems,                                      \
-  const int N_fw_n_bw,                                                \
-  const int N_smooth,                                                 \
-  Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold, \
-  const int debug,                                                    \
-  const int N_first
-
 /* --------------------------------------- */
 
 template<
@@ -137,26 +115,36 @@ Rcpp::List PF_smooth(
     const arma::mat &F, const int n_max, const int n_threads,
     const arma::vec &fixed_parems, const int N_fw_n_bw, const int N_smooth,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
-    const int debug, const int N_first,
+    const int debug, const int N_first, std::string type,
 
     /* non-common arguments */
     const std::string method, const std::string smoother, const std::string model){
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
-  random_walk<PF_data> data(
-      n_fixed_terms_in_state_vec,
-      X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
-      risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
-      N_smooth, forward_backward_ESS_threshold, debug, N_first);
+  std::unique_ptr<PF_data> data;
+  if(type == "RW")
+    data.reset(new random_walk<PF_data>(
+        n_fixed_terms_in_state_vec,
+        X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
+        risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+        N_smooth, forward_backward_ESS_threshold, debug, N_first));
+  else if (type == "VAR")
+    data.reset(new PF_data(
+        n_fixed_terms_in_state_vec,
+        X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
+        risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+        N_smooth, forward_backward_ESS_threshold, debug, N_first));
+  else
+    Rcpp::stop("'type' not implemented");
 
   Rcpp::List ans;
 
   std::unique_ptr<pf_base_dens> dens_calc;
   if(model == "logit"){
-    dens_calc.reset(new logistic_dens(data));
+    dens_calc.reset(new logistic_dens(*data.get()));
 
   } else if (model == "exponential"){
-    dens_calc.reset(new exponential_dens(data));
+    dens_calc.reset(new exponential_dens(*data.get()));
 
   } else {
     std::stringstream stream;
@@ -166,7 +154,7 @@ Rcpp::List PF_smooth(
   }
 
   ans = PF_smooth_dens::compute(
-    data, smoother, method, *dens_calc.get());
+    *data.get(), smoother, method, *dens_calc.get());
 
   return(ans);
 }
@@ -257,27 +245,37 @@ Rcpp::List particle_filter(
     const arma::mat &F, const int n_max, const int n_threads,
     const arma::vec &fixed_parems, const int N_fw_n_bw, const int N_smooth,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
-    const int debug, const int N_first,
+    const int debug, const int N_first, std::string type,
 
     /* non-common arguments */
     const bool is_forward, const std::string method, const std::string model){
   const arma::ivec is_event_in_bin =
     Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
-  random_walk<PF_data> data(
-      n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop,
-      is_event_in_bin, a_0, R, R.t(), Q_0, Q, risk_obj, F, n_max, n_threads,
-      fixed_parems, Q_tilde, N_fw_n_bw, N_smooth,
-      forward_backward_ESS_threshold, debug, N_first);
+  std::unique_ptr<PF_data> data;
+  if(type == "RW")
+    data.reset(new random_walk<PF_data>(
+        n_fixed_terms_in_state_vec,
+        X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
+        risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+        N_smooth, forward_backward_ESS_threshold, debug, N_first));
+  else if (type == "VAR")
+    data.reset(new PF_data(
+        n_fixed_terms_in_state_vec,
+        X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
+        risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+        N_smooth, forward_backward_ESS_threshold, debug, N_first));
+  else
+    Rcpp::stop("'type' not implemented");
 
   Rcpp::List ans;
 
   std::unique_ptr<pf_base_dens> dens_calc;
   if(model == "logit"){
-    dens_calc.reset(new logistic_dens(data));
+    dens_calc.reset(new logistic_dens(*data.get()));
 
   } else if (model == "exponential"){
-    dens_calc.reset(new exponential_dens(data));
+    dens_calc.reset(new exponential_dens(*data.get()));
 
   } else {
     std::stringstream stream;
@@ -286,8 +284,8 @@ Rcpp::List particle_filter(
 
   }
 
-  ans =
-    PF_single_direction_compute(data, is_forward, method, *dens_calc.get());
+  ans = PF_single_direction_compute(
+    *data.get(), is_forward, method, *dens_calc.get());
 
   return(ans);
 }

@@ -11,14 +11,14 @@
 
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens &dens_calc, const PF_data &data,
-    const unsigned int t, const covarmat &Q, const arma::vec &alpha_bar,
+    const unsigned int t, const arma::mat &Q_inv, const arma::vec &alpha_bar,
     arma::uvec &r_set, const unsigned int debug_lvl,
-    const bool multithread){
+    const bool multithread, const bool is_forward){
   if(data.debug > debug_lvl){
     data.log(debug_lvl) << "Computing normal approximation with mean vector:" << std::endl
                         << alpha_bar.t()
-                        << "and chol(covariance):"  << std::endl
-                        << Q.chol;
+                        << "and inv(covariance):"  << std::endl
+                        << Q_inv;
   }
 
   input_for_normal_apprx ans;
@@ -34,13 +34,11 @@ input_for_normal_apprx taylor_normal_approx(
     // avoid wmaybe-uninitialized
     bin_start = bin_stop = std::numeric_limits<double>::quiet_NaN();
 
-  /* Compute the terms that does not depend on the outcome */
-  /* Sigma^-1 = (Q + \tilde{Q})^{-1} */
-  arma::uword p = data.err_dim;
+  /* initalize output */
+  const arma::uword r = data.err_dim;
   arma::vec coefs = data.err_state_inv->map(alpha_bar).sv;
-  arma::mat Sigma_inv = Q.inv;
-
-  ans.mu = arma::vec(p, arma::fill::zeros);
+  arma::mat Sigma_inv(r, r, arma::fill::zeros);
+  ans.mu = arma::vec(r, arma::fill::zeros);
   arma::vec &mu = ans.mu;
 
   /* Add the terms that does depend on the outcome */
@@ -65,8 +63,8 @@ nested parallel setup. See https://stackoverflow.com/a/20447843
 
   arma::vec starts;
   arma::vec stops;
-  arma::mat my_Sigma_inv(p, p, arma::fill::zeros);
-  arma::vec my_mu(p, arma::fill::zeros);
+  arma::mat my_Sigma_inv(r, r, arma::fill::zeros);
+  arma::vec my_mu(r, arma::fill::zeros);
 
 #ifdef _OPENMP
 #pragma omp for schedule(static)
@@ -92,11 +90,7 @@ nested parallel setup. See https://stackoverflow.com/a/20447843
     auto it_start = starts.begin();
     auto it_stops = stops.begin();
     arma::uword n_elem = eta.n_elem;
-    /*
-    Update with:
-    Sigma = ... + R^T L^T X^T (-G) X L R
-    mu    = R^T L^T X^T (-G) X L \bar{alpha} + R^T L^T X^T (-g)
-    */
+    /* Update with inverse of sigma and mu */
     for(arma::uword i = 0; i < n_elem;
         ++i, ++it_eta, ++it_is_event, ++it_r, ++it_off){
       double at_risk_length = 0;
@@ -143,6 +137,9 @@ nested parallel setup. See https://stackoverflow.com/a/20447843
 
   /* copy to lower */
   Sigma_inv = arma::symmatu(Sigma_inv);
+  if(!is_forward)
+    Sigma_inv = data.err_state->map(Sigma_inv).sv;
+  Sigma_inv += Q_inv;
 
   /* Compute needed factorizations */
   ans.Sigma_inv_chol = arma::chol(Sigma_inv);
@@ -150,13 +147,18 @@ nested parallel setup. See https://stackoverflow.com/a/20447843
   ans.sigma_chol_inv = arma::inv(arma::trimatu(ans.Sigma_chol));
   std::swap(ans.Sigma_inv, Sigma_inv);
 
+  if(!is_forward)
+    mu = data.err_state->map(mu).sv;
+  mu = solve_w_precomputed_chol(ans.Sigma_inv_chol, mu);
+
   return ans;
 }
 
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens &dens_calc, const PF_data &data, const unsigned int t,
-    const covarmat &Q, const arma::vec &alpha_bar,
-    const unsigned int debug_lvl, const bool multithread){
+    const arma::mat &Q_inv, const arma::vec &alpha_bar,
+    const unsigned int debug_lvl, const bool multithread,
+    const bool is_forward){
   /*
    Had similar issues as posted here:
    http://lists.r-forge.r-project.org/pipermail/rcpp-devel/2013-June/005968.html
@@ -168,26 +170,44 @@ input_for_normal_apprx taylor_normal_approx(
 
   return(
     taylor_normal_approx
-    (dens_calc, data, t, Q, alpha_bar, r_set, debug_lvl, multithread));
+    (dens_calc, data, t, Q_inv, alpha_bar, r_set, debug_lvl, multithread,
+     is_forward));
 }
 
 /*----------------------------------------------------*/
+
+inline void debug_before_solve(
+    const PF_data &data, const arma::vec &parent,
+    const arma::mat &A, const arma::vec &x, const arma::vec &xtra_term){
+  const int debug_lvl = 5;
+  if(data.debug > debug_lvl - 1L){
+    data.log(debug_lvl) <<"Finding new particle for" << std::endl
+                        << parent.t()
+                        << "Solving Ax = b with A" << std::endl
+                        << A
+                        << "and b^\\top " << std::endl
+                        << x.t()
+                        << "Yielding" << std::endl
+                        << arma::solve(A, x).t()
+                        << "Then adding c with c^\\top" << std::endl
+                        << xtra_term.t();
+  }
+}
 
 input_for_normal_apprx_w_cloud_mean
   taylor_normal_approx_w_cloud_mean(
     pf_base_dens &dens_calc, const PF_data &data,
     const unsigned int t, const covarmat &Q, const arma::vec &alpha_bar,
-    cloud &cl /* set mu_js when cloud is passed to */, const bool is_forward){
-    const covarmat *Q_use;
-    const arma::mat tmp;
+    cloud &cl, const bool is_forward){
+    const arma::mat *Q_inv;
     const arma::vec *mu_term;
     if(!is_forward){
-      Q_use = new covarmat(arma::inv(
-        data.state_trans_err_inv->map(Q.inv).sv + data.uncond_covar(t)));
-      mu_term = &data.uncond_mean(t);
+      arma::mat tmp = data.state_trans_err->map(Q.inv, both, trans).sv;
+      Q_inv = new arma::mat(tmp + data.uncond_covar_inv(t));
+      mu_term = &data.uncond_mean_term(t);
 
     } else {
-      Q_use = &Q;
+      Q_inv = &Q.inv;
       // avoid wmaybe-uninitialized
       mu_term = nullptr;
 
@@ -195,35 +215,46 @@ input_for_normal_apprx_w_cloud_mean
 
     input_for_normal_apprx_w_cloud_mean ans =
       taylor_normal_approx
-      (dens_calc, data, t, *Q_use, alpha_bar, 2, true);
+      (dens_calc, data, t, *Q_inv, alpha_bar, 2, true, is_forward);
 
     auto n_elem = cl.size();
     ans.mu_js = std::vector<arma::vec>(n_elem);
+    ans.xi_js = std::vector<arma::vec>(n_elem);
 #ifdef _OPENMP
 #pragma omp  parallel for schedule(static)
 #endif
   for(unsigned int i = 0; i < n_elem; ++i){
-    arma::vec mu_j;
+    arma::vec &mu_j = ans.mu_js[i];
+    arma::vec &xi_j = ans.xi_js[i];
+    particle &pr = cl[i];
+
     if(is_forward){
-      mu_j = data.state_trans->map(cl[i].get_state()).sv;
-      mu_j = data.err_state_inv->map(mu_j).sv;
-      mu_j = solve_w_precomputed_chol(Q.chol, mu_j) + ans.mu;
+      mu_j = data.state_trans_err->map(pr.get_state()).sv;
+      mu_j = solve_w_precomputed_chol(Q.chol, mu_j);
 
     } else {
-      mu_j = data.err_state_inv->map(cl[i].get_state()).sv;
+      mu_j = data.err_state_inv->map(pr.get_state()).sv;
       mu_j = solve_w_precomputed_chol(Q.chol, mu_j);
-      mu_j = data.state_trans_inv->map(data.err_state->map(mu_j).sv).sv;
-      mu_j = data.err_state_inv->map(mu_j).sv      + ans.mu + *mu_term;
+      mu_j = data.state_trans_err->map(mu_j, trans).sv + *mu_term;
 
     }
 
-    mu_j = solve_w_precomputed_chol(ans.Sigma_inv_chol, mu_j);
+    debug_before_solve(data, pr.get_state(), ans.Sigma_inv, mu_j, ans.mu);
+    mu_j = solve_w_precomputed_chol(ans.Sigma_inv_chol, mu_j) + ans.mu;
 
-    ans.mu_js[i] = std::move(mu_j);
+    if(is_forward){
+      xi_j = std::move(mu_j);
+      mu_j = data.state_trans->map(pr.get_state()).sv;
+      mu_j.elem(data.err_state->non_zero_row_idx()) =
+        xi_j.elem(data.err_state->non_zero_col_idx());
+
+    } else
+      xi_j = data.err_state_inv->map(mu_j).sv;
+
   }
 
   if(!is_forward){
-    delete Q_use;
+    delete Q_inv;
 
   }
 
@@ -239,18 +270,19 @@ input_for_normal_apprx_w_particle_mean
    const unsigned int t,
    const covarmat &Q, mu_iterator begin, const unsigned int size,
    const bool is_forward){
-  const covarmat *Q_use;
+  const arma::mat *Q_inv;
   arma::mat Q_art_chol;
   const arma::vec *mu_term;
   if(!is_forward){
-   // Add the covariance matrix of the artificial prior
-   Q_use = new covarmat(arma::inv(Q.inv + data.uncond_covar(t)));
-   mu_term = &data.uncond_mean(t);
+    // Add the covariance matrix of the artificial prior
+    arma::mat tmp = data.state_trans_err->map(Q.inv, both, trans).sv;
+    Q_inv = new arma::mat(tmp + data.uncond_covar_inv(t));
+    mu_term = &data.uncond_mean_term(t);
 
   } else {
-   Q_use = &Q;
-   // avoid wmaybe-uninitialized
-   mu_term = nullptr;
+    Q_inv = &Q.inv;
+    // avoid wmaybe-uninitialized
+    mu_term = nullptr;
 
   }
 
@@ -265,30 +297,39 @@ input_for_normal_apprx_w_particle_mean
    mu_iterator iter = b + i;
    const arma::vec &this_state = Func::get_elem(iter);
    auto inter = taylor_normal_approx
-     (dens_calc, data, t, *Q_use, this_state, r_set, 5, false);
+     (dens_calc, data, t, *Q_inv, this_state, r_set, 5, false, is_forward);
 
-   arma::vec mu;
+   arma::vec &mu = ans[i].mu;
+   arma::vec &xi = ans[i].xi;
    if(is_forward){
-     mu = data.state_trans->map(this_state).sv;
-     mu = solve_w_precomputed_chol(Q.chol, mu) + inter.mu;
+     mu = data.state_trans_err->map(this_state).sv;
+     mu = solve_w_precomputed_chol(Q.chol, mu);
 
    } else {
-     mu = data.err_state_inv->map(this_state).sv;
+     mu = data.err_state_inv   ->map(this_state).sv;
      mu = solve_w_precomputed_chol(Q.chol, mu);
-     mu = data.state_trans_inv->map(data.err_state->map(mu).sv).sv;
-     mu = data.err_state_inv->map(mu).sv      + inter.mu + *mu_term;
+     mu = data.state_trans_err->map(mu, trans).sv + *mu_term;
 
    }
 
-   mu = solve_w_precomputed_chol(inter.Sigma_inv_chol, mu);
+   debug_before_solve(data, this_state, inter.Sigma_inv, mu, inter.mu);
+   mu = solve_w_precomputed_chol(inter.Sigma_inv_chol, mu) + inter.mu;
 
-   std::swap(ans[i].mu, mu);
+   if(is_forward){
+     xi = std::move(mu);
+     mu = data.state_trans->map(this_state).sv;
+     mu.elem(data.err_state->non_zero_row_idx()) =
+       xi.elem(data.err_state->non_zero_col_idx());
+
+   } else
+     xi = data.err_state_inv->map(mu).sv;
+
    std::swap(ans[i].sigma_chol_inv, inter.sigma_chol_inv);
    std::swap(ans[i].Sigma_chol, inter.Sigma_chol);
   }
 
   if(!is_forward){
-   delete Q_use;
+   delete Q_inv;
 
   }
 

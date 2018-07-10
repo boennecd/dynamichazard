@@ -61,6 +61,10 @@ public:
 
   virtual map_res_mat map(const arma::mat&, side s = both,
                           do_trans transpose = dont_trans) const = 0;
+
+  /* returns indicies for which rows and columns have non-zero entries */
+  virtual const arma::uvec& non_zero_row_idx() const = 0;
+  virtual const arma::uvec& non_zero_col_idx() const = 0;
 };
 
 
@@ -69,12 +73,12 @@ public:
 #define PROTECTED_OVERIDES                                           \
 map_res_col map_(const arma::vec&, do_trans, ptr_vec&) const override;
 
-#define PUBLIC_OVERIDES                                        \
-const arma::mat& map() const override;                         \
-using linear_mapper::map;                                      \
-map_res_mat map(const arma::mat&, side, do_trans) const override;
-
-
+#define PUBLIC_OVERIDES                                           \
+const arma::mat& map() const override;                            \
+using linear_mapper::map;                                         \
+map_res_mat map(const arma::mat&, side, do_trans) const override; \
+const arma::uvec& non_zero_row_idx() const override;              \
+const arma::uvec& non_zero_col_idx() const override;
 
 
 /* Dens matrix B = A */
@@ -135,8 +139,7 @@ class inv_sub_mapper : public linear_mapper {
 
 public:
   inv_sub_mapper(const arma::mat &A, const selection_matrix &R):
-  A_LU(LU_factorization(A)), R(R),
-  inv_mat(R.map_inv(R.map_inv(A_LU.solve()), true)) {}
+  A_LU(LU_factorization(A)), R(R), inv_mat(R.map_inv(A_LU.solve())) {}
 
   PUBLIC_OVERIDES
 };

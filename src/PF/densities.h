@@ -58,7 +58,7 @@ public:
 
   double log_artificial_prior(const particle &p, int t){
     return(dmvnrm_log(
-        data.err_state_inv->map(p.get_state()).sv,
+        p.get_state(),
         data.uncond_mean_state(t),
         data.uncond_covar_state(t).chol_inv));
   }

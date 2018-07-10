@@ -199,11 +199,11 @@ public:
   static smoother_output
   compute(const PF_data &data, pf_base_dens &dens_calc){
     smoother_output result;
-    std::vector<cloud> &forward_clouds = result.forward_clouds;
+    std::vector<cloud> &forward_clouds  = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
     std::vector<cloud> &smoothed_clouds = result.smoothed_clouds;
 
-    forward_clouds  = forward_filter::compute(data, dens_calc);
+    forward_clouds  =  forward_filter::compute(data, dens_calc);
     backward_clouds = backward_filter::compute(data, dens_calc);
 
     if(data.debug > 0)
@@ -331,7 +331,7 @@ public:
   static smoother_output
   compute(const PF_data &data, pf_base_dens &dens_calc){
     smoother_output result;
-    std::vector<cloud> &forward_clouds = result.forward_clouds;
+    std::vector<cloud> &forward_clouds  = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
     std::vector<cloud> &smoothed_clouds = result.smoothed_clouds;
     std::shared_ptr<smoother_output::trans_like_obj> trans_ptr =
@@ -339,7 +339,7 @@ public:
 
     smoother_output::trans_like_obj &transition_likelihoods = *trans_ptr;
 
-    forward_clouds = forward_filter::compute(data, dens_calc);
+    forward_clouds  = forward_filter::compute(data, dens_calc);
     backward_clouds = backward_filter::compute(data, dens_calc);
 
     if(data.debug > 0)

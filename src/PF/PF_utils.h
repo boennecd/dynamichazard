@@ -117,20 +117,21 @@ struct input_for_normal_apprx {
 
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens&, const PF_data&,
-    const unsigned int, const covarmat&, const arma::vec&,
+    const unsigned int, const arma::mat&, const arma::vec&,
     arma::uvec& /* non-const avoid copy /w arma */,
-    const unsigned int, const bool);
+    const unsigned int, const bool, const bool);
 
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens&, const PF_data&, const unsigned int,
-    const covarmat&, const arma::vec&,
-    const unsigned int, const bool);
+    const arma::mat&, const arma::vec&,
+    const unsigned int, const bool, const bool);
 
 /* ------------------------------------------- */
 
 struct input_for_normal_apprx_w_cloud_mean : public input_for_normal_apprx {
   /* the conditional means for each of the particles given their parents */
   std::vector<arma::vec> mu_js;
+  std::vector<arma::vec> xi_js;
 
   input_for_normal_apprx_w_cloud_mean(input_for_normal_apprx &&other):
     input_for_normal_apprx(other) {}
@@ -145,6 +146,7 @@ input_for_normal_apprx_w_cloud_mean
 
 struct input_for_normal_apprx_w_particle_mean_element {
   arma::vec mu;
+  arma::vec xi;
   arma::mat sigma_chol_inv;
   arma::mat Sigma_chol;
 };
@@ -164,9 +166,7 @@ input_for_normal_apprx_w_particle_mean
 
 /* ------------------------------------------- */
 
-/*
- Output class for smoothers
-*/
+/* Output class for smoothers */
 
 class smoother_output {
 public:

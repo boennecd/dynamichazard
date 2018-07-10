@@ -59,6 +59,14 @@ map_res_mat dens_mapper::map
     return map_res_mat(out(arma::span::all, arma::span::all), ptr);
   }
 
+const arma::uvec& dens_mapper::non_zero_row_idx() const{
+  Rcpp::stop("'dens_mapper::non_zero_row_idx' is not implemented");
+}
+
+const arma::uvec& dens_mapper::non_zero_col_idx() const{
+  Rcpp::stop("'dens_mapper::non_zero_col_idx' is not implemented");
+}
+
 
 
 
@@ -118,6 +126,13 @@ map_res_mat select_mapper::map
     return map_res_mat(out(arma::span::all, arma::span::all), ptr);
   }
 
+const arma::uvec& select_mapper::non_zero_row_idx() const {
+  return A.non_zero_row_idx();
+}
+
+const arma::uvec& select_mapper::non_zero_col_idx() const {
+  return A.non_zero_col_idx();
+}
 
 
 
@@ -183,12 +198,20 @@ map_res_mat inv_mapper::map
     return map_res_mat(out(arma::span::all, arma::span::all), ptr);
   }
 
+const arma::uvec& inv_mapper::non_zero_row_idx() const {
+  Rcpp::stop("'inv_mapper::non_zero_row_idx' is not implemented");
+}
+
+const arma::uvec& inv_mapper::non_zero_col_idx() const {
+  Rcpp::stop("'inv_mapper::non_zero_col_idx' is not implemented");
+}
+
 /* inv_sub_mapper
  * TODO: This could like be done smarter... */
 map_res_col
   inv_sub_mapper::map_(const arma::vec &x, do_trans transpose, ptr_vec &ptr) const
   {
-    ptr.reset(new arma::vec(R.map_inv(A_LU.solve(R.map(x), transpose))));
+    ptr.reset(new arma::vec(R.map_inv(A_LU.solve(x, transpose))));
 
     arma::vec &out = *ptr.get();
     return map_res_col(out(arma::span::all), ptr);
@@ -210,13 +233,22 @@ map_res_mat inv_sub_mapper::map
     } else {
       arma::mat tmp = X; // copy
       if(s == left or s == both){
-        tmp = R.map_inv(A_LU.solve(R.map(tmp)));
+        /* \begin{align*}
+         *    B  &= R^\top A^{-1}  \\
+         *    BX &= R^\top A^{-1}X
+         * \end{align*} */
+        tmp = R.map_inv(A_LU.solve(tmp));
 
       }
       if(s == right or s == both){
+        /* \begin{align*}
+         *    B       &= R^\top A^{-1}              \\
+         *    XB^\top &= (R^\top A^{-1}X^\top)^\top
+         * \end{align*} */
+
         // XR^\top A^{-\top}R = (R^\top A^{-1} RX^\top)^\top
-        tmp = tmp.t();
-        tmp = R.map_inv(A_LU.solve(R.map(tmp))).t();
+        arma::inplace_trans(tmp);
+        tmp = R.map_inv(A_LU.solve(tmp)).t();
 
       }
 
@@ -227,5 +259,11 @@ map_res_mat inv_sub_mapper::map
     return map_res_mat(out(arma::span::all, arma::span::all), ptr);
   }
 
+const arma::uvec& inv_sub_mapper::non_zero_row_idx() const {
+  Rcpp::stop("'inv_sub_mapper::non_zero_row_idx' is not implemented");
+}
 
+const arma::uvec& inv_sub_mapper::non_zero_col_idx() const {
+  Rcpp::stop("'inv_sub_mapper::non_zero_col_idx' is not implemented");
+}
 
