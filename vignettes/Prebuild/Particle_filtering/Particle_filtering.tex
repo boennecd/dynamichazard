@@ -200,39 +200,41 @@ This section will cover some options for algorithm~\ref{alg:forward}. Let $\norm
 %
 which we can sample from in $\bigO{\nPart \dimState^2}$ time if we have a pre-computed Cholesky decomposition of $\mat{Q}$. This is often called the \emph{bootstrap filter}. Another option is to use normal approximation of $\vec{y}_t$'s conditional density%
 %
+{\scriptsize %
 \begin{equation}\begin{array}{cl}
 	\optorC{g}{\vec{y}_t}{\vec{\xi}_t} & \simeq  \optorC{\widetilde{g}_t}{\vec{y}_t}{\vec{\xi}_t} \\ 
 %
 &= \normalC{
 		\mat{X}_t\vec{\xi}_t
 	}{ % end of arg1 \normalC
-		\mat{X}_t\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} -
-		\mat{G}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
-		\vec{g}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}
+		\mat{X}_t\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} - \vec{o}_t + 
+		\mat{G}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} + \vec{o}_t}^{-1}
+		\vec{g}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} + \vec{o}_t}
 	}{ % end of arg2 \normalC
-		- \mat{G}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
+		- \mat{G}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} + \vec{o}_t}^{-1}
 	} \\
 %
 &= \normalC{
 		\mat{X}_t\vec{\xi}_t
 	}{ % end of arg1 \normalC
-		\mat{X}_t\mat{R}^{+}\vecb{\alpha}_{t} -
-		\mat{G}_t\Lparen{\mat{R}^{+}\vecb{\alpha}_{t}}^{-1}
-		\vec{g}_t\Lparen{\mat{R}^{+}\vecb{\alpha}_{t}}
+		\mat{X}_t\mat{R}^{+}\vecb{\alpha}_{t} - \vec{o}_t + 
+		\mat{G}_t\Lparen{\mat{R}^{+}\vecb{\alpha}_{t} + \vec{o}_t}^{-1}
+		\vec{g}_t\Lparen{\mat{R}^{+}\vecb{\alpha}_{t} + \vec{o}_t}
 	}{ % end of arg2 \normalC
-		- \mat{G}_t\Lparen{\mat{R}^{+}\vecb{\alpha}_{t}}^{-1}
+		- \mat{G}_t\Lparen{\mat{R}^{+}\vecb{\alpha}_{t} + \vec{o}_t}^{-1}
 	} \\
 %
 &= \normalC{
 		\mat{X}_t\vec{\xi}_t
 	}{ % end of arg1 \normalC
-		\mat{X}_t\vecb{\xi}_{t} -
-		\mat{G}_t\Lparen{\vecb{\xi}_{t}}^{-1}
-		\vec{g}_t\Lparen{\vecb{\xi}_{t}}
+		\mat{X}_t\vecb{\xi}_{t} - \vec{o}_t + 
+		\mat{G}_t\Lparen{\vecb{\xi}_{t} + \vec{o}_t}^{-1}
+		\vec{g}_t\Lparen{\vecb{\xi}_{t} + \vec{o}_t}
 	}{ % end of arg2 \normalC
-		- \mat{G}_t\Lparen{\vecb{\xi}_{t}}^{-1}
+		- \mat{G}_t\Lparen{\vecb{\xi}_{t} + \vec{o}_t}^{-1}
 	} \\ 
-\end{array}\end{equation}
+\end{array}\end{equation}%
+}%
 %
 where%
 %
@@ -269,17 +271,19 @@ Thus, we need to sample from%
 	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} &=  %
 		\normalC{\vec{\xi}_t}{\vec{\mu}_t}{\mat{\Sigma}_t} \\
 %
+	\vecb{\xi}_t &= \mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} \\
+%
 	\mat{\Sigma}_t^{-1} &= \mat{X}_t^\top
-		\Lparen{-\mat{G}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}}
+		\Lparen{-\mat{G}_t\Lparen{\vecb{\xi}_t + \vec{o}_t}}
 		\mat{X}_t + \mat{Q}^{-1}  \\
 %
 	\vec{\mu}_t &= \mat{\Sigma}_t\Lparen{
 		\mat{Q}^{-1}\mat{R}^{+}\mat{F}\partic{\vec{\alpha}}{t-1}{j} +
-		\mat{X}_t^\top \Lparen{-\mat{G}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}}
+		\mat{X}_t^\top \Lparen{-\mat{G}_t\Lparen{\vecb{\xi}_t + \vec{o}_t}}
 		\Lparen{
-			\mat{X}_t\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} -
-			\mat{G}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}^{-1}
-			\vec{g}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}
+			\mat{X}_t\vecb{\xi}_t - \vec{o}_t -
+			\mat{G}_t\Lparen{\vecb{\xi}_t + \vec{o}_t}^{-1}
+			\vec{g}_t\Lparen{\vecb{\xi}_t + \vec{o}_t}
 		}
 	} \\
 %
@@ -287,9 +291,9 @@ Thus, we need to sample from%
 		\mat{Q}^{-1}\mat{R}^{+}\mat{F}\partic{\vec{\alpha}}{t-1}{j} +
 		\mat{X}_t^\top
 		\Lparen{
-			-\mat{G}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}
-			\mat{X}_t\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} +
-			\vec{g}_t\Lparen{\mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1}}
+			-\mat{G}_t\Lparen{\vecb{\xi}_t + \vec{o}_t}
+			\mat{X}_t\vecb{\xi}_t - \vec{o}_t +
+			\vec{g}_t\Lparen{\vecb{\xi}_t + \vec{o}_t}
 		}
 	}
 \end{split}\end{equation}
@@ -395,10 +399,12 @@ We get the following backward version of equation~\eqref{eqn:TaylorProposalForwa
 	\IDAproxC{\vec{\alpha}_t}{\vec{y}_t, \particB{\vec{\alpha}}{t + 1}{k}} &=   %
 		\normalC{\vec{\alpha}_t}{\vecLarrow{\mu}_t}{\matLarrow{\Sigma}_t} \\
 %
+	\vecb{\xi}_{t} &= \mat{R}^{+}\mat{F}^{-1}\vecb{\alpha}_{t + 1} \\
+%
 	\matLarrow{\Sigma}_t^{-1} &=
 		\matLarrow{P}_t^{-1} +
 		\mat{R}\mat{X}_t^\top\Lparen{-\mat{G}_t\Lparen{
-		    \mat{R}^{+}\mat{F}^{-1}\vecb{\alpha}_{t + 1}}}
+		    \vecb{\xi}_{t} + \vec{o}_t}}
 		\mat{X}_t\mat{R}^\top + 
 		\mat{F}^\top\mat{R}^{+\top}\mat{Q}^{-1}
 		\mat{R}^{+}\mat{F}  \\
@@ -410,9 +416,9 @@ We get the following backward version of equation~\eqref{eqn:TaylorProposalForwa
 		\mat{Q}^{-1}\mat{R}^{+}\particB{\vec{\alpha}}{t + 1}{k} +
 		\mat{R}\mat{X}_t^\top
 		\Lparen{
-			-\mat{G}_t\Lparen{\mat{R}^{+}\mat{F}^{-1}\vecb{\alpha}_{t + 1}}
-			\mat{X}_t\mat{R}^{+}\mat{F}^{-1}\vecb{\alpha}_{t + 1} +
-			\vec{g}_t\Lparen{\mat{R}^{+}\mat{F}^{-1}\vecb{\alpha}_{t + 1}}
+			-\mat{G}_t\Lparen{\vecb{\xi}_{t} + \vec{o}_t}
+			\mat{X}_t\vecb{\xi}_{t} - \vec{o}_t +
+			\vec{g}_t\Lparen{\vecb{\xi}_{t} + \vec{o}_t}
 		}}
 \end{split}\end{equation}
 }%
@@ -492,11 +498,11 @@ We need to specify the importance density $\IDAproxC{\cdot}{\partic{\vec{\alpha}
 {\scriptsize%
 \begin{equation}\begin{split}\label{eqn:approx_smooth}
 	\IDAproxC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j},\vec{y}_t, \particB{\vec{\alpha}}{t+1}{k}}  &=   %
-		\normalC{\vec{\alpha}_t}{\vecLRarrow{\mu}_t}{\matLRarrow{\Sigma}_t} \\
+		\normalC{\vec{\alpha}_t}{\vecLRarrow{\mu}_t}{\matLRarrow{\Sigma}_t} \\	
 %
 	\matLRarrow{\Sigma}_t^{-1} &=
 		\mat{R}^{+\top}\mat{Q}^{-1}\mat{R}^+ +
-		\mat{R}\mat{X}_t^\top\Lparen{-\mat{G}_t\Lparen{\vecb{\xi}_{t}}}
+		\mat{R}\mat{X}_t^\top\Lparen{-\mat{G}_t\Lparen{\vecb{\xi}_{t} + \vec{o}_t}}
 		\mat{X}_t\mat{R}^\top + 
 		\mat{F}^\top\mat{R}^{+\top}\mat{Q}^{-1}
 		\mat{R}^{+}\mat{F}  \\
@@ -509,9 +515,9 @@ We need to specify the importance density $\IDAproxC{\cdot}{\partic{\vec{\alpha}
 		\mat{R}^+\particB{\vec{\alpha}}{t + 1}{k} +
 		\mat{R}\mat{X}_t^\top
 		\Lparen{
-			-\mat{G}_t\Lparen{\vecb{\xi}_{t}}
-			\mat{X}_t\vecb{\xi}_{t} +
-			\vec{g}_t\Lparen{\vecb{\xi}_{t}}
+			-\mat{G}_t\Lparen{\vecb{\xi}_{t} + \vec{o}_t}
+			\mat{X}_t\vecb{\xi}_{t} - \vec{o}_t +
+			\vec{g}_t\Lparen{\vecb{\xi}_{t} + \vec{o}_t}
 		}}
 \end{split}\end{equation}%
 }%

@@ -17,8 +17,6 @@
       Computes log(P(y | alpha_t))
     log_prob_state_given_previous
       Computes log(P(alpha_t | alpha_{t - 1}))
-    log_prob_state_given_next
-      Computes log(P(alpha_t | alpha_{t + 1}))
     log_artificial_prior
       Returns the log density of of artificial prior gamma_t(alpha_t)
     d_log_like
@@ -43,16 +41,7 @@ public:
     return(dmvnrm_log(
         data.err_state_inv->map(state).sv,
         data.err_state_inv->map(
-            data.state_trans->map    (previous_state).sv).sv,
-            data.Q.chol_inv));
-  }
-
-  double log_prob_state_given_next(
-      const arma::vec state, arma::vec next_state, int t){
-    return(dmvnrm_log(
-        data.err_state_inv->map(state).sv,
-        data.err_state_inv->map(
-            data.state_trans_inv->map(    next_state).sv).sv,
+            data.state_trans->map(previous_state).sv).sv,
             data.Q.chol_inv));
   }
 

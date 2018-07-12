@@ -26,7 +26,7 @@ struct PF_parameters {
 PF_parameters
   est_params_dens
   (const smoother_output&, const arma::vec&, const arma::mat&,
-   const arma::mat&, const arma::mat&, int,
+   const arma::mat&, const arma::mat&, int, const bool,
    const unsigned long int max_bytes = 5000000);
 
 #endif

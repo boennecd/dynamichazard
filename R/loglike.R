@@ -26,6 +26,7 @@ logLik.ddhazard = function(object, data = NULL, id, ...){
     stop("data is needed to compute log likelihood. Please, pass the data set used in 'ddhazard' call")
 
   X <- get_design_matrix(
+    formula = object$formula,
     data = data, Terms = object$terms, xlev = object$xlev,
     has_fixed_intercept = object$has_fixed_intercept)
   X$X <- t(X$X)

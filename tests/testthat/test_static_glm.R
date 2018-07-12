@@ -96,7 +96,7 @@ test_that("get_survival_case_weights_and_data work w/ factors and weights",{
 test_that("Gets error with only_coef = TRUE and no mf",{
   expect_error(
     static_glm(only_coef = T),
-    "^mf must be supplied when only_coef = TRUE$")
+    "^mf must be supplied when .only_coef = TRUE.$")
 })
 
 test_that("Gives depreciated warning about speedglm argument", {

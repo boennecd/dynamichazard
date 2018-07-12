@@ -293,7 +293,6 @@ PF_EM <- function(
     } else if (type == "VAR") {
       new_params <- PF_est_params_dens(
         clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
-      fit_call$a_0 <- a_0 <- drop(new_params$a_0)
       fit_call$F <- new_params$R_top_F # TODO: need to change for higher order
                                        #       models
       fit_call$Q <- (Q <- new_params$Q) / length(clouds$smoothed_clouds)
@@ -343,7 +342,8 @@ PF_EM <- function(
 
   return(structure(list(
     call = cl, clouds = clouds, a_0 = a_0, fixed_effects = fixed_parems, Q = Q,
-    F = fit_call$F., R = R, summary_stats = sum_stats,
+    F = fit_call$F, R = R,
+    summary_stats = if(type == "RW") sum_stats else NULL,
     log_likes = log_likes[1:i], n_iter = i,
     effective_sample_size = effective_sample_size, seed = seed),
     class = "PF_EM"))

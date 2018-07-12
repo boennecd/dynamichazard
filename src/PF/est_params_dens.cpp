@@ -100,7 +100,7 @@ PF_parameters
   est_params_dens
   (const smoother_output &sm_output, const arma::vec &a_0, const arma::mat &Q,
    const arma::mat &Q_0, const arma::mat &R, int max_threads,
-   const unsigned long int max_bytes){
+   const bool do_est_a_0, const unsigned long int max_bytes){
     update_parameters_data dat(sm_output, R);
 
     /* setup generators */
@@ -148,12 +148,15 @@ PF_parameters
 
     // update a_0
     /* TODO: needs to be updated for higher order models. Need Full F matrix */
-    inv_mapper inv_map(out.R_top_F);
-    const std::vector<particle_pairs> &first_particles = dat.tr->operator[](0);
     out.a_0 = arma::zeros<arma::vec>(a_0.n_elem);
+    if(do_est_a_0){
+      inv_mapper inv_map(out.R_top_F);
+      const std::vector<particle_pairs> &first_particles =
+        dat.tr->operator[](0);
 
-    for(auto i = first_particles.begin(); i != first_particles.end(); ++i)
-        out.a_0 += exp(i->log_weight) * i->p->get_state();
+      for(auto i = first_particles.begin(); i != first_particles.end(); ++i)
+          out.a_0 += exp(i->log_weight) * i->p->get_state();
+    }
 
     return out;
   }

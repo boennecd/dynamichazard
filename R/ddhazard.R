@@ -581,13 +581,21 @@ get_start_values <- function(
       names(coefs) %in% rownames(fixed_terms) |
       grepl("^ddFixed_intercept\\(", names(coefs), perl = TRUE)
 
+    # only the latter `(Intercept)` is the fixed intercept if there are two
+    cum_intercept <- cumsum(names(coefs) == "(Intercept)")
+    if(max(cum_intercept) > 2L)
+      stop("There are more than two ", sQuote("(Intercept)"), " coefficients")
+    if(max(cum_intercept) == 2L)
+      is_fixed[min(which(cum_intercept == 1L))] <- FALSE
+
     if(is.null(a_0)){
-      message("a_0 not supplied. IWLS estimates of static glm model is used")
+      message("a_0 not supplied. IWLS estimates of static glm model is used",
+              " for random walk models. Otherwise the values are zero")
       a_0 = rep(coefs[!is_fixed], order)
 
       if(verbose){
-        message("Starting values for time-varying coeffecients are:")
-        print(a_0)
+        message("Starting values for time-varying coeffecients are:\n",
+                paste0(capture.output(a_0), collapse = "\n"))
       }
     }
 
@@ -595,8 +603,8 @@ get_start_values <- function(
       fixed_parems_start <- coefs[is_fixed]
 
       if(verbose && length(fixed_parems_start) > 0){
-        message("Starting values for fixed coeffecients are:")
-        print(fixed_parems_start)
+        message("Starting values for fixed coeffecients are:\n",
+                paste0(capture.output(fixed_parems_start), collapse = "\n"))
       }
     }
   }

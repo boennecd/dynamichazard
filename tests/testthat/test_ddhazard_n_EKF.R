@@ -187,7 +187,7 @@ test_that(
 # Test on simulated data
 
 test_that("Result of exponential model gives previous results w/ simulated data", {
-  args <- list(
+  result_exp <- ddhazard(
     formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
     data = exp_sim_500$res,
     by = 1,
@@ -199,8 +199,6 @@ test_that("Result of exponential model gives previous results w/ simulated data"
     max_T = 10,
     id = exp_sim_500$res$id, order = 1,
     model = "exponential")
-
-  result_exp <- do.call(ddhazard, args)
 
   # matplot(exp_sim_500$betas, type = "l", lty = 1)
   # matplot(result_exp$state_vecs, lty = 2, type = "l", add = T)

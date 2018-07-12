@@ -113,9 +113,9 @@ public:
             double log_prob_state_given_other =
               is_forward ?
               dens_calc.log_prob_state_given_previous(
-                it->get_state(), it->parent->get_state(), t) :
-              dens_calc.log_prob_state_given_next(
-                it->get_state(), it->parent->get_state(), t);
+                it->get_state()        , it->parent->get_state(), t) :
+              dens_calc.log_prob_state_given_previous(
+                it->parent->get_state(), it->get_state()        , t + 1);
 
             it->log_unnormalized_weight = it->log_weight =
               /* nominator */
@@ -265,10 +265,10 @@ public:
                 it->get_state(), t, r_set, false);
             double log_prob_state_given_previous =
               dens_calc.log_prob_state_given_previous(
-                it->get_state(), it->parent->get_state(), t);
+                it->get_state()       , it->parent->get_state(), t);
             double log_prob_next_given_state =
-              dens_calc.log_prob_state_given_next(
-                it->get_state(), it->child->get_state(), t);
+              dens_calc.log_prob_state_given_previous(
+                it->child->get_state(), it->get_state()        , t + 1);
             double log_importance_dens = it->log_importance_dens;
             double log_artificial_prior = // TODO: have already been computed
               dens_calc.log_artificial_prior(

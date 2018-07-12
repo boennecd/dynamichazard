@@ -52,6 +52,7 @@ predict.ddhazard = function(object, new_data,
   # TODO: change the code below to use terms object which has been added in
   #       in version 0.5.0 to get the index of potential fixed effects
   tmp = get_design_matrix(
+    formula = object$formula,
     data = new_data, response = F, Terms = object$terms, xlev = object$xlev,
     has_fixed_intercept = object$has_fixed_intercept)
   object$formula <- tmp$formula_used

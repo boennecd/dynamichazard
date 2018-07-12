@@ -36,6 +36,8 @@
 
 /* base class importance samplers */
 
+
+
 template<bool is_forward>
 class importance_dens_base {
 public:
@@ -62,7 +64,7 @@ public:
                   << " with chol(covariance matrix):" << std::endl
                   << *Q_chol
                   << "and mean:" << std::endl
-                  << *mean;
+                  << mean->t();
     }
 
     double log_weight = log(1. / data.N_first);
@@ -134,17 +136,11 @@ public:
     cloud ans;
     ans.reserve(data.N_smooth);
 
-    std::unique_ptr<covarmat> Q_use;
-    {
-      arma::mat Q_inv_arg = data.err_state_inv->map(
-        data.Q_proposal_smooth.inv, both, trans).sv;
-      Q_inv_arg += data.state_trans->map(Q_inv_arg, both, trans).sv;
-      Q_use.reset(new covarmat(Q_inv_arg.i()));
-    }
+    bw_fw_particle_combiner combiner(data);
 
     if(data.debug > 2){
       data.log(3) << "Sampling new cloud from normal distribution with chol(Q) given by" << std::endl
-                  << Q_use->chol;
+                  << combiner.Q.chol;
     }
 
     for(arma::uword i = 0; i < data.N_smooth; ++i){
@@ -153,16 +149,12 @@ public:
       const particle &fw_p = fw_cloud[*it_fw];
       const particle &bw_p = bw_cloud[*it_bw];
 
-      arma::vec mu =
-        data.state_trans    ->map(fw_p.get_state()).sv +
-        data.state_trans_inv->map(bw_p.get_state()).sv;
-      mu *= .5;
-
-      arma::vec err = mvrnorm(Q_use->chol);
-      ans.new_particle(data.err_state->map(err).sv + mu, &fw_p, &bw_p);
+      arma::vec mu = combiner(fw_p, bw_p);
+      arma::vec err = mvrnorm(combiner.Q.chol);
+      ans.new_particle(err + mu, &fw_p, &bw_p);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(err, Q_use->chol_inv);
+      p.log_importance_dens = dmvnrm_log(err, combiner.Q.chol_inv);
     }
 
     return ans;
@@ -252,19 +244,15 @@ public:
 
   static cloud sample_smooth(SAMPLE_SMOOTH_ARGS){
     /* Find weighted mean estimate */
-    arma::vec alpha_bar =
-      data.state_trans    ->map(fw_cloud.get_weigthed_mean()).sv +
-      data.state_trans_inv->map(bw_cloud.get_weigthed_mean()).sv;
-    alpha_bar *= .5;
+    bw_fw_particle_combiner combiner(data);
+
+    const arma::vec alpha_bar = combiner(
+      fw_cloud.get_weigthed_mean(), bw_cloud.get_weigthed_mean());
 
     /* compute parts of the terms for the mean and covariance */
-    auto &Q = data.Q_proposal_smooth;
-    arma::mat Q_inv_arg = data.err_state_inv->map(Q.inv, both, trans).sv;
-    Q_inv_arg += data.state_trans->map(Q_inv_arg, both, trans).sv;
-
     auto inter_output =
       taylor_normal_approx(
-          dens_calc, data, t, Q_inv_arg, alpha_bar, 2, true, false);
+          dens_calc, data, t, combiner.Q.inv, alpha_bar, 2, true, false);
 
     /* Sample */
     debug_msg_before_sampling(data, inter_output);
@@ -279,13 +267,13 @@ public:
 
       /* compute part of the mean from the forward particle */
       arma::vec mu_j = data.state_trans_err->map(fw_p.get_state()).sv;
-      mu_j = solve_w_precomputed_chol(Q.chol, mu_j);
+      mu_j = solve_w_precomputed_chol(combiner.Q_trans.chol, mu_j);
       mu_j = data.state_trans_err->map(mu_j, trans).sv;
 
       /* add part of the mean from the backward particle */
       {
         arma::vec bw_term = data.err_state_inv  ->map(bw_p.get_state()).sv;
-        bw_term = solve_w_precomputed_chol(Q.chol, bw_term);
+        bw_term = solve_w_precomputed_chol(combiner.Q_trans.chol, bw_term);
         mu_j += data.state_trans_err            ->map(bw_term, trans).sv;
       }
 
@@ -377,13 +365,7 @@ public:
     /* Compute means before accounting for outcomes */
     std::vector<arma::vec> mus(data.N_smooth);
 
-    std::unique_ptr<covarmat> Q_use;
-    {
-      arma::mat Q_inv_arg = data.err_state_inv->map(
-        data.Q_proposal_smooth.inv, both, trans).sv;
-      Q_inv_arg += data.state_trans->map(Q_inv_arg, both, trans).sv;
-      Q_use.reset(new covarmat(Q_inv_arg.i()));
-    }
+    bw_fw_particle_combiner combiner(data);
 
     auto begin_fw = fw_idx.begin();
     auto begin_bw = bw_idx.begin();
@@ -393,19 +375,13 @@ public:
 #endif
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       arma::vec &mu_j = *(begin_mu + i);
-      const particle &fw_p = fw_cloud[*(begin_fw + i)];
-      const particle &bw_p = bw_cloud[*(begin_bw + i)];
-
-      mu_j =
-        data.state_trans    ->map(fw_p.get_state()).sv +
-        data.state_trans_inv->map(bw_p.get_state()).sv;
-      mu_j *= .5;
+      mu_j = combiner(fw_cloud[*(begin_fw + i)], bw_cloud[*(begin_bw + i)]);
     }
 
     /* compute means and covariances */
     auto inter_output =
       taylor_normal_approx_w_particles
-      (dens_calc, data, t, *Q_use.get(), mus, false);
+      (dens_calc, data, t, combiner.Q, mus, false);
 
     /* Sample */
     cloud ans;

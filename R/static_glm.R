@@ -254,7 +254,7 @@ static_glm = function(
   method_use = c("glm", "speedglm", "parallelglm_quick", "parallelglm_QR"),
   n_threads = getOption("ddhazard_max_threads")){
   if(only_coef && missing(mf))
-    stop("mf must be supplied when only_coef = TRUE")
+    stop("mf must be supplied when ", sQuote("only_coef = TRUE"))
 
   if(!missing(mf) && nrow(mf) != nrow(data))
     stop("data and mf must have the same number of rows")
@@ -264,6 +264,8 @@ static_glm = function(
             sQuote("method_use"))
 
   method_use <- method_use[1]
+
+  formula_org <- formula
 
   if(only_coef){
     # we mark the row numbers as some may be removed and the order may be
@@ -281,7 +283,7 @@ static_glm = function(
   if(family %in% c("binomial", "logit")){
     family <- binomial()
 
-    tmp = get_survival_case_weights_and_data(
+    tmp <- get_survival_case_weights_and_data(
       formula = formula, data = data, by = by, max_T = max_T, id = id,
       init_weights = weights, risk_obj = risk_obj,
       c_outcome = c_outcome,
@@ -300,7 +302,7 @@ static_glm = function(
   } else if(family == "exponential"){
     family <- poisson()
 
-    tmp = get_survival_case_weights_and_data(
+    tmp <- get_survival_case_weights_and_data(
       formula = formula, data = data, by = by, max_T = max_T, id = id,
       init_weights = weights, risk_obj = risk_obj,
       is_for_discrete_model = FALSE,
@@ -329,18 +331,79 @@ static_glm = function(
     mf <- mf[new_order, , drop = FALSE]
   }
 
+  #####
+  # check if there are some duplicate terms (terms which as appear as is and
+  # wrapped in `ddFixed`).
+  tt <- terms(formula, specials = "ddFixed")
+  # logic below is in case something like `Y ~ f(x, a) + z` is used since then
+  # e.g., `all.vars` yields
+  #
+  #           all.vars(Y ~ f(x, a) + z, unique = FALSE)
+  #           #R [1] "Y" "x" "a" "z"
+  #
+  # It also avoid issues like
+  #
+  #           frm <- terms(y ~ x + f(x) + ddFixed(x))
+  #           unlist(lapply(attr(frm, "variables")[-1L], all.vars))
+  #           #R [1] "y" "x" "x" "x"
+  #
+  vars <- lapply(attr(tt, "variables")[-1L], all.vars)
+  dups <- which(vars %in% vars[duplicated(vars)])
+  xtra_ddfixed <- which(dups %in% attr(tt, "specials")$ddFixed)
+
+  ddFixed_term_labels <- attr(tt, "term.labels")[xtra_ddfixed]
+  ddFixed_terms <- gsub(
+    "^(ddFixed\\()(.+)(\\))$", "\\2", ddFixed_term_labels)
+  do_drop <- which(attr(tt, "term.labels") %in% ddFixed_terms)
+  if(length(do_drop) > 0){
+    # remove these from the formula
+    formula <- drop.terms(tt, do_drop, keep.response = TRUE)
+
+    if(only_coef){
+      # find the indices to drop from `mf`
+      dropped_names <- attr(tt, "term.labels")[do_drop]
+      # TODO: this will not work if with e.g., `y ~ x1 + x11 + ddFixed(x1)`...
+      #       A better way would be to call `model.frame` again and use the
+      #       `model.matrix` and `attr(,"assign")`. However, the whole idea of
+      #       using the `mf` argument is to avoid this. Another idea is require
+      #       that `mf` has an `assign` attribute and then use this...
+      do_drop <- sapply(colnames(mf), function(n)
+        any(sapply(dropped_names, startsWith, x = n)))
+
+      # there may also be an additional intercept
+      do_keep_random_intercept <- .keep_random_intercept(formula_org, data)
+      if(do_keep_random_intercept){
+        # assume that the fixed intercept is the last `(Intercept)` in `mf`
+        cum_is_inter <- cumsum(colnames(mf) == "(Intercept)")
+        stopifnot(max(cum_is_inter) == 2L)
+
+        do_drop[min(which(cum_is_inter == 1L))] <- TRUE
+      }
+
+      mf <- mf[, !do_drop, drop = FALSE]
+    }
+  }
+
+  if(only_coef)
+    wrap_output <- function(res){
+      if(length(do_drop) == 0)
+        return(res)
+
+      out <- structure(numeric(length(do_drop)), names = names(do_drop))
+      out[!do_drop] <- res
+      out
+    }
+
   offset <- if(family$family == "poisson")
     data$log_delta_time else rep(0, nrow(data))
 
   if(method_use == "speedglm" && requireNamespace("speedglm", quietly = T)){
     if(only_coef){
-
-
       fit <- speedglm::speedglm.wfit(
         X = mf, y = data[[c_outcome]], weights = data[[c_weights]],
         family = family, offset = offset, ...)
 
-      return(fit$coefficients)
+      return(wrap_output(fit$coefficients))
     }
 
     return(drop(speedglm::speedglm(
@@ -356,7 +419,7 @@ static_glm = function(
           x = mf, y = data[[.(c_outcome)]], weights = data[[.(c_weights)]],
           family = family, control = .(ctrl), offset = offset)))
 
-      return(fit$coefficients)
+      return(wrap_output(fit$coefficients))
     }
 
     return(eval(bquote(
@@ -377,7 +440,7 @@ static_glm = function(
                   family = family$family, method = method.,
                   tol = epsilon, nthreads = n_threads))
 
-    return(structure(out, names = dimnames(mf)[[2]]))
+    return(wrap_output(structure(out, names = dimnames(mf)[[2]])))
 
   } else
     stop(sQuote("method_use"), " not implemented with ", sQuote("only_coef"),

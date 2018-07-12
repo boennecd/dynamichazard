@@ -7,17 +7,18 @@ get_design_matrix = function(
     stop(sQuote("get_design_matrix"),
          " is called where neither respone or predictors is requested")
 
-  if(!all(is.null(Terms) == c(is.null(has_fixed_intercept), is.null(xlev)))) # TODO: test error message
+  if(!all(
+    is.null(Terms) == c(is.null(has_fixed_intercept), is.null(xlev))))
     stop(sQuote("Terms"), ", ", sQuote("has_fixed_intercept"), " and ",
          sQuote("xlev"), " must either all be NULL or not")
 
-  is_first_call <- is.null(Terms)
-
-  if(is_first_call){
+  if(is_first_call <- is.null(Terms)){
     #####
     # See if there is a fixed intercept. If so, update the formula
     tt <- terms(formula, data = data, specials = "ddFixed_intercept")
     fixed_inter_terms <- attr(tt, "specials")[["ddFixed_intercept"]]
+    if(length(fixed_inter_terms) > 1)
+      stop("more than one ", sQuote("ddFixed_intercept"), " term")
     has_fixed_intercept <- length(fixed_inter_terms) > 0
     formula_used <- if(has_fixed_intercept){
       attr(tt, "intercept") <- 1
@@ -28,6 +29,8 @@ get_design_matrix = function(
     } else
       formula
   }
+
+  do_keep_random_intercept <- .keep_random_intercept(formula, data = data)
 
   #####
   # Get model.frame, model.matrix and outcome. The two latter if needed
@@ -77,28 +80,42 @@ get_design_matrix = function(
       fixed_terms_indicies <- c()
     } else {
       fixed_terms_indicies <- which(
-        attr(X, "assign") %in% (fixed_terms_indicies - attr(Terms, "response")))
+        attr(X, "assign") %in%
+          (fixed_terms_indicies - attr(Terms, "response")))
     }
 
     fixed_terms <- X[, fixed_terms_indicies, drop = F]
     if(length(fixed_terms_indicies) > 0)
       X <- X[, -fixed_terms_indicies, drop = F]
     if(has_fixed_intercept){
-      fixed_terms <- cbind(`(Intercept)` = rep(1, nrow(fixed_terms)),
-                           fixed_terms)
-      X <- X[, colnames(X) != "(Intercept)", drop = FALSE]
+      fixed_terms <- cbind(`(Intercept)` = 1, fixed_terms)
+      if(!do_keep_random_intercept)
+        X <- X[, colnames(X) != "(Intercept)", drop = FALSE]
     }
   }
 
   # Change outcome if formula it was Surv(stop, event) ~
   if(!is.null(Y) && attr(Y, "type") == "right"){
-    Y <- cbind(rep(0, nrow(Y)), Y)
+    Y <- cbind(0, Y)
     dimnames(Y)[[2]] <- c("start", "stop", "status")
     attr(Y, "type") <- "counting"
   }
 
   list(X = X, fixed_terms = fixed_terms, Y = Y, formula_used = formula_used,
        terms = Terms, has_fixed_intercept = has_fixed_intercept, xlev = xlev)
+}
+
+.keep_random_intercept <- function(formula, data){
+  tt <- terms(formula, specials = "ddFixed_intercept", data = data)
+  fixed_inter_terms <- attr(tt, "specials")[["ddFixed_intercept"]]
+  if(length(fixed_inter_terms) == 0)
+    return(FALSE)
+
+  if(length(fixed_inter_terms) > 1)
+    stop("more than one ", sQuote("ddFixed_intercept"), " term")
+
+  fixed_expr <- attr(tt, "variables")[[fixed_inter_terms + 1L]]
+  attr(eval(fixed_expr), "random_intercept")
 }
 
 #' Auxiliary Functions for Fixed Effects
@@ -118,7 +135,6 @@ get_design_matrix = function(
 #'\dontrun{
 #' ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, data)
 #' ddhazard(Surv(stop, event) ~ -1 + ddFixed_intercept() + x1, data)
-#' ddhazard(Surv(stop, event) ~ ddFixed_intercept(what_ever) + x1, data)
 #'}
 #' @export
 ddFixed <- function(object){
@@ -138,5 +154,15 @@ ddFixed <- function(object){
 }
 
 #' @rdname ddFixed
+#'
+#' @param random_intercept \code{TRUE} if a zero mean time-varying process
+#' should be included at as an addtional term. Only relevant in stationary
+#' models. See the \code{type} argument in \code{\link{PF_EM}}.
+#'
 #' @export
-ddFixed_intercept <- function(object) NULL
+ddFixed_intercept <- function(random_intercept = FALSE){
+  if(!is.logical(random_intercept) || length(random_intercept) != 1L)
+    stop(sQuote("random_intercept"), " needs to be a scalar logical")
+
+  structure(list(), random_intercept = random_intercept)
+}

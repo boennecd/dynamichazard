@@ -26,11 +26,7 @@ test_that("different ways of fixing the intercept gives the same result", {
     tstop = rexp(25, 1))
   test_formulas <- list(
     Surv(tstop, y) ~ ddFixed_intercept() + x,
-    Surv(tstop, y) ~ -1 + ddFixed_intercept() + x,
-    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + x,
-    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + .,
-    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + .,
-    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + x)
+    Surv(tstop, y) ~ -1 + ddFixed_intercept() + x)
 
   test_exp <- expression({
     results <- lapply(test_formulas, get_design_matrix, data = .data)
@@ -39,6 +35,7 @@ test_that("different ways of fixing the intercept gives the same result", {
       eval(substitute({
         expect_equal(results[[1]], results[[i]])
         r_new <- with(results[[i]], get_design_matrix(
+          formula = test_formulas[[i]],
           data = .data[1:10, ], Terms = terms, xlev = xlev,
           has_fixed_intercept = has_fixed_intercept))
         expect_equal(results[[i]][["X"]][1:10, , drop = FALSE], r_new[["X"]])
@@ -54,18 +51,12 @@ test_that("different ways of fixing the intercept gives the same result", {
   .data$x <- rnorm(25)
   test_formulas <- list(
     Surv(tstop, y) ~ ddFixed_intercept() + poly(x, degree = 3),
-    Surv(tstop, y) ~ -1 + ddFixed_intercept() + poly(x, degree = 3),
-    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + poly(x, degree = 3),
-    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + poly(x, degree = 3))
+    Surv(tstop, y) ~ -1 + ddFixed_intercept() + poly(x, degree = 3))
   eval(test_exp)
 
   test_formulas <- list(
     Surv(tstop, y) ~ ddFixed_intercept() + x,
-    Surv(tstop, y) ~ -1 + ddFixed_intercept() + x,
-    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + x,
-    Surv(tstop, y) ~ ddFixed_intercept(what_ever) + .,
-    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + .,
-    Surv(tstop, y) ~ -1 + ddFixed_intercept(what_ever) + x)
+    Surv(tstop, y) ~ -1 + ddFixed_intercept() + x)
   eval(test_exp)
 })
 
@@ -96,40 +87,6 @@ test_that("Fixed terms works as expected",{
                check.attributes = F)
   expect_equal(as.matrix(design_with_fixed$fixed_terms), dum(sims$x2),
                check.attributes = F)
-})
-
-test_that("Different forms of fixing the intercept gives same results", {
-  sims = exp_sim_200$res
-
-  frms <- list(
-    survival::Surv(tstart, tstop, event) ~ ddFixed_intercept(1) + x1 + x2,
-    survival::Surv(tstart, tstop, event) ~ -1 + ddFixed_intercept(1) + x1 + x2,
-    survival::Surv(tstart, tstop, event) ~
-      -1 + ddFixed_intercept(rep(1, length(x1))) + x1 + x2)
-
-  for(m in c("logit", exp_model_names)){
-    if(m != "logit")
-      skip_on_cran()
-
-    results <- lapply(frms, function(f)
-      suppressWarnings(suppressMessages(
-        ddhazard(f,
-                 model = m, by = 1, data = sims, max_T = 10,
-                 Q_0 = diag(1, 2), Q = diag(.01, 2),
-                 control = list(eps = .1, method = "GMA",
-                                fixed_terms_method = "M_step")))))
-
-    # matplot(exp_sim_200$betas, lty = 1, type = "l", main = m)
-    # matplot(m1$state_vecs, col = 2:3, lty = 2, add = TRUE, type = "l")
-    # abline(h = m1$fixed_effects, lty = 2, col = 1)
-
-    for(i in 2:length(frms))
-      eval(bquote({
-      expect_equal(results[[1]][c("state_vecs", "fixed_effects")],
-                   results[[.(i)]][c("state_vecs", "fixed_effects")],
-                   tolerance = 1e-5)
-    }))
-  }
 })
 
 test_that("Fixed terms works as expected",{

@@ -166,6 +166,22 @@ input_for_normal_apprx_w_particle_mean
 
 /* ------------------------------------------- */
 
+class bw_fw_particle_combiner {
+  const PF_data &data;
+
+public:
+  const covarmat &Q_trans;
+  const covarmat  Q;
+
+  bw_fw_particle_combiner(const PF_data&);
+
+  arma::vec operator()(const particle&, const particle&) const;
+
+  arma::vec operator()(const arma::vec&, const arma::vec&) const;
+};
+
+/* ------------------------------------------- */
+
 /* Output class for smoothers */
 
 class smoother_output {

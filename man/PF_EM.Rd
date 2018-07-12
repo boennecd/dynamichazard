@@ -34,7 +34,7 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 
 \item{seed}{seed to set at the start of every EM iteration.}
 
-\item{type}{Type of state model. Either \code{"RW"} for a [R]andom [W]alk or
+\item{type}{type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 "VAR" for [V]ector [A]uto[R]egression.}
 
 \item{...}{optional way to pass arguments to \code{control}.}

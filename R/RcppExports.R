@@ -133,8 +133,8 @@ compute_summary_stats_first_o_RW <- function(rcpp_list, n_threads, a_0, Q, Q_0, 
     .Call(`_dynamichazard_compute_summary_stats_first_o_RW`, rcpp_list, n_threads, a_0, Q, Q_0, R)
 }
 
-PF_est_params_dens <- function(rcpp_list, n_threads, a_0, Q, Q_0, R) {
-    .Call(`_dynamichazard_PF_est_params_dens`, rcpp_list, n_threads, a_0, Q, Q_0, R)
+PF_est_params_dens <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, do_est_a_0 = FALSE) {
+    .Call(`_dynamichazard_PF_est_params_dens`, rcpp_list, n_threads, a_0, Q, Q_0, R, do_est_a_0)
 }
 
 test_copy_mat <- function(X, n_times) {

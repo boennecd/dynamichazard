@@ -7,10 +7,14 @@
 \usage{
 ddFixed(object)
 
-ddFixed_intercept(object)
+ddFixed_intercept(random_intercept = FALSE)
 }
 \arguments{
 \item{object}{expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}.}
+
+\item{random_intercept}{\code{TRUE} if a zero mean time-varying process
+should be included at as an addtional term. Only relevant in stationary
+models. See the \code{type} argument in \code{\link{PF_EM}}.}
 }
 \description{
 Functions used in formula of \code{\link{ddhazard}} for time-invariant effects. \code{ddFixed_intercept} is only used for the intercept.
@@ -26,6 +30,5 @@ ddhazard(Surv(stop, event) ~ ddFixed(x1), data)
 \dontrun{
 ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, data)
 ddhazard(Surv(stop, event) ~ -1 + ddFixed_intercept() + x1, data)
-ddhazard(Surv(stop, event) ~ ddFixed_intercept(what_ever) + x1, data)
 }
 }

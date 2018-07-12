@@ -50,6 +50,7 @@ ddhazard_boot <- function(
   list2env(ddhazard_fit[c("control", "id", "data", "order", "model")],
            environment())
   X_Y <- get_design_matrix(
+    formula = ddhazard_fit$formula,
     data = data, Terms = ddhazard_fit$terms, xlev = ddhazard_fit$xlev,
     has_fixed_intercept = ddhazard_fit$has_fixed_intercept)
 

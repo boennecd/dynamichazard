@@ -35,6 +35,7 @@ hatvalues.ddhazard <- function(model, ...){
   # get design matrix, save the start and stop times and include the fixed
   # effects
   design_mat <- get_design_matrix(
+    formula = model$formula,
     data = model$data, Terms = model$terms, xlev = model$xlev,
     has_fixed_intercept = model$has_fixed_intercept)
   tstart <- design_mat$Y[, 1]
