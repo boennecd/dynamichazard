@@ -16,9 +16,34 @@ PF_effective_sample_size <- function(object){
 #' @param seed seed to set at the start of every EM iteration.
 #' @param type type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 #' "VAR" for [V]ector [A]uto[R]egression.
+#' @param Fmat starting value for \eqn{F} when \code{type = "VAR"}. See
+#' 'Details'.
 #' @param ... optional way to pass arguments to \code{control}.
 #'
 #' @details
+#' Estimates a state model of the form
+#'
+#' \deqn{\alpha_t = F \alpha_t + R\epsilon_t, \qquad \epsilon_t \sim N(0, Q)}
+#'
+#' where \eqn{F\in{\rm I\!R}^{p\times p}} has full rank,
+#' \eqn{\alpha_t\in {\rm I\!R}^p}, \eqn{\epsilon_t\in {\rm I\!R}^r},
+#' \eqn{r \leq p}, and \eqn{R = (e_{l_1},e_{l_2},\dots,e_{l_r})}
+#' where \eqn{e_k} is column from the \eqn{p} dimensional identity matrix and
+#' \eqn{l_1<l_2<\dots<l_r}. The time zero state is drawn from
+#'
+#' \deqn{\alpha_0\sim N(a_0, Q_0)}
+#'
+#' with \eqn{Q_0 \in {\rm I\!R}^{p\times p}}. The latent states,
+#' \eqn{\alpha_t}, are related to the output throught the linear predictors
+#'
+#' \deqn{\eta_{it} = X_t(R^\top\alpha_t) + Z_t\beta}
+#'
+#' where \eqn{X_t\in{\rm I\!R}^{n_t\times r}} and
+#' \eqn{Z_t{\rm I\!R}^{n_t\times c}} are design matrices and the outcome for a
+#' individual \eqn{i} at time \eqn{t} is distributed according
+#' to an exponential family member given \eqn{\eta_{it}}. \eqn{\beta} are
+#' constant coefficients.
+#'
 #' See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 #'
 #' @return
@@ -120,7 +145,8 @@ PF_effective_sample_size <- function(object){
 #' @export
 PF_EM <- function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = NULL, type = "RW", ...){
+  control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
+  ...){
   #####
   # checks
   if(length(order) == 1 && order != 1)
@@ -139,6 +165,9 @@ PF_EM <- function(
   if(is.character(type) && length(type) == 1 &&
      !type %in% c("RW", "VAR"))
     stop("Invalid ", sQuote("type"), " argument")
+
+  if(!missing(Fmat) && type != "VAR")
+    stop(sQuote("Fmat"), " should not be passed for type ", sQuote(type))
 
   #####
   # check if `control` has all the needed elements or if is called as in
@@ -171,13 +200,18 @@ PF_EM <- function(
   a_0 <- start_coefs$a_0
   fixed_parems <- start_coefs$fixed_parems_start
 
-  model_args <- .get_state_eq_matrices_PF(
+  model_args <- get_state_eq_matrices(
     order = order, n_params = nrow(static_args$X),
     n_fixed = static_args$n_fixed, Q_0 = if(missing(Q_0)) NULL else Q_0,
-    Q = if(missing(Q)) NULL else Q, a_0 = a_0)
-  model_args$L <- NULL
-  if(type == "VAR")
-    model_args$F. <- diag(.1, ncol(model_args$F.))
+    Q = if(missing(Q)) NULL else Q, a_0 = a_0,
+    F. = if(missing(Fmat)) NULL else Fmat, type = type)
+  model_args[c("L", "indicies_fix")] <- NULL
+
+  .check_filter_input(
+    Q = model_args$Q, Q_0 = model_args$Q_0, F. = model_args$F.,
+    R = model_args$R, a_0 = model_args$a_0,
+    fixed_parems = start_coefs$fixed_parems_start, est_fixed_in_E = FALSE,
+    X = static_args$X, fixed_terms = static_args$fixed_terms, order = order)
 
   #####
   # build up call with symbols to get neater call stack incase of an error
@@ -423,16 +457,6 @@ PF_control <- function(
     n_fixed_terms_in_state_vec = 0, X = X_Y$X, fixed_terms = X_Y$fixed_terms,
     tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], risk_obj = risk_set,
     debug = max(0, trace - 1), model = model))
-}
-
-.get_state_eq_matrices_PF <- function(order, n_params, n_fixed, Q_0, Q, a_0){
-  call. <- match.call()
-  call.[["est_fixed_in_E"]] <- FALSE
-  call.[[1]] <- quote(get_state_eq_matrices)
-  out <- eval(call., envir = parent.frame())
-  out$indicies_fix <- NULL
-
-  out
 }
 
 

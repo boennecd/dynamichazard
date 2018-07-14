@@ -209,16 +209,16 @@ test_that("Result of exponential model gives previous results w/ simulated data"
 
 
 test_that("Permutating data does not change the results", {
-  args <- list(
+  cl <- quote(ddhazard(
     Surv(stop, event) ~ group, head_neck_cancer,
     by = 1, max_T = 40,
-    Q_0 = diag(rep(10000, 2)), Q = diag(rep(0.1, 2)))
+    Q_0 = diag(rep(10000, 2)), Q = diag(rep(0.1, 2))))
 
-  r1 <- do.call(ddhazard, args)
+  r1 <- eval(cl)
 
-  args$control <- c(args$control, list(permu = T))
+  cl$control <- c(cl$control, list(permu = T))
 
-  r2 <- do.call(ddhazard, args)
+  r2 <- eval(cl)
 
   # plot(r1)
   # plot(r2)
@@ -229,16 +229,16 @@ test_that("Permutating data does not change the results", {
 
   #####
   # With fixed effects
-  args <- list(
+  cl <- quote(ddhazard(
     Surv(tstart, tstop, death == 2) ~ age + ddFixed(edema) +
       log(albumin) + log(protime) + log(bili), pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
     Q_0 = diag(rep(10000, 5)), Q = diag(rep(0.001, 5)),
-    control = list(n_threads = 1))
+    control = list(n_threads = 1)))
 
-  r1 <- do.call(ddhazard, args)
-  args$control <- c(args$control, list(permu = T))
-  r2 <- do.call(ddhazard, args)
+  r1 <- eval(cl)
+  cl$control <- c(eval(cl$control), list(permu = T))
+  r2 <- eval(cl)
 
   # plot(r1)
   # plot(r2)
@@ -252,17 +252,17 @@ test_that("Permutating data does not change the results", {
   set.seed(94884214)
   w <- sample(1:3, nrow(pbc2), replace = T)
 
-  args <- list(
+  cl <- quote(ddhazard(
     Surv(tstart, tstop, death == 2) ~ age + edema +
       log(albumin) + log(protime) + log(bili), pbc2,
     id = pbc2$id, by = 100, max_T = 3000,
     weights = w,
     Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
-    control = list(n_threads = 1, LR = .6))
+    control = list(n_threads = 1, LR = .6)))
 
-  r1 <- do.call(ddhazard, args)
-  args$control <- c(args$control, list(permu = T))
-  r2 <- do.call(ddhazard, args)
+  r1 <- eval(cl)
+  cl$control <- c(eval(cl$control), list(permu = T))
+  r2 <- eval(cl)
 
   # plot(r1)
   # plot(r2)

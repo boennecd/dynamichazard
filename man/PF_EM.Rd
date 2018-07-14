@@ -5,7 +5,8 @@
 \title{EM Estimation with Particle Filters and Smoothers}
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = NULL, type = "RW", ...)
+  control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
+  ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -37,6 +38,9 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 \item{type}{type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 "VAR" for [V]ector [A]uto[R]egression.}
 
+\item{Fmat}{starting value for \eqn{F} when \code{type = "VAR"}. See
+'Details'.}
+
 \item{...}{optional way to pass arguments to \code{control}.}
 }
 \value{
@@ -46,6 +50,29 @@ An object of class \code{PF_EM}.
 Method to estimate the hyper parameters with an EM algorithm.
 }
 \details{
+Estimates a state model of the form
+
+\deqn{\alpha_t = F \alpha_t + R\epsilon_t, \qquad \epsilon_t \sim N(0, Q)}
+
+where \eqn{F\in{\rm I\!R}^{p\times p}} has full rank,
+\eqn{\alpha_t\in {\rm I\!R}^p}, \eqn{\epsilon_t\in {\rm I\!R}^r},
+\eqn{r \leq p}, and \eqn{R = (e_{l_1},e_{l_2},\dots,e_{l_r})}
+where \eqn{e_k} is column from the \eqn{p} dimensional identity matrix and
+\eqn{l_1<l_2<\dots<l_r}. The time zero state is drawn from
+
+\deqn{\alpha_0\sim N(a_0, Q_0)}
+
+with \eqn{Q_0 \in {\rm I\!R}^{p\times p}}. The latent states,
+\eqn{\alpha_t}, are related to the output throught the linear predictors
+
+\deqn{\eta_{it} = X_t(R^\top\alpha_t) + Z_t\beta}
+
+where \eqn{X_t\in{\rm I\!R}^{n_t\times r}} and
+\eqn{Z_t{\rm I\!R}^{n_t\times c}} are design matrices and the outcome for a
+individual \eqn{i} at time \eqn{t} is distributed according
+to an exponential family member given \eqn{\eta_{it}}. \eqn{\beta} are
+constant coefficients.
+
 See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 }
 \examples{

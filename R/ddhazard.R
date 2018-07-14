@@ -225,7 +225,7 @@ ddhazard = function(
     fixed_parems_start = control$fixed_parems_start)
 
   a_0 <- tmp$a_0
-  control$fixed_parems_start <- tmp$fixed_parems_start
+  control$fixed_parems_start <- fixed_parems_start <- tmp$fixed_parems_start
 
   #####
   # Find matrices for state equation
@@ -236,6 +236,12 @@ ddhazard = function(
     Q = if(missing(Q)) NULL else Q,
     a_0 = a_0, control)
   list2env(tmp, environment())
+
+  .check_filter_input(
+    Q = Q, Q_0 = Q_0, F. = F., R = R, a_0 = a_0, L = L,
+    fixed_parems = fixed_parems_start, est_fixed_in_E = est_fixed_in_E,
+    X = X_Y$X, fixed_terms = X_Y$fixed_terms, order = order,
+    has_transposed_design = FALSE)
 
   if(verbose)
     report_pre_liminary_stats_before_EM(risk_set = risk_set, Y = X_Y$Y)
@@ -415,7 +421,8 @@ ddhazard_no_validation <- function(
 }
 
 get_state_eq_matrices <-  function(
-  order, n_params, n_fixed, est_fixed_in_E, Q_0, Q, a_0, control){
+  order, n_params, n_fixed, est_fixed_in_E = FALSE, Q_0, Q, a_0, control,
+  type = "RW", F. = NULL){
   #####
   # Indices vector used later
   state_dim <- n_params * order + n_fixed * est_fixed_in_E
@@ -448,43 +455,37 @@ get_state_eq_matrices <-  function(
   if(is.vector(Q_0) && length(Q_0) == 1)
     Q_0 <- matrix(Q_0)
 
-  if(ncol(Q) != n_params)
-    stop("Q does not have the correct dimension. Its dimension should be ",
-         n_params, " but it has ", ncol(Q), " columns")
-
-  os <- n_params * order + (
-    if(est_fixed_in_E) c(0, length(indicies_fix))  else 0)
-  if(!ncol(Q_0) %in% os){
-    .str <- if(length(os) == 1) n_params * order else paste(os[1], "or", os[2])
-    stop("Q_0 does not have the correct dimension. Its dimension should be ",
-         .str,
-         " but it has ", ncol(Q_0), " columns")
-  }
-
   if(!order %in% 1:2)
     stop("Method not implemented for order ", order)
 
   #####
   # Get F matrix
-  if(order == 1){
-    F. <- diag(rep(1, n_params + n_fixed * est_fixed_in_E))
+  if(is.null(F.)){
+    if(type == "RW"){
+      if(order == 1){
+        F. <- diag(rep(1, n_params + n_fixed * est_fixed_in_E))
 
-  } else if(order == 2){
-    F. = matrix(NA_real_,
-                nrow = 2 * n_params + n_fixed * est_fixed_in_E,
-                ncol = 2 * n_params + n_fixed * est_fixed_in_E)
-    F.[indicies_cur, indicies_cur] = diag(2, n_params)
-    F.[indicies_lag, indicies_cur] = diag(1, n_params)
-    F.[indicies_cur, indicies_lag] = diag(-1, n_params)
-    F.[indicies_lag, indicies_lag] = 0
+      } else if(order == 2){
+        F. = matrix(NA_real_,
+                    nrow = 2 * n_params + n_fixed * est_fixed_in_E,
+                    ncol = 2 * n_params + n_fixed * est_fixed_in_E)
+        F.[indicies_cur, indicies_cur] = diag(2, n_params)
+        F.[indicies_lag, indicies_cur] = diag(1, n_params)
+        F.[indicies_cur, indicies_lag] = diag(-1, n_params)
+        F.[indicies_lag, indicies_lag] = 0
 
-    if(length(indicies_fix) > 0){
-      F.[indicies_fix, ] <- 0
-      F.[, indicies_fix] <- 0
-      if(length(indicies_fix) > 1)
-        diag(F.[indicies_fix, indicies_fix]) <- 1 else
-          F.[indicies_fix, indicies_fix] <- 1
-    }
+        if(length(indicies_fix) > 0){
+          F.[indicies_fix, ] <- 0
+          F.[, indicies_fix] <- 0
+          if(length(indicies_fix) > 1)
+            diag(F.[indicies_fix, indicies_fix]) <- 1 else
+              F.[indicies_fix, indicies_fix] <- 1
+        }
+      }
+    } else if(type == "VAR" && order == 1 && !est_fixed_in_E){
+      F. <- diag(.1, n_params) # TODO: find better default
+    } else
+      stop("Default parameter not implemented for ", sQuote("F."))
   }
 
   #####
@@ -528,6 +529,66 @@ get_state_eq_matrices <-  function(
   return(list(
     Q = Q, Q_0 = Q_0, F. = F., R = R, L = L, a_0 = a_0,
     indicies_fix = indicies_fix))
+}
+
+.check_filter_input <- function(
+  Q, Q_0, F., R, a_0, L = NULL, fixed_parems, est_fixed_in_E,
+  X, fixed_terms, order, has_transposed_design = TRUE){
+  lp_dim  <- if(has_transposed_design) nrow(          X) else ncol(          X)
+  fix_dim <- if(has_transposed_design) nrow(fixed_terms) else ncol(fixed_terms)
+  state_dim <- lp_dim * order + fix_dim * est_fixed_in_E
+  rng_dim   <- lp_dim
+
+  .check_full_rank_square(Q  , rng_dim  , TRUE)
+  .check_full_rank_square(Q_0, state_dim, TRUE)
+  .check_full_rank_square(F. , state_dim, FALSE)
+
+  .check_selection_matrix(R, state_dim, rng_dim)
+  if(!is.null(L))
+    .check_selection_matrix(L, lp_dim + fix_dim * est_fixed_in_E, state_dim)
+
+  if(!length(a_0) == state_dim)
+    stop("Invalid ", sQuote("a_0"))
+  if(!length(fixed_parems) == fix_dim)
+    stop("Invalid ", sQuote("fixed_terms"))
+
+  invisible(TRUE)
+}
+
+.check_full_rank_square <- function(X, expected_dim, pos_def){
+  qu <- substitute({
+    if(ncol(X) != n || nrow(X) != n)
+      stop("Invalid dimensions of ", sQuote(Xstr), ". Should be (", n,
+           ", ", n, ") but is ",
+           paste0("(", paste0(dim(X), collapse = ", "), ")"))
+    if(n > 0){
+      if(pos_def){
+        eg <- eigen(X)
+        if(!all(eg$values > 1e-8))
+          stop(sQuote(Xstr), " is not positive definite")
+      } else
+        if(qr(X)$rank < n)
+          stop(sQuote(Xstr), " does not have full rank")
+    }
+  }, list(X = substitute(X), Xstr = deparse(substitute(X)), n = expected_dim,
+          pos_def = pos_def))
+
+  eval(qu, envir = parent.frame())
+}
+
+.check_selection_matrix <- function(X, n, m){
+  qu <- substitute({
+    if(nrow(X) != n || ncol(X) != m)
+      stop("Invalid dimensions of ", sQuote(Xstr),  ". Should be (", m,
+           ", ", n, ") but is ",
+           paste0("(", paste0(dim(X), collapse = ", "), ")"))
+    if(!all(X %in% c(0, 1)))
+      stop("All entries of ", sQuote(Xstr), " are not zero or one")
+    if(n * m > 0 && !qr(X)$rank == min(n, m))
+      stop(sQuote(Xstr), " rank is less than ", min(n, m))
+  }, list(X = substitute(X), Xstr = deparse(substitute(X)), n = n, m = m))
+
+  eval(qu, envir = parent.frame())
 }
 
 # TODO: remove other exp_ names at some future point after 0.5.0 changes
