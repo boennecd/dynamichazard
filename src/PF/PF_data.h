@@ -151,8 +151,7 @@ public:
 class PF_data : public problem_data {
   using uword = arma::uword;
 
-  /* Pre-computed matrices and mapping function for Taylor approximation used
-   * in the [b]ack[w]ard filter */
+  /* Objects used to compute P(\alpha_t \vert \alpha_{t - 1}) */
   std::map<const uword, const std::unique_ptr<linear_mapper>> bw_mean_maps;
   std::map<const uword, const arma::vec> bw_mean_const_term;
   std::map<const uword, const covarmat> bw_covar_map;
@@ -184,10 +183,12 @@ protected:
       uncond_covarmats.insert(std::make_pair(t + 1L, covarmat(P_t_p_1)));
 
       arma::mat S_t =
-        arma::solve(P_t_p_1, err_state->map(Q.mat).sv);
+        arma::solve(P_t_p_1, Q_state);
       S_t = state_trans_inv->map(S_t, right).sv;
       S_t = state_trans->map(P_t, right).sv * S_t;
 
+      /* 1. P_{t +1}^{-\top}F
+       * 2. P_t(P_{t +1}^{-\top}F)^\top */
       arma::mat tmp = arma::solve(P_t_p_1.t(), state_trans->map());
       bw_mean_maps.insert(std::make_pair(
           t, std::unique_ptr<dens_mapper>(
@@ -203,6 +204,13 @@ protected:
 
       uncond_covs_inv.insert(std::make_pair(
           t, arma::mat(P_t.i())));
+
+      if(debug > 4)
+        log(5) << "P_" << t << std::endl << P_t
+               << "m_" << t << std::endl << m_t.t()
+               << "S_" << t << std::endl << bw_covar_map.at(t).mat
+               << "P(a_" << t << " | a_" << t  + 1 << ") mean term"
+               << std::endl << uncond_mean_terms.at(t).t();
     }
   }
 

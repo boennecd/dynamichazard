@@ -114,7 +114,7 @@ public:
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
       arma::vec mu;
       if(is_forward){
-        mu = cl[*it].get_state();
+        mu = data.state_trans->map(cl[*it].get_state()).sv;
 
       } else {
         mu = data.bw_mean(t, cl[*it].get_state());
@@ -205,6 +205,11 @@ public:
   static cloud sample(SAMPLE_COMMON_ARGS, nothing unused){
     /* Find weighted mean estimate */
     arma::vec alpha_bar = cl.get_weigthed_mean();
+
+    if(is_forward)
+      alpha_bar = data.state_trans->map(alpha_bar).sv;
+    else
+      alpha_bar = data.bw_mean(t, alpha_bar);
 
     /* compute means and covariances */
     auto &Q = data.Q_proposal;

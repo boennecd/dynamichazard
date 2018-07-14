@@ -111,6 +111,11 @@ public:
     /* Find weighted mean estimate */
     arma::vec alpha_bar = PF_cloud.get_weigthed_mean();
 
+    if(is_forward)
+      alpha_bar = data.state_trans->map(alpha_bar).sv;
+    else
+      alpha_bar = data.bw_mean(t, alpha_bar);
+
     /* compute means and covariances */
     auto ans = taylor_normal_approx_w_cloud_mean
       (dens_calc, data, t, data.Q_proposal, alpha_bar, PF_cloud, is_forward);

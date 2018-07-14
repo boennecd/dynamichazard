@@ -1,3 +1,7 @@
+# dynamichazard 0.6.0
+* The averages used in the Taylor approximation in the backward smoothing have 
+changed so the resuls differ for `PF_EM`.
+
 # dynamichazard 0.5.2
 * Fixed effects is estimated faster with `PF_EM` and can be estimated 
 with `model = "exponential"`.

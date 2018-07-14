@@ -163,7 +163,7 @@ map_res_mat inv_mapper::map
         ptr.reset(new arma::mat(A_LU.solve(X    , true)));
         break;
       case both: {
-        // A^{-\top} X A^-1 = (A^{-\top} (A^{-\top} X)^\top)^\top
+        // A^{-\top} X A^{^-1} = (A^{-\top}X^\top A^{-1})^\top = (A^{-\top} (A^{-\top} X)^\top)^\top
         arma::mat tmp = A_LU.solve(X, true).t();
         ptr.reset(new arma::mat(A_LU.solve(tmp  , true).t()));
       } break;
@@ -181,7 +181,7 @@ map_res_mat inv_mapper::map
         ptr.reset(new arma::mat(A_LU.solve(X)));
         break;
       case both: {
-        // A^{-1}XA^{-\top} = (A^{-1}(A^{-1}X)^\top)^\top
+        //  A^{-1}XA^{-\top} = (A^{-1}X^\top A^{-\top})^\top = (A^{-1}(A^{-1}X)^\top)^\top
         arma::mat tmp = A_LU.solve(X).t();
         ptr.reset(new arma::mat(A_LU.solve(tmp).t()));
       } break;

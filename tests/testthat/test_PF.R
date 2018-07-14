@@ -357,9 +357,11 @@ test_that("compute_summary_stats_first_o_RW gives previous results", {
           #####
           # Test that multithreaded version gives the same
           sum_stats <- compute_summary_stats_first_o_RW(
-            cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
+            cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+            debug = FALSE)
           s2 <- compute_summary_stats_first_o_RW(
-            cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
+            cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+            debug = FALSE)
 
           expect_equal(sum_stats, s2)
 

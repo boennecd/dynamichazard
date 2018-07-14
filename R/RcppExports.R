@@ -129,12 +129,12 @@ particle_filter <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, 
     .Call(`_dynamichazard_particle_filter`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, R, Q_0, Q, Q_tilde, risk_obj, F, n_max, n_threads, fixed_parems, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, type, is_forward, method, model)
 }
 
-compute_summary_stats_first_o_RW <- function(rcpp_list, n_threads, a_0, Q, Q_0, R) {
-    .Call(`_dynamichazard_compute_summary_stats_first_o_RW`, rcpp_list, n_threads, a_0, Q, Q_0, R)
+compute_summary_stats_first_o_RW <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, debug) {
+    .Call(`_dynamichazard_compute_summary_stats_first_o_RW`, rcpp_list, n_threads, a_0, Q, Q_0, R, debug)
 }
 
-PF_est_params_dens <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, do_est_a_0 = FALSE) {
-    .Call(`_dynamichazard_PF_est_params_dens`, rcpp_list, n_threads, a_0, Q, Q_0, R, do_est_a_0)
+PF_est_params_dens <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0 = FALSE) {
+    .Call(`_dynamichazard_PF_est_params_dens`, rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0)
 }
 
 test_copy_mat <- function(X, n_times) {
@@ -145,8 +145,8 @@ test_copy_vec <- function(x, n_times) {
     .Call(`_dynamichazard_test_copy_vec`, x, n_times)
 }
 
-pf_fixed_effect_iteration <- function(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, max_bytes = 20000000L) {
-    .Call(`_dynamichazard_pf_fixed_effect_iteration`, X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, max_bytes)
+pf_fixed_effect_iteration <- function(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, debug, max_bytes = 1000000L) {
+    .Call(`_dynamichazard_pf_fixed_effect_iteration`, X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, debug, max_bytes)
 }
 
 get_risk_obj_rcpp <- function(start, stop, event, by, start_order, max_T, order_by_id_and_rev_start, id, min_start, event_times_in, is_for_discrete_model = TRUE) {

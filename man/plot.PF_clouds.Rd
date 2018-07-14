@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{PF_clouds}(x, y, type = c("smoothed_clouds", "forward_clouds",
   "backward_clouds"), ylim, add = FALSE, qlvls = c(0.05, 0.5, 0.95),
-  pch = 4, lty = 1, ..., cov_index)
+  pch = 4, lty = 1, col, ..., cov_index)
 }
 \arguments{
 \item{x}{an object of class \code{PF_clouds}.}
@@ -24,6 +24,9 @@
 \item{pch}{\code{pch} argument for the quantile points.}
 
 \item{lty}{\code{lty} argument for the mean curves.}
+
+\item{col}{\code{col} argument to \code{\link{matplot}} and
+\code{\link{matpoints}}.}
 
 \item{...}{unused.}
 

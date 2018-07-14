@@ -296,8 +296,14 @@ input_for_normal_apprx_w_particle_mean
   for(unsigned int i = 0; i < size; ++i){
    mu_iterator iter = b + i;
    const arma::vec &this_state = Func::get_elem(iter);
+   arma::vec alpha_bar = this_state;
+   if(is_forward)
+     alpha_bar = data.state_trans->map(alpha_bar).sv;
+   else
+     alpha_bar = data.bw_mean(t, alpha_bar);
+
    auto inter = taylor_normal_approx
-     (dens_calc, data, t, *Q_inv, this_state, r_set, 5, false, is_forward);
+     (dens_calc, data, t, *Q_inv, alpha_bar, r_set, 5, false, is_forward);
 
    arma::vec &mu = ans[i].mu;
    arma::vec &xi = ans[i].xi;

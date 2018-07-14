@@ -197,6 +197,8 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
 #' @param qlvls vector of quantile levels to be plotted.
 #' @param pch \code{pch} argument for the quantile points.
 #' @param lty \code{lty} argument for the mean curves.
+#' @param col \code{col} argument to \code{\link{matplot}} and
+#' \code{\link{matpoints}}.
 #' @param ... unused.
 #' @param cov_index indices of the state vector to plot. All are plotted if this argument is omitted.
 #'
@@ -208,7 +210,8 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
 plot.PF_clouds <- function(
   x, y,
   type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
-  ylim, add = FALSE, qlvls = c(.05, .5, .95), pch = 4, lty = 1, ..., cov_index){
+  ylim, add = FALSE, qlvls = c(.05, .5, .95), pch = 4, lty = 1, col, ...,
+  cov_index){
   type <- type[1]
   these_clouds <- x[[type]]
   if(missing(cov_index))
@@ -227,7 +230,12 @@ plot.PF_clouds <- function(
       out <- apply(row$states[cov_index, , drop = FALSE], 1, function(x){
         ord <- order(x)
         wg_cumsum <- cumsum(row$weights[ord])
-        idx <- ord[sapply(qlvls, function(q) max(which(wg_cumsum < q)))]
+        idx <- ord[sapply(qlvls, function(q) {
+          is_lower <- wg_cumsum < q
+          if(!any(is_lower))
+            return(NA_integer_)
+          max(which(wg_cumsum < q))
+        })]
         x[idx]
       })
 
@@ -248,7 +256,10 @@ plot.PF_clouds <- function(
     ylim <- range(qs, .mean, na.rm = TRUE) # can have NA if we dont have a
                                            # weighted value below or above qlvl
 
-  matplot(.x, .mean, ylim = ylim, type = "l", lty = lty, add = add,
+  if(missing(col))
+    col <- 1:ncol(.mean)
+
+  matplot(.x, .mean, ylim = ylim, type = "l", lty = lty, add = add, col = col,
           xlab = "Time", ylab = "State vector", ...)
 
   if(length(qs) > 0){
@@ -256,7 +267,7 @@ plot.PF_clouds <- function(
       tmp <- qs[, i, ]
       if(is.null(dim(tmp)))
         tmp <- matrix(tmp, ncol = length(tmp))
-      matpoints(.x, t(tmp), pch = pch, col = i)
+      matpoints(.x, t(tmp), pch = pch, col = col[i])
     }
   }
 
@@ -276,5 +287,9 @@ plot.PF_clouds <- function(
 #'
 #' @export
 plot.PF_EM <- function(x, y, ...){
+  cl <- match.call()
+  cl[[1]] <- quote(plot)
+  cl$x <- bquote(.(substitute(x))$clouds)
+  invisible(eval(cl, parent.frame()))
   invisible(do.call(plot, c(list(x = x$clouds), list(...))))
 }

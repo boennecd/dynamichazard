@@ -33,6 +33,8 @@ class family_base {
 public:
   virtual bool uses_at_risk_length() const = 0;
 
+  virtual double offset(const double) const = 0;
+
   virtual trunc_eta_res truncate_eta(
       const bool outcome, const double eta, const double exp_eta,
       const double at_risk_length) const = 0;
@@ -99,6 +101,10 @@ class logistic : public virtual family_base, public virtual glm_base {
 public:
   bool uses_at_risk_length() const override {
     return false;
+  }
+
+  double offset(const double at_risk_length) const override {
+    return 0;
   }
 
   trunc_eta_res truncate_eta(
@@ -187,6 +193,10 @@ class exponential : public virtual family_base, public virtual glm_base  {
 public:
   bool uses_at_risk_length() const override {
     return true;
+  }
+
+  double offset(const double at_risk_length) const override {
+    return std::log(at_risk_length);
   }
 
   trunc_eta_res truncate_eta(

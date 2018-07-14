@@ -132,7 +132,7 @@ ppfit <- PF_EM(
    N_fw_n_bw = 250, N_smooth = 500, N_first = 1000, eps = 1e-3,
    method = "AUX_normal_approx_w_cloud_mean",
    n_max = 25, # just take a few iterations as an example
-   n_threads = max(parallel::detectCores(logical = FALSE), 1), trace = TRUE)
+   n_threads = max(parallel::detectCores(logical = FALSE), 1)), trace = TRUE)
 
 # compare results
 plot(ddfit)

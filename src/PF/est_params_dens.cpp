@@ -7,7 +7,7 @@ using pair_iterator = std::vector<const particle_pairs*>::const_iterator;
 class update_parameters_data {
   /* function to create a list of pointers to be used in loops later */
   std::vector<const smoother_output::particle_pairs*>
-  set_pairs(){ /* Just store two start and end iterators */
+  set_pairs(){ /* TODO: Just store two start and end iterators */
     std::vector<const particle_pairs*>::size_type total_n_pairs = 0L;
     for(auto i = tr->begin(); i != tr->end(); ++i)
       total_n_pairs += i->size();
@@ -74,7 +74,7 @@ public:
       for(auto pair = pas.transition_pairs.begin();
           pair != pas.transition_pairs.end();
           ++pair, ++i){
-        double w_sqrt = exp((pas.log_weight +  pair->log_weight) / 2);
+        double w_sqrt = exp((pas.log_weight + pair->log_weight) / 2);
         if(w_sqrt < 1e-8) /* don't keep */
           continue;
 
@@ -100,12 +100,18 @@ PF_parameters
   est_params_dens
   (const smoother_output &sm_output, const arma::vec &a_0, const arma::mat &Q,
    const arma::mat &Q_0, const arma::mat &R, int max_threads,
-   const bool do_est_a_0, const unsigned long int max_bytes){
+   const bool do_est_a_0, const bool debug,
+   const unsigned long int max_bytes){
     update_parameters_data dat(sm_output, R);
 
     /* setup generators */
     const unsigned long int max_per_block =
-        max_bytes / ((dat.n_elem_X + dat.n_elem_Y) * 8L);
+        max_bytes / ((dat.n_elem_X + dat.n_elem_Y) * 8L) + 1L;
+
+    if(debug)
+      Rcpp::Rcout << "Running `est_params_dens` with `max_per_block` "
+                  << max_per_block << " and " << dat.pairs.size()
+                  << " particle pairs vectors" << std::endl;
 
     qr_parallel qr_calc(
         std::vector<std::unique_ptr<qr_data_generator>>(), max_threads);
@@ -117,6 +123,11 @@ PF_parameters
         ++i_end;
 
       } while (n_pairs < max_per_block && i_end != dat.pairs.end());
+
+      if(debug)
+        Rcpp::Rcout << "Starting worker with " << std::distance(i_start, i_end)
+                    << " particle pairs vectors "
+                    << n_pairs << " pairs" << std::endl;
 
       qr_calc.submit(std::unique_ptr<qr_data_generator>(
         new generator_dens(dat, i_start, i_end, n_pairs)));
@@ -138,6 +149,9 @@ PF_parameters
                               arma::solve_opts::no_approx);
     out.R_top_F = arma::solve(R_from_QR    , out.R_top_F,
                               arma::solve_opts::no_approx);
+    out.F = res.F;
+    out.R = R_from_QR;
+    out.dev = res.dev;
 
     /* use that
      *    Q = Y^\top Y - F^\top F
@@ -145,6 +159,7 @@ PF_parameters
      * where F is the output from qr_parallel.compute().
      */
     out.Q = res.dev - res.F.t() * res.F;
+    out.Q /= dat.tr->size();
 
     // update a_0
     /* TODO: needs to be updated for higher order models. Need Full F matrix */

@@ -21,12 +21,16 @@ struct PF_parameters {
   arma::mat R_top_F;
   /* covariance matrix in state equation */
   arma::mat Q;
+  /* output form QR */
+  arma::mat R;
+  arma::mat F;
+  arma::mat dev;
 };
 
 PF_parameters
   est_params_dens
   (const smoother_output&, const arma::vec&, const arma::mat&,
-   const arma::mat&, const arma::mat&, int, const bool,
+   const arma::mat&, const arma::mat&, int, const bool, const bool,
    const unsigned long int max_bytes = 5000000);
 
 #endif

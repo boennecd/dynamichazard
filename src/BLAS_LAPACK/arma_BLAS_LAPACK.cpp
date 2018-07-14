@@ -228,6 +228,8 @@ arma::mat QR_factorization::qy(
   // take copy
   arma::mat out = B;
   int NRHS = B.n_cols, K = MIN(M, N);
+  if(B.n_rows != (unsigned int)M)
+    Rcpp::stop("Invalid `B` matrix in `QR_factorization::qy`");
 
   /* compute QR */
   int info, lwork = -1;

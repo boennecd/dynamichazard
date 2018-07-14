@@ -294,7 +294,7 @@ Rcpp::List particle_filter(
 Rcpp::List compute_summary_stats_first_o_RW(
     const Rcpp::List &rcpp_list, unsigned int n_threads,
     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
-    const arma::mat &R){
+    const arma::mat &R, const bool debug){
 #ifdef _OPENMP
   omp_set_num_threads(n_threads);
 #endif
@@ -323,7 +323,7 @@ Rcpp::List compute_summary_stats_first_o_RW(
 Rcpp::List PF_est_params_dens(
     const Rcpp::List &rcpp_list, unsigned int n_threads,
     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
-    const arma::mat &R, const bool do_est_a_0 = false){
+    const arma::mat &R, const bool debug, const bool do_est_a_0 = false){
   const unsigned long int max_bytes = 5000000;
   PF_parameters new_params;
 
@@ -331,11 +331,14 @@ Rcpp::List PF_est_params_dens(
     auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
 
     new_params = est_params_dens(
-      sm_output, a_0, Q, Q_0, R, n_threads, do_est_a_0, max_bytes);
+      sm_output, a_0, Q, Q_0, R, n_threads, do_est_a_0, debug, max_bytes);
   }
 
   return Rcpp::List::create(
     Rcpp::Named("a_0")     = new_params.a_0,
     Rcpp::Named("R_top_F") = new_params.R_top_F,
-    Rcpp::Named("Q")       = new_params.Q);
+    Rcpp::Named("Q")       = new_params.Q,
+    Rcpp::Named("QR_R")    = new_params.R,
+    Rcpp::Named("QR_F")    = new_params.F,
+    Rcpp::Named("QR_dev")  = new_params.dev);
 }

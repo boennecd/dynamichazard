@@ -144,10 +144,12 @@ test_that("PF_EM help page example runs and gives previous computed results", {
       n_threads = max(parallel::detectCores(logical = FALSE), 1)))
 
   if(dir.exists("previous_results/local_tests"))
+    # tmp <- readRDS("previous_results/local_tests/survival_lung_example.RDS")
     expect_known_value(
       pf_fit[names(pf_fit) != "call"], "local_tests/survival_lung_example.RDS",
       tolerance = 1.49e-08)
 
+  # tmp <- readRDS("previous_results/survival_lung_example_cloud_means.RDS")
   expect_known_value(
     get_means(pf_fit$clouds), "survival_lung_example_cloud_means.RDS",
     tolerance = 1.49e-08)
@@ -206,6 +208,7 @@ test_that("Second example on PF help page gives the same result", {
       n_max = 25, # just take a few iterations as an example
       n_threads = max(parallel::detectCores(logical = FALSE), 1))))
 
+  # tmp <- readRDS("previous_results/local_tests/pf_man_2nd_ppfit.RDS")
   expect_known_value(ppfit[!names(ppfit) %in%
                              c("clouds", "call", "summary_stats")],
                      "local_tests/pf_man_2nd_ppfit.RDS")

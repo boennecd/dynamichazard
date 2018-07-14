@@ -108,7 +108,7 @@ PF_effective_sample_size <- function(object){
 #'    N_fw_n_bw = 250, N_smooth = 500, N_first = 1000, eps = 1e-3,
 #'    method = "AUX_normal_approx_w_cloud_mean",
 #'    n_max = 25, # just take a few iterations as an example
-#'    n_threads = max(parallel::detectCores(logical = FALSE), 1), trace = TRUE)
+#'    n_threads = max(parallel::detectCores(logical = FALSE), 1)), trace = TRUE)
 #'
 #'# compare results
 #'plot(ddfit)
@@ -177,7 +177,7 @@ PF_EM <- function(
     Q = if(missing(Q)) NULL else Q, a_0 = a_0)
   model_args$L <- NULL
   if(type == "VAR")
-    model_args$F. <- diag(1e-4, ncol(model_args$F.))
+    model_args$F. <- diag(.1, ncol(model_args$F.))
 
   #####
   # build up call with symbols to get neater call stack incase of an error
@@ -251,6 +251,10 @@ PF_EM <- function(
         cat("Fixed parameters are:\n")
         print(fixed_parems)
       }
+      if(type == "VAR"){
+        cat("F is:\n")
+        print(fit_call$F)
+      }
 
       cat("chol(Q) is:\n")
       print(chol(fit_call$Q))
@@ -283,7 +287,8 @@ PF_EM <- function(
 
     if(type == "RW"){
       sum_stats <- compute_summary_stats_first_o_RW(
-        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
+        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+        debug = trace > 2)
       a_0 <- drop(sum_stats[[1]]$E_xs)
       Q <- Reduce("+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
       Q <- Q / length(sum_stats)
@@ -292,10 +297,11 @@ PF_EM <- function(
       fit_call$Q <- Q
     } else if (type == "VAR") {
       new_params <- PF_est_params_dens(
-        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R)
+        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+        debug = trace > 1)
       fit_call$F <- new_params$R_top_F # TODO: need to change for higher order
                                        #       models
-      fit_call$Q <- (Q <- new_params$Q) / length(clouds$smoothed_clouds)
+      fit_call$Q <- Q <- new_params$Q
 
     } else
       stop(sQuote("type"), " not implemented")
@@ -309,7 +315,8 @@ PF_EM <- function(
       fit_call$fixed_parems <- fixed_parems <- .PF_update_fixed(
         clouds = clouds$smoothed_clouds, risk_obj = risk_obj, model = model,
         R = R, X = X, fixed_terms = fixed_terms, fixed_parems = fixed_parems,
-        nthreads = n_threads, tstart = tstart, tstop = tstop)
+        nthreads = n_threads, tstart = tstart, tstop = tstop,
+        debug = trace > 1L)
     }
 
     #####
@@ -431,7 +438,7 @@ PF_control <- function(
 
 .PF_update_fixed <- function(
   clouds, risk_obj, R, X, fixed_terms, fixed_parems, model, nthreads,
-  tstart, tstop){
+  tstart, tstop, debug){
   if(!model %in% c("logit", "exponential"))
     stop(sQuote(model), " is not implemented with fixed effects")
 
@@ -462,7 +469,7 @@ PF_control <- function(
       pf_fixed_effect_iteration(
         X = X_i, Y = y_i, dts = dts, cloud = particle_coefs,
         cl_weights = ws, ran_vars = ran_vars, beta = fixed_parems,
-        family = family_arg, max_threads = nthreads)))
+        family = family_arg, max_threads = nthreads, debug = debug)))
   }
 
   f_stack <- do.call(c, lapply(out, "[[", "f"))

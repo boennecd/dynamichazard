@@ -92,6 +92,7 @@ public:
       if(data.debug > 0)
         data.log(1) << "Updating weights";
       {
+          const bool do_debug = data.debug > 4;
           double max_weight =  -std::numeric_limits<double>::max();
           arma::uvec r_set = get_risk_set(data, t);
           unsigned int n_elem = new_cloud.size();
@@ -140,6 +141,27 @@ public:
             }
 
             my_max_weight = MAX(it->log_weight, my_max_weight);
+
+            if(do_debug){
+              const int wd = 11;
+              std::stringstream ss;
+
+              ss << std::setprecision(6)
+                 << "log-like terms"
+                 << " 'log_prob_y_given_state' "           << std::setw(wd) << log_prob_y_given_state
+                 << " 'log_prob_state_given_other' "       << std::setw(wd) << log_prob_state_given_other
+                 << " '-log_importance_dens' "             << std::setw(wd) << -it->log_importance_dens;
+
+              if(did_resample)
+                ss << " 'parent->log_weight' "             << std::setw(wd) << it->parent->log_weight
+                   << " '-parent->log_resampling_weight' " << std::setw(wd) << -it->parent->log_resampling_weight;
+
+              if(!is_forward)
+                ss << " 'log_artificial_prior(t)' "        << std::setw(wd) <<  dens_calc.log_artificial_prior(*it        , t)
+                   << " '-log_artificial_prior(t + 1)' "   << std::setw(wd) << -dens_calc.log_artificial_prior(*it->parent, t + 1);
+
+              data.log(5) << ss.str();
+            };
 
           } // end loop over new particle
 

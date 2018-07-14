@@ -74,6 +74,9 @@ if(interactive()){
   library(dynamichazard); library(testthat)
 
   list2env(as.list(asNamespace("dynamichazard")), envir = environment())
+
+  if(!grepl("testtthat$", getwd()) && grepl("dynamichazard$", getwd()))
+    setwd("tests/testthat")
 }
 
 # wrapper for expect_know_...
