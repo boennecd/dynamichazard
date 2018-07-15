@@ -533,15 +533,17 @@ get_state_eq_matrices <-  function(
 
 .check_filter_input <- function(
   Q, Q_0, F., R, a_0, L = NULL, fixed_parems, est_fixed_in_E,
-  X, fixed_terms, order, has_transposed_design = TRUE){
+  X, fixed_terms, order, has_transposed_design = TRUE, Q_tilde = NULL){
   lp_dim  <- if(has_transposed_design) nrow(          X) else ncol(          X)
   fix_dim <- if(has_transposed_design) nrow(fixed_terms) else ncol(fixed_terms)
   state_dim <- lp_dim * order + fix_dim * est_fixed_in_E
   rng_dim   <- lp_dim
 
-  .check_full_rank_square(Q  , rng_dim  , TRUE)
-  .check_full_rank_square(Q_0, state_dim, TRUE)
-  .check_full_rank_square(F. , state_dim, FALSE)
+  .check_full_rank_square  (Q      , rng_dim  , TRUE)
+  .check_full_rank_square  (Q_0    , state_dim, TRUE)
+  .check_full_rank_square  (F.     , state_dim, FALSE)
+  if(!is.null(Q_tilde))
+    .check_full_rank_square(Q_tilde, rng_dim  , TRUE)
 
   .check_selection_matrix(R, state_dim, rng_dim)
   if(!is.null(L))

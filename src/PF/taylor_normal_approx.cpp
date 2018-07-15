@@ -143,7 +143,8 @@ nested parallel setup. See https://stackoverflow.com/a/20447843
 
   /* Compute needed factorizations */
   ans.Sigma_inv_chol = arma::chol(Sigma_inv);
-  ans.Sigma_chol = arma::chol(arma::inv(Sigma_inv)); // TODO: do something smarter
+  ans.Sigma = arma::inv(Sigma_inv);
+  ans.Sigma_chol = arma::chol(ans.Sigma);
   ans.sigma_chol_inv = arma::inv(arma::trimatu(ans.Sigma_chol));
   std::swap(ans.Sigma_inv, Sigma_inv);
 
@@ -202,12 +203,12 @@ input_for_normal_apprx_w_cloud_mean
     const arma::mat *Q_inv;
     const arma::vec *mu_term;
     if(!is_forward){
-      arma::mat tmp = data.state_trans_err->map(Q.inv, both, trans).sv;
+      arma::mat tmp = data.state_trans_err->map(Q.inv(), both, trans).sv;
       Q_inv = new arma::mat(tmp + data.uncond_covar_inv(t));
       mu_term = &data.uncond_mean_term(t);
 
     } else {
-      Q_inv = &Q.inv;
+      Q_inv = &Q.inv();
       // avoid wmaybe-uninitialized
       mu_term = nullptr;
 
@@ -230,11 +231,11 @@ input_for_normal_apprx_w_cloud_mean
 
     if(is_forward){
       mu_j = data.state_trans_err->map(pr.get_state()).sv;
-      mu_j = solve_w_precomputed_chol(Q.chol, mu_j);
+      mu_j = solve_w_precomputed_chol(Q.chol(), mu_j);
 
     } else {
       mu_j = data.err_state_inv->map(pr.get_state()).sv;
-      mu_j = solve_w_precomputed_chol(Q.chol, mu_j);
+      mu_j = solve_w_precomputed_chol(Q.chol(), mu_j);
       mu_j = data.state_trans_err->map(mu_j, trans).sv + *mu_term;
 
     }
@@ -275,12 +276,12 @@ input_for_normal_apprx_w_particle_mean
   const arma::vec *mu_term;
   if(!is_forward){
     // Add the covariance matrix of the artificial prior
-    arma::mat tmp = data.state_trans_err->map(Q.inv, both, trans).sv;
+    arma::mat tmp = data.state_trans_err->map(Q.inv(), both, trans).sv;
     Q_inv = new arma::mat(tmp + data.uncond_covar_inv(t));
     mu_term = &data.uncond_mean_term(t);
 
   } else {
-    Q_inv = &Q.inv;
+    Q_inv = &Q.inv();
     // avoid wmaybe-uninitialized
     mu_term = nullptr;
 
@@ -309,11 +310,11 @@ input_for_normal_apprx_w_particle_mean
    arma::vec &xi = ans[i].xi;
    if(is_forward){
      mu = data.state_trans_err->map(this_state).sv;
-     mu = solve_w_precomputed_chol(Q.chol, mu);
+     mu = solve_w_precomputed_chol(Q.chol(), mu);
 
    } else {
      mu = data.err_state_inv   ->map(this_state).sv;
-     mu = solve_w_precomputed_chol(Q.chol, mu);
+     mu = solve_w_precomputed_chol(Q.chol(), mu);
      mu = data.state_trans_err->map(mu, trans).sv + *mu_term;
 
    }
@@ -331,7 +332,7 @@ input_for_normal_apprx_w_particle_mean
      xi = data.err_state_inv->map(mu).sv;
 
    std::swap(ans[i].sigma_chol_inv, inter.sigma_chol_inv);
-   std::swap(ans[i].Sigma_chol, inter.Sigma_chol);
+   std::swap(ans[i].sigma, inter.Sigma);
   }
 
   if(!is_forward){

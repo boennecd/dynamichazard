@@ -109,6 +109,7 @@ struct input_for_normal_apprx {
   /* mean of error term              */
   arma::vec mu;
   /* covariance matrix of error term */
+  arma::mat Sigma;
   arma::mat Sigma_inv;
   arma::mat Sigma_inv_chol;
   arma::mat Sigma_chol;
@@ -148,7 +149,7 @@ struct input_for_normal_apprx_w_particle_mean_element {
   arma::vec mu;
   arma::vec xi;
   arma::mat sigma_chol_inv;
-  arma::mat Sigma_chol;
+  arma::mat sigma;
 };
 
 using input_for_normal_apprx_w_particle_mean =

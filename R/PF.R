@@ -11,6 +11,7 @@ PF_effective_sample_size <- function(object){
 #' @description Method to estimate the hyper parameters with an EM algorithm.
 #'
 #' @inheritParams ddhazard
+#' @param control see \code{\link{PF_control}}.
 #' @param trace argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.
 #' @param model either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.
 #' @param seed seed to set at the start of every EM iteration.
@@ -244,13 +245,14 @@ PF_EM <- function(
   R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
-  fixed_parems, type){
+  fixed_parems, type, Q_tilde){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
   fit_call[[1]] <- as.name("PF_smooth")
 
-  fit_call[["Q_tilde"]] <- diag(0, n_vars)
+  if(is.null(Q_tilde))
+    fit_call[["Q_tilde"]] <- diag(0, n_vars)
   fit_call[["F"]]   <- eval(fit_call[["F."]] , parent.frame())
   fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
   fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
@@ -416,11 +418,13 @@ PF_control <- function(
   N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
   eps = 1e-2, forward_backward_ESS_threshold = NULL,
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
-  n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N"){
+  n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
+  Q_tilde = NULL){
   control <- list(
     N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
     forward_backward_ESS_threshold = forward_backward_ESS_threshold,
-    method = method, n_max = n_max, n_threads = n_threads, smoother = smoother)
+    method = method, n_max = n_max, n_threads = n_threads, smoother = smoother,
+    Q_tilde = Q_tilde)
 
   check_n_particles_expr <- function(N_xyz)
     eval(bquote({

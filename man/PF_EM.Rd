@@ -29,7 +29,7 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 
 \item{order}{order of the random walk.}
 
-\item{control}{list of control variables (see the control section below).}
+\item{control}{see \code{\link{PF_control}}.}
 
 \item{trace}{argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.}
 

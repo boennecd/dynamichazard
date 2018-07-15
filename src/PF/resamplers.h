@@ -118,7 +118,7 @@ public:
 
     /* compute means and covariances */
     auto ans = taylor_normal_approx_w_cloud_mean
-      (dens_calc, data, t, data.Q_proposal, alpha_bar, PF_cloud, is_forward);
+      (dens_calc, data, t, data.Q, alpha_bar, PF_cloud, is_forward);
 
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
@@ -146,12 +146,12 @@ public:
         log_prop_transition = dmvnrm_log(
           *it_xi_j,
           data.err_state_inv->map(mean).sv,
-          data.Q.chol_inv);
+          data.Q.chol_inv());
 
       } else {
         const arma::vec mean = data.bw_mean(t, it_cl->get_state());
         log_prop_transition = dmvnrm_log(
-          *it_mu_j, mean, data.bw_covar(t).chol_inv);
+          *it_mu_j, mean, data.bw_covar(t).chol_inv());
 
       }
 
@@ -200,9 +200,8 @@ public:
       pf_base_dens &dens_calc, const PF_data &data, cloud &PF_cloud,
       unsigned int t, arma::uvec &outcome, bool &did_resample){
     /* compute means and covariances */
-    auto &Q = data.Q_proposal;
     auto ans = taylor_normal_approx_w_particles
-      (dens_calc, data, t, Q, PF_cloud, is_forward);
+      (dens_calc, data, t, data.Q, PF_cloud, is_forward);
 
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();
@@ -231,12 +230,12 @@ public:
           it_ans->xi,
           // will failed if there are fixed effects in the state vector
           data.err_state_inv->map(it_cl->get_state()).sv,
-          data.Q.chol_inv);
+          data.Q.chol_inv());
 
       } else {
         const arma::vec mean = data.bw_mean(t, it_cl->get_state());
         log_prop_transition = dmvnrm_log(
-          it_ans->mu, mean, data.bw_covar(t).chol_inv);
+          it_ans->mu, mean, data.bw_covar(t).chol_inv());
 
       }
 
