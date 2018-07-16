@@ -169,3 +169,7 @@ sqrt(ppfit$Q)
 rbind(ddfit$fixed_effects, ppfit$fixed_effects)
 }
 }
+\seealso{
+\code{\link{PF_forward_filter}} to get a more precise estimate of
+the final log-likelihood.
+}

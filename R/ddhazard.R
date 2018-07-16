@@ -597,6 +597,7 @@ get_state_eq_matrices <-  function(
 exp_model_names <- c(
   "exponential", "exp_bin", "exp_clip_time", "exp_clip_time_w_jump")
 
+#' @importFrom utils capture.output
 get_start_values <- function(
   formula, data, max_T, X, fixed_terms, risk_set, verbose = FALSE, n_threads,
   model, order, a_0 = NULL, fixed_parems_start = NULL){

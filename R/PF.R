@@ -251,6 +251,8 @@ PF_EM <- function(
 #' model details.
 #'
 #' @inheritParams PF_EM
+#' @param x an \code{PF_EM} or \code{formula} object.
+#' @param fixed_effects values for the fixed parameters.
 #' @param N_fw number of particles.
 #' @param N_first number of time zero particles to draw.
 #' @param R \eqn{R} matrix in the model. See \code{\link{PF_EM}}.
