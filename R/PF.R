@@ -50,6 +50,9 @@ PF_effective_sample_size <- function(object){
 #' @return
 #' An object of class \code{PF_EM}.
 #'
+#' @seealso \code{\link{PF_forward_filter}} to get a more precise estimate of
+#' the final log-likelihood.
+#'
 #' @examples
 #'#####
 #'# Fit model with lung data set from survival
@@ -210,33 +213,193 @@ PF_EM <- function(
 
   .check_filter_input(
     Q = model_args$Q, Q_0 = model_args$Q_0, F. = model_args$F.,
-    R = model_args$R, a_0 = model_args$a_0,
+    R = model_args$R, a_0 = model_args$a_0, Q_tilde = control$Q_tilde,
     fixed_parems = start_coefs$fixed_parems_start, est_fixed_in_E = FALSE,
     X = static_args$X, fixed_terms = static_args$fixed_terms, order = order)
 
   #####
   # build up call with symbols to get neater call stack incase of an error
-  . <- quote
-  fit_call <- list(
-    .(.PF_EM), trace = .(trace), seed = .(seed),
-    fixed_parems = .(fixed_parems), type = .(type))
-
-  names. <- names(static_args)
-  fit_call[names.] <- lapply(names., function(nam)
-    substitute(static_args$x, list(x = as.symbol(nam))))
-
-  names. <- names(model_args)
-  fit_call[names.] <- lapply(names., function(nam)
-    substitute(model_args$x, list(x = as.symbol(nam))))
-
-  names. <- names(control)
-  fit_call[names.] <- lapply(names., function(nam)
-    substitute(control$x, list(x = as.symbol(nam))))
-
-  out <- eval(as.call(fit_call), envir = environment())
+  out <- .PF_EM(
+    trace = trace, seed = seed, fixed_parems = fixed_parems,
+    type = type, n_fixed_terms_in_state_vec =
+      static_args$n_fixed_terms_in_state_vec, X = static_args$X,
+    fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
+    tstop = static_args$tstop, risk_obj = static_args$risk_obj,
+    debug = static_args$debug, model = static_args$model, Q = model_args$Q,
+    Q_0 = model_args$Q_0, F. = model_args$F., R = model_args$R,
+    a_0 = model_args$a_0, N_fw_n_bw = control$N_fw_n_bw,
+    N_smooth = control$N_smooth, N_first = control$N_first, eps = control$eps,
+    forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
+    method = control$method, n_max = control$n_max,
+    n_threads = control$n_threads, smoother = control$smoother,
+    Q_tilde = control$Q_tilde, est_a_0 = control$est_a_0)
 
   out$call <- match.call()
   out
+}
+
+#' Forward Particle Filter
+#'
+#' @description
+#' Functions to only use the forward particle filter. Useful for log-likelihood
+#' evaluation though there is an \eqn{O(d^2)} variance of the estimate where \eqn{d} is the number of time
+#' periods. The number of particles specified in the \code{control} argument
+#' has no effect.
+#'
+#' The function does not alter the \code{\link{.Random.seed}} to make sure the
+#' same \code{rng.kind} is kept after the call. See \code{\link{PF_EM}} for
+#' model details.
+#'
+#' @inheritParams PF_EM
+#' @param N_fw number of particles.
+#' @param N_first number of time zero particles to draw.
+#' @param R \eqn{R} matrix in the model. See \code{\link{PF_EM}}.
+#' @param Fmat \eqn{F} matrix in the model. See \code{\link{PF_EM}}.
+#' @param seed \code{.GlobalEnv$.Random.seed} to set. Not \code{seed} as in
+#' \code{\link{set.seed}} function. Can be used with the
+#' \code{\link{.Random.seed}} returned by \code{\link{PF_EM}}.
+#'
+#' @return
+#' An object of class \code{PF_clouds}.
+#'
+#' @examples
+#' \dontrun{
+#' # head-and-neck cancer study data. See Efron, B. (1988) doi:10.2307/2288857
+#' is_censored <- c(
+#'   6, 27, 34, 36, 42, 46, 48:51, 51 + c(15, 30:28, 33, 35:37, 39, 40, 42:45))
+#' head_neck_cancer <- data.frame(
+#'   id = 1:96,
+#'   stop = c(
+#'     1, 2, 2, rep(3, 6), 4, 4, rep(5, 8),
+#'     rep(6, 7), 7, 8, 8, 8, 9, 9, 10, 10, 10, 11, 14, 14, 14, 15, 18, 18, 20,
+#'     20, 37, 37, 38, 41, 45, 47, 47,
+#'     2, 2, 3, rep(4, 4), rep(5, 5), rep(6, 5),
+#'     7, 7, 7, 9, 10, 11, 12, 15, 16, 18, 18, 18, 21,
+#'     21, 24, 25, 27, 36, 41, 44, 52, 54, 59, 59, 63, 67, 71, 76),
+#'   event = !(1:96 %in% is_censored),
+#'   group = factor(c(rep(1, 45 + 6), rep(2, 45))))
+#'
+#' # fit model
+#' set.seed(61364778)
+#' ctrl <- PF_control(
+#'   N_fw_n_bw = 500, N_smooth = 2500, N_first = 2000,
+#'   n_max = 1, # set to one as an example
+#'   n_threads = max(parallel::detectCores(logical = FALSE), 1),
+#'   eps = .001, Q_tilde = as.matrix(.3^2), est_a_0 = FALSE)
+#' pf_fit <- suppressWarnings(
+#'   PF_EM(
+#'     survival::Surv(stop, event) ~ ddFixed(group),
+#'     data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, control = ctrl,
+#'     max_T = 30))
+#'
+#' # the log-likelihood in the final iteration
+#' (end_log_like <- tail(pf_fit$log_likes, 1))
+#'
+#' # gives the same
+#' fw_ps <- PF_forward_filter(
+#'   survival::Surv(stop, event) ~ ddFixed(group), N_fw = 500, N_first = 2000,
+#'   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, Fmat = 1, R = 1,
+#'   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
+#'   control = ctrl, max_T = 30, seed = pf_fit$seed)
+#' all.equal(end_log_like, logLik(fw_ps))
+#'
+#' # will differ since we use different number of particles
+#' fw_ps <- PF_forward_filter(
+#'   survival::Surv(stop, event) ~ ddFixed(group), N_fw = 1000, N_first = 3000,
+#'   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, Fmat = 1, R = 1,
+#'   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
+#'   control = ctrl, max_T = 30, seed = pf_fit$seed)
+#' all.equal(end_log_like, logLik(fw_ps))
+#'
+#' # will differ since we use the final estimates
+#' fw_ps <- PF_forward_filter(pf_fit, N_fw = 500, N_first = 2000)
+#' all.equal(end_log_like, logLik(fw_ps))
+#' }
+#' @export
+PF_forward_filter <- function (x, N_fw, N_first, ...)
+  UseMethod("PF_forward_filter", x)
+
+#' @describeIn PF_forward_filter Forward particle filter with
+#' \code{\link{PF_EM}} results.
+#' @export
+PF_forward_filter.PF_EM <- function(x, N_fw, N_first, ...){
+  cl <- x$call
+  cl <- cl[c(1, match(
+    c("formula", "data", "model", "by", "max_T", "id", "control",
+      formals(PF_control), "type", "trace", "Q_0"),
+    names(cl), 0))]
+  names(cl)[2] <- "x"
+  xSym <- substitute(x)
+  cl[ c("seed", "Fmat", "a_0", "Q", "R", "fixed_effects")] <-
+    lapply(
+      c("seed",    "F", "a_0", "Q", "R", "fixed_effects"),
+      function(z) substitute(y$z, list(y = xSym, z = as.symbol(z))))
+  cl[c("N_fw", "N_first")] <- list(N_fw, N_first)
+  cl[[1]] <- quote(PF_forward_filter)
+
+  eval(cl, parent.frame())
+}
+
+#' @describeIn PF_forward_filter Forward particle filter with formula input.
+#' @export
+PF_forward_filter.formula <- function(
+  x, N_fw, N_first, data, model = "logit", by, max_T, id, a_0, Q_0, Q, R,
+  fixed_effects, control = PF_control(...), seed = NULL, trace = 0,
+  type = "RW", Fmat, ...){
+  stopifnot(length(N_fw) == 1, length(N_first) == 1)
+
+  order <- 1
+  if(missing(id))
+    id = 1:nrow(data)
+
+  static_args <- .get_PF_static_args(
+    formula = x, data = data, by = by,
+    max_T = if(missing(max_T)) NULL else max_T, id = id,
+    trace = trace, model, order = order)
+
+  # make sure intputs are matrices if scalars are passed
+  . <- function(x)
+    eval(
+      substitute(
+        if(!is.matrix(X) && length(X) == 1) X <- as.matrix(X),
+        list(X = substitute(x))),
+      envir = parent.frame())
+  .(Q_0)
+  .(Q)
+  .(R)
+  .(Fmat)
+
+  .check_filter_input(
+    Q = Q, Q_0 = Q_0, F. = Fmat, R = R, a_0 = a_0, Q_tilde = control$Q_tilde,
+    fixed_parems = fixed_effects, est_fixed_in_E = FALSE,
+    X = static_args$X, fixed_terms = static_args$fixed_terms, order = order)
+  Q_tilde <- if(is.null(control$Q_tilde))
+    diag(0., ncol(Q)) else control$Q_tilde
+
+  # set the seed
+  old_seed <- .GlobalEnv$.Random.seed
+  # to make sure the user has the same `rng.kind`
+  on.exit(.GlobalEnv$.Random.seed <- old_seed)
+  if(!is.null(seed)){
+    stopifnot(length(seed) > 1) # make sure user did not use seed as in
+                                # `set.seed`
+    .GlobalEnv$.Random.seed <- seed
+  }
+
+  out <- particle_filter(
+    fixed_parems = fixed_effects, type = type, n_fixed_terms_in_state_vec =
+      static_args$n_fixed_terms_in_state_vec, X = static_args$X,
+    fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
+    tstop = static_args$tstop, risk_obj = static_args$risk_obj,
+    debug = static_args$debug, model = static_args$model, Q = Q, Q_0 = Q_0,
+    F = Fmat, R = R, is_forward = TRUE, a_0 = a_0, N_fw_n_bw = N_fw,
+    N_first = N_first,
+    forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
+    method = control$method, n_threads = control$n_threads, Q_tilde = Q_tilde)
+
+  structure(list(
+    forward_clouds = out, backward_clouds = list(), smoothed_clouds = list(),
+    transition_likelihoods = list()), class = "PF_clouds")
 }
 
 #' @importFrom graphics plot
@@ -245,7 +408,7 @@ PF_EM <- function(
   R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
-  fixed_parems, type, Q_tilde){
+  fixed_parems, type, Q_tilde, est_a_0){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
@@ -257,7 +420,7 @@ PF_EM <- function(
   fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
   fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
 
-  fit_call[c("eps", "seed", "F.", "trace")] <- NULL
+  fit_call[c("eps", "seed", "F.", "trace", "est_a_0")] <- NULL
 
   #####
   # set the seed as in r-source/src/library/stats/R/lm.R `simulate.lm`
@@ -325,7 +488,8 @@ PF_EM <- function(
       sum_stats <- compute_summary_stats_first_o_RW(
         clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
         debug = trace > 2)
-      a_0 <- drop(sum_stats[[1]]$E_xs)
+      if(est_a_0)
+        a_0 <- drop(sum_stats[[1]]$E_xs)
       Q <- Reduce("+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
       Q <- Q / length(sum_stats)
 
@@ -335,8 +499,8 @@ PF_EM <- function(
       new_params <- PF_est_params_dens(
         clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
         debug = trace > 1)
-      fit_call$F <- new_params$R_top_F # TODO: need to change for higher order
-                                       #       models
+      fit_call$F <- F. <- new_params$R_top_F # TODO: need to change for higher
+                                             #       order models
       fit_call$Q <- Q <- new_params$Q
 
     } else
@@ -366,14 +530,27 @@ PF_EM <- function(
 
     Q_relative_norm <- norm(Q_old - Q) / (norm(Q_old) + 1e-8)
     a_0_relative_norm <- norm(t(a_0 - a_0_old)) / (norm(t(a_0_old)) + 1e-8)
+    F_norm <- norm(F_old - F.) / (norm(F_old) + 1e-8)
 
-    if(trace > 0)
-      cat("The relative norm of the change in a_0 and Q are",
-          a_0_relative_norm, "and", Q_relative_norm, "at iteration", i)
+    if(trace > 0){
+      msg <- "The relative norm of the change in"
+      if(type == "VAR")
+        msg <- paste(msg, "F,")
+
+      msg <- paste(msg, "a_0 and Q are")
+      if(type == "VAR")
+        msg <- paste0(msg, " ", sprintf("%.5f", F_norm), ",")
+
+      msg <- paste(
+        msg, sprintf("%.5f", a_0_relative_norm), "and",
+        sprintf("%.5f", Q_relative_norm), "at iteration", i)
+      cat(msg)
+    }
 
     if(has_converged <-
        Q_relative_norm < eps &&
-       a_0_relative_norm < eps)
+       a_0_relative_norm < eps &&
+       (type != "VAR" || F_norm < eps))
       break
   }
 
@@ -406,6 +583,10 @@ PF_EM <- function(
 #' @param n_max maximum number of iterations of the EM algorithm.
 #' @param n_threads maximum number threads to use in the computations.
 #' @param smoother smoother to use.
+#' @param Q_tilde covariance matrix of additional error term to add to the
+#' proposal distributions. \code{NULL} implies no additional error term.
+#' @param est_a_0 \code{FALSE} if the starting value of the state model should
+#' be fixed. Does not apply for \code{type = "VAR"}.
 #'
 #' @return
 #' A list with components named as the arguments.
@@ -419,12 +600,12 @@ PF_control <- function(
   eps = 1e-2, forward_backward_ESS_threshold = NULL,
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
-  Q_tilde = NULL){
+  Q_tilde = NULL, est_a_0 = TRUE){
   control <- list(
     N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
     forward_backward_ESS_threshold = forward_backward_ESS_threshold,
     method = method, n_max = n_max, n_threads = n_threads, smoother = smoother,
-    Q_tilde = Q_tilde)
+    Q_tilde = Q_tilde, est_a_0 = est_a_0)
 
   check_n_particles_expr <- function(N_xyz)
     eval(bquote({

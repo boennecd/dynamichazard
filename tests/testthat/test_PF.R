@@ -35,14 +35,15 @@ test_that("PF_smooth gives same results", {
   n_vars <- 2
   set.seed(78095324)
   sims <- test_sim_func_logit(
-    n_series = 1e3, n_vars = n_vars, t_0 = 0, t_max = 10,
+    n_series = 250, n_vars = n_vars, t_0 = 0, t_max = 10,
     x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
     intercept_start = -3, sds = c(.1, rep(.5, n_vars)))
 
-  X_Y = get_design_matrix(Surv(tstart, tstop, event) ~ . - id, sims$res)
-  risk_set <-
-    get_risk_obj(Y = X_Y$Y, by = 1, max_T = 10,
-                 id = sims$res$id, is_for_discrete_model = TRUE)
+  frm <- Surv(tstart, tstop, event) ~ . - id
+  X_Y = get_design_matrix(frm, sims$res)
+  risk_set <- get_risk_obj(
+    Y = X_Y$Y, by = 1, max_T = 10, id = sims$res$id,
+    is_for_discrete_model = TRUE)
 
   # sum(sims$res$event)
   # matplot(sims$beta, type = "l", lty = 1)
@@ -54,32 +55,22 @@ test_that("PF_smooth gives same results", {
 
   args <- list(
     n_fixed_terms_in_state_vec = 0,
-    X = t(X_Y$X),
-    fixed_terms = t(X_Y$fixed_terms),
-    tstart = X_Y$Y[1, ],
-    tstop = X_Y$Y[2, ],
+    X = t(X_Y$X), fixed_terms = t(X_Y$fixed_terms),
+    tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], R = diag(1, ncol(Q)), Q_0 = Q_0,
+    fixed_parems = numeric(), Q = Q, a_0 = a_0, Q_tilde = diag(1e-2, n_vars + 1),
+    risk_obj = risk_set, F = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
+    N_fw_n_bw = 20, N_smooth = 100, N_first = 100,
+    forward_backward_ESS_threshold = NULL, debug = 0, method = "PF",
+    smoother = "Fearnhead_O_N", model = "logit", type = "RW")
 
-    R = diag(1, ncol(Q)),
-    Q_0 = Q_0,
-
-    fixed_parems = numeric(),
-
-    Q = Q,
-    a_0 = a_0,
-
-    Q_tilde = diag(1e-2, n_vars + 1),
-    risk_obj = risk_set,
-    F = diag(1, n_vars + 1),
-    n_max = 10,
-    n_threads = 1,
-    N_fw_n_bw = 20,
-    N_smooth = 100,
-    N_first = 100,
-    forward_backward_ESS_threshold = NULL,
-    debug = 0,
-    method = "PF",
-    smoother = "Fearnhead_O_N",
-    model = "logit", type = "RW")
+  fw_args <- list(
+    x = frm, N_fw = args$N_fw_n_bw, N_first = args$N_first, data = sims$res,
+    by = 1, fixed_effects = numeric(), control = PF_control(
+      N_fw_n_bw = 1, N_smooth = 1, N_first = 1, method = args$method,
+      Q_tilde = args$Q_tilde, n_threads = 1),
+    max_T = 10, Fmat = diag(1, 3), trace = 0, id = sims$res$id)
+  fw_args <- c(fw_args, args[
+    intersect(names(args), names(formals(PF_forward_filter.formula)))])
 
   test_func <- function(test_file_name, update = FALSE){
     get_func <- quote(
@@ -95,6 +86,11 @@ test_that("PF_smooth gives same results", {
     cl[names(args)] <- lapply(names(args), function(x)
       substitute(args$z, list(z = as.symbol(x))))
     cl <- as.call(cl)
+
+    cl_fw <- list(quote(PF_forward_filter))
+    cl_fw[names(fw_args)] <- lapply(names(fw_args), function(x)
+      substitute(fw_args$z, list(z = as.symbol(x))))
+    cl_fw <- as.call(cl_fw)
 
     q <- bquote({
       set.seed(30302129)
@@ -125,6 +121,13 @@ test_that("PF_smooth gives same results", {
       }
 
       #####
+      # We should get the same with the forward filter
+      set.seed(30302129)
+      fw_res <- .(cl_fw)
+
+      expect_equal(fw_res$forward_clouds, result$forward_clouds)
+
+      #####
       # Changing the seed changes the result
       set.seed(1)
       result_new_seed <- .(cl)
@@ -146,6 +149,12 @@ test_that("PF_smooth gives same results", {
       # Test versus previous computed values
 
       # Compute clouds means to test against
+      if(.(update)){
+        sm <- get_means(result)$smoothed_clouds
+        matplot(sm, ylim = range(sm, sims$betas), type = "l", lty = 1)
+        matplot(sims$betas, lty = 2, type = "l", add = TRUE)
+      }
+
       .file <- paste0(.(test_file_name), "_cloud_means.RDS")
       eval(substitute(
         expect_known_value(
@@ -167,32 +176,32 @@ test_that("PF_smooth gives same results", {
 
   #####
   # Simple PF
-  args$method <- "bootstrap_filter"
+  fw_args$control$method <- args$method <- "bootstrap_filter"
   test_func(test_file_name = "bootstrap_filter")
 
   #####
   # Normal approximation in importance density with mean from previous cloud
-  args$method <- "PF_normal_approx_w_cloud_mean"
+  fw_args$control$method <- args$method <- "PF_normal_approx_w_cloud_mean"
   test_func(test_file_name = "PF_normal_approx_w_cloud_mean")
 
   #####
   # Normal approximation in AUX filter with mean from previous cloud
-  args$method <- "AUX_normal_approx_w_cloud_mean"
+  fw_args$control$method <- args$method <- "AUX_normal_approx_w_cloud_mean"
   test_func(test_file_name = "AUX_normal_approx_w_cloud_mean")
 
   #####
   # Normal approximation in importance density with mean from parent and child particle
-  args$method <- "PF_normal_approx_w_particles"
+  fw_args$control$method <- args$method <- "PF_normal_approx_w_particles"
   test_func(test_file_name = "PF_normal_approx_w_particles")
 
   #####
   # Normal approximation in AUX filter with mean from parent and child particle
-  args$method <- "AUX_normal_approx_w_particles"
+  fw_args$control$method <- args$method <- "AUX_normal_approx_w_particles"
   test_func(test_file_name = "AUX_normal_approx_w_particles")
 
   #####
   # Test O(n^2) method from Brier et al
-  args$method <- "AUX_normal_approx_w_particles"
+  fw_args$control$method <- args$method <- "AUX_normal_approx_w_particles"
   args$smoother <- "Brier_O_N_square"
   test_func(test_file_name = "Brier_AUX_normal_w_particles")
 })
@@ -381,4 +390,49 @@ test_that("compute_summary_stats_first_o_RW gives previous results", {
   # Test with method from Brier et al (2010)
   test_func("local_tests/PF_head_neck_w_Brier_method",
             "local_tests/compute_summary_stats_w_Brier_method")
+})
+
+test_that("´est_params_dens´ versus R version", {
+  skip_on_cran()
+  fit <- suppressWarnings(PF_EM(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2),
+    control = list(
+      N_fw_n_bw = 200, N_smooth = 1e3, N_first = 2e3, n_max = 1),
+    max_T = 45, type = "VAR"))
+
+  . <- function(bw, this){
+    ws <- sqrt(this$weights)
+    good <- which(ws > 1e-8)
+    ws <- ws[good]
+
+    X_new <- t(bw$states[, this$parent_idx[good], drop = FALSE])
+    Y_new <- t(this$states[, good, drop = FALSE])
+
+    list(X = X_new, Y = Y_new, sqrt_ws = ws)
+  }
+
+  X <- Y <- matrix(ncol = 2)[-1, , drop = FALSE]
+  sqrt_ws <- numeric()
+  fw_clouds <- fit$clouds$forward_clouds
+  clouds <- fit$clouds$smoothed_clouds
+
+  for(i in 1:length(clouds)){
+    out <- .(fw_clouds[[i]], clouds[[i]])
+
+    sqrt_ws <- c(sqrt_ws, out$sqrt_ws)
+    X <- rbind(X, out$X)
+    Y <- rbind(Y, out$Y)
+  }
+
+  wX <- X * sqrt_ws
+  wY <- Y * sqrt_ws
+  lm_fit <- lm.fit(x = wX, y = wY)
+  expect_equal(lm_fit$coefficients, fit$F, check.attributes = FALSE)
+
+  qr_obj <- qr(wX)
+  qty <- qr.qty(qr_obj, wY)[1:ncol(wX), ]
+  Q <- (crossprod(wY) - crossprod(qty)) / length(clouds)
+  expect_equal(Q, fit$Q)
 })

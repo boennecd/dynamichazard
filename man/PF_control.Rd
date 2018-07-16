@@ -7,7 +7,8 @@
 PF_control(N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
   eps = 0.01, forward_backward_ESS_threshold = NULL,
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
-  n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N")
+  n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
+  Q_tilde = NULL, est_a_0 = TRUE)
 }
 \arguments{
 \item{N_fw_n_bw}{number of particles to use in forward and backward filter.}
@@ -27,6 +28,12 @@ PF_control(N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
 \item{n_threads}{maximum number threads to use in the computations.}
 
 \item{smoother}{smoother to use.}
+
+\item{Q_tilde}{covariance matrix of additional error term to add to the
+proposal distributions. \code{NULL} implies no additional error term.}
+
+\item{est_a_0}{\code{FALSE} if the starting value of the state model should
+be fixed. Does not apply for \code{type = "VAR"}.}
 }
 \value{
 A list with components named as the arguments.

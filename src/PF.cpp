@@ -242,17 +242,16 @@ Rcpp::List particle_filter(
     const arma::vec &tstart, const arma::vec &tstop, const arma::colvec &a_0,
     const arma::mat &R, arma::mat &Q_0,
     arma::mat &Q, const arma::mat Q_tilde, const Rcpp::List &risk_obj,
-    const arma::mat &F, const int n_max, const int n_threads,
-    const arma::vec &fixed_parems, const int N_fw_n_bw, const int N_smooth,
+    const arma::mat &F, const int n_threads,
+    const arma::vec &fixed_parems, const int N_fw_n_bw,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
     const int debug, const int N_first, std::string type,
-
-    /* non-common arguments */
     const bool is_forward, const std::string method, const std::string model){
   const arma::ivec is_event_in_bin =
     Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
   std::unique_ptr<PF_data> data;
+  const unsigned int N_smooth = 1, n_max = 1;
   if(type == "RW")
     data.reset(new random_walk<PF_data>(
         n_fixed_terms_in_state_vec,
@@ -284,8 +283,7 @@ Rcpp::List particle_filter(
 
   }
 
-  ans = PF_single_direction_compute(
-    *data.get(), is_forward, method, *dens_calc.get());
+  ans = PF_single_direction_compute(*data.get(), is_forward, method, *dens_calc.get());
 
   return(ans);
 }
