@@ -436,3 +436,84 @@ test_that("´est_params_dens´ versus R version", {
   Q <- (crossprod(wY) - crossprod(qty)) / length(clouds)
   expect_equal(Q, fit$Q)
 })
+
+test_that("fixed effect estimation gives the same as an R implementation", {
+  skip_on_cran()
+
+  # specific function for this example. Only works when 1 fixed and 1 varying
+  # parameter
+  R_est_func <- function(pf_res, fam, start){
+    cl <- pf_res$call
+    cl <- cl[c(1, match(
+      c("formula", "data", "max_T", "id", "trace", "order", "by", "model"),
+      names(cl), 0))]
+    cl$trace <- 0
+    cl[[1]] <- quote(dynamichazard:::.get_PF_static_args)
+    static_args <- eval(cl)
+
+    cls <- pf_res$clouds$smoothed_clouds
+    d <- length(cls)
+    tstop  <- static_args$tstop
+    tstart <- static_args$tstart
+
+    y <- offs <- Z <- ws <- NULL
+    for(i in 1:d){
+      r_set <- static_args$risk_obj$risk_sets[[i]]
+      X_i <- static_args$X[, r_set]
+      Z_i <- static_args$fixed_terms[, r_set]
+      Y_i <- static_args$risk_obj$is_event_in[r_set] == (i - 1L)
+
+      cl <- cls[[i]]
+      good <- which(drop(cl$weights > 1e-7))
+      ws_i <- cl$weights[good]
+      sta <- cl$states[good]
+
+      off <- c(sapply(sta, function(s) s * X_i))
+      if(fam == "exponential")
+        off <- off + log(pmin(tstop[r_set], i) - pmax(tstart[r_set], i - 1))
+
+      ws_i <- c(sapply(ws_i, rep, times = length(r_set)))
+      Z_i <- rep(Z_i, length(good))
+      Y_i <- rep(Y_i, length(good))
+
+      ws <- c(ws, ws_i)
+      Z <- c(Z, Z_i)
+      offs <- c(offs, off)
+      y <- c(y, Y_i)
+    }
+
+    fam <- if(fam == "exponential") poisson else binomial
+    suppressWarnings(
+      # avoid `non-integer #successes in a binomial glm!`
+      # and the non-covergence warning
+      glm(y ~ Z - 1, family = fam, offset = offs, weights = ws,
+          control = glm.control(maxit = 1), start = start))
+  }
+
+  fam <- "logit"
+  set.seed(19724898)
+  pf_fit <- suppressWarnings(PF_EM(
+    formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+    data = head_neck_cancer, id = head_neck_cancer$id, model = fam,
+    by = 1, Q_0 = 1, Q = .1,
+    control = list(
+      N_fw_n_bw = 100, N_smooth = 200, N_first = 1000, n_max = 1),
+    max_T = 45, type = "RW"))
+
+  # start is found by running the above with `trace = 1`
+  fit <- R_est_func(pf_fit, fam, start = 0.6576882362117193)
+  expect_equal(
+    fit$coefficients, pf_fit$fixed_effects, check.attributes = FALSE)
+
+  fam <- "exponential"
+  pf_fit <- suppressWarnings(PF_EM(
+    formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+    data = head_neck_cancer, id = head_neck_cancer$id, model = fam,
+    by = 1, Q_0 = 1, Q = .1,
+    control = list(
+      N_fw_n_bw = 100, N_smooth = 200, N_first = 1000, n_max = 1),
+    max_T = 45, type = "RW"))
+  fit <- R_est_func(pf_fit, fam, start = 0.6255092546830791)
+  expect_equal(
+    fit$coefficients, pf_fit$fixed_effects, check.attributes = FALSE)
+})

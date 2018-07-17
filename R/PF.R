@@ -485,6 +485,7 @@ PF_forward_filter.formula <- function(
     a_0_old <- fit_call$a_0
     Q_old <- fit_call$Q
     F_old <- fit_call$F
+    fixed_parems_old <- fixed_parems
 
     if(type == "RW"){
       sum_stats <- compute_summary_stats_first_o_RW(
@@ -510,7 +511,8 @@ PF_forward_filter.formula <- function(
 
     #####
     # Update fixed effects
-    if(length(fixed_parems) > 0){
+    has_fixed_params <- length(fixed_parems) > 0
+    if(has_fixed_params){
       if(trace > 0)
         cat("Updating fixed effects...\n")
 
@@ -533,15 +535,24 @@ PF_forward_filter.formula <- function(
     Q_relative_norm <- norm(Q_old - Q) / (norm(Q_old) + 1e-8)
     a_0_relative_norm <- norm(t(a_0 - a_0_old)) / (norm(t(a_0_old)) + 1e-8)
     F_norm <- norm(F_old - F.) / (norm(F_old) + 1e-8)
+    if(has_fixed_params)
+      fixed_params_norm <- norm(t(fixed_parems - fixed_parems_old)) /
+        (norm(t(fixed_parems)) + 1e-8)
 
     if(trace > 0){
       msg <- "The relative norm of the change in"
       if(type == "VAR")
         msg <- paste(msg, "F,")
 
+      if(has_fixed_params)
+        msg <- paste(msg, "fixed parameters,")
+
       msg <- paste(msg, "a_0 and Q are")
       if(type == "VAR")
         msg <- paste0(msg, " ", sprintf("%.5f", F_norm), ",")
+
+      if(has_fixed_params)
+        msg <- paste0(msg, " ", sprintf("%.5f", fixed_params_norm), ",")
 
       msg <- paste(
         msg, sprintf("%.5f", a_0_relative_norm), "and",
@@ -552,7 +563,8 @@ PF_forward_filter.formula <- function(
     if(has_converged <-
        Q_relative_norm < eps &&
        a_0_relative_norm < eps &&
-       (type != "VAR" || F_norm < eps))
+       (type != "VAR" || F_norm < eps) &&
+       (!has_fixed_params || fixed_params_norm < eps))
       break
   }
 
@@ -684,8 +696,7 @@ PF_control <- function(
   }
 
   f_stack <- do.call(c, lapply(out, "[[", "f"))
-  R_stack <- lapply(out, .get_R)
-  R_stack <- do.call(rbind, R_stack)
+  R_stack <- do.call(rbind, lapply(out, .get_R))
 
   qr. <- qr(R_stack, LAPACK = TRUE)
   f <- qr.qty(qr., f_stack)[1:nrow(X_i)]
