@@ -312,12 +312,12 @@ $\{\partic{\vec{\alpha}}{t-1}{1}, \partic{\vec{\alpha}}{t-1}{2}, \dots \partic{\
 %
 \begin{enumerate}
   \item Set $\vecb{\xi}_t^{(k - 1)} = \mat{R}^+ \vecb{\mu}_t^{(k - 1)}$ and let $\vecb{\mu}_t^{(k)} = \vec{\mu}_t\Lparen{\vecb{\alpha}_{t - 1}, \vecb{\xi}_t^{(k-1)}}$.
-  \item Stop if $\Lvert{\vecb{\mu}_t^{(k)} - \vecb{\mu}_t^{(k - 1)}} < \epsilon$. Otherwise set $k \leftarrow k + 1$ and repeat 1. 
+  \item Stop if $\Lvert{\vecb{\mu}_t^{(k)} - \vecb{\mu}_t^{(k - 1)}} / \Lvert{\vecb{\mu}_t^{(k - 1)}} < \epsilon$. Otherwise set $k \leftarrow k + 1$ and repeat 1. 
 \end{enumerate}%
 %
-for some small $\epsilon$. The final functions $\vec{\mu}_t\Lparen{\cdot, \vecb{\xi}_t^{(k)}}$ and $\mat{\Sigma}_t\Lparen{\vecb{\xi}_t^{(k)}}$ defined in Equation~\eqref{eqn:TaylorProposalForward} are then used as the proposal distributions. Similar steps can be taken for the next proposal distributions. We will drop the argument in the functions in equations similar to Equation~\eqref{eqn:TaylorProposalForward} and we will not go into details as the steps are very similar.
+for some small $\epsilon$. The final functions $\vec{\mu}_t\Lparen{\cdot, \vecb{\xi}_t^{(k)}}$ and $\mat{\Sigma}_t\Lparen{\vecb{\xi}_t^{(k)}}$ defined in Equation~\eqref{eqn:TaylorProposalForward} are then used as the proposal distributions. Further, $\vec{\mu}_t\Lparen{\vecb{\alpha}_{t - 1}, \vecb{\xi}_t^{(k)}}$ is the mode of $\optorC{P}{\vec{\alpha}_t}{\vecb{\alpha}_{t - 1}, \vec{y}_t}$. Similar steps can be taken for the next proposal distributions. We will drop the argument in the functions in equations similar to Equation~\eqref{eqn:TaylorProposalForward} and we will not go into details as the steps are very similar.
 
-This is similar to the second order random walk example in \cite{fearnhead10}. They use the mode which is feasible as the outcome only depends on one element of the state vector. The downside is an $\bigO{\nMax \dimState^2+\dimState^3}$ computational cost though independent of the number of particles, $\nPart$. The total cost of sampling is $\bigO{\nMax\dimState^2+\dimState^3 + \nPart\dimState^2}$. Another option is to set $\vecb{\alpha}_{t - 1} = \partic{\vec{\alpha}}{t-1}{j}$ for each particle $j = 1, 2, \dots, \nPart$ in the particle cloud at time $t - 1$. This will improve the Taylor expansion but yields an $\bigO{\nPart\Lparen{\nMax\dimState^2+\dimState^3}}$ computational cost. The extra $\nPart\nMax$ factor makes this much slower.
+The downside is an $\bigO{\nMax \dimState^2+\dimState^3}$ computational cost though independent of the number of particles, $\nPart$. The total cost of sampling is $\bigO{\nMax\dimState^2+\dimState^3 + \nPart\dimState^2}$. Another option is to set $\vecb{\alpha}_{t - 1} = \partic{\vec{\alpha}}{t-1}{j}$ for each particle $j = 1, 2, \dots, \nPart$ in the particle cloud at time $t - 1$. This is similar to the second order random walk example in \cite{fearnhead10}. This will improve the Taylor expansion but yields an $\bigO{\nPart\Lparen{\nMax\dimState^2+\dimState^3}}$ computational cost. The extra $\nPart\nMax$ factor makes this much slower.
 
 Next, we have the re-sampling weights. A simple solution is not to use an auxiliary particle filter as in the examples of \cite{fearnhead10} and set:
 
@@ -1114,7 +1114,7 @@ $\mat{F}^\top\mat{R}^{+\top}\mat{Q}^{-1}\mat{R}^+\vecb{\alpha}_{t+1} +
 	}
   \end{align*}
   }
-  \item Stop if $\Lvert{\vecb{\mu}_t^{(k)} - \vecb{\mu}_t^{(k - 1)}} < \epsilon$ and return $\mat{\Sigma}_t^{(k)}$ and \\%
+  \item Stop if $\Lvert{\vecb{\mu}_t^{(k)} - \vecb{\mu}_t^{(k - 1)}} / \Lvert{\vecb{\mu}_t^{(k - 1)}} < \epsilon$ and return $\mat{\Sigma}_t^{(k)}$ and \\%
 $\vec{t} = \mat{\Sigma}_t^{(k)}\mat{R}\mat{X}_t^\top
 		\Lparen{
 			-\mat{G}_t\Lparen{\vecb{\xi}_t^{(k -1)} + \vec{o}_t}

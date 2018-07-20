@@ -280,7 +280,8 @@ test_that("PF_EM gives previous results on head neck data set", {
       n_threads =  max(parallel::detectCores(logical = FALSE), 1)),
     max_T = 45)
 
-  test_func <- function(smoother, file_name){
+  test_func <- function(
+    smoother, file_name, do_update = FALSE, do_print_fname = FALSE){
     f1 <- paste0("local_tests/", file_name)
     f2 <- paste0(file_name, "_cloud_means")
 
@@ -307,13 +308,22 @@ test_that("PF_EM gives previous results on head neck data set", {
       result <- result[c("a_0", "Q", "clouds", "summary_stats", "log_likes",
                          "n_iter", "effective_sample_size", "seed")]
 
-      # save_to_test(result, .(f1))
+      if(.(do_print_fname)){
+        func <- function(x)
+          cat("tmp <- readRDS('previous_results/", x, ".RDS')\n", sep = "")
+        func(.(f1))
+        func(.(f2))
+      }
+      if(.(do_update))
+        save_to_test(result, .(f1))
+
       test_if_file_exists(
         .(f1),
         expect_equal(result, read_to_test(.(f1)), tolerance = 1.49e-08))
 
       # Compute clouds means to test against
-      # save_to_test(get_means(result$clouds), file_name = .(f2))
+      if(.(do_update))
+        save_to_test(get_means(result$clouds), file_name = .(f2))
       expect_equal(get_means(result$clouds), read_to_test(.(f2)),
                    tolerance = 1.49e-08)
     })
@@ -335,7 +345,7 @@ test_that("PF_EM gives previous results on head neck data set with fixed effects
     PF_EM(
       formula = survival::Surv(start, stop, event) ~ ddFixed(group),
       data = head_neck_cancer,
-      by = 1, Q_0 = 10, Q = 0.01,
+      by = 1, Q_0 = 1, Q = 0.01,
       control = PF_control(
         N_fw_n_bw = 200, N_smooth = 2e3, N_first = 2e3,
         n_max = 3,
@@ -343,6 +353,7 @@ test_that("PF_EM gives previous results on head neck data set with fixed effects
         n_threads = max(parallel::detectCores(logical = FALSE), 1)),
       max_T = 30))
 
+  # tmp <- readRDS("previous_results/local_tests/pf_logit_w_fixed.RDS")
   expect_known_value(pp_fit[!names(pp_fit) %in%
                              c("clouds", "call", "summary_stats")],
                      "local_tests/pf_logit_w_fixed.RDS")
@@ -356,7 +367,7 @@ test_that("compute_summary_stats_first_o_RW gives previous results", {
   a_0 <- c(-3.6, 0)
   R <- diag(1, 2)
 
-  test_func <- function(data_file, test_file){
+  test_func <- function(data_file, test_file, do_update = FALSE){
     q <- bquote({
       test_if_file_exists(
         .(data_file),
@@ -376,7 +387,8 @@ test_that("compute_summary_stats_first_o_RW gives previous results", {
 
           #####
           # Test versus previous results
-          # save_to_test(sum_stats, .(test_file))
+          if(.(do_update))
+            save_to_test(sum_stats, .(test_file))
           expect_equal(sum_stats, read_to_test(.(test_file)), tolerance = 1.49e-08)
       })
     })
@@ -392,7 +404,7 @@ test_that("compute_summary_stats_first_o_RW gives previous results", {
             "local_tests/compute_summary_stats_w_Brier_method")
 })
 
-test_that("´est_params_dens´ versus R version", {
+test_that("´est_params_dens´ gives the same as a R version", {
   skip_on_cran()
   fit <- suppressWarnings(PF_EM(
     formula = survival::Surv(start, stop, event) ~ group,
@@ -418,7 +430,7 @@ test_that("´est_params_dens´ versus R version", {
   fw_clouds <- fit$clouds$forward_clouds
   clouds <- fit$clouds$smoothed_clouds
 
-  for(i in 1:length(clouds)){
+  for(i in 2:length(clouds)){
     out <- .(fw_clouds[[i]], clouds[[i]])
 
     sqrt_ws <- c(sqrt_ws, out$sqrt_ws)
@@ -433,7 +445,7 @@ test_that("´est_params_dens´ versus R version", {
 
   qr_obj <- qr(wX)
   qty <- qr.qty(qr_obj, wY)[1:ncol(wX), ]
-  Q <- (crossprod(wY) - crossprod(qty)) / length(clouds)
+  Q <- (crossprod(wY) - crossprod(qty)) / (length(clouds) - 1)
   expect_equal(Q, fit$Q)
 })
 

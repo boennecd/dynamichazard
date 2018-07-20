@@ -69,27 +69,28 @@ max(aids$stop[aids$event == 1]) # Last person with event
 
 # Fit model with extended Kalman filter
 fit <- ddhazard(
-  Surv(stop, event) ~ AZT + gender + drug + prevOI,
+  Surv(stop, event) ~ ddFixed_intercept() + ddFixed(AZT) + gender + 
+    ddFixed(drug) + ddFixed(prevOI),
   aids,
   model = "exponential",          # piecewise constant exponentially distributed 
                                   # arrivals times
   by = .5,                        # Length of time intervals in state space 
                                   # model
   max_T = 19,                     # Last period we observe when modeling
-  Q = diag(.01, 5),               # Covariance matrix for state equation in 
+  Q = .1^2,                       # Covariance matrix for state equation in 
                                   # first iteration
-  Q_0 = diag(10, 5),              # Covariance matrix for the prior
+  Q_0 = 1,                        # Covariance matrix for the prior
   control = list(
     eps = .001,                   # tolerance for EM-algorithm
-    NR_eps = 1e-5,                # Use more iteration of the EKF
-    LR = .5,                      # Learning rate
-    n_max = 20                    # Max number iterations in EM
+    LR = .9,                      # Learning rate
+    n_max = 100                   # Max number iterations in EM
     ))
 
 # Plot the estimates. Dashed lines are 95% confidence bounds
 plot(fit)
 
 # Bootstrap the estimates
+set.seed(87754771)
 boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
 
 # Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
@@ -97,50 +98,38 @@ boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
 plot(fit, ddhazard_boot = boot_out)
 ```
 
-Bootstrapping only slightly changes the confidence bounds. It seems that:
-
-* It is hard to tell the difference between the two drugs. The `ddi` may be more effective in the latter period (the estimates is negative) though the point-wise confidence bounds still contains 0. Further, this comment neglect that the confidence bounds are point-wise.
-* Having aids rather than being enrolled (only) due to two CD4 counts of 300 or fewer is associated with an increased risk of dying.
-* Males seems to be at lower risk in the first period.
-
-An example of a paper analyzing the CD4 count can be found in [@guo2004]. They also fit a static model (time-invariant coefficients) of the survival times with an exponential model. The estimates are comparable with those above as expected.
+Bootstrapping only slightly changes the confidence bounds. An example of a paper analyzing the CD4 count can be found in [@guo2004]. They also fit a static model (time-invariant coefficients) of the survival times with an exponential model. The estimates are comparable with those above as expected.
 
 ## Example - particle filter and smoother
 A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data. We only use a time-varying effect for gender this time.
 
-```{r pf_fit, cache=TRUE}
-options(ddhazard_max_threads = 4) # I use a quad-core machine
-
+```{r pf_fit, cache = 1}
 set.seed(20170907)
 pf_fit <- PF_EM(
   Surv(stop, event) ~ ddFixed_intercept() + ddFixed(AZT) + gender + 
     ddFixed(drug) + ddFixed(prevOI),
-  aids,
-  model = "exponential",
-  by = .5,  
-  max_T = 19,
-  Q = .01,
-  Q_0 = 1,
+  aids, model = "exponential",
+  by = .5,  max_T = 19, Q = .5^2, Q_0 = 1,
   control = PF_control(
+    n_threads = 4, # I use a quad-core machine
     # set number of particles
-    N_fw_n_bw = 1000, 
-    N_first = 1000,
+    N_fw_n_bw = 1000, N_first = 1000,
     N_smooth = 1, # Does not matter with Brier_O_N_square
-    
     smoother = "Brier_O_N_square", # Select smoother
-    
-    eps = .001, 
-    n_max = 100)
+    eps = .001, n_max = 100, est_a_0 = FALSE, Q_tilde = as.matrix(.2^2))
   #, trace = 1 # comment back to get feedback during estimation
   )
 ```
 
-```{r pf_plots}
+```{r pf_plots, cache = 1, dependson = "pf_fit"}
 # Compare estimates of Q
 pf_fit$Q / .5
 fit$Q
 plot(pf_fit)
 plot(pf_fit$log_likes) # log-likelihoods
+
+# better estimate of final log-likelihood
+logLik(PF_forward_filter(pf_fit, N_fw = 10000, N_first = 10000))
 ```
 
 

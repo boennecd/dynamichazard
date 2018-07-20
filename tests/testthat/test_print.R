@@ -91,7 +91,7 @@ test_that("Print function for PF objects gives previous results", {
   pf_fit <- suppressWarnings(PF_EM(
     Surv(time, status == 2) ~ ph.ecog + age,
     data = .lung, by = 50, id = 1:nrow(.lung),
-    Q_0 = diag(1, 3), Q = diag(.1, 3),
+    Q_0 = diag(c(1, 1, .1)^2), Q = diag(c(.3, .3, .01)^2),
     max_T = 800,
     control = list(
       N_fw_n_bw = 200,

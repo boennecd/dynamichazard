@@ -83,24 +83,24 @@ See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 \dontrun{
 library(dynamichazard)
 .lung <- lung[!is.na(lung$ph.ecog), ]
+# standardize
+.lung$age <- scale(.lung$age)
+
+# fit
 set.seed(43588155)
 pf_fit <- PF_EM(
- Surv(time, status == 2) ~ ph.ecog + age,
- data = .lung, by = 50, id = 1:nrow(.lung),
- Q_0 = diag(1, 3), Q = diag(1, 3),
- max_T = 800,
- control = PF_control(
-   N_fw_n_bw = 500,
-   N_first = 2500,
-   N_smooth = 2500,
-   n_max = 50,
-   n_threads = max(parallel::detectCores(logical = FALSE), 1)),
- trace = 1)
+Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
+data = .lung, by = 50, id = 1:nrow(.lung),
+Q_0 = diag(1, 2), Q = diag(.5^2, 2),
+max_T = 800,
+control = PF_control(
+  N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000,
+  n_max = 50, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
+  n_threads = max(parallel::detectCores(logical = FALSE), 1)))
 
 # Plot state vector estimates
 plot(pf_fit, cov_index = 1)
 plot(pf_fit, cov_index = 2)
-plot(pf_fit, cov_index = 3)
 
 # Plot log-likelihood
 plot(pf_fit$log_likes)
@@ -149,24 +149,25 @@ summary(ddfit)
 
 # fit model with particle filter
 set.seed(88235076)
-ppfit <- PF_EM(
- Surv(tstart, tstop, death == 2) ~ ddFixed_intercept() + ddFixed(age) +
-   ddFixed(edema) + ddFixed(log_albumin) + ddFixed(log_protime) + log_bili,
- pbc2, Q_0 = 100, Q = ddfit$Q * 100, # use estimate from before
- by = 100, id = pbc2$id,
- model = "exponential", max_T = 3600,
- control = PF_control(
-   N_fw_n_bw = 250, N_smooth = 500, N_first = 1000, eps = 1e-3,
-   method = "AUX_normal_approx_w_cloud_mean",
-   n_max = 25, # just take a few iterations as an example
-   n_threads = max(parallel::detectCores(logical = FALSE), 1)), trace = TRUE)
+pf_fit <- PF_EM(
+  Surv(tstart, tstop, death == 2) ~ ddFixed_intercept() + ddFixed(age) +
+    ddFixed(edema) + ddFixed(log_albumin) + ddFixed(log_protime) + log_bili,
+  pbc2, Q_0 = 2^2, Q = ddfit$Q * 100, # use estimate from before
+  by = 100, id = pbc2$id,
+  model = "exponential", max_T = 3600,
+  control = PF_control(
+    N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = 1e-3,
+    method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+    Q_tilde = as.matrix(.1^2),
+    n_max = 25, # just take a few iterations as an example
+    n_threads = max(parallel::detectCores(logical = FALSE), 1)))
 
 # compare results
 plot(ddfit)
-plot(ppfit)
+plot(pf_fit)
 sqrt(ddfit$Q * 100)
-sqrt(ppfit$Q)
-rbind(ddfit$fixed_effects, ppfit$fixed_effects)
+sqrt(pf_fit$Q)
+rbind(ddfit$fixed_effects, pf_fit$fixed_effects)
 }
 }
 \seealso{

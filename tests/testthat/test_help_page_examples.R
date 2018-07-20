@@ -130,18 +130,24 @@ test_that("PF_EM help page example runs and gives previous computed results", {
   skip_on_cran()
 
   .lung <- lung[!is.na(lung$ph.ecog), ]
+  # standardize
+  .lung$age <- scale(.lung$age)
+
+  # fit
   set.seed(43588155)
-  pf_fit <- PF_EM(
-    Surv(time, status == 2) ~ ph.ecog + age,
+  pf_fit <- suppressWarnings(PF_EM(
+    Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
     data = .lung, by = 50, id = 1:nrow(.lung),
-    Q_0 = diag(1, 3), Q = diag(1, 3),
+    Q_0 = diag(1, 2), Q = diag(.5^2, 2),
     max_T = 800,
     control = PF_control(
-      N_fw_n_bw = 500,
-      N_first = 2500,
-      N_smooth = 2500,
-      n_max = 50,
-      n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+      N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000,
+
+      # take less its than in the man page
+      n_max = 5,
+
+      eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
+      n_threads = max(parallel::detectCores(logical = FALSE), 1))))
 
   if(dir.exists("previous_results/local_tests"))
     # tmp <- readRDS("previous_results/local_tests/survival_lung_example.RDS")
@@ -156,7 +162,6 @@ test_that("PF_EM help page example runs and gives previous computed results", {
 
   expect_no_error(plot(pf_fit, cov_index = 1))
   expect_no_error(plot(pf_fit, cov_index = 2))
-  expect_no_error(plot(pf_fit, cov_index = 3))
   expect_no_error(plot(pf_fit$log_likes))
 })
 
@@ -196,21 +201,21 @@ test_that("Second example on PF help page gives the same result", {
 
   # fit model with particle filter
   set.seed(88235076)
-  ppfit <- suppressWarnings(PF_EM(
+  pf_fit <- suppressWarnings(PF_EM(
     Surv(tstart, tstop, death == 2) ~ ddFixed_intercept() + ddFixed(age) +
       ddFixed(edema) + ddFixed(log_albumin) + ddFixed(log_protime) + log_bili,
-    pbc2, Q_0 = 100, Q = ddfit$Q * 100, # use estimate from before
+    pbc2, Q_0 = 2^2, Q = ddfit$Q * 100, # use estimate from before
     by = 100, id = pbc2$id,
     model = "exponential", max_T = 3600,
     control = PF_control(
-      N_fw_n_bw = 250, N_smooth = 500, N_first = 1000, eps = 1e-3,
-      method = "AUX_normal_approx_w_cloud_mean",
-      n_max = 25, # just take a few iterations as an example
+      N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = 1e-3,
+      method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+      Q_tilde = as.matrix(.1^2),
+      n_max = 5, # less than in man page
       n_threads = max(parallel::detectCores(logical = FALSE), 1))))
 
   # tmp <- readRDS("previous_results/local_tests/pf_man_2nd_ppfit.RDS")
-  expect_known_value(ppfit[!names(ppfit) %in%
-                             c("clouds", "call", "summary_stats")],
+  expect_known_value(pf_fit[!names(pf_fit) %in% c("clouds", "call")],
                      "local_tests/pf_man_2nd_ppfit.RDS")
 })
 
@@ -248,7 +253,7 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
 
   # the log-likelihood in the final iteration
   # dput((end_log_like <- tail(pf_fit$log_likes, 1)))
-  expect_equal((end_log_like <- tail(pf_fit$log_likes, 1)), -251.287510661281)
+  expect_equal((end_log_like <- tail(pf_fit$log_likes, 1)), -251.123391099791)
 
 
   # gives the same

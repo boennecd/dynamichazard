@@ -45,21 +45,7 @@ The analysis is given below with comments:
 
 ``` r
 library(dynamichazard)
-#> Loading required package: survival
 library(JMbayes) # Contain the aids data set
-#> Loading required package: nlme
-#> Loading required package: doParallel
-#> Loading required package: foreach
-#> Loading required package: iterators
-#> Loading required package: parallel
-#> Loading required package: rstan
-#> Loading required package: ggplot2
-#> Loading required package: StanHeaders
-#> rstan (Version 2.17.3, GitRev: 2e1f913d3ca3)
-#> For execution on a local, multicore CPU with excess RAM we recommend calling
-#> options(mc.cores = parallel::detectCores()).
-#> To avoid recompilation of unchanged Stan programs, we recommend calling
-#> rstan_options(auto_write = TRUE)
 
 # We remove the data we dont neeed
 aids <- aids[aids$Time == aids$stop, ]
@@ -81,23 +67,23 @@ max(aids$stop[aids$event == 1]) # Last person with event
 
 # Fit model with extended Kalman filter
 fit <- ddhazard(
-  Surv(stop, event) ~ AZT + gender + drug + prevOI,
+  Surv(stop, event) ~ ddFixed_intercept() + ddFixed(AZT) + gender + 
+    ddFixed(drug) + ddFixed(prevOI),
   aids,
   model = "exponential",          # piecewise constant exponentially distributed 
                                   # arrivals times
   by = .5,                        # Length of time intervals in state space 
                                   # model
   max_T = 19,                     # Last period we observe when modeling
-  Q = diag(.01, 5),               # Covariance matrix for state equation in 
+  Q = .1^2,                       # Covariance matrix for state equation in 
                                   # first iteration
-  Q_0 = diag(10, 5),              # Covariance matrix for the prior
+  Q_0 = 1,                        # Covariance matrix for the prior
   control = list(
     eps = .001,                   # tolerance for EM-algorithm
-    NR_eps = 1e-5,                # Use more iteration of the EKF
-    LR = .5,                      # Learning rate
-    n_max = 20                    # Max number iterations in EM
+    LR = .9,                      # Learning rate
+    n_max = 100                   # Max number iterations in EM
     ))
-#> a_0 not supplied. IWLS estimates of static glm model is used
+#> a_0 not supplied. IWLS estimates of static glm model is used for random walk models. Otherwise the values are zero
 
 # Plot the estimates. Dashed lines are 95% confidence bounds
 plot(fit)
@@ -108,6 +94,7 @@ plot(fit)
 ``` r
 
 # Bootstrap the estimates
+set.seed(87754771)
 boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
 
 # Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
@@ -118,13 +105,7 @@ plot(fit, ddhazard_boot = boot_out)
 
 ![](README-ddhazard_fit-2.png)
 
-Bootstrapping only slightly changes the confidence bounds. It seems that:
-
--   It is hard to tell the difference between the two drugs. The `ddi` may be more effective in the latter period (the estimates is negative) though the point-wise confidence bounds still contains 0. Further, this comment neglect that the confidence bounds are point-wise.
--   Having aids rather than being enrolled (only) due to two CD4 counts of 300 or fewer is associated with an increased risk of dying.
--   Males seems to be at lower risk in the first period.
-
-An example of a paper analyzing the CD4 count can be found in Guo & Carlin (2004). They also fit a static model (time-invariant coefficients) of the survival times with an exponential model. The estimates are comparable with those above as expected.
+Bootstrapping only slightly changes the confidence bounds. An example of a paper analyzing the CD4 count can be found in Guo & Carlin (2004). They also fit a static model (time-invariant coefficients) of the survival times with an exponential model. The estimates are comparable with those above as expected.
 
 Example - particle filter and smoother
 --------------------------------------
@@ -132,38 +113,29 @@ Example - particle filter and smoother
 A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data. We only use a time-varying effect for gender this time.
 
 ``` r
-options(ddhazard_max_threads = 4) # I use a quad-core machine
-
 set.seed(20170907)
 pf_fit <- PF_EM(
   Surv(stop, event) ~ ddFixed_intercept() + ddFixed(AZT) + gender + 
     ddFixed(drug) + ddFixed(prevOI),
-  aids,
-  model = "exponential",
-  by = .5,  
-  max_T = 19,
-  Q = .01,
-  Q_0 = 1,
+  aids, model = "exponential",
+  by = .5,  max_T = 19, Q = .5^2, Q_0 = 1,
   control = PF_control(
+    n_threads = 4, # I use a quad-core machine
     # set number of particles
-    N_fw_n_bw = 1000, 
-    N_first = 1000,
+    N_fw_n_bw = 1000, N_first = 1000,
     N_smooth = 1, # Does not matter with Brier_O_N_square
-    
     smoother = "Brier_O_N_square", # Select smoother
-    
-    eps = .001, 
-    n_max = 100)
+    eps = .001, n_max = 100, est_a_0 = FALSE, Q_tilde = as.matrix(.2^2))
   #, trace = 1 # comment back to get feedback during estimation
   )
-#> a_0 not supplied. IWLS estimates of static glm model is used
+#> a_0 not supplied. IWLS estimates of static glm model is used for random walk models. Otherwise the values are zero
 ```
 
 ``` r
 # Compare estimates of Q
 pf_fit$Q / .5
 #>            [,1]
-#> [1,] 0.04169318
+#> [1,] 0.04034838
 fit$Q
 #>               (Intercept)    AZTfailure    gendermale       drugddI
 #> (Intercept)  0.0092783394 -1.794496e-04 -2.810209e-04 -2.398848e-04
@@ -180,13 +152,20 @@ fit$Q
 plot(pf_fit)
 ```
 
-![](README-pf_plots-1.png)
+![](README-pf_plots-1.png)![](README-pf_plots-2.png)
 
 ``` r
 plot(pf_fit$log_likes) # log-likelihoods
 ```
 
-![](README-pf_plots-2.png)
+![](README-pf_plots-3.png)
+
+``` r
+
+# better estimate of final log-likelihood
+logLik(PF_forward_filter(pf_fit, N_fw = 10000, N_first = 10000))
+#> [1] -791.0708
+```
 
 For more details, see the "Particle filters in the dynamichazard package" vignette at <https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf>
 

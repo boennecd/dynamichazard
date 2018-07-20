@@ -1,6 +1,9 @@
 # dynamichazard 0.6.0
 * The averages used in the Taylor approximation in the backward smoothing have 
 changed so the resuls differ for `PF_EM`.
+* Bug is fixed with the `..._w_particles` methods so results have changed.
+* mode estimation is now done in the proposal distribution with more than one
+iteration.
 
 # dynamichazard 0.5.2
 * Fixed effects is estimated faster with `PF_EM` and can be estimated 

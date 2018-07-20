@@ -120,12 +120,14 @@ input_for_normal_apprx taylor_normal_approx(
     pf_base_dens&, const PF_data&,
     const unsigned int, const arma::mat&, const arma::vec&,
     const arma::vec&, arma::uvec& /* non-const avoid copy /w arma */,
-    const unsigned int, const bool, const bool);
+    const unsigned int, const bool, const bool,
+    const unsigned int max_steps = 5);
 
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens&, const PF_data&, const unsigned int,
     const arma::mat&, const arma::vec&, const arma::vec&,
-    const unsigned int, const bool, const bool);
+    const unsigned int, const bool, const bool,
+    const unsigned int max_steps = 5);
 
 /* ------------------------------------------- */
 

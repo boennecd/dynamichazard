@@ -14,7 +14,8 @@ input_for_normal_apprx taylor_normal_approx(
     const unsigned int t, const arma::mat &Q_inv, const arma::vec &alpha_bar,
     const arma::vec &mean_term,
     arma::uvec &r_set, const unsigned int debug_lvl,
-    const bool multithread, const bool is_forward){
+    const bool multithread, const bool is_forward,
+    const unsigned int max_steps){
   if(data.debug > debug_lvl){
     data.log(debug_lvl) << "Computing normal approximation with mean vector:" << std::endl
                         << alpha_bar.t()
@@ -37,8 +38,8 @@ input_for_normal_apprx taylor_normal_approx(
 
   /* initalize output */
   const arma::uword r = data.err_dim;
-  arma::mat Sigma_inv(r, r, arma::fill::zeros);
-  ans.mu = arma::vec(r, arma::fill::zeros);
+  arma::mat Sigma_inv(r, r);
+  ans.mu = arma::vec(r);
   arma::vec &mu = ans.mu;
 
   arma::vec state = alpha_bar;
@@ -60,9 +61,12 @@ input_for_normal_apprx taylor_normal_approx(
 #endif
 
   unsigned int k = 0;
+  double conv;
   do {
     ++k;
     arma::vec coefs = data.err_state_inv->map(state).sv, state_old = state;
+    mu.zeros();
+    Sigma_inv.zeros();
 
 #ifdef _OPENMP
 #pragma omp parallel if(multithread)
@@ -151,14 +155,15 @@ input_for_normal_apprx taylor_normal_approx(
       state += data.err_state->map(mu).sv;
     state += mean_term;
     state = solve_w_precomputed_chol(ans.Sigma_inv_chol, state);
-    double conv = arma::norm(state - state_old);
+    conv =
+      arma::norm(state - state_old, 1) / (arma::norm(state_old, 1) + 1e-8);
 
     if(data.debug > debug_lvl){
       data.log(debug_lvl) << "convergence criteria in mode estimation iteration "
                           << k << " is " << conv << " with " << std::endl
                           << state.t() << state_old.t();
     }
-  } while (false);
+  } while (conv >= 1e-4 and k < max_steps);
 
 #ifdef _OPENMP
   if(multithread){
@@ -185,7 +190,7 @@ input_for_normal_apprx taylor_normal_approx(
     const arma::mat &Q_inv, const arma::vec &alpha_bar,
     const arma::vec &mean_term,
     const unsigned int debug_lvl, const bool multithread,
-    const bool is_forward){
+    const bool is_forward, const unsigned int max_steps){
   /*
    Had similar issues as posted here:
    http://lists.r-forge.r-project.org/pipermail/rcpp-devel/2013-June/005968.html
@@ -198,7 +203,7 @@ input_for_normal_apprx taylor_normal_approx(
   return(
     taylor_normal_approx
     (dens_calc, data, t, Q_inv, alpha_bar, mean_term, r_set, debug_lvl,
-     multithread, is_forward));
+     multithread, is_forward, max_steps));
 }
 
 /*----------------------------------------------------*/
