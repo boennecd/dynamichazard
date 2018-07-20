@@ -12,6 +12,7 @@
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens &dens_calc, const PF_data &data,
     const unsigned int t, const arma::mat &Q_inv, const arma::vec &alpha_bar,
+    const arma::vec &mean_term,
     arma::uvec &r_set, const unsigned int debug_lvl,
     const bool multithread, const bool is_forward){
   if(data.debug > debug_lvl){
@@ -36,10 +37,11 @@ input_for_normal_apprx taylor_normal_approx(
 
   /* initalize output */
   const arma::uword r = data.err_dim;
-  arma::vec coefs = data.err_state_inv->map(alpha_bar).sv;
   arma::mat Sigma_inv(r, r, arma::fill::zeros);
   ans.mu = arma::vec(r, arma::fill::zeros);
   arma::vec &mu = ans.mu;
+
+  arma::vec state = alpha_bar;
 
   /* Add the terms that does depend on the outcome */
   auto jobs =
@@ -47,102 +49,125 @@ input_for_normal_apprx taylor_normal_approx(
   unsigned int n_jobs = jobs.size();
 
 #ifdef _OPENMP
-  /*
-Use lock as critical section will not do if this function is called in
-nested parallel setup. See https://stackoverflow.com/a/20447843
-*/
+  /* Use lock as critical section will not do if this function is called in
+   * nested parallel setup. See https://stackoverflow.com/a/20447843 */
   omp_lock_t *lock;
   if(multithread){
     lock = new omp_lock_t;
     omp_init_lock(lock);
   } else
     lock = nullptr;
-#pragma omp parallel if(multithread)
-{
 #endif
 
-  arma::vec starts;
-  arma::vec stops;
-  arma::mat my_Sigma_inv(r, r, arma::fill::zeros);
-  arma::vec my_mu(r, arma::fill::zeros);
+  unsigned int k = 0;
+  do {
+    ++k;
+    arma::vec coefs = data.err_state_inv->map(state).sv, state_old = state;
+
+#ifdef _OPENMP
+#pragma omp parallel if(multithread)
+    {
+#endif
+
+    arma::vec starts;
+    arma::vec stops;
+    arma::mat my_Sigma_inv(r, r, arma::fill::zeros);
+    arma::vec my_mu(r, arma::fill::zeros);
 
 #ifdef _OPENMP
 #pragma omp for schedule(static)
 #endif
-  for(unsigned int i = 0; i < n_jobs; ++i){
-    auto &job = jobs[i];
-    arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
+    for(unsigned int i = 0; i < n_jobs; ++i){
+      auto &job = jobs[i];
+      arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
 
-    arma::vec eta =  get_linear_product(coefs, data.X, my_r_set);
-    arma::vec offsets = data.fixed_effects(my_r_set);
-    eta += offsets;
-    const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
+      arma::vec eta =  get_linear_product(coefs, data.X, my_r_set);
+      arma::vec offsets = data.fixed_effects(my_r_set);
+      eta += offsets;
+      const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
-    if(uses_at_risk_length){
-      starts = data.tstart(my_r_set);
-      stops = data.tstop(my_r_set);
-    }
-
-    auto it_eta = eta.begin();
-    auto it_off = offsets.begin();
-    auto it_is_event = is_event.begin();
-    auto it_r = my_r_set.begin();
-    auto it_start = starts.begin();
-    auto it_stops = stops.begin();
-    arma::uword n_elem = eta.n_elem;
-    /* Update with inverse of sigma and mu */
-    for(arma::uword i = 0; i < n_elem;
-        ++i, ++it_eta, ++it_is_event, ++it_r, ++it_off){
-      double at_risk_length = 0;
       if(uses_at_risk_length){
-        at_risk_length = get_at_risk_length(
-          *(it_stops++) /* increament here */, bin_stop,
-          *(it_start++) /* increament here */, bin_start);
-
+        starts = data.tstart(my_r_set);
+        stops = data.tstop(my_r_set);
       }
 
-      auto trunc_eta = dens_calc.truncate_eta(
-        *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
-      double g = dens_calc.d_log_like(
-        *it_is_event, trunc_eta, at_risk_length);
-      double neg_G = - dens_calc.dd_log_like(
-        *it_is_event, trunc_eta, at_risk_length);
+      auto it_eta = eta.begin();
+      auto it_off = offsets.begin();
+      auto it_is_event = is_event.begin();
+      auto it_r = my_r_set.begin();
+      auto it_start = starts.begin();
+      auto it_stops = stops.begin();
+      arma::uword n_elem = eta.n_elem;
+      /* Update with inverse of sigma and mu */
+      for(arma::uword i = 0; i < n_elem;
+          ++i, ++it_eta, ++it_is_event, ++it_r, ++it_off){
+        double at_risk_length = 0;
+        if(uses_at_risk_length){
+          at_risk_length = get_at_risk_length(
+            *(it_stops++) /* increament here */, bin_stop,
+            *(it_start++) /* increament here */, bin_start);
 
-      arma::vec x_err_space = data.X.col(*it_r);
-      sym_mat_rank_one_update(neg_G, x_err_space, my_Sigma_inv);
-      my_mu += x_err_space * (((*it_eta - *it_off) * neg_G) + g);
+        }
+
+        auto trunc_eta = dens_calc.truncate_eta(
+          *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
+        double g = dens_calc.d_log_like(
+          *it_is_event, trunc_eta, at_risk_length);
+        double neg_G = - dens_calc.dd_log_like(
+          *it_is_event, trunc_eta, at_risk_length);
+
+        arma::vec x_err_space = data.X.col(*it_r);
+        sym_mat_rank_one_update(neg_G, x_err_space, my_Sigma_inv);
+        my_mu += x_err_space * (((*it_eta - *it_off) * neg_G) + g);
+      }
     }
-  }
 
 #ifdef _OPENMP
-  if(multithread)
-    omp_set_lock(lock);
+    if(multithread)
+      omp_set_lock(lock);
 #endif
 
-  Sigma_inv += my_Sigma_inv;
-  mu += my_mu;
+    Sigma_inv += my_Sigma_inv;
+    mu += my_mu;
 
 #ifdef _OPENMP
-  if(multithread)
-    omp_unset_lock(lock);
+    if(multithread)
+      omp_unset_lock(lock);
+    } // end omp parallel
 #endif
 
+    /* copy to lower */
+    Sigma_inv = arma::symmatu(Sigma_inv);
+    if(!is_forward)
+      Sigma_inv = data.err_state->map(Sigma_inv).sv;
+    Sigma_inv += Q_inv;
+    ans.Sigma_inv_chol = arma::chol(Sigma_inv);
+
+    /* check mode estimate */
+    state.zeros();
+    if(is_forward)
+      state += mu;
+    else
+      state += data.err_state->map(mu).sv;
+    state += mean_term;
+    state = solve_w_precomputed_chol(ans.Sigma_inv_chol, state);
+    double conv = arma::norm(state - state_old);
+
+    if(data.debug > debug_lvl){
+      data.log(debug_lvl) << "convergence criteria in mode estimation iteration "
+                          << k << " is " << conv << " with " << std::endl
+                          << state.t() << state_old.t();
+    }
+  } while (false);
+
 #ifdef _OPENMP
-  } // end omp parallel
   if(multithread){
     omp_destroy_lock(lock);
     delete lock;
   }
 #endif
 
-  /* copy to lower */
-  Sigma_inv = arma::symmatu(Sigma_inv);
-  if(!is_forward)
-    Sigma_inv = data.err_state->map(Sigma_inv).sv;
-  Sigma_inv += Q_inv;
-
   /* Compute needed factorizations */
-  ans.Sigma_inv_chol = arma::chol(Sigma_inv);
   ans.Sigma = arma::inv(Sigma_inv);
   ans.Sigma_chol = arma::chol(ans.Sigma);
   ans.sigma_chol_inv = arma::inv(arma::trimatu(ans.Sigma_chol));
@@ -158,6 +183,7 @@ nested parallel setup. See https://stackoverflow.com/a/20447843
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens &dens_calc, const PF_data &data, const unsigned int t,
     const arma::mat &Q_inv, const arma::vec &alpha_bar,
+    const arma::vec &mean_term,
     const unsigned int debug_lvl, const bool multithread,
     const bool is_forward){
   /*
@@ -171,8 +197,8 @@ input_for_normal_apprx taylor_normal_approx(
 
   return(
     taylor_normal_approx
-    (dens_calc, data, t, Q_inv, alpha_bar, r_set, debug_lvl, multithread,
-     is_forward));
+    (dens_calc, data, t, Q_inv, alpha_bar, mean_term, r_set, debug_lvl,
+     multithread, is_forward));
 }
 
 /*----------------------------------------------------*/
@@ -198,25 +224,37 @@ inline void debug_before_solve(
 input_for_normal_apprx_w_cloud_mean
   taylor_normal_approx_w_cloud_mean(
     pf_base_dens &dens_calc, const PF_data &data,
-    const unsigned int t, const covarmat &Q, const arma::vec &alpha_bar,
+    const unsigned int t, const covarmat &Q, const arma::vec &parent,
     cloud &cl, const bool is_forward){
     const arma::mat *Q_inv;
     const arma::vec *mu_term;
+    arma::vec alpha_bar, mean_term_approx;
     if(!is_forward){
       arma::mat tmp = data.state_trans_err->map(Q.inv(), both, trans).sv;
       Q_inv = new arma::mat(tmp + data.uncond_covar_inv(t));
       mu_term = &data.uncond_mean_term(t);
+
+      alpha_bar = data.bw_mean(t, parent);
+      mean_term_approx = data.err_state_inv->map(parent).sv;
+      mean_term_approx = solve_w_precomputed_chol(Q.chol(), mean_term_approx);
+      mean_term_approx =
+        data.state_trans_err->map(mean_term_approx, trans).sv + *mu_term;
 
     } else {
       Q_inv = &Q.inv();
       // avoid wmaybe-uninitialized
       mu_term = nullptr;
 
+      alpha_bar = data.state_trans->map(parent).sv;
+      mean_term_approx = data.err_state_inv->map(alpha_bar).sv;
+      mean_term_approx = solve_w_precomputed_chol(Q.chol(), mean_term_approx);
+
     }
 
     input_for_normal_apprx_w_cloud_mean ans =
       taylor_normal_approx
-      (dens_calc, data, t, *Q_inv, alpha_bar, 2, true, is_forward);
+      (dens_calc, data, t, *Q_inv, alpha_bar, mean_term_approx, 2, true,
+       is_forward);
 
     auto n_elem = cl.size();
     ans.mu_js = std::vector<arma::vec>(n_elem);
@@ -298,26 +336,25 @@ input_for_normal_apprx_w_particle_mean
    mu_iterator iter = b + i;
    const arma::vec &this_state = Func::get_elem(iter);
    arma::vec alpha_bar = this_state;
-   if(is_forward)
-     alpha_bar = data.state_trans->map(alpha_bar).sv;
-   else
-     alpha_bar = data.bw_mean(t, alpha_bar);
-
-   auto inter = taylor_normal_approx
-     (dens_calc, data, t, *Q_inv, alpha_bar, r_set, 5, false, is_forward);
-
    arma::vec &mu = ans[i].mu;
    arma::vec &xi = ans[i].xi;
+
    if(is_forward){
+     alpha_bar = data.state_trans->map(alpha_bar).sv;
      mu = data.state_trans_err->map(this_state).sv;
      mu = solve_w_precomputed_chol(Q.chol(), mu);
 
-   } else {
-     mu = data.err_state_inv   ->map(this_state).sv;
+   }
+   else{
+     alpha_bar = data.bw_mean(t, alpha_bar);
+     mu = data.err_state_inv->map(this_state).sv;
      mu = solve_w_precomputed_chol(Q.chol(), mu);
      mu = data.state_trans_err->map(mu, trans).sv + *mu_term;
 
    }
+
+   auto inter = taylor_normal_approx
+     (dens_calc, data, t, *Q_inv, alpha_bar, mu, r_set, 5, false, is_forward);
 
    debug_before_solve(data, this_state, inter.Sigma_inv, mu, inter.mu);
    mu = solve_w_precomputed_chol(inter.Sigma_inv_chol, mu) + inter.mu;

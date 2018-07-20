@@ -109,16 +109,11 @@ public:
       pf_base_dens &dens_calc, const PF_data &data, cloud &PF_cloud,
       unsigned int t, arma::uvec &outcome, bool &did_resample){
     /* Find weighted mean estimate */
-    arma::vec alpha_bar = PF_cloud.get_weigthed_mean();
-
-    if(is_forward)
-      alpha_bar = data.state_trans->map(alpha_bar).sv;
-    else
-      alpha_bar = data.bw_mean(t, alpha_bar);
+    arma::vec parent = PF_cloud.get_weigthed_mean();
 
     /* compute means and covariances */
     auto ans = taylor_normal_approx_w_cloud_mean
-      (dens_calc, data, t, data.Q, alpha_bar, PF_cloud, is_forward);
+      (dens_calc, data, t, data.Q, parent, PF_cloud, is_forward);
 
     /* Compute sampling weights */
     double max_weight =  -std::numeric_limits<double>::max();

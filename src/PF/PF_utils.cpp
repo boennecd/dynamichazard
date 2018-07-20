@@ -15,12 +15,12 @@ bw_fw_particle_combiner::bw_fw_particle_combiner
   Q(set_bw_fw_particle_combiner_Q(data, Q_trans)) {}
 
 arma::vec bw_fw_particle_combiner::operator()
-  (const particle &fw_p, const particle &bw_p) const {
-  return this->operator()(fw_p.get_state(), bw_p.get_state());
+  (const particle &fw_p, const particle &bw_p, const bool do_transform) const {
+  return this->operator()(fw_p.get_state(), bw_p.get_state(), do_transform);
 }
 
 arma::vec bw_fw_particle_combiner::operator()
-  (const arma::vec &fw_p, const arma::vec &bw_p) const {
+  (const arma::vec &fw_p, const arma::vec &bw_p, const bool do_transform) const {
   /* compute part of the mean from the forward particle */
   arma::vec mu = data.state_trans_err->map(fw_p).sv;
   mu = solve_w_precomputed_chol(Q_trans.chol(), mu);
@@ -32,6 +32,9 @@ arma::vec bw_fw_particle_combiner::operator()
     bw_term = solve_w_precomputed_chol(Q_trans.chol(), bw_term);
     mu += data.state_trans_err->map(bw_term, trans).sv;
   }
+
+  if(!do_transform)
+    return mu;
 
   return Q.mat() * mu;
 }

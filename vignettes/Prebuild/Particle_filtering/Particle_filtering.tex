@@ -43,6 +43,7 @@
 \newcommand{\Lbrac}[1]{\left[ #1\right]}
 \newcommand{\Lbrace}[1]{\left\{ #1\right\}}
 \newcommand{\Lparen}[1]{\left( #1\right)}
+\newcommand{\Lvert}[1]{\left\vert #1\right\vert}
 \newcommand{\Cond}[2]{\left. #1 \vphantom{#2} \right\vert  #2}
 
 % Operators
@@ -268,16 +269,21 @@ Thus, we need to sample from%
 %
 {\scriptsize %
 \begin{equation}\label{eqn:TaylorProposalForward}\begin{split}
-	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} &=  %
-		\normalC{\vec{\xi}_t}{\vec{\mu}_t}{\mat{\Sigma}_t} \\
+	\IDC{\cdot}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} &=  %
+		\normalC{\cdot}{
+			\vec{\mu}_t\Lparen{\partic{\vec{\alpha}}{t-1}{j}, \vecb{\xi}_t}
+		}{
+			\mat{\Sigma}_t\Lparen{\vecb{\xi}_t}
+		} \\
 %
 	\vecb{\xi}_t &= \mat{R}^{+}\mat{F}\vecb{\alpha}_{t - 1} \\
 %
-	\mat{\Sigma}_t^{-1} &= \mat{X}_t^\top
+	\mat{\Sigma}_t\Lparen{\vecb{\xi}_t}^{-1} &= \mat{X}_t^\top
 		\Lparen{-\mat{G}_t\Lparen{\vecb{\xi}_t + \vec{o}_t}}
 		\mat{X}_t + \mat{Q}^{-1}  \\
 %
-	\vec{\mu}_t &= \mat{\Sigma}_t\Lparen{
+	\vec{\mu}_t\Lparen{\partic{\vec{\alpha}}{t-1}{j}, \vecb{\xi}_t} 
+	&= \mat{\Sigma}_t\Lparen{\vecb{\xi}_t}\Lparen{
 		\mat{Q}^{-1}\mat{R}^{+}\mat{F}\partic{\vec{\alpha}}{t-1}{j} +
 		\mat{X}_t^\top \Lparen{-\mat{G}_t\Lparen{\vecb{\xi}_t + \vec{o}_t}}
 		\Lparen{
@@ -287,7 +293,7 @@ Thus, we need to sample from%
 		}
 	} \\
 %
-	 &= \mat{\Sigma}_t\Lparen{
+	 &= \mat{\Sigma}_t\Lparen{\vecb{\xi}_t}\Lparen{
 		\mat{Q}^{-1}\mat{R}^{+}\mat{F}\partic{\vec{\alpha}}{t-1}{j} +
 		\mat{X}_t^\top
 		\Lparen{
@@ -302,7 +308,16 @@ Thus, we need to sample from%
 %
 We can select  $\vecb{\alpha}_{t - 1}$ as the weighted mean given the particle cloud at time $t-1$ (that is, %
 $\{\partic{\vec{\alpha}}{t-1}{1}, \partic{\vec{\alpha}}{t-1}{2}, \dots \partic{\vec{\alpha}}{t-1}{\nPart}\}$%
-). This is similar to the second order random walk example in \cite{fearnhead10}. They use the mode which is feasible as the outcome only depends on one element of the state vector. The downside is an $\bigO{\nMax \dimState^2+\dimState^3}$ computational cost though independent of the number of particles, $\nPart$. The total cost of sampling is $\bigO{\nMax\dimState^2+\dimState^3 + \nPart\dimState^2}$. Another option is to set $\vecb{\alpha}_{t - 1} = \partic{\vec{\alpha}}{t-1}{j}$ for each particle $j = 1, 2, \dots, \nPart$ in the particle cloud at time $t - 1$. This will improve the Taylor expansion but yields an $\bigO{\nPart\Lparen{\nMax\dimState^2+\dimState^3}}$ computational cost. The extra $\nPart\nMax$ factor makes this much slower.
+). Observing that $\optorC{P}{\vec{\alpha}_t}{\vec{\alpha}_{t - 1}, \vec{y}_t}$ is log-concave, then following \cite{doucet00} we can set $\vecb{\mu}_t^{(0)} = \mat{F}\vecb{\alpha}_{t - 1}$ and for $k = 1, \dots$ %
+%
+\begin{enumerate}
+  \item Set $\vecb{\xi}_t^{(k - 1)} = \mat{R}^+ \vecb{\mu}_t^{(k - 1)}$ and let $\vecb{\mu}_t^{(k)} = \vec{\mu}_t\Lparen{\vecb{\alpha}_{t - 1}, \vecb{\xi}_t^{(k-1)}}$.
+  \item Stop if $\Lvert{\vecb{\mu}_t^{(k)} - \vecb{\mu}_t^{(k - 1)}} < \epsilon$. Otherwise set $k \leftarrow k + 1$ and repeat 1. 
+\end{enumerate}%
+%
+for some small $\epsilon$. The final functions $\vec{\mu}_t\Lparen{\cdot, \vecb{\xi}_t^{(k)}}$ and $\mat{\Sigma}_t\Lparen{\vecb{\xi}_t^{(k)}}$ defined in Equation~\eqref{eqn:TaylorProposalForward} are then used as the proposal distributions. Similar steps can be taken for the next proposal distributions. We will drop the argument in the functions in equations similar to Equation~\eqref{eqn:TaylorProposalForward} and we will not go into details as the steps are very similar.
+
+This is similar to the second order random walk example in \cite{fearnhead10}. They use the mode which is feasible as the outcome only depends on one element of the state vector. The downside is an $\bigO{\nMax \dimState^2+\dimState^3}$ computational cost though independent of the number of particles, $\nPart$. The total cost of sampling is $\bigO{\nMax\dimState^2+\dimState^3 + \nPart\dimState^2}$. Another option is to set $\vecb{\alpha}_{t - 1} = \partic{\vec{\alpha}}{t-1}{j}$ for each particle $j = 1, 2, \dots, \nPart$ in the particle cloud at time $t - 1$. This will improve the Taylor expansion but yields an $\bigO{\nPart\Lparen{\nMax\dimState^2+\dimState^3}}$ computational cost. The extra $\nPart\nMax$ factor makes this much slower.
 
 Next, we have the re-sampling weights. A simple solution is not to use an auxiliary particle filter as in the examples of \cite{fearnhead10} and set:
 
@@ -1067,33 +1082,49 @@ $\matLarrow{P}_t^{-1}\vecLarrow{m}_t$, and $\matLarrow{P}_t^{-1}$ for equation~\
 \texttt{bw\_covar(signed int)}, %
 \texttt{uncond\_mean\_term(signed int)}, and \texttt{uncond\_covar\_inv(signed int)}. The terms and factors that can will computed once using equation~\eqref{eqn:bwTransProp}.
 
-\subsection{Approximations}
-The approximations in equation~\eqref{eqn:TaylorProposalForward},~\eqref{eqn:bw_approx}~and~\eqref{eqn:approx_smooth} can be done as follow 
-
+\subsection{Proposal distribution}
+The proposal distributions in equation~\eqref{eqn:TaylorProposalForward},~\eqref{eqn:bw_approx}~and~\eqref{eqn:approx_smooth} can be done as follows. One input is an extra information matrix term which we denote by $\mat{B}$. This is $\mat{Q}^{-1}$ in Equation~\eqref{eqn:TaylorProposalForward}, %
+$\mat{P}_t^{-1} + \mat{F}^\top\mat{R}^{+\top}\mat{Q}^{-1}\mat{R}^+\mat{F}$%
+~in Equation~\eqref{eqn:bw_approx}, and \\%
+$\mat{R}^{+\top}\mat{Q}^{-1}\mat{R}^+ + \mat{F}^\top\mat{R}^{+\top}\mat{Q}^{-1}\mat{R}^+\mat{F}$%
+~ in Equation~\eqref{eqn:approx_smooth}. The other input is an extra mean term which we denote by $\vec{c}$. This is $\mat{Q}^{-1}\mat{R}^+\vecb{\alpha}_{t-1}$ in Equation~\eqref{eqn:TaylorProposalForward}, %
+$\mat{P}_t^{-1}\vec{m}_t + \mat{F}^\top\mat{R}^{+\top}\mat{Q}^{-1}\mat{R}^+\vecb{\alpha}_{t+1}$%
+~in Equation~\eqref{eqn:bw_approx}, and %
+$\mat{F}^\top\mat{R}^{+\top}\mat{Q}^{-1}\mat{R}^+\vecb{\alpha}_{t+1} + 
+	\mat{R}\mat{Q}^{-1}\mat{R}^+\vecb{\alpha}_{t-1}$~ for Equation~\eqref{eqn:approx_smooth}. Then given an initial value $\vecb{\mu}_t^{(0)}$ for $k = 1, \dots$%
+%
 \begin{enumerate}
-	\item Taylor develop around a given value $\vec{\xi}_t$ and compute %
-	$\vec{k} = \mat{X}_t^\top
+  \item Set $\vecb{\xi}_t^{(k - 1)} = \mat{R}^+ \vecb{\mu}_t^{(k - 1)}$. 
+  \item Compute %
+  {\scriptsize \begin{align*}
+  		\mat{\Sigma}_t^{(k)-} &= 
+  		\mat{R}\mat{X}_t^\top\Lparen{-\mat{G}_t\Lparen{
+  			\vecb{\xi}_t^{(k-1)}\mat{X}\mat{R}^\top + \vec{o}_t}
+  		} + \mat{B}  \\
+%
+	\vecb{\mu}_t^{(k)}
+	&= \mat{\Sigma}_t^{(k)}\Lparen{
+		\vec{c} +
+		\mat{R}\mat{X}_t^\top
 		\Lparen{
-			-\mat{G}_t\Lparen{\vec{\xi}_{t}}
-			\mat{X}_t\vecb{\xi}_{t} +
-			\vec{g}_t\Lparen{\vec{\xi}_{t}}
-		}$, %
-		$\mat{K} = \mat{X}_t^\top\Lparen{-\mat{G}_t\Lparen{\vec{\xi}_{t}}}\mat{X}_t$.
-	\item Given one or two pairs of means and covariance matrices%
-	$(\mat{S}_1, \vec{a}_1)\in \mathbb{R}^{\dimState\times\dimState}\times\mathbb{R}^\dimState$%
-	~and %
-	$(\mat{S}_2, \vec{a}_2)\in \mathbb{R}^{\dimState\times\dimState}\times\mathbb{R}^\dimState$%
-	~then compute %
-	%
-	\begin{align*}
-		\mat{\Sigma}^{-1} &= \mat{S}_1^{-1} + \mat{S}_2^{-1} + \mat{R}\mat{K}\mat{R}^\top \\
-		\vec{\mu} &= \mat{\Sigma}\Lparen{
-		    \mat{S}_1^{-1}\vec{a}_1 + 
-		    \mat{S}_2^{-1}\vec{a}_2 + \mat{R}\vec{k}}
-	\end{align*}
+			-\mat{G}_t\Lparen{\vecb{\xi}_t^{(k -1)} + \vec{o}_t}
+			\mat{X}_t\vecb{\xi}_t^{(k - 1)} - \vec{o}_t +
+			\vec{g}_t\Lparen{\vecb{\xi}_t^{(k -1)} + \vec{o}_t}
+		}
+	}
+  \end{align*}
+  }
+  \item Stop if $\Lvert{\vecb{\mu}_t^{(k)} - \vecb{\mu}_t^{(k - 1)}} < \epsilon$ and return $\mat{\Sigma}_t^{(k)}$ and \\%
+$\vec{t} = \mat{\Sigma}_t^{(k)}\mat{R}\mat{X}_t^\top
+		\Lparen{
+			-\mat{G}_t\Lparen{\vecb{\xi}_t^{(k -1)} + \vec{o}_t}
+			\mat{X}_t\vecb{\xi}_t^{(k -1)} - \vec{o}_t +
+			\vec{g}_t\Lparen{\vecb{\xi}_t^{(k -1)} + \vec{o}_t}
+		}$%
+. Otherwise set $k \leftarrow k + 1$ and repeat 1. 
 \end{enumerate}
 
-So a common task in Equation~\eqref{eqn:bw_approx}~and~\eqref{eqn:approx_smooth} is to compute $\mat{\Sigma}^{-1}$ and $\vec{k}$ given one or two $(\mat{S}_i,\vec{a}_i)$ pairs. Equation~\eqref{eqn:TaylorProposalForward} only the needs the $\dimRng\times\dimRng$ dimensional output since there is $\dimState - \dimRng$ elements that are constant. Thus, an \texttt{is\_forward} flag is used to indicate whether the $\dimRng$ dimensional output is returned. The function \texttt{taylor\_normal\_approx} returns $\mat{\Sigma}^{-1}$ and $\mat{\Sigma}\mat{R}\vec{k}$ (the latter to save some computation later). If \texttt{is\_forward = true} then the  $\mat{\Sigma}$ is as in Equation~\eqref{eqn:TaylorProposalForward} and  $\mat{\Sigma}\vec{k}$.
+The returned output it was we need to compute the proposal distribution. Equation~\eqref{eqn:TaylorProposalForward} only the needs the $\dimRng\times\dimRng$ dimensional output since there is $\dimState - \dimRng$ elements that are constant and where the multiplication by $\mat{R}$ and $\mat{R}^\top$ is not done. Thus, an \texttt{is\_forward} flag is used to indicate whether the $\dimRng$ dimensional output is returned in the function \texttt{taylor\_normal\_approx}.
 
 
 

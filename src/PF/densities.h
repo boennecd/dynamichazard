@@ -42,7 +42,7 @@ public:
         data.err_state_inv->map(state).sv,
         data.err_state_inv->map(
             data.state_trans->map(previous_state).sv).sv,
-            data.Q.chol_inv()));
+        data.Q.chol_inv()));
   }
 
   double log_artificial_prior(const particle &p, int t){

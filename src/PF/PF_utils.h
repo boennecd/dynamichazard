@@ -119,12 +119,12 @@ struct input_for_normal_apprx {
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens&, const PF_data&,
     const unsigned int, const arma::mat&, const arma::vec&,
-    arma::uvec& /* non-const avoid copy /w arma */,
+    const arma::vec&, arma::uvec& /* non-const avoid copy /w arma */,
     const unsigned int, const bool, const bool);
 
 input_for_normal_apprx taylor_normal_approx(
     pf_base_dens&, const PF_data&, const unsigned int,
-    const arma::mat&, const arma::vec&,
+    const arma::mat&, const arma::vec&, const arma::vec&,
     const unsigned int, const bool, const bool);
 
 /* ------------------------------------------- */
@@ -176,9 +176,11 @@ public:
 
   bw_fw_particle_combiner(const PF_data&);
 
-  arma::vec operator()(const particle&, const particle&) const;
+  arma::vec operator()(const particle&, const particle&,
+                       const bool do_transform = true) const;
 
-  arma::vec operator()(const arma::vec&, const arma::vec&) const;
+  arma::vec operator()(const arma::vec&, const arma::vec&,
+                       const bool do_transform = true) const;
 };
 
 /* ------------------------------------------- */
