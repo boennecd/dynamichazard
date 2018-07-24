@@ -18,16 +18,7 @@ knitr::opts_chunk$set(
 
 # dynamichazard
 
-The goal of dynamichazard is to estimate time-varying effects in survival analysis. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period.
-
-The estimation methods are implemented such: 
-
-* They have linear time complexity in both time and the number of observations.
-* Computation is done in `c++` using `BLAS` and `LAPACK`.
-* Use a `coxph` like formula from the survival package. Therefore, the methods are easily applied to panel datasets.
-* Allows for time-varying covariates.
-
-For more details, see the ddhazard vignette at https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf
+The goal of dynamichazard is to estimate time-varying effects in survival analysis. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period. For more details, see the ddhazard vignette at https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf
 
 ## Installation
 
@@ -121,17 +112,18 @@ pf_fit <- PF_EM(
   )
 ```
 
-```{r pf_plots, cache = 1, dependson = "pf_fit"}
+```{r pf_plots}
 # Compare estimates of Q
 pf_fit$Q / .5
 fit$Q
 plot(pf_fit)
 plot(pf_fit$log_likes) # log-likelihoods
+```
 
+```{r pf_better_log_like, cache = 1, dependson = "pf_fit"}
 # better estimate of final log-likelihood
 logLik(PF_forward_filter(pf_fit, N_fw = 10000, N_first = 10000))
 ```
-
 
 For more details, see the "Particle filters in the dynamichazard package" vignette at https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf
 

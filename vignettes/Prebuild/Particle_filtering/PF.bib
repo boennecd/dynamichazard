@@ -7,6 +7,36 @@
   publisher={JSTOR}
 }
 
+@article{louis82,
+ ISSN = {00359246},
+ URL = {http://www.jstor.org/stable/2345828},
+ abstract = {A procedure is derived for extracting the observed information matrix when the EM algorithm is used to find maximum likelihood estimates in incomplete data problems. The technique requires computation of a complete-data gradient vector or second derivative matrix, but not those associated with the incomplete data likelihood. In addition, a method useful in speeding up the convergence of the EM algorithm is developed. Two examples are presented.},
+ author = {Thomas A. Louis},
+ journal = {Journal of the Royal Statistical Society. Series B (Methodological)},
+ number = {2},
+ pages = {226--233},
+ publisher = {[Royal Statistical Society, Wiley]},
+ title = {Finding the Observed Information Matrix when Using the EM Algorithm},
+ volume = {44},
+ year = {1982}
+}
+
+@Article{kitagawa94,
+author="Kitagawa, Genshiro",
+title="The two-filter formula for smoothing and an implementation of the Gaussian-sum smoother",
+journal="Annals of the Institute of Statistical Mathematics",
+year="1994",
+month="Dec",
+day="01",
+volume="46",
+number="4",
+pages="605--623",
+abstract="A Gaussian-sum smoother is developed based on the two filter formula for smoothing. This facilitates the application of non-Gaussian state space modeling to diverse problems in time series analysis. It is especially useful when a higher order state vector is required and the application of the non-Gaussian smoother based on direct numerical computation is impractical. In particular, applications to the non-Gaussian seasonal adjustment of economic time series and to the modeling of seasonal time series with several outliers are shown.",
+issn="1572-9052",
+doi="10.1007/BF00773470",
+url="https://doi.org/10.1007/BF00773470"
+}
+
 @article{kitagawa96,
   title={Monte Carlo filter and smoother for non-Gaussian nonlinear state space models},
   author={Kitagawa, Genshiro},
@@ -108,6 +138,15 @@ url="https://doi.org/10.1023/A:1008935410038"
   organization={IEEE}
 }
 
+@book{cappe05,
+ author = {Capp{\'e}, Olivier and Moulines, Eric and Ryden, Tobias},
+ title = {Inference in Hidden Markov Models},
+ year = {2005},
+ isbn = {978-0-387-40264-2, 978-1-4419-2319-6},
+ publisher = {Springer-Verlag New York},
+} 
+
+
 @inproceedings{klaas06,
   title={Fast particle smoothing: If I had a million particles},
   author={Klaas, Mike and Briers, Mark and De Freitas, Nando and Doucet, Arnaud and Maskell, Simon and Lang, Dustin},
@@ -127,6 +166,24 @@ url="https://doi.org/10.1023/A:1008935410038"
   year={2009}
 }
 
+@Article{briers09,
+author="Briers, Mark
+and Doucet, Arnaud
+and Maskell, Simon",
+title="Smoothing algorithms for state--space models",
+journal="Annals of the Institute of Statistical Mathematics",
+year="2009",
+month="Jun",
+day="09",
+volume="62",
+number="1",
+pages="61",
+abstract="Two-filter smoothing is a principled approach for performing optimal smoothing in non-linear non-Gaussian state--space models where the smoothing distributions are computed through the combination of `forward' and `backward' time filters. The `forward' filter is the standard Bayesian filter but the `backward' filter, generally referred to as the backward information filter, is not a probability measure on the space of the hidden Markov process. In cases where the backward information filter can be computed in closed form, this technical point is not important. However, for general state--space models where there is no closed form expression, this prohibits the use of flexible numerical techniques such as Sequential Monte Carlo (SMC) to approximate the two-filter smoothing formula. We propose here a generalised two-filter smoothing formula which only requires approximating probability distributions and applies to any state--space model, removing the need to make restrictive assumptions used in previous approaches to this problem. SMC algorithms are developed to implement this generalised recursion and we illustrate their performance on various problems.",
+issn="1572-9052",
+doi="10.1007/s10463-009-0236-2",
+url="https://doi.org/10.1007/s10463-009-0236-2"
+}
+
 @article{fearnhead10,
   title={A sequential smoothing algorithm with linear computational cost},
   author={Fearnhead, Paul and Wyncoll, David and Tawn, Jonathan},
@@ -136,17 +193,6 @@ url="https://doi.org/10.1023/A:1008935410038"
   pages={447--464},
   year={2010},
   publisher={Oxford University Press}
-}
-
-@article{briers10,
-  title={Smoothing algorithms for state--space models},
-  author={Briers, Mark and Doucet, Arnaud and Maskell, Simon},
-  journal={Annals of the Institute of Statistical Mathematics},
-  volume={62},
-  number={1},
-  pages={61--89},
-  year={2010},
-  publisher={Springer}
 }
 
 @article{del10,
@@ -167,6 +213,20 @@ url="https://doi.org/10.1023/A:1008935410038"
   publisher={Elsevier}
 }
 
+@article{poyiadjis11,
+ ISSN = {00063444},
+ URL = {http://www.jstor.org/stable/29777165},
+ abstract = {Particle methods are popular computational tools for Bayesian inference in nonlinear non-Gaussian state space models. For this class of models, we present two particle algorithms to compute the score vector and observed information matrix recursively. The first algorithm is implemented with computational complexity ð’ª(N) and the second with complexity ð’ª(NÂ²), where N is the number of particles. Although cheaper, the performance of the ð’ª(N) method degrades quickly, as it relies on the approximation of a sequence of probability distributions whose dimension increases linearly with time. In particular, even under strong mixing assumptions, the variance of the estimates computed with the ð’ª(N) method increases at least quadratically in time. The more expensive ð’ª(NÂ²) method relies on a nonstandard particle implementation and does not suffer from this rapid degradation. It is shown how both methods can be used to perform batch and recursive parameter estimation.},
+ author = {George Poyiadjis and Arnaud Doucet and Sumeetpal S. Singh},
+ journal = {Biometrika},
+ number = {1},
+ pages = {65--80},
+ publisher = {Biometrika Trust},
+ title = {Particle approximations of the score and observed information matrix in state space models with application to parameter estimation},
+ volume = {98},
+ year = {2011}
+}
+
 @article{schon11,
   title={System identification of nonlinear state-space models},
   author={Sch{\"o}n, Thomas B and Wills, Adrian and Ninness, Brett},
@@ -176,6 +236,21 @@ url="https://doi.org/10.1023/A:1008935410038"
   pages={39--49},
   year={2011},
   publisher={Elsevier}
+}
+
+@article{wood14,
+author = {Simon Wood and Yannig Goude and Simon Shaw},
+title = {Generalized additive models for large data sets},
+journal = {Journal of the Royal Statistical Society: Series C (Applied Statistics)},
+volume = {64},
+number = {1},
+year = {2014},
+pages = {139-155},
+keywords = {Correlated additive model, Electricity load prediction, Generalized additive model estimation},
+doi = {10.1111/rssc.12068},
+url = {https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/rssc.12068},
+eprint = {https://rss.onlinelibrary.wiley.com/doi/pdf/10.1111/rssc.12068},
+abstract = {Summary We consider an application in electricity grid load prediction, where generalized additive models are appropriate, but where the data set's size can make their use practically intractable with existing methods. We therefore develop practical generalized additive model fitting methods for large data sets in the case in which the smooth terms in the model are represented by using penalized regression splines. The methods use iterative update schemes to obtain factors of the model matrix while requiring only subblocks of the model matrix to be computed at any one time. We show that efficient smoothing parameter estimation can be carried out in a well-justified manner. The grid load prediction problem requires updates of the model fit, as new data become available, and some means for dealing with residual auto-correlation in grid load. Methods are provided for these problems and parallel implementation is covered. The methods allow estimation of generalized additive models for large data sets by using modest computer hardware, and the grid load prediction problem illustrates the utility of reduced rank spline smoothing methods for dealing with complex modelling problems.}
 }
 
 @article{kantas15,

@@ -279,4 +279,14 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
   fw_ps <- PF_forward_filter(pf_fit, N_fw = 500, N_first = 2000)
   expect_false(isTRUE(all.equal(end_log_like, logLik(fw_ps))))
   expect_equal(seed_now, .GlobalEnv$.Random.seed)
+
+  # should give the same when called again
+  fw_ps_2 <- PF_forward_filter(pf_fit, N_fw = 500, N_first = 2000)
+  expect_equal(fw_ps, fw_ps_2)
+
+  # but not when we change the seed argument
+  runif(100)
+  fw_ps_3 <- PF_forward_filter(
+    pf_fit, N_fw = 500, N_first = 2000, seed = .Random.seed)
+  expect_false(isTRUE(all.equal(fw_ps, fw_ps_3)))
 })

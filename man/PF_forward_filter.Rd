@@ -8,7 +8,7 @@
 \usage{
 PF_forward_filter(x, N_fw, N_first, ...)
 
-\method{PF_forward_filter}{PF_EM}(x, N_fw, N_first, ...)
+\method{PF_forward_filter}{PF_EM}(x, N_fw, N_first, seed, ...)
 
 \method{PF_forward_filter}{formula}(x, N_fw, N_first, data, model = "logit",
   by, max_T, id, a_0, Q_0, Q, R, fixed_effects, control = PF_control(...),
@@ -22,6 +22,10 @@ PF_forward_filter(x, N_fw, N_first, ...)
 \item{N_first}{number of time zero particles to draw.}
 
 \item{...}{optional way to pass arguments to \code{control}.}
+
+\item{seed}{\code{.GlobalEnv$.Random.seed} to set. Not \code{seed} as in
+\code{\link{set.seed}} function. Can be used with the
+\code{\link{.Random.seed}} returned by \code{\link{PF_EM}}.}
 
 \item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
 
@@ -44,10 +48,6 @@ PF_forward_filter(x, N_fw, N_first, ...)
 \item{fixed_effects}{values for the fixed parameters.}
 
 \item{control}{see \code{\link{PF_control}}.}
-
-\item{seed}{\code{.GlobalEnv$.Random.seed} to set. Not \code{seed} as in
-\code{\link{set.seed}} function. Can be used with the
-\code{\link{.Random.seed}} returned by \code{\link{PF_EM}}.}
 
 \item{trace}{argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.}
 

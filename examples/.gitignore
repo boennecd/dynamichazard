@@ -1,0 +1,5 @@
+/*
+!.gitignore
+!*.Rmd
+!*.html
+!fig/firstOrderVAR-fig/*.png

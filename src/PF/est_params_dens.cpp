@@ -150,6 +150,10 @@ PF_parameters
                               arma::solve_opts::no_approx);
     out.R_top_F = arma::solve(R_from_QR    , out.R_top_F,
                               arma::solve_opts::no_approx);
+
+    /* current values is (R^\top F)^\top ! */
+    arma::inplace_trans(out.R_top_F);
+
     out.F = res.F;
     out.R = R_from_QR;
     out.dev = res.dev;

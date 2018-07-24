@@ -368,9 +368,9 @@ public:
       data.log(1) << "Finished finding forward and backward clouds. Started smoothing";
 
     auto fw_cloud = forward_clouds.begin();
-    //++fw_cloud; // first index is time 0 -- we need index 1 to start with
+    //++fw_cloud; // first index is time 0
     auto bw_cloud = backward_clouds.rbegin();
-    //++bw_cloud; // first index is time 1 -- we need index 2 to start with
+    //++bw_cloud; // first index is time 1
 
     double max_weight = -std::numeric_limits<double>::max();
     for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){

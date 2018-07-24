@@ -14,11 +14,14 @@ PF_effective_sample_size <- function(object){
 #' @param control see \code{\link{PF_control}}.
 #' @param trace argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.
 #' @param model either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.
-#' @param seed seed to set at the start of every EM iteration.
+#' @param seed seed to set at the start of every EM iteration. See
+#' \code{\link{set.seed}}.
 #' @param type type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 #' "VAR" for [V]ector [A]uto[R]egression.
 #' @param Fmat starting value for \eqn{F} when \code{type = "VAR"}. See
 #' 'Details'.
+#' @param fixed_effects starting values for fixed effects if any. See
+#' \code{\link{ddFixed}}.
 #' @param ... optional way to pass arguments to \code{control}.
 #'
 #' @details
@@ -140,7 +143,7 @@ PF_effective_sample_size <- function(object){
 PF_EM <- function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
   control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
-  ...){
+  fixed_effects, ...){
   #####
   # checks
   if(length(order) == 1 && order != 1)
@@ -190,7 +193,8 @@ PF_EM <- function(
     formula = formula, data = data, max_T = max_T, X = static_args$X,
     fixed_terms = static_args$fixed_terms, risk_set = static_args$risk_obj,
     verbose = trace > 0, n_threads = control$n_threads, model = model,
-    a_0 = if(missing(a_0)) NULL else a_0, order = order)
+    a_0 = if(missing(a_0)) NULL else a_0, order = order,
+    fixed_parems_start = if(missing(fixed_effects)) NULL else fixed_effects)
   a_0 <- start_coefs$a_0
   fixed_parems <- start_coefs$fixed_parems_start
 
@@ -314,7 +318,7 @@ PF_forward_filter <- function (x, N_fw, N_first, ...)
 #' @describeIn PF_forward_filter Forward particle filter with
 #' \code{\link{PF_EM}} results.
 #' @export
-PF_forward_filter.PF_EM <- function(x, N_fw, N_first, ...){
+PF_forward_filter.PF_EM <- function(x, N_fw, N_first, seed, ...){
   cl <- x$call
   cl <- cl[c(1, match(
     c("formula", "data", "model", "by", "max_T", "id", "control",
@@ -322,10 +326,13 @@ PF_forward_filter.PF_EM <- function(x, N_fw, N_first, ...){
     names(cl), 0))]
   names(cl)[2] <- "x"
   xSym <- substitute(x)
-  cl[ c("seed", "Fmat", "a_0", "Q", "R", "fixed_effects")] <-
+  cl[c("seed", "Fmat", "a_0", "Q", "R", "fixed_effects")] <-
     lapply(
       c("seed",    "F", "a_0", "Q", "R", "fixed_effects"),
       function(z) substitute(y$z, list(y = xSym, z = as.symbol(z))))
+  if(!missing(seed))
+    cl[["seed"]] <- substitute(seed)
+
   cl[c("N_fw", "N_first")] <- list(N_fw, N_first)
   cl[[1]] <- quote(PF_forward_filter)
 

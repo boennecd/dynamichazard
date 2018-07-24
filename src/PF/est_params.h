@@ -21,7 +21,7 @@ struct PF_parameters {
   arma::mat R_top_F;
   /* covariance matrix in state equation */
   arma::mat Q;
-  /* output form QR */
+  /* output form QR. Names are confusing though */
   arma::mat R;
   arma::mat F;
   arma::mat dev;

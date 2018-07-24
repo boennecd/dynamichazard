@@ -6,7 +6,7 @@
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
   control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
-  ...)
+  fixed_effects, ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -33,13 +33,17 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 
 \item{trace}{argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.}
 
-\item{seed}{seed to set at the start of every EM iteration.}
+\item{seed}{seed to set at the start of every EM iteration. See
+\code{\link{set.seed}}.}
 
 \item{type}{type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 "VAR" for [V]ector [A]uto[R]egression.}
 
 \item{Fmat}{starting value for \eqn{F} when \code{type = "VAR"}. See
 'Details'.}
+
+\item{fixed_effects}{starting values for fixed effects if any. See
+\code{\link{ddFixed}}.}
 
 \item{...}{optional way to pass arguments to \code{control}.}
 }
@@ -78,7 +82,7 @@ See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 \examples{
 #####
 # Fit model with lung data set from survival
-# Warning: this has a longer computation time
+# Warning: long-ish computation time
 
 \dontrun{
 library(dynamichazard)
@@ -105,17 +109,6 @@ plot(pf_fit, cov_index = 2)
 # Plot log-likelihood
 plot(pf_fit$log_likes)
 }
-
-#####
-# Can be compared with this example from ?coxph in R 3.4.1. Though, the above
-# only has a linear effect for age
-
-\dontrun{
-cox <- coxph(
- Surv(time, status) ~ ph.ecog + tt(age), data= .lung,
- tt=function(x,t,...) pspline(x + t/365.25))
-cox}
-
 
 \dontrun{
 ######
