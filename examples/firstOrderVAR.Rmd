@@ -2,7 +2,9 @@
 title: "First Order Vector Autoregression"
 author: "Benjamin Christoffersen"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  md_document:
+    variant: markdown_github
 bibliography: bibliography.bib
 ---
 
@@ -43,7 +45,7 @@ $$
 $$
 
 where the $y_{it}$'s are Poisson distributed event indicators conditional on 
-knowing the log time at risk, $\vec{o}_t$, covariates, $X_t$ and $Z_t$, and latent states, $\vec{\alpha}_t$. 
+knowing the log time at risk, $\vec{o}_t$, covariates, $X_t$ and $Z_t$, and latent states, $\vec{\alpha}_1,\dots,\vec{\alpha}_d$. 
 The model is a precise-wise constant exponentially distributed event times
 conditional on knowing the latent states. Further, we set $Z_t = X_t$ so the 
 states have a non-zero mean. The true values are 
@@ -68,8 +70,9 @@ $\vec{a}_0$ and $Q_0$ are given by the invariant distribution. The unknown
 parameters to be estimated is everything but $Q_0$ and $R$ (since we fix $Q_0$ doing the estimation and we set $\vec{a}_0 = (0, 0)^\top$). This 
 example is run on the git branch "`r git_bra`" with key "`r git_key`". The code
 can be found on 
-[the github site for the package](http://github.com/boennecd/dynamichazard/examples).
-All functions which assignments are not shown can be found on the github site.
+[the github site for the package](.).
+All functions which assignments are not shown and are not in the 
+`dynamichazard` package can be found on the github site.
 
 ## Simulation
 
@@ -104,7 +107,7 @@ beta <- c(-6.5, -2)
 ```
 
 `get_Q_0` is a function to get the covariance matrix for the invariant distribution.
-We then simulate and plot the latent variables
+We then simulate and plot the latent states
 
 ```{r sim_plot_latent}
 set.seed(54432125)
@@ -193,7 +196,7 @@ system.time(pf_Brier <- PF_EM(
   control = PF_control(
     N_fw_n_bw = 750, N_smooth = 1, N_first = 2000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 60, smoother = "Brier_O_N_square",
+    n_max = 100, smoother = "Brier_O_N_square",
     # we add some extra variation to the proposal distributions
     Q_tilde = diag(.3^2, 2), n_threads = n_threads)))
 ```
@@ -254,7 +257,7 @@ plot_cloud(pf_Brier)
 ```
 
 The dashed non-vertical lines are the true curve and the continuous is the smoothed estimate. The 
-approximate log-likelihood from the particle filter at the EM iterations are
+approximate log-likelihoods from the particle filter at the EM iterations are
 
 ```{r brier_log_like_far_F}
 plot(pf_Brier$log_likes)
@@ -276,7 +279,7 @@ system.time(pf_Fear <- PF_EM(
   control = PF_control(
     N_fw_n_bw = 500, N_smooth = 2000, N_first = 2000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 60, smoother = "Fearnhead_O_N",
+    n_max = 100, smoother = "Fearnhead_O_N",
     Q_tilde = diag(.3^2, 2), n_threads = n_threads)))
 ```
 
@@ -296,7 +299,7 @@ plot(pf_Fear$effective_sample_size$smoothed_clouds, type = "h",
      ylab = "Effective sample size")
 ```
 
-However, there are many options for speeding up the computation time as e.g, 
+However, there are many options to reduce the computation time for the former smoother as e.g, 
 mentioned in [@briers09] but those are not implemented. The smoothed estimates are 
 also rather close
 
@@ -310,7 +313,7 @@ The log-likelihoods are almost the same
 plot(pf_Fear$log_likes)
 ```
 
-The log-likelihood was still tending sloping towards the end but not monotonically
+The log-likelihood where flat toward the ensds and not monotonically increasing
 
 ```{r fear_log_like_far_F_tail}
 plot(tail(pf_Fear$log_likes, 20), type = "l")
@@ -337,7 +340,7 @@ pf_Fear_more <- PF_EM(
   fixed_effects = pf_Fear$fixed_effects, by = 1, type = "VAR", 
   model = "exponential", max_T = n_periods,
   control = PF_control(
-    N_fw_n_bw = 1000, N_smooth = 10000, N_first = 5000, eps = .001,
+    N_fw_n_bw = 5000, N_smooth = 10000, N_first = 5000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 10, smoother = "Fearnhead_O_N",
     Q_tilde = diag(.3^2, 2), n_threads = n_threads))
@@ -381,7 +384,7 @@ logLik(fw_true)
 The log-likelihood from the final model we estimated is
 
 ```{r end_log_like_before}
-print(tail(pf_Fear$log_likes, 1), digits = 7)
+print(tail(pf_Fear_more$log_likes, 1), digits = 7)
 ```
 
 or we can get a more precise estimate by calling (though the log-likelihood 
@@ -390,7 +393,7 @@ step prior as above)
 
 ```{r end_log_like_before_precise, cache = 1, dependson = "fear_far_F"}
 print(
-  logLik(PF_forward_filter(pf_Fear, N_fw = 10000, N_first = 10000)), 
+  logLik(PF_forward_filter(pf_Fear_more, N_fw = 20000, N_first = 20000)), 
   digits = 7)
 ```
 
@@ -412,7 +415,7 @@ pf_Fear_close <- PF_EM(
   control = PF_control(
     N_fw_n_bw = 500, N_smooth = 2000, N_first = 2000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 60, smoother = "Fearnhead_O_N",
+    n_max = 100, smoother = "Fearnhead_O_N",
     Q_tilde = diag(.3^2, 2), n_threads = n_threads))
 ```
 
