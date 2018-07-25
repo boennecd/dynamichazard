@@ -2,9 +2,7 @@
 title: "First Order Vector Autoregression"
 author: "Benjamin Christoffersen"
 date: "`r Sys.Date()`"
-output: 
-  md_document:
-    variant: markdown_github
+output: html_document
 bibliography: bibliography.bib
 ---
 
