@@ -314,7 +314,7 @@ plot(pf_Fear$log_likes)
 The log-likelihood where flat toward the ensds and not monotonically increasing
 
 ```{r fear_log_like_far_F_tail}
-plot(tail(pf_Fear$log_likes, 20), type = "l")
+plot(tail(pf_Fear$log_likes, 20))
 ```
 
 ```{r clean_up, echo = FALSE}
