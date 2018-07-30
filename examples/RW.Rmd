@@ -1,0 +1,307 @@
+---
+title: "First Order Random Walk"
+author: "Benjamin Christoffersen"
+date: "`r Sys.Date()`"
+output: html_document
+bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.height = 4, fig.width = 7, dpi = 128,
+  cache.path = "cache/RW-cache/", fig.path = "fig/RW-fig/", 
+  error = FALSE)
+options(digits = 4, scipen = 10, width = 70)
+```
+
+```{r confs, echo = FALSE, cache = 1}
+n_threads <- 4 # I ran this on a quad core machine
+
+# you can replace this with e.g.,  
+# max(parallel::detectCores(logical = FALSE), 2)))
+```
+
+```{r ass_cols, echo = FALSE}
+palette(c("black", "darkblue"))
+```
+
+
+## Introduction
+
+We will simulate and estimate a random walk model in this example using the 
+particle filter and smoother. For details see 
+[this vignette](../vignettes/Particle_filtering.pdf) which can also be found by 
+calling `vignette("Particle_filtering", package = "dynamichazard")`. The models 
+we are going to simulate from and estimate are of the form 
+
+$$
+\begin{split}
+ 	y_{it} &\sim g(\cdot\vert\eta_{it}) &  \\
+ 	\vec{\eta}_t &= X_tR^+\vec{\alpha}_t \\
+ 	\vec{\alpha}_t &= F\vec{\alpha}_{t - 1} + R\vec{\epsilon}_t &
+ 		\quad \vec{\epsilon}_t \sim N(\vec{0}, Q) \\
+	& &	\quad \vec{\alpha}_0 \sim N(\vec{a}_0, Q_0)
+\end{split}, \qquad
+\begin{array}{l} i = 1, \dots, n_t \\ t = 1, \dots, d \end{array}
+$$
+
+where the $y_{it}$'s are binary event indicators for individual $i$ at 
+time $t$. It is one if individual $i$ dies at in the time period $(t - 1, t]$.  
+$X_t$ are covariates and $\vec{\alpha}_0,\dots,\vec{\alpha}_d$ are the latent states. 
+The probability that $y_{it}$ is one conditional on no prior event ($y_{ij} = 0$ for $j = 0,\dots, t - 1$) 
+is the inverse logit function of $\eta_{it}$. 
+Thus, the model is related to a so-called conditional logistic regression. The difference is 
+that we have a distributional assumption about the intercept and we allow some 
+of the other coefficients to vary. The true values are 
+
+$$
+F = \begin{pmatrix}1 & 0 \\ 0 & 1 \end{pmatrix}, \quad
+Q = \begin{pmatrix}0.33^2 & -3/4 \cdot .33^2 \\ -3/4 \cdot .33^2 & 0.33^2 \end{pmatrix}, \quad
+R = I_2, \quad 
+\vec{\alpha} = (-6, -2)^\top
+$$
+
+```{r assign_kit_info, echo = FALSE}
+git_key <- system("git rev-parse --short HEAD", intern = TRUE)
+git_bra <- system("git branch", intern = TRUE)
+regexp <- "^(\\*\ )(.+)$"
+git_bra <- git_bra[grepl(regexp, git_bra)]
+git_bra <- gsub(regexp, "\\2", git_bra)
+```
+
+where $I_2$ is the two-dimensional identity matrix. The unknown 
+parameters to be estimated is $Q$ and maybe $\vec{a}_0$. This 
+example is run on the git branch "`r git_bra`" with ID "`r git_key`". The code
+can be found on 
+[the github site for the package](../examples).
+All functions which assignments are not shown and are not in the 
+`dynamichazard` package can be found on the github site.
+
+## Simulation
+
+We start by simulating the data. Feel free to skip this part as the specifications 
+are given above. First we assign the parameters for the simulation
+
+```{r assign_sim_params, cache = 1}
+n_obs     <- 1000L
+n_periods <- 100L
+
+Qmat <- matrix(c(.33^2, -.75 * .33^2, -.75 * .33^2, .33^2), 2)
+a_0 <- c(-6, -2)
+```
+
+Then we simulate and plot the latent states
+
+```{r sim_plot_latent}
+set.seed(98734059)
+alphas <- matrix(nrow = n_periods + 1, ncol = 2)
+alphas[1, ] <- a_0
+for(i in 1:n_periods + 1)
+  alphas[i, ] <- alphas[i - 1, ] + drop(rnorm(2) %*% chol(Qmat))
+
+# plot of latent variables
+cols <- c("black", "darkblue")
+matplot(alphas, type = "l", lty = 1, col = cols)
+for(i in 1:2)
+  abline(h = a_0[i], lty = 2, col = cols[i])
+```
+
+We simulate the observations as follows
+
+```{r sim_obs}
+df <- replicate(n_obs, {
+  # left-censoring
+  tstart <- max(0L, sample.int((n_periods - 1L) * 2L, 1) - n_periods + 1L)
+
+  # covariates
+  x <- runif(1, 0, 2)
+  covars <- c(1, x)
+
+  # outcome (stop time and event indicator)
+  y <- FALSE
+  for(tstop in (tstart + 1L):n_periods){
+    inv_logit <- 1 / (1 + exp(-covars %*% alphas[tstop + 1L, ]))
+    if(inv_logit > runif(1)){
+      y <- TRUE
+      break
+    }
+  }
+
+  c(tstart = tstart, tstop = tstop, x = x, y = y)
+})
+df <- data.frame(t(df))
+head(df, 10)
+```
+
+We left-censor the observations since we otherwise may end up with a low number
+of observations towards the end. 
+
+### Model without latent variables
+We can fit a model without the latent variables (i.e., a constant coefficient
+model) as follows
+
+```{r glm_fit}
+library(dynamichazard)
+stat_fit <- static_glm(
+  Surv(tstart, tstop, y) ~ x, data = df, by = 1, max_T = n_periods, 
+  family = "logit")
+summary(stat_fit)$coefficients
+logLik(stat_fit)
+```
+
+The estimated coefficients seems plausible when looking at the previous plot. 
+Further, we can compare the log-likelihood with this models with the 
+log-likelihood approximation we get from the particle filter in the 
+next section.
+
+## Particle filter and smoother
+We start by using the particle filter and smoother from [@fearnhead10]
+
+<!-- 
+  # there is an issue since another chunk is called fearnhead_xyz
+  # knitr::opts_knit$set(output.dir = ".")
+  # pf_fearn <- knitr::load_cache("fearnhead", "pf_fearn", path = "examples/cache/RW-cache/") 
+  fs <- list.files("examples/cache/RW-cache/", full.names = TRUE)
+  ma <- which(grepl("fearnhead\\_(?!w\\_a\\_0).+\\.RData$", fs, perl = TRUE))
+  stopifnot(length(ma) == 1)
+  fs <- fs[ma]
+  knitr:::cache$load(gsub("(.+)(\\.RData)$", "\\1", fs))
+-->
+
+```{r fearnhead, cache = 1, dependson = c("assign_sim_params", "confs")}
+set.seed(26564868)
+system.time(pf_fearn <- PF_EM(
+  Surv(tstart, tstop, y) ~ x, df,
+  Q_0 = diag(3^2, 2), Q = diag(1, 2), 
+  by = 1, type = "RW", model = "logit", max_T = n_periods,
+  control = PF_control(
+    N_fw_n_bw = 500, N_smooth = 10000, N_first = 5000, eps = .0001,
+    method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+    n_max = 200, smoother = "Fearnhead_O_N",
+    # we add some extra variation to the proposal distributions 
+    Q_tilde = diag(.1^2, 2), n_threads = n_threads)))
+```
+
+`system.time` is used to show the computation time. The final estimates and true values are 
+
+```{r fearnhead_wo_a_0_ests}
+print_Q_est <- function(x)
+  list(est      =      x$Q,  actual      =      Qmat, 
+       est_chol = chol(x$Q), actual_chol = chol(Qmat))
+print_Q_est(pf_fearn) 
+```
+
+The effective sample size at each time point looks as follows
+
+```{r fearnhead_wo_a_0_ess}
+plot(pf_fearn$effective_sample_size$smoothed_clouds, type = "h", 
+     ylim = range(0, pf_fearn$effective_sample_size$smoothed_clouds))
+```
+
+The approximate log-likelihoods at each EM iteration are
+
+```{r fearnhead_wo_a_0_logLik}
+plot(pf_fearn$log_likes)
+```
+
+We can plot the smoothed estimates as follows
+
+```{r, fearnhead_wo_a_0_plot}
+plot(pf_fearn, qlvls = c(.05, .5, .95))
+matplot(0:n_periods, alphas, type = "l", lty = 2, add = TRUE)
+```
+
+The crosses are the 5%, 50% and 95% ("pointwise") quantiles estimates (due to the value we pass 
+to `qlvls` argument of `plot.PF_EM`). The continuous lines are the 
+smoothed mean estimates. The dashed lines are the true state variables.
+
+The pointwise confidence bounds are broader toward the end. The cause may be that 
+there are few events towards the end. E.g., there are the following number of events
+after time 70
+
+```{r why_poor_est}
+sum(df$y & df$tstop > 70)
+```
+
+while there are quite a few who are still alive past time 70
+
+```{r n_in_late_sample}
+sum(df$tstop > 70)
+```
+
+We can also estimate a model where we try to estimate $\vec{a}_0$ (though, I 
+do not think we can expect to do this consistently)
+
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  pf_fearn_w_a_0 <- 
+    knitr::load_cache("fearnhead_w_a_0", "pf_fearn_w_a_0", 
+                      path = "examples/cache/RW-cache/")
+-->
+
+```{r fearnhead_w_a_0, cache = 1, dependson = c("assign_sim_params", "confs")}
+set.seed(26564868)
+pf_fearn_w_a_0 <- PF_EM(
+  Surv(tstart, tstop, y) ~ x, df,
+  Q_0 = diag(3^2, 2), Q = diag(1, 2), 
+  by = 1, type = "RW", model = "logit", max_T = n_periods,
+  control = PF_control(
+    N_fw_n_bw = 500, N_smooth = 10000, N_first = 5000, eps = .0001,
+    method = "AUX_normal_approx_w_cloud_mean",
+    n_max = 200, smoother = "Fearnhead_O_N",
+    Q_tilde = diag(.1^2, 2), n_threads = n_threads))
+```
+
+The estimates are
+
+```{r fearnhead_w_a_0_ests}
+print_Q_est(pf_fearn_w_a_0) 
+pf_fearn_w_a_0$a_0
+```
+
+The approximate log-likelihoods at each EM iteration are
+
+```{r fearnhead_w_a_0_logLik}
+plot(pf_fearn_w_a_0$log_likes)
+```
+
+We can plot the smoothed estimates like before
+
+```{r, fearnhead_w_a_0_plot}
+plot(pf_fearn_w_a_0, qlvls = c(.05, .5, .95))
+matplot(0:n_periods, alphas, type = "l", lty = 2, add = TRUE)
+```
+
+## Extended Kalman filter
+
+We can compare the results above with the extended Kalman filter which is 
+implemented in the package
+
+```{r ekf_est}
+dd_fit <- ddhazard(
+  Surv(tstart, tstop, y) ~ x, df, model = "logit", max_T = n_periods,
+  Q_0 = diag(3^2, 2), Q = diag(1, 2), by = 1, order = 1, 
+  control = list(eps = .001, method = "EKF", NR_eps = 1e-4))
+```
+
+The estimates are
+
+```{r ekf_est_show_res}
+print_Q_est(dd_fit) 
+dd_fit$state_vecs[1, ]
+```
+
+The smoothed estimates looks as follows
+
+```{r ekf_est_plot}
+plot(dd_fit, cov_index = 1, level = .9)
+lines(0:n_periods, alphas[, 1], lty = 2)
+
+plot(dd_fit, cov_index = 2, col = 2, level = .9)
+lines(0:n_periods, alphas[, 2], lty = 2, col = 2)
+```
+
+Above, the "outer" dashed lines are 5% and 95% pointwise confidence bounds.
+
+## References

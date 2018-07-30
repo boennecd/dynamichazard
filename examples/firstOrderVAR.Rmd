@@ -25,8 +25,8 @@ n_threads <- 4 # I ran this on a quad core machine
 
 ## Introduction
 
-We will simulate and estimate a first order vector auto-regression model with 
-the in this example using the particle filter and smoother. For details see 
+We will simulate and estimate a first order vector auto-regression model in 
+this example using the particle filter and smoother. For details see 
 [this vignette](../vignettes/Particle_filtering.pdf) which can also be found by 
 calling `vignette("Particle_filtering", package = "dynamichazard")`. The models 
 we are going to simulate from and estimate are of the form 
@@ -42,9 +42,11 @@ $$
 \begin{array}{l} i = 1, \dots, n_t \\ t = 1, \dots, d \end{array}
 $$
 
-where the $y_{it}$'s are Poisson distributed event indicators conditional on 
-knowing the log time at risk, $\vec{o}_t$, covariates, $X_t$ and $Z_t$, and latent states, $\vec{\alpha}_1,\dots,\vec{\alpha}_d$. 
-The model is a precise-wise constant exponentially distributed event times
+where the $y_{it}$ is individual $i$'s indicator at time $t$ for whether he dies 
+between time $(t - 1, t]$. The indicators are Poisson distributed conditional on 
+knowing the log time at risk, $\vec{o}_t$, covariates, $X_t$ and $Z_t$, and latent states, $\vec{\alpha}_0,\dots,\vec{\alpha}_d$. 
+The total survival time of individual $i$ is $T_i$ which is 
+piecewise constant exponentially distributed
 conditional on knowing the latent states. Further, we set $Z_t = X_t$ so the 
 states have a non-zero mean. The true values are 
 
@@ -66,9 +68,9 @@ git_bra <- gsub(regexp, "\\2", git_bra)
 where $I_2$ is the two-dimensional identity matrix and 
 $\vec{a}_0$ and $Q_0$ are given by the invariant distribution. The unknown 
 parameters to be estimated is everything but $Q_0$ and $R$ (since we fix $Q_0$ doing the estimation and we set $\vec{a}_0 = (0, 0)^\top$). This 
-example is run on the git branch "`r git_bra`" with key "`r git_key`". The code
+example is run on the git branch "`r git_bra`" with ID "`r git_key`". The code
 can be found on 
-[the github site for the package](.).
+[the github site for the package](../examples).
 All functions which assignments are not shown and are not in the 
 `dynamichazard` package can be found on the github site.
 
@@ -105,7 +107,7 @@ beta <- c(-6.5, -2)
 ```
 
 `get_Q_0` is a function to get the covariance matrix for the invariant distribution.
-We then simulate and plot the latent states
+Then we simulate and plot the latent states
 
 ```{r sim_plot_latent}
 set.seed(54432125)
@@ -123,7 +125,7 @@ for(i in 1:2)
   abline(h = beta[i], lty = 2, col = cols[i])
 ```
 
-Then we simulate the observations
+We simulate the observations as follows
 
 ```{r sim_obs}
 df <- replicate(n_obs, {
@@ -299,7 +301,7 @@ plot(pf_Fear$effective_sample_size$smoothed_clouds, type = "h",
 
 However, there are many options to reduce the computation time for the former smoother as e.g, 
 mentioned in [@briers09] but those are not implemented. The smoothed estimates are 
-also rather close
+also rather close to what we saw before 
 
 ```{r fear_plot_far_F}
 plot_cloud(pf_Fear)
@@ -311,7 +313,7 @@ The log-likelihoods are almost the same
 plot(pf_Fear$log_likes)
 ```
 
-The log-likelihood where flat toward the ensds and not monotonically increasing
+The log-likelihood where flat toward the end and not monotonically increasing
 
 ```{r fear_log_like_far_F_tail}
 plot(tail(pf_Fear$log_likes, 20))
