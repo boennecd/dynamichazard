@@ -56,6 +56,8 @@ PF_effective_sample_size <- function(object){
 #' @seealso \code{\link{PF_forward_filter}} to get a more precise estimate of
 #' the final log-likelihood.
 #'
+#' See the examples at https://github.com/boennecd/dynamichazard/tree/devel/examples.
+#'
 #' @examples
 #'#####
 #'# Fit model with lung data set from survival

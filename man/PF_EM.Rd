@@ -166,4 +166,6 @@ rbind(ddfit$fixed_effects, pf_fit$fixed_effects)
 \seealso{
 \code{\link{PF_forward_filter}} to get a more precise estimate of
 the final log-likelihood.
+
+See the examples at https://github.com/boennecd/dynamichazard/tree/devel/examples.
 }

@@ -1,0 +1,346 @@
+---
+title: "Independent Identically Distributed Coefficients"
+author: "Benjamin Christoffersen"
+date: "`r Sys.Date()`"
+output: html_document
+bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.height = 4, fig.width = 7, dpi = 128,
+  cache.path = "cache/iid-cache/", fig.path = "fig/iid-fig/", 
+  error = FALSE)
+options(digits = 4, scipen = 10, width = 70)
+```
+
+```{r confs, echo = FALSE, cache = 1}
+n_threads <- 4 # I ran this on a quad core machine
+
+# you can replace this with e.g.,  
+# max(parallel::detectCores(logical = FALSE), 2)))
+```
+
+
+## Introduction
+
+We will simulate and estimate with independent identically distributed coefficients in 
+this example using the particle filter and smoother. For details see 
+[this vignette](../vignettes/Particle_filtering.pdf) which can also be found by 
+calling `vignette("Particle_filtering", package = "dynamichazard")`. The models 
+we are going to simulate from and estimate are of the form 
+
+$$
+\begin{split}
+ 	y_{it} &\sim g(\cdot\vert\eta_{it}) &  \\
+ 	\vec{\eta}_t &= X_t\vec{\alpha}_t + Z_t\vec{\beta} \\
+ 	\vec{\alpha}_t &= \vec{\epsilon}_t &
+ 		\quad \vec{\epsilon}_t \sim N(\vec{0}, Q) \\
+	& &	\quad \vec{\alpha}_0 \sim N(\vec{a}_0, Q_0)
+\end{split}, \qquad
+\begin{array}{l} i = 1, \dots, n_t \\ t = 1, \dots, d \end{array}
+$$
+
+where the $y_{it}$'s are binary event indicators for individual $i$ at 
+time $t$. It is one if individual $i$ dies at in the time period $(t - 1, t]$.  
+$X_t$ and $Z_t$ are covariates and $\vec{\alpha}_0,\dots,\vec{\alpha}_d$ are the latent states. 
+The probability that $y_{it}$ is one conditional on no prior event ($y_{ij} = 0$ for $j = 0,\dots, t - 1$) 
+is the inverse logit function of $\eta_{it}$. 
+Thus, the model is related to a so-called conditional logistic regression. The difference is 
+that we have a distributional assumption about the intercept and we allow some 
+of the other coefficients to vary. The true values are 
+
+$$
+Q = \begin{pmatrix}0.33^2 & -3/4 \cdot .33^2 \\ -3/4 \cdot .33^2 & 0.33^2 \end{pmatrix}, \quad
+\vec{\beta} = (-4, -2)^\top, 
+$$
+
+```{r assign_kit_info, echo = FALSE}
+git_key <- system("git rev-parse --short HEAD", intern = TRUE)
+git_bra <- system("git branch", intern = TRUE)
+regexp <- "^(\\*\ )(.+)$"
+git_bra <- git_bra[grepl(regexp, git_bra)]
+git_bra <- gsub(regexp, "\\2", git_bra)
+```
+
+where we set $X_t = Z_t$ so the 
+random random coefficients have a non-zero mean. The unknown 
+parameters to be estimated is $Q$. We are going the estimate a more general model 
+of the form 
+
+$$
+\begin{split}
+ 	y_{it} &\sim g(\cdot\vert\eta_{it}) &  \\
+ 	\vec{\eta}_t &= X_t\vec{\alpha}_t + Z_t\vec{\beta} \\
+ 	\vec{\alpha}_t &= F\vec{\alpha}_{t - 1} + \vec{\epsilon}_t &
+ 		\quad \vec{\epsilon}_t \sim N(\vec{0}, Q) \\
+	& &	\quad \vec{\alpha}_0 \sim N(\vec{a}_0, Q_0)
+\end{split}, \qquad
+\begin{array}{l} i = 1, \dots, n_t \\ t = 1, \dots, d \end{array}
+$$
+
+where $F$ is a $2\times 2$ matrix to be estimated. This 
+example is run on the git branch "`r git_bra`" with ID "`r git_key`". The code
+can be found on 
+[the github site for the package](../examples).
+All functions which assignments are not shown and are not in the 
+`dynamichazard` package can be found on the github site.
+
+## Simulation
+
+We start by simulating the data. Feel free to skip this part as the specifications 
+are given above. First we assign the parameters for the simulation
+
+```{r assign_sim_params, cache = 1}
+n_obs     <- 1000L
+n_periods <- 100L
+
+Qmat <- matrix(c(.75^2, -.4 * .75^2, -.4 * .75^2, .75^2), 2)
+beta <- c(-4, -2)
+```
+
+`get_Q_0` is a function to get the covariance matrix for the invariant distribution.
+Then we simulate and plot the latent states
+
+```{r sim_plot_latent}
+set.seed(54432125)
+betas <- matrix(rnorm(n_periods * 2), ncol = 2) %*% chol(Qmat)
+betas <- t(t(betas) + beta)
+
+# plot of latent variables
+cols <- c("black", "darkblue")
+matplot(betas, type = "l", lty = 1, col = cols)
+for(i in 1:2)
+  abline(h = beta[i], lty = 2, col = cols[i])
+```
+
+We simulate the observations as follows
+
+```{r sim_obs}
+df <- replicate(n_obs, {
+  # left-censoring
+  tstart <- max(0L, sample.int((n_periods - 1L) * 2L, 1) - n_periods + 1L)
+
+  # covariates
+  x <- runif(1, 0, 2)
+  covars <- c(1, x)
+
+  # outcome (stop time and event indicator)
+  y <- FALSE
+  for(tstop in (tstart + 1L):n_periods){
+    inv_logit <- 1 / (1 + exp(-covars %*% betas[tstop, ]))
+    if(inv_logit > runif(1)){
+      y <- TRUE
+      break
+    }
+  }
+
+  c(tstart = tstart, tstop = tstop, x = x, y = y)
+})
+df <- data.frame(t(df))
+head(df, 10)
+
+local({
+  tmp <- aggregate(x ~ tstop, subset(df, y == 1), mean)
+  plot(tmp$tstop, tmp$x, xlab = "tstop", ylab = "mean x given event")
+  abline(h = 1, lty = 2)
+  
+  df$tmp <- factor(df$tstop, 1:n_periods)
+  n_events <- with(subset(df, y == 1), 
+                   tapply(tmp, tmp, length, default = 0))
+  plot(as.integer(names(n_events)), n_events, xlab = "tstop", 
+       ylab = "number of events", ylim = )
+})
+```
+
+We left-censor the observations since we otherwise may end up with a low number
+of observations towards the end. 
+
+## lme4::glmer
+
+We start by estimating "the correct" model (without dependence between the 
+latent states) using `lme4::glmer`. We do this to compare the approximate log-likelihood
+from the Laplace approximation in `glmer` to the approximations we get from the 
+forward particle filter in the next section doing the EM algorithm Further, we do this to see how 
+much we "lose" by estimating a more general model. 
+
+```{r load_lme4}
+library(lme4)
+library(dynamichazard)
+```
+
+We call the `get_survival_case_weights_and_data` function to get a `data.frame`
+we can pass to `glmer` where we get an additional time interval dummy column 
+called `t`
+
+```{r glmer_get_dat}
+dsg <- get_survival_case_weights_and_data(
+  Surv(tstart, tstop, y) ~ x, data = df, by = 1, max_T = n_periods, 
+  use_weights = FALSE, is_for_discrete_model = TRUE)
+
+head(dsg$X)
+range(dsg$X$t)
+
+# number of individuals at risk at each time point 
+plot(table(dsg$X$t), ylab = "n risk")
+```
+
+Then we fit the model
+
+```{r glmer_fit_comp, cache = 1, dependson = c("assign_sim_params", "confs")}
+glmer_fit <- glmer(Y ~ x + (x | t), family = binomial(), data = dsg$X)
+```
+
+The summary of the fit is 
+
+```{r show_glmer_res}
+summary(glmer_fit)
+```
+
+The estimated covariance matrix is
+
+```{r show_VarCorr_glmer}
+glmer_vcor <- VarCorr(glmer_fit)
+glmer_vcor <- 
+  diag(attr(glmer_vcor$t, "stddev")) %*% attr(glmer_vcor$t, "correlation") %*% 
+  diag(attr(glmer_vcor$t, "stddev"))
+
+glmer_vcor
+Qmat
+chol(glmer_vcor)
+chol(Qmat)
+```
+
+The approximate log-likelihood is
+
+```{r glmer_log_like}
+logLik(glmer_fit)
+```
+
+## Particle filter and smoother
+We start by using the particle filter and smoother from [@fearnhead10]
+
+<!-- 
+  # there is an issue since another chunk is called fearnhead_xyz
+  # knitr::opts_knit$set(output.dir = ".")
+  # knitr::load_cache("fearnhead", "pf_fearn", path = "examples/cache/iid-cache/") 
+  fs <- list.files("examples/cache/iid-cache/", full.names = TRUE)
+  ma <- which(grepl("fearnhead\\_(?!other).+\\.RData$", fs, perl = TRUE))
+  stopifnot(length(ma) == 1)
+  fs <- fs[ma]
+  knitr:::cache$load(gsub("(.+)(\\.RData)$", "\\1", fs))
+-->
+
+```{r fearnhead, cache = 1, dependson = c("assign_sim_params", "confs")}
+set.seed(26564868)
+system.time(pf_fearn <- PF_EM(
+  Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
+  Q_0 = diag(3^2, 2), Q = diag(1, 2), Fmat = diag(1, 2), 
+  by = 1, type = "VAR", model = "logit", max_T = n_periods,
+  control = PF_control(
+    N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = .0001,
+    method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+    n_max = 100, smoother = "Fearnhead_O_N",
+    # we add some extra variation to the proposal distributions 
+    Q_tilde = diag(.33^2, 2), n_threads = n_threads)))
+```
+
+`system.time` is used to show the computation time. The estimates are
+
+```{r fearn_ests}
+chol(pf_fearn$Q)
+chol(glmer_vcor) # not far from 
+chol(Qmat)
+
+pf_fearn$F
+pf_fearn$fixed_effects
+beta # actual values
+```
+
+The log-likelihood at each EM iteration is
+
+```{r plot_log_like}
+plot(pf_fearn$log_likes, type = "l")
+```
+
+The smoothed estimates and 90% confidence intervals are 
+
+```{r plot_smooth_est}
+plot(pf_fearn, qlvls = c(.05, .95), col = c("Black", "Darkblue"))
+matpoints(t(t(betas) - beta), pch = 16, col = c("Black", "Darkblue"))
+abline(h = 0, lty = 2)
+```
+
+The crosses are the point-wise confidence bounds, the lines are the smoothed 
+means, and the full dot is the actual value. The effective sample sizes are
+
+```{r plot_ess}
+plot(
+  pf_fearn$effective_sample_size$smoothed_clouds, type = "h", 
+  ylab = "Effective sample size", 
+  ylim = range(pf_fearn$effective_sample_size$smoothed_clouds, 0))
+```
+
+We can get an approximation of the final log-likelihood as follows
+
+```{r app_log_like, cache = 1, dependson = "fearnhead"}
+logLik(PF_forward_filter(pf_fearn, N_fw = 10000, 10000))
+```
+
+This is close to the `glmer` result as expected and also does not match as it 
+need not to since we estimate $F$
+
+```{r glmer_again}
+logLik(glmer_fit)
+```
+
+We may ask what would happen if we used different starting values. E.g.,
+
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  knitr::load_cache("fearnhead_other", "pf_fearn_other", path = "examples/cache/iid-cache/")
+-->
+
+```{r fearnhead_other, cache = 1, dependson = c("assign_sim_params", "confs")}
+set.seed(92890620)
+pf_fearn_other <- PF_EM(
+  Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
+  Q_0 = diag(2^2, 2), Q = diag(.1^2, 2), Fmat = diag(.5, 2), 
+  by = 1, type = "VAR", model = "logit", max_T = n_periods,
+  control = PF_control(
+    N_fw_n_bw = 1000, N_smooth = 2500, N_first = 5000, eps = .0001,
+    method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+    n_max = 250, smoother = "Fearnhead_O_N", 
+    Q_tilde = diag(.3^2, 2), n_threads = n_threads))
+```
+
+The estimates are
+
+```{r show_est_other}
+chol(pf_fearn_other$Q)
+pf_fearn_other$F
+```
+
+Clearly, something has gone. The log-likelihood at each EM-iterations are also 
+off 
+
+```{r log_like_ohter}
+plot(pf_fearn_other$log_likes, type = "l")
+tail(pf_fearn_other$log_likes, 4)
+```
+
+These are not increasing with a Monte Carlo in both the 
+approximation of the log likelihood and E-step as expected with 
+a MCEM algorithm. The smoothed estimates are
+
+```{r plot_smooth_est_other}
+plot(pf_fearn_other, qlvls = c(.05, .95), col = c("Black", "Darkblue"))
+matpoints(t(t(betas) - beta), pch = 16, col = c("Black", "Darkblue"))
+abline(h = 0, lty = 2)
+```
+
+This is discouraging and I am not sure why the results are as they are.
+
+
+# References
