@@ -4,4 +4,4 @@ PF_EM(formula = Surv(time, status == 2) ~ ph.ecog + age, data = .lung,
         1, 0.1)^2), Q = diag(c(0.3, 0.3, 0.01)^2), control = list(N_fw_n_bw = 200, 
         N_first = 200, N_smooth = 200, n_max = 5, n_threads = 1))
 
-Model estimated in 5 iterations of the EM algorithm. The log-likelihood in the last iteration is -488.9946.
+Model estimated in 5 iterations of the EM algorithm. The log-likelihood in the last iteration is -489.7706.

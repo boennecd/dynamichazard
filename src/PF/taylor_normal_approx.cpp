@@ -63,6 +63,7 @@ input_for_normal_apprx taylor_normal_approx(
   unsigned int k = 0;
   double conv;
   do {
+    bool is_first_it = k == 0;
     ++k;
     arma::vec coefs = data.err_state_inv->map(state).sv, state_old = state;
     mu.zeros();
@@ -85,10 +86,19 @@ input_for_normal_apprx taylor_normal_approx(
       auto &job = jobs[i];
       arma::uvec my_r_set(job.start, job.block_size, false /* don't copy */);
 
-      arma::vec eta =  get_linear_product(coefs, data.X, my_r_set);
+      arma::vec eta;
       arma::vec offsets = data.fixed_effects(my_r_set);
-      eta += offsets;
       const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
+
+      if(is_first_it){
+        /* initialize as in `glm.fit`. Though, we have an L2 penalty... */
+        eta = arma::vec(job.block_size);
+        double *eta_i = eta.begin();
+        const arma::uword *y_i = is_event.begin();
+        for(arma::uword k = 0; k < job.block_size; ++k, ++eta_i, ++y_i)
+          *eta_i = dens_calc.initialize(*y_i);
+      } else
+        eta = get_linear_product(coefs, data.X, my_r_set) + offsets;
 
       if(uses_at_risk_length){
         starts = data.tstart(my_r_set);

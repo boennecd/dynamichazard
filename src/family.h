@@ -93,6 +93,8 @@ public:
       outcome, res.eta_trunc, res.exp_eta_trunc, at_risk_length);
   }
 
+  virtual double initialize(double) const = 0;
+
   // create a virtual, default destructor
   virtual ~family_base() = default;
 };
@@ -186,6 +188,10 @@ public:
   std::string name() const override {
     return BINOMIAL;
   }
+
+  double initialize(double y) const override {
+    return glm_initialize(y, 1);
+  }
 };
 
 
@@ -267,6 +273,10 @@ public:
 
   double glm_initialize(double y, double weight) const override {
     return glm_linkfun(y + 0.1);
+  }
+
+  double initialize(double y) const override {
+    return glm_initialize(y, 1);
   }
 
   std::string name() const override {

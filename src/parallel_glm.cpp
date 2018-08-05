@@ -238,7 +238,7 @@ class parallelglm_class_QR {
         const double *y_i = y.begin();
         const double *wt = weight.begin();
         for(uword i = 0; i < n; ++i, ++eta_i, ++wt, ++y_i)
-          *eta_i =data.family->glm_initialize(*y_i, *wt);
+          *eta_i = data.family->glm_initialize(*y_i, *wt);
 
       } else
         eta = (data.beta->t() * X).t() + offset;

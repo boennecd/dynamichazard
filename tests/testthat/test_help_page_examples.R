@@ -253,7 +253,7 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
 
   # the log-likelihood in the final iteration
   # dput((end_log_like <- tail(pf_fit$log_likes, 1)))
-  expect_equal((end_log_like <- tail(pf_fit$log_likes, 1)), -251.123391099791)
+  expect_equal((end_log_like <- tail(pf_fit$log_likes, 1)), -251.123404920722)
 
 
   # gives the same
