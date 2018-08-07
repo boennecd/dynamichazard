@@ -1,0 +1,31 @@
+@Article{briers09,
+author="Briers, Mark
+and Doucet, Arnaud
+and Maskell, Simon",
+title="Smoothing algorithms for state--space models",
+journal="Annals of the Institute of Statistical Mathematics",
+year="2009",
+month="Jun",
+day="09",
+volume="62",
+number="1",
+pages="61",
+abstract="Two-filter smoothing is a principled approach for performing optimal smoothing in non-linear non-Gaussian state--space models where the smoothing distributions are computed through the combination of `forward' and `backward' time filters. The `forward' filter is the standard Bayesian filter but the `backward' filter, generally referred to as the backward information filter, is not a probability measure on the space of the hidden Markov process. In cases where the backward information filter can be computed in closed form, this technical point is not important. However, for general state--space models where there is no closed form expression, this prohibits the use of flexible numerical techniques such as Sequential Monte Carlo (SMC) to approximate the two-filter smoothing formula. We propose here a generalised two-filter smoothing formula which only requires approximating probability distributions and applies to any state--space model, removing the need to make restrictive assumptions used in previous approaches to this problem. SMC algorithms are developed to implement this generalised recursion and we illustrate their performance on various problems.",
+issn="1572-9052",
+doi="10.1007/s10463-009-0236-2",
+url="https://doi.org/10.1007/s10463-009-0236-2"
+}
+
+@article{fearnhead10,
+ ISSN = {00063444},
+ URL = {http://www.jstor.org/stable/25734097},
+ abstract = {In this paper we propose a new particle smoother that has a computational complexity of O(N), where N is the number of particles. This compares favourably with the O(N²) computational cost of most smoothers. The new method also overcomes some degeneracy problems in existing algorithms. Through simulation studies we show that substantial gains in efficiency are obtained for practical amounts of computational cost. It is shown both through these simulation studies, and by the analysis of an athletics dataset, that our new method also substantially outperforms the simple filter-smoother, the only other smoother with computational cost that is O(N).},
+ author = {Paul Fearnhead and David Wyncoll and Jonathan Tawn},
+ journal = {Biometrika},
+ number = {2},
+ pages = {447--464},
+ publisher = {[Oxford University Press, Biometrika Trust]},
+ title = {A sequential smoothing algorithm with linear computational cost},
+ volume = {97},
+ year = {2010}
+}

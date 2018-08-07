@@ -2,5 +2,6 @@
 !.gitignore
 !*.Rmd
 !*.html
+!*.bib
 !*.md
 !/fig/
