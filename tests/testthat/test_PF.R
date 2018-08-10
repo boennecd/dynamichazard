@@ -305,7 +305,7 @@ test_that("PF_EM gives previous results on head neck data set", {
 
       #####
       # Test versus previous computed values
-      result <- result[c("a_0", "Q", "clouds", "summary_stats", "log_likes",
+      result <- result[c("a_0", "Q", "clouds", "EM_ests", "log_likes",
                          "n_iter", "effective_sample_size", "seed")]
 
       if(.(do_print_fname)){
@@ -354,8 +354,7 @@ test_that("PF_EM gives previous results on head neck data set with fixed effects
       max_T = 30))
 
   # tmp <- readRDS("previous_results/local_tests/pf_logit_w_fixed.RDS")
-  expect_known_value(pp_fit[!names(pp_fit) %in%
-                             c("clouds", "call", "summary_stats")],
+  expect_known_value(pp_fit[!names(pp_fit) %in% c("clouds", "call")],
                      "local_tests/pf_logit_w_fixed.RDS")
 })
 
@@ -446,10 +445,10 @@ test_that("´est_params_dens´ gives the same as a R version", {
   qr_obj <- qr(wX)
   qty <- qr.qty(qr_obj, wY)[1:ncol(wX), ]
   Q <- (crossprod(wY) - crossprod(qty)) / (length(clouds) - 1)
-  expect_equal(Q, fit$Q)
+  expect_equal(Q, fit$Q, check.attributes = FALSE)
 
   Q <- crossprod(wY - wX %*% lm_fit$coefficients) / (length(clouds) - 1)
-  expect_equal(Q, fit$Q)
+  expect_equal(Q, fit$Q, check.attributes = FALSE)
 })
 
 test_that("fixed effect estimation gives the same as an R implementation", {

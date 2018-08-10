@@ -230,8 +230,42 @@ PF_EM <- function(
     n_threads = control$n_threads, smoother = control$smoother,
     Q_tilde = control$Q_tilde, est_a_0 = control$est_a_0)
 
+  out <- .set_PF_names(out, rng_names = row.names(static_args$X),
+                       fixed_names = rownames(static_args$fixed_terms))
+
   out$call <- match.call()
   out
+}
+
+.set_PF_names <- function(obj, fixed_names, rng_names){
+  fn <- length(fixed_names)
+  rn <- length(rng_names)
+
+  # we assume that there is atleast one random effect
+  colnames(obj$R) <- rng_names
+  state_names <- character(nrow(obj$R))
+  for(i in seq_len(rn)){
+    j <- which(obj$R[, i] == 1)
+    state_names[j] <- rng_names[i]
+  }
+  rownames(obj$R) <- state_names
+  dimnames(obj$F) <- list(state_names, state_names)
+  dimnames(obj$Q) <- list(rng_names, rng_names)
+  names(obj$a_0) <- state_names
+  if(length(fixed_names) > 0)
+    names(obj$fixed_effects) <- fixed_names
+
+  if(length(obj$EM_ests) > 0){
+    n_iter <- nrow(obj$EM_ests$a_0)
+    em_names <- paste0("EM it ", 1:n_iter)
+    dimnames(obj$EM_ests$a_0) <- list(em_names, state_names)
+    if(length(fixed_names) > 0)
+      dimnames(obj$EM_ests$fixed_effects) <- list(em_names, fixed_names)
+    dimnames(obj$EM_ests$F) <- list(state_names, state_names, em_names)
+    dimnames(obj$EM_ests$Q) <- list(rng_names, rng_names, em_names)
+
+  }
+  obj
 }
 
 #' Forward Particle Filter
@@ -436,6 +470,12 @@ PF_forward_filter.formula <- function(
 
   }
 
+  # setup matrices and arrays to save the estimates from each iteration
+  a_0_it          <- matrix(NA_real_, n_max, length(a_0))
+  fixed_parems_it <- matrix(NA_real_, n_max, length(fixed_parems))
+  F_it <- array(NA_real_, c(nrow(F.), ncol(F.), n_max))
+  Q_it <- array(NA_real_, c(nrow(Q) , ncol(Q) , n_max))
+
   log_likes <- rep(NA_real_, n_max)
   log_like <- log_like_max <- -Inf
   for(i in 1:n_max){
@@ -560,6 +600,12 @@ PF_forward_filter.formula <- function(
       cat(msg)
     }
 
+    a_0_it[i, ] <- a_0
+    if(has_fixed_params)
+      fixed_parems_it[i, ] <- fixed_parems
+    F_it[, ,i] <- F.
+    Q_it[, ,i] <- Q
+
     if(has_converged <-
        Q_relative_norm < eps &&
        a_0_relative_norm < eps &&
@@ -576,8 +622,11 @@ PF_forward_filter.formula <- function(
 
   return(structure(list(
     call = cl, clouds = clouds, a_0 = a_0, fixed_effects = fixed_parems, Q = Q,
-    F = fit_call$F, R = R,
-    summary_stats = if(type == "RW") sum_stats else NULL,
+    F = fit_call$F, R = R, EM_ests = list(
+      a_0             = a_0_it         [1:i, , drop = FALSE],
+      fixed_effects   = fixed_parems_it[1:i, , drop = FALSE],
+      F = F_it[, , 1:i, drop = FALSE],
+      Q = Q_it[, , 1:i, drop = FALSE]),
     log_likes = log_likes[1:i], n_iter = i,
     effective_sample_size = effective_sample_size, seed = seed),
     class = "PF_EM"))
