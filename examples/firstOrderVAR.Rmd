@@ -15,13 +15,6 @@ knitr::opts_chunk$set(
 options(digits = 4, scipen = 10, width = 70)
 ```
 
-```{r confs, echo = FALSE, cache = 1}
-n_threads <- 4 # I ran this on a quad core machine
-
-# you can replace this with e.g.,  
-# max(parallel::detectCores(logical = FALSE), 2)))
-```
-
 
 ## Introduction
 
@@ -187,6 +180,13 @@ library(dynamichazard)
   knitr::load_cache("brier_far_F", "pf_Brier", path = "examples/cache/firstOrderVAR-cache/") 
 -->
 
+```{r confs, cache = 1}
+n_threads <- 4 # I ran this on a quad core machine
+
+# you can replace this with e.g.,  
+# max(parallel::detectCores(logical = FALSE), 2)))
+```
+
 ```{r brier_far_F, cache = 1, dependson = c("assign_sim_params", "confs")}
 set.seed(30520116)
 system.time(pf_Brier <- PF_EM(
@@ -342,7 +342,7 @@ pf_Fear_more <- PF_EM(
   control = PF_control(
     N_fw_n_bw = 5000, N_smooth = 10000, N_first = 5000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 10, smoother = "Fearnhead_O_N",
+    n_max = 10, smoother = "Fearnhead_O_N",   
     Q_tilde = diag(.3^2, 2), n_threads = n_threads))
 ```
 
@@ -360,7 +360,28 @@ chol(pf_Fear_more$Q)
 pf_Fear_more$fixed_effects
 ```
 
+### Averaging
+Averaging is sometimes argued for in MCEM algorithm. E.g., see [@cappe05] 
+section 11.1.2.2. The idea is to take an average over the last M step 
+estimates. This is easily done with the package since the M step estimates 
+from each iterations is stored in the `EM_ests` element. 
 
+```{r show_EM_ests}
+lapply(pf_Fear_more$EM_ests, dim)
+```
+
+We can average over say the last 5 M-step estimates as follows
+
+```{r comp_avgs}
+lapply(pf_Fear_more$EM_ests[c("fixed_effects", "F", "Q")], function(x){
+  if(length(dim(x)) == 2)
+    apply(x[6:10, ], 2, mean) else
+      apply(x[, , 6:10], c(1, 2), mean)
+})
+
+# the M-step estimates from the final iteration was 
+pf_Fear_more[c("fixed_effects", "F", "Q")]
+```
 
 ### Log-likehood evaluation 
 We may question what the log-likelihood is at the true parameters. We can use 
