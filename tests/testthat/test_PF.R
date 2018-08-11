@@ -531,3 +531,76 @@ test_that("fixed effect estimation gives the same as an R implementation", {
   expect_equal(
     fit$coefficients, pf_fit$fixed_effects, check.attributes = FALSE)
 })
+
+test_that("A few iterations with `type = \"VAR\"' yields the same as before", {
+  skip_on_cran()
+
+  n_obs     <- 2000L
+  n_periods <- 300L
+
+  # Fmat <- matrix(c(.8, 0, 0, .8), 2)
+  # Rmat <- diag(1    , 2)
+  # Qmat <- diag(.33^2, 2)
+  # get_Q_0 <- function(Qmat, Fmat){
+  #   # see https://math.stackexchange.com/q/2854333/253239
+  #   eg  <- eigen(Fmat)
+  #   las <- eg$values
+  #   if(any(abs(las) >= 1))
+  #     stop("Divergent series")
+  #   U   <- eg$vectors
+  #   U_t <- t(U)
+  #   T.  <- crossprod(U, Qmat %*% U)
+  #   Z   <- T. / (1 - tcrossprod(las))
+  #   solve(U_t, t(solve(U_t, t(Z))))
+  # }
+  # Q_0  <- get_Q_0(Qmat, Fmat)
+  # beta <- c(-6.5, -2)
+  #
+  # set.seed(54432125)
+  # betas <- matrix(nrow = n_periods + 1, ncol = 2)
+  # betas[1, ] <- rnorm(2) %*% chol(Q_0)
+  # for(i in 1:n_periods + 1)
+  #   betas[i, ] <- Fmat %*% betas[i - 1, ] + drop(rnorm(2) %*% chol(Qmat))
+  #
+  # betas <- t(t(betas) + beta)
+  #
+  # df <- replicate(n_obs, {
+  #   # left-censoring
+  #   tstart <- max(0L, sample.int((n_periods - 1L) * 2L, 1) - n_periods + 1L)
+  #
+  #   # covariates
+  #   x <- runif(1, -1, 1)
+  #   covars <- c(1, x)
+  #
+  #   # outcome (stop time and event indicator)
+  #   y <- FALSE
+  #   for(tstop in (tstart + 1L):n_periods){
+  #     fail_time <- rexp(1) / exp(covars %*% betas[tstop + 1L, ])
+  #     if(fail_time <= 1){
+  #       y <- TRUE
+  #       tstop <- tstop - 1L + fail_time
+  #       break
+  #     }
+  #   }
+  #
+  #   c(tstart = tstart, tstop = tstop, x = x, y = y)
+  # })
+  # df <- data.frame(t(df))
+  # saveRDS(df, "VAR_data.RDS")
+  df <- readRDS("VAR_data.RDS")
+
+  # this tend toward the true values. We only take a few iterations though...
+  set.seed(30520116)
+  pf_Fear <- suppressWarnings(PF_EM(
+    Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
+    Q_0 = diag(1, 2), Q = diag(1, 2), Fmat = matrix(c(.1, 0, 0, .1), 2),
+    by = 1, type = "VAR", model = "exponential", max_T = n_periods,
+    control = PF_control(
+      N_fw_n_bw = 50, N_smooth = 100, N_first = 500, eps = .001,
+      method = "AUX_normal_approx_w_cloud_mean",
+      n_max = 3, smoother = "Fearnhead_O_N",
+      Q_tilde = diag(.3^2, 2), n_threads = 4)))
+
+  expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
+                     file = "PF_VARS.RDS", update = TRUE)
+})

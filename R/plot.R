@@ -291,5 +291,4 @@ plot.PF_EM <- function(x, y, ...){
   cl[[1]] <- quote(plot)
   cl$x <- bquote(.(substitute(x))$clouds)
   invisible(eval(cl, parent.frame()))
-  invisible(do.call(plot, c(list(x = x$clouds), list(...))))
 }

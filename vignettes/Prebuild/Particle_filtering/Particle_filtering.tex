@@ -76,6 +76,8 @@
 \newcommand{\covp}[1]{\optor{\COV}{#1}}
 \newcommand{\covpC}[2]{\optorC{\COV}{#1}{#2}}
 
+\newcommand{\vecOP}[1]{\optor{\text{vec}}{#1}}
+
 \newcommand{\propAproxC}[2]{\optorC{\widetilde{p}}{#1}{#2}}
 
 \newcommand{\dirac}[1]{\optor{\delta}{#1}}
@@ -764,17 +766,17 @@ We can evaluate the log likelihood for a particular value of $\vec{\theta} = \Lb
 \section{Parameter inference}
 In this section I first show an example of parameter estimation the first order random walk using EM-algorithm \citep{dempster77}. Then I cover the general vector auto-regression model and estimating the fixed effects. Lastly, I will turn to estimation of observed information matrix. 
 
-The formulas for parameter estimation for the first order random with the are particularly simple. We need to estimate $\mat{Q}$ and $\vec{a}_0$ elements of $\vec{\theta} = \Lbrace{\mat{Q}, \mat{Q}_0, \vec{a}_0}$. We do this by running Algorithm~\ref{alg:ONsmoother} for the current $\vec{\theta}$. We compute following to do so%
+The formulas for parameter estimation for the first order random with the are particularly simple. We need to estimate $\mat{Q}$ and $\vec{a}_0$ elements of $\vec{\varphi} = \Lbrace{\mat{Q}, \mat{Q}_0, \vec{a}_0}$. We do this by running Algorithm~\ref{alg:ONsmoother} for the current $\vec{\varphi}$. We compute following to do so%
 %
 \begin{equation}\begin{split}
-\vec{t}_t^{(\vec{\theta})} &= \int_{\vec{\alpha}_t} \vec{\alpha}_t
-	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_t}{\vec{y}_{1:\nPeriods}} \partial \vec{\alpha}_t
+\vec{t}_t^{(\vec{\varphi})} &= \int_{\vec{\alpha}_t} \vec{\alpha}_t
+	\optorC{\Prob_{\vec{\varphi}}}{\vec{\alpha}_t}{\vec{y}_{1:\nPeriods}} \partial \vec{\alpha}_t
 	\approx \sum_{i = 1}^{\nPart_s} \particS{\vec{\alpha}}{t}{i} \particS{w}{t}{i} \\
 %
-\vec{T}_t^{(\vec{\theta})} &= \int_{\mathbb{R}^{2\dimState}}
+\vec{T}_t^{(\vec{\varphi})} &= \int_{\mathbb{R}^{2\dimState}}
 	\Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t-1}}
 	\Lparen{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t-1}}^\top
-	\optorC{\Prob_{\vec{\theta}}}{\vec{\alpha}_{(t-1):t}}{\vec{y}_{1:\nPeriods}}
+	\optorC{\Prob_{\vec{\varphi}}}{\vec{\alpha}_{(t-1):t}}{\vec{y}_{1:\nPeriods}}
 	\partial \vec{\alpha}_{(t-1):t} \\
 %
 &\approx \sum_{i = 1}^{\nPart_s}
@@ -784,19 +786,19 @@ The formulas for parameter estimation for the first order random with the are pa
 \end{split}\end{equation}%
 %
 %
-where $\vec{\alpha}_{s:t} = \Lbrace{\vec{\alpha}_s, \vec{\alpha}_{s +1}, \dots \vec{\alpha}_t}$, we have extended the notation in Algorithm~\ref{alg:ONsmoother} such that superscript $j_{it}$ is the index from forward cloud at time $t-1$ matching with $i$'th smoothed particle at time $t$, and the subscript in $\Prob$ denotes that it is the probability given the parameter $\vec{\theta}$. The update of $\vec{a}_0$ and $\mat{Q}$ given the summary statistics is%
+where $\vec{\alpha}_{s:t} = \Lbrace{\vec{\alpha}_s, \vec{\alpha}_{s +1}, \dots \vec{\alpha}_t}$, we have extended the notation in Algorithm~\ref{alg:ONsmoother} such that superscript $j_{it}$ is the index from forward cloud at time $t-1$ matching with $i$'th smoothed particle at time $t$, and the subscript in $\Prob$ denotes that it is the probability given the parameter $\vec{\varphi}$. The update of $\vec{a}_0$ and $\mat{Q}$ given the summary statistics is%
 %
 \begin{equation}
-\vec{a}_0 = \vec{t}_0^{(\vec{\theta})} \qquad
+\vec{a}_0 = \vec{t}_0^{(\vec{\varphi})} \qquad
 %
-\mat{Q} = \frac{1}{\nPeriods - 1}\sum_{t = 2}^\nPeriods \mat{R}^+\vec{T}_t^{(\vec{\theta})}\mat{R}^{+\top}
+\mat{Q} = \frac{1}{\nPeriods - 1}\sum_{t = 2}^\nPeriods \mat{R}^+\vec{T}_t^{(\vec{\varphi})}\mat{R}^{+\top}
 \end{equation}%
 
 We then repeat with the new $\vec{a}_0$ and $\mat{Q}$ for a given number of iterations or till a convergence criteria is satisfied.  See \cite{kantas15}, \cite{del10} and \cite{schon11} for further details on parameter estimation with particle filters.
 
 \todoin{I do not think we can estimate $\vec{a}_0$ consistently so we likely just want to fix it at some value...}
 
-\subsection{Vector autoregression models}\label{subsec:VAR}
+\subsection{Vector auto-regression models}\label{subsec:VAR}
 We start by defining the following matrices to cover estimation in general vector auto-regression models for the latent space variable %
 %
 \begin{align*}
@@ -827,7 +829,7 @@ We start by defining the following matrices to cover estimation in general vecto
 	}
 \end{align*}%
 % 
-where $\diag{\cdot}$ is a diagonal matrix which diagonal elements are the argument. The goal is to estimate $\mat{F}$ and $\mat{Q}$ in Equation~\eqref{eqn:model}. We can then show that the M-step maximizers are%
+where $\diag{\cdot}$ is a diagonal matrix which diagonal elements are the argument. We implicitly let the above depend on the result of the E-step in a given iteration of the EM algorithm to ease the notation. The goal is to estimate $\mat{F}$ and $\mat{Q}$ in Equation~\eqref{eqn:model}. We can then show that the M-step maximizers are%
 % 
 \begin{align}
 \widehat{\mat{F}}^\top\mat{R}^{+\top} &=
@@ -841,9 +843,72 @@ where $\diag{\cdot}$ is a diagonal matrix which diagonal elements are the argume
 	\Lparen{\mat{N} - \mat{R}^+\widehat{\mat{F}}\mat{M}} \label{eqn:VARQ}
 \end{align}%
 %
-which is the typical vector auto-regression estimators with weights. One may want to apply restrictions to $\mat{F}$ and $\mat{Q}$ so we do not have to estimate respectively all $\dimState \times \dimRng$ and $\dimRng (\dimRng + 1) / 2$ parameters. In that case, the M-step likelihood becomes generalized least squares problem with weights. Thus, we can no longer jointly update $\mat{Q}$ and $\mat{F}$. I gather one can use an MC expectation conditional maximization algorithm in this case though I have not implemented this. 
+which is the typical vector auto-regression estimators with weights. Equation \eqref{eqn:VARF}~and \eqref{eqn:VARQ} can easily be computed in parallel using QR decompositions as in the \texttt{bam} in the \texttt{mgcv} package with a low memory footprint \citep[see][]{wood14}. This is currently implemented. Though, the gains from a parallel implementation may be small as the computation here have a computation time which is independent of the number of observations. In other words, the other the computation is relatively much less demanding then the other parts.
 
-Equation \eqref{eqn:VARF}~and \eqref{eqn:VARQ} can easily be computed in parallel using QR decompositions as in the \texttt{bam} in the \texttt{mgcv} package with a low memory footprint \citep[see][]{wood14}. This is currently implemented. Though, the gains from a parallel implementation may be small as the computation here have a computation time which is independent of the number of observations. In other words, the other the computation is relatively much less demanding then the other parts.
+\subsection{Restricted vector auto-regression models}
+Suppose that we want to restrict the some of the parameters of $\mat{F}$ and $\mat{Q}$. E.g., we can restrict the model to %
+%
+$$
+\vecOP{\mat{R}^+\mat{F}} = \mat{G}\vec{\theta}, \qquad
+\nu(\mat{Q}) = \mat{J}\vec{\psi}
+$$%
+%
+where $\vecOP{\cdot}$ is the vectorization function which stacks the the columns of a matrix from left to right and $\nu$ is the function that removes all superdiagonal elements of a square $n\times n$ matrix and stack the remaining $n(n+1)/2$ elements. E.g., %
+%
+\begin{align*}
+\mat{A} &= \begin{pmatrix}
+	a_{11} & a_{12} & a_{13} \\
+	a_{21} & a_{22} & a_{23} \\
+	a_{31} & a_{32} & a_{33}
+\end{pmatrix} \\
+\vecOP{\mat{A}} &= \Lparen{
+	a_{11}, a_{21}, a_{31}, 
+	a_{12}, a_{22}, a_{32},
+	a_{13}, a_{23}, a_{33}}^\top \\
+\nu(\mat{A}) &= \Lparen{
+	a_{11}, a_{21}, a_{31}, 
+	a_{22}, a_{32},
+	a_{33}}^\top
+\end{align*}
+%
+$\mat{G}\in\mathbb{R}^{\dimRng\dimState \times k}$ is a known matrix with $k \leq \dimState\dimRng$ and we assume that it has full column rank. Similarly, $\mat{J}\in \mathbb{R}^{\dimRng(\dimRng + 1) / 2 \times l}$ is a known matrix with $l \leq \dimRng(\dimRng + 1) / 2$ and with full column rank. We assume that $\mat{G}$ is such that $\mat{F}$ is non-singular for some $\vec{\theta}$. Similarly, we assume that $\mat{J}$ is such that $\mat{Q}$ is a positive definite matrix for some $\vec{\psi}$.
+
+We cannot jointly maximize $\vec{\theta}$ and $\vec{\psi}$ analytically but we can maximize one conditional on the other. Hence, we can employ a Monte Carlo expectation conditional maximization algorithm in which we take two so-called conditional maximization steps \citep[see][on the, non-Monte Carlo, expectation maximization algorithm]{meng93}. We need some more notation before we show the two conditional maximization steps. Let $H^{(\dimRng, \dimState)}$ be the $(\dimRng, \dimState)$ commutation matrix so %
+%
+$$
+H^{(\dimRng, \dimState)}\vecOP{\mat{R}^+\mat{F}} 
+	= \vecOP{\Lparen{\mat{R}^+\mat{F}}^\top}
+	= \vecOP{\mat{F}^\top\mat{R}^{+\top}}
+$$%
+%
+and let $\tilde{\mat{G}} = H^{(\dimRng, \dimState)}\mat{G}$. Let $\mat{D}_\dimRng$ be the duplication matrix such that %
+%
+$$
+\mat{D}_\dimRng\nu(\mat{Q}) = \vecOP{\mat{Q}}
+$$%
+%
+which holds for any $\dimRng\times\dimRng$ symmetrical matrix in place of $\mat{Q}$ in the above equation. Lastly, let superscript $(i)$ denote the M-step estimates from the $i$'th iteration of the EM algorithm. Then the first conditional maximization step is %
+%
+\begin{equation}\label{eqn:restric_F_est}
+\vec{\theta}^{(i + 1)} =
+	\tilde{\mat{G}}^+
+	\Lparen{\mat{Q}^{(i)} \otimes \Lparen{\mat{M}^\top\mat{W}\mat{M}}^{-1}}
+	\tilde{\mat{G}}^{+\top}\tilde{\mat{G}}^\top	
+	\vecOP{\mat{M}^\top\mat{W}\mat{N}\mat{Q}^{-(i)}}
+\end{equation}%
+% 
+where $\otimes$ is the Kronecker product and $\mat{Q}^{-(i)}$ is the inverse of $\mat{Q}^{(i)}$. Equation~\eqref{eqn:restric_F_est} is easily computed with the QR decomposition we compute for Equation~\eqref{eqn:VARF}. Having obtained the new $\vec{\theta}^{(i + 1)}$ then we update the variable elements of $\mat{F}$ (those columns "picked out" by $\mat{R}$ in $\mat{R}^+\mat{F}$) and denote the new estimate $\widehat{\mat{F}}^{(i + 1)}$. The second conditional maximization of $\vec{\psi}$ is %
+%
+$$
+\vec{\psi}^{(i +1)} =
+   \frac{1}{\nPeriods - 1}\mat{J}^+
+   \nu\Lparen{
+	\Lparen{\mat{N} - \mat{R}^+\widehat{\mat{F}}^{(i +1)}\mat{M}}^\top
+	\mat{W}
+	\Lparen{\mat{N} - \mat{R}^+\widehat{\mat{F}}^{(i +1)}\mat{M}}}
+$$
+
+This completes the two conditional maximization steps. The next E-step is then performed using $\vec{\psi}^{(i +1)}$ and $\vec{\theta}^{(i + 1)}$. \citet[][see the discussion]{meng93} comments that it may be beneficial to perform an E-step between each conditional maximization step when the E-step is relatively cheap. This is not the case here since all the above computation are independent of $\nMax$.
 
 \subsection{Estimating fixed effect coefficients}
 Next, we turn to estimating the fixed effects, $\vec{\omega}$, in Equation~\eqref{eqn:model}. Since each observation $y_{it}$ is from an exponential family then it is easy to show that the M-step estimator amounts to generalized linear model with $\nPart_s$ observations for each $y_{it}$ which differ only by an offset term and a weight. The offset term comes from the $\vec{x}_{it}^\top\mat{R}^{+}\particS{\vec{\alpha}}{j}{t}$ term in Equation~\eqref{eqn:model} for each of the $j = 1, \dots, \nPart_s$ smoothed particles. The corresponding offset terms are the smoothed weights, $\particS{w}{j}{t}$. The problem can be solved in parallel using QR decompositions as in Section~\ref{subsec:VAR}. This is what is done in the current implementation.
