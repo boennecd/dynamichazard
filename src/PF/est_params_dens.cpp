@@ -102,7 +102,7 @@ PF_parameters
   (const smoother_output &sm_output, const arma::vec &a_0, const arma::mat &Q,
    const arma::mat &Q_0, const arma::mat &R, int max_threads,
    const bool do_est_a_0, const bool debug,
-   const unsigned long int max_bytes){
+   const unsigned long int max_bytes, const bool only_QR){
     update_parameters_data dat(sm_output, R);
 
     /* setup generators */
@@ -143,9 +143,16 @@ PF_parameters
     R_F res = qr_calc.compute();
     PF_parameters out;
 
+    out.F = res.F;
+    arma::mat R_from_QR = res.R_rev_piv();
+    out.R = R_from_QR;
+    out.dev = res.dev;
+
+    if(only_QR)
+      return(out);
+
     /* TODO: needs to be updated for higher order models since we need the
      *       full F matrix in a bit */
-    arma::mat R_from_QR = res.R_rev_piv();
     out.R_top_F = arma::solve(R_from_QR.t(), R_from_QR.t() * res.F,
                               arma::solve_opts::no_approx);
     out.R_top_F = arma::solve(R_from_QR    , out.R_top_F,
@@ -153,10 +160,6 @@ PF_parameters
 
     /* current values is (R^\top F)^\top ! */
     arma::inplace_trans(out.R_top_F);
-
-    out.F = res.F;
-    out.R = R_from_QR;
-    out.dev = res.dev;
 
     /* use that
      *    Q = Y^\top Y - F^\top F

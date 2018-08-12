@@ -533,17 +533,17 @@ get_state_eq_matrices <-  function(
 
 .check_filter_input <- function(
   Q, Q_0, F., R, a_0, L = NULL, fixed_parems, est_fixed_in_E,
-  X, fixed_terms, order, has_transposed_design = TRUE, Q_tilde = NULL){
+  X, fixed_terms, order, has_transposed_design = TRUE, Q_tilde = NULL,
+  G = NULL, J = NULL, theta = NULL, psi = NULL){
   lp_dim  <- if(has_transposed_design) nrow(          X) else ncol(          X)
   fix_dim <- if(has_transposed_design) nrow(fixed_terms) else ncol(fixed_terms)
   state_dim <- lp_dim * order + fix_dim * est_fixed_in_E
   rng_dim   <- lp_dim
 
-  .check_full_rank_square  (Q      , rng_dim  , TRUE)
-  .check_full_rank_square  (Q_0    , state_dim, TRUE)
-  .check_full_rank_square  (F.     , state_dim, FALSE)
-  if(!is.null(Q_tilde))
-    .check_full_rank_square(Q_tilde, rng_dim  , TRUE)
+  .check_full_rank_square  (Q      , rng_dim  , TRUE , is_null_ok = TRUE)
+  .check_full_rank_square  (Q_0    , state_dim, TRUE , is_null_ok = TRUE)
+  .check_full_rank_square  (F.     , state_dim, FALSE, is_null_ok = TRUE)
+  .check_full_rank_square(Q_tilde  , rng_dim  , TRUE , is_null_ok = TRUE)
 
   .check_selection_matrix(R, state_dim, rng_dim)
   if(!is.null(L))
@@ -554,26 +554,38 @@ get_state_eq_matrices <-  function(
   if(!length(fixed_parems) == fix_dim)
     stop("Invalid ", sQuote("fixed_terms"))
 
+  # TODO: check that G can lead to a full rank F and J can lead to a positive
+  #       definite matrix.
+  if(!is.null(G) || !is.null(theta))
+    stopifnot(nrow(G) == state_dim^2, ncol(G) == length(theta),
+              length(theta) <= nrow(G), qr(G)$rank == ncol(G))
+  if(!is.null(J) || !is.null(psi))
+    stopifnot(nrow(J) == rng_dim * (1 + rng_dim) / 2, ncol(J) == length(psi),
+              length(psi) <= nrow(J), qr(J)$rank == ncol(J))
+
   invisible(TRUE)
 }
 
-.check_full_rank_square <- function(X, expected_dim, pos_def){
+.check_full_rank_square <- function(X, expected_dim, pos_def,
+                                    is_null_ok = FALSE){
   qu <- substitute({
-    if(ncol(X) != n || nrow(X) != n)
-      stop("Invalid dimensions of ", sQuote(Xstr), ". Should be (", n,
-           ", ", n, ") but is ",
-           paste0("(", paste0(dim(X), collapse = ", "), ")"))
-    if(n > 0){
-      if(pos_def){
-        eg <- eigen(X)
-        if(!all(eg$values > 1e-8))
-          stop(sQuote(Xstr), " is not positive definite")
-      } else
-        if(qr(X)$rank < n)
-          stop(sQuote(Xstr), " does not have full rank")
+    if(!is.null(X) || !is_null_ok){
+      if(ncol(X) != n || nrow(X) != n)
+        stop("Invalid dimensions of ", sQuote(Xstr), ". Should be (", n,
+             ", ", n, ") but is ",
+             paste0("(", paste0(dim(X), collapse = ", "), ")"))
+      if(n > 0){
+        if(pos_def){
+          eg <- eigen(X)
+          if(!all(eg$values > 1e-8))
+            stop(sQuote(Xstr), " is not positive definite")
+        } else
+          if(qr(X)$rank < n)
+            stop(sQuote(Xstr), " does not have full rank")
+      }
     }
   }, list(X = substitute(X), Xstr = deparse(substitute(X)), n = expected_dim,
-          pos_def = pos_def))
+          pos_def = pos_def, is_null_ok = is_null_ok))
 
   eval(qu, envir = parent.frame())
 }

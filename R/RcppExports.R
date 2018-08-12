@@ -129,12 +129,12 @@ particle_filter <- function(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, 
     .Call(`_dynamichazard_particle_filter`, n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, R, Q_0, Q, Q_tilde, risk_obj, F, n_threads, fixed_parems, N_fw_n_bw, forward_backward_ESS_threshold, debug, N_first, type, is_forward, method, model)
 }
 
-compute_summary_stats_first_o_RW <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, debug) {
-    .Call(`_dynamichazard_compute_summary_stats_first_o_RW`, rcpp_list, n_threads, a_0, Q, Q_0, R, debug)
+compute_PF_summary_stats <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, F, do_use_F = FALSE, do_compute_E_x = TRUE) {
+    .Call(`_dynamichazard_compute_PF_summary_stats`, rcpp_list, n_threads, a_0, Q, Q_0, R, debug, F, do_use_F, do_compute_E_x)
 }
 
-PF_est_params_dens <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0 = FALSE) {
-    .Call(`_dynamichazard_PF_est_params_dens`, rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0)
+PF_est_params_dens <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0 = FALSE, only_QR = FALSE) {
+    .Call(`_dynamichazard_PF_est_params_dens`, rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0, only_QR)
 }
 
 test_copy_mat <- function(X, n_times) {

@@ -510,9 +510,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// compute_summary_stats_first_o_RW
-Rcpp::List compute_summary_stats_first_o_RW(const Rcpp::List& rcpp_list, unsigned int n_threads, const arma::vec& a_0, const arma::mat& Q, const arma::mat& Q_0, const arma::mat& R, const bool debug);
-RcppExport SEXP _dynamichazard_compute_summary_stats_first_o_RW(SEXP rcpp_listSEXP, SEXP n_threadsSEXP, SEXP a_0SEXP, SEXP QSEXP, SEXP Q_0SEXP, SEXP RSEXP, SEXP debugSEXP) {
+// compute_PF_summary_stats
+Rcpp::List compute_PF_summary_stats(const Rcpp::List& rcpp_list, unsigned int n_threads, const arma::vec& a_0, const arma::mat& Q, const arma::mat& Q_0, const arma::mat& R, const bool debug, const arma::mat F, const bool do_use_F, const bool do_compute_E_x);
+RcppExport SEXP _dynamichazard_compute_PF_summary_stats(SEXP rcpp_listSEXP, SEXP n_threadsSEXP, SEXP a_0SEXP, SEXP QSEXP, SEXP Q_0SEXP, SEXP RSEXP, SEXP debugSEXP, SEXP FSEXP, SEXP do_use_FSEXP, SEXP do_compute_E_xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -523,13 +523,16 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type Q_0(Q_0SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
     Rcpp::traits::input_parameter< const bool >::type debug(debugSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_summary_stats_first_o_RW(rcpp_list, n_threads, a_0, Q, Q_0, R, debug));
+    Rcpp::traits::input_parameter< const arma::mat >::type F(FSEXP);
+    Rcpp::traits::input_parameter< const bool >::type do_use_F(do_use_FSEXP);
+    Rcpp::traits::input_parameter< const bool >::type do_compute_E_x(do_compute_E_xSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_PF_summary_stats(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, F, do_use_F, do_compute_E_x));
     return rcpp_result_gen;
 END_RCPP
 }
 // PF_est_params_dens
-Rcpp::List PF_est_params_dens(const Rcpp::List& rcpp_list, unsigned int n_threads, const arma::vec& a_0, const arma::mat& Q, const arma::mat& Q_0, const arma::mat& R, const bool debug, const bool do_est_a_0);
-RcppExport SEXP _dynamichazard_PF_est_params_dens(SEXP rcpp_listSEXP, SEXP n_threadsSEXP, SEXP a_0SEXP, SEXP QSEXP, SEXP Q_0SEXP, SEXP RSEXP, SEXP debugSEXP, SEXP do_est_a_0SEXP) {
+Rcpp::List PF_est_params_dens(const Rcpp::List& rcpp_list, unsigned int n_threads, const arma::vec& a_0, const arma::mat& Q, const arma::mat& Q_0, const arma::mat& R, const bool debug, const bool do_est_a_0, const bool only_QR);
+RcppExport SEXP _dynamichazard_PF_est_params_dens(SEXP rcpp_listSEXP, SEXP n_threadsSEXP, SEXP a_0SEXP, SEXP QSEXP, SEXP Q_0SEXP, SEXP RSEXP, SEXP debugSEXP, SEXP do_est_a_0SEXP, SEXP only_QRSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -541,7 +544,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
     Rcpp::traits::input_parameter< const bool >::type debug(debugSEXP);
     Rcpp::traits::input_parameter< const bool >::type do_est_a_0(do_est_a_0SEXP);
-    rcpp_result_gen = Rcpp::wrap(PF_est_params_dens(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0));
+    Rcpp::traits::input_parameter< const bool >::type only_QR(only_QRSEXP);
+    rcpp_result_gen = Rcpp::wrap(PF_est_params_dens(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0, only_QR));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -673,8 +677,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 24},
     {"_dynamichazard_particle_filter", (DL_FUNC) &_dynamichazard_particle_filter, 22},
-    {"_dynamichazard_compute_summary_stats_first_o_RW", (DL_FUNC) &_dynamichazard_compute_summary_stats_first_o_RW, 7},
-    {"_dynamichazard_PF_est_params_dens", (DL_FUNC) &_dynamichazard_PF_est_params_dens, 8},
+    {"_dynamichazard_compute_PF_summary_stats", (DL_FUNC) &_dynamichazard_compute_PF_summary_stats, 10},
+    {"_dynamichazard_PF_est_params_dens", (DL_FUNC) &_dynamichazard_PF_est_params_dens, 9},
     {"_dynamichazard_test_copy_mat", (DL_FUNC) &_dynamichazard_test_copy_mat, 2},
     {"_dynamichazard_test_copy_vec", (DL_FUNC) &_dynamichazard_test_copy_vec, 2},
     {"_dynamichazard_pf_fixed_effect_iteration", (DL_FUNC) &_dynamichazard_pf_fixed_effect_iteration, 11},

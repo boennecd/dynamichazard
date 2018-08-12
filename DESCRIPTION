@@ -18,7 +18,8 @@ Description: Contains functions that lets you fit dynamic hazard models using
   (1992) <doi:10.1080/01621459.1992.10475232> and Fahrmeir (1994) 
   <doi:10.1093/biomet/81.2.317>. Extensions hereof are available where the  
   Extended Kalman filter is replaced by an unscented Kalman filter and other 
-  options including particle filters.
+  options including particle filters. The implemented particle filters support
+  more general state space models. 
 License: GPL-2
 LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo

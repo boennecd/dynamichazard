@@ -22,6 +22,9 @@ PF_effective_sample_size <- function(object){
 #' 'Details'.
 #' @param fixed_effects starting values for fixed effects if any. See
 #' \code{\link{ddFixed}}.
+#' @param G,J,theta,psi parameters for a restricted \code{type = "VAR"} model.
+#' See the vignette mentioned in 'Details' and the examples linked to in
+#' 'See Also'.
 #' @param ... optional way to pass arguments to \code{control}.
 #'
 #' @details
@@ -40,7 +43,7 @@ PF_effective_sample_size <- function(object){
 #' with \eqn{Q_0 \in {\rm I\!R}^{p\times p}}. The latent states,
 #' \eqn{\alpha_t}, are related to the output throught the linear predictors
 #'
-#' \deqn{\eta_{it} = X_t(R^\top\alpha_t) + Z_t\beta}
+#' \deqn{\eta_{it} = X_t(R^+\alpha_t) + Z_t\beta}
 #'
 #' where \eqn{X_t\in{\rm I\!R}^{n_t\times r}} and
 #' \eqn{Z_t{\rm I\!R}^{n_t\times c}} are design matrices and the outcome for a
@@ -57,6 +60,9 @@ PF_effective_sample_size <- function(object){
 #' the final log-likelihood.
 #'
 #' See the examples at https://github.com/boennecd/dynamichazard/tree/devel/examples.
+#'
+#' @section Warning:
+#' The function is still under development and the ouput and API may change.
 #'
 #' @examples
 #'#####
@@ -145,7 +151,7 @@ PF_effective_sample_size <- function(object){
 PF_EM <- function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
   control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
-  fixed_effects, ...){
+  fixed_effects, G, J, theta, psi, ...){
   #####
   # checks
   if(length(order) == 1 && order != 1)
@@ -167,6 +173,20 @@ PF_EM <- function(
 
   if(!missing(Fmat) && type != "VAR")
     stop(sQuote("Fmat"), " should not be passed for type ", sQuote(type))
+
+  has_restrict <- !c(missing(G), missing(theta), missing(J), missing(psi))
+  is_restricted <- all(has_restrict)
+  if(!(missing(Q) && missing(Fmat)) && !all(!has_restrict))
+    stop("Either supply ", sQuote("Q"), " and ", sQuote("Fmat"),
+         " or ", sQuote("G"), ", ", sQuote("theta"), ", ",
+         sQuote("J"), ", and ", sQuote("psi"))
+  if(any(has_restrict) && type != "VAR")
+    stop(sQuote("G"), ", ", sQuote("theta"), ", ", sQuote("J"),
+         ", and ", sQuote("psi"), " supplied with ", sQuote("type"),
+         " ", sQuote(type))
+  if(any(has_restrict) && !all(has_restrict))
+    stop("Missing one of ", sQuote("G"), ", ", sQuote("theta"), ", ", sQuote("J"),
+         ", or ", sQuote("psi"))
 
   #####
   # check if `control` has all the needed elements or if is called as in
@@ -200,18 +220,28 @@ PF_EM <- function(
   a_0 <- start_coefs$a_0
   fixed_parems <- start_coefs$fixed_parems_start
 
-  model_args <- get_state_eq_matrices(
-    order = order, n_params = nrow(static_args$X),
-    n_fixed = static_args$n_fixed, Q_0 = if(missing(Q_0)) NULL else Q_0,
-    Q = if(missing(Q)) NULL else Q, a_0 = a_0,
-    F. = if(missing(Fmat)) NULL else Fmat, type = type)
-  model_args[c("L", "indicies_fix")] <- NULL
+  if(is_restricted){
+    model_args <- list(
+      G = G, J = J, psi = psi, theta = theta, R = diag(nrow(static_args$X)),
+      a_0 = a_0, Q_0 = Q_0)
+
+  } else {
+    model_args <- get_state_eq_matrices(
+      order = order, n_params = nrow(static_args$X),
+      n_fixed = static_args$n_fixed, Q_0 = if(missing(Q_0)) NULL else Q_0,
+      Q = if(missing(Q)) NULL else Q, a_0 = a_0,
+      F. = if(missing(Fmat)) NULL else Fmat, type = type)
+    model_args[c("L", "indicies_fix")] <- NULL
+
+  }
 
   .check_filter_input(
     Q = model_args$Q, Q_0 = model_args$Q_0, F. = model_args$F.,
     R = model_args$R, a_0 = model_args$a_0, Q_tilde = control$Q_tilde,
     fixed_parems = start_coefs$fixed_parems_start, est_fixed_in_E = FALSE,
-    X = static_args$X, fixed_terms = static_args$fixed_terms, order = order)
+    X = static_args$X, fixed_terms = static_args$fixed_terms, order = order,
+    G = model_args$G, J = model_args$J, theta = model_args$theta,
+    psi = model_args$psi)
 
   #####
   # build up call with symbols to get neater call stack incase of an error
@@ -223,7 +253,9 @@ PF_EM <- function(
     tstop = static_args$tstop, risk_obj = static_args$risk_obj,
     debug = static_args$debug, model = static_args$model, Q = model_args$Q,
     Q_0 = model_args$Q_0, F. = model_args$F., R = model_args$R,
-    a_0 = model_args$a_0, N_fw_n_bw = control$N_fw_n_bw,
+    a_0 = model_args$a_0, G = model_args$G, J = model_args$J,
+    theta = model_args$theta, psi = model_args$psi,
+    N_fw_n_bw = control$N_fw_n_bw,
     N_smooth = control$N_smooth, N_first = control$N_first, eps = control$eps,
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
     method = control$method, n_max = control$n_max,
@@ -249,9 +281,12 @@ PF_EM <- function(
     state_names[j] <- rng_names[i]
   }
   rownames(obj$R) <- state_names
-  dimnames(obj$F) <- list(state_names, state_names)
-  dimnames(obj$Q) <- list(rng_names, rng_names)
-  names(obj$a_0) <- state_names
+  if(!is.null(obj$F))
+    dimnames(obj$F) <- list(state_names, state_names)
+  if(!is.null(obj$Q))
+    dimnames(obj$Q) <- list(rng_names, rng_names)
+  if(!is.null(obj$a_0))
+    names(obj$a_0) <- state_names
   if(length(fixed_names) > 0)
     names(obj$fixed_effects) <- fixed_names
 
@@ -265,6 +300,22 @@ PF_EM <- function(
     dimnames(obj$EM_ests$Q) <- list(rng_names, rng_names, em_names)
 
   }
+
+  if(!is.null(obj$G) && !is.null(obj$theta)){
+    colnames(obj$G) <- names(obj$theta) <- paste0("theta", seq_along(obj$theta))
+    tmp <- outer(
+      state_names, state_names, function(x, y) paste0(x, ":", y))
+    rownames(obj$G) <- as.vector(tmp)
+
+  }
+
+  if(!is.null(obj$J) && !is.null(obj$psi)){
+    colnames(obj$J) <- names(obj$psi) <- paste0("psi", seq_along(obj$psi))
+    tmp <- outer(rng_names, rng_names, function(x, y) paste0(x, ":", y))
+    rownames(obj$J) <- as.vector(tmp[lower.tri(tmp, diag = TRUE)])
+
+  }
+
   obj
 }
 
@@ -443,7 +494,7 @@ PF_forward_filter.formula <- function(
   R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
-  fixed_parems, type, Q_tilde, est_a_0){
+  fixed_parems, type, Q_tilde, est_a_0, G, J, theta, psi){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
@@ -451,11 +502,56 @@ PF_forward_filter.formula <- function(
 
   if(is.null(Q_tilde))
     fit_call[["Q_tilde"]] <- diag(0, n_vars)
-  fit_call[["F"]]   <- eval(fit_call[["F."]] , parent.frame())
-  fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
-  fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
 
-  fit_call[c("eps", "seed", "F.", "trace", "est_a_0")] <- NULL
+  is_restricted <- all(
+    !is.null(G), !is.null(J), !is.null(theta), !is.null(psi))
+  if(is_restricted){
+    fit_call[["F"]]   <- F. <- .get_F(G, theta)
+    fit_call[["Q"]]   <- Q  <- .get_Q(J, psi)
+    fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
+    G_tilde <- .get_cum_mat(nrow(F.), ncol(F.)) %*% G
+    J_qr <- qr(J)
+
+  } else {
+    fit_call[["F"]]   <- eval(fit_call[["F."]] , parent.frame())
+    fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
+    fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
+
+  }
+
+  fit_call[c("eps", "seed", "F.", "trace", "est_a_0", "G", "J",
+             "theta", "psi")] <- NULL
+
+  # print Q and F structure
+  if(trace > 0 && is_restricted){
+    tmp <- list(F = .get_F(G, seq_along(theta)), Q = .get_Q(J, seq_along(psi)),
+                R = R)
+    tmp <- .set_PF_names(tmp, rng_names = row.names(X), fixed_names = NULL)
+
+    # start with F
+    if(all(rowSums(G) < 2, G %in% c(0, 1))){
+      tmp$F <- structure(
+        sapply(tmp$F, sprintf, fmt = "t%d"), dimnames = dimnames(tmp$F),
+        dim = dim(tmp$F))
+      tmp$F[tmp$F == "t0"] <- NA_character_
+      cat(sQuote("F"), "matrix is of the following form\n")
+      print(tmp$F, quote = FALSE, na.print = "")
+      cat("\n")
+
+    }
+
+    # then Q
+    if(all(rowSums(J) < 2, J %in% c(0, 1))){
+      tmp$Q <- structure(
+        sapply(tmp$Q, sprintf, fmt = "p%d"), dimnames = dimnames(tmp$Q),
+        dim = dim(tmp$Q))
+      tmp$Q[tmp$Q == "p0"] <- NA_character_
+      cat(sQuote("Q"), "matrix is of the following form\n")
+      print(tmp$Q, quote = FALSE, na.print = "")
+      cat("\n")
+
+    }
+  }
 
   #####
   # set the seed as in r-source/src/library/stats/R/lm.R `simulate.lm`
@@ -527,9 +623,9 @@ PF_forward_filter.formula <- function(
     fixed_parems_old <- fixed_parems
 
     if(type == "RW"){
-      sum_stats <- compute_summary_stats_first_o_RW(
+      sum_stats <- compute_PF_summary_stats(
         clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-        debug = trace > 2)
+        debug = trace > 2, F = F.)
       if(est_a_0)
         a_0 <- drop(sum_stats[[1]]$E_xs)
       Q <- Reduce(
@@ -539,12 +635,44 @@ PF_forward_filter.formula <- function(
       fit_call$a_0 <- a_0
       fit_call$Q <- Q
     } else if (type == "VAR") {
-      new_params <- PF_est_params_dens(
-        clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-        debug = trace > 1)
-      fit_call$F <- F. <- new_params$R_top_F # TODO: need to change for higher
-                                             #       order models
-      fit_call$Q <- Q <- new_params$Q
+      if(is_restricted){
+        if(trace > 0)
+          cat("Running first conditional maximization step\n")
+        new_params <- PF_est_params_dens(
+          clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+          debug = trace > 1, only_QR = TRUE)
+        # see https://math.stackexchange.com/a/2875857/253239
+        QR_R <- new_params$QR_R
+        QR_F <- new_params$QR_F
+        t1 <- crossprod(
+          G_tilde, as.vector(crossprod(QR_R, t(solve(Q, t(QR_F))))))
+        t2 <- crossprod(
+          G_tilde, kronecker(solve(Q), crossprod(QR_R)) %*% G_tilde)
+        theta <- drop(solve(t2, t1))
+        # TODO: need to change for higher order models
+        fit_call$F <- F. <- .get_F(G, theta)
+
+        if(trace > 0)
+          cat("Running second conditional maximization step\n")
+        sum_stats <- compute_PF_summary_stats(
+          clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+          debug = trace > 2, F = F., do_use_F = TRUE, do_compute_E_x = FALSE)
+        Z <- Reduce(
+          "+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers")[-1])
+        Z <- as.vector(Z[lower.tri(Z, diag = TRUE)])
+        psi <- 1 / (length(sum_stats) - 1)* solve(J_qr, Z)
+        fit_call$Q <- Q <- .get_Q(J, psi)
+
+      } else {
+        new_params <- PF_est_params_dens(
+          clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+          debug = trace > 1, only_QR = FALSE)
+        # TODO: need to change for higher order models
+        fit_call$F <- F. <- new_params$R_top_F
+        fit_call$Q <- Q <- new_params$Q
+
+      }
+
 
     } else
       stop(sQuote("type"), " not implemented")
@@ -620,7 +748,7 @@ PF_forward_filter.formula <- function(
   if(!exists("effective_sample_size", envir = environment()))
     effective_sample_size <- PF_effective_sample_size(clouds)
 
-  return(structure(list(
+  out <- structure(list(
     call = cl, clouds = clouds, a_0 = a_0, fixed_effects = fixed_parems, Q = Q,
     F = fit_call$F, R = R, EM_ests = list(
       a_0             = a_0_it         [1:i, , drop = FALSE],
@@ -629,7 +757,13 @@ PF_forward_filter.formula <- function(
       Q = Q_it[, , 1:i, drop = FALSE]),
     log_likes = log_likes[1:i], n_iter = i,
     effective_sample_size = effective_sample_size, seed = seed),
-    class = "PF_EM"))
+    class = "PF_EM")
+
+  if(is_restricted)
+    out[c("G", "J", "theta", "psi")] <- list(
+      G = G, J = J, theta = theta, psi = psi)
+
+  out
 }
 
 #' @title Auxiliary for Controlling Particle Fitting
@@ -762,4 +896,39 @@ PF_control <- function(
   piv <- drop(o$pivot) + 1
   piv[piv] <- 1:length(piv)
   o$R[, piv, drop = FALSE]
+}
+
+.get_Q <- function(J, psi){
+  x <- nrow(J)
+  p <- as.integer((sqrt(8 * x + 1) - 1) / 2 + 1e-8)
+  Q <- matrix(0., ncol = p, nrow = p)
+  Q[lower.tri(Q, diag = TRUE)] <- J %*% psi
+  Q[upper.tri(Q)] <- t(Q)[upper.tri(Q)]
+  Q
+}
+
+.get_F <- function(G, theta){
+  q <- as.integer(sqrt(nrow(G)) + 1e-8)
+  matrix(as.vector(G %*% theta), q, q)
+}
+
+.get_cum_mat <- function(r, c){
+  Ir <- diag(1, r)
+  Ic <- diag(1, c)
+  H <- list()
+  for (i in 1:r) {
+    H[[i]] <- list()
+    for (j in 1:c) {
+      H[[i]][[j]] <- Ir[i, ] %o% Ic[j, ]
+    }
+  }
+  p <- r * c
+  K <- matrix(0, nrow = p, ncol = p)
+  for (i in 1:r) {
+    for (j in 1:c) {
+      Hij <- H[[i]][[j]]
+      K <- K + (Hij %x% t(Hij))
+    }
+  }
+  K
 }

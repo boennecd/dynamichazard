@@ -289,19 +289,21 @@ Rcpp::List particle_filter(
 }
 
 // [[Rcpp::export]]
-Rcpp::List compute_summary_stats_first_o_RW(
+Rcpp::List compute_PF_summary_stats(
     const Rcpp::List &rcpp_list, unsigned int n_threads,
     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
-    const arma::mat &R, const bool debug){
+    const arma::mat &R, const bool debug, const arma::mat F,
+    const bool do_use_F = false, const bool do_compute_E_x = true){
 #ifdef _OPENMP
   omp_set_num_threads(n_threads);
 #endif
 
-  PF_summary_stats_RW stats;
+  PF_summary_stats stats;
   {
     auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
 
-    stats = compute_summary_stats_first_o_RW(sm_output, a_0, Q, Q_0);
+    stats = compute_PF_summary_stats(
+      sm_output, a_0, Q, Q_0, F, do_use_F, do_compute_E_x);
   }
 
   unsigned int n_periods = stats.E_xs.size();
@@ -321,7 +323,8 @@ Rcpp::List compute_summary_stats_first_o_RW(
 Rcpp::List PF_est_params_dens(
     const Rcpp::List &rcpp_list, unsigned int n_threads,
     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
-    const arma::mat &R, const bool debug, const bool do_est_a_0 = false){
+    const arma::mat &R, const bool debug, const bool do_est_a_0 = false,
+    const bool only_QR = false){
   const unsigned long int max_bytes = 5000000;
   PF_parameters new_params;
 
@@ -329,7 +332,8 @@ Rcpp::List PF_est_params_dens(
     auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
 
     new_params = est_params_dens(
-      sm_output, a_0, Q, Q_0, R, n_threads, do_est_a_0, debug, max_bytes);
+      sm_output, a_0, Q, Q_0, R, n_threads, do_est_a_0, debug, max_bytes,
+      only_QR);
   }
 
   return Rcpp::List::create(

@@ -6,7 +6,7 @@
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
   control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
-  fixed_effects, ...)
+  fixed_effects, G, J, theta, psi, ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -45,6 +45,10 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 \item{fixed_effects}{starting values for fixed effects if any. See
 \code{\link{ddFixed}}.}
 
+\item{G, J, theta, psi}{parameters for a restricted \code{type = "VAR"} model.
+See the vignette mentioned in 'Details' and the examples linked to in
+'See Also'.}
+
 \item{...}{optional way to pass arguments to \code{control}.}
 }
 \value{
@@ -69,7 +73,7 @@ where \eqn{e_k} is column from the \eqn{p} dimensional identity matrix and
 with \eqn{Q_0 \in {\rm I\!R}^{p\times p}}. The latent states,
 \eqn{\alpha_t}, are related to the output throught the linear predictors
 
-\deqn{\eta_{it} = X_t(R^\top\alpha_t) + Z_t\beta}
+\deqn{\eta_{it} = X_t(R^+\alpha_t) + Z_t\beta}
 
 where \eqn{X_t\in{\rm I\!R}^{n_t\times r}} and
 \eqn{Z_t{\rm I\!R}^{n_t\times c}} are design matrices and the outcome for a
@@ -79,6 +83,11 @@ constant coefficients.
 
 See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 }
+\section{Warning}{
+
+The function is still under development and the ouput and API may change.
+}
+
 \examples{
 #####
 # Fit model with lung data set from survival

@@ -358,9 +358,11 @@ test_that("PF_EM gives previous results on head neck data set with fixed effects
                      "local_tests/pf_logit_w_fixed.RDS")
 })
 
-test_that("compute_summary_stats_first_o_RW gives previous results", {
+test_that("compute_PF_summary_stats gives previous results", {
   skip_on_cran()
 
+  F. <- diag(1, 2)
+  F1 <- matrix(c(.5, 0, .1, .3), 2)
   Q_0 <- diag(1, 2)
   Q <- diag(0.1, 2)
   a_0 <- c(-3.6, 0)
@@ -375,14 +377,41 @@ test_that("compute_summary_stats_first_o_RW gives previous results", {
 
           #####
           # Test that multithreaded version gives the same
-          sum_stats <- compute_summary_stats_first_o_RW(
+          sum_stats <- compute_PF_summary_stats(
             cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-            debug = FALSE)
-          s2 <- compute_summary_stats_first_o_RW(
+            debug = FALSE, F = F.)
+          s2 <- compute_PF_summary_stats(
             cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-            debug = FALSE)
+            debug = FALSE, F = F.)
 
           expect_equal(sum_stats, s2)
+
+          # we should get the same when we use F
+          s3 <- compute_PF_summary_stats(
+            cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+            debug = FALSE, F = F., do_use_F = TRUE)
+          expect_equal(sum_stats, s3)
+
+          # should only compute the latter sets of elements only
+          s4 <- compute_PF_summary_stats(
+            cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+            debug = FALSE, F = F., do_compute_E_x = FALSE)
+          expect_equal(lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"),
+                       lapply(s4       , "[[", "E_x_less_x_less_one_outers"))
+          expect_true(all(do.call(rbind, lapply(s4, "[[", "E_xs")) == 0))
+
+          # should get the same when we compute with F on our site
+          cp <- cloud_example
+          for(i in 1:(length(cp$forward_clouds) - 1))
+            cp$forward_clouds[[i]]$states <-
+              F1 %*% cp$forward_clouds[[i]]$states
+          s5 <- compute_PF_summary_stats(
+            cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+            debug = FALSE, F = F1, do_use_F = TRUE)
+          s6 <- compute_PF_summary_stats(
+            cp           , 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
+            debug = FALSE, F = F., do_use_F = FALSE)
+          expect_equal(s5, s6)
 
           #####
           # Test versus previous results
@@ -603,4 +632,11 @@ test_that("A few iterations with `type = \"VAR\"' yields the same as before", {
 
   expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
                      file = "PF_VARS.RDS", update = TRUE)
+})
+
+test_that("Commutation matrix is correct", {
+  A <- structure(c(0.96, 0.27, -0.25, -1.67, 0.63, 0.12, 1.29, 0.31),
+                 .Dim = c(4L, 2L))
+  expect_equal(as.vector(t(A)), drop(.get_cum_mat(4, 2) %*% as.vector(A)))
+  expect_equal(as.vector(A), drop(.get_cum_mat(2, 4) %*% as.vector(t(A))))
 })

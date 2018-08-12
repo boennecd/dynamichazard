@@ -75,7 +75,7 @@ are given above. First we assign the parameters for the simulation
 ```{r assign_get_Q_0, echo = FALSE}
 # function to find Q_0
 get_Q_0 <- function(Qmat, Fmat){
-  # compute with above formulas
+  # see https://math.stackexchange.com/q/2854333/253239
   eg  <- eigen(Fmat)
   las <- eg$values
   if(any(abs(las) >= 1))
