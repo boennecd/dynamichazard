@@ -11,7 +11,7 @@
 
 <meta name="author" content="Benjamin Christoffersen" />
 
-<meta name="date" content="2018-08-12" />
+<meta name="date" content="2018-08-13" />
 
 <title>Restricted Vector Autoregression</title>
 
@@ -121,7 +121,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">Restricted Vector Autoregression</h1>
 <h4 class="author"><em>Benjamin Christoffersen</em></h4>
-<h4 class="date"><em>2018-08-12</em></h4>
+<h4 class="date"><em>2018-08-13</em></h4>
 
 </div>
 
@@ -152,11 +152,11 @@ Q = \begin{pmatrix}
 R = I_4, \quad
 \]</span></p>
 <p><span class="math display">\[
-\vec{\beta} = (-3, -1, -0.5, 0.5, 1)^\top, \quad
+\vec{\beta} = (-6.5, -1, -0.5, 0.5, 1)^\top, \quad
 \vec{\theta} =(0.66, 0.8, 0.2)^\top, \quad
 \vec{\psi} =(0.4, 0.25, -0.2)^\top
 \]</span></p>
-<p>where <span class="math inline">\(I_4\)</span> is the four-dimensional identity matrix, <span class="math inline">\(.\)</span> is used instead of <span class="math inline">\(0\)</span> to put emphasis on the non-zero elements, and <span class="math inline">\(\vec{a}_0\)</span> and <span class="math inline">\(Q_0\)</span> are given by the invariant distribution. The unknown parameters to be estimated is everything but <span class="math inline">\(Q_0\)</span> and <span class="math inline">\(R\)</span> (since we fix <span class="math inline">\(Q_0\)</span> doing the estimation and we set <span class="math inline">\(\vec{a}_0 = (0, 0,0,0)^\top\)</span>). This example is run on the git branch “devel” with ID “465a8b2”. The code can be found on <a href="../examples">the github site for the package</a>. All functions which assignments are not shown and are not in the <code>dynamichazard</code> package can be found on the github site.</p>
+<p>where <span class="math inline">\(I_4\)</span> is the four-dimensional identity matrix, <span class="math inline">\(.\)</span> is used instead of <span class="math inline">\(0\)</span> to put emphasis on the non-zero elements, and <span class="math inline">\(\vec{a}_0\)</span> and <span class="math inline">\(Q_0\)</span> are given by the invariant distribution. The unknown parameters to be estimated is everything but <span class="math inline">\(Q_0\)</span> and <span class="math inline">\(R\)</span> (since we fix <span class="math inline">\(Q_0\)</span> doing the estimation and we set <span class="math inline">\(\vec{a}_0 = (0, 0,0,0)^\top\)</span>). This example is run on the git branch “devel” with ID “2601e14”. The code can be found on <a href="../examples">the github site for the package</a>. All functions which assignments are not shown and are not in the <code>dynamichazard</code> package can be found on the github site.</p>
 <p>We are going to estimate the parameters in an unrestricted model where we estimate the <span class="math inline">\(Q\)</span> and <span class="math inline">\(F\)</span> and a restricted model where we estimate <span class="math inline">\(\vec{\theta}\)</span> and <span class="math inline">\(\vec{\psi}\)</span>. In the later case, we can write</p>
 <p><span class="math display">\[
 \text{vec}(R^+F) = G\vec{\theta}, \qquad \nu(Q) = J\vec{\psi}

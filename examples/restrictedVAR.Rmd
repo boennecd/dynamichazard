@@ -63,7 +63,7 @@ R = I_4, \quad
 $$
 
 $$
-\vec{\beta} = (-3, -1, -0.5, 0.5, 1)^\top, \quad
+\vec{\beta} = (-6.5, -1, -0.5, 0.5, 1)^\top, \quad
 \vec{\theta} =(0.66, 0.8, 0.2)^\top, \quad
 \vec{\psi} =(0.4, 0.25, -0.2)^\top
 $$
