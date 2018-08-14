@@ -98,13 +98,7 @@ public:
           unsigned int n_elem = new_cloud.size();
 
 #ifdef _OPENMP
-#pragma omp parallel
-{
-#endif
-          double my_max_weight = -std::numeric_limits<double>::max();
-
-#ifdef _OPENMP
-#pragma omp for schedule(static)
+#pragma omp parallel for schedule(static) reduction(max:max_weight)
 #endif
           for(unsigned int i = 0; i < n_elem; ++i){ // loop over new particles
             auto it = new_cloud.begin() + i;
@@ -140,7 +134,7 @@ public:
                 dens_calc.log_artificial_prior(*it->parent, t + 1);
             }
 
-            my_max_weight = MAX(it->log_weight, my_max_weight);
+            max_weight = MAX(max_weight, it->log_weight);
 
             if(do_debug){
               const int wd = 11;
@@ -164,16 +158,6 @@ public:
             };
 
           } // end loop over new particle
-
-#ifdef _OPENMP
-#pragma omp critical(aux_lock)
-{
-#endif
-          max_weight = MAX(my_max_weight, max_weight);
-#ifdef _OPENMP
-}
-} // end omp parallel
-#endif
 
           normalize_log_weights<false, true>(new_cloud, max_weight);
       }
@@ -267,57 +251,41 @@ public:
       if(data.debug > 0)
         data.log(1) << "Weighting particles";
       {
-          double max_weight = -std::numeric_limits<double>::max();
-          arma::uvec r_set = get_risk_set(data, t);
-          unsigned int n_elem = new_cloud.size();
+        double max_weight = -std::numeric_limits<double>::max();
+        arma::uvec r_set = get_risk_set(data, t);
+        unsigned int n_elem = new_cloud.size();
 
 #ifdef _OPENMP
-#pragma omp parallel
-{
+#pragma omp parallel for schedule(static) reduction(max:max_weight)
 #endif
-          double my_max_weight = -std::numeric_limits<double>::max();
+        for(unsigned int i = 0; i < n_elem; ++i){ // loop over smooth clouds
+          auto it = new_cloud.begin() + i;
+          double log_prob_y_given_state =
+            dens_calc.log_prob_y_given_state(
+              it->get_state(), t, r_set, false);
+          double log_prob_state_given_previous =
+            dens_calc.log_prob_state_given_previous(
+              it->get_state()       , it->parent->get_state(), t);
+          double log_prob_next_given_state =
+            dens_calc.log_prob_state_given_previous(
+              it->child->get_state(), it->get_state()        , t + 1);
+          double log_importance_dens = it->log_importance_dens;
+          double log_artificial_prior = // TODO: have already been computed
+            dens_calc.log_artificial_prior(
+              *it->child /* note child */, t + 1 /* note t + 1 */);
 
-#ifdef _OPENMP
-#pragma omp for schedule(static)
-#endif
-          for(unsigned int i = 0; i < n_elem; ++i){ // loop over smooth clouds
-            auto it = new_cloud.begin() + i;
-            double log_prob_y_given_state =
-              dens_calc.log_prob_y_given_state(
-                it->get_state(), t, r_set, false);
-            double log_prob_state_given_previous =
-              dens_calc.log_prob_state_given_previous(
-                it->get_state()       , it->parent->get_state(), t);
-            double log_prob_next_given_state =
-              dens_calc.log_prob_state_given_previous(
-                it->child->get_state(), it->get_state()        , t + 1);
-            double log_importance_dens = it->log_importance_dens;
-            double log_artificial_prior = // TODO: have already been computed
-              dens_calc.log_artificial_prior(
-                *it->child /* note child */, t + 1 /* note t + 1 */);
+          it->log_unnormalized_weight = it->log_weight =
+            /* nominator */
+            (log_prob_y_given_state + log_prob_state_given_previous + log_prob_next_given_state +
+              it->parent->log_weight + it->child->log_weight)
+            /* denoninator */
+            - (log_importance_dens + it->parent->log_resampling_weight +
+                it->child->log_resampling_weight + log_artificial_prior);
 
-            it->log_unnormalized_weight = it->log_weight =
-              /* nominator */
-              (log_prob_y_given_state + log_prob_state_given_previous + log_prob_next_given_state +
-                it->parent->log_weight + it->child->log_weight)
-              /* denoninator */
-              - (log_importance_dens + it->parent->log_resampling_weight +
-                  it->child->log_resampling_weight + log_artificial_prior);
+          max_weight = MAX(max_weight, it->log_weight);
+        } // end over smooth clouds
 
-            my_max_weight = MAX(it->log_weight, my_max_weight);
-          } // end over smooth clouds
-
-#ifdef _OPENMP
-#pragma omp critical(smoother_lock)
-{
-#endif
-          max_weight = MAX(max_weight, my_max_weight);
-#ifdef _OPENMP
-}
-} // end omp parallel
-#endif
-
-          normalize_log_weights<false, true>(new_cloud, max_weight);
+        normalize_log_weights<false, true>(new_cloud, max_weight);
       }
 
       debug_msg_after_weighting(data, new_cloud);
@@ -410,12 +378,7 @@ public:
       cloud new_cloud(n_elem_bw);
 
 #ifdef _OPENMP
-#pragma omp parallel
-{
-#endif
-      double my_max_weight = -std::numeric_limits<double>::max();
-#ifdef _OPENMP
-#pragma omp for schedule(static)
+#pragma omp parallel for schedule(static) reduction(max:max_weight)
 #endif
       for(unsigned int i = 0; i < n_elem_bw; ++i){ // loop over bw particle
         particle &bw_particle = (*bw_cloud)[i];
@@ -468,18 +431,8 @@ public:
         particle &new_p = new_cloud.set_particle(i, bw_particle.get_state());
         new_p.log_unnormalized_weight = new_p.log_weight = this_log_weight;
 
-        my_max_weight = MAX(my_max_weight, this_log_weight);
+        max_weight = MAX(max_weight, this_log_weight);
       } // end loop over bw particle
-
-#ifdef _OPENMP
-#pragma omp critical(smoother_lock_brier_three)
-{
-#endif
-      max_weight = MAX(max_weight, my_max_weight);
-#ifdef _OPENMP
-}
-} // end omp parallel
-#endif
 
       // normalize smoothed weights
       normalize_log_weights<false, true>(new_cloud, max_weight);

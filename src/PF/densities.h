@@ -74,26 +74,7 @@ public:
     /* compute log likelihood */
     double result = 0;
 #ifdef _OPENMP
-    /*
-    Use lock as critical section will not do if this function is called in
-    nested parallel setup. See https://stackoverflow.com/a/20447843
-    */
-    omp_lock_t *lock;
-    if(multithreaded){
-      lock = new omp_lock_t;
-      omp_init_lock(lock);
-    } else
-      // avoid wmaybe-uninitialized
-      lock = nullptr;
-#pragma omp parallel if(multithreaded)
-{
-#endif
-    double my_result = 0;
-    arma::vec starts;
-    arma::vec stops;
-
-#ifdef _OPENMP
-#pragma omp for schedule(static)
+#pragma omp parallel for schedule(static) reduction(+:result)
 #endif
     for(unsigned int i = 0; i < n_jobs; ++i){
       auto &job = jobs[i];
@@ -103,49 +84,31 @@ public:
 
       const arma::uvec is_event = data.is_event_in_bin(my_r_set) == t - 1; /* zero indexed while t is not */
 
-          if(uses_at_risk_len){
-            starts = data.tstart(my_r_set);
-            stops = data.tstop(my_r_set);
-          }
+      arma::vec starts;
+      arma::vec stops;
+      if(uses_at_risk_len){
+        starts = data.tstart(my_r_set);
+        stops = data.tstop(my_r_set);
+      }
 
-          auto it_eta = eta.begin();
-          auto it_is_event = is_event.begin();
-          auto it_start = starts.begin();
-          auto it_stops = stops.begin();
-          unsigned int n = eta.n_elem;
-          for(uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
-            double at_risk_length = 0;
-            if(uses_at_risk_len){
-              at_risk_length = get_at_risk_length(
-                *(it_stops++) /* increament here */, bin_stop,
-                *(it_start++) /* increament here */, bin_start);
-            }
+      auto it_eta = eta.begin();
+      auto it_is_event = is_event.begin();
+      auto it_start = starts.begin();
+      auto it_stops = stops.begin();
+      unsigned int n = eta.n_elem;
+      for(uword i = 0; i < n; ++i, ++it_eta, ++it_is_event){
+        double at_risk_length = 0;
+        if(uses_at_risk_len){
+          at_risk_length = get_at_risk_length(
+            *(it_stops++) /* increament here */, bin_stop,
+            *(it_start++) /* increament here */, bin_start);
+        }
 
-            auto trunc_eta = truncate_eta(
-              *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
-            my_result += log_like(
-              *it_is_event, trunc_eta, at_risk_length);
-          }
+        auto trunc_eta = truncate_eta(
+          *it_is_event, *it_eta, exp(*it_eta), at_risk_length);
+        result += log_like(*it_is_event, trunc_eta, at_risk_length);
+      }
     }
-
-#ifdef _OPENMP
-  if(multithreaded)
-    omp_set_lock(lock);
-#endif
-
-    result += my_result;
-
-#ifdef _OPENMP
-  if(multithreaded)
-    omp_unset_lock(lock);
-#endif
-#ifdef _OPENMP
-}
-if(multithreaded){
-  omp_destroy_lock(lock);
-  delete lock;
-}
-#endif
 
     if(data.debug > 4){
       data.log(5) << "Computing log(P(y_t|alpha_t)) at time " << t

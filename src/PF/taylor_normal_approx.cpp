@@ -141,6 +141,7 @@ input_for_normal_apprx taylor_normal_approx(
       omp_set_lock(lock);
 #endif
 
+    // TODO: write reduction
     Sigma_inv += my_Sigma_inv;
     mu += my_mu;
 
