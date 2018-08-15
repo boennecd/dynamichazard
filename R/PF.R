@@ -151,7 +151,7 @@ PF_effective_sample_size <- function(object){
 PF_EM <- function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
   control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
-  fixed_effects, G, J, theta, psi, ...){
+  fixed_effects, G, theta, J, K, psi, phi, ...){
   #####
   # checks
   if(length(order) == 1 && order != 1)
@@ -174,19 +174,20 @@ PF_EM <- function(
   if(!missing(Fmat) && type != "VAR")
     stop(sQuote("Fmat"), " should not be passed for type ", sQuote(type))
 
-  has_restrict <- !c(missing(G), missing(theta), missing(J), missing(psi))
+  has_restrict <- !c(missing(G), missing(theta), missing(J), missing(K),
+                     missing(psi), missing(phi))
   is_restricted <- all(has_restrict)
+  str_if_err <- paste0(
+    sQuote("G"), ", ", sQuote("theta"), ", ", sQuote("J"), ", ", sQuote("K"),
+    ", ", sQuote("psi"), ", and ", sQuote("phi"))
   if(!(missing(Q) && missing(Fmat)) && !all(!has_restrict))
     stop("Either supply ", sQuote("Q"), " and ", sQuote("Fmat"),
-         " or ", sQuote("G"), ", ", sQuote("theta"), ", ",
-         sQuote("J"), ", and ", sQuote("psi"))
+         " or ", str_if_err)
   if(any(has_restrict) && type != "VAR")
-    stop(sQuote("G"), ", ", sQuote("theta"), ", ", sQuote("J"),
-         ", and ", sQuote("psi"), " supplied with ", sQuote("type"),
+    stop(str_if_err, " supplied with ", sQuote("type"),
          " ", sQuote(type))
   if(any(has_restrict) && !all(has_restrict))
-    stop("Missing one of ", sQuote("G"), ", ", sQuote("theta"), ", ", sQuote("J"),
-         ", or ", sQuote("psi"))
+    stop("Missing one of ", str_if_err)
 
   #####
   # check if `control` has all the needed elements or if is called as in
@@ -222,8 +223,8 @@ PF_EM <- function(
 
   if(is_restricted){
     model_args <- list(
-      G = G, J = J, psi = psi, theta = theta, R = diag(nrow(static_args$X)),
-      a_0 = a_0, Q_0 = Q_0)
+      G = G, theta = theta, J = J, K = K, psi = psi, phi = phi,
+      R = diag(nrow(static_args$X)), a_0 = a_0, Q_0 = Q_0)
 
   } else {
     model_args <- get_state_eq_matrices(
@@ -240,8 +241,8 @@ PF_EM <- function(
     R = model_args$R, a_0 = model_args$a_0, Q_tilde = control$Q_tilde,
     fixed_parems = start_coefs$fixed_parems_start, est_fixed_in_E = FALSE,
     X = static_args$X, fixed_terms = static_args$fixed_terms, order = order,
-    G = model_args$G, J = model_args$J, theta = model_args$theta,
-    psi = model_args$psi)
+    G = model_args$G, theta = model_args$theta, J = model_args$J,
+    K = model_args$K, psi = model_args$psi, phi = model_args$phi)
 
   #####
   # build up call with symbols to get neater call stack incase of an error
@@ -253,8 +254,8 @@ PF_EM <- function(
     tstop = static_args$tstop, risk_obj = static_args$risk_obj,
     debug = static_args$debug, model = static_args$model, Q = model_args$Q,
     Q_0 = model_args$Q_0, F. = model_args$F., R = model_args$R,
-    a_0 = model_args$a_0, G = model_args$G, J = model_args$J,
-    theta = model_args$theta, psi = model_args$psi,
+    a_0 = model_args$a_0, G = model_args$G, J = model_args$J, K = model_args$K,
+    theta = model_args$theta, psi = model_args$psi, phi = model_args$phi,
     N_fw_n_bw = control$N_fw_n_bw,
     N_smooth = control$N_smooth, N_first = control$N_first, eps = control$eps,
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
@@ -302,7 +303,8 @@ PF_EM <- function(
   }
 
   if(!is.null(obj$G) && !is.null(obj$theta)){
-    colnames(obj$G) <- names(obj$theta) <- paste0("theta", seq_along(obj$theta))
+    colnames(obj$G) <- names(obj$theta) <-
+      paste0("theta", seq_along(obj$theta))
     tmp <- outer(
       state_names, state_names, function(x, y) paste0(x, ":", y))
     rownames(obj$G) <- as.vector(tmp)
@@ -311,8 +313,15 @@ PF_EM <- function(
 
   if(!is.null(obj$J) && !is.null(obj$psi)){
     colnames(obj$J) <- names(obj$psi) <- paste0("psi", seq_along(obj$psi))
+    rownames(obj$J) <- rng_names
+
+  }
+
+  if(!is.null(obj$K) && !is.null(obj$phi)){
+    if(length(obj$phi) > 0)
+      colnames(obj$K) <- names(obj$phi) <- paste0("phi", seq_along(obj$phi))
     tmp <- outer(rng_names, rng_names, function(x, y) paste0(x, ":", y))
-    rownames(obj$J) <- as.vector(tmp[lower.tri(tmp, diag = TRUE)])
+    rownames(obj$K) <- tmp[lower.tri(tmp)]
 
   }
 
@@ -494,7 +503,7 @@ PF_forward_filter.formula <- function(
   R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
-  fixed_parems, type, Q_tilde, est_a_0, G, J, theta, psi){
+  fixed_parems, type, Q_tilde, est_a_0, G, J, K, theta, psi, phi){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
@@ -504,10 +513,11 @@ PF_forward_filter.formula <- function(
     fit_call[["Q_tilde"]] <- diag(0, n_vars)
 
   is_restricted <- all(
-    !is.null(G), !is.null(J), !is.null(theta), !is.null(psi))
+    !is.null(G), !is.null(J), !is.null(K), !is.null(theta), !is.null(psi),
+    !is.null(phi))
   if(is_restricted){
     fit_call[["F"]]   <- F. <- .get_F(G, theta)
-    fit_call[["Q"]]   <- Q  <- .get_Q(J, psi)
+    fit_call[["Q"]]   <- Q  <- .get_Q(J, K, psi, phi)$Q
     fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
     G_tilde <- .get_cum_mat(nrow(F.), ncol(F.)) %*% G
     J_qr <- qr(J)
@@ -519,13 +529,14 @@ PF_forward_filter.formula <- function(
 
   }
 
-  fit_call[c("eps", "seed", "F.", "trace", "est_a_0", "G", "J",
-             "theta", "psi")] <- NULL
+  fit_call[c("eps", "seed", "F.", "trace", "est_a_0", "G", "J", "K",
+             "theta", "psi", "phi")] <- NULL
 
   # print Q and F structure
   if(trace > 0 && is_restricted){
-    tmp <- list(F = .get_F(G, seq_along(theta)), Q = .get_Q(J, seq_along(psi)),
-                R = R)
+    tmp <- list(
+      F = .get_F(G, seq_along(theta)), R = R,
+      Q = .get_Q(J, K, seq_along(psi), seq_along(phi))$Q)
     tmp <- .set_PF_names(tmp, rng_names = row.names(X), fixed_names = NULL)
 
     # start with F
@@ -540,17 +551,17 @@ PF_forward_filter.formula <- function(
 
     }
 
-    # then Q
-    if(all(rowSums(J) < 2, J %in% c(0, 1))){
-      tmp$Q <- structure(
-        sapply(tmp$Q, sprintf, fmt = "p%d"), dimnames = dimnames(tmp$Q),
-        dim = dim(tmp$Q))
-      tmp$Q[tmp$Q == "p0"] <- NA_character_
+    if(all(rowSums(K) < 2, rowSums(J) < 2, c(J, K) %in% c(0, 1))){
+      tp <- drop(J %*% seq_along(psi))
+      diag(tmp$Q) <- sprintf("psi%d", tp)
+      tp <- drop(K %*% seq_along(phi))
+      tmp$Q[lower.tri(tmp$Q)] <- sprintf("phi%d", tp)
+      tmp$Q[tmp$Q == "phi0"] <- tmp$Q[upper.tri(tmp$Q)] <- NA_character_
       cat(sQuote("Q"), "matrix is of the following form\n")
       print(tmp$Q, quote = FALSE, na.print = "")
       cat("\n")
-
     }
+
   }
 
   #####
@@ -659,9 +670,70 @@ PF_forward_filter.formula <- function(
           debug = trace > 2, F = F., do_use_F = TRUE, do_compute_E_x = FALSE)
         Z <- Reduce(
           "+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers")[-1])
-        Z <- as.vector(Z[lower.tri(Z, diag = TRUE)])
-        psi <- 1 / (length(sum_stats) - 1)* solve(J_qr, Z)
-        fit_call$Q <- Q <- .get_Q(J, psi)
+
+        #####
+        # see https://stats.stackexchange.com/q/362062/81865
+
+        # assign log-likelihood function
+        idx <- 1:length(psi)
+        nobs <- length(sum_stats) - 1
+        ll <- function(par){
+          psi <- par[ idx]
+          phi <- par[-idx]
+
+          Q <- .get_Q(J, K, psi, phi)$Q
+          Q_qr <- qr(Q)
+          deter <- determinant(Q, logarithm = TRUE)
+          if(deter$sign < 0 || Q_qr$rank < ncol(Q))
+            return(NA_real_)
+
+          -(nobs * deter$modulus + sum(diag(solve(Q_qr, Z)))) / 2
+        }
+
+        # assign gradient function
+        gr <- function(par){
+          psi <- par[ idx]
+          phi <- par[-idx]
+
+          tmp <- .get_Q(J, K, psi, phi)
+          Q <- tmp$Q
+          C <- tmp$C
+          V <- tmp$V
+
+          # TODO: Computations could be done a lot smarter...
+          Q_qr <- qr(Q)
+          if(Q_qr$rank < ncol(Q))
+            return(NA_real_)
+          fac <- solve(Q_qr, Z) - diag(nobs, ncol(Q))
+          fac <- solve(Q_qr, t(fac)) / 2
+
+          d_V <-
+            diag(fac %*% V %*% C + C %*% V %*% fac) %*%
+            J %*% diag(exp(psi), length(psi))
+
+          d_C <- tcrossprod(V, V %*% fac)
+          exp_phi <- exp(phi)
+          d_C <- as.vector(d_C)[lower.tri(d_C, diag = FALSE)] %*% K %*%
+            diag((4 * exp_phi / (1 + exp_phi)^2), length(phi))
+
+          c(drop(d_V), drop(d_C))
+        }
+
+        # scale with full covariance matrix log-likelihood
+        Q_full <- Z / nobs
+        deter <- determinant(Q_full, logarithm = TRUE)
+        ll_full <- -(nobs * deter$modulus + nobs * ncol(Q_full)) / 2
+        ctrl <- list(fnscale = if(ll_full < 0) ll_full else -ll_full)
+
+        out_optim <-
+          optim(c(psi, phi), ll, gr, control = ctrl, method = "BFGS")
+        if(out_optim$convergence != 0)
+          stop(sQuote("optim"), " failed to converge with code ",
+               out_optim$convergence)
+        psi <- out_optim$par[ idx]
+        phi <- out_optim$par[-idx]
+
+        fit_call$Q <- Q <- .get_Q(J, K, psi, phi)$Q
 
       } else {
         new_params <- PF_est_params_dens(
@@ -725,7 +797,7 @@ PF_forward_filter.formula <- function(
       msg <- paste(
         msg, sprintf("%.5f", a_0_relative_norm), "and",
         sprintf("%.5f", Q_relative_norm), "at iteration", i)
-      cat(msg)
+      cat(msg, "\n")
     }
 
     a_0_it[i, ] <- a_0
@@ -760,8 +832,8 @@ PF_forward_filter.formula <- function(
     class = "PF_EM")
 
   if(is_restricted)
-    out[c("G", "J", "theta", "psi")] <- list(
-      G = G, J = J, theta = theta, psi = psi)
+    out[c("G", "J", "K", "theta", "psi", "phi")] <- list(
+      G = G, J = J, K = K, theta = theta, psi = psi, phi = phi)
 
   out
 }
@@ -898,13 +970,12 @@ PF_control <- function(
   o$R[, piv, drop = FALSE]
 }
 
-.get_Q <- function(J, psi){
-  x <- nrow(J)
-  p <- as.integer((sqrt(8 * x + 1) - 1) / 2 + 1e-8)
-  Q <- matrix(0., ncol = p, nrow = p)
-  Q[lower.tri(Q, diag = TRUE)] <- J %*% psi
-  Q[upper.tri(Q)] <- t(Q)[upper.tri(Q)]
-  Q
+.get_Q <- function(J, K, psi, phi){
+  V <- diag(exp(drop(J %*% psi)))
+  C <- diag(1, ncol(V))
+  C[lower.tri(C)] <- 2/(1 + exp(-drop(K %*% phi))) - 1
+  C[upper.tri(C)] <- t(C)[upper.tri(C)]
+  list(Q = V %*% C %*% V, V = V, C = C)
 }
 
 .get_F <- function(G, theta){

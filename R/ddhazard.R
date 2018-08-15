@@ -534,7 +534,7 @@ get_state_eq_matrices <-  function(
 .check_filter_input <- function(
   Q, Q_0, F., R, a_0, L = NULL, fixed_parems, est_fixed_in_E,
   X, fixed_terms, order, has_transposed_design = TRUE, Q_tilde = NULL,
-  G = NULL, J = NULL, theta = NULL, psi = NULL){
+  G = NULL, J = NULL, K = NULL, theta = NULL, psi = NULL, phi = NULL){
   lp_dim  <- if(has_transposed_design) nrow(          X) else ncol(          X)
   fix_dim <- if(has_transposed_design) nrow(fixed_terms) else ncol(fixed_terms)
   state_dim <- lp_dim * order + fix_dim * est_fixed_in_E
@@ -554,14 +554,27 @@ get_state_eq_matrices <-  function(
   if(!length(fixed_parems) == fix_dim)
     stop("Invalid ", sQuote("fixed_terms"))
 
-  # TODO: check that G can lead to a full rank F and J can lead to a positive
-  #       definite matrix.
-  if(!is.null(G) || !is.null(theta))
+  if(!is.null(G) || !is.null(theta)){
     stopifnot(nrow(G) == state_dim^2, ncol(G) == length(theta),
               length(theta) <= nrow(G), qr(G)$rank == ncol(G))
-  if(!is.null(J) || !is.null(psi))
-    stopifnot(nrow(J) == rng_dim * (1 + rng_dim) / 2, ncol(J) == length(psi),
+    F. <- .get_F(G, theta)
+    if(qr(F.)$rank < ncol(F.))
+      stop(sQuote("F"), " is singular with the starting values")
+
+  }
+  if(!is.null(J) || !is.null(psi) || !is.null(K) || !is.null(phi)){
+    stopifnot(nrow(J) == rng_dim, ncol(J) == length(psi),
               length(psi) <= nrow(J), qr(J)$rank == ncol(J))
+    stopifnot(nrow(K) == rng_dim * (rng_dim - 1) / 2, ncol(K) == length(phi),
+              length(phi) <= nrow(K), qr(K)$rank == ncol(K))
+
+    Q <- .get_Q(J, K, psi, phi)$Q
+    eg <- eigen(Q)
+
+    if(any(abs(eg$values) < 1e-10))
+      stop(sQuote("Q"), " is not positive definite with the starting values")
+  }
+
 
   invisible(TRUE)
 }

@@ -26,6 +26,9 @@
 \newcommand{\citeAlgLineTo}[3]{lines~\ref{#1}-\ref{#2} of Algorithm~\ref{#3}}
 
 % Math commands
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
 \renewcommand{\vec}[1]{\bm{#1}}
 \newcommand{\vect}[1]{\widetilde{\vec{#1}}}
 \newcommand{\vecb}[1]{\bar{\vec{#1}}}
@@ -846,14 +849,35 @@ where $\diag{\cdot}$ is a diagonal matrix which diagonal elements are the argume
 which is the typical vector auto-regression estimators with weights. Equation \eqref{eqn:VARF}~and \eqref{eqn:VARQ} can easily be computed in parallel using QR decompositions as in the \texttt{bam} in the \texttt{mgcv} package with a low memory footprint \citep[see][]{wood14}. This is currently implemented. Though, the gains from a parallel implementation may be small as the computation here have a computation time which is independent of the number of observations. In other words, the other the computation is relatively much less demanding then the other parts.
 
 \subsection{Restricted vector auto-regression models}
-Suppose that we want to restrict the some of the parameters of $\mat{F}$ and $\mat{Q}$. E.g., we can restrict the model to %
+Suppose that we want to restrict some of the parameters of $\mat{F}$ and $\mat{Q}$. E.g., we can restrict the model to %
 %
-$$
-\vecOP{\mat{R}^+\mat{F}} = \mat{G}\vec{\theta}, \qquad
-\nu(\mat{Q}) = \mat{J}\vec{\psi}
-$$%
+\begin{align*}
+\vecOP{\mat{R}^+\mat{F}} &= \mat{G}\vec{\theta} &  
+  \mat{Q} &= \mat{V}\mat{C}\mat{V} \\
+\mat{V} &= \begin{pmatrix} 
+     \sigma_1 & 0 & \cdots & 0 \\
+     0 & \sigma_2 & \ddots & 0 \\
+     \vdots & \ddots & \ddots & \vdots \\
+     0 & \dots & 0 & \sigma_\dimRng
+   \end{pmatrix} &
+  \mat{C} &= \begin{pmatrix} 
+     1 & \rho_{21} & \cdots & \rho_{\dimRng1} \\
+     \rho_{21} & 1 & \ddots & \rho_{\dimRng2} \\
+     \vdots & \ddots & \ddots & \vdots \\
+     \rho_{\dimRng1} & \dots & \rho_{\dimRng,\dimRng-1} & 1
+   \end{pmatrix} \\
+\sigma_i &= \exp(s_i) & 
+  \rho_{ij}&= \frac{2}{1 + \exp(-q_{ij})} - 1
+\end{align*}%
 %
-where $\vecOP{\cdot}$ is the vectorization function which stacks the the columns of a matrix from left to right and $\nu$ is the function that removes all superdiagonal elements of a square $n\times n$ matrix and stack the remaining $n(n+1)/2$ elements. E.g., %
+with%
+%
+\begin{align*}
+  (s_1,s_2,\dots, s_\dimRng)^\top&=\mat{J}\vec\psi \\
+  (q_{21},q_{31},\dots,q_{\dimRng1},q_{32},\dots,q_{\dimRng,\dimRng-1})^\top&=\mat{K}\vec\phi  
+\end{align*} %
+%
+and where $\vecOP{\cdot}$ is the vectorization function which stacks the the columns of a matrix from left to right. E.g., %
 %
 \begin{align*}
 \mat{A} &= \begin{pmatrix}
@@ -864,16 +888,12 @@ where $\vecOP{\cdot}$ is the vectorization function which stacks the the columns
 \vecOP{\mat{A}} &= \Lparen{
 	a_{11}, a_{21}, a_{31}, 
 	a_{12}, a_{22}, a_{32},
-	a_{13}, a_{23}, a_{33}}^\top \\
-\nu(\mat{A}) &= \Lparen{
-	a_{11}, a_{21}, a_{31}, 
-	a_{22}, a_{32},
-	a_{33}}^\top
+	a_{13}, a_{23}, a_{33}}^\top
 \end{align*}
 %
-$\mat{G}\in\mathbb{R}^{\dimRng\dimState \times k}$ is a known matrix with $k \leq \dimState\dimRng$ and we assume that it has full column rank. Similarly, $\mat{J}\in \mathbb{R}^{\dimRng(\dimRng + 1) / 2 \times l}$ is a known matrix with $l \leq \dimRng(\dimRng + 1) / 2$ and with full column rank. We assume that $\mat{G}$ is such that $\mat{F}$ is non-singular for some $\vec{\theta}$. Similarly, we assume that $\mat{J}$ is such that $\mat{Q}$ is a positive definite matrix for some $\vec{\psi}$.
+$\mat{G}\in\mathbb{R}^{\dimRng\dimState \times g}$ is a known matrix with $g \leq \dimRng\dimState$ and we assume that it has full column rank. Similarly, $\mat{J}\in\mathbb{R}^{\dimRng \times l}$ with $l \leq \dimRng$ and $\mat{K}\in\mathbb{R}^{\dimRng(\dimRng - 1)/2 \times k}$ with $k\leq \dimRng(\dimRng - 1)/2$. Both are known and have full column rank. We assume that $\mat{G}$ is such that $\mat{F}$ is non-singular for some $\vec{\theta}$. Similarly, we assume that $\mat{J}$ and $\mat{K}$ are such that $\mat{Q}$ is a positive definite matrix for some $\vec{\psi}$ and $\vec{\phi}$ pair. $\mat{V}$ is a diagonal matrix containing the standard deviations and $\mat{C}$ is the correlation matrix.
 
-We cannot jointly maximize $\vec{\theta}$ and $\vec{\psi}$ analytically but we can maximize one conditional on the other. Hence, we can employ a Monte Carlo expectation conditional maximization algorithm in which we take two so-called conditional maximization steps \citep[see][on the, non-Monte Carlo, expectation maximization algorithm]{meng93}. We need some more notation before we show the two conditional maximization steps. Let $H^{(\dimRng, \dimState)}$ be the $(\dimRng, \dimState)$ commutation matrix so %
+We cannot jointly maximize $\vec{\theta}$, $\vec{\psi}$, and $\vec{\phi}$ analytically but we can maximize $\vec{\theta}$ analytically conditional on $\vec{\psi}$ and $\vec{\phi}$. Hence, we can employ a Monte Carlo expectation conditional maximization algorithm in which we take two so-called conditional maximization steps \citep[see][on the, non-Monte Carlo, expectation maximization algorithm]{meng93}. We need some more notation before we show the two conditional maximization steps. Let $H^{(\dimRng, \dimState)}$ be the $(\dimRng, \dimState)$ commutation matrix so %
 %
 $$
 H^{(\dimRng, \dimState)}\vecOP{\mat{R}^+\mat{F}} 
@@ -881,13 +901,7 @@ H^{(\dimRng, \dimState)}\vecOP{\mat{R}^+\mat{F}}
 	= \vecOP{\mat{F}^\top\mat{R}^{+\top}}
 $$%
 %
-and let $\tilde{\mat{G}} = H^{(\dimRng, \dimState)}\mat{G}$. Let $\mat{D}_\dimRng$ be the duplication matrix such that %
-%
-$$
-\mat{D}_\dimRng\nu(\mat{Q}) = \vecOP{\mat{Q}}
-$$%
-%
-which holds for any $\dimRng\times\dimRng$ symmetrical matrix in place of $\mat{Q}$ in the above equation. Lastly, let superscript $(i)$ denote the M-step estimates from the $i$'th iteration of the EM algorithm. Then the first conditional maximization step is %
+and let superscript $(i)$ denote the M-step estimates from the $i$'th iteration of the EM algorithm. Then the first conditional maximization step is %
 %
 \begin{equation}\label{eqn:restric_F_est}
 \vec{\theta}^{(i + 1)} =
@@ -897,18 +911,17 @@ which holds for any $\dimRng\times\dimRng$ symmetrical matrix in place of $\mat{
 	\vecOP{\mat{M}^\top\mat{W}\mat{N}\mat{Q}^{-(i)}}
 \end{equation}%
 % 
-where $\otimes$ is the Kronecker product and $\mat{Q}^{-(i)}$ is the inverse of $\mat{Q}^{(i)}$. Equation~\eqref{eqn:restric_F_est} is easily computed with the QR decomposition we compute for Equation~\eqref{eqn:VARF}. Having obtained the new $\vec{\theta}^{(i + 1)}$ then we update the variable elements of $\mat{F}$ (those columns "picked out" by $\mat{R}$ in $\mat{R}^+\mat{F}$) and denote the new estimate $\widehat{\mat{F}}^{(i + 1)}$. The second conditional maximization of $\vec{\psi}$ is %
+where $\otimes$ is the Kronecker product and $\mat{Q}^{-(i)}$ is the inverse of $\mat{Q}^{(i)}$. Equation~\eqref{eqn:restric_F_est} is easily computed with the QR decomposition we compute for Equation~\eqref{eqn:VARF}. Having obtained the new $\vec{\theta}^{(i + 1)}$ then we update the variable elements of $\mat{F}$ (those columns "picked out" by $\mat{R}$ in $\mat{R}^+\mat{F}$) and denote the new estimate $\widehat{\mat{F}}^{(i + 1)}$. The second conditional maximization of $\vec{\psi}$ and $\vec{\phi}$ is %
 %
-$$
-\vec{\psi}^{(i +1)} =
-   \frac{1}{\nPeriods - 1}\mat{J}^+
-   \nu\Lparen{
-	\Lparen{\mat{N} - \mat{R}^+\widehat{\mat{F}}^{(i +1)}\mat{M}}^\top
-	\mat{W}
-	\Lparen{\mat{N} - \mat{R}^+\widehat{\mat{F}}^{(i +1)}\mat{M}}}
-$$
-
-This completes the two conditional maximization steps. The next E-step is then performed using $\vec{\psi}^{(i +1)}$ and $\vec{\theta}^{(i + 1)}$. \citet[][see the discussion]{meng93} comments that it may be beneficial to perform an E-step between each conditional maximization step when the E-step is relatively cheap. This is not the case here since all the above computation are independent of $\nMax$.
+\begin{align*}
+\mat{Z} &= \Lparen{\mat{N} - \mat{R}^+\widehat{\mat{F}}^{(i +1)}\mat{M}}^\top\mat{W}
+           \Lparen{\mat{N} - \mat{R}^+\widehat{\mat{F}}^{(i +1)}\mat{M}} \\
+\vec{\psi}^{(i+1)},\vec{\phi}^{(i+1)} &= \argmax_{\vec{\psi},\vec{\phi}} 
+   -(\nPeriods - 1)\log\Lvert{\mat{Q}(\vec{\psi},\vec{\phi})}
+   -\text{tr}\Lparen{\mat{Q}(\vec{\psi},\vec{\phi})^{-1}\mat{Z}}
+\end{align*}%
+% 
+which can be done numerically. We have made $\mat{Q}$'s depends on $\vec{\psi}$ and $\vec{\phi}$ explicit to emphasize which factors are affected. $\mat{C}$ will not be a valid covariance for all $\vec{\phi}\in\mathbb{R}^k$ for some choices of $\mat{K}$. The invalid values are ruled out doing the numerical optimization. This completes the two conditional maximization steps. The next E-step is then performed using $\vec{\theta}^{(i + 1)}$, $\vec{\psi}^{(i +1)}$, $\vec{\phi}^{(i + 1)}$. \citet[][see the discussion]{meng93} comments that it may be beneficial to perform an E-step between each conditional maximization step when the E-step is relatively cheap. This is not the case here since all the above computation are independent of $\nMax$.
 
 \subsection{Estimating fixed effect coefficients}
 Next, we turn to estimating the fixed effects, $\vec{\omega}$, in Equation~\eqref{eqn:model}. Since each observation $y_{it}$ is from an exponential family then it is easy to show that the M-step estimator amounts to generalized linear model with $\nPart_s$ observations for each $y_{it}$ which differ only by an offset term and a weight. The offset term comes from the $\vec{x}_{it}^\top\mat{R}^{+}\particS{\vec{\alpha}}{j}{t}$ term in Equation~\eqref{eqn:model} for each of the $j = 1, \dots, \nPart_s$ smoothed particles. The corresponding offset terms are the smoothed weights, $\particS{w}{j}{t}$. The problem can be solved in parallel using QR decompositions as in Section~\ref{subsec:VAR}. This is what is done in the current implementation.
