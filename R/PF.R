@@ -22,7 +22,7 @@ PF_effective_sample_size <- function(object){
 #' 'Details'.
 #' @param fixed_effects starting values for fixed effects if any. See
 #' \code{\link{ddFixed}}.
-#' @param G,J,theta,psi parameters for a restricted \code{type = "VAR"} model.
+#' @param G,theta,J,K,psi,phi parameters for a restricted \code{type = "VAR"} model.
 #' See the vignette mentioned in 'Details' and the examples linked to in
 #' 'See Also'.
 #' @param ... optional way to pass arguments to \code{control}.

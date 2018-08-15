@@ -196,7 +196,7 @@ Given the models of interest we have that
 
 \begin{itemize}
 	\item Evaluating $\optorC{g_t}{\vec{y_t}}{\vec{\alpha}_t}$ is an expensive operation as $\nMax \gg \dimRng$ and it has a $\bigO{\nMax\dimRng}$ computational cost. Any $\bigO{\nMax}$ operation is going to take considerable time.
-	\item Evaluating $\optorC{f}{\vec{\alpha}_t}{\vec{\alpha}_{t -1}}$ is cheap, it is done in in closed form, and sampling from these distribution can be done in closed form.
+	\item Evaluating $\optorC{f}{\vec{\alpha}_t}{\vec{\alpha}_{t -1}}$ is cheap, it is done in in closed form, and sampling is easy.
 \end{itemize}
 
 We can also notice that the second example in \cite{fearnhead10} is close to the model here though with $\nMax = 1$. The following sections will closely follow the example shown in \cite{fearnhead10} and the appendix of the paper.

@@ -6,7 +6,7 @@
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
   control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
-  fixed_effects, G, J, theta, psi, ...)
+  fixed_effects, G, theta, J, K, psi, phi, ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -45,7 +45,7 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 \item{fixed_effects}{starting values for fixed effects if any. See
 \code{\link{ddFixed}}.}
 
-\item{G, J, theta, psi}{parameters for a restricted \code{type = "VAR"} model.
+\item{G, theta, J, K, psi, phi}{parameters for a restricted \code{type = "VAR"} model.
 See the vignette mentioned in 'Details' and the examples linked to in
 'See Also'.}
 
