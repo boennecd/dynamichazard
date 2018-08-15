@@ -41,7 +41,8 @@ $$
 
 where the $y_{it}$ is individual $i$'s indicator at time $t$ for whether he dies 
 between time $(t - 1, t]$ and $h:\,\{1,\dots n\} \rightarrow \{1,\dots,4\}$ 
-returns the group index individual $i$ belongs to. The indicators, $y_{it}$, are Poisson distributed conditional on 
+returns the group index individual $i$ belongs to. The indicators, $y_{it}$, 
+are binomial distributed with the complementary log-log link function conditional on 
 knowing the log time at risk, $o_{it}$, covariates, $x_t$ and $z_t$, and latent states, $\vec{\alpha}_1,\dots,\vec{\alpha}_d$. 
 The total survival time of individual $i$ is $T_i$ which is 
 piecewise constant exponentially distributed
@@ -55,19 +56,18 @@ F = \begin{pmatrix}
     . & . & \theta_2 & . \\
     \theta_3 & . & . & \theta_1 \end{pmatrix}, \quad
 Q = \begin{pmatrix}
-    \psi_1 & . & \psi_3 & . \\
-    . & \psi_1 & . & . \\
-    \psi_3 & . & \psi_2 & . \\ 
-    . & . & . & \psi_2 \end{pmatrix}, \quad
-R = I_4, \quad
+      0.49 & . & 0.175 & . \\
+      . & 0.49 & . & . \\
+      0.175 & . & 0.25 & . \\ 
+      . & . & . & 0.25 
+\end{pmatrix}, \quad 
+R = I_4
 $$
 
 $$
 \vec{\beta} = (-6.5, -1, -0.5, 0.5, 1)^\top, \quad
-\vec{\theta} =(0.66, 0.8, 0.2)^\top, \quad
-\vec{\psi} =(0.4, 0.25, -0.2)^\top
+\vec{\theta} =(0.66, 0.8, 0.2)^\top
 $$
-
 
 ```{r assign_kit_info, echo = FALSE}
 git_key <- system("git rev-parse --short HEAD", intern = TRUE)
@@ -89,17 +89,41 @@ All functions which assignments are not shown and are not in the
 
 We are going to estimate the parameters in an unrestricted model where we 
 estimate the $Q$ and $F$ and a restricted model where we estimate 
-$\vec{\theta}$ and $\vec{\psi}$. In the later case, we can write 
+$\vec{\theta}$, parameters for standard deviations which we denote by 
+$\vec{\psi}$, and parameters for the correlations which we denote by 
+$\vec{\phi}$. In the restricted case, we let  
 
 $$
-\text{vec}(R^+F) = G\vec{\theta}, \qquad \nu(Q) = J\vec{\psi}
+\begin{align*}
+\text{vec}(R^+F) &= G\vec{\theta} \\
+Q &= VCV 
+  = \begin{pmatrix}
+      \sigma_1 & . & . & . \\
+      . & \sigma_2 & . & . \\
+      . & . & \sigma_3 & . \\ 
+      . & . & . & \sigma_4 
+    \end{pmatrix}
+    \begin{pmatrix}
+      1 & \rho_{21} & \rho_{31} & \rho_{41} \\
+      \rho_{21} & 1 & \rho_{32} & \rho_{42} \\
+      \rho_{31} & \rho_{32} & 1 & \rho_{43} \\ 
+      \rho_{41} & \rho_{42} & \rho_{43} & 1 
+    \end{pmatrix}
+    \begin{pmatrix}
+      \sigma_1 & . & . & . \\
+      . & \sigma_2 & . & . \\
+      . & . & \sigma_3 & . \\ 
+      . & . & . & \sigma_4 
+    \end{pmatrix} \\
+(\sigma_1,\sigma_2,\sigma_3,\sigma_4)^\top 
+    &= J (\exp(\psi_1), \exp(\psi_2))^\top \\
+(\rho_{21}, \rho_{31}, \rho_{41},\rho_{32}, \rho_{42},\rho_{43})^\top
+    &=K\cdot\left(\frac{2}{1+\exp(-\phi_1)} - 1\right)
+\end{align*}
 $$
 
-where $\text{vec}(\cdot)$ is the [vectorization function](https://en.wikipedia.org/wiki/Vectorization_(mathematics))
-and $\nu(\cdot)$ is the function [half-vectorizaiton function](https://en.wikipedia.org/wiki/Vectorization_(mathematics)#Half-vectorization) 
-that that removes all superdiagonal elements 
-of a square $n\times n$ matrix and stack the remaining $n(n+1)/2$ elements. $G$
-and $J$ are 
+where $\text{vec}(\cdot)$ is the [vectorization function](https://en.wikipedia.org/wiki/Vectorization_(mathematics)) and $G$, $J$,
+and $L$ are 
 
 $$
 \begin{split}
@@ -109,13 +133,12 @@ G &= \begin{pmatrix}
     . & . & . & 1 & . & . & . & . & . & . & . & . & 1 & . & . & .
 \end{pmatrix}^\top \\
 J &= \begin{pmatrix} 
-    1 & . & . & . & 1 & . & . & . & . & . \\
-    . & . & . & . & . & . & . & 1 & . & 1 \\
-    . & . & 1 & . & . & . & . & . & . & .
-\end{pmatrix}^\top
+    1 & 1 & . & .  \\
+    . & . & 1 & 1 
+\end{pmatrix}^\top \\
+K &= \begin{pmatrix} \cdot & 1 & \cdot& \cdot& \cdot & \cdot \end{pmatrix}^\top
 \end{split}
 $$
-
 
 ## Simulation
 
@@ -144,23 +167,23 @@ G <- matrix(0., 4^2, 3)
 idx <- 1 + (0:(4 - 1)) * 4 + 0:(4 - 1)
 G[idx[-(2:3)], 1] <- 1
 G[idx[  2:3 ], 2] <- 1
-G[c(4, 13)   , 3] <-  1
+G[c(4, 13)   , 3] <- 1
 theta <- c(.66, .8, .2)
 (F. <- matrix(as.vector(G %*% theta), 4, 4))
 
-# assign J, psi, and Q
-J <- matrix(0., 4 * (4 + 1) / 2, 3)
-tmp <- 0
-for(i in 4:1){
-  J[1 + tmp, if(i > 2) 1 else 2] <- 1
-  tmp <- tmp + i
-}
-J[3, 3] <- 1
-psi <- c(.4, .25, -.2)
-Q <- matrix(0., 4, 4)
-Q[lower.tri(Q, diag = TRUE)] <- J %*% psi
-Q[upper.tri(Q)] <- t(Q)[upper.tri(Q)]
-Q
+# assign J, K, psi, phi, and Q
+J <- matrix(0., 4, 2)
+J[1:2, 1] <- J[3:4, 2] <- 1
+psi <- log(sqrt(c(.49, .25)))
+K <- matrix(0., 6, 1)
+K[2, 1] <- 1
+phi <- log(- (.5 + 1) / (.5 - 1))
+
+V <- diag(exp(drop(J %*% psi)))
+C <- diag(1, ncol(V))
+C[lower.tri(C)] <- 2/(1 + exp(-drop(K %*% phi))) - 1
+C[upper.tri(C)] <- t(C)[upper.tri(C)]
+(Q <- V %*% C %*% V)
 
 # assign Q_0 and beta
 Q_0  <- get_Q_0(Q, F.)
@@ -334,7 +357,7 @@ plot(tail(pf_Fear$log_likes, 50), type = "l", ylab = "log-likelihood")
 -->
 
 ### Restricted model 
-We fit the model where we only estimate $\vec{\theta}$ and $\vec{\psi}$ as 
+We fit the model where we only estimate $\vec{\theta}$, $\vec{\psi}$, and $\vec{\phi}$ as 
 follows
 
 ```{r pf_restrict, cache = 1, dependson = c("assign_sim_params", "confs")}
@@ -342,8 +365,8 @@ set.seed(30520116)
 pf_Fear_restric <- PF_EM(
   Surv(tstart, tstop, y) ~ ddFixed_intercept() + x1 + x2 + x3 + x4 + 
     ddFixed(x1) + ddFixed(x2) + ddFixed(x3) + ddFixed(x4), 
-  df, Q_0 = diag(1, 4), G = G, J = J, theta = c(.1, .1, 0), 
-  psi = c(1, 1, 0), 
+  df, Q_0 = diag(1, 4), G = G, J = J, theta = c(.1, .1, 0), K = K, 
+  psi = c(0, 0), phi = 0,
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
   control = PF_control(
     N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = .001,
@@ -352,7 +375,7 @@ pf_Fear_restric <- PF_EM(
     Q_tilde = diag(.2^2, 4), n_threads = n_threads))
 ```
 
-Notice that we pass `G`, `J`, `theta`, and `psi` instead of `Q` and `Fmat`. 
+Notice that we pass `G`, `J`, `K`, `theta`, `psi`, and `phi` instead of `Q` and `Fmat`. 
 The estimates are
 
 ```{r pf_Fear_restric_ests}
@@ -414,10 +437,11 @@ F = \begin{pmatrix}
     . & . & \theta_3 & . \\
     . & . & . & \theta_4 \end{pmatrix}, \quad
 Q = \begin{pmatrix}
-    \psi_1 & . & . & . \\
-    . & \psi_2 & . & . \\
-    . & . & \psi_3 & . \\ 
-    . & . & . & \psi_4 \end{pmatrix}
+    \exp(\psi_1) & . & . & . \\
+    . & \exp(\psi_2) & . & . \\
+    . & . & \exp(\psi_3) & . \\ 
+    . & . & . & \exp(\psi_4) 
+    \end{pmatrix}
 $$
 We can estimate such a model by making the following calls
 
@@ -431,20 +455,16 @@ We can estimate such a model by making the following calls
 G_miss <- matrix(0., 4^2, 4)
 for(i in 0:3)
   G_miss[1 + i * 4 + i, i + 1] <- 1
-J_miss <- matrix(0., 4 * (4 + 1) / 2, 4)
-tmp <- 0
-for(i in 4:1){
-  J_miss[1 + tmp, 5 - i] <- 1
-  tmp <- tmp + i
-}
+J_miss <- diag(4)
+K_miss <- matrix(nrow = 4 * (4 - 1) / 2, ncol = 0)
 
 # estimate
 set.seed(30520116)
 pf_Fear_miss <- PF_EM(
   Surv(tstart, tstop, y) ~ ddFixed_intercept() + x1 + x2 + x3 + x4 + 
     ddFixed(x1) + ddFixed(x2) + ddFixed(x3) + ddFixed(x4), 
-  df, Q_0 = diag(1, 4), G = G_miss, J = J_miss, 
-  theta = rep(.1, 4), psi = rep(1, 4), 
+  df, Q_0 = diag(1, 4), G = G_miss, J = J_miss, K = K_miss, 
+  theta = rep(.1, 4), psi = rep(0, 4), phi = vector(),
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
   control = PF_control(
     N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = .001,

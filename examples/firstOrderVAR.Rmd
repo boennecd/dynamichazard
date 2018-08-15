@@ -36,8 +36,9 @@ $$
 $$
 
 where the $y_{it}$ is individual $i$'s indicator at time $t$ for whether he dies 
-between time $(t - 1, t]$. The indicators are Poisson distributed conditional on 
-knowing the log time at risk, $\vec{o}_t$, covariates, $X_t$ and $Z_t$, and latent states, $\vec{\alpha}_0,\dots,\vec{\alpha}_d$. 
+between time $(t - 1, t]$. The indicators, $y_{it}$, 
+are binomial distributed with the complementary log-log link function conditional on 
+knowing the log times at risk, $\vec{o}_1,\cdots,\vec{o}_d$, covariates, $X_t$ and $Z_t$, and latent states, $\vec{\alpha}_1,\dots,\vec{\alpha}_d$. 
 The total survival time of individual $i$ is $T_i$ which is 
 piecewise constant exponentially distributed
 conditional on knowing the latent states. Further, we set $Z_t = X_t$ so the 
@@ -453,5 +454,64 @@ The log-likelihoods at the EM iterations look as follows
 ```{r fear_true_log_like}
 plot(pf_Fear_close$log_likes, type = "l")
 ```
+
+### Restricted model 
+The model can be written as in terms of 2 parameters for the state model by 
+writting it as 
+
+$$
+F = \begin{pmatrix}
+      \theta & 0 \\ 
+      0 & \theta
+    \end{pmatrix}, \quad
+Q = \begin{pmatrix}
+    \exp(\psi) & 0 \\
+    0 & \exp(\psi)
+    \end{pmatrix}
+$$
+
+We can estimate the restricted model as follows (see the vignette mentioned in 
+the beginning for details about the arguments to `PF_EM`).
+
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  knitr::load_cache("est_restrict", "pf_Fear_restrict", path = "examples/cache/firstOrderVAR-cache/") 
+-->
+
+```{r est_restrict, cache = 1}
+G <- matrix(0, 2^2, 1)
+G[1, 1] <- G[4, 1] <- 1
+J <- matrix(1, 2, 1)
+K <- matrix(nrow = 2 * (2 - 1) / 2, ncol = 0)
+
+pf_Fear_restrict <- PF_EM(
+  Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
+  Q_0 = diag(1, 2), G = G, J = J, K = K, theta = .1, psi = 0, phi = numeric(),
+  by = 1, type = "VAR", model = "exponential", max_T = n_periods,
+  control = PF_control(
+    N_fw_n_bw = 500, N_smooth = 2000, N_first = 2000, eps = .001,
+    method = "AUX_normal_approx_w_cloud_mean",
+    n_max = 100, smoother = "Fearnhead_O_N",
+    Q_tilde = diag(.3^2, 2), n_threads = n_threads))
+```
+
+The final estimates are
+
+```{r est_restrict_show_ests}
+pf_Fear_restrict$F
+chol(pf_Fear_restrict$Q)
+pf_Fear_restrict$fixed_effects
+```
+
+and a log-likelihood approximation is
+
+```{r pf_Fear_restrict_ll, cache = 1, dependson = "est_restrict"}
+print(
+  logLik(PF_forward_filter(pf_Fear_restrict, N_fw = 20000, N_first = 20000)), 
+  digits = 7)
+```
+
+We have $2^2 + 2(2 + 1) / 2 - 2 = 5$ fewer parameters so the difference in 
+log-likelihood to the full model seems reasonable.
 
 ## References
