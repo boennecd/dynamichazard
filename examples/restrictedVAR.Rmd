@@ -115,10 +115,10 @@ Q &= VCV
       . & . & \sigma_3 & . \\ 
       . & . & . & \sigma_4 
     \end{pmatrix} \\
-(\sigma_1,\sigma_2,\sigma_3,\sigma_4)^\top 
-    &= J (\exp(\psi_1), \exp(\psi_2))^\top \\
-(\rho_{21}, \rho_{31}, \rho_{41},\rho_{32}, \rho_{42},\rho_{43})^\top
-    &=K\cdot\left(\frac{2}{1+\exp(-\phi_1)} - 1\right)
+\sigma_i &= \exp(s_i), \qquad
+    (s_1,s_2,s_3,s_4)^\top = J (\psi_1, \psi_2)^\top \\ 
+\rho_{ij} &= \frac{2}{1 + \exp(-q_{ij})} - 1, \qquad
+(q_{21}, q_{31}, q_{41},q_{32}, q_{42},q_{43})^\top =K\phi_1
 \end{align*}
 $$
 
@@ -407,7 +407,7 @@ plot(tail(pf_Fear_restric$log_likes, 50), type = "l", ylab = "log-likelihood")
 ```
 
 We can get a better estimate of the log-likelihood at the final estimate for 
-the two model by running the particle filter with more estimates as follows
+the two models by running the particle filter with more estimates as follows
 
 ```{r better_est_log_like_before, echo = FALSE}
 old_dig <- getOption("digits")

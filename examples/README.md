@@ -12,7 +12,7 @@ for the returned `.html` file.
 with the particle filter and smoothers. Here we estimate models with fewer
 parameters by restricting the model.
 See [restrictedVAR.Rmd](restrictedVAR.Rmd) for the source code 
-and [firstOrderVAR.html](https://htmlpreview.github.io/?https://github.com/boennecd/dynamichazard/blob/devel/examples/restrictedVAR.html)
+and [restrictedVAR.html](https://htmlpreview.github.io/?https://github.com/boennecd/dynamichazard/blob/devel/examples/restrictedVAR.html)
 for the returned `.html` file. 
 
 ### First order random walk model

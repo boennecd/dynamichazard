@@ -867,14 +867,14 @@ Suppose that we want to restrict some of the parameters of $\mat{F}$ and $\mat{Q
      \rho_{\dimRng1} & \dots & \rho_{\dimRng,\dimRng-1} & 1
    \end{pmatrix} \\
 \sigma_i &= \exp(s_i) & 
-  \rho_{ij}&= \frac{2}{1 + \exp(-q_{ij})} - 1
+  \rho_{ij}&= \frac{2}{1 + \exp(-o_{ij})} - 1
 \end{align*}%
 %
 with%
 %
 \begin{align*}
   (s_1,s_2,\dots, s_\dimRng)^\top&=\mat{J}\vec\psi \\
-  (q_{21},q_{31},\dots,q_{\dimRng1},q_{32},\dots,q_{\dimRng,\dimRng-1})^\top&=\mat{K}\vec\phi  
+  (o_{21},o_{31},\dots,o_{\dimRng1},o_{32},\dots,o_{\dimRng,\dimRng-1})^\top&=\mat{K}\vec\phi  
 \end{align*} %
 %
 and where $\vecOP{\cdot}$ is the vectorization function which stacks the the columns of a matrix from left to right. E.g., %
