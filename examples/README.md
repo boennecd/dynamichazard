@@ -26,3 +26,10 @@ with the particle filter and smoothers with a comparison with `lme4::glmer`.
 See [iid.Rmd](iid.Rmd) for the source code 
 and [iid.html](https://htmlpreview.github.io/?https://github.com/boennecd/dynamichazard/blob/devel/examples/iid.html)
 for the returned `.html` file.
+
+### Overhead with Multithreading
+The file shows how much is gained by adding more threads on one hardware, 
+operating system, and compiler. The results will likely differ on another 
+setup. See [overhead.Rmd](overhead.Rmd) for the source code 
+and [overhead.html](https://htmlpreview.github.io/?https://github.com/boennecd/dynamichazard/blob/devel/examples/overhead.html)
+for the returned `.html` file.
