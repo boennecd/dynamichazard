@@ -36,7 +36,7 @@ test_that("Invalid penalty terms throw error", {
 })
 
 test_that("Get expected warning when no Q or Q_0 is passed", {
-  args <- list(
+  cl <- quote(ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
@@ -44,35 +44,36 @@ test_that("Get expected warning when no Q or Q_0 is passed", {
                    save_data = F, save_risk_set = F),
     a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45,
-    id = head_neck_cancer$id, order = 1)
+    id = head_neck_cancer$id, order = 1))
 
-  tmp <- args
+  tmp <- cl
   tmp$Q_0 <- NULL
   expect_warning(
-    do.call(ddhazard, tmp),
+    eval(tmp),
     paste(sQuote("Q_0"), "not supplied. It has been set to a diagonal matrix with diagonal entries equal to"))
 
-  tmp <- args
+  tmp <- cl
   tmp$Q <- NULL
   expect_warning(
-    do.call(ddhazard, tmp),
+    eval(tmp),
     paste(sQuote("Q"), "not supplied. It has been set to a diagonal matrix with diagonal entries equal to"))
 })
 
 
 
-test_that("Changing convergence criteria change output",{
-  arg_list <- list(
+test_that("Changing convergence criteria change output", {
+  ctrl <- ddhazard_control(criteria = "delta_coef", eps = .002)
+  cl <- quote(ddhazard(
     formula = survival::Surv(stop, event) ~ group,
     data = head_neck_cancer,
     by = 1, # Use by month intervals
     id = head_neck_cancer$id,
     Q_0 = diag(1e5, 2), Q = diag(.1, 2),
-    control = list(criteria = "delta_coef", eps = .002))
+    control = ctrl))
 
-  suppressMessages(res1 <- do.call(ddhazard, arg_list))
-  arg_list$control$criteria <- "delta_likeli"
-  suppressMessages(res2 <- do.call(ddhazard, arg_list))
+  suppressMessages(res1 <- eval(cl))
+  ctrl$criteria <- "delta_likeli"
+  suppressMessages(res2 <- eval(cl))
 
   expect_true(res1$n_iter != res2$n_iter)
 })
@@ -130,7 +131,35 @@ test_that("Unmacthed control variable throw error",
               max_T = 45,
               id = head_neck_cancer$id, order = 1,
               control = list(None_existing_parem = 1)
-            )}, regexp = "These control parameters are not recognized"))
+            )}, regexp = "unused argument \\(None_existing_parem = 1\\)"))
+
+test_that("Various ways of passing control gives the same but some with warnings", {
+  cl <- quote(ddhazard(
+    formula = survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer,
+    by = 1,
+    control = list(est_Q_0 = F, save_data = F),
+    a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
+    max_T = 45,
+    id = head_neck_cancer$id, order = 1))
+
+  expect_warning(
+    f1 <- eval(cl),
+    "'ddhazard_control' instead of 'list' to the 'control' argument")
+
+  ctrl <- eval(cl$control)
+  cl$control <- quote(ctrl)
+  expect_silent(f2 <- eval(cl))
+  expect_equal(f1[names(f1) != "call"], f2[names(f2) != "call"])
+
+  cl$control <- quote(ddhazard_control(est_Q_0 = F, save_data = F))
+  expect_silent(f3 <- eval(cl))
+  expect_equal(f1[names(f1) != "call"], f3[names(f3) != "call"])
+
+  cl$control <- ddhazard_control(est_Q_0 = F, save_data = F)
+  expect_silent(f4 <- eval(cl))
+  expect_equal(f1[names(f1) != "call"], f4[names(f4) != "call"])
+})
 
 test_that("Different non-integer time_scales gives the same result with ddhazard", {
   skip_on_cran()
@@ -158,22 +187,23 @@ test_that("Different non-integer time_scales gives the same result with ddhazard
 
 test_that(
   "Old expoential models gives the same results and yields expected message", {
-    args <- list(
+    cl <- quote(ddhazard(
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, Q_0 = diag(10000, 2),
       Q = diag(1e-3, 2), a_0 = c(0, 0),
       max_T = 30,
-      id = head_neck_cancer$id, order = 1, control = list(eps = .1))
+      id = head_neck_cancer$id, order = 1,
+      control = ddhazard_control(eps = .1)))
 
-    args$model <- "exponential"
-    expect_silent(f1 <- do.call(ddhazard, args))
+    cl$model <- "exponential"
+    expect_silent(f1 <- eval(cl))
 
     for(m in c("exp_bin", "exp_clip_time", "exp_clip_time_w_jump")){
       eval(bquote({
-        args$model <- .(m)
+        cl$model <- .(m)
         expect_message(
-          f2 <- do.call(ddhazard, args),
+          f2 <- eval(cl),
           .(paste0(".", m, ". is not used after version 0\\.5\\.0\\.")))
         expect_equal(f1[c("state_vars", "state_vecs")],
                      f2[c("state_vars", "state_vecs")],
@@ -215,17 +245,15 @@ test_that("Permutating data does not change the results", {
     Q_0 = diag(rep(10000, 2)), Q = diag(rep(0.1, 2))))
 
   r1 <- eval(cl)
-
-  cl$control <- c(cl$control, list(permu = T))
-
+  cl$control <- quote(ddhazard_control(permu = T))
   r2 <- eval(cl)
 
   # plot(r1)
   # plot(r2)
 
   expect_equal(r1$state_vecs, r2$state_vecs)
-  expect_true(is.character(
-    all.equal(r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
+  expect_true(!isTRUE(all.equal(
+    r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
 
   #####
   # With fixed effects
@@ -234,17 +262,17 @@ test_that("Permutating data does not change the results", {
       log(albumin) + log(protime) + log(bili), pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
     Q_0 = diag(rep(10000, 5)), Q = diag(rep(0.001, 5)),
-    control = list(n_threads = 1)))
+    control = ddhazard_control(n_threads = 1)))
 
   r1 <- eval(cl)
-  cl$control <- c(eval(cl$control), list(permu = T))
+  cl$control <- quote(ddhazard_control(n_threads = 1, permu = TRUE))
   r2 <- eval(cl)
 
   # plot(r1)
   # plot(r2)
 
   expect_equal(r1$state_vecs, r2$state_vecs)
-  expect_true(is.character(
+  expect_true(!isTRUE(
     all.equal(r1$state_vecs, r2$state_vecs,tolerance = 1e-16)))
 
   #####
@@ -258,10 +286,10 @@ test_that("Permutating data does not change the results", {
     id = pbc2$id, by = 100, max_T = 3000,
     weights = w,
     Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
-    control = list(n_threads = 1, LR = .6)))
+    control = ddhazard_control(n_threads = 1, LR = .6)))
 
   r1 <- eval(cl)
-  cl$control <- c(eval(cl$control), list(permu = T))
+  cl$control <- quote(ddhazard_control(n_threads = 1, LR = .6, permu = TRUE))
   r2 <- eval(cl)
 
   # plot(r1)

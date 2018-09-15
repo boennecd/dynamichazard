@@ -7,14 +7,14 @@ test_that("ddhazard with verbose > 0 prints log likelihood",{
       for(m in c("exponential", "logit")){
         if(m == "exponential" && method == "UKF")
           next
-        expect_output({
+        eval(bquote(expect_output({
           ddhazard(survival::Surv(start, stop, event) ~ group,
                    data = head_neck_cancer, id = head_neck_cancer$id,
                    by = 1, max_T = 30, Q = diag(.01, 2),
-                   Q_0 = Q_0_arg, model = m, order = o,
+                   Q_0 = .(Q_0_arg), model = .(m), order = .(o),
                    verbose = 5,
-                   control = list (eps = .1, method = method))
-        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")
+                   control = list(eps = .1, method = .(method)))
+        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")))
 }}}})
 
 test_that("ddhazard with verbose > 0 prints log likelihood with fixed effects",{
@@ -24,15 +24,15 @@ test_that("ddhazard with verbose > 0 prints log likelihood with fixed effects",{
       for(m in c("exponential", "logit")){
         if(m == "exponential" && method == "UKF")
           next
-        expect_output({
+        eval(bquote(expect_output({
           ddhazard(survival::Surv(start, stop, event) ~ ddFixed(group),
                    data = head_neck_cancer, id = head_neck_cancer$id,
                    by = 2, max_T = 30, Q = diag(.1, 1),
-                   Q_0 = Q_0_arg, model = m,
+                   Q_0 = .(Q_0_arg), model = .(m),
                    verbose = 5,
-                   control = list (eps = .1, method = method,
-                                   fixed_terms_method = fixed_method))
-        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")
+                   control = list (eps = .1, method = .(method),
+                                   fixed_terms_method = .(fixed_method)))
+        }, regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")))
       }}}})
 
 test_that("logLik for head_neck_cancer data set match previous results", {
@@ -61,7 +61,7 @@ test_that("logLik for head_neck_cancer data set match previous results", {
 })
 
 test_that("Saving or not saving risk set or data gives the same result", {
-  arg_list <- list(
+  cl <- quote(ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
@@ -69,9 +69,9 @@ test_that("Saving or not saving risk set or data gives the same result", {
     Q = diag(.2, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1,
-    verbose = F)
+    verbose = F))
 
-  control_fit <- do.call(ddhazard, arg_list)
+  control_fit <- eval(cl)
   control_fit$logLik <- logLik(control_fit)
 
   for(save_risk_set in c(T, F))
@@ -79,10 +79,12 @@ test_that("Saving or not saving risk set or data gives the same result", {
       if(save_risk_set && save_data)
         next
 
-      arg_list$control <- list(save_risk_set = save_risk_set, save_data = save_data)
-      new_fit <- do.call(ddhazard, arg_list)
-      new_fit$logLik <- logLik(new_fit, data = if(save_data) NULL else head_neck_cancer,
-                               id = if(save_risk_set) NULL else head_neck_cancer$id)
+      cl$control <- ddhazard_control(
+        save_risk_set = save_risk_set, save_data = save_data)
+      new_fit <- eval(cl)
+      new_fit$logLik <- logLik(
+        new_fit, data = if(save_data) NULL else head_neck_cancer,
+        id = if(save_risk_set) NULL else head_neck_cancer$id)
 
       expect_equal(new_fit$logLik, control_fit$logLik)
     }

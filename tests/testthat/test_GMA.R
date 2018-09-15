@@ -17,16 +17,17 @@ test_that("Gives same results w/ 1. order logit model", {
 })
 
 test_that("GMA gives the same w/ all exponential model inputs", {
-  args <- list(
+  ctrl <- ddhazard_control(method = "GMA")
+  cl <- quote(ddhazard(
     formula = Surv(tstart, tstop, death == 2) ~ edema + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA"),
-    Q_0 = diag(rep(1, 5)), Q = diag(rep(1e-4, 5)))
+    control = ctrl,
+    Q_0 = diag(rep(1, 5)), Q = diag(rep(1e-4, 5))))
 
-  args$model <- "exp_bin"
+  cl$model <- "exp_bin"
 
-  f1 <- do.call(ddhazard, args)
+  f1 <- eval(cl)
 
   # plot(f1)
   f1 <- f1[c("state_vecs", "state_vars")]
@@ -34,8 +35,8 @@ test_that("GMA gives the same w/ all exponential model inputs", {
   expect_equal(f1, read_to_test("GMA_pbc_o1_exp"), tolerance = 1.490116e-08)
 
   for(n in exp_model_names[exp_model_names != "exp_bin"]){
-    args$model <- n
-    f2 <- do.call(ddhazard, args)
+    cl$model <- n
+    f2 <- eval(cl)
     expect_equal(f1$state_vecs, f2$state_vecs)
     expect_equal(f1$state_vars, f2$state_vars)
   }
@@ -90,68 +91,69 @@ test_that("GMA works w/ fixed effects in M-step", {
 })
 
 test_that("Changing hyper parameters w/ GMA changes the result", {
-  args <- list(
+  ctrl <- ddhazard_control(method = "GMA")
+  cl <- quote(ddhazard(
     formula = Surv(tstart, tstop, death == 2) ~ edema + age + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA"),
-    Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6)))
+    control = ctrl,
+    Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6))))
 
-  args$control$GMA_NR_eps <- 1
-  f1 <- do.call(ddhazard, args)
-  args$control$GMA_NR_eps <- .01
-  f2 <- do.call(ddhazard, args)
+  ctrl$GMA_NR_eps <- 1
+  f1 <- eval(cl)
+  ctrl$GMA_NR_eps <- .01
+  f2 <- eval(cl)
 
   expect_true(is.character(all.equal(f1$state_vecs, f2$state_vars)))
 })
 
 test_that("GMA makes one mesasge when global scoring did not succed within given number of iterations", {
-  args <- list(
+  ctrl <- ddhazard_control(method = "GMA", LR = .5)
+  cl <- quote(ddhazard(
     formula = Surv(tstart, tstop, death == 2) ~ edema + age + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA", LR = .5),
-    Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6)))
+    control = ctrl,
+    Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6))))
 
-  args$control$GMA_max_rep <- 1
-  expect_warning(
-    f1 <- do.call(ddhazard, args),
-    "^Failed once to make correction step")
+  ctrl$GMA_max_rep <- 1
+  expect_warning(f1 <- eval(cl), "^Failed once to make correction step")
 
-  args$control$GMA_max_rep <- 25
-  expect_silent(suppressMessages(f1 <- do.call(ddhazard, args)))
+  ctrl$GMA_max_rep <- 25
+  expect_silent(suppressMessages(f1 <- eval(cl)))
 })
 
 test_that("Changing learning rates changes the result w/ GMA", {
-  args <- list(
+  ctrl <- ddhazard_control(method = "GMA", LR =.75)
+  args <- quote(ddhazard(
     formula = Surv(tstart, tstop, death == 2) ~ edema + age + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA", LR =.75),
-    Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6)))
+    control = ctrl,
+    Q_0 = diag(rep(1, 6)), Q = diag(rep(1e-4, 6))))
 
-  f1 <- do.call(ddhazard, args)
-  args$control$LR <- .5
-  f2 <- do.call(ddhazard, args)
+  f1 <- eval(args)
+  ctrl$LR <- .5
+  f2 <- eval(args)
 
   expect_true(is.character(all.equal(f1$state_vecs, f2$state_vecs)))
 })
 
 test_that("GAM works w/ weights", {
-  args <-  list(
+  cl <-  quote(ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
     control = list(est_Q_0 = F, method = "GMA"),
     Q_0 = diag(1, 2), Q = diag(0.01, 2),
-    max_T = 45, order = 1)
+    max_T = 45, order = 1))
 
-  f1 <- do.call(ddhazard, args) # no weigths
+  f1 <- eval(cl) # no weigths
 
   set.seed(10211)
   ws <- sample(1:3, nrow(head_neck_cancer), replace = T)
-  args$weights = ws
-  f2 <- do.call(ddhazard, args) # with weigths
+  cl$weights = ws
+  f2 <- eval(cl) # with weigths
 
   expect_true(is.character(all.equal(
     f1$state_vecs, f2$state_vecs, tolerance = 1e-8)))
@@ -160,9 +162,9 @@ test_that("GAM works w/ weights", {
 
   dum_dat <-
     head_neck_cancer[unlist(mapply(rep, x = seq_along(ws), times = ws)), ]
-  args$weights <- NULL
-  args$data <- dum_dat
-  f3 <- do.call(ddhazard, args) # with dummy data mimic weigths
+  cl$weights <- NULL
+  cl$data <- dum_dat
+  f3 <- eval(cl) # with dummy data mimic weigths
 
   expect_equal(f2$state_vecs, f3$state_vecs, 1e-3)
 })

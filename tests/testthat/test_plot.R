@@ -2,17 +2,17 @@ context("Testing plot functions")
 
 # Test first order
 test_that("Expecting plot calls to succed with first order model", {
-  arg_list <- list(
+  cl <- quote(ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
     a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(1e-3, 2),
-    order = 1)
+    order = 1))
 
   for(i in 0:1){
-    if(i) arg_list$control <- list("method" = "UKF")
+    if(i) cl$control <- quote(ddhazard_control(method = "UKF"))
 
-    result = do.call(ddhazard, arg_list)
+    result = eval(cl)
 
     if(i < 1){
       space_error <- residuals(result, type ="std_space_error")

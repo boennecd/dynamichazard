@@ -3,16 +3,15 @@ context("Testing residuals functions")
 ###############
 # Simple test that methods calls succeds
 
-arg_list <- list(
+cl <- quote(ddhazard(
   formula = survival::Surv(tstart, tstop, event) ~ x1,
   data = logit_sim_200$res,
   id = logit_sim_200$res$id,
   by = 1, max_T = 10,
   a_0 = rep(0, 2), Q_0 = diag(1, 2),
-  Q = diag(1e-2, 2))
+  Q = diag(1e-2, 2)))
 
-args_sim_logit <-
-  m_args <- list(
+cl_logit <- quote(ddhazard(
     formula = survival::Surv(tstart, tstop, event) ~ x1 + x2,
     data = logit_sim_200$res,
     by = (by_ <- 1),
@@ -20,9 +19,9 @@ args_sim_logit <-
     Q = diag(1000000, 3),
     control = list(est_Q_0 = F, eps = .1), # Just want a fit
     max_T = 10,
-    id = logit_sim_200$res$id)
+    id = logit_sim_200$res$id))
 
-result = do.call(ddhazard, arg_list)
+result <- eval(cl)
 result_ekf <- result
 
 test_that("Calls to residuals should succed", {
@@ -32,8 +31,8 @@ test_that("Calls to residuals should succed", {
   expect_no_error(residuals(result, type = "raw", data = logit_sim_200))
 })
 
-arg_list$control <- list(method = "UKF")
-result = do.call(ddhazard, arg_list)
+cl$control <- quote(ddhazard_control(method = "UKF"))
+result <- eval(cl)
 
 test_that("residuals functions throws error for some types when method is UKF",{
   expect_error(residuals(result, "std_space_error"))
@@ -43,17 +42,16 @@ test_that("residuals functions throws error for some types when method is UKF",{
 })
 
 test_that("Residuals work when data is saved on the fit", {
-
   for(ty in c("pearson", "raw")){
-    cur_args <- args_sim_logit
-    cur_args$control = list(save_data = T)
-    fit_saved_data <- do.call(ddhazard, cur_args)
+    cl_cur <- cl_logit
+    cl_cur$control <- quote(ddhazard_control(save_data = T))
+    fit_saved_data <- eval(cl_cur)
 
     expect_true(!is.null(fit_saved_data$data))
     fit_saved_data$res <- residuals(fit_saved_data, type = ty)
 
-    cur_args$control = list(save_data = F)
-    fit_not_saved_data <- do.call(ddhazard, cur_args)
+    cl_cur$control <- quote(ddhazard_control(save_data = F))
+    fit_not_saved_data <- eval(cl_cur)
 
     expect_true(is.null(fit_not_saved_data$data))
     expect_error(residuals(fit_not_saved_data, type = ty))
@@ -67,20 +65,21 @@ test_that("Residuals work when data is saved on the fit", {
 })
 
 test_that("Residuals work when data is saved on the fit and fixed effects are present", {
-  arg_list_new <- args_sim_logit
-  arg_list_new$formula <- update(arg_list_new$formula, . ~ . - x1 + ddFixed(x1))
-  arg_list_new$Q_0 <- diag(1e8, 2)
-  arg_list_new$Q <- diag(.1, 2)
+  cl_new <- cl_logit
+  cl_new$formula <- bquote(update(
+    .(cl_new$formula), . ~ . - x1 + ddFixed(x1)))
+  cl_new$Q_0 <- diag(1e8, 2)
+  cl_new$Q <- diag(.1, 2)
 
   for(ty in c("pearson", "raw")){
-    arg_list_new$control = list(save_data = T)
-    fit_saved_data <- do.call(ddhazard, arg_list_new)
+    cl_new$control <- quote(ddhazard_control(save_data = T))
+    fit_saved_data <- eval(cl_new)
 
     expect_true(!is.null(fit_saved_data$data))
     fit_saved_data$res <- residuals(fit_saved_data, type = ty)
 
-    arg_list_new$control = list(save_data = F)
-    fit_not_saved_data <- do.call(ddhazard, arg_list_new)
+    cl_new$control <- quote(ddhazard_control(save_data = F))
+    fit_not_saved_data <- eval(cl_new)
 
     expect_true(is.null(fit_not_saved_data$data))
     expect_error(residuals(fit_not_saved_data, type = ty))

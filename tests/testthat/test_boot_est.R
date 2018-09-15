@@ -8,7 +8,7 @@ test_that("Throws error when risk_set or data is not saved",{
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer, max_T = 40,
       by = 1, a_0 = c(0, 0), Q_0 = diag(10, 2), Q = diag(1, 2),
-      control = list(save_data = tmp[1], save_risk_set = tmp[2]))
+      control = ddhazard_control(save_data = tmp[1], save_risk_set = tmp[2]))
 
     expect_error(ddhazard_boot(fit, 2),
                  regexp = "^Cannot bootstrap estimates when ddhazard has been")

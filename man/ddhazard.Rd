@@ -5,7 +5,7 @@
 \title{Fitting Dynamic Hazard Models}
 \usage{
 ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
-  order = 1, weights, control = list(), verbose = F)
+  order = 1, weights, control = ddhazard_control(), verbose = F)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -30,7 +30,8 @@ ddhazard(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0,
 
 \item{weights}{weights to use if e.g. a skewed sample is used.}
 
-\item{control}{list of control variables (see the control section below).}
+\item{control}{list of control variables from
+\code{\link{ddhazard_control}}.}
 
 \item{verbose}{\code{TRUE} if you want status messages during execution.}
 }
@@ -69,48 +70,20 @@ The model is specified through the \code{model} argument. The logistic model is 
 
 It is recommended to see the Shiny app demo for this function by calling \code{\link{ddhazard_app}()}.
 }
-\section{Control}{
-
-The \code{control} argument allows you to pass a \code{list} to select additional parameters. See \code{vignette("ddhazard", "dynamichazard")} for more information. Unspecified elements of the list will yield default values.
-\describe{
-\item{\code{method}}{set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"} for the Unscented Kalman Filter, \code{"SMA"} for the sequential posterior mode approximation method or \code{"GMA"} for the global mode approximation method. \code{"EKF"} is the default.}
-\item{\code{LR}}{learning rate.}
-\item{\code{NR_eps}}{tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step.}
-\item{\code{alpha}}{hyper parameter \eqn{\alpha} in the unscented Kalman Filter.}
-\item{\code{beta}}{hyper parameter \eqn{\beta} in the unscented Kalman Filter.}
-\item{\code{kappa}}{hyper parameter \eqn{\kappa} in the unscented Kalman Filter.}
-\item{\code{n_max}}{maximum number of iteration in the EM-algorithm.}
-\item{\code{eps}}{tolerance parameter for the EM-algorithm.}
-\item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}.}
-\item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later calls to e.g., \code{residuals}, \code{plot} and \code{logLike}.}
-\item{\code{save_data}}{\code{TRUE} if you want to keep the \code{data} argument. It may be needed for later calls to e.g., \code{residuals}, \code{plot} and \code{logLike}.}
-\item{\code{denom_term}}{term added to denominators in either the EKF or UKF.}
-\item{\code{n_threads}}{maximum number of threads to use.}
-\item{\code{fixed_parems_start}}{starting value for fixed terms.}
-\item{\code{fixed_terms_method}}{the method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively.}
-\item{\code{Q_0_term_for_fixed_E_step}}{the diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step.}
-\item{\code{eps_fixed_parems}}{tolerance used in the M-step of the Fisher's scoring algorithm for the fixed effects.}
-\item{\code{permu}}{\code{TRUE} if the risk sets should be permutated before computation. This is \code{TRUE} by default for posterior mode approximation method and \code{FALSE} for all other methods.}
-\item{\code{posterior_version}}{the implementation version of the posterior approximation method. Either \code{"woodbury"} or \code{"cholesky"}.}
-\item{\code{GMA_max_rep}}{maximum number of iterations in the correction step if \code{method = 'GMA'}.}
-\item{\code{GMA_NR_eps}}{tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}.}
-}
-}
-
 \examples{
 # example with first order model
 library(dynamichazard)
 fit <- ddhazard(
  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
  Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
- control = list(method = "GMA"))
+ control = ddhazard_control(method = "GMA"))
 plot(fit)
 
 # example with second order model
 fit <- ddhazard(
  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
  Q_0 = diag(1, 4), Q = diag(1e-4, 2), by = 50,
- control = list(method = "GMA"),
+ control = ddhazard_control(method = "GMA"),
  order = 2)
 plot(fit)
 

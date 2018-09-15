@@ -43,16 +43,16 @@ test_that("NR method for logit function gives correct values for logit", {
     -2.15823, tolerance = 1e-5)
 })
 
-args <- list(Surv(tstart, tstop, death == 2) ~ age + edema +
+cl <- quote(ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                log(albumin) + log(protime) + log(bili), pbc2,
              id = pbc2$id, by = 100, max_T = 3600,
              control = list(method = "SMA",
                             posterior_version = "woodbury"),
-             Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6)))
+             Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6))))
 
 test_that("Logit model for posterior_approx gives previous found values", {
   set.seed(950466)
-  f1 <- do.call(ddhazard, args)
+  f1 <- eval(cl)
 
   # plot(f1)
   f1 <- f1[c("state_vecs", "state_vecs")]
@@ -60,19 +60,21 @@ test_that("Logit model for posterior_approx gives previous found values", {
 })
 
 test_that("Changing between woodbury and cholesky makes a slight difference with PBC",{
-  expect_equal(args$control$posterior_version, "woodbury")
+  expect_equal(eval(cl$control)$posterior_version, "woodbury")
 
   set.seed(seed <- 5517547)
-  f1 <- do.call(ddhazard, args)
+  f1 <- eval(cl)
   set.seed(seed)
-  f2 <- do.call(ddhazard, args)
+  f2 <- eval(cl)
 
   expect_equal(f1[c("state_vars", "state_vecs")], f2[c("state_vars", "state_vecs")],
                tolerance = 1e-16)
 
-  args$control$posterior_version <- "cholesky"
+  ctrl <- eval(cl$control)
+  ctrl$posterior_version <- "cholesky"
+  cl$control <- quote(ctrl)
   set.seed(seed)
-  f2 <- do.call(ddhazard, args)
+  f2 <- eval(cl)
 
   expect_true(is.character(all.equal(
     f1[c("state_vars", "state_vecs")],
@@ -85,61 +87,51 @@ test_that("Changing between woodbury and cholesky makes a slight difference with
 
 test_that("Logit model for posterior_approx differs due to permutation", {
   set.seed(84766)
-  f1 <- do.call(ddhazard, args)
-  f2 <- do.call(ddhazard, args)
+  f1 <- eval(cl)
+  f2 <- eval(cl)
 
   expect_true(is.character(all.equal(f1$state_vecs, f2$state_vecs, tolerance = 1e-6)))
 })
 
 test_that("Logit model for posterior_approx gives previous found values with weights", {
-  args <-  list(
+  cl <-  quote(ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, method = "SMA",
-                   save_data = F, save_risk_set = F,
-                   permu = F), # <-- we turn off permutation!
+    control = ddhazard_control(
+      est_Q_0 = F, method = "SMA", save_data = F, save_risk_set = F),
     Q_0 = diag(100000, 2), Q = diag(0.01, 2),
-    max_T = 45, order = 1)
+    max_T = 45, order = 1))
 
-
-  f1 <- do.call(ddhazard, args) # no weigths
+  f1 <- eval(cl) # no weigths
 
   set.seed(10211)
   ws <- sample(1:3, nrow(head_neck_cancer), replace = T)
-  args$weights = ws
-  f2 <- do.call(ddhazard, args) # with weigths
+  cl$weights <- quote(ws)
+  f2 <- eval(cl) # with weigths
 
-  expect_true(is.character(all.equal(
+  expect_true(!isTRUE(all.equal(
     f1$state_vecs, f2$state_vecs, tolerance = 1e-8)))
-  expect_equal(
-    f1$state_vecs, f2$state_vecs, tolerance = 3e-1)
-
-  dum_dat <-
-    head_neck_cancer[unlist(mapply(rep, x = seq_along(ws), times = ws)), ]
-  args$weights <- NULL
-  args$data <- dum_dat
-  f3 <- do.call(ddhazard, args) # with dummy data mimic weigths
-
-  expect_equal(f2$state_vecs, f3$state_vecs, 3e-2)
+  expect_equal(f1$state_vecs, f2$state_vecs, tolerance = 3e-1)
 })
 
 test_that("Chaning the learning changes the result for the posterior approx method",{
-  args <-  list(
+  ctrl <- ddhazard_control(est_Q_0 = F, method = "SMA",
+                           save_data = F, save_risk_set = F)
+  cl <-  quote(ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, method = "SMA",
-                   save_data = F, save_risk_set = F),
+    control = ctrl,
     Q_0 = diag(100000, 2), Q = diag(0.01, 2),
-    max_T = 45, order = 1)
+    max_T = 45, order = 1))
 
   set.seed(seed <- 685617)
-  f1 <- do.call(ddhazard, args)
+  f1 <- eval(cl)
 
   set.seed(seed)
-  args$control$LR <- .5
-  f2 <- do.call(ddhazard, args)
+  ctrl$LR <- .5
+  f2 <- eval(cl)
 
   f1$control <- NULL
   f1$LR <- NULL
@@ -219,16 +211,17 @@ test_that("NR method for logit function gives correct values for Exponential", {
 })
 
 
-args <- list(Surv(tstart, tstop, death == 2) ~ age + edema +
-               log(albumin) + log(protime) + log(bili), pbc2,
-             id = pbc2$id, by = 100, max_T = 3600,
-             model = "exp_clip_time_w_jump",
-             control = list(method = "SMA", eps = 1e-2),
-             Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.001, 6)))
+cl <- quote(ddhazard(
+  Surv(tstart, tstop, death == 2) ~ age + edema +
+    log(albumin) + log(protime) + log(bili), pbc2,
+  id = pbc2$id, by = 100, max_T = 3600,
+  model = "exp_clip_time_w_jump",
+  control = list(method = "SMA", eps = 1e-2),
+  Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.001, 6))))
 
 test_that("Exponential model for posterior_approx gives previous found values", {
   set.seed(507958)
-  f1 <- do.call(ddhazard, args)
+  f1 <- eval(cl)
 
   # plot(f1)
   f1 <- f1[c("state_vecs", "state_vecs")]
@@ -241,14 +234,14 @@ test_that("Exponential model yields the same results for all the method inputs w
   seed <- 259430
 
   set.seed(seed)
-  args$model <- "exp_clip_time_w_jump"
+  cl$model <- "exp_clip_time_w_jump"
   set.seed(seed)
-  f1 <- do.call(ddhazard, args)
+  f1 <- eval(cl)
 
   for(n in exp_model_names[exp_model_names != "exp_clip_time_w_jump"]){
     set.seed(seed)
-    args$model <- n
-    f2 <- do.call(ddhazard, args)
+    cl$model <- n
+    f2 <- eval(cl)
 
     expect_equal(f1$state_vecs, f2$state_vecs)
   }

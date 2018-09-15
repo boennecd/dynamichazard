@@ -14,7 +14,8 @@ if(getRversion() >= "2.15.1")
 #' @param Q initial covariance matrix for the state equation.
 #' @param order order of the random walk.
 #' @param weights weights to use if e.g. a skewed sample is used.
-#' @param control list of control variables (see the control section below).
+#' @param control list of control variables from
+#' \code{\link{ddhazard_control}}.
 #' @param verbose \code{TRUE} if you want status messages during execution.
 #'
 #' @details
@@ -25,32 +26,6 @@ if(getRversion() >= "2.15.1")
 #' The model is specified through the \code{model} argument. The logistic model is where outcomes are binned into the intervals. Be aware that there can be "loss" of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time-varying co-variates. The the exponential model use an exponential model for the arrival times where there is no "loss" information due to binning.
 #'
 #' It is recommended to see the Shiny app demo for this function by calling \code{\link{ddhazard_app}()}.
-#'
-#' @section Control:
-#' The \code{control} argument allows you to pass a \code{list} to select additional parameters. See \code{vignette("ddhazard", "dynamichazard")} for more information. Unspecified elements of the list will yield default values.
-#' \describe{
-#' \item{\code{method}}{set to the method to use in the E-step. Either \code{"EKF"} for the Extended Kalman Filter, \code{"UKF"} for the Unscented Kalman Filter, \code{"SMA"} for the sequential posterior mode approximation method or \code{"GMA"} for the global mode approximation method. \code{"EKF"} is the default.}
-#' \item{\code{LR}}{learning rate.}
-#' \item{\code{NR_eps}}{tolerance for the Extended Kalman filter. Default is \code{NULL} which means that no extra iteration is made in the correction step.}
-#' \item{\code{alpha}}{hyper parameter \eqn{\alpha} in the unscented Kalman Filter.}
-#' \item{\code{beta}}{hyper parameter \eqn{\beta} in the unscented Kalman Filter.}
-#' \item{\code{kappa}}{hyper parameter \eqn{\kappa} in the unscented Kalman Filter.}
-#' \item{\code{n_max}}{maximum number of iteration in the EM-algorithm.}
-#' \item{\code{eps}}{tolerance parameter for the EM-algorithm.}
-#' \item{\code{est_Q_0}}{\code{TRUE} if you want the EM-algorithm to estimate \code{Q_0}. Default is \code{FALSE}.}
-#' \item{\code{save_risk_set}}{\code{TRUE} if you want to save the list from \code{\link{get_risk_obj}} used to estimate the model. It may be needed for later calls to e.g., \code{residuals}, \code{plot} and \code{logLike}.}
-#' \item{\code{save_data}}{\code{TRUE} if you want to keep the \code{data} argument. It may be needed for later calls to e.g., \code{residuals}, \code{plot} and \code{logLike}.}
-#' \item{\code{denom_term}}{term added to denominators in either the EKF or UKF.}
-#' \item{\code{n_threads}}{maximum number of threads to use.}
-#' \item{\code{fixed_parems_start}}{starting value for fixed terms.}
-#' \item{\code{fixed_terms_method}}{the method used to estimate the fixed effects. Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or E-step respectively.}
-#' \item{\code{Q_0_term_for_fixed_E_step}}{the diagonal value of the initial covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are estimated in the E-step.}
-#' \item{\code{eps_fixed_parems}}{tolerance used in the M-step of the Fisher's scoring algorithm for the fixed effects.}
-#' \item{\code{permu}}{\code{TRUE} if the risk sets should be permutated before computation. This is \code{TRUE} by default for posterior mode approximation method and \code{FALSE} for all other methods.}
-#' \item{\code{posterior_version}}{the implementation version of the posterior approximation method. Either \code{"woodbury"} or \code{"cholesky"}.}
-#' \item{\code{GMA_max_rep}}{maximum number of iterations in the correction step if \code{method = 'GMA'}.}
-#' \item{\code{GMA_NR_eps}}{tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}.}
-#'}
 #'
 #' @return
 #' A list with class \code{ddhazard}. The list contains
@@ -89,21 +64,21 @@ if(getRversion() >= "2.15.1")
 #'fit <- ddhazard(
 #'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
 #'  Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
-#'  control = list(method = "GMA"))
+#'  control = ddhazard_control(method = "GMA"))
 #'plot(fit)
 #'
 #'# example with second order model
 #'fit <- ddhazard(
 #'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
 #'  Q_0 = diag(1, 4), Q = diag(1e-4, 2), by = 50,
-#'  control = list(method = "GMA"),
+#'  control = ddhazard_control(method = "GMA"),
 #'  order = 2)
 #'plot(fit)
 #'
 #' @export
 ddhazard = function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0, order = 1,
-  weights, control = list(), verbose = F){
+  weights, control = ddhazard_control(), verbose = F){
   #####
   # checks
   if (model %in% c("exp_bin", "exp_clip_time", "exp_clip_time_w_jump")){
@@ -163,51 +138,27 @@ ddhazard = function(
 
   #####
   # set control arguments
-  control_default <- list(
-    kappa = NULL, alpha = 1, beta = 0,
-    NR_eps = NULL, LR = 1, n_max = 10^2, eps = 1e-3,
-    est_Q_0 = F, method = "EKF", save_risk_set = T,
-    save_data = T, eps_fixed_parems = 1e-4,
-    max_it_fixed_params = 25, fixed_effect_chunk_size = 1e4,
-    debug = F, fixed_parems_start = NULL, LR_max_try = 10,
-    LR_decrease_fac = 0.9,
-    n_threads = getOption("ddhazard_max_threads"),
-    denom_term = 1e-5,
-    fixed_terms_method = "E_step",
-    Q_0_term_for_fixed_E_step = NULL,
-    use_pinv = FALSE, criteria = "delta_coef",
-    permu = if(!is.null(control$method)) control$method == "SMA" else F,
-    posterior_version = "cholesky",
-    GMA_max_rep = 25,
-    GMA_NR_eps = 1e-4,
-    EKF_batch_size = 500L)
+  ctrl <- substitute(control)
+  if(is.call(ctrl) && identical(ctrl[[1]], quote(list))){
+    # TODO: remove this warning sometime post version 0.6.0
+    warning(sQuote("ddhazard_control"), " instead of ", sQuote("list"),
+            " to the ", sQuote("control"), " argument")
+    ctrl[[1L]] <- quote(ddhazard_control)
+    control <- eval(ctrl)
 
-  if(any(is.na(control_match <-
-               match(names(control), names(control_default)))))
-    stop("These control parameters are not recognized: ",
-         paste0(names(control)[is.na(control_match)], collapse = "\t"))
+  } else if(is.list(control)){
+    if(any(!names(control) %in% names(formals(ddhazard_control))))
+      stop(sQuote("control"), " contains unused elements")
 
-  control_default[control_match] <- control
-  control <- control_default
+    # does control have all the needed elements?
+    if(!setequal(names(control), names(formals(ddhazard_control)))){
+      cl <- as.call(c(list(quote(ddhazard_control)), control))
+      control <- eval(cl)
 
-  if(!control$criteria %in% c("delta_coef", "delta_likeli"))
-    stop("Convergence criteria ", control$criteria, " not implemented")
+    }
 
-  if(is.null(control$Q_0_term_for_fixed_E_step))
-    control$Q_0_term_for_fixed_E_step <- ifelse(
-      # quite abritary values (especially the former - the latter is not too
-      # important).
-      control$method %in% c("UKF", "GMA"), 1, 1e5)
-
-  if(!control$fixed_terms_method %in% c("M_step", "E_step"))
-    stop("fixed_terms_method method ", sQuote(control$fixed_terms_method),
-         " is not implemented")
-
-  if(control$denom_term <= 0){
-    stop("Method not implemented with penalty term ",
-         sQuote("control$denom_term"), " equal to ", control$denom_term)
-
-  }
+  } else
+    stop("Invalid ", sQuote("control"), " argument")
 
   est_fixed_in_E <- control$fixed_terms_method == "E_step" && n_fixed > 0
 
@@ -762,3 +713,112 @@ get_design_matrix_and_risk_obj <- function(
   list(X_Y = X_Y, risk_set = risk_set,
        n_params = ncol(X_Y$X), n_fixed = ncol(X_Y$fixed_terms))
 }
+
+#' @title Auxiliary for Controlling Dynamic Hazard Models
+#'
+#' @description
+#' Auxiliary for additional settings with \code{\link{ddhazard}}.
+#'
+#' @param method set to the method to use in the E-step. Either \code{"EKF"}
+#' for the Extended Kalman Filter, \code{"UKF"} for the Unscented Kalman
+#' Filter, \code{"SMA"} for the sequential posterior mode approximation method
+#' or \code{"GMA"} for the global mode approximation method. \code{"EKF"} is
+#' the default.
+#' @param LR learning rate.
+#' @param NR_eps tolerance for the Extended Kalman filter. Default is
+#' \code{NULL} which means that no extra iteration is made in the correction
+#' step.
+#' @param alpha hyper parameter \eqn{\alpha} in the unscented Kalman Filter.
+#' @param beta hyper parameter \eqn{\beta} in the unscented Kalman Filter.
+#' @param kappa hyper parameter \eqn{\kappa} in the unscented Kalman Filter.
+#' @param n_max maximum number of iteration in the EM-algorithm.
+#' @param eps tolerance parameter for the EM-algorithm
+#' @param est_Q_0 \code{TRUE} if you want the EM-algorithm to estimate
+#' \code{Q_0}. Default is \code{FALSE}.
+#' @param save_risk_set \code{TRUE} if you want to save the list from
+#' \code{\link{get_risk_obj}} used to estimate the model. It may be needed for
+#' later calls to e.g., \code{residuals}, \code{plot} and \code{logLike}.
+#' @param save_data \code{TRUE} if you want to keep the \code{data} argument.
+#' It may be needed for later calls to e.g., \code{residuals}, \code{plot} and
+#' \code{logLike}.
+#' @param denom_term term added to denominators in either the EKF or UKF.
+#' @param n_threads maximum number of threads to use.
+#' @param fixed_parems_start starting value for fixed terms.
+#' @param fixed_terms_method the method used to estimate the fixed effects.
+#' Either \code{'M_step'} or \code{'E_step'} for estimation in the M-step or
+#' E-step respectively.
+#' @param Q_0_term_for_fixed_E_step the diagonal value of the initial
+#' covariance matrix, \code{Q_0}, for the fixed effects if fixed effects are
+#' estimated in the E-step.
+#' @param eps_fixed_parems tolerance used in the M-step of the Fisher's scoring
+#' algorithm for the fixed effects
+#' @param permu \code{TRUE} if the risk sets should be permutated before
+#' computation. This is \code{TRUE} by default for posterior mode approximation
+#' method and \code{FALSE} for all other methods.
+#' @param posterior_version the implementation version of the posterior
+#' approximation method. Either \code{"woodbury"} or \code{"cholesky"}.
+#' @param GMA_max_rep maximum number of iterations in the correction step if
+#' \code{method = 'GMA'}.
+#' @param GMA_NR_eps tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}.
+#'
+#' @return
+#' A list with components named as the arguments.
+#'
+#' @seealso \code{\link{ddhazard}}
+#'
+#' @export
+ddhazard_control <- function(
+  kappa = NULL, alpha = 1, beta = 0,
+  NR_eps = NULL, LR = 1, n_max = 10^2, eps = 1e-3,
+  est_Q_0 = F, method = "EKF", save_risk_set = T,
+  save_data = T, eps_fixed_parems = 1e-4,
+  max_it_fixed_params = 25, fixed_effect_chunk_size = 1e4,
+  debug = F, fixed_parems_start = NULL, LR_max_try = 10,
+  LR_decrease_fac = 0.9,
+  n_threads = getOption("ddhazard_max_threads"),
+  denom_term = 1e-5,
+  fixed_terms_method = "E_step",
+  Q_0_term_for_fixed_E_step = NULL,
+  use_pinv = FALSE, criteria = "delta_coef",
+  permu = if(!is.null(method)) method == "SMA" else F,
+  posterior_version = "cholesky",
+  GMA_max_rep = 25,
+  GMA_NR_eps = 1e-4,
+  EKF_batch_size = 500L) {
+  control <- list(
+    kappa = kappa, alpha = alpha, beta = beta, NR_eps = NR_eps, LR = LR,
+    n_max = n_max, eps = eps, est_Q_0 = est_Q_0, method = method,
+    save_risk_set = save_risk_set, save_data = save_data,
+    eps_fixed_parems = eps_fixed_parems,
+    max_it_fixed_params = max_it_fixed_params,
+    fixed_effect_chunk_size = fixed_effect_chunk_size,
+    debug = debug, fixed_parems_start = fixed_parems_start,
+    LR_max_try = LR_max_try, LR_decrease_fac = LR_decrease_fac,
+    n_threads = n_threads, denom_term = denom_term,
+    fixed_terms_method = fixed_terms_method,
+    Q_0_term_for_fixed_E_step = Q_0_term_for_fixed_E_step,
+    use_pinv = use_pinv, criteria = criteria, permu = permu,
+    posterior_version = posterior_version, GMA_max_rep = GMA_max_rep,
+    GMA_NR_eps = GMA_NR_eps, EKF_batch_size = EKF_batch_size)
+  if(!control$criteria %in% c("delta_coef", "delta_likeli"))
+    stop("Convergence criteria ", control$criteria, " not implemented")
+
+  if(is.null(control$Q_0_term_for_fixed_E_step))
+    control$Q_0_term_for_fixed_E_step <- ifelse(
+      # quite abritary values (especially the former - the latter is not too
+      # important).
+      control$method %in% c("UKF", "GMA"), 1, 1e5)
+
+  if(!control$fixed_terms_method %in% c("M_step", "E_step"))
+    stop("fixed_terms_method method ", sQuote(control$fixed_terms_method),
+         " is not implemented")
+
+  if(control$denom_term <= 0){
+    stop("Method not implemented with penalty term ",
+         sQuote("control$denom_term"), " equal to ", control$denom_term)
+
+  }
+
+  control
+}
+
