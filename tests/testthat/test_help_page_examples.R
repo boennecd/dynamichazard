@@ -5,7 +5,7 @@ test_that("ddhazard help page examples gives the same results", {
   fit <- ddhazard(
     Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
     Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
-    control = list(method = "GMA"))
+    control = ddhazard_control(method = "GMA"))
 
   # test for plot
   expect_no_error(plot(fit))
@@ -33,7 +33,7 @@ test_that("ddhazard help page examples gives the same results", {
   fit <- ddhazard(
    Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
    Q_0 = diag(1, 4), Q = diag(1e-4, 2), by = 50,
-   control = list(method = "GMA"),
+   control = ddhazard_control(method = "GMA"),
    order = 2)
   fit <- fit[c("state_vecs", "state_vars", "lag_one_cov")]
   expect_known_value(fit, "ddhazard_help_page_order_two.RDS")
@@ -46,7 +46,7 @@ test_that("residuals.ddhazard help page examples gives the same results", {
   fit <- ddhazard(
     Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
     Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 50,
-    control = list(method = "GMA"))
+    control = ddhazard_control(method = "GMA"))
 
   resids <- residuals(fit, type = "pearson")$residuals
   expect_known_value(resids[1:2], "ddhazard_help_page_residuals.RDS")
@@ -57,7 +57,7 @@ test_that("hatvalues.ddhazard help page examples gives the same results", {
   fit <- ddhazard(
     Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3000,
     Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 100,
-    control = list(method = "GMA"))
+    control = ddhazard_control(method = "GMA"))
   hvs <- hatvalues(fit)
 
   expect_known_value(hvs[1:2], "hatvalues_help_page.RDS")
@@ -71,7 +71,7 @@ test_that("ddhazard_boot help page examples gives the same results", {
   fit <- ddhazard(
     Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3000,
     Q_0 = diag(1, 2), Q = diag(1e-4, 2), by = 100,
-    control = list(method = "GMA"))
+    control = ddhazard_control(method = "GMA"))
   bt <- ddhazard_boot(fit, R = 999)
 
   expect_known_value(
@@ -194,9 +194,9 @@ test_that("Second example on PF help page gives the same result", {
       ddFixed(edema) + ddFixed(log_albumin) + ddFixed(log_protime) + log_bili,
     pbc2, Q_0 = 100, Q = 1e-2, by = 100, id = pbc2$id,
     model = "exponential", max_T = 3600,
-    control = list(eps = 1e-5, NR_eps = 1e-4, n_max = 1e4))
+    control = ddhazard_control(eps = 1e-5, NR_eps = 1e-4, n_max = 1e4))
 
-  expect_known_value(ddfit[names(ddfit) != "call"],
+  expect_known_value(ddfit[!names(ddfit) %in% c("call", "control")],
                      "local_tests/pf_man_2nd_ddfit.RDS")
 
   # fit model with particle filter

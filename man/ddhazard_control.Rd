@@ -7,13 +7,11 @@
 ddhazard_control(kappa = NULL, alpha = 1, beta = 0, NR_eps = NULL,
   LR = 1, n_max = 10^2, eps = 0.001, est_Q_0 = F, method = "EKF",
   save_risk_set = T, save_data = T, eps_fixed_parems = 1e-04,
-  max_it_fixed_params = 25, fixed_effect_chunk_size = 10000, debug = F,
-  fixed_parems_start = NULL, LR_max_try = 10, LR_decrease_fac = 0.9,
-  n_threads = getOption("ddhazard_max_threads"), denom_term = 1e-05,
-  fixed_terms_method = "E_step", Q_0_term_for_fixed_E_step = NULL,
-  use_pinv = FALSE, criteria = "delta_coef", permu = if (!is.null(method))
-  method == "SMA" else F, posterior_version = "cholesky", GMA_max_rep = 25,
-  GMA_NR_eps = 1e-04, EKF_batch_size = 500L)
+  fixed_parems_start = NULL, n_threads = getOption("ddhazard_max_threads"),
+  denom_term = 1e-05, fixed_terms_method = "E_step",
+  Q_0_term_for_fixed_E_step = NULL, permu = if (!is.null(method)) method ==
+  "SMA" else F, posterior_version = "cholesky", GMA_max_rep = 25,
+  GMA_NR_eps = 1e-04, est_a_0 = TRUE, ...)
 }
 \arguments{
 \item{kappa}{hyper parameter \eqn{\kappa} in the unscented Kalman Filter.}
@@ -76,7 +74,14 @@ approximation method. Either \code{"woodbury"} or \code{"cholesky"}.}
 \item{GMA_max_rep}{maximum number of iterations in the correction step if
 \code{method = 'GMA'}.}
 
-\item{GMA_NR_eps}{tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}.}
+\item{GMA_NR_eps}{tolerance for the convergence criteria for the relative
+change in the norm of the coefficients in the correction step if
+\code{method = 'GMA'}.}
+
+\item{est_a_0}{\code{FALSE} if the starting value of the state model should
+be fixed.}
+
+\item{...}{additional undocumented arguments}
 }
 \value{
 A list with components named as the arguments.

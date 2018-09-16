@@ -5,8 +5,8 @@ result <- ddhazard(
   formula = survival::Surv(start, stop, event) ~ group,
   data = head_neck_cancer,
   by = 1,
-  control = list(est_Q_0 = F,
-                 save_data = F, save_risk_set = F),
+  control = ddhazard_control(
+    est_Q_0 = F, save_data = F, save_risk_set = F),
   a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
   max_T = 45,
   id = head_neck_cancer$id, order = 1)
@@ -23,7 +23,7 @@ test_that("Invalid penalty terms throw error", {
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, # Use by month intervals
-      control = list(denom_term = 0)),
+      control = ddhazard_control(denom_term = 0)),
     regexp = "Method not implemented with penalty term 'control\\$denom_term' equal to 0")
 
   expect_error(
@@ -31,7 +31,7 @@ test_that("Invalid penalty terms throw error", {
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, # Use by month intervals
-      control = list(denom_term = -1)),
+      control = ddhazard_control(denom_term = -1)),
     regexp = "Method not implemented with penalty term 'control\\$denom_term' equal to -1")
 })
 
@@ -40,8 +40,8 @@ test_that("Get expected warning when no Q or Q_0 is passed", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F,
-                   save_data = F, save_risk_set = F),
+    control = ddhazard_control(
+      est_Q_0 = F, save_data = F, save_risk_set = F),
     a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1))
@@ -92,8 +92,8 @@ test_that("exponential model and logit moels hazzard functions differs", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F,
-                   save_data = F, save_risk_set = F),
+    control = ddhazard_control(
+      est_Q_0 = F, save_data = F, save_risk_set = F),
     a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1)
@@ -130,8 +130,8 @@ test_that("Unmacthed control variable throw error",
               a_0 = rep(0, 2), Q_0 = diag(1, 2), # Initial value
               max_T = 45,
               id = head_neck_cancer$id, order = 1,
-              control = list(None_existing_parem = 1)
-            )}, regexp = "unused argument \\(None_existing_parem = 1\\)"))
+              control = ddhazard_control(None_existing_parem = 1)
+            )}, regexp = "Unused arguments passed to 'ddhazard_control'"))
 
 test_that("Various ways of passing control gives the same but some with warnings", {
   cl <- quote(ddhazard(
@@ -170,7 +170,7 @@ test_that("Different non-integer time_scales gives the same result with ddhazard
       formula = survival::Surv(start * .by, stop * .by, event) ~ group,
       data = head_neck_cancer,
       by = .by,
-      control = list(est_Q_0 = F, save_data = F),
+      control = ddhazard_control(est_Q_0 = F, save_data = F),
       a_0 = rep(0, 2), Q_0 = diag(1e2, 2), Q = diag(1e-2 / .by, 2),
       id = head_neck_cancer$id, order = 1))
 
@@ -213,6 +213,32 @@ test_that(
 
   })
 
+test_that("est_a_0 fixes the time zero value", {
+  # TODO: make a smarter way to test this...
+  sink(tmp_file <- tempfile())
+  tryCatch({
+    res <- ddhazard(
+      formula = survival::Surv(start, stop, event) ~ group,
+      data = head_neck_cancer,
+      by = 1, Q_0 = diag(10000, 2),
+      Q = diag(1e-3, 2), a_0 = c(0, 0),
+      max_T = 30, control = ddhazard_control(est_a_0 = FALSE, debug = TRUE),
+      id = head_neck_cancer$id, order = 1,
+      model = "logit")
+
+    log_f <- paste0(readLines(tmp_file), collapse = "\n")
+    expect_true(grepl(
+      "it\\s+1,\\ Starting EM:\\ a_0\\n[^\\n]+\\s+0\\s+0", log_f, perl = TRUE))
+    expect_true(grepl(
+      paste0("it\\s+", res$n_iter - 1L,
+             ",\\ Starting EM:\\ a_0\\n[^\\n]+\\s+0\\s+0"), log_f,
+      perl = TRUE))
+  }, finally = {
+    sink()
+    unlink(tmp_file)
+  })
+})
+
 ########
 # Test on simulated data
 
@@ -223,7 +249,7 @@ test_that("Result of exponential model gives previous results w/ simulated data"
     by = 1,
     Q_0 = diag(1e5, 11),
     Q = diag(1e-3, 11),
-    control = list(
+    control = ddhazard_control(
       save_data = F, save_risk_set = F,
       method = "EKF"),
     max_T = 10,

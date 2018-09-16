@@ -1,6 +1,6 @@
 Call:
 ddhazard(formula = survival::Surv(stop, event) ~ group, data = head_neck_cancer, 
     by = 1, max_T = 20, a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(0.1, 
-        2), order = 1, control = list(eps = 0.1))
+        2), order = 1, control = ddhazard_control(eps = 0.1))
 
 'logit' model fitted with the 'EKF' method in 2 iterations of the EM algorithm.

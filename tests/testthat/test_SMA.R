@@ -46,8 +46,8 @@ test_that("NR method for logit function gives correct values for logit", {
 cl <- quote(ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                log(albumin) + log(protime) + log(bili), pbc2,
              id = pbc2$id, by = 100, max_T = 3600,
-             control = list(method = "SMA",
-                            posterior_version = "woodbury"),
+             control = ddhazard_control(
+               method = "SMA", posterior_version = "woodbury"),
              Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.01, 6))))
 
 test_that("Logit model for posterior_approx gives previous found values", {
@@ -99,7 +99,8 @@ test_that("Logit model for posterior_approx gives previous found values with wei
     data = head_neck_cancer,
     by = 1,
     control = ddhazard_control(
-      est_Q_0 = F, method = "SMA", save_data = F, save_risk_set = F),
+      est_Q_0 = F, method = "SMA", save_data = F, save_risk_set = F,
+      eps = 1e-2),
     Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45, order = 1))
 
@@ -151,7 +152,7 @@ test_that("Second order model gives previous found result for posterior approx",
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(method = "SMA"),
+    control = ddhazard_control(method = "SMA"),
     Q_0 = diag(1, 4), Q = diag(0.01, 2),
     max_T = 30, order = 2)
 
@@ -167,7 +168,7 @@ test_that("Posterior gives previous found results with large by length for pbc d
   f1 <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                   log(albumin) + log(protime) + log(bili), pbc2,
                  id = pbc2$id, by = 300, max_T = 3600,
-                 control = list(method = "SMA"),
+                 control = ddhazard_control(method = "SMA"),
                  Q_0 = diag(rep(100000, 6)), Q = diag(rep(1e-3, 6)))
 
   # plot(f1)
@@ -216,7 +217,7 @@ cl <- quote(ddhazard(
     log(albumin) + log(protime) + log(bili), pbc2,
   id = pbc2$id, by = 100, max_T = 3600,
   model = "exp_clip_time_w_jump",
-  control = list(method = "SMA", eps = 1e-2),
+  control = ddhazard_control(method = "SMA", eps = 1e-2),
   Q_0 = diag(rep(100000, 6)), Q = diag(rep(0.001, 6))))
 
 test_that("Exponential model for posterior_approx gives previous found values", {

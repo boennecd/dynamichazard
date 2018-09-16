@@ -1,12 +1,13 @@
 context("Testing fixed_effects_in_E_step")
 
 test_that("Works with EKF and logit model and with one fixed and one non-fixed", {
-          fit <- ddhazard(survival::Surv(start, stop, event) ~ ddFixed(group),
-                          Q_0 = matrix(1), Q = matrix(.1),
-                          data = head_neck_cancer,
-                          by = 1,
-                          control = list(fixed_terms_method = "E_step",
-                                         save_risk_set = F, save_data = F))
+          fit <- ddhazard(
+            survival::Surv(start, stop, event) ~ ddFixed(group),
+            Q_0 = matrix(1), Q = matrix(.1),
+            data = head_neck_cancer,
+            by = 1,
+            control = ddhazard_control(
+              fixed_terms_method = "E_step", save_risk_set = F, save_data = F))
 
           # plot(fit)
           # fit$fixed_effects
@@ -22,7 +23,7 @@ test_that("Gives previous results with call as for pbc as in vignette", {
       ddFixed(age) + ddFixed(log(albumin)) + edema +ddFixed(log(protime)) + log(bili),
     pbc2, id = pbc2$id, by = 100, max_T = 3600,
     Q_0 = diag(rep(100000, 2)), Q = diag(rep(0.001, 2)),
-    control = list(fixed_terms_method = "E_step"))
+    control = ddhazard_control(fixed_terms_method = "E_step"))
 
   # plot(dd_fit)
   # dd_fit$fixed_effects
@@ -38,8 +39,9 @@ test_that("Works with EKF and continous time model and that it work with one fix
                   Q_0 = matrix(100000), Q = matrix(.1),
                   data = head_neck_cancer, max_T = 35,
                   by = 1, model = "exponential",
-                  control = list(fixed_terms_method = "E_step",
-                                 save_risk_set = F, save_data = F))
+                  control = ddhazard_control(
+                    fixed_terms_method = "E_step", save_risk_set = F,
+                    save_data = F))
 
   # plot(fit$state_vecs)
   # fit$fixed_effects
@@ -58,9 +60,10 @@ test_that("Works with UKF and logit model", {
  fit <- ddhazard(form, Q_0 = diag(1, 3), Q = diag(.1, 3),
                   data = sims_logit$res, id = sims_logit$res$id,
                   by = 1,
-                  control = list(fixed_terms_method = "E_step",
-                                 save_risk_set = F, save_data = F,
-                                 method = "UKF"))
+                  control = ddhazard_control(
+                    fixed_terms_method = "E_step",
+                    save_risk_set = F, save_data = F,
+                    method = "UKF"))
 
 
   # matplot(sims_logit$betas, lty = 1, type = "l")
@@ -77,9 +80,9 @@ test_that("Works with second order random walk and logit model", {
   fit <- ddhazard(form, Q_0 = diag(c(rep(1000000, 3), rep(10, 3))), Q = diag(.01, 3),
                   data = sims_logit$res, id = sims_logit$res$id,
                   by = 1, order = 2,
-                  control = list(fixed_terms_method = "E_step",
-                                 save_risk_set = F, save_data = F,
-                                 LR = .5))
+                  control = ddhazard_control(
+                    fixed_terms_method = "E_step",
+                    save_risk_set = F, save_data = F, LR = .5))
 
   # matplot(sims_logit$betas, lty = 1, type = "l")
   # matplot(fit$state_vecs[, 1:3], lty = 2, type = "l", add = T, col = 3:5)
@@ -97,9 +100,9 @@ test_that("Get loglike to work so you can use verbose with E-step fixed effects"
     fit <- ddhazard(form, Q_0 = diag(c(rep(1, 3), rep(.1, 3))), Q = diag(1e-4, 3),
                     data = sims_logit$res, id = sims_logit$res$id,
                     by = 1, order = 2,
-                    control = list(fixed_terms_method = "E_step",
-                                   save_risk_set = F, save_data = F,
-                                   LR = 1 / 1.25),
+                    control = ddhazard_control(
+                      fixed_terms_method = "E_step", save_risk_set = F,
+                      save_data = F, LR = 1 / 1.25),
                     verbose = 5)
     , regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")
 })
@@ -117,9 +120,9 @@ test_that("Works with UKF and continous time model", {
   fit <- ddhazard(form, Q_0 = diag(1, 2), Q = diag(1, 2),
                   data = sims_exp$res, id = sims_exp$res$id,
                   by = 1, model = "exponential", max_T = 10,
-                  control = list(fixed_terms_method = "E_step",
-                                 save_risk_set = F, save_data = F,
-                                 method = "UKF"))
+                  control = ddhazard_control(
+                    fixed_terms_method = "E_step", save_risk_set = F,
+                    save_data = F, method = "UKF"))
 
   # matplot(sims_exp$betas, lty = 1, type = "l",
   #         ylim = range(fit$fixed_effects, fit$state_vecs, sims_exp$betas))
@@ -135,9 +138,9 @@ test_that("Works with second order random walk and continous time model",{
                   Q_0 = diag(1, 4), Q = diag(1, 2),
                   data = sims_exp$res, id = sims_exp$res$id,
                   by = 1, model = "exp_clip_time_w_jump", max_T = 10,
-                  control = list(fixed_terms_method = "E_step",
-                                 save_risk_set = F, save_data = F,
-                                 method = "UKF"),
+                  control = ddhazard_control(
+                    fixed_terms_method = "E_step", save_risk_set = F,
+                    save_data = F, method = "UKF"),
                   order = 2)
 
   # matplot(sims_exp$betas, lty = 1, type = "l",
@@ -154,7 +157,8 @@ test_that("posterior_approx gives previous found values with fixed effects in E-
   f1 <- ddhazard(Surv(tstart, tstop, death == 2) ~ ddFixed(age) + ddFixed(edema) +
                    log(albumin) + log(protime) + log(bili), pbc2,
                  id = pbc2$id, by = 100, max_T = 3600,
-                 control = list(method = "SMA",  fixed_terms_method = "E_step"),
+                 control = ddhazard_control(
+                   method = "SMA",  fixed_terms_method = "E_step"),
                  Q_0 = diag(rep(100000, 4)), Q = diag(rep(0.01, 4)))
 
   # plot(f1)

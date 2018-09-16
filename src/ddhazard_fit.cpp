@@ -46,7 +46,7 @@ Rcpp::List ddhazard_fit_cpp(
     const std::string posterior_version = "cholesky",
     const unsigned int GMA_max_rep = 10,
     const double GMA_NR_eps = 0.1,
-    const int EKF_batch_size = 5000L){
+    const int EKF_batch_size = 5000L, const bool est_a_0 = true){
   if(Rcpp::as<bool>(risk_obj["is_for_discrete_model"]) &&
      is_exponential_model(model)){
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = true which should be false for model '" + model  +"'");
@@ -148,6 +148,10 @@ Rcpp::List ddhazard_fit_cpp(
   // main loop for estimation
   do
   {
+    if(!est_a_0)
+      /* fix a_0 */
+      p_data->a_t_t_s.col(0) = a_0;
+
     p_data->em_iteration = it;
     p_data->computation_stage = "Starting EM";
 

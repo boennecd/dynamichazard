@@ -19,11 +19,12 @@ test_that("boot yields previously computed values with pbc", {
   skip_on_cran()
 
   suppressMessages(
-    fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
-                      log(albumin) + log(protime) + log(bili), pbc2,
-                    id = pbc2$id, by = 100, max_T = 3600,
-                    Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
-                    control = list(save_risk_set = T, save_data = T, eps = .1)))
+    fit <- ddhazard(
+      Surv(tstart, tstop, death == 2) ~ age + edema +
+        log(albumin) + log(protime) + log(bili), pbc2,
+      id = pbc2$id, by = 100, max_T = 3600,
+      Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
+      control = ddhazard_control(save_risk_set = T, save_data = T, eps = .1)))
 
   #####
   set.seed(993)
@@ -80,8 +81,8 @@ test_that("Boot works with posterior_approx and gives previous found results", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(method = "SMA",
-                   eps = 1e-2), # large to decrease comp time
+    control = ddhazard_control(
+      method = "SMA", eps = 1e-2), # large to decrease comp time
     Q_0 = diag(1e5, 2), Q = diag(0.01, 2),
     max_T = 45)
 
@@ -102,8 +103,8 @@ test_that("Boot do result differs when control$permu = T",{
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, permu = T,
-                   method = "SMA"),
+    control = ddhazard_control(
+      est_Q_0 = F, permu = T, method = "SMA"),
     Q_0 = diag(1e5, 2), Q = diag(0.01, 2),
     max_T = 45)
 

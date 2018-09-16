@@ -320,7 +320,7 @@ dd_fit <- ddhazard(Surv(tstart, tstop, death == 2) ~ age + edema +
                         log(albumin) + log(protime) + log(bili), pbc2,
                    id = pbc2$id, by = 100, max_T = 3600, 
                    Q_0 = diag(100, 6), Q = diag(0.01, 6),
-                   control = list(eps = .001))
+                   control = ddhazard_control(eps = .001))
 
 plot(dd_fit)
 ```
@@ -341,7 +341,7 @@ dd_fit <- ddhazard(
     log(albumin) + log(protime) + log(bili), pbc2,
   id = pbc2$id, by = 100, max_T = 3600,
   Q_0 = diag(10 / sds), Q = diag(0.01 / sds, 6),
-  control = list(
+  control = ddhazard_control(
     eps = .001,
     NR_eps = 0.0001, # Tolerance in correction step
     LR = .33
@@ -362,8 +362,8 @@ dd_fit_UKF <- ddhazard(
          edema + log(albumin) + log(protime) + log(bili), pbc2,
    id = pbc2$id, by = 100, max_T = 3600, 
    Q_0 = diag(rep(1, 6)), Q = diag(rep(0.01, 6)),
-   control = list(method = "UKF", beta = 0, alpha = 1,
-                  eps = 0.1, n_max = 1e4))
+   control = ddhazard_control(method = "UKF", beta = 0, alpha = 1,
+                              eps = 0.1, n_max = 1e4))
 
 plot(dd_fit_UKF)
 ```
@@ -380,8 +380,8 @@ dd_fit_UKF <- ddhazard(
    id = pbc2$id, by = 100, max_T = 3600, 
    Q_0 = diag(rep(1, 6)), Q = diag(rep(0.01, 6)),
    control = 
-     list(method = "UKF", beta = 0, alpha = 1, 
-          debug = T)) # <-- prints information in each iteration
+     ddhazard_control(method = "UKF", beta = 0, alpha = 1, 
+                      debug = T)) # <-- prints information in each iteration
 sink()
 close(tmp_file)
 ```
@@ -402,7 +402,7 @@ dd_fit_UKF <- ddhazard(
   Q_0 = diag(c(0.001, 0.00001, rep(0.001, 4))) * 100, # <-- decreased
   Q = diag(0.0001, 6),                                # <-- decreased
   control = 
-    list(method = "UKF", beta = 0, alpha = 1, eps = 0.001))
+    ddhazard_control(method = "UKF", beta = 0, alpha = 1, eps = 0.001))
 
 plot(dd_fit_UKF)
 ```
@@ -430,7 +430,7 @@ dd_fit_EKF <-
        log(albumin) + log(protime) + log(bili), pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
     Q_0 = diag(100, 6), Q = diag(0.01, 6),
-    control = list(eps = .001))
+    control = ddhazard_control(eps = .001))
 
 dd_fit_SMA <- 
   ddhazard(
@@ -438,7 +438,7 @@ dd_fit_SMA <-
      log(albumin) + log(protime) + log(bili), pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
     Q_0 = diag(100, 6), Q = diag(0.01, 6),
-    control = list(
+    control = ddhazard_control(
        method = "SMA", # change estimation method 
        eps = 0.001))
 ```
@@ -471,10 +471,11 @@ We may want to fit a model where we assume that some of the co-variates are fixe
 ```{r, warning=FALSE}
 dd_fit <- ddhazard(
   Surv(tstart, tstop, death == 2) ~ ddFixed_intercept() + 
-    ddFixed(age) + ddFixed(log(albumin)) + edema + ddFixed(log(protime)) + log(bili), 
+    ddFixed(age) + ddFixed(log(albumin)) + edema + ddFixed(log(protime)) + 
+    log(bili), 
   pbc2, id = pbc2$id, by = 100, max_T = 3600, 
   Q_0 = diag(100, 2), Q = diag(0.01, 2),
-  control = list(eps = .001))
+  control = ddhazard_control(eps = .001))
 ```
 
 
@@ -490,11 +491,7 @@ dd_fit$fixed_effects
 
 ## Second order random walk
 
-We will end by fitting a second order random walk to model where only the `log(bili)` effect is time-varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have a time-varying coefficient. We will comparer estimates with the Extended Kalman Filter and the sequential rank-one approximation. First, we make the two estimations:
-
-```{r, echo = FALSE}
-set.seed(3434439) # <-- Data is permuated so we set a seed
-```
+We will end by fitting a second order random walk to model where only the `log(bili)` effect is time-varying. The motivation is that the second order random walk tend to diverge more easily especially for small data sets. Further, the previous models seems to suggest that it is the only covariate where we may have a time-varying coefficient. First, we fit the model:
 
 ```{r}
 # Define formula
@@ -506,36 +503,26 @@ form <- Surv(tstart, tstop, death == 2) ~
 # Fit models
 dd_fit_EKF <- 
   ddhazard(form, 
-          pbc2, id = pbc2$id, by = 100, max_T = 3600, 
+           pbc2, id = pbc2$id, by = 100, max_T = 3600, 
  
-          order = 2,          # <-- second order
-          Q_0 = diag(100, 2),   # <-- needs more elements
-          Q = .00001,         # <-- decreased
+           order = 2,            # <-- second order
+           Q_0 = diag(5, 2),     # <-- needs more elements
+           Q = .0001,            # <-- decreased
           
-          control = list(eps = .001))
-
-dd_fit_post <- 
-  ddhazard(form, 
-          pbc2, id = pbc2$id, by = 100, max_T = 3600, 
-          order = 2,          
-          Q_0 = diag(100, 2), 
-          Q = .00001,         
-          control = list(eps = .001, method = "SMA"))
+           control = ddhazard_control(
+             eps = .0001, est_a_0 = FALSE))
 ```
 
-We have to decrease the starting value of `Q` in the above to get the methods to converge. The fixed effects estimates are not to far from each other:
+We have to decrease the starting value of `Q` in the above to get the methods to converge. The fixed effects estimates are:
 
 ```{r}
-rbind(
-  "EKF" = dd_fit_EKF$fixed_effects,
-  "Posterior approximation" = dd_fit_post$fixed_effects)
+dd_fit_EKF$fixed_effects
 ```
 
-The predicted curves are also not to far from each other and the shapes are almost identical:
+The predicted curve is:
 
 ```{r}
 plot(dd_fit_EKF)
-plot(dd_fit_post, col = "red", add = T)
 ```
 
 We see that the predicted curve is more smooth as expected with a second order random walk. Further, we can confirm that the fixed effects are comparable with our previous fits.
@@ -546,12 +533,6 @@ Question: Is this note too long now or should I also show how to compute residua
 
 # Summary
 We have estimated a model using Generalized additive models with the `mgcv` package and a time-varying Cox model with the `timereg` package. Further, we have illustrated how the `ddhazard` function in the `dynamichazard` package can be used. All the fits have been comparable with the Generalized Additive model.
-
-An unaddressed question is why you should this package. Some of the advantageous of the state space model here are among other: 
-
-1. You can extrapolate beyond the last observation time. An example hereof could be any time series where the underlying time is the calendar time such a medical trail where we may suspect a different effects of a drug in 2015 than in 1990.
-2. The implementation scale well in computation time with the number of individuals.
-3. All estimation is made in `c++` with use of the `Armadillo` library. Thus, an optimized version of `Blas` or `Lapack` can decrease the computation time.
 
 # References
 

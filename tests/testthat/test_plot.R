@@ -29,7 +29,7 @@ test_that("Expecting plot calls to succed with first order model", {
     data = pbc2, model = "exp_clip_time", by = 1, max_T = 36,
     Q_0 = diag(2, 3), Q = diag(1e-3, 3), verbose = F,
     id = pbc2$id,
-    control = list(LR = 1, eps = 1e-3, save_risk_set = F)))
+    control = ddhazard_control(LR = 1, eps = 1e-3, save_risk_set = F)))
 
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 1))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 2))
@@ -42,12 +42,11 @@ test_that("Expecting plot calls to succed with second order model", {
   result = ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
-    by = 1, control = list(eps = 1e-2, est_Q_0 = F),
+    by = 1, control = ddhazard_control(eps = 1e-2, est_Q_0 = F),
     a_0 = rep(0, 4), Q_0 = diag(1, 4),
     Q = diag(c(5e-3, 5e-3)),
     order = 2,
-    max_T = 40
-  )
+    max_T = 40)
 
   expect_no_error(plot(result, type = "cov", cov_index = 1))
   expect_no_error(plot(result, type = "cov", cov_index = 2))
@@ -58,7 +57,7 @@ test_that("Expecting plot calls to succed with second order model", {
     data = pbc2, model = "exp_clip_time", by = 1, max_T = 36,
     Q_0 = diag(5, 6), Q = diag(c(rep(1e-3, 3))),
     id = pbc2$id, order = 2,
-    control = list(LR = .01, eps = 1e-2, save_risk_set = F)))
+    control = ddhazard_control(LR = .01, eps = 1e-2, save_risk_set = F)))
 
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 1))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 2))
@@ -78,8 +77,9 @@ test_that("Alters mfcol and sets it back", {
     by = (by_ <- 1),
     Q_0 = diag(10, 11),
     Q = diag(1e-2, 11),
-    control = list(est_Q_0 = F, eps = 10^-2, n_max = 10^3,
-                   save_data = F, save_risk_set = F, denom_term = 1e-2),
+    control = ddhazard_control(
+      est_Q_0 = F, eps = 10^-2, n_max = 10^3,
+      save_data = F, save_risk_set = F, denom_term = 1e-2),
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,

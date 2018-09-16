@@ -122,7 +122,7 @@ PF_effective_sample_size <- function(object){
 #'    ddFixed(edema) + ddFixed(log_albumin) + ddFixed(log_protime) + log_bili,
 #'  pbc2, Q_0 = 100, Q = 1e-2, by = 100, id = pbc2$id,
 #'  model = "exponential", max_T = 3600,
-#'  control = list(eps = 1e-5, NR_eps = 1e-4, n_max = 1e4))
+#'  control = ddhazard_control(eps = 1e-5, NR_eps = 1e-4, n_max = 1e4))
 #'summary(ddfit)
 #'
 #'# fit model with particle filter

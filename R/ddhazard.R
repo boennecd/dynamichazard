@@ -147,7 +147,8 @@ ddhazard = function(
     control <- eval(ctrl)
 
   } else if(is.list(control)){
-    if(any(!names(control) %in% names(formals(ddhazard_control))))
+    if(any(!names(control) %in% c(
+      names(formals(ddhazard_control)), names(ddhazard_control_xtra_get()))))
       stop(sQuote("control"), " contains unused elements")
 
     # does control have all the needed elements?
@@ -368,7 +369,8 @@ ddhazard_no_validation <- function(
     posterior_version = control$posterior_version,
     GMA_max_rep = control$GMA_max_rep,
     GMA_NR_eps = control$GMA_NR_eps,
-    EKF_batch_size = control$EKF_batch_size)
+    EKF_batch_size = control$EKF_batch_size,
+    est_a_0 = control$est_a_0)
 }
 
 get_state_eq_matrices <-  function(
@@ -759,7 +761,12 @@ get_design_matrix_and_risk_obj <- function(
 #' approximation method. Either \code{"woodbury"} or \code{"cholesky"}.
 #' @param GMA_max_rep maximum number of iterations in the correction step if
 #' \code{method = 'GMA'}.
-#' @param GMA_NR_eps tolerance for the convergence criteria for the relative change in the norm of the coefficients in the correction step if \code{method = 'GMA'}.
+#' @param GMA_NR_eps tolerance for the convergence criteria for the relative
+#' change in the norm of the coefficients in the correction step if
+#' \code{method = 'GMA'}.
+#' @param est_a_0 \code{FALSE} if the starting value of the state model should
+#' be fixed.
+#' @param ... additional undocumented arguments
 #'
 #' @return
 #' A list with components named as the arguments.
@@ -772,34 +779,32 @@ ddhazard_control <- function(
   NR_eps = NULL, LR = 1, n_max = 10^2, eps = 1e-3,
   est_Q_0 = F, method = "EKF", save_risk_set = T,
   save_data = T, eps_fixed_parems = 1e-4,
-  max_it_fixed_params = 25, fixed_effect_chunk_size = 1e4,
-  debug = F, fixed_parems_start = NULL, LR_max_try = 10,
-  LR_decrease_fac = 0.9,
+  fixed_parems_start = NULL,
   n_threads = getOption("ddhazard_max_threads"),
   denom_term = 1e-5,
   fixed_terms_method = "E_step",
   Q_0_term_for_fixed_E_step = NULL,
-  use_pinv = FALSE, criteria = "delta_coef",
   permu = if(!is.null(method)) method == "SMA" else F,
-  posterior_version = "cholesky",
-  GMA_max_rep = 25,
-  GMA_NR_eps = 1e-4,
-  EKF_batch_size = 500L) {
-  control <- list(
+  posterior_version = "cholesky", GMA_max_rep = 25, GMA_NR_eps = 1e-4,
+  est_a_0 = TRUE, ...) {
+  dts <- list(...)
+  xtra <- ddhazard_control_xtra_get()
+  ma <- match(names(dts), names(xtra), NA_integer_)
+  if(anyNA(ma))
+    stop("Unused arguments passed to ", sQuote("ddhazard_control"))
+  if(length(ma) > 0)
+    xtra[ma] <- dts
+
+  control <- c(list(
     kappa = kappa, alpha = alpha, beta = beta, NR_eps = NR_eps, LR = LR,
     n_max = n_max, eps = eps, est_Q_0 = est_Q_0, method = method,
     save_risk_set = save_risk_set, save_data = save_data,
     eps_fixed_parems = eps_fixed_parems,
-    max_it_fixed_params = max_it_fixed_params,
-    fixed_effect_chunk_size = fixed_effect_chunk_size,
-    debug = debug, fixed_parems_start = fixed_parems_start,
-    LR_max_try = LR_max_try, LR_decrease_fac = LR_decrease_fac,
-    n_threads = n_threads, denom_term = denom_term,
-    fixed_terms_method = fixed_terms_method,
-    Q_0_term_for_fixed_E_step = Q_0_term_for_fixed_E_step,
-    use_pinv = use_pinv, criteria = criteria, permu = permu,
+    fixed_parems_start = fixed_parems_start, n_threads = n_threads,
+    denom_term = denom_term, fixed_terms_method = fixed_terms_method,
+    Q_0_term_for_fixed_E_step = Q_0_term_for_fixed_E_step, permu = permu,
     posterior_version = posterior_version, GMA_max_rep = GMA_max_rep,
-    GMA_NR_eps = GMA_NR_eps, EKF_batch_size = EKF_batch_size)
+    GMA_NR_eps = GMA_NR_eps, est_a_0 = est_a_0), xtra)
   if(!control$criteria %in% c("delta_coef", "delta_likeli"))
     stop("Convergence criteria ", control$criteria, " not implemented")
 
@@ -822,3 +827,8 @@ ddhazard_control <- function(
   control
 }
 
+ddhazard_control_xtra_get <- function()
+  list(
+    max_it_fixed_params = 25, fixed_effect_chunk_size = 1e4, debug = F,
+    LR_max_try = 10, LR_decrease_fac = 0.9, use_pinv = FALSE,
+    criteria = "delta_coef", EKF_batch_size = 500L)

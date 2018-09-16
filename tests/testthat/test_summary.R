@@ -16,7 +16,7 @@ test_that("summary.ddhazard yields previous results and prints match previous va
     formula = survival::Surv(stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(eps = 1e-1),
+    control = ddhazard_control(eps = 1e-1),
     a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
     max_T = 20, order = 1)
   f1 <- test_func(fit, file =  "summary_ddhazard", update = FALSE)
@@ -45,7 +45,7 @@ test_that("summary.ddhazard yields previous results and prints match previous va
       formula = survival::Surv(stop, event) ~ ddFixed(group),
       data = head_neck_cancer,
       by = 1,
-      control = list(eps = 1e-1),
+      control = ddhazard_control(eps = 1e-1),
       a_0 = 0, Q_0 = 1, Q = .1,
       max_T = 20, order = 1),
     file =  "summary_ddhazard_fixed", update = FALSE)
@@ -56,7 +56,7 @@ test_that("summary.ddhazard yields previous results and prints match previous va
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, model = "exponential",
-      control = list(eps = 1e-1),
+      control = ddhazard_control(eps = 1e-1),
       a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
       max_T = 20, order = 1),
     file =  "summary_ddhazard_exp", update = FALSE)
@@ -67,7 +67,7 @@ test_that("summary.ddhazard yields previous results and prints match previous va
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, model = "exponential",
-      control = list(eps = 1e-1, method = "UKF"),
+      control = ddhazard_control(eps = 1e-1, method = "UKF"),
       a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
       max_T = 20, order = 1),
     file =  "summary_ddhazard_UKF", update = FALSE)

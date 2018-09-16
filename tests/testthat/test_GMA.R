@@ -5,7 +5,7 @@ test_that("Gives same results w/ 1. order logit model", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(method = "GMA"),
+    control = ddhazard_control(method = "GMA"),
     Q_0 = diag(1, 2), Q = diag(0.01, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1)
@@ -48,7 +48,7 @@ test_that("GMA works w/ second order random walk", {
     data = pbc2,
     order = 2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA", LR = .33, GMA_NR_eps = 1e-3),
+    control = ddhazard_control(method = "GMA", LR = .33, GMA_NR_eps = 1e-3),
     Q_0 = diag(rep(1, 10)), Q = diag(rep(1e-4, 5)))
 
   # plot(f1)
@@ -62,8 +62,8 @@ test_that("GMA works w/ fixed effects in E-step", {
     formula = Surv(tstart, tstop, death == 2) ~ edema + ddFixed(age) + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA",
-                   fixed_terms_method = 'E_step'),
+    control = ddhazard_control(
+      method = "GMA", fixed_terms_method = 'E_step'),
     Q_0 = diag(rep(1, 5)), Q = diag(rep(1e-4, 5)))
 
   # plot(fit)
@@ -79,8 +79,9 @@ test_that("GMA works w/ fixed effects in M-step", {
       edema + ddFixed(age) + log(albumin) + log(bili) + log(protime),
     data = pbc2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA", eps = 1e-3, criteria = "delta_likeli",
-                   fixed_terms_method = 'M_step'),
+    control = ddhazard_control(
+      method = "GMA", eps = 1e-3, criteria = "delta_likeli",
+      fixed_terms_method = 'M_step'),
     Q_0 = diag(rep(1, 5)), Q = diag(1e-4, 5))
 
   # plot(fit)
@@ -144,7 +145,7 @@ test_that("GAM works w/ weights", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, method = "GMA"),
+    control = ddhazard_control(est_Q_0 = F, method = "GMA"),
     Q_0 = diag(1, 2), Q = diag(0.01, 2),
     max_T = 45, order = 1))
 

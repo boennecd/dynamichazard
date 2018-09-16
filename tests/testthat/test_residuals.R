@@ -17,7 +17,7 @@ cl_logit <- quote(ddhazard(
     by = (by_ <- 1),
     Q_0 = diag(1e-2, 3),
     Q = diag(1000000, 3),
-    control = list(est_Q_0 = F, eps = .1), # Just want a fit
+    control = ddhazard_control(est_Q_0 = F, eps = .1), # Just want a fit
     max_T = 10,
     id = logit_sim_200$res$id))
 
@@ -144,7 +144,7 @@ local({
     data = pbc, Q_0 = diag(rep(1e8, 2)), by = 100, id = pbc$id,
     Q = diag(rep(1e-2, 2)), max_T = 3600,
     a = rep(0, 2),
-    control = list(est_Q_0 = F, eps = .1))
+    control = ddhazard_control(est_Q_0 = F, eps = .1))
 
   test_that("Pearson residuals and raw residuals for logistic model are consistent with each other", {
     pearson_res <- residuals(object = fit, type = "pearson", data = pbc)
@@ -194,7 +194,7 @@ fit <- ddhazard(
   model = "exp_clip_time_w_jump",
   a_0 = numeric(2),
   max_T = 10, Q_0 = diag(1e8, 2), Q = diag(.1, 2),
-  control = list(eps = .1))
+  control = ddhazard_control(eps = .1))
 
 test_that("Calls to residuals should fail for exponential model and state space error",{
   expect_error(residuals(fit, "std_space_error", regexp = "Functions for with model 'exponential' is not implemented"))

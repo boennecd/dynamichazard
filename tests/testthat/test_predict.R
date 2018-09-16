@@ -196,7 +196,7 @@ test_that("get_survival_case_weights_and_data and predict yields consistent resu
     fit <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3 + x4 + x5,
                     data = s$res, max_T = 10, by = 1, id = s$res$id,
                     Q = diag(1, 6), Q_0 = diag(10, 6),
-                    control = list(LR = .5)))
+                    control = ddhazard_control(LR = .5)))
 
   s$res$tstart_ceil <- ceiling(s$res$tstart)
   s$res$tstop_ceil <- as.integer(pmin(ceiling(s$res$tstop), 10))
@@ -256,15 +256,14 @@ test_that("get_survival_case_weights_and_data and predict yields consistent resu
 
 test_that("Calls with second order models do not throw errors", {
   # Check for second order
-  result = ddhazard(
+  result <- ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
     a_0 = rep(0, 2 * 2), Q_0 = diag(10, 2 * 2),
     Q = diag(c(1.0e-4, 1.0e-4)),
-    control = list(n_max = 1e3, save_risk_set = T, est_Q_0 = F),
-    order = 2
-  )
+    control = ddhazard_control(n_max = 1e3, save_risk_set = T, est_Q_0 = F),
+    order = 2)
 
   for(g in c(0, 1))
     for(use_parallel in c(T, F))
@@ -285,7 +284,7 @@ test_that("Term predict work with second order random walk", {
     data = pbc2,
     order = 2,
     id = pbc2$id, by = 100, max_T = 3600,
-    control = list(method = "GMA", LR = .33),
+    control = ddhazard_control(method = "GMA", LR = .33),
     Q_0 = diag(1, 4), Q = diag(rep(1e-4, 2)))
 
   dum <- data.frame(
@@ -372,7 +371,7 @@ test_that("Different non-integer time_scales gives the same result with predict 
       formula = survival::Surv(start * .by, stop * .by, event) ~ group,
       data = head_neck_cancer,
       by = .by,
-      control = list(est_Q_0 = F, save_data = F),
+      control = ddhazard_control(est_Q_0 = F, save_data = F),
       a_0 = rep(0, 2), Q_0 = diag(1e2, 2), Q = diag(1e-2 / .by, 2),
       id = head_neck_cancer$id, order = 1)
 

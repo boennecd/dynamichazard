@@ -282,7 +282,7 @@ implemented in the package
 dd_fit <- ddhazard(
   Surv(tstart, tstop, y) ~ x, df, model = "logit", max_T = n_periods,
   Q_0 = diag(3^2, 2), Q = diag(1, 2), by = 1, order = 1, 
-  control = list(eps = .001, method = "EKF", NR_eps = 1e-4))
+  control = ddhazard_control(eps = .001, method = "EKF", NR_eps = 1e-4))
 ```
 
 The estimates are

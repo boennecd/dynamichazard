@@ -86,7 +86,7 @@ dd_fit <- ddhazard(
     ddFixed(age) + ddFixed(sex) + ddFixed(diabetes) + chf + vf,
   TRACE, max_T = 7, by = .25, model = "exponential", 
   Q_0 = diag(10, 2), Q = diag(.1^2, 2), 
-  control = list(eps = .001, n_max = 25))
+  control = ddhazard_control(eps = .001, n_max = 25))
 ```
 
 We use the exponential arrival times models with the extended Kalman filter (the default) estimation method. A plot of the estimates is given below. The dashed lines are 95% point-wise confidence intervals using the variances estimates from the Extended Kalman filter with smoothing
@@ -341,10 +341,11 @@ We are now able to estimate the model as follows:
 ```{r, plot_2x3=TRUE}
 # Estimate model
 fit_expression <- expression({
-  fit <- ddhazard(Surv(tstart, tstop, dies) ~ -1 + x1 + x2 + x3 + x4 + x5,
-                data = sim_list$sims, id = sim_list$sims$id, max_T = tmax, 
-                by = 1, Q_0 = diag(1e4, 5), Q = diag(.1, 5),
-                a_0 = rep(0, 5), control = list(eps = .001, n_max = 25))
+  fit <- ddhazard(
+    Surv(tstart, tstop, dies) ~ -1 + x1 + x2 + x3 + x4 + x5,
+    data = sim_list$sims, id = sim_list$sims$id, max_T = tmax, 
+    by = 1, Q_0 = diag(1e4, 5), Q = diag(.1, 5),
+    a_0 = rep(0, 5), control = ddhazard_control(eps = .001, n_max = 25))
 })
 eval(fit_expression)
 

@@ -7,7 +7,7 @@ test_that("Print yields the expected results for object returned by ddhazard", {
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 1,
-      control = list(eps = 1e-1),
+      control = ddhazard_control(eps = 1e-1),
       a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
       max_T = 20, order = 1)),
     file =  "print_ddhazard", update = FALSE, print = FALSE)
@@ -18,7 +18,7 @@ test_that("Print yields the expected results for object returned by ddhazard", {
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, model = "exponential",
-      control = list(eps = 1e-1),
+      control = ddhazard_control(eps = 1e-1),
       a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
       max_T = 20, order = 1)),
     file =  "print_ddhazard_exp", update = FALSE, print = FALSE)
@@ -29,7 +29,7 @@ test_that("Print yields the expected results for object returned by ddhazard", {
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer,
       by = 1, model = "exponential",
-      control = list(eps = 1e-1, method = "UKF"),
+      control = ddhazard_control(eps = 1e-1, method = "UKF"),
       a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
       max_T = 20, order = 1)),
     file =  "print_ddhazard_UKF", update = FALSE, print = FALSE)
@@ -46,8 +46,9 @@ test_that("print.ddhazard_boot gives the expected output", {
     survival::Surv(tstart, tstop, event) ~ ddFixed(x1) + ddFixed(x2) + . - id - x1 - x2,
     sims$res,
     by = 1,
-    control = list(fixed_terms_method = "E_step",
-                   eps = 1e-2), # decreased to reduce run-time
+    control = ddhazard_control(
+      fixed_terms_method = "E_step", eps = 1e-2 # decreased to reduce run-time
+      ),
     Q_0 = diag(1, 9),
     Q = diag(1e-2, 9),
     max_T = 10, model = "exponential",
@@ -67,8 +68,9 @@ test_that("print.ddhazard_boot gives the expected output", {
     survival::Surv(tstart, tstop, event) ~ . - id,
     sims$res,
     by = 1,
-    control = list(fixed_terms_method = "E_step",
-                   eps = 1e-2), # decreased to reduce run-time
+    control = ddhazard_control(
+      fixed_terms_method = "E_step",
+      eps = 1e-2), # decreased to reduce run-time
     Q_0 = diag(1, 11),
     Q = diag(1e-2, 11),
     max_T = 10, model = "exponential",
@@ -112,7 +114,7 @@ test_that("Print function for ddhazard_space_errors object gives previous result
     formula = survival::Surv(stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(eps = 1e-1),
+    control = ddhazard_control(eps = 1e-1),
     a_0 = rep(0, 2), Q_0 = diag(1, 2), Q = diag(.1, 2),
     max_T = 20, order = 1)
 

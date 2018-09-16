@@ -7,7 +7,7 @@ test_that("UKF throws error when first sigm points weight is zero", {
       data = head_neck_cancer,
       by = 1, Q_0 = diag(1, 2), a_0 = c(-3, 0),
       Q = diag(1e-1, 2),
-      control = list(kappa = 0, method = "UKF"),
+      control = ddhazard_control(kappa = 0, method = "UKF"),
       max_T = 30,
       id = head_neck_cancer$id, order = 1)
   }, regexp = "UKF not implemented for hyperparameters that yield zero weight on first sigma point")
@@ -19,7 +19,7 @@ test_that("UKF on head_neck works with logit model", {
     data = head_neck_cancer,
     by = 1, Q_0 = diag(1, 2), a_0 = c(-3, 0),
     Q = diag(1e-1, 2),
-    control = list(
+    control = ddhazard_control(
       eps = 10^-3, method = "UKF", beta = 0, alpha = 1),
     max_T = 30,
     id = head_neck_cancer$id, order = 1,
@@ -36,27 +36,30 @@ test_that("UKF on head_neck works with logit model", {
 
 test_that("UKF does not fail and both methods give the same",{
   sims <- logit_sim_200
-  res_new <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-                  by = 1,
-                  data = sims$res,
-                  a_0 = rep(0, ncol(sims$res) + 1 - 4),
-                  Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                  Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                  verbose = F,
-                  control = list(eps = 1e-2, est_Q_0 = F, method = "UKF",
-                                 kappa = 0.1, alpha = 1, beta = 0),
-                  id = sims$res$id,
-                  max_T = 10)
+  res_new <- ddhazard(
+    formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    by = 1,
+    data = sims$res,
+    a_0 = rep(0, ncol(sims$res) + 1 - 4),
+    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
+    Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
+    verbose = F,
+    control = ddhazard_control(eps = 1e-2, est_Q_0 = F, method = "UKF",
+                               kappa = 0.1, alpha = 1, beta = 0),
+    id = sims$res$id,
+    max_T = 10)
 
-  res_old <- ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-                      by = 1,
-                      data = sims$res,
-                      a_0 = rep(0, ncol(sims$res) + 1 - 4),
-                      Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                      Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
-                      control = list(est_Q_0 = F, kappa = 0.1, alpha = 1, beta = 0, eps = 1e-2, method = "UKF_org"),
-                      id = sims$res$id,
-                      max_T = 10)
+  res_old <- ddhazard(
+    formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    by = 1,
+    data = sims$res,
+    a_0 = rep(0, ncol(sims$res) + 1 - 4),
+    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
+    Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
+    control = ddhazard_control(
+      est_Q_0 = F, kappa = 0.1, alpha = 1, beta = 0, eps = 1e-2, method = "UKF_org"),
+    id = sims$res$id,
+    max_T = 10)
 
   expect_equal(res_new$state_vecs, res_old$state_vecs)
   expect_equal(res_new$state_vars, res_old$state_vars)
@@ -170,8 +173,9 @@ test_that("UKF works on simulated data works with exponential model and gives pr
     by = (by_ <- 1),
     Q_0 = diag(1, 11),
     Q = diag(1e-1, 11),
-    control = list(eps = 10^-2, method = "UKF",
-                   debug = F, beta = 0, save_data = F, save_risk_set = F),
+    control = ddhazard_control(
+      eps = 10^-2, method = "UKF",
+      debug = F, beta = 0, save_data = F, save_risk_set = F),
     max_T = 10,
     id = sims$res$id, order = 1,
     verbose = F,
@@ -191,7 +195,7 @@ test_that("UKF second order model works (that is, gives no errors...)", {
       data = head_neck_cancer,
       by = 1, Q_0 = diag(1, 4),
       Q = diag(1e-1, 2),
-      control = list(est_Q_0 = F, method = "UKF", beta = 0),
+      control = ddhazard_control(est_Q_0 = F, method = "UKF", beta = 0),
       max_T = 30,
       id = head_neck_cancer$id, order = 2,
       verbose = F,
@@ -199,20 +203,23 @@ test_that("UKF second order model works (that is, gives no errors...)", {
     ))
 
     sims <- if(m == "logit") logit_sim_200 else exp_sim_200
-    expect_no_error(result_sim <-
-                      ddhazard(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
-                               by = 1,
-                               data = sims$res,
-                               Q_0 = diag(c(
-                                 rep(.1,  ncol(sims$res) + 1 - 4),
-                                 rep(.1, ncol(sims$res) + 1 - 4))),
-                               Q = diag(.01, ncol(sims$res) + 1 - 4),
-                               control = list(est_Q_0 = F, method = "UKF",
-                                              eps = .1 # Just want see the a few iterations passes
-                                              ),
-                               id = sims$res$id,
-                               model = m,
-                               order = 2,
-                               max_T = 10))
+    expect_no_error(
+      result_sim <-
+        ddhazard(
+          formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+           by = 1,
+           data = sims$res,
+           Q_0 = diag(c(
+             rep(.1,  ncol(sims$res) + 1 - 4),
+             rep(.1, ncol(sims$res) + 1 - 4))),
+           Q = diag(.01, ncol(sims$res) + 1 - 4),
+           control = ddhazard_control(
+             est_Q_0 = F, method = "UKF",
+             eps = .1 # Just want see the a few iterations passes
+           ),
+           id = sims$res$id,
+           model = m,
+           order = 2,
+           max_T = 10))
   }
 })

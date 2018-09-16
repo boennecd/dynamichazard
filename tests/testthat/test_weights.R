@@ -7,8 +7,9 @@ test_that("Passing fewer weigths than rows in design mat throws error",{
       formula = survival::Surv(start, stop, event) ~ group,
       data = head_neck_cancer,
       by = 1,
-      control = list(est_Q_0 = F, n_max = 10^4, eps = 10^-4,
-                     save_data = F, save_risk_set = F),
+      control = ddhazard_control(
+        est_Q_0 = F, n_max = 10^4, eps = 10^-4,
+        save_data = F, save_risk_set = F),
       a_0 = rep(0, 2), Q_0 = diag(1, 2),
       max_T = 45,
       id = head_neck_cancer$id, order = 1,

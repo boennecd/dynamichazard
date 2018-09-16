@@ -2,14 +2,13 @@ library(dynamichazard)
 if(!require(shiny))
   stop("Requires 'shiny' to run the demo")
 
-test_sim_func_exp <- with(environment(ddhazard), test_sim_func_exp)
-test_sim_func_logit <- with(environment(ddhazard), test_sim_func_logit)
-exp_model_names <- with(environment(ddhazard), exp_model_names)
+test_sim_func_exp <- dynamichazard:::test_sim_func_exp
+test_sim_func_logit <- dynamichazard:::test_sim_func_logit
+exp_model_names <- dynamichazard:::exp_model_names
 
 # Save memory on server
 ddhazard <- function(..., control){
-  control$save_data = F
-  control$save_risk_set = F
+  control <- c(control, list(save_data = FALSE, save_risk_set = FALSE))
   dynamichazard::ddhazard(..., control = control)
 }
 
@@ -502,6 +501,8 @@ server <- function(input, output) {
     if(debug > 0){
       control_list$debug <- debug
     }
+
+    control_list <- as.call(c(quote(ddhazard_control), control_list))
 
     Q <- if(6 - n_fixed > 1)
       bquote(diag(.1, .(6 - n_fixed))) else 0.1
