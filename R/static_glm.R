@@ -360,6 +360,7 @@ static_glm = function(
     formula <- drop.terms(tt, do_drop, keep.response = TRUE)
 
     if(only_coef){
+      tmp_drop <- logical(ncol(mf))
       # find the indices to drop from `mf`
       dropped_names <- attr(tt, "term.labels")[do_drop]
       # TODO: this will not work if with e.g., `y ~ x1 + x11 + ddFixed(x1)`...
@@ -369,24 +370,33 @@ static_glm = function(
       #       that `mf` has an `assign` attribute and then use this...
       do_drop <- sapply(colnames(mf), function(n)
         any(sapply(dropped_names, startsWith, x = n)))
+      tmp_drop[do_drop] <- TRUE
+      do_drop <- tmp_drop
+    } else
+      do_drop <- FALSE # will yield all columns
+  } else if(!missing(mf))
+      do_drop <- logical(ncol(mf)) else
+        do_drop <- FALSE
 
-      # there may also be an additional intercept
-      do_keep_random_intercept <- .keep_random_intercept(formula_org, data)
-      if(do_keep_random_intercept){
-        # assume that the fixed intercept is the last `(Intercept)` in `mf`
-        cum_is_inter <- cumsum(colnames(mf) == "(Intercept)")
-        stopifnot(max(cum_is_inter) == 2L)
+  # there may also be an additional intercept
+  do_keep_random_intercept <- .keep_random_intercept(formula_org, data)
+  if(do_keep_random_intercept){
+    # assume that the fixed intercept is the last `(Intercept)` in `mf`
+    cum_is_inter <- cumsum(colnames(mf) == "(Intercept)")
+    stopifnot(max(cum_is_inter) <= 2L)
 
-        do_drop[min(which(cum_is_inter == 1L))] <- TRUE
-      }
+    if(max(cum_is_inter) > 1L)
+      do_drop[min(which(cum_is_inter == 1L))] <- TRUE
+  }
 
-      mf <- mf[, !do_drop, drop = FALSE]
-    }
+  if(!missing(mf)){
+    names(do_drop) <- colnames(mf)
+    mf <- mf[, !do_drop, drop = FALSE]
   }
 
   if(only_coef)
     wrap_output <- function(res){
-      if(length(do_drop) == 0)
+      if(sum(do_drop) < 1)
         return(res)
 
       out <- structure(numeric(length(do_drop)), names = names(do_drop))
