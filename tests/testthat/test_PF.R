@@ -631,7 +631,7 @@ test_that("A few iterations with `type = \"VAR\"' yields the same as before", {
       Q_tilde = diag(.3^2, 2), n_threads = 4)))
 
   expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
-                     file = "PF_VARS.RDS", update = TRUE)
+                     file = "PF_VARS.RDS")
 })
 
 test_that("Commutation matrix is correct", {
@@ -724,4 +724,34 @@ test_that("PF_EM gives the same with restricted and unrestricted model when we e
     pf_non_restrict_Fear$F, pf_restrict_Fear$F, tolerance = 1e-5)
   expect_equal(
     pf_non_restrict_Fear$Q, pf_restrict_Fear$Q, tolerance = 1e-5)
+})
+
+test_that("type = 'VAR' works with non-zero mean for with a single term and gives previous results", {
+  # had somes issues when on
+  set.seed(30520116)
+  pf_Fear <- suppressWarnings(PF_EM(
+    Surv(start, stop, event) ~ ddFixed(group) + ddFixed_intercept(TRUE),
+    head_neck_cancer, Q_0 = 1, Q = .2, Fmat = diag(1e-2, 1),
+    by = 1, type = "VAR", model = "logit", max_T = 30,
+    control = PF_control(
+      N_fw_n_bw = 50, N_smooth = 100, N_first = 500, eps = .001,
+      method = "AUX_normal_approx_w_cloud_mean",
+      n_max = 2, smoother = "Fearnhead_O_N",
+      Q_tilde = diag(.3^2, 1), n_threads = 1)))
+
+  expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
+                     file = "PF_VARS_non_zero_mean_inter.RDS")
+
+  pf_Fear <- suppressWarnings(PF_EM(
+    Surv(start, stop, event) ~ group + ddFixed(group) + ddFixed_intercept(),
+    head_neck_cancer, Q_0 = 1, Q = .2, Fmat = diag(1e-2, 1),
+    by = 1, type = "VAR", model = "logit", max_T = 30,
+    control = PF_control(
+      N_fw_n_bw = 50, N_smooth = 100, N_first = 500, eps = .001,
+      method = "AUX_normal_approx_w_cloud_mean",
+      n_max = 2, smoother = "Fearnhead_O_N",
+      Q_tilde = diag(.3^2, 1), n_threads = 1)))
+
+  expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
+                     file = "PF_VARS_non_zero_mean_slope.RDS")
 })
