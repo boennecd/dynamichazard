@@ -925,36 +925,18 @@ PF_control <- function(
     logit = "binomial",
     exponential = "poisson")
 
-  out <- NULL
   R_top <- t(R)
-  for(i in 1:length(clouds)){
-    cl <- clouds[[i]]
-    risk_set <- risk_obj$risk_sets[[i]]
-
-    ran_vars <- X[, risk_set, drop = FALSE]
-    X_i <- fixed_terms[, risk_set, drop = FALSE]
-    y_i <- risk_obj$is_event_in[risk_set] == (i - 1)
-
-    good <- which(drop(cl$weights) >= 1e-7)
-    dts <-
-      pmin(tstop[risk_set], risk_obj$event_times[i + 1]) -
-      pmax(tstart[risk_set], risk_obj$event_times[i])
-
-    ws <- cl$weights[good] # TODO: maybe scale up the weights at this point?
-    particle_coefs <- R_top %*% cl$states[, good, drop = FALSE]
-
-    out <- c(out, list(
-      pf_fixed_effect_iteration(
-        X = X_i, Y = y_i, dts = dts, cloud = particle_coefs,
-        cl_weights = ws, ran_vars = ran_vars, beta = fixed_parems,
-        family = family_arg, max_threads = nthreads, debug = debug)))
-  }
+  out <- pf_fixed_effect_get_QR(
+    clouds = clouds, risk_obj = risk_obj, ran_vars = X,
+    fixed_terms = fixed_terms, R_top = R_top, tstart = tstart,
+    tstop = tstop, fixed_parems = fixed_parems, family = family_arg,
+    max_threads = nthreads, debug = debug)
 
   f_stack <- do.call(c, lapply(out, "[[", "f"))
   R_stack <- do.call(rbind, lapply(out, .get_R))
 
   qr. <- qr(R_stack, LAPACK = TRUE)
-  f <- qr.qty(qr., f_stack)[1:nrow(X_i)]
+  f <- qr.qty(qr., f_stack)[1:nrow(fixed_terms)]
 
   out <- list(list(
     R = qr.R(qr.), f = f,

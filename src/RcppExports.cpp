@@ -574,24 +574,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// pf_fixed_effect_iteration
-Rcpp::List pf_fixed_effect_iteration(const arma::mat& X, const arma::vec& Y, const arma::vec& dts, const arma::mat& cloud, const arma::vec& cl_weights, const arma::mat& ran_vars, const arma::vec& beta, std::string family, int max_threads, const bool debug, const unsigned int max_bytes);
-RcppExport SEXP _dynamichazard_pf_fixed_effect_iteration(SEXP XSEXP, SEXP YSEXP, SEXP dtsSEXP, SEXP cloudSEXP, SEXP cl_weightsSEXP, SEXP ran_varsSEXP, SEXP betaSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP debugSEXP, SEXP max_bytesSEXP) {
+// pf_fixed_effect_get_QR
+Rcpp::List pf_fixed_effect_get_QR(Rcpp::List clouds, Rcpp::List risk_obj, const arma::mat& ran_vars, const arma::mat& fixed_terms, const arma::mat& R_top, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_parems, const std::string family, const int max_threads, const bool debug, const unsigned int max_bytes);
+RcppExport SEXP _dynamichazard_pf_fixed_effect_get_QR(SEXP cloudsSEXP, SEXP risk_objSEXP, SEXP ran_varsSEXP, SEXP fixed_termsSEXP, SEXP R_topSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_paremsSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP debugSEXP, SEXP max_bytesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type dts(dtsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type cloud(cloudSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type cl_weights(cl_weightsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type clouds(cloudsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type risk_obj(risk_objSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type ran_vars(ran_varsSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< std::string >::type family(familySEXP);
-    Rcpp::traits::input_parameter< int >::type max_threads(max_threadsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type fixed_terms(fixed_termsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type R_top(R_topSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tstart(tstartSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tstop(tstopSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type fixed_parems(fixed_paremsSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type family(familySEXP);
+    Rcpp::traits::input_parameter< const int >::type max_threads(max_threadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type debug(debugSEXP);
     Rcpp::traits::input_parameter< const unsigned int >::type max_bytes(max_bytesSEXP);
-    rcpp_result_gen = Rcpp::wrap(pf_fixed_effect_iteration(X, Y, dts, cloud, cl_weights, ran_vars, beta, family, max_threads, debug, max_bytes));
+    rcpp_result_gen = Rcpp::wrap(pf_fixed_effect_get_QR(clouds, risk_obj, ran_vars, fixed_terms, R_top, tstart, tstop, fixed_parems, family, max_threads, debug, max_bytes));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -682,7 +683,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_PF_est_params_dens", (DL_FUNC) &_dynamichazard_PF_est_params_dens, 9},
     {"_dynamichazard_test_copy_mat", (DL_FUNC) &_dynamichazard_test_copy_mat, 2},
     {"_dynamichazard_test_copy_vec", (DL_FUNC) &_dynamichazard_test_copy_vec, 2},
-    {"_dynamichazard_pf_fixed_effect_iteration", (DL_FUNC) &_dynamichazard_pf_fixed_effect_iteration, 11},
+    {"_dynamichazard_pf_fixed_effect_get_QR", (DL_FUNC) &_dynamichazard_pf_fixed_effect_get_QR, 12},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},
     {"_dynamichazard_round_if_almost_eq", (DL_FUNC) &_dynamichazard_round_if_almost_eq, 3},
     {"_dynamichazard_rep_vec", (DL_FUNC) &_dynamichazard_rep_vec, 2},
