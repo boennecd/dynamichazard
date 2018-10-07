@@ -25,6 +25,12 @@ PF_effective_sample_size <- function(object){
 #' @param G,theta,J,K,psi,phi parameters for a restricted \code{type = "VAR"} model.
 #' See the vignette mentioned in 'Details' and the examples linked to in
 #' 'See Also'.
+#' @param fixed  two-sided \code{\link{formula}} to be used
+#' with \code{random} instead of \code{formula}. It is of the form
+#' \code{Surv(tstart, tstop, event) ~ x}.
+#' @param random one-sided \code{\link{formula}} to be used
+#' with \code{fixed} instead of \code{formula}. It is of the form
+#' \code{~ z} or \code{~ - 1} for no fixed effects.
 #' @param ... optional way to pass arguments to \code{control}.
 #'
 #' @details
@@ -150,8 +156,9 @@ PF_effective_sample_size <- function(object){
 #' @export
 PF_EM <- function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
-  fixed_effects, G, theta, J, K, psi, phi, ...){
+  control = PF_control(...), trace = 0, seed = NULL, type = "RW",
+  fixed = NULL, random = NULL,
+  Fmat, fixed_effects, G, theta, J, K, psi, phi, ...){
   #####
   # checks
   if(length(order) == 1 && order != 1)
@@ -189,6 +196,14 @@ PF_EM <- function(
   if(any(has_restrict) && !all(has_restrict))
     stop("Missing one of ", str_if_err)
 
+  if(is.null(fixed) != is.null(random))
+    stop("supply either both ", sQuote("fixed"), " and ", sQuote("random"),
+         " or none of them")
+
+  if(!missing(formula) & !is.null(fixed) &  !is.null(random))
+    stop("Use either ", sQuote("formula"), " or ", sQuote("fixed"), " and ",
+         sQuote("random"))
+
   #####
   # check if `control` has all the needed elements or if is called as in
   # version 0.5.1 or earlier
@@ -208,16 +223,17 @@ PF_EM <- function(
   static_args <- .get_PF_static_args(
     formula = formula, data = data, by = by,
     max_T = if(missing(max_T)) NULL else max_T, id = id,
-    trace = trace, model, order = order)
+    trace = trace, model, order = order, fixed = fixed, random = random)
 
   #####
   # find matrices for state equation
   start_coefs <- get_start_values(
-    formula = formula, data = data, max_T = max_T, X = static_args$X,
+    data = data, formula = formula, max_T = max_T, X = static_args$X,
     fixed_terms = static_args$fixed_terms, risk_set = static_args$risk_obj,
     verbose = trace > 0, n_threads = control$n_threads, model = model,
     a_0 = if(missing(a_0)) NULL else a_0, order = order,
-    fixed_parems_start = if(missing(fixed_effects)) NULL else fixed_effects)
+    fixed_parems_start = if(missing(fixed_effects)) NULL else fixed_effects,
+    fixed = fixed, random = random, type = type)
   a_0 <- start_coefs$a_0
   fixed_parems <- start_coefs$fixed_parems_start
 
@@ -892,12 +908,14 @@ PF_control <- function(
 
 
 .get_PF_static_args <- function(
-  formula, data, by, max_T = NULL, id, trace, model, order){
+  formula, data, by, max_T = NULL, id, trace, model, order, fixed = NULL,
+  random = NULL){
   # get design matrix and risk set
   tmp <- get_design_matrix_and_risk_obj(
     formula = formula, data = data, by = by,
     max_T = if(is.null(max_T)) NULL else max_T, verbose = trace > 0,
-    is_for_discrete_model = model == "logit", id = id)
+    is_for_discrete_model = model == "logit", id = id, fixed = fixed,
+    random = random)
 
   if(trace > 0)
     report_pre_liminary_stats_before_EM(

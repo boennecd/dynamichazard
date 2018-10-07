@@ -166,14 +166,13 @@ ddhazard = function(
   #####
   # Find starting values at time zero
   tmp <- get_start_values(
-    formula = formula, data = data, max_T = max_T,
+    data = data, formula = formula, max_T = max_T,
     # TODO: avoid transpose here by transpoing earlier
     X = t(X_Y$X), fixed_terms = t(X_Y$fixed_terms),
-
     risk_set = risk_set,
     verbose = verbose, n_threads = control$n_threads, model = model,
     a_0 = if(missing(a_0)) NULL else a_0,
-    order = order,
+    order = order, type = "RW",
     fixed_parems_start = control$fixed_parems_start)
 
   a_0 <- tmp$a_0
@@ -577,22 +576,43 @@ exp_model_names <- c(
 
 #' @importFrom utils capture.output
 get_start_values <- function(
-  formula, data, max_T, X, fixed_terms, risk_set, verbose = FALSE, n_threads,
-  model, order, a_0 = NULL, fixed_parems_start = NULL){
-
+  data, formula, max_T, X, risk_obj, fixed_terms, risk_set, verbose = FALSE,
+  n_threads, model, order, a_0 = NULL, fixed_parems_start = NULL,
+  fixed = NULL, random = NULL, type){
   n_params = nrow(X)
   n_fixed = nrow(fixed_terms)
 
-  missing_a_0 <- is.null(a_0) && n_params > 0
-  missing_fixed <- is.null(fixed_parems_start) && n_fixed > 0
+  miss_a_0 <- is.null(a_0) && n_params > 0
+  miss_fix <- is.null(fixed_parems_start) && n_fixed > 0
 
-  if(!missing_a_0 && !missing_fixed){
+  finish <- function(a = a_0, f = fixed_parems_start,
+                     adj_a_0 = TRUE){
+    if(adj_a_0)
+      a <- rep(a, order)
+
+    if(verbose){
+      if(length(a) > 0)
+        message("Starting values for time-varying coeffecients are:\n",
+                paste0(capture.output(a), collapse = "\n"))
+      if(length(f > 0))
+        message("Starting values for fixed coeffecients are:\n",
+                paste0(capture.output(f), collapse = "\n"))
+    }
+
+    list(a_0 = a, fixed_parems_start = f)
+  }
+
+  if(!miss_a_0 && !miss_fix){
     if(is.null(fixed_parems_start))
       fixed_parems_start <- numeric()
     if(is.null(a_0))
       a_0 <- numeric()
 
-  } else if(n_params == 0){
+    return(finish(adj_a_0 = FALSE))
+
+  }
+
+  if(n_params == 0){
     # Model is fitted for testing
     warning("The model can be estimated more effeciently by using get_survival_case_Weights_and_data and static_glm when there is no time-varying parameters")
     a_0 = vector()
@@ -601,62 +621,62 @@ get_start_values <- function(
       fixed_parems_start <- rep(0, n_fixed) else
         fixed_parems_start <- fixed_parems_start
 
-  } else {
-    glm_func <- function(fam)
-      static_glm(
-        formula = formula, data = data, max_T = max_T, risk_obj = risk_set,
-        epsilon = sqrt(.Machine$double.eps) * 1e1, family = fam,
-        speedglm = FALSE, only_coef = TRUE, mf = cbind(t(X), t(fixed_terms)),
-        method_use = "parallelglm_quick", n_threads = n_threads)
+    return(finish(adj_a_0 = TRUE))
 
-    if(model == "logit"){
-      coefs = glm_func("binomial")
-
-    } else if(model %in% exp_model_names){
-      coefs = glm_func("exponential")
-
-    } else
-      stop("Method not implemented to find initial values for ", sQuote(model),
-           ". Please, provide intial values for a_0")
-
-    is_fixed <-
-      names(coefs) %in% rownames(fixed_terms) |
-      grepl("^ddFixed_intercept\\(", names(coefs), perl = TRUE)
-
-    # only the latter `(Intercept)` is the fixed intercept if there are two
-    cum_intercept <- cumsum(names(coefs) == "(Intercept)")
-    if(max(cum_intercept) > 2L)
-      stop("There are more than two ", sQuote("(Intercept)"), " coefficients")
-    if(max(cum_intercept) == 2L)
-      is_fixed[min(which(cum_intercept == 1L))] <- FALSE
-
-    if(is.null(a_0)){
-      message("a_0 not supplied. IWLS estimates of static glm model is used",
-              " for random walk models. Otherwise the values are zero")
-      a_0 = rep(coefs[!is_fixed], order)
-
-      if(verbose){
-        message("Starting values for time-varying coeffecients are:\n",
-                paste0(capture.output(a_0), collapse = "\n"))
-      }
-    }
-
-    if(is.null(fixed_parems_start)){
-      fixed_parems_start <- coefs[is_fixed]
-
-      if(verbose && length(fixed_parems_start) > 0){
-        message("Starting values for fixed coeffecients are:\n",
-                paste0(capture.output(fixed_parems_start), collapse = "\n"))
-      }
-    }
   }
 
-  # check
-  if(length(a_0) != n_params * order)
-    stop("a_0 does not have the correct length. Its length should be ",
-         n_params * order, " but it has length ", length(a_0))
+  #####
+  # setup call with to use with different design matrices and families
+  cl <- bquote(static_glm(
+    formula = .(if(missing(formula)) quote(fixed) else quote(formula)),
+    data = data, max_T = max_T, risk_obj = risk_set,
+    epsilon = sqrt(.Machine$double.eps) * 1e1,
+    speedglm = FALSE, only_coef = TRUE, mf = mt,
+    method_use = "parallelglm_quick", n_threads = n_threads))
 
-  return(list(a_0 = a_0, fixed_parems_start = fixed_parems_start))
+  if(model == "logit"){
+    cl$family <- "binomial"
+
+  } else if(model %in% exp_model_names){
+    cl$family <- "exponential"
+
+  } else
+    stop("Method not implemented to find initial values for ", sQuote(model),
+         ". Please, provide intial values for a_0")
+
+  if(type == "VAR"){
+    if(miss_fix){
+      mt <- t(fixed_terms)
+      fixed_parems_start <- eval(cl)
+
+    } else if(nrow(fixed_terms) == 0L)
+      fixed_parems_start <- numeric()
+
+    if(miss_a_0)
+      a_0 <- numeric(nrow(X)) else if (nrow(X) == 0L)
+        a_0 <- numeric()
+
+  } else if (type == "RW") {
+    mt <- cbind(t(X), t(fixed_terms))
+    out <- eval(cl)
+    if(miss_fix)
+      fixed_parems_start <- out[-(1:nrow(X))] else if(nrow(fixed_terms) == 0L)
+        fixed_parems_start <- numeric()
+
+    if(miss_a_0)
+      a_0 <- out[1:nrow(X)] else if(nrow(X) == 0L)
+        a_0 <- numeric()
+
+  } else
+    stop("type ", sQuote(type), " is not supported")
+
+  if(!miss_a_0 && miss_fix)
+    return(finish(adj_a_0 = TRUE))
+
+  # give an additional message
+  message("a_0 not supplied. IWLS estimates of static glm model is used",
+          " for random walk models. Otherwise the values are zero")
+  return(finish(adj_a_0 = TRUE))
 }
 
 report_pre_liminary_stats_before_EM <- function(risk_set, Y){
@@ -697,8 +717,9 @@ report_pre_liminary_stats_before_EM <- function(risk_set, Y){
 }
 
 get_design_matrix_and_risk_obj <- function(
-  formula, data, by, max_T = NULL, id, verbose = FALSE, is_for_discrete_model){
-  X_Y = get_design_matrix(formula, data)
+  formula, data, by, max_T = NULL, id, verbose = FALSE, is_for_discrete_model,
+  fixed = NULL, random = NULL){
+  X_Y = get_design_matrix(formula, data, fixed = fixed, random = random)
 
   if(verbose)
     message("Finding Risk set")

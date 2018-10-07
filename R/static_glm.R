@@ -41,7 +41,7 @@
 #'  use_weights = FALSE)$X
 #'
 #' @export
-get_survival_case_weights_and_data = function(
+get_survival_case_weights_and_data <- function(
   formula, data, by, max_T, id, init_weights, risk_obj,
   use_weights = T, is_for_discrete_model = T,
   c_outcome = "Y",
@@ -142,7 +142,8 @@ change_new_var_name <- function(c_x, data){
           data[r_set_is_case, ],
           list(weights = init_weights[r_set_is_case]))))
 
-      new_weights[r_set_not_case] = new_weights[r_set_not_case] + init_weights[r_set_not_case]
+      new_weights[r_set_not_case] <-
+        new_weights[r_set_not_case] + init_weights[r_set_not_case]
     }
 
     do_keep <- new_weights > 0
@@ -248,7 +249,7 @@ change_new_var_name <- function(c_x, data){
 #'
 #'
 #' @export
-static_glm = function(
+static_glm <- function(
   formula, data, by, max_T, ..., id, family = "logit", model = F, weights,
   risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
   method_use = c("glm", "speedglm", "parallelglm_quick", "parallelglm_QR"),
@@ -279,6 +280,12 @@ static_glm = function(
   c_outcome <- change_new_var_name("Y", data = data)
   c_weights <- change_new_var_name("weights", data = data)
   c_end_t   <- change_new_var_name("t", data = data)
+
+  if(!missing(mf)){
+    # we only need the outcome variable and weights from the next part
+    formula <- update(formula, . ~ 1)
+    data <- data[, c(all.vars(formula), col_for_row_n)]
+  }
 
   if(family %in% c("binomial", "logit")){
     family <- binomial()
@@ -331,89 +338,32 @@ static_glm = function(
     mf <- mf[new_order, , drop = FALSE]
   }
 
-  #####
-  # check if there are some duplicate terms (terms which as appear as is and
-  # wrapped in `ddFixed`).
-  tt <- terms(formula, specials = "ddFixed")
-  # logic below is in case something like `Y ~ f(x, a) + z` is used since then
-  # e.g., `all.vars` yields
-  #
-  #           all.vars(Y ~ f(x, a) + z, unique = FALSE)
-  #           #R [1] "Y" "x" "a" "z"
-  #
-  # It also avoid issues like
-  #
-  #           frm <- terms(y ~ x + f(x) + ddFixed(x))
-  #           unlist(lapply(attr(frm, "variables")[-1L], all.vars))
-  #           #R [1] "y" "x" "x" "x"
-  #
-  vars <- lapply(attr(tt, "variables")[-1L], all.vars)
-  dups <- which(vars %in% vars[duplicated(vars)])
-  xtra_ddfixed <- which(dups %in% attr(tt, "specials")$ddFixed)
-
-  ddFixed_term_labels <- attr(tt, "term.labels")[xtra_ddfixed]
-  ddFixed_terms <- gsub(
-    "^(ddFixed\\()(.+)(\\))$", "\\2", ddFixed_term_labels)
-  do_drop <- which(attr(tt, "term.labels") %in% ddFixed_terms)
-  if(length(do_drop) > 0){
-    # remove these from the formula
-    formula <- drop.terms(tt, do_drop, keep.response = TRUE)
-
-    if(only_coef){
-      tmp_drop <- logical(ncol(mf))
-      # find the indices to drop from `mf`
-      dropped_names <- attr(tt, "term.labels")[do_drop]
-      # TODO: this will not work if with e.g., `y ~ x1 + x11 + ddFixed(x1)`...
-      #       A better way would be to call `model.frame` again and use the
-      #       `model.matrix` and `attr(,"assign")`. However, the whole idea of
-      #       using the `mf` argument is to avoid this. Another idea is require
-      #       that `mf` has an `assign` attribute and then use this...
-      do_drop <- sapply(colnames(mf), function(n)
-        any(sapply(dropped_names, startsWith, x = n)))
-      tmp_drop[do_drop] <- TRUE
-      do_drop <- tmp_drop
-    } else
-      do_drop <- FALSE # will yield all columns
-  } else if(!missing(mf))
-      do_drop <- logical(ncol(mf)) else
-        do_drop <- FALSE
-
-  # there may also be an additional intercept
-  do_keep_random_intercept <- .keep_random_intercept(formula_org, data)
-  if(do_keep_random_intercept){
-    # assume that the fixed intercept is the last `(Intercept)` in `mf`
-    cum_is_inter <- cumsum(colnames(mf) == "(Intercept)")
-    stopifnot(max(cum_is_inter) <= 2L)
-
-    if(max(cum_is_inter) > 1L)
-      do_drop[min(which(cum_is_inter == 1L))] <- TRUE
-  }
-
-  if(!missing(mf)){
-    names(do_drop) <- colnames(mf)
-    mf <- mf[, !do_drop, drop = FALSE]
-  }
-
-  if(only_coef)
-    wrap_output <- function(res){
-      if(sum(do_drop) < 1)
-        return(res)
-
-      out <- structure(numeric(length(do_drop)), names = names(do_drop))
-      out[!do_drop] <- res
-      out
-    }
-
   offset <- if(family$family == "poisson")
     data$log_delta_time else rep(0, nrow(data))
 
+  cl <- match.call()
+  cl <- cl[!names(cl) %in% names(formals(static_glm))]
+  cl[[1L]] <- quote(.static_glm_fit)
+
+  cl[c("method_use", "only_coef", "c_outcome", "c_weights", "family",
+       "offset", "data", "mf", "n_threads", "formula", "model")] <- list(
+         quote(method_use), quote(only_coef), quote(c_outcome),
+         quote(c_weights), quote(family), quote(offset), quote(data),
+         quote(mf), quote(n_threads), quote(formula), quote(model))
+
+  eval(cl, environment())
+}
+
+.static_glm_fit <- function(
+  method_use, only_coef, c_outcome, c_weights, family, offset, data, mf,
+  n_threads, formula, model, ...){
   if(method_use == "speedglm" && requireNamespace("speedglm", quietly = T)){
     if(only_coef){
       fit <- speedglm::speedglm.wfit(
         X = mf, y = data[[c_outcome]], weights = data[[c_weights]],
         family = family, offset = offset, ...)
 
-      return(wrap_output(fit$coefficients))
+      return(fit$coefficients)
     }
 
     return(drop(speedglm::speedglm(
@@ -429,7 +379,7 @@ static_glm = function(
           x = mf, y = data[[.(c_outcome)]], weights = data[[.(c_weights)]],
           family = family, control = .(ctrl), offset = offset)))
 
-      return(wrap_output(fit$coefficients))
+      return(fit$coefficients)
     }
 
     return(eval(bquote(
@@ -445,14 +395,16 @@ static_glm = function(
     method. <- gsub("(^parallelglm_)([a-zA-Z]+$)", "\\2", method_use)
 
     out <- drop(
-      parallelglm(X = t(mf), Ys = data[[c_outcome]],
-                  weights = data[[c_weights]], offsets = offset, beta0 = numeric(),
-                  family = family$family, method = method.,
-                  tol = epsilon, nthreads = n_threads))
+      parallelglm(
+        X = t(mf), Ys = data[[c_outcome]],
+        weights = data[[c_weights]], offsets = offset, beta0 = numeric(),
+        family = family$family, method = method.,
+        tol = epsilon, nthreads = n_threads))
 
-    return(wrap_output(structure(out, names = dimnames(mf)[[2]])))
+    return(structure(out, names = dimnames(mf)[[2]]))
 
-  } else
-    stop(sQuote("method_use"), " not implemented with ", sQuote("only_coef"),
-         " = ", only_coef)
+  }
+
+  stop(sQuote("method_use"), " not implemented with ", sQuote("only_coef"),
+       " = ", only_coef)
 }

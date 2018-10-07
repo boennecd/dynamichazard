@@ -1,6 +1,22 @@
+get_design_matrix <- function(
+  formula, data, response = T, predictors = T,
+  Terms = NULL, has_fixed_intercept = NULL, xlev = NULL, fixed = NULL,
+  random = NULL){
+  cl <- match.call()
+  if(is.null(fixed) && is.null(random)){
+    cl[c("fixed", "random")] <- NULL
+    cl[[1L]] <- quote(.get_design_matrix_one_frm)
+    return(eval(cl, parent.frame()))
+  }
+
+  cl[c("formula", "has_fixed_intercept")] <- NULL
+  cl[[1L]] <- quote(.get_design_matrix_two_frms)
+  eval(cl, parent.frame())
+}
+
 # find the design matrix and returns the left hand side and right hand side of
 # objects in the formula
-get_design_matrix = function(
+.get_design_matrix_one_frm <- function(
   formula, data, response = T, predictors = T,
   Terms = NULL, has_fixed_intercept = NULL, xlev = NULL){
   if(!response && !predictors)
@@ -94,14 +110,8 @@ get_design_matrix = function(
     }
   }
 
-  # Change outcome if formula it was Surv(stop, event) ~
-  if(!is.null(Y) && attr(Y, "type") == "right"){
-    Y <- cbind(0, Y)
-    dimnames(Y)[[2]] <- c("start", "stop", "status")
-    attr(Y, "type") <- "counting"
-  }
-
-  list(X = X, fixed_terms = fixed_terms, Y = Y, formula_used = formula_used,
+  list(X = X, fixed_terms = fixed_terms, Y = .set_Y_to_counting(Y),
+       formula_used = formula_used,
        terms = Terms, has_fixed_intercept = has_fixed_intercept, xlev = xlev)
 }
 
@@ -116,6 +126,60 @@ get_design_matrix = function(
 
   fixed_expr <- attr(tt, "variables")[[fixed_inter_terms + 1L]]
   attr(eval(fixed_expr), "random_intercept")
+}
+
+.get_design_matrix_two_frms <- function(
+  data, response = T, predictors = T, Terms = NULL, xlev = NULL, fixed = NULL,
+  random = NULL){
+  if(!is.null(Terms) || !is.null(xlev))
+    stop("method not implemented")
+  stopifnot(inherits(fixed, "formula"), inherits(random, "formula"))
+
+  . <- function(formula, data, ...){
+    tt <- terms(formula, data, specials = c("ddFixed", "ddFixed_intercept"))
+    if(any(sapply(attr(tt, "specials"), length) > 0))
+      stop("Do not use ", sQuote("ddFixed"), " or ",
+           sQuote("ddFixed_intercept"),
+           " when you use ", sQuote("random"), " and ", sQuote("fixed"))
+
+    cl <- match.call()
+    cl[[1L]] <- quote(model.frame)
+    eval(cl, parent.frame())
+  }
+
+  if(!predictors)
+    fixed <- update(fixed, . ~ 1)
+
+  mf <- .(fixed, data)
+  Y <- if(response)
+    model.response(mf) else NULL
+
+  if(predictors){
+    Terms_fixed <- terms(mf)
+    xlev_fixed <- .getXlevels(Terms_fixed, mf)
+    fixed_terms <- model.matrix(Terms_fixed, mf)
+
+    mf <- model.frame(random, data)
+    Terms_random <- terms(mf)
+    xlev_random <- .getXlevels(Terms_random, mf)
+    X <- model.matrix(Terms_random, mf)
+  } else
+    X <- fixed_terms <- Terms_fixed <- Terms_random <- xlev_fixed <-
+    xlev_random <- NULL
+
+  list(X = X, fixed_terms = fixed_terms, Y = .set_Y_to_counting(Y),
+       terms = list(fixed = Terms_fixed, random = Terms_random),
+       xlev  = list(fixed = xlev_fixed , random = xlev_random))
+}
+
+.set_Y_to_counting <- function(Y){
+  # Change outcome if formula it was Surv(stop, event) ~
+  if(!is.null(Y) && attr(Y, "type") == "right"){
+    Y <- cbind(0, Y)
+    dimnames(Y)[[2]] <- c("start", "stop", "status")
+    attr(Y, "type") <- "counting"
+  }
+  Y
 }
 
 #' Auxiliary Functions for Fixed Effects

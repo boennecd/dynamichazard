@@ -5,8 +5,9 @@
 \title{EM Estimation with Particle Filters and Smoothers}
 \usage{
 PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = NULL, type = "RW", Fmat,
-  fixed_effects, G, theta, J, K, psi, phi, ...)
+  control = PF_control(...), trace = 0, seed = NULL, type = "RW",
+  fixed = NULL, random = NULL, Fmat, fixed_effects, G, theta, J, K, psi,
+  phi, ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
@@ -38,6 +39,14 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 
 \item{type}{type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 "VAR" for [V]ector [A]uto[R]egression.}
+
+\item{fixed}{two-sided \code{\link{formula}} to be used
+with \code{random} instead of \code{formula}. It is of the form
+\code{Surv(tstart, tstop, event) ~ x}.}
+
+\item{random}{one-sided \code{\link{formula}} to be used
+with \code{fixed} instead of \code{formula}. It is of the form
+\code{~ z} or \code{~ - 1} for no fixed effects.}
 
 \item{Fmat}{starting value for \eqn{F} when \code{type = "VAR"}. See
 'Details'.}
