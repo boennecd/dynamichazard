@@ -27,10 +27,11 @@ PF_effective_sample_size <- function(object){
 #' 'See Also'.
 #' @param fixed  two-sided \code{\link{formula}} to be used
 #' with \code{random} instead of \code{formula}. It is of the form
-#' \code{Surv(tstart, tstop, event) ~ x}.
+#' \code{Surv(tstart, tstop, event) ~ x} or
+#' \code{Surv(tstart, tstop, event) ~ - 1} for no fixed effects.
 #' @param random one-sided \code{\link{formula}} to be used
 #' with \code{fixed} instead of \code{formula}. It is of the form
-#' \code{~ z} or \code{~ - 1} for no fixed effects.
+#' \code{~ z}.
 #' @param ... optional way to pass arguments to \code{control}.
 #'
 #' @details
@@ -65,17 +66,17 @@ PF_effective_sample_size <- function(object){
 #' @seealso \code{\link{PF_forward_filter}} to get a more precise estimate of
 #' the final log-likelihood.
 #'
-#' See the examples at https://github.com/boennecd/dynamichazard/tree/devel/examples.
+#' See the examples at https://github.com/boennecd/dynamichazard/tree/master/examples.
 #'
 #' @section Warning:
 #' The function is still under development and the ouput and API may change.
 #'
 #' @examples
+#'\dontrun{
 #'#####
 #'# Fit model with lung data set from survival
 #'# Warning: long-ish computation time
 #'
-#'\dontrun{
 #'library(dynamichazard)
 #' .lung <- lung[!is.na(lung$ph.ecog), ]
 #' # standardize
@@ -100,7 +101,6 @@ PF_effective_sample_size <- function(object){
 #'# Plot log-likelihood
 #'plot(pf_fit$log_likes)
 #'}
-#'
 #'\dontrun{
 #'######
 #'# example with fixed effects
@@ -152,6 +152,146 @@ PF_effective_sample_size <- function(object){
 #'sqrt(ddfit$Q * 100)
 #'sqrt(pf_fit$Q)
 #'rbind(ddfit$fixed_effects, pf_fit$fixed_effects)
+#'}
+#'\dontrun{
+#' #####
+#' # simulation example with `random` and `fixed` argument and a restricted
+#' # model
+#'
+#' # g groups with k individuals in each
+#' g <- 3L
+#' k <- 400L
+#'
+#' # matrices for state equation
+#' p <- g + 1L
+#' G <- matrix(0., p^2, 2L)
+#' for(i in 1:p)
+#'   G[i + (i - 1L) * p, 1L + (i == p)] <- 1L
+#'
+#' theta <- c(.9, .8)
+#' # coefficients in transition density
+#' (F. <- matrix(as.vector(G %*% theta), 4L, 4L))
+#'
+#' J <- matrix(0., ncol = 2L, nrow = p)
+#' J[-p, 1L] <- J[p, 2L] <- 1
+#' psi <- c(log(c(.3, .1)))
+#'
+#' K <- matrix(0., p * (p - 1L) / 2L, 2L)
+#' j <- 0L
+#' for(i in (p - 1L):1L){
+#'   j <- j + i
+#'   K[j, 2L] <- 1
+#' }
+#' K[K[, 2L] < 1, 1L] <- 1
+#' phi <- log(-(c(.8, .3) + 1) / (c(.8, .3) - 1))
+#'
+#' V <- diag(exp(drop(J %*% psi)))
+#' C <- diag(1, ncol(V))
+#' C[lower.tri(C)] <- 2/(1 + exp(-drop(K %*% phi))) - 1
+#' C[upper.tri(C)] <- t(C)[upper.tri(C)]
+#' (Q <- V %*% C %*% V)     # covariance matrix in state transition
+#' cov2cor(Q)
+#'
+#' Q_0 <- get_Q_0(Q, F.)    # invariant covariance matrix
+#' beta <- c(rep(-6, g), 0) # all groups have the same long run mean intercept
+#'
+#' # simulate state variables
+#' set.seed(56219373)
+#' n_periods <- 300L
+#' alphas <- matrix(nrow = n_periods + 1L, ncol = p)
+#' alphas[1L, ] <- rnorm(p) %*% chol(Q_0)
+#' for(i in 1:n_periods + 1L)
+#'   alphas[i, ] <- F. %*% alphas[i - 1L, ] + drop(rnorm(p) %*% chol(Q))
+#'
+#' alphas <- t(t(alphas) + beta)
+#'
+#' # plot state variables
+#' matplot(alphas, type = "l", lty = 1)
+#'
+#' # simulate individuals' outcome
+#' n_obs <- g * k
+#' df <- lapply(1:n_obs, function(i){
+#'   # find the group
+#'   grp <- (i - 1L) %/% (n_obs / g) + 1L
+#'
+#'   # left-censoring
+#'   tstart <- max(0L, sample.int((n_periods - 1L) * 2L, 1) - n_periods + 1L)
+#'
+#'   # covariates
+#'   x <- c(1, rnorm(1))
+#'
+#'   # outcome (stop time and event indicator)
+#'   osa <- NULL
+#'   oso <- NULL
+#'   osx <- NULL
+#'   y <- FALSE
+#'   for(tstop in (tstart + 1L):n_periods){
+#'     sigmoid <- 1 / (1 + exp(- drop(x %*% alphas[tstop + 1L, c(grp, p)])))
+#'     if(sigmoid > runif(1)){
+#'       y <- TRUE
+#'       break
+#'     }
+#'     if(.01 > runif(1L) && tstop < n_periods){
+#'       # sample new covariate
+#'       osa <- c(osa, tstart)
+#'       tstart <- tstop
+#'       oso <- c(oso, tstop)
+#'       osx <- c(osx, x[2])
+#'       x[2] <- rnorm(1)
+#'     }
+#'   }
+#'
+#'   cbind(
+#'     tstart = c(osa, tstart), tstop = c(oso, tstop),
+#'     x = c(osx, x[2]), y = c(rep(FALSE, length(osa)), y), grp = grp,
+#'     id = i)
+#' })
+#' df <- data.frame(do.call(rbind, df))
+#' df$grp <- factor(df$grp)
+#'
+#' # fit model. Start with "cheap" iterations
+#' fit <- PF_EM(
+#'   fixed = Surv(tstart, tstop, y) ~ x, random = ~ grp + x - 1,
+#'   data = df, model = "logit", by = 1L, max_T = max(df$tstop),
+#'   Q_0 = diag(1.5^2, p), id = df$id, type = "VAR",
+#'   G = G, theta = c(.5, .5), J = J, psi = log(c(.1, .1)),
+#'   K = K, phi = log(-(c(.4, 0) + 1) / (c(.4, 0) - 1)),
+#'   control = PF_control(
+#'     N_fw_n_bw = 100L, N_smooth = 100L, N_first = 500L,
+#'     method = "AUX_normal_approx_w_cloud_mean",
+#'     Q_tilde = diag(.05^2, p),
+#'     n_max = 100L,  # should maybe be larger
+#'     smoother = "Fearnhead_O_N", eps = 1e-4,
+#'     n_threads = 4L # depends on your cpu(s)
+#'   ),
+#'   trace = 1L)
+#' plot(fit$log_likes) # log-likelihood approximation at each iterations
+#'
+#' # take more iterations with more particles
+#' cl <- fit$call
+#' ctrl <- cl[["control"]]
+#' ctrl[c("N_fw_n_bw", "N_smooth", "N_first", "n_max")] <- list(
+#'   400L, 1000L, 1000L, 25L)
+#' cl[["control"]] <- ctrl
+#' cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
+#' fit_extra <- eval(cl)
+#'
+#' plot(fit_extra$log_likes) # log-likelihood approximation at each iteration
+#'
+#' # check estimates
+#' sqrt(diag(fit_extra$Q))
+#' sqrt(diag(Q))
+#' cov2cor(fit_extra$Q)
+#' cov2cor(Q)
+#' fit_extra$F
+#' F.
+#'
+#' # plot predicted state variables
+#' for(i in 1:p){
+#'   plot(fit_extra, cov_index = i)
+#'   abline(h = 0, lty = 2)
+#'   lines(1:nrow(alphas) - 1, alphas[, i] - beta[i], lty = 3)
+#' }
 #'}
 #' @export
 PF_EM <- function(
@@ -599,12 +739,28 @@ PF_forward_filter.formula <- function(
   F_it <- array(NA_real_, c(nrow(F.), ncol(F.), n_max))
   Q_it <- array(NA_real_, c(nrow(Q) , ncol(Q) , n_max))
 
+  if(type == "VAR")
+    Q_0 <- fit_call$Q_0 <- get_Q_0(Qmat = fit_call$Q, Fmat = fit_call$F)
+
   log_likes <- rep(NA_real_, n_max)
   log_like <- log_like_max <- -Inf
+
+  if(trace > 0){
+    print_covmat <- function(X, lab){
+      cormat <- cov2cor(X)
+      cormat[upper.tri(cormat, diag = TRUE)] <- NA_real_
+      cormat <- cormat[-1, -nrow(cormat)]
+      cat("Square root of diagonal elements of", lab, "are:\n")
+      print(sqrt(diag(X)), na.print = "")
+      cat("Lower triangle of correlation matrix is\n")
+      print(cormat, na.print = "")
+    }
+  }
+
   for(i in 1:n_max){
     if(trace > 0){
       if(i != 1)
-        cat("\n\n\n")
+        cat("\n")
       cat("#######################\nStarting EM iteration", i, "\n")
 
       cat("a_0 is:\n")
@@ -619,8 +775,10 @@ PF_forward_filter.formula <- function(
         print(fit_call$F)
       }
 
-      cat("chol(Q) is:\n")
-      print(chol(fit_call$Q))
+      print_covmat(fit_call$Q, "Q")
+
+      if(type == "VAR")
+        print_covmat(fit_call$Q_0, "Q_0")
     }
     log_like_old <- log_like
     log_like_max <- max(log_like, log_like_max)
@@ -631,13 +789,23 @@ PF_forward_filter.formula <- function(
     clouds <- eval(fit_call, envir = parent.frame())
 
     if(trace > 0){
-      cat("Plotting state vector mean and quantiles for iteration", i, "\n")
+      cat("Plotting state vector mean and quantiles for iteration", i,
+          "(dashed lines are means from forward and backward particle",
+          "clouds)\n")
       plot(clouds, main = paste0("EM iteration ", i))
       plot(clouds, type = "forward_clouds", add = TRUE, qlvls = c(), lty = 2)
       plot(clouds, type = "backward_clouds", add = TRUE, qlvls = c(), lty = 3)
 
       cat("Effective sample sizes are:\n")
-      print(effective_sample_size <- PF_effective_sample_size(clouds))
+      effective_sample_size <- PF_effective_sample_size(clouds)
+      if(length(effective_sample_size[[1L]] > 50)){
+        print(sapply(effective_sample_size, function(x) c(
+          `Mean effective sample size` = mean(x),
+          `Sd of effective sample size` = sd(x),
+          Min = min(x), Max = max(x))))
+
+      } else
+        print(effective_sample_size)
     }
 
     #####
@@ -718,7 +886,7 @@ PF_forward_filter.formula <- function(
 
           # TODO: Computations could be done a lot smarter...
           Q_qr <- qr(Q)
-          if(Q_qr$rank < ncol(Q))
+          if(Q_qr$rank < ncol(Q) || det(Q) <= 0)
             return(NA_real_)
           fac <- solve(Q_qr, Z) - diag(nobs, ncol(Q))
           fac <- solve(Q_qr, t(fac)) / 2
@@ -739,7 +907,8 @@ PF_forward_filter.formula <- function(
         Q_full <- Z / nobs
         deter <- determinant(Q_full, logarithm = TRUE)
         ll_full <- -(nobs * deter$modulus + nobs * ncol(Q_full)) / 2
-        ctrl <- list(fnscale = if(ll_full < 0) ll_full else -ll_full)
+        ctrl <- list(fnscale = if(ll_full < 0) ll_full else -ll_full,
+                     reltol = .Machine$double.eps^(3/4))
 
         out_optim <-
           optim(c(psi, phi), ll, gr, control = ctrl, method = "BFGS")
@@ -764,6 +933,9 @@ PF_forward_filter.formula <- function(
 
     } else
       stop(sQuote("type"), " not implemented")
+
+    if(type == "VAR")
+      Q_0 <- fit_call$Q_0 <- get_Q_0(Qmat = fit_call$Q, Fmat = fit_call$F)
 
     #####
     # Update fixed effects
@@ -1002,4 +1174,27 @@ PF_control <- function(
     }
   }
   K
+}
+
+#' @title Compute Invariant Covaraince Matrix
+#' @description
+#' Computes the invariant covaraince matrix for a vector autoregression model.
+#'
+#' @param Qmat Covaraince matrix in transition density.
+#' @param Fmat Coefficients in transition density.
+#'
+#' @return
+#' The invariant covaraince matrix.
+#'
+#' @export
+get_Q_0 <- function(Qmat, Fmat){
+  eg  <- eigen(Fmat)
+  las <- eg$values
+  if(any(abs(las) >= 1))
+    stop("Divergent series")
+  U   <- eg$vectors
+  U_t <- t(U)
+  T.  <- crossprod(U, Qmat %*% U)
+  Z   <- T. / (1 - tcrossprod(las))
+  solve(U_t, t(solve(U_t, t(Z))))
 }

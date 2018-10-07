@@ -630,6 +630,7 @@ test_that("A few iterations with `type = \"VAR\"' yields the same as before", {
       n_max = 3, smoother = "Fearnhead_O_N",
       Q_tilde = diag(.3^2, 2), n_threads = 4)))
 
+  # old <- readRDS(file.path("previous_results", "PF_VARS.RDS"))
   expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
                      file = "PF_VARS.RDS")
 })
@@ -721,13 +722,13 @@ test_that("PF_EM gives the same with restricted and unrestricted model when we e
   pf_restrict_Fear <- suppressWarnings(eval(cl))
 
   expect_equal(
-    pf_non_restrict_Fear$F, pf_restrict_Fear$F, tolerance = 1e-5)
+    pf_non_restrict_Fear$F, pf_restrict_Fear$F, tolerance = 1e-6)
   expect_equal(
-    pf_non_restrict_Fear$Q, pf_restrict_Fear$Q, tolerance = 1e-5)
+    pf_non_restrict_Fear$Q, pf_restrict_Fear$Q, tolerance = 1e-6)
 })
 
 test_that("type = 'VAR' works with non-zero mean for with a single term and gives previous results", {
-  # had somes issues when on
+  # had somes issues when with an example like this
   set.seed(30520116)
   pf_Fear <- suppressWarnings(PF_EM(
     Surv(start, stop, event) ~ ddFixed(group) + ddFixed_intercept(TRUE),
@@ -739,6 +740,8 @@ test_that("type = 'VAR' works with non-zero mean for with a single term and give
       n_max = 2, smoother = "Fearnhead_O_N",
       Q_tilde = diag(.3^2, 1), n_threads = 1)))
 
+  # old <- readRDS(file.path(
+  #    "previous_results", "PF_VARS_non_zero_mean_inter.RDS"))
   expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
                      file = "PF_VARS_non_zero_mean_inter.RDS")
 
@@ -752,6 +755,8 @@ test_that("type = 'VAR' works with non-zero mean for with a single term and give
       n_max = 2, smoother = "Fearnhead_O_N",
       Q_tilde = diag(.3^2, 1), n_threads = 1)))
 
+  # old <- readRDS(file.path(
+  #    "previous_results", "PF_VARS_non_zero_mean_slope.RDS"))
   expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
                      file = "PF_VARS_non_zero_mean_slope.RDS")
 })

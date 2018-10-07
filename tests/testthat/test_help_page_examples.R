@@ -219,6 +219,135 @@ test_that("Second example on PF help page gives the same result", {
                      "local_tests/pf_man_2nd_ppfit.RDS")
 })
 
+test_that("example in 'PF_EM' with gives previous results w/ a few iterations", {
+  skip_on_cran()
+  skip_if(!dir.exists("previous_results/local_tests"))
+
+  # g groups with k individuals in each
+  g <- 3L
+  k <- 400L
+
+  # matrices for state equation
+  p <- g + 1L
+  G <- matrix(0., p^2, 2L)
+  for(i in 1:p)
+    G[i + (i - 1L) * p, 1L + (i == p)] <- 1L
+
+  theta <- c(.9, .8)
+  F. <- matrix(as.vector(G %*% theta), 4L, 4L)
+
+  J <- matrix(0., ncol = 2L, nrow = p)
+  J[-p, 1L] <- J[p, 2L] <- 1
+  psi <- c(log(c(.3, .1)))
+
+  K <- matrix(0., p * (p - 1L) / 2L, 2L)
+  j <- 0L
+  for(i in (p - 1L):1L){
+    j <- j + i
+    K[j, 2L] <- 1
+  }
+  K[K[, 2L] < 1, 1L] <- 1
+  phi <- log(-(c(.8, .3) + 1) / (c(.8, .3) - 1))
+
+  V <- diag(exp(drop(J %*% psi)))
+  C <- diag(1, ncol(V))
+  C[lower.tri(C)] <- 2/(1 + exp(-drop(K %*% phi))) - 1
+  C[upper.tri(C)] <- t(C)[upper.tri(C)]
+  Q <- V %*% C %*% V     # covariance matrix in state transition
+
+  Q_0 <- get_Q_0(Q, F.)    # invariant covariance matrix
+  beta <- c(rep(-6, g), 0) # all groups have the same long run mean intercept
+
+  # simulate state variables
+  set.seed(56219373)
+  n_periods <- 300L
+  alphas <- matrix(nrow = n_periods + 1L, ncol = p)
+  alphas[1L, ] <- rnorm(p) %*% chol(Q_0)
+  for(i in 1:n_periods + 1L)
+    alphas[i, ] <- F. %*% alphas[i - 1L, ] + drop(rnorm(p) %*% chol(Q))
+
+  alphas <- t(t(alphas) + beta)
+
+  # simulate individuals' outcome
+  n_obs <- g * k
+  df <- lapply(1:n_obs, function(i){
+    # find the group
+    grp <- (i - 1L) %/% (n_obs / g) + 1L
+
+    # left-censoring
+    tstart <- max(0L, sample.int((n_periods - 1L) * 2L, 1) - n_periods + 1L)
+
+    # covariates
+    x <- c(1, rnorm(1))
+
+    # outcome (stop time and event indicator)
+    osa <- NULL
+    oso <- NULL
+    osx <- NULL
+    y <- FALSE
+    for(tstop in (tstart + 1L):n_periods){
+      sigmoid <- 1 / (1 + exp(- drop(x %*% alphas[tstop + 1L, c(grp, p)])))
+      if(sigmoid > runif(1)){
+        y <- TRUE
+        break
+      }
+      if(.01 > runif(1L) && tstop < n_periods){
+        # sample new covariate
+        osa <- c(osa, tstart)
+        tstart <- tstop
+        oso <- c(oso, tstop)
+        osx <- c(osx, x[2])
+        x[2] <- rnorm(1)
+      }
+    }
+
+    cbind(
+      tstart = c(osa, tstart), tstop = c(oso, tstop),
+      x = c(osx, x[2]), y = c(rep(FALSE, length(osa)), y), grp = grp,
+      id = i)
+  })
+  df <- data.frame(do.call(rbind, df))
+  df$grp <- factor(df$grp)
+
+  # fit model. Start with "cheap" iterations
+  fit <- suppressWarnings(PF_EM(
+    fixed = Surv(tstart, tstop, y) ~ x, random = ~ grp + x - 1,
+    data = df, model = "logit", by = 1L, max_T = max(df$tstop),
+    Q_0 = diag(1.5^2, p), id = df$id, type = "VAR",
+    G = G, theta = c(.5, .5), J = J, psi = log(c(.1, .1)),
+    K = K, phi = log(-(c(.4, 0) + 1) / (c(.4, 0) - 1)),
+    control = PF_control(
+      N_fw_n_bw = 100L, N_smooth = 100L, N_first = 500L,
+      method = "AUX_normal_approx_w_cloud_mean",
+      Q_tilde = diag(.05^2, p),
+      n_max = 2L,  # should maybe be larger
+      smoother = "Fearnhead_O_N", eps = 1e-4,
+      n_threads = 4L # depends on you cpu(s)
+    )))
+
+  expect_known_value(fit[!names(fit) %in% c("clouds", "call")],
+                     "local_tests/pf_man_restrict_fit_ex.RDS")
+
+  # take more iterations with more particles
+  cl <- fit$call
+  ctrl <- cl[["control"]]
+  ctrl[c("N_fw_n_bw", "N_smooth", "N_first", "n_max")] <- list(
+    400L, 500L, 1000L, 1L)
+  cl[["control"]] <- ctrl
+  cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
+  fit_extra <- suppressWarnings(eval(cl))
+
+  expect_known_value(fit_extra[!names(fit_extra) %in% c("clouds", "call")],
+                     "local_tests/pf_man_restrict_fit_ex_more.RDS")
+
+  # plot predicted state variables
+  for(i in 1:p){
+    plot(fit_extra, cov_index = i)
+    abline(h = 0, lty = 2)
+    lines(1:nrow(alphas) - 1, alphas[, i] - beta[i], lty = 3)
+  }
+})
+
 test_that("`PF_forward_filter` the results stated in the comments and does not alter the .Random.seed as stated on the help page", {
   skip_on_cran()
 

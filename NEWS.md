@@ -1,9 +1,13 @@
 # dynamichazard 0.6.0
+* One can fit first order Vector vector autoregression models with the particle
+filter. 
 * The averages used in the Taylor approximation in the backward smoothing have 
 changed so the resuls differ for `PF_EM`.
 * Bug is fixed with the `..._w_particles` methods so results have changed.
-* mode estimation is now done in the proposal distribution with more than one
+* Mode estimation is now done in the proposal distribution with more than one
 iteration.
+* A `random` and `fixed` argument is added to `PF_EM` as an alternative way 
+to specify the random and fixed effect parts. 
 
 # dynamichazard 0.5.2
 * Fixed effects is estimated faster with `PF_EM` and can be estimated 
