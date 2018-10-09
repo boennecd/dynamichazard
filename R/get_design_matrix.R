@@ -2,16 +2,15 @@ get_design_matrix <- function(
   formula, data, response = T, predictors = T,
   Terms = NULL, has_fixed_intercept = NULL, xlev = NULL, fixed = NULL,
   random = NULL){
-  cl <- match.call()
-  if(is.null(fixed) && is.null(random)){
-    cl[c("fixed", "random")] <- NULL
-    cl[[1L]] <- quote(.get_design_matrix_one_frm)
-    return(eval(cl, parent.frame()))
-  }
+  if(is.null(fixed) && is.null(random))
+    return(.get_design_matrix_one_frm (
+      formula = formula, data = data, response = response,
+      predictors = predictors, Terms = Terms,
+      has_fixed_intercept = has_fixed_intercept, xlev = xlev))
 
-  cl[c("formula", "has_fixed_intercept")] <- NULL
-  cl[[1L]] <- quote(.get_design_matrix_two_frms)
-  eval(cl, parent.frame())
+  .get_design_matrix_two_frms(
+    data = data, response = response, predictors = predictors, Terms = Terms,
+    xlev = xlev, fixed = fixed, random = random)
 }
 
 # find the design matrix and returns the left hand side and right hand side of
