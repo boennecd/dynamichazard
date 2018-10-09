@@ -3,7 +3,7 @@
 filter. 
 * The averages used in the Taylor approximation in the backward smoothing have 
 changed so the resuls differ for `PF_EM`.
-* Bug is fixed with the `..._w_particles` methods so results have changed.
+* A bug is fixed with the `..._w_particles` methods so results have changed.
 * Mode estimation is now done in the proposal distribution with more than one
 iteration.
 * A `random` and `fixed` argument is added to `PF_EM` as an alternative way 

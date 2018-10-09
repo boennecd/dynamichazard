@@ -2,10 +2,7 @@ test that residuals works for second order random walk
 replace `save_to_test` and `read_to_test` with `testthat::expect_known_output`
 make functions for `ddhazard` and `PF_EM` where you only take one iteration
 and can provide your own structural matrices
-make PF_data argument
 make ESS function
 make mean and quantile function for pf_clouds
 make sure plot works with forward filter only
-make the forward particle filters avialable on its own for likelihood evaluation
-make example of particle filtering w/ e.g., LME4
 also scale Q as in ddhazard in the particle filter
