@@ -160,8 +160,7 @@ EKF_solver::EKF_solver(
   Rcpp::Nullable<Rcpp::NumericVector> NR_eps,
   const unsigned int NR_it_max, const int EKF_batch_size, family_base &fam) :
   org(p), p_dat(new ddhazard_data_EKF(
-      p, NR_eps, NR_it_max, EKF_batch_size)), model(model),
-  max_threads((p.n_threads > 1) ? p.n_threads - 1 : 1), fam(fam)
+      p, NR_eps, NR_it_max, EKF_batch_size)), model(model), fam(fam)
   {}
 
 void EKF_solver::solve(){

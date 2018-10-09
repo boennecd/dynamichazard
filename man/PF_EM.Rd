@@ -12,7 +12,7 @@ PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
 
-\item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
+\item{data}{\code{data.frame} or environment containing the outcome and covariates.}
 
 \item{model}{either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.}
 
@@ -95,7 +95,7 @@ See \code{vignette("Particle_filtering", "dynamichazard")} for details.
 }
 \section{Warning}{
 
-The function is still under development and the ouput and API may change.
+The function is still under development so the ouput and API may change.
 }
 
 \examples{
@@ -216,10 +216,10 @@ V <- diag(exp(drop(J \%*\% psi)))
 C <- diag(1, ncol(V))
 C[lower.tri(C)] <- 2/(1 + exp(-drop(K \%*\% phi))) - 1
 C[upper.tri(C)] <- t(C)[upper.tri(C)]
-(Q <- V \%*\% C \%*\% V)     # covariance matrix in state transition
+(Q <- V \%*\% C \%*\% V)     # covariance matrix in transition density
 cov2cor(Q)
 
-Q_0 <- get_Q_0(Q, F.)    # invariant covariance matrix
+Q_0 <- get_Q_0(Q, F.)    # time-invariant covariance matrix
 beta <- c(rep(-6, g), 0) # all groups have the same long run mean intercept
 
 # simulate state variables

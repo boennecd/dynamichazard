@@ -69,7 +69,7 @@ PF_effective_sample_size <- function(object){
 #' See the examples at https://github.com/boennecd/dynamichazard/tree/master/examples.
 #'
 #' @section Warning:
-#' The function is still under development and the ouput and API may change.
+#' The function is still under development so the ouput and API may change.
 #'
 #' @examples
 #'\dontrun{
@@ -189,10 +189,10 @@ PF_effective_sample_size <- function(object){
 #' C <- diag(1, ncol(V))
 #' C[lower.tri(C)] <- 2/(1 + exp(-drop(K %*% phi))) - 1
 #' C[upper.tri(C)] <- t(C)[upper.tri(C)]
-#' (Q <- V %*% C %*% V)     # covariance matrix in state transition
+#' (Q <- V %*% C %*% V)     # covariance matrix in transition density
 #' cov2cor(Q)
 #'
-#' Q_0 <- get_Q_0(Q, F.)    # invariant covariance matrix
+#' Q_0 <- get_Q_0(Q, F.)    # time-invariant covariance matrix
 #' beta <- c(rep(-6, g), 0) # all groups have the same long run mean intercept
 #'
 #' # simulate state variables
@@ -567,8 +567,8 @@ PF_EM <- function(
 PF_forward_filter <- function (x, N_fw, N_first, ...)
   UseMethod("PF_forward_filter", x)
 
-#' @describeIn PF_forward_filter Forward particle filter with
-#' \code{\link{PF_EM}} results.
+#' @describeIn PF_forward_filter Forward particle filter using the
+#' estimates of an \code{\link{PF_EM}} call.
 #' @export
 PF_forward_filter.PF_EM <- function(x, N_fw, N_first, seed, ...){
   cl <- x$call
@@ -1176,15 +1176,15 @@ PF_control <- function(
   K
 }
 
-#' @title Compute Invariant Covaraince Matrix
+#' @title Compute Time-Invariant Covariance Matrix
 #' @description
-#' Computes the invariant covaraince matrix for a vector autoregression model.
+#' Computes the invariant covariance matrix for a vector autoregression model.
 #'
-#' @param Qmat Covaraince matrix in transition density.
-#' @param Fmat Coefficients in transition density.
+#' @param Qmat covariance matrix in transition density.
+#' @param Fmat coefficients in transition density.
 #'
 #' @return
-#' The invariant covaraince matrix.
+#' The invariant covariance matrix.
 #'
 #' @export
 get_Q_0 <- function(Qmat, Fmat){

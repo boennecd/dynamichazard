@@ -15,6 +15,7 @@ struct qr_work_chunk {
 class qr_data_generator {
 public:
   virtual qr_work_chunk get_chunk() const = 0;
+  virtual ~qr_data_generator() = default;
 };
 
 /* Let x = QR. Then this is a data holder for the R matrix and f = Q^\top y.

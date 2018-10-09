@@ -13,7 +13,7 @@ ddFixed_intercept(random_intercept = FALSE)
 \item{object}{expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}.}
 
 \item{random_intercept}{\code{TRUE} if a zero mean time-varying process
-should be included at as an addtional term. Only relevant in stationary
+should be included at as an additional term. Only relevant in stationary
 models. See the \code{type} argument in \code{\link{PF_EM}}.}
 }
 \description{

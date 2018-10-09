@@ -11,7 +11,7 @@ get_survival_case_weights_and_data(formula, data, by, max_T, id, init_weights,
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
 
-\item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
+\item{data}{\code{data.frame} or environment containing the outcome and covariates.}
 
 \item{by}{interval length of the bins in which parameters are fixed.}
 
@@ -36,9 +36,9 @@ Returns a \code{data.frame} where the following is added (column names will diff
 Function used to get \code{data.frame} with weights for a static fit for survivals.
 }
 \details{
-This function is used to get the \code{data.frame} for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For example, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Next, consider an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the co-variates and \code{weights} is the weights for the regression. Consider another individual who does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 3)}.
+This function is used to get the \code{data.frame} for e.g. a \code{glm} fit that is comparable to a \code{\link{ddhazard}} fit in the sense that it is a static version. For example, say that we bin our time periods into \code{(0,1]}, \code{(1,2]} and \code{(2,3]}. Next, consider an individual who dies at time 2.5. He should be a control in the the first two bins and should be a case in the last bin. Thus the rows in the final data frame for this individual is \code{c(Y = 1, ..., weights = 1)} and \code{c(Y = 0, ..., weights = 2)} where \code{Y} is the outcome, \code{...} is the covariates and \code{weights} is the weights for the regression. Consider another individual who does not die and we observe him for all three periods. Thus, he will yield one row with \code{c(Y = 0, ..., weights = 3)}.
 
-This function use similar logic as the \code{ddhazard} for individuals with time varying co-variates (see the vignette \code{vignette("ddhazard", "dynamichazard")} for details).
+This function use similar logic as the \code{ddhazard} for individuals with time varying covariates (see the vignette \code{vignette("ddhazard", "dynamichazard")} for details).
 
 If \code{use_weights = FALSE} then the two previously mentioned individuals will yield three rows each. The first individual will have \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 1, t = 3, ..., weights = 1)} while the latter will have three rows \code{c(Y = 0, t = 1, ..., weights = 1)}, \code{c(Y = 0, t = 2, ..., weights = 1)}, \code{c(Y = 0, t = 3, ..., weights = 1)}. This kind of data frame is useful if you want to make a fit with e.g. \code{\link[mgcv]{gam}} function in the \code{mgcv} package as described en Tutz et. al (2016).
 }

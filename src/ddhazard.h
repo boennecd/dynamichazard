@@ -29,7 +29,6 @@ class EKF_solver : public Solver {
   ddhazard_data &org;
   std::unique_ptr<ddhazard_data_EKF> p_dat;
   const std::string model;
-  unsigned long const max_threads;
   family_base &fam;
 
   void parallel_filter_step(

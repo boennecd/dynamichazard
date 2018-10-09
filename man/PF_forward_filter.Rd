@@ -27,7 +27,7 @@ PF_forward_filter(x, N_fw, N_first, ...)
 \code{\link{set.seed}} function. Can be used with the
 \code{\link{.Random.seed}} returned by \code{\link{PF_EM}}.}
 
-\item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
+\item{data}{\code{data.frame} or environment containing the outcome and covariates.}
 
 \item{model}{either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.}
 
@@ -71,8 +71,8 @@ model details.
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{PF_EM}: Forward particle filter with
-\code{\link{PF_EM}} results.
+\item \code{PF_EM}: Forward particle filter using the
+estimates of an \code{\link{PF_EM}} call.
 
 \item \code{formula}: Forward particle filter with formula input.
 }}

@@ -2,18 +2,18 @@
 % Please edit documentation in R/PF.R
 \name{get_Q_0}
 \alias{get_Q_0}
-\title{Compute Invariant Covaraince Matrix}
+\title{Compute Time-Invariant Covariance Matrix}
 \usage{
 get_Q_0(Qmat, Fmat)
 }
 \arguments{
-\item{Qmat}{Covaraince matrix in transition density.}
+\item{Qmat}{covariance matrix in transition density.}
 
-\item{Fmat}{Coefficients in transition density.}
+\item{Fmat}{coefficients in transition density.}
 }
 \value{
-The invariant covaraince matrix.
+The invariant covariance matrix.
 }
 \description{
-Computes the invariant covaraince matrix for a vector autoregression model.
+Computes the invariant covariance matrix for a vector autoregression model.
 }

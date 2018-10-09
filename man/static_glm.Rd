@@ -12,7 +12,7 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
 
-\item{data}{\code{data.frame} or environment containing the outcome and co-variates.}
+\item{data}{\code{data.frame} or environment containing the outcome and covariates.}
 
 \item{by}{interval length of the bins in which parameters are fixed.}
 
