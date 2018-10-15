@@ -73,7 +73,6 @@ void estimate_fixed_effects_M_step(
       arma::vec y(n_take);
       arma::vec w(n_take);
 
-
       auto o_j = offsets.begin();
       double *at_j = at_risk_length.memptr();
       auto y_j = y.begin();

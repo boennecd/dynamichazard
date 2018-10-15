@@ -21,9 +21,9 @@ R_F qr_parallel::worker::operator()(){
 
 qr_parallel::qr_parallel(
   ptr_vec generators, const unsigned int max_threads):
-  pool(std::max((unsigned int)1L, max_threads))
+  n_threads(std::max((unsigned int)1L, max_threads)),
+  pool(n_threads), futures()
   {
-    futures.reserve(generators.size());
     while(!generators.empty()){
       submit(std::move(generators.back()));
       generators.pop_back();
@@ -40,27 +40,43 @@ R_F qr_parallel::compute(){
   arma::mat R_stack;
   arma::mat F_stack;
   arma::mat dev;
+  arma::uword p = 0L, q = 0L, i = 0L;
 
-  unsigned int num_blocks = futures.size();
-  for(unsigned int i = 0; i < num_blocks; ++i){
-    R_F R_Fs_i = futures[i].get();
-    if(is_first){
-      R_stack = R_Fs_i.R_rev_piv();
-      F_stack = std::move(R_Fs_i.F);
-      dev = R_Fs_i.dev;
-      is_first = false;
-      continue;
+  arma::uword num_blocks = futures.size();
+  while(!futures.empty()){
+    auto f = futures.begin();
+
+    /* we assume that the first tasks are done first */
+    for(arma::uword j = 0; f != futures.end() and j < n_threads; ++j, ++f){
+      if(f->wait_for(std::chrono::milliseconds(10)) ==
+         std::future_status::ready){
+        R_F R_Fs_i = f->get();
+        if(is_first){
+          p = R_Fs_i.R.n_rows;
+          q = R_Fs_i.F.n_rows;
+
+          R_stack.set_size(p * num_blocks, p);
+          F_stack.set_size(q * num_blocks, R_Fs_i.F.n_cols);
+
+          dev = R_Fs_i.dev;
+          is_first = false;
+
+        } else
+          dev += R_Fs_i.dev;
+
+        R_stack.rows(i * p, (i + 1L) * p - 1L) = R_Fs_i.R_rev_piv();
+        F_stack.rows(i * q, (i + 1L) * q - 1L) = std::move(R_Fs_i.F);
+
+        ++i;
+        futures.erase(f);
+        break;
+      }
     }
-
-    R_stack = arma::join_cols(R_stack, R_Fs_i.R_rev_piv());
-    F_stack = arma::join_cols(F_stack, std::move(R_Fs_i.F));
-    dev += R_Fs_i.dev;
   }
-  futures.clear(); /* in case the method is called again */
 
   /* make new QR decomp and compute new F */
   QR_factorization qr(R_stack);
-  arma::mat F = qr.qy(F_stack, true).rows(0, R_stack.n_cols - 1);
+  arma::mat F = qr.qy(F_stack, true).rows(0, p - 1);
 
   return { qr.R(), qr.pivot(), std::move(F), dev };
 }

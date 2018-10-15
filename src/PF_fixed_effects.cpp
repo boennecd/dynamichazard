@@ -247,7 +247,7 @@ Rcpp::List pf_fixed_effect_get_QR(
     const arma::vec &tstart, const arma::vec &tstop,
     const arma::vec &fixed_parems, const std::string family,
     const int max_threads, const bool debug,
-    const unsigned int max_bytes = 1000000){
+    const unsigned int max_bytes = 5000000){
   const unsigned int n_clouds = clouds.size();
   Rcpp::List out(n_clouds),
              risk_sets = Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]);
@@ -259,6 +259,9 @@ Rcpp::List pf_fixed_effect_get_QR(
                    max_threads);
 
   for(unsigned int i = 0; i < n_clouds; ++i){
+    if((i + 1L) % 5L == 0L)
+      Rcpp::checkUserInterrupt();
+
     Rcpp::List cl = Rcpp::as<Rcpp::List>(clouds[i]);
     arma::uvec risk_set = Rcpp::as<arma::uvec>(risk_sets[i]);
     risk_set.for_each([](arma::uvec::elem_type& val) { val -= 1L; } );

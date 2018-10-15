@@ -4,6 +4,7 @@
 #include "arma_n_rcpp.h"
 #include "thread_pool.h"
 #include <memory>
+#include <list>
 
 struct qr_work_chunk {
   arma::mat X;
@@ -42,8 +43,9 @@ class qr_parallel {
     R_F operator()();
   };
 
+  unsigned int n_threads;
   thread_pool pool;
-  std::vector<std::future<R_F> > futures;
+  std::list<std::future<R_F> > futures;
 
 public:
   qr_parallel(ptr_vec, const unsigned int);

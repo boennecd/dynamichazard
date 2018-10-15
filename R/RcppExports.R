@@ -145,7 +145,7 @@ test_copy_vec <- function(x, n_times) {
     .Call(`_dynamichazard_test_copy_vec`, x, n_times)
 }
 
-pf_fixed_effect_get_QR <- function(clouds, risk_obj, ran_vars, fixed_terms, R_top, tstart, tstop, fixed_parems, family, max_threads, debug, max_bytes = 1000000L) {
+pf_fixed_effect_get_QR <- function(clouds, risk_obj, ran_vars, fixed_terms, R_top, tstart, tstop, fixed_parems, family, max_threads, debug, max_bytes = 5000000L) {
     .Call(`_dynamichazard_pf_fixed_effect_get_QR`, clouds, risk_obj, ran_vars, fixed_terms, R_top, tstart, tstop, fixed_parems, family, max_threads, debug, max_bytes)
 }
 
