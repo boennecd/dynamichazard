@@ -96,6 +96,30 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sample_n_count_replicas_indices_test
+arma::umat sample_n_count_replicas_indices_test(const int size, arma::vec probs);
+RcppExport SEXP _dynamichazard_sample_n_count_replicas_indices_test(SEXP sizeSEXP, SEXP probsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const int >::type size(sizeSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type probs(probsSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_n_count_replicas_indices_test(size, probs));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sample_n_count_replicas_systematic_test
+arma::umat sample_n_count_replicas_systematic_test(const int size, arma::vec probs);
+RcppExport SEXP _dynamichazard_sample_n_count_replicas_systematic_test(SEXP sizeSEXP, SEXP probsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const int >::type size(sizeSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type probs(probsSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_n_count_replicas_systematic_test(size, probs));
+    return rcpp_result_gen;
+END_RCPP
+}
 // mvrnorm_test
 arma::vec mvrnorm_test(const arma::vec mu, const arma::mat sigma_chol);
 RcppExport SEXP _dynamichazard_mvrnorm_test(SEXP muSEXP, SEXP sigma_cholSEXP) {
@@ -446,8 +470,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // PF_smooth
-Rcpp::List PF_smooth(const int n_fixed_terms_in_state_vec, arma::mat& X, arma::mat& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, const arma::mat& R, arma::mat& Q_0, arma::mat& Q, const arma::mat Q_tilde, const Rcpp::List& risk_obj, const arma::mat& F, const int n_max, const int n_threads, const arma::vec& fixed_parems, const int N_fw_n_bw, const int N_smooth, Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold, const int debug, const int N_first, std::string type, /* non-common arguments */     const std::string method, const std::string smoother, const std::string model);
-RcppExport SEXP _dynamichazard_PF_smooth(SEXP n_fixed_terms_in_state_vecSEXP, SEXP XSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP RSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP Q_tildeSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP n_maxSEXP, SEXP n_threadsSEXP, SEXP fixed_paremsSEXP, SEXP N_fw_n_bwSEXP, SEXP N_smoothSEXP, SEXP forward_backward_ESS_thresholdSEXP, SEXP debugSEXP, SEXP N_firstSEXP, SEXP typeSEXP, SEXP methodSEXP, SEXP smootherSEXP, SEXP modelSEXP) {
+Rcpp::List PF_smooth(const int n_fixed_terms_in_state_vec, arma::mat& X, arma::mat& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, const arma::mat& R, arma::mat& Q_0, arma::mat& Q, const arma::mat Q_tilde, const Rcpp::List& risk_obj, const arma::mat& F, const int n_max, const int n_threads, const arma::vec& fixed_parems, const int N_fw_n_bw, const int N_smooth, const int N_smooth_final, Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold, const int debug, const int N_first, std::string type, /* non-common arguments */     const std::string method, const std::string smoother, const std::string model);
+RcppExport SEXP _dynamichazard_PF_smooth(SEXP n_fixed_terms_in_state_vecSEXP, SEXP XSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP RSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP Q_tildeSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP n_maxSEXP, SEXP n_threadsSEXP, SEXP fixed_paremsSEXP, SEXP N_fw_n_bwSEXP, SEXP N_smoothSEXP, SEXP N_smooth_finalSEXP, SEXP forward_backward_ESS_thresholdSEXP, SEXP debugSEXP, SEXP N_firstSEXP, SEXP typeSEXP, SEXP methodSEXP, SEXP smootherSEXP, SEXP modelSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -468,6 +492,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type fixed_parems(fixed_paremsSEXP);
     Rcpp::traits::input_parameter< const int >::type N_fw_n_bw(N_fw_n_bwSEXP);
     Rcpp::traits::input_parameter< const int >::type N_smooth(N_smoothSEXP);
+    Rcpp::traits::input_parameter< const int >::type N_smooth_final(N_smooth_finalSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type forward_backward_ESS_threshold(forward_backward_ESS_thresholdSEXP);
     Rcpp::traits::input_parameter< const int >::type debug(debugSEXP);
     Rcpp::traits::input_parameter< const int >::type N_first(N_firstSEXP);
@@ -475,7 +500,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< /* non-common arguments */     const std::string >::type method(methodSEXP);
     Rcpp::traits::input_parameter< const std::string >::type smoother(smootherSEXP);
     Rcpp::traits::input_parameter< const std::string >::type model(modelSEXP);
-    rcpp_result_gen = Rcpp::wrap(PF_smooth(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, R, Q_0, Q, Q_tilde, risk_obj, F, n_max, n_threads, fixed_parems, N_fw_n_bw, N_smooth, forward_backward_ESS_threshold, debug, N_first, type, method, smoother, model));
+    rcpp_result_gen = Rcpp::wrap(PF_smooth(n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, a_0, R, Q_0, Q, Q_tilde, risk_obj, F, n_max, n_threads, fixed_parems, N_fw_n_bw, N_smooth, N_smooth_final, forward_backward_ESS_threshold, debug, N_first, type, method, smoother, model));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -651,6 +676,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &_dynamichazard_ddhazard_fit_cpp, 40},
     {"_dynamichazard_sample_indices_test", (DL_FUNC) &_dynamichazard_sample_indices_test, 2},
     {"_dynamichazard_systematic_resampling_test", (DL_FUNC) &_dynamichazard_systematic_resampling_test, 2},
+    {"_dynamichazard_sample_n_count_replicas_indices_test", (DL_FUNC) &_dynamichazard_sample_n_count_replicas_indices_test, 2},
+    {"_dynamichazard_sample_n_count_replicas_systematic_test", (DL_FUNC) &_dynamichazard_sample_n_count_replicas_systematic_test, 2},
     {"_dynamichazard_mvrnorm_test", (DL_FUNC) &_dynamichazard_mvrnorm_test, 2},
     {"_dynamichazard_dmvnrm_log_test", (DL_FUNC) &_dynamichazard_dmvnrm_log_test, 3},
     {"_dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &_dynamichazard_bigglm_updateQR_rcpp, 13},
@@ -677,7 +704,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_linear_mapper_test", (DL_FUNC) &_dynamichazard_linear_mapper_test, 7},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
-    {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 24},
+    {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 25},
     {"_dynamichazard_particle_filter", (DL_FUNC) &_dynamichazard_particle_filter, 22},
     {"_dynamichazard_compute_PF_summary_stats", (DL_FUNC) &_dynamichazard_compute_PF_summary_stats, 10},
     {"_dynamichazard_PF_est_params_dens", (DL_FUNC) &_dynamichazard_PF_est_params_dens, 9},

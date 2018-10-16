@@ -59,7 +59,7 @@ test_that("PF_smooth gives same results", {
     tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], R = diag(1, ncol(Q)), Q_0 = Q_0,
     fixed_parems = numeric(), Q = Q, a_0 = a_0, Q_tilde = diag(1e-2, n_vars + 1),
     risk_obj = risk_set, F = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
-    N_fw_n_bw = 20, N_smooth = 100, N_first = 100,
+    N_fw_n_bw = 20, N_smooth = 100, N_first = 100, N_smooth_final = 100,
     forward_backward_ESS_threshold = NULL, debug = 0, method = "PF",
     smoother = "Fearnhead_O_N", model = "logit", type = "RW")
 
@@ -759,4 +759,82 @@ test_that("type = 'VAR' works with non-zero mean for with a single term and give
   #    "previous_results", "PF_VARS_non_zero_mean_slope.RDS"))
   expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
                      file = "PF_VARS_non_zero_mean_slope.RDS")
+})
+
+test_that("Using `n_smooth_final` works as expected and yields previous results", {
+  skip_on_cran()
+
+  set.seed(seed <- 56219373)
+  .lung <- lung[!is.na(lung$ph.ecog), ]
+  .lung$age <- scale(.lung$age)
+  f_fit_1 <- suppressWarnings(PF_EM(
+    Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
+    data = .lung, by = 50, id = 1:nrow(.lung),
+    Q_0 = diag(1, 2), Q = diag(.5^2, 2),
+    max_T = 800,
+    control = PF_control(
+      N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000, N_smooth_final = 1000,
+      n_max = 1, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
+      n_threads = max(parallel::detectCores(logical = FALSE), 1))))
+
+  expect_known_value(f_fit_1[!names(f_fit_1) %in% c("clouds", "call")],
+                     file = "n_smooth_final_RW.RDS")
+
+  # # compare with the following after you change `n_max`
+  # set.seed(seed)
+  # pf_fit <- PF_EM(
+  #   Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
+  #   data = .lung, by = 50, id = 1:nrow(.lung),
+  #   Q_0 = diag(1, 2), Q = diag(.5^2, 2),
+  #   max_T = 800,
+  #   control = PF_control(
+  #     N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000,
+  #     n_max = 50, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
+  #     n_threads = max(parallel::detectCores(logical = FALSE), 1)), trace = 1)
+
+  # plot(pf_fit$log_likes)
+  # points(seq_along(f_fit_1$log_likes), f_fit_1$log_likes, pch = 16)
+
+  set.seed(seed)
+  f_fit_2 <- suppressWarnings(PF_EM(
+    fixed = Surv(time, status == 2) ~ ph.ecog + age, random = ~ age,
+    data = .lung, by = 50, id = 1:nrow(.lung),
+    Q_0 = diag(1, 2), Q = diag(.5^2, 2), Fmat = diag(.9, 2),
+    max_T = 800, type = "VAR",
+    control = PF_control(
+      N_fw_n_bw = 500, N_first = 2500, N_smooth = 1000, N_smooth_final = 500,
+      n_max = 1, eps = .001, Q_tilde = diag(.1^2, 2),
+      n_threads = max(parallel::detectCores(logical = FALSE), 1))))
+
+  # # compare with the following after you change `n_max`
+  # set.seed(seed)
+  # pf_fit_2 <- suppressWarnings(PF_EM(
+  #   fixed = Surv(time, status == 2) ~ ph.ecog + age, random = ~ age,
+  #   data = .lung, by = 50, id = 1:nrow(.lung),
+  #   Q_0 = diag(1, 2), Q = diag(.5^2, 2), Fmat = diag(.9, 2),
+  #   max_T = 800, type = "VAR",
+  #   control = PF_control(
+  #     N_fw_n_bw = 1000, N_first = 2500, N_smooth = 5000,
+  #     n_max = 50, eps = .001, Q_tilde = diag(.1^2, 2),
+  #     n_threads = max(parallel::detectCores(logical = FALSE), 1)),
+  #   trace = 1))
+  # plot(pf_fit_2$log_likes)
+  # points(seq_along(f_fit_2$log_likes), f_fit_2$log_likes, pch = 16)
+
+  expect_known_value(f_fit_2[!names(f_fit_2) %in% c("clouds", "call")],
+                     file = "n_smooth_final_VAR.RDS")
+})
+
+test_that("`get_Q_0` returns a real matrix also when `Fmat` has a complex eigendecomposition", {
+  Fmat <- structure(c(0.657881453882877, 0.29770504266233, -0.0894041006717788,
+                      0.361585659007044), .Dim = c(2L, 2L))
+  Qmat <- structure(c(0.037357449287092, -0.00781178357213716, -0.00781178357213716,
+                      0.0205796045976825), .Dim = c(2L, 2L))
+
+  out <- get_Q_0(Qmat = Qmat, Fmat = Fmat)
+  expect_true(!is.complex(out))
+  expect_equal(
+    out,
+    structure(c(0.0621064332808536, -0.0111136683871378, -0.0111136683871378,
+                0.0250726831993073), .Dim = c(2L, 2L)))
 })

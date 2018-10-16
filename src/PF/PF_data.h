@@ -349,6 +349,7 @@ public:
   /* Number of paprticles in forward and/or backward filter */
   const uword N_fw_n_bw;
   const uword N_smooth;
+  const uword N_smooth_final;
   const double forward_backward_ESS_threshold;
 
   /* Inital state, number of particles to draw at time 0 and d + 1 and debug level */
@@ -383,6 +384,7 @@ public:
           const arma::mat Q_tilde,
           const uword N_fw_n_bw,
           const uword N_smooth,
+          const uword N_smooth_final,
           Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
           const unsigned int debug,
           const uword N_first) :
@@ -391,8 +393,7 @@ public:
       X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, Q_0, Q,
       risk_obj, F, n_max, n_threads, fixed_parems),
 
-      N_fw_n_bw(N_fw_n_bw),
-      N_smooth(N_smooth),
+      N_fw_n_bw(N_fw_n_bw), N_smooth(N_smooth), N_smooth_final(N_smooth_final),
       forward_backward_ESS_threshold(
         forward_backward_ESS_threshold.isNotNull() ?
           Rcpp::as<Rcpp::NumericVector>(forward_backward_ESS_threshold)[0] :

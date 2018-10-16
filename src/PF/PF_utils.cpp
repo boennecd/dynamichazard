@@ -1,5 +1,5 @@
 #include "PF_utils.h"
-
+#include "../sample_funcs.h"
 
 inline covarmat set_bw_fw_particle_combiner_Q
   (const PF_data &data, const covarmat &Q_trans){
@@ -37,4 +37,33 @@ arma::vec bw_fw_particle_combiner::operator()
     return mu;
 
   return Q.mat() * mu;
+}
+
+
+cloud re_sample_cloud(const unsigned int size, const cloud cl){
+  if(size >= cl.size())
+    Rcpp::stop("size greater than or equal to cl.size() in 're_sample_cloud'");
+
+  arma::vec probs(cl.size());
+  double *p = probs.begin();
+  for(auto it = cl.begin(); it != cl.end(); ++it, ++p)
+    *p = std::exp(it->log_weight);
+
+  std::map<arma::uword, arma::uword> idx =
+    sample_n_count_replicas<systematic_resampling>(size, probs);
+
+  cloud out;
+  out.reserve(idx.size());
+  unsigned int i = 0;
+  for (auto it = idx.begin(); it != idx.end(); it++, i++)
+  {
+    const particle &to_copy = cl[it->first];
+    out.new_particle(to_copy.get_state(), to_copy.parent, to_copy.child);
+    particle &p = out[i];
+    p.log_importance_dens = to_copy.log_importance_dens;
+    p.log_unnormalized_weight = to_copy.log_unnormalized_weight;
+    p.log_weight = log(((double)it->second) / size);
+  }
+
+  return out;
 }

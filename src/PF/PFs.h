@@ -10,7 +10,9 @@
 
 class PF_base {
 protected:
-  static void debug_msg_after_weighting(const PF_data &data, cloud &cl){
+  static void debug_msg_after_weighting(
+      const PF_data &data, cloud &cl, const bool have_resampled = false,
+      const unsigned int max_size = 0L){
     if(data.debug > 1){
       double max_w =  -std::numeric_limits<double>::max();
       double min_w = std::numeric_limits<double>::max();
@@ -23,6 +25,11 @@ protected:
         ESS += w * w;
       }
       ESS = 1 / ESS;
+
+      if(have_resampled)
+        data.log(2) << "Sub-sampled cloud. There are " << cl.size()
+                    << " unique particles where up to " << max_size
+                    << " is possible. ";
 
       data.log(2) << "(min, max) log weights are: ("
                   << min_w  << ", " << max_w  <<  "). "
@@ -290,6 +297,11 @@ public:
 
       debug_msg_after_weighting(data, new_cloud);
 
+      if(data.N_smooth_final < data.N_smooth){
+        new_cloud = re_sample_cloud(data.N_smooth_final, new_cloud);
+        debug_msg_after_weighting(data, new_cloud, true, data.N_smooth_final);
+      }
+
       /* Add cloud  */
       smoothed_clouds.push_back(std::move(new_cloud));
     }
@@ -411,15 +423,7 @@ public:
         }
 
         // add pairs
-//#ifdef _OPENMP
-// Locks should not be needed. See https://stackoverflow.com/a/13955871
-// #pragma omp critical(smoother_lock_brier_one)
-// {
-//#endif
         new_trans_like[i] = std::move(pf_pairs);
-//#ifdef _OPENMP
-// }
-//#endif
 
         double log_artificial_prior = // TODO: have already been computed
           dens_calc.log_artificial_prior(bw_particle, t);

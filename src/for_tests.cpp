@@ -18,6 +18,42 @@ arma::uvec systematic_resampling_test(const int size, arma::vec probs){
 }
 
 // [[Rcpp::export]]
+arma::umat
+  sample_n_count_replicas_indices_test(const int size, arma::vec probs)
+  {
+    std::map<arma::uword, arma::uword> tmp =
+      sample_n_count_replicas<sample_indices>(size, probs);
+    arma::umat out(tmp.size(), 2L);
+
+    arma::uword j = 0L;
+    for (auto it = tmp.begin(); it != tmp.end(); it++, ++j)
+    {
+      out(j, 0L) = it->first;
+      out(j, 1L) = it->second;
+    }
+
+    return out;
+  }
+
+// [[Rcpp::export]]
+arma::umat
+  sample_n_count_replicas_systematic_test(const int size, arma::vec probs)
+  {
+    std::map<arma::uword, arma::uword> tmp =
+      sample_n_count_replicas<systematic_resampling>(size, probs);
+    arma::umat out(tmp.size(), 2L);
+
+    arma::uword j = 0L;
+    for (auto it = tmp.begin(); it != tmp.end(); it++, ++j)
+    {
+      out(j, 0L) = it->first;
+      out(j, 1L) = it->second;
+    }
+
+    return out;
+  }
+
+// [[Rcpp::export]]
 arma::vec mvrnorm_test(const arma::vec mu, const arma::mat sigma_chol){
   return mvrnorm(mu, sigma_chol);
 }

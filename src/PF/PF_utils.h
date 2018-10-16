@@ -233,6 +233,10 @@ Rcpp::List get_rcpp_list_from_cloud(
 
 smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list);
 
+/* ------------------------------------------- */
+
+cloud re_sample_cloud(const unsigned int, const cloud);
+
 #undef USE_PRIOR_IN_BW_FILTER_DEFAULT
 #undef MAX
 #endif

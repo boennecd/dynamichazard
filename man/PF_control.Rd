@@ -8,7 +8,7 @@ PF_control(N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
   eps = 0.01, forward_backward_ESS_threshold = NULL,
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
-  Q_tilde = NULL, est_a_0 = TRUE)
+  Q_tilde = NULL, est_a_0 = TRUE, N_smooth_final = N_smooth)
 }
 \arguments{
 \item{N_fw_n_bw}{number of particles to use in forward and backward filter.}
@@ -34,6 +34,11 @@ proposal distributions. \code{NULL} implies no additional error term.}
 
 \item{est_a_0}{\code{FALSE} if the starting value of the state model should
 be fixed. Does not apply for \code{type = "VAR"}.}
+
+\item{N_smooth_final}{number of particles to sample with replacement from
+the smoothed particle cloud with \code{N_smooth} particles using the
+particles' weight. This causes additional sampling error but decreases the
+computation time in the M-step.}
 }
 \value{
 A list with components named as the arguments.

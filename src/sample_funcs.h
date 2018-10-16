@@ -25,6 +25,21 @@ arma::uvec systematic_resampling(arma::vec &probs);
 arma::uvec systematic_resampling(const arma::uword size, arma::vec &probs);
 
 /*
+  Wrapper function to use the above and return a tuple with an index and number
+  of replicas
+*/
+template <arma::uvec (*sample_func)(const arma::uword, arma::vec&)>
+std::map<arma::uword, arma::uword>
+  sample_n_count_replicas(const arma::uword size, arma::vec &probs){
+    arma::uvec sample = sample_func(size, probs);
+    std::map<arma::uword, arma::uword> out;
+    for(auto i = sample.begin(); i != sample.end(); ++i)
+      ++out[*i];
+
+    return out;
+  }
+
+/*
   n draws from N(mu, Sigma). See
     http://gallery.rcpp.org/articles/simulate-multivariate-normal/
 */

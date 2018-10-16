@@ -85,14 +85,14 @@ PF_effective_sample_size <- function(object){
 #' # fit
 #' set.seed(43588155)
 #' pf_fit <- PF_EM(
-#' Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
-#' data = .lung, by = 50, id = 1:nrow(.lung),
-#' Q_0 = diag(1, 2), Q = diag(.5^2, 2),
-#' max_T = 800,
-#' control = PF_control(
-#'   N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000,
-#'   n_max = 50, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
-#'   n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+#'  Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
+#'  data = .lung, by = 50, id = 1:nrow(.lung),
+#'  Q_0 = diag(1, 2), Q = diag(.5^2, 2),
+#'  max_T = 800,
+#'  control = PF_control(
+#'     N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000,
+#'     n_max = 50, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
+#'     n_threads = max(parallel::detectCores(logical = FALSE), 1)))
 #'
 #'# Plot state vector estimates
 #'plot(pf_fit, cov_index = 1)
@@ -103,7 +103,7 @@ PF_effective_sample_size <- function(object){
 #'}
 #'\dontrun{
 #'######
-#'# example with fixed effects
+#'# example with fixed intercept
 #'
 #'# prepare data
 #'temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))
@@ -413,7 +413,8 @@ PF_EM <- function(
     a_0 = model_args$a_0, G = model_args$G, J = model_args$J, K = model_args$K,
     theta = model_args$theta, psi = model_args$psi, phi = model_args$phi,
     N_fw_n_bw = control$N_fw_n_bw,
-    N_smooth = control$N_smooth, N_first = control$N_first, eps = control$eps,
+    N_smooth = control$N_smooth, N_smooth_final = control$N_smooth_final,
+    N_first = control$N_first, eps = control$eps,
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
     method = control$method, n_max = control$n_max,
     n_threads = control$n_threads, smoother = control$smoother,
@@ -656,7 +657,8 @@ PF_forward_filter.formula <- function(
 #' @importFrom graphics plot
 .PF_EM <- function(
   n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, Q_0, Q, a_0, F.,
-  R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_first, eps,
+  R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_smooth_final, N_first,
+  eps,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
   fixed_parems, type, Q_tilde, est_a_0, G, J, K, theta, psi, phi){
@@ -1044,6 +1046,10 @@ PF_forward_filter.formula <- function(
 #' proposal distributions. \code{NULL} implies no additional error term.
 #' @param est_a_0 \code{FALSE} if the starting value of the state model should
 #' be fixed. Does not apply for \code{type = "VAR"}.
+#' @param N_smooth_final number of particles to sample with replacement from
+#' the smoothed particle cloud with \code{N_smooth} particles using the
+#' particles' weight. This causes additional sampling error but decreases the
+#' computation time in the M-step.
 #'
 #' @return
 #' A list with components named as the arguments.
@@ -1057,12 +1063,12 @@ PF_control <- function(
   eps = 1e-2, forward_backward_ESS_threshold = NULL,
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
-  Q_tilde = NULL, est_a_0 = TRUE){
+  Q_tilde = NULL, est_a_0 = TRUE, N_smooth_final = N_smooth){
   control <- list(
     N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
     forward_backward_ESS_threshold = forward_backward_ESS_threshold,
     method = method, n_max = n_max, n_threads = n_threads, smoother = smoother,
-    Q_tilde = Q_tilde, est_a_0 = est_a_0)
+    Q_tilde = Q_tilde, est_a_0 = est_a_0, N_smooth_final = N_smooth_final)
 
   check_n_particles_expr <- function(N_xyz)
     eval(bquote({
@@ -1074,6 +1080,10 @@ PF_control <- function(
   check_n_particles_expr("N_first")
   check_n_particles_expr("N_fw_n_bw")
   check_n_particles_expr("N_smooth")
+  stopifnot(
+    typeof(N_smooth_final) %in% c("double", "integer"),
+    length(N_smooth_final) == 1L, as.integer(N_smooth_final) == N_smooth_final,
+    N_smooth_final <= N_smooth)
 
   return(control)
 }
@@ -1196,5 +1206,13 @@ get_Q_0 <- function(Qmat, Fmat){
   U_t <- t(U)
   T.  <- crossprod(U, Qmat %*% U)
   Z   <- T. / (1 - tcrossprod(las))
-  solve(U_t, t(solve(U_t, t(Z))))
+  out <- solve(U_t, t(solve(U_t, t(Z))))
+  if(is.complex(out)){
+    if(all(abs(Im(out)) < .Machine$double.eps^(3/4)))
+      return(Re(out))
+
+    stop("Q_0 has imaginary part")
+  }
+
+  out
 }

@@ -112,14 +112,14 @@ library(dynamichazard)
 # fit
 set.seed(43588155)
 pf_fit <- PF_EM(
-Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
-data = .lung, by = 50, id = 1:nrow(.lung),
-Q_0 = diag(1, 2), Q = diag(.5^2, 2),
-max_T = 800,
-control = PF_control(
-  N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000,
-  n_max = 50, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
-  n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+ Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
+ data = .lung, by = 50, id = 1:nrow(.lung),
+ Q_0 = diag(1, 2), Q = diag(.5^2, 2),
+ max_T = 800,
+ control = PF_control(
+    N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000,
+    n_max = 50, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
+    n_threads = max(parallel::detectCores(logical = FALSE), 1)))
 
 # Plot state vector estimates
 plot(pf_fit, cov_index = 1)
@@ -130,7 +130,7 @@ plot(pf_fit$log_likes)
 }
 \dontrun{
 ######
-# example with fixed effects
+# example with fixed intercept
 
 # prepare data
 temp <- subset(pbc, id <= 312, select=c(id, sex, time, status, edema, age))

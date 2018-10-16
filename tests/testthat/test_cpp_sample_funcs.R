@@ -106,3 +106,28 @@ test_that("cpp systematic_resampling function gives the same as R version", {
     }
   }
 })
+
+test_that("cpp sample_n_count_replicas gives the right result", {
+  ps <- exp(1:1000 / 1000)
+  ps <- ps / sum(ps)
+
+  set.seed(seed <- 101)
+  x <- sample_indices_test(size = 100, probs = ps)
+  x <- table(drop(x))
+
+  set.seed(seed)
+  y <- sample_n_count_replicas_indices_test(size = 100, probs = ps)
+
+  expect_equal(as.numeric(names(x)),  y[, 1L])
+  expect_equal(unclass(x),  y[, 2L], check.attributes = FALSE)
+
+  set.seed(seed)
+  x <- systematic_resampling_test(size = 100, probs = ps)
+  x <- table(drop(x))
+
+  set.seed(seed)
+  y <- sample_n_count_replicas_systematic_test(size = 100, probs = ps)
+
+  expect_equal(as.numeric(names(x)),  y[, 1L])
+  expect_equal(unclass(x),  y[, 2L], check.attributes = FALSE)
+})
