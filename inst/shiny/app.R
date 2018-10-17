@@ -6,12 +6,6 @@ test_sim_func_exp <- dynamichazard:::test_sim_func_exp
 test_sim_func_logit <- dynamichazard:::test_sim_func_logit
 exp_model_names <- dynamichazard:::exp_model_names
 
-# Save memory on server
-ddhazard <- function(..., control){
-  control <- c(control, list(save_data = FALSE, save_risk_set = FALSE))
-  dynamichazard::ddhazard(..., control = control)
-}
-
 # Global params
 quietly <- if(exists("quietly")) quietly else FALSE
 cat_l <- if(quietly) function(...) { invisible() } else cat
@@ -507,7 +501,7 @@ server <- function(input, output) {
     Q <- if(6 - n_fixed > 1)
       bquote(diag(.1, .(6 - n_fixed))) else 0.1
 
-    quote = bquote(ddhazard(
+    quote <- bquote(ddhazard(
       formula = .(form),
       data = data,
       by = 1,
