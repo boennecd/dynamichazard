@@ -2,7 +2,9 @@ context("Running test_PF")
 
 test_that("dmvnrm_log_test gives correct likelihood", {
   skip_if_not_installed("mvtnorm")
+  library(mvtnorm)
 
+  set.seed(44518266)
   for(i in 1:10){
     n <- 5
     mu <- rnorm(n)
@@ -13,8 +15,44 @@ test_that("dmvnrm_log_test gives correct likelihood", {
     for(i in 1:10){
       x <- rnorm(n)
       expect_equal(
-        mvtnorm::dmvnorm(x, mu, sigma, log = TRUE),
+        dmvnorm(x, mu, sigma, log = TRUE),
         dmvnrm_log_test(x, mu, sigma_chol_inv))
+    }
+  }
+})
+
+test_that("dmvtrm_log_test gives correct likelihood", {
+  skip_if_not_installed("mvtnorm")
+  library(mvtnorm)
+
+  # dfunc <- function(x, mu, sigma, nu){
+  #   p <- length(x)
+  #   constant <-
+  #     lgamma((nu + p) / 2) - lgamma(nu / 2) -
+  #     log(nu * pi) * (p / 2) - log(det(sigma)) /2
+  #   delta <- x - mu
+  #   cp <- crossprod(delta, solve(sigma, delta))
+  #
+  #   drop(constant - (nu + p) / 2 * log1p(cp / nu))
+  # }
+
+  set.seed(44518266)
+  for(i in 1:10){
+    n <- 5
+    mu <- rnorm(n)
+    A <- matrix(runif(n^2)*2-1, ncol=n)
+    sigma <- t(A) %*% A
+    sigma_chol_inv <- solve(chol(sigma))
+    nu <- i + 2L
+
+    for(i in 1:10){
+      x <- rnorm(n)
+      expect_equal(
+        dmvt(x = x, delta = mu, sigma = sigma, df = nu, log = TRUE),
+        dmvtrm_log_test(x, mu, sigma_chol_inv = sigma_chol_inv, nu = nu))
+      # expect_equal(
+      #   dfunc(x = x, mu = mu, sigma = sigma, nu = nu),
+      #   dmvtrm_log_test(x, mu, sigma_chol_inv = sigma_chol_inv, nu = nu))
     }
   }
 })

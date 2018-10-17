@@ -49,4 +49,10 @@ arma::mat mvrnorm(const int, const arma::vec&, const arma::mat&);
 arma::vec mvrnorm(const arma::vec&, const arma::mat&);
 arma::vec mvrnorm(const arma::mat&);
 
+arma::mat mvtrnorm(const int, const arma::mat&, const int);
+arma::mat mvtrnorm(const int, const arma::vec&, const arma::mat&,
+                   const int);
+arma::vec mvtrnorm(const arma::vec&, const arma::mat&, const int);
+arma::vec mvtrnorm(const arma::mat&, const int);
+
 #endif

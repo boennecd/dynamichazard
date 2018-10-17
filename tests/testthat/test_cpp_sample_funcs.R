@@ -107,6 +107,36 @@ test_that("cpp systematic_resampling function gives the same as R version", {
   }
 })
 
+test_that("'mvtrnorm' yields close to uniform sample", {
+  skip_on_cran()
+  skip_if_not_installed("mvtnorm")
+
+  n <- 2
+  mu <- c(-1, 1)
+  Sigma <- matrix(.5, ncol=n, nrow = n)
+  diag(Sigma) <- rep(1, n)
+
+  nu <- 5
+  set.seed(6922317)
+  X <- drop(replicate(
+    1000, mvtrnorm_test(mu = mu, sigma_chol = chol(Sigma), nu = nu)))
+  # plot(X[1, ], X[2, ], xlim = c(-6, 6), ylim = c(-6, 6))
+
+  library(mvtnorm)
+  p1 <- apply(X, 2, function(x)
+    pmvt(lower = -Inf, upper = c(x[1], Inf), df = nu, corr = Sigma,
+         type = "shifted", delta = mu))
+  expect_true(ks.test(p1, "punif", 0, 1)$p.value > .1)
+
+  p2 <- apply(X, 2, function(x)
+    pmvt(lower = -Inf, upper = c(Inf, x[2]), df = nu, corr = Sigma,
+         type = "shifted", delta = mu))
+  expect_true(ks.test(p2, "punif", 0, 1)$p.value > .1)
+
+  # try with e.g., the following instead
+  #   X <- t(matrix(rnorm(1000 * 2), ncol = 2) %*% chol(Sigma)) + mu
+})
+
 test_that("cpp sample_n_count_replicas gives the right result", {
   ps <- exp(1:1000 / 1000)
   ps <- ps / sum(ps)

@@ -64,6 +64,21 @@ double dmvnrm_log_test(
   return(dmvnrm_log(x, mean, sigma_chol_inv));
 }
 
+// [[Rcpp::export]]
+arma::vec mvtrnorm_test(
+    const arma::vec mu, const arma::mat sigma_chol, const int nu)
+  {
+    return mvtrnorm(mu, sigma_chol, nu);
+  }
+
+// [[Rcpp::export]]
+double dmvtrm_log_test(
+    const arma::vec x, const arma::vec mean, const arma::mat sigma_chol_inv,
+    const int nu)
+  {
+    return(dmvtrm_log(x, mean, sigma_chol_inv, nu));
+  }
+
 // -------------------------------------------------- //
 
 #include "ddhazard.h"

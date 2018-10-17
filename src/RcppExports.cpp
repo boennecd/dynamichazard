@@ -145,6 +145,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// mvtrnorm_test
+arma::vec mvtrnorm_test(const arma::vec mu, const arma::mat sigma_chol, const int nu);
+RcppExport SEXP _dynamichazard_mvtrnorm_test(SEXP muSEXP, SEXP sigma_cholSEXP, SEXP nuSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type sigma_chol(sigma_cholSEXP);
+    Rcpp::traits::input_parameter< const int >::type nu(nuSEXP);
+    rcpp_result_gen = Rcpp::wrap(mvtrnorm_test(mu, sigma_chol, nu));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dmvtrm_log_test
+double dmvtrm_log_test(const arma::vec x, const arma::vec mean, const arma::mat sigma_chol_inv, const int nu);
+RcppExport SEXP _dynamichazard_dmvtrm_log_test(SEXP xSEXP, SEXP meanSEXP, SEXP sigma_chol_invSEXP, SEXP nuSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const arma::vec >::type mean(meanSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type sigma_chol_inv(sigma_chol_invSEXP);
+    Rcpp::traits::input_parameter< const int >::type nu(nuSEXP);
+    rcpp_result_gen = Rcpp::wrap(dmvtrm_log_test(x, mean, sigma_chol_inv, nu));
+    return rcpp_result_gen;
+END_RCPP
+}
 // bigglm_updateQR_rcpp
 void bigglm_updateQR_rcpp(arma::vec& D, arma::vec& rbar, arma::vec& thetab, double& ss, bool& checked, arma::vec& tol, std::string model, const arma::mat& X, const arma::vec& eta, const arma::vec& offset, const arma::vec& at_risk_length, arma::vec& y, const arma::vec& w);
 RcppExport SEXP _dynamichazard_bigglm_updateQR_rcpp(SEXP DSEXP, SEXP rbarSEXP, SEXP thetabSEXP, SEXP ssSEXP, SEXP checkedSEXP, SEXP tolSEXP, SEXP modelSEXP, SEXP XSEXP, SEXP etaSEXP, SEXP offsetSEXP, SEXP at_risk_lengthSEXP, SEXP ySEXP, SEXP wSEXP) {
@@ -680,6 +707,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_sample_n_count_replicas_systematic_test", (DL_FUNC) &_dynamichazard_sample_n_count_replicas_systematic_test, 2},
     {"_dynamichazard_mvrnorm_test", (DL_FUNC) &_dynamichazard_mvrnorm_test, 2},
     {"_dynamichazard_dmvnrm_log_test", (DL_FUNC) &_dynamichazard_dmvnrm_log_test, 3},
+    {"_dynamichazard_mvtrnorm_test", (DL_FUNC) &_dynamichazard_mvtrnorm_test, 3},
+    {"_dynamichazard_dmvtrm_log_test", (DL_FUNC) &_dynamichazard_dmvtrm_log_test, 4},
     {"_dynamichazard_bigglm_updateQR_rcpp", (DL_FUNC) &_dynamichazard_bigglm_updateQR_rcpp, 13},
     {"_dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_compute_length, 5},
     {"_dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_compute_length, 6},

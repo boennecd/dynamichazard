@@ -33,6 +33,14 @@ dmvnrm_log_test <- function(x, mean, sigma_chol_inv) {
     .Call(`_dynamichazard_dmvnrm_log_test`, x, mean, sigma_chol_inv)
 }
 
+mvtrnorm_test <- function(mu, sigma_chol, nu) {
+    .Call(`_dynamichazard_mvtrnorm_test`, mu, sigma_chol, nu)
+}
+
+dmvtrm_log_test <- function(x, mean, sigma_chol_inv, nu) {
+    .Call(`_dynamichazard_dmvtrm_log_test`, x, mean, sigma_chol_inv, nu)
+}
+
 bigglm_updateQR_rcpp <- function(D, rbar, thetab, ss, checked, tol, model, X, eta, offset, at_risk_length, y, w) {
     invisible(.Call(`_dynamichazard_bigglm_updateQR_rcpp`, D, rbar, thetab, ss, checked, tol, model, X, eta, offset, at_risk_length, y, w))
 }

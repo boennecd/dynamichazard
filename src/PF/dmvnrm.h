@@ -15,4 +15,8 @@
 double dmvnrm_log(arma::vec, const arma::mat&);
 double dmvnrm_log(const arma::vec&, const arma::vec&, const arma::mat&);
 
+double dmvtrm_log(arma::vec, const arma::mat&, const int);
+double dmvtrm_log(
+    const arma::vec&, const arma::vec&, const arma::mat&, const int);
+
 #endif

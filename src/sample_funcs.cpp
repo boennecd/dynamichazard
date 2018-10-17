@@ -81,3 +81,34 @@ arma::vec mvrnorm(const arma::mat &sigma_chol){
   return mvrnorm(1, sigma_chol).col(0);
 }
 
+// --------------------------------------- //
+
+arma::mat mvtrnorm(const int m, const arma::mat &sigma_chol, const int nu){
+  arma::mat Y = mvrnorm(m, sigma_chol);
+  arma::vec chi_draw = Rcpp::as<arma::vec>(Rcpp::rchisq(m, nu));
+
+  double *u = chi_draw.begin();
+  for(int i = 0; i < m; ++i, ++u)
+    /* see https://stats.stackexchange.com/a/68490/81865 and
+     * https://en.wikipedia.org/wiki/Multivariate_t-distribution#Definition */
+    Y.col(i) /= std::sqrt(*u / nu);
+
+  return Y;
+}
+
+arma::mat mvtrnorm(
+    const int m, const arma::vec &mu, const arma::mat &sigma_chol,
+    const int nu)
+  {
+    return arma::repmat(mu, 1, m) + mvtrnorm(m, sigma_chol, nu);
+  }
+
+arma::vec mvtrnorm(
+    const arma::vec &mu, const arma::mat &sigma_chol, const int nu)
+  {
+    return mvtrnorm(1, mu, sigma_chol, nu).col(0);
+  }
+
+arma::vec mvtrnorm(const arma::mat &sigma_chol, const int nu){
+  return mvtrnorm(1, sigma_chol, nu).col(0);
+}
