@@ -99,7 +99,7 @@ test_that("PF_smooth gives same results", {
     risk_obj = risk_set, F = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
     N_fw_n_bw = 20, N_smooth = 100, N_first = 100, N_smooth_final = 100,
     forward_backward_ESS_threshold = NULL, debug = 0, method = "PF",
-    smoother = "Fearnhead_O_N", model = "logit", type = "RW")
+    smoother = "Fearnhead_O_N", model = "logit", type = "RW", nu = 0L)
 
   fw_args <- list(
     x = frm, N_fw = args$N_fw_n_bw, N_first = args$N_first, data = sims$res,
@@ -861,6 +861,30 @@ test_that("Using `n_smooth_final` works as expected and yields previous results"
 
   expect_known_value(f_fit_2[!names(f_fit_2) %in% c("clouds", "call")],
                      file = "n_smooth_final_VAR.RDS")
+})
+
+test_that("sampling with a t-distribution gives previous results", {
+  skip_on_cran()
+
+  set.seed(26443522)
+  t_fit <- suppressWarnings(PF_EM(
+    formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+    data = head_neck_cancer, id = head_neck_cancer$id, model = "logit",
+    by = 1, Q_0 = 1, Q = .1^2,
+    control = PF_control(
+      N_fw_n_bw = 500, N_smooth = 500, N_first = 1000, n_max = 1,
+      Q_tilde = diag(0, 1), nu = 5L),
+    max_T = 45, type = "RW"))
+
+  expect_lte(
+    t_fit$effective_sample_size$forward_clouds[1],
+    length(t_fit$clouds$forward_clouds[[1L]]$weights))
+  expect_lte(
+    tail(t_fit$effective_sample_size$backward_clouds, 1),
+    length(tail(t_fit$clouds$backward_clouds, 1)[[1L]]$weights))
+
+  expect_known_value(t_fit[!names(t_fit) %in% c("clouds", "call")],
+                     file = "pf_t_dist_proposal.RDS")
 })
 
 test_that("`get_Q_0` returns a real matrix also when `Fmat` has a complex eigendecomposition", {

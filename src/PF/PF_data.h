@@ -356,6 +356,7 @@ public:
   const arma::vec &a_0;
   const unsigned int debug; /* < 1 is no info and greater values yields more info */
   const uword N_first;
+  const int nu;
   const unsigned long work_block_size;
 
   /* pre-computed factorization */
@@ -387,7 +388,7 @@ public:
           const uword N_smooth_final,
           Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
           const unsigned int debug,
-          const uword N_first) :
+          const uword N_first, const int nu) :
     problem_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, Q_0, Q,
@@ -401,7 +402,7 @@ public:
 
       a_0(a_0),
       debug(debug),
-      N_first(N_first),
+      N_first(N_first), nu(nu),
       work_block_size(500),
 
       Q(Q),

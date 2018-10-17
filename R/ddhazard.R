@@ -492,10 +492,11 @@ get_state_eq_matrices <-  function(
   state_dim <- lp_dim * order + fix_dim * est_fixed_in_E
   rng_dim   <- lp_dim
 
-  .check_full_rank_square  (Q      , rng_dim  , TRUE , is_null_ok = TRUE)
-  .check_full_rank_square  (Q_0    , state_dim, TRUE , is_null_ok = TRUE)
-  .check_full_rank_square  (F.     , state_dim, FALSE, is_null_ok = TRUE)
-  .check_full_rank_square(Q_tilde  , rng_dim  , TRUE , is_null_ok = TRUE)
+  .check_full_rank_square(Q      , rng_dim  , TRUE , is_null_ok = TRUE)
+  .check_full_rank_square(Q_0    , state_dim, TRUE , is_null_ok = TRUE)
+  .check_full_rank_square(F.     , state_dim, FALSE, is_null_ok = TRUE)
+  .check_full_rank_square(Q_tilde, rng_dim  , TRUE , is_null_ok = TRUE,
+                          is_zero_ok = TRUE)
 
   .check_selection_matrix(R, state_dim, rng_dim)
   if(!is.null(L))
@@ -532,7 +533,7 @@ get_state_eq_matrices <-  function(
 }
 
 .check_full_rank_square <- function(X, expected_dim, pos_def,
-                                    is_null_ok = FALSE){
+                                    is_null_ok = FALSE, is_zero_ok = FALSE){
   qu <- substitute({
     if(!is.null(X) || !is_null_ok){
       if(ncol(X) != n || nrow(X) != n)
@@ -542,7 +543,8 @@ get_state_eq_matrices <-  function(
       if(n > 0){
         if(pos_def){
           eg <- eigen(X)
-          if(!all(eg$values > 1e-8))
+          tol <- if(is_zero_ok) 0. else  sqrt(.Machine$double.eps)
+          if(!all(eg$values >= tol))
             stop(sQuote(Xstr), " is not positive definite")
         } else
           if(qr(X)$rank < n)
@@ -550,7 +552,7 @@ get_state_eq_matrices <-  function(
       }
     }
   }, list(X = substitute(X), Xstr = deparse(substitute(X)), n = expected_dim,
-          pos_def = pos_def, is_null_ok = is_null_ok))
+          pos_def = pos_def, is_null_ok = is_null_ok, is_zero_ok = is_zero_ok))
 
   eval(qu, envir = parent.frame())
 }

@@ -6,6 +6,37 @@
 #include "dmvnrm.h"
 
 
+/* sample function */
+struct sample_output {
+  arma::vec sample;
+  double log_importance_dens;
+};
+
+class proposal_sampler {
+public:
+  virtual sample_output
+  operator()(const arma::mat&, const arma::mat&) const = 0;
+
+  virtual ~proposal_sampler() = default;
+};
+
+class proposal_sampler_mvtrnorm : public proposal_sampler {
+  const int nu;
+
+public:
+  proposal_sampler_mvtrnorm() = delete;
+  proposal_sampler_mvtrnorm(const int);
+
+  sample_output operator()(const arma::mat&, const arma::mat&) const override;
+};
+
+class proposal_sampler_mvnrnorm : public proposal_sampler {
+public:
+  sample_output operator()(const arma::mat&, const arma::mat&) const override;
+};
+
+std::unique_ptr<proposal_sampler> get_sampler(const PF_data &data);
+
 #define SAMPLE_SMOOTH_ARGS                                \
   pf_base_dens &dens_calc,                                \
   const PF_data &data,                                    \
@@ -35,9 +66,6 @@
 */
 
 /* base class importance samplers */
-
-
-
 template<bool is_forward>
 class importance_dens_base {
 public:
@@ -45,15 +73,17 @@ public:
   (pf_base_dens &dens_calc, const PF_data &data){
     cloud ans;
     ans.reserve(data.N_first);
-    const arma::mat *Q_chol;
+    const arma::mat *Q_chol, *Q_chol_inv;
     const arma::vec *mean;
 
     if(is_forward){
-      Q_chol = &data.Q_0.chol();
+      Q_chol     = &data.Q_0.chol();
+      Q_chol_inv = &data.Q_0.chol_inv();
       mean = &data.a_0;
 
     } else {
-      Q_chol = &data.uncond_covar_state(data.d + 1).chol();
+      Q_chol     = &data.uncond_covar_state(data.d + 1).chol();
+      Q_chol_inv = &data.uncond_covar_state(data.d + 1).chol_inv();
       mean = &data.uncond_mean_state(data.d + 1);
 
     }
@@ -67,11 +97,28 @@ public:
                   << mean->t();
     }
 
-    double log_weight = log(1. / data.N_first);
-    for(arma::uword i = 0; i < data.N_first; ++i){
-      arma::vec err = mvrnorm(*Q_chol);
-      ans.new_particle(err + *mean, nullptr);
-      ans[i].log_weight = log_weight;
+    if(data.nu > 0L){
+      proposal_sampler_mvtrnorm sampler(data.nu);
+
+      double max_weight = -std::numeric_limits<double>::max();
+      for(arma::uword i = 0; i < data.N_first; ++i){
+        auto smp = sampler(*Q_chol, *Q_chol_inv);
+        ans.new_particle(smp.sample + *mean, nullptr);
+        ans[i].log_weight =
+          dmvnrm_log(smp.sample, *Q_chol_inv) - smp.log_importance_dens;
+        max_weight = std::max(max_weight, smp.log_importance_dens);
+      }
+
+      normalize_log_weights<false, true>(ans, max_weight);
+
+    } else {
+      double log_weight = log(1. / data.N_first);
+      for(arma::uword i = 0; i < data.N_first; ++i){
+        arma::vec err = mvrnorm(*Q_chol);
+        ans.new_particle(err + *mean, nullptr);
+        ans[i].log_weight = log_weight;
+      }
+
     }
 
     return(ans);
@@ -111,6 +158,7 @@ public:
     }
 
     auto it = resample_idx.begin();
+    std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i, ++it){
       arma::vec mu;
       if(is_forward){
@@ -121,11 +169,10 @@ public:
 
       }
 
-      arma::vec err = mvrnorm(Q_use->chol());
-      ans.new_particle(data.err_state->map(err).sv + mu, &cl[*it]);
-
+      auto smp = (*sampler)(Q_use->chol(), Q_use->chol_inv());
+      ans.new_particle(data.err_state->map(smp.sample).sv + mu, &cl[*it]);
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(err, Q_use->chol_inv());
+      p.log_importance_dens = smp.log_importance_dens;
 
     }
 
@@ -145,6 +192,7 @@ public:
                   << rng_mat.chol();
     }
 
+    std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       auto it_fw = fw_idx.begin() + i;
       auto it_bw = bw_idx.begin() + i;
@@ -152,11 +200,11 @@ public:
       const particle &bw_p = bw_cloud[*it_bw];
 
       arma::vec mu = combiner(fw_p, bw_p);
-      arma::vec err = mvrnorm(rng_mat.chol());
-      ans.new_particle(err + mu, &fw_p, &bw_p);
+      auto smp = (*sampler)(rng_mat.chol(), rng_mat.chol_inv());
+      ans.new_particle(smp.sample + mu, &fw_p, &bw_p);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(err, rng_mat.chol_inv());
+      p.log_importance_dens = smp.log_importance_dens;
     }
 
     return ans;
@@ -230,18 +278,20 @@ public:
         inter_output.Sigma + data.Q_proposal_state.mat()));
     debug_msg_before_sampling(data, rng_covar->chol(), inter_output.mu);
 
+    std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
       auto it = resample_idx.begin() + i;
       arma::vec &mu_j = inter_output.mu_js[*it];
 
-      arma::vec err = mvrnorm(rng_covar->chol());
+      auto smp = (*sampler)(rng_covar->chol(), rng_covar->chol_inv());
+      arma::vec &err = smp.sample;
       if(is_forward)
         ans.new_particle(mu_j + data.err_state->map(err).sv, &cl[*it]);
       else
         ans.new_particle(mu_j +                     err    , &cl[*it]);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(err, rng_covar->chol_inv());
+      p.log_importance_dens = smp.log_importance_dens;
 
       debug_msg_while_sampling(data, p, mu_j);
     }
@@ -272,6 +322,8 @@ public:
     covarmat rng_covar(
         inter_output.Sigma + data.Q_proposal_state.mat());
     debug_msg_before_sampling(data, rng_covar.chol(), inter_output.mu);
+
+    std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       auto it_fw = fw_idx.begin() + i;
       auto it_bw = bw_idx.begin() + i;
@@ -284,12 +336,11 @@ public:
       mu_j = solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mu_j) +
         inter_output.mu;
 
-      arma::vec err = mvrnorm(rng_covar.chol());
-      ans.new_particle(err + mu_j, &fw_p, &bw_p);
+      auto smp = (*sampler)(rng_covar.chol(), rng_covar.chol_inv());
+      ans.new_particle(smp.sample + mu_j, &fw_p, &bw_p);
 
       particle &p = ans[i];
-      p.log_importance_dens =
-        dmvnrm_log(err, rng_covar.chol_inv());
+      p.log_importance_dens = smp.log_importance_dens;
 
       debug_msg_while_sampling(data, p, mu_j);
     }
@@ -346,6 +397,7 @@ public:
     ans.reserve(data.N_fw_n_bw);
 
     std::unique_ptr<covarmat> rng_covar;
+    std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
     for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
       auto it = resample_idx.begin() + i;
       auto &inter_o = inter_output[*it];
@@ -356,14 +408,15 @@ public:
         rng_covar.reset(new covarmat(
             inter_o.sigma + data.Q_proposal_state.mat()));
 
-      arma::vec err = mvrnorm(rng_covar->chol());
+      auto smp = (*sampler)(rng_covar->chol(), rng_covar->chol_inv());
+      arma::vec &err = smp.sample;
       if(is_forward)
         ans.new_particle(data.err_state->map(err).sv + inter_o.mu, &cl[*it]);
       else
         ans.new_particle(                    err     + inter_o.mu, &cl[*it]);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(err, rng_covar->chol_inv());
+      p.log_importance_dens = smp.log_importance_dens;
 
       debug_msg_while_sampling(data, p, inter_o.mu, rng_covar->chol());
     }
@@ -409,15 +462,16 @@ public:
     }
 
     /* Sample */
+    std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       const particle &fw_p = fw_cloud[*(begin_fw + i)];
       const particle &bw_p = bw_cloud[*(begin_bw + i)];
 
-      arma::vec err = mvrnorm(rng_mats[i]->chol());
-      ans.new_particle(err + propsal_means[i], &fw_p, &bw_p);
+      auto smp = (*sampler)(rng_mats[i]->chol(), rng_mats[i]->chol_inv());
+      ans.new_particle(smp.sample + propsal_means[i], &fw_p, &bw_p);
 
       particle &p = ans[i];
-      p.log_importance_dens = dmvnrm_log(err, rng_mats[i]->chol_inv());
+      p.log_importance_dens = smp.log_importance_dens;
 
       debug_msg_while_sampling(data, p, propsal_means[i], rng_mats[i]->chol());
     }

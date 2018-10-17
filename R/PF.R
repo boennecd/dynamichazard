@@ -412,7 +412,7 @@ PF_EM <- function(
     Q_0 = model_args$Q_0, F. = model_args$F., R = model_args$R,
     a_0 = model_args$a_0, G = model_args$G, J = model_args$J, K = model_args$K,
     theta = model_args$theta, psi = model_args$psi, phi = model_args$phi,
-    N_fw_n_bw = control$N_fw_n_bw,
+    N_fw_n_bw = control$N_fw_n_bw, nu = control$nu,
     N_smooth = control$N_smooth, N_smooth_final = control$N_smooth_final,
     N_first = control$N_first, eps = control$eps,
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
@@ -645,7 +645,7 @@ PF_forward_filter.formula <- function(
     tstop = static_args$tstop, risk_obj = static_args$risk_obj,
     debug = static_args$debug, model = static_args$model, Q = Q, Q_0 = Q_0,
     F = Fmat, R = R, is_forward = TRUE, a_0 = a_0, N_fw_n_bw = N_fw,
-    N_first = N_first,
+    N_first = N_first, nu = control$nu,
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
     method = control$method, n_threads = control$n_threads, Q_tilde = Q_tilde)
 
@@ -658,7 +658,7 @@ PF_forward_filter.formula <- function(
 .PF_EM <- function(
   n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, Q_0, Q, a_0, F.,
   R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_smooth_final, N_first,
-  eps,
+  eps, nu,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
   fixed_parems, type, Q_tilde, est_a_0, G, J, K, theta, psi, phi){
@@ -1048,8 +1048,11 @@ PF_forward_filter.formula <- function(
 #' be fixed. Does not apply for \code{type = "VAR"}.
 #' @param N_smooth_final number of particles to sample with replacement from
 #' the smoothed particle cloud with \code{N_smooth} particles using the
-#' particles' weight. This causes additional sampling error but decreases the
+#' particles' weights. This causes additional sampling error but decreases the
 #' computation time in the M-step.
+#' @param nu integer with degrees of freedom to use in the (multivariate)
+#' t-distribution used as the proposal distribution. A (multivariate) normal
+#' distribution is used if it is zero.
 #'
 #' @return
 #' A list with components named as the arguments.
@@ -1063,12 +1066,13 @@ PF_control <- function(
   eps = 1e-2, forward_backward_ESS_threshold = NULL,
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
-  Q_tilde = NULL, est_a_0 = TRUE, N_smooth_final = N_smooth){
+  Q_tilde = NULL, est_a_0 = TRUE, N_smooth_final = N_smooth, nu = 0L){
   control <- list(
     N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
     forward_backward_ESS_threshold = forward_backward_ESS_threshold,
     method = method, n_max = n_max, n_threads = n_threads, smoother = smoother,
-    Q_tilde = Q_tilde, est_a_0 = est_a_0, N_smooth_final = N_smooth_final)
+    Q_tilde = Q_tilde, est_a_0 = est_a_0, N_smooth_final = N_smooth_final,
+    nu = nu)
 
   check_n_particles_expr <- function(N_xyz)
     eval(bquote({
@@ -1084,6 +1088,9 @@ PF_control <- function(
     typeof(N_smooth_final) %in% c("double", "integer"),
     length(N_smooth_final) == 1L, as.integer(N_smooth_final) == N_smooth_final,
     N_smooth_final <= N_smooth)
+  stopifnot(
+    typeof(nu) %in% c("double", "integer"), length(nu) == 1L, nu >= 0L,
+    as.integer(nu) == nu)
 
   return(control)
 }
