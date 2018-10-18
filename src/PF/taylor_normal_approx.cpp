@@ -51,7 +51,8 @@ input_for_normal_apprx taylor_normal_approx(
 
 #ifdef _OPENMP
   /* Use lock as critical section will not do if this function is called in
-   * nested parallel setup. See https://stackoverflow.com/a/20447843 */
+   * nested parallel setup. See https://stackoverflow.com/a/20447843
+   * TODO: replace with a reduction... */
   omp_lock_t *lock;
   if(multithread){
     lock = new omp_lock_t;
@@ -251,6 +252,7 @@ input_for_normal_apprx_w_cloud_mean
       mu_term = &data.uncond_mean_term(t);
 
       alpha_bar = data.bw_mean(t, parent);
+      /* RF^\top Q^{-1}R^\top\bar x_{t+1} + P_t^{-1}\mu_t */
       mean_term_approx = data.err_state_inv->map(parent).sv;
       mean_term_approx = solve_w_precomputed_chol(Q.chol(), mean_term_approx);
       mean_term_approx =
@@ -362,7 +364,9 @@ input_for_normal_apprx_w_particle_mean
 
    }
    else{
+
      alpha_bar = data.bw_mean(t, alpha_bar);
+     /* RF^\top Q^{-1}R^\top\bar x_{t+1} + P_t^{-1}\mu_t */
      mu = data.err_state_inv->map(this_state).sv;
      mu = solve_w_precomputed_chol(Q.chol(), mu);
      mu = data.state_trans_err->map(mu, trans).sv + *mu_term;

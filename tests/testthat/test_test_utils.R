@@ -87,6 +87,7 @@ test_that("Sim functions gives previous results", {
 })
 
 test_that("`linear_mapper`s gives expected result", {
+  set.seed(56219373)
   A <- structure(
     c(0.157, 0.025, 1.14, -2.055, -0.376, -0.837, -0.414,
       -0.627, 0.272, -0.574, 0.526, -0.088, 0.566, 0.809, -0.198),

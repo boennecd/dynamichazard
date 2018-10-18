@@ -282,12 +282,12 @@ public:
 class PF_data : public problem_data {
   using uword = arma::uword;
 
-  /* Objects used to compute P(\alpha_t \vert \alpha_{t - 1}) */
+  /* Objects used to compute P(\alpha_t \vert \alpha_{t + 1}) */
   std::map<const uword, const std::unique_ptr<linear_mapper>> bw_mean_maps;
   std::map<const uword, const arma::vec> bw_mean_const_term;
   std::map<const uword, const covarmat> bw_covar_map;
 
-  /* Pre-computed objects for the artificial prior */
+  /* Pre-computed objects for backward filter's */
   std::map<const uword, const arma::vec> uncond_means;
   std::map<const uword, const covarmat>  uncond_covarmats;
 

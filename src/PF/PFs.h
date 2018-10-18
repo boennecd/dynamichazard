@@ -258,6 +258,7 @@ public:
       if(data.debug > 0)
         data.log(1) << "Weighting particles";
       {
+        const bool do_debug = data.debug > 4;
         double max_weight = -std::numeric_limits<double>::max();
         arma::uvec r_set = get_risk_set(data, t);
         unsigned int n_elem = new_cloud.size();
@@ -280,6 +281,25 @@ public:
           double log_artificial_prior = // TODO: have already been computed
             dens_calc.log_artificial_prior(
               *it->child /* note child */, t + 1 /* note t + 1 */);
+
+          if(do_debug){
+            const int wd = 11;
+            std::stringstream ss;
+
+            ss << std::setprecision(6)
+               << "log-like terms"
+               << " 'log_prob_y_given_state' "            << std::setw(wd) << log_prob_y_given_state
+               << " 'log_prob_state_given_previous' "     << std::setw(wd) << log_prob_state_given_previous
+               << " 'log_prob_next_given_state' "         << std::setw(wd) << log_prob_next_given_state
+               << " 'parent->log_weight' "                << std::setw(wd) << it->parent->log_weight
+               << " 'child->log_weight' "                 << std::setw(wd) << it->child->log_weight
+               << " 'log_importance_dens' "               << std::setw(wd) << log_importance_dens
+               << " 'parent->log_resampling_weight' "     << std::setw(wd) << it->parent->log_resampling_weight
+               << " 'child->log_resampling_weight' "      << std::setw(wd) << it->child->log_resampling_weight
+               << " 'log_artificial_prior' "              << std::setw(wd) << log_artificial_prior;
+
+            data.log(5) << ss.str();
+          };
 
           it->log_unnormalized_weight = it->log_weight =
             /* nominator */

@@ -148,8 +148,8 @@ input_for_normal_apprx_w_cloud_mean
 /* ------------------------------------------- */
 
 struct input_for_normal_apprx_w_particle_mean_element {
-  arma::vec mu;
-  arma::vec xi;
+  arma::vec mu; /*        \hat x_t */
+  arma::vec xi; /* R^\top \hat x_t */
   arma::mat sigma_chol_inv;
   arma::mat sigma;
 };
