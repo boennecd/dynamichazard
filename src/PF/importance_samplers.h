@@ -141,21 +141,18 @@ public:
     cloud ans;
     ans.reserve(data.N_fw_n_bw);
 
-    const covarmat *Q_use;
-    if(is_forward){
-      Q_use = &data.Q_proposal;
+    std::unique_ptr<covarmat> Q_use;
+    if(is_forward)
+      Q_use.reset(new covarmat(
+          data.Q.mat()           + data.Q_proposal_xtra.mat()));
+    else
+      Q_use.reset(new covarmat(
+          data.bw_covar(t).mat() + data.Q_proposal_xtra.mat()));
 
-    } else {
-      Q_use = &data.bw_covar(t);
-
-    }
-
-    if(data.debug > 2){
+    if(data.debug > 2)
       data.log(3)
         << "Sampling new cloud from normal distribution with chol(Q) given by"
         << std::endl << Q_use->chol();
-
-    }
 
     auto it = resample_idx.begin();
     std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
@@ -185,7 +182,7 @@ public:
 
     bw_fw_particle_combiner combiner(data);
 
-    covarmat rng_mat(combiner.Q.mat() + data.Q_proposal_state.mat());
+    covarmat rng_mat(combiner.Q.mat() + data.Q_proposal_xtra_state.mat());
 
     if(data.debug > 2){
       data.log(3) << "Sampling new cloud from normal distribution with chol(Q) given by" << std::endl
@@ -272,10 +269,11 @@ public:
 
     std::unique_ptr<covarmat> rng_covar;
     if(is_forward)
-      rng_covar.reset(new covarmat(inter_output.Sigma + data.Q_proposal.mat()));
+      rng_covar.reset(new covarmat(
+          inter_output.Sigma + data.Q_proposal_xtra.mat()));
     else
       rng_covar.reset(new covarmat(
-        inter_output.Sigma + data.Q_proposal_state.mat()));
+        inter_output.Sigma + data.Q_proposal_xtra_state.mat()));
     debug_msg_before_sampling(data, rng_covar->chol(), inter_output.mu);
 
     std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
@@ -320,7 +318,7 @@ public:
     ans.reserve(data.N_fw_n_bw);
 
     covarmat rng_covar(
-        inter_output.Sigma + data.Q_proposal_state.mat());
+        inter_output.Sigma + data.Q_proposal_xtra_state.mat());
     debug_msg_before_sampling(data, rng_covar.chol(), inter_output.mu);
 
     std::unique_ptr<proposal_sampler> sampler = get_sampler(data);
@@ -403,10 +401,11 @@ public:
       auto &inter_o = inter_output[*it];
 
       if(is_forward)
-        rng_covar.reset(new covarmat(inter_o.sigma + data.Q_proposal.mat()));
+        rng_covar.reset(new covarmat(
+            inter_o.sigma + data.Q_proposal_xtra.mat()));
       else
         rng_covar.reset(new covarmat(
-            inter_o.sigma + data.Q_proposal_state.mat()));
+            inter_o.sigma + data.Q_proposal_xtra_state.mat()));
 
       auto smp = (*sampler)(rng_covar->chol(), rng_covar->chol_inv());
       arma::vec &err = smp.sample;
@@ -454,7 +453,7 @@ public:
         5, false, false);
 
       std::unique_ptr<covarmat> new_ptr(
-          new covarmat(inter_output.Sigma + data.Q_proposal_state.mat()));
+          new covarmat(inter_output.Sigma + data.Q_proposal_xtra_state.mat()));
       std::swap(rng_mats[i], new_ptr);
       propsal_means[i] =
         solve_w_precomputed_chol(inter_output.Sigma_inv_chol, mean_term) +

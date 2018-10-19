@@ -359,12 +359,11 @@ input_for_normal_apprx_w_particle_mean
 
    if(is_forward){
      alpha_bar = data.state_trans->map(alpha_bar).sv;
-     mu = data.state_trans_err->map(this_state).sv;
+     mu = data.err_state_inv->map(alpha_bar).sv;
      mu = solve_w_precomputed_chol(Q.chol(), mu);
 
    }
    else{
-
      alpha_bar = data.bw_mean(t, alpha_bar);
      /* RF^\top Q^{-1}R^\top\bar x_{t+1} + P_t^{-1}\mu_t */
      mu = data.err_state_inv->map(this_state).sv;

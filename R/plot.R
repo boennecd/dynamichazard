@@ -185,7 +185,7 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
   invisible()
 }
 
-#' @title Plot of Clouds From a PF_clouds Object
+#' @title Plot of Clouds from a PF_clouds Object
 #' @description
 #' Plots mean curve along with quantiles through time for the forward, backward or smoothed clouds.
 #'
@@ -198,53 +198,40 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
 #' @param pch \code{pch} argument for the quantile points.
 #' @param lty \code{lty} argument for the mean curves.
 #' @param col \code{col} argument to \code{\link{matplot}} and
-#' \code{\link{matpoints}}.
+#' \code{\link{matpoints}} or \code{\link{matlines}}.
 #' @param ... unused.
-#' @param cov_index indices of the state vector to plot. All are plotted if this argument is omitted.
+#' @param cov_index indices of the state vector to plot. All are plotted if
+#' this argument is omitted.
+#' @param qtype character specifying how to show quantiles. Either
+#' \code{"points"} for crosses or \code{"lines"} for dashed lines.
 #'
 #' @return
 #' List with quantile levels and mean curve.
 #'
-#' @importFrom graphics matplot matpoints
+#' @importFrom graphics matplot matpoints matlines
 #' @export
 plot.PF_clouds <- function(
   x, y,
   type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
   ylim, add = FALSE, qlvls = c(.05, .5, .95), pch = 4, lty = 1, col, ...,
-  cov_index){
+  cov_index, qtype = c("points", "lines")){
   type <- type[1]
   these_clouds <- x[[type]]
   if(missing(cov_index))
     cov_index <- seq_len(dim(these_clouds[[1]]$states)[1])
 
+  qtype <- qtype[1L]
+  stopifnot(qtype %in% c("points", "lines"))
+
   #####
   # find means
-  .mean <- do.call(rbind, sapply(these_clouds, function(row){
-    colSums(t(row$states[cov_index, , drop = FALSE]) * drop(row$weights))
-  }, simplify = FALSE))
+  .mean <- get_cloud_means(x, cov_index = cov_index, type = type)
 
   #####
   # find quantiles
   if(length(qlvls) > 0){
-    qs <- lapply(these_clouds, function(row){
-      out <- apply(row$states[cov_index, , drop = FALSE], 1, function(x){
-        ord <- order(x)
-        wg_cumsum <- cumsum(row$weights[ord])
-        idx <- ord[sapply(qlvls, function(q) {
-          is_lower <- wg_cumsum < q
-          if(!any(is_lower))
-            return(NA_integer_)
-          max(which(wg_cumsum < q))
-        })]
-        x[idx]
-      })
-
-      if(is.null(dim(out)))
-        out <- matrix(out, ncol = length(out))
-
-      out
-    })
-    qs <- simplify2array(qs)
+    qs <- get_cloud_quantiles(
+      x, cov_index = cov_index, type = type, qlvls = qlvls)
 
   } else
     qs <- NULL
@@ -267,7 +254,10 @@ plot.PF_clouds <- function(
       tmp <- qs[, i, ]
       if(is.null(dim(tmp)))
         tmp <- matrix(tmp, ncol = length(tmp))
-      matpoints(.x, t(tmp), pch = pch, col = col[i])
+      switch (qtype,
+        points = matpoints(.x, t(tmp), pch = pch, col = col[i]),
+        lines  = matlines(.x, t(tmp), lty = 3, col = col[i]),
+        stop(sQuote(qtype), " not implemented"))
     }
   }
 

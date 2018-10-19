@@ -9,13 +9,12 @@ class update_parameters_data {
   std::vector<const smoother_output::particle_pairs*>
   set_pairs(){ /* TODO: Just store two start and end iterators */
     std::vector<const particle_pairs*>::size_type total_n_pairs = 0L;
-    for(auto i = tr->begin() + 1 /* plus one as we cannot observe 0 -- > 1 trans */;
-        i != tr->end(); ++i)
+    for(auto i = tr->begin(); i != tr->end(); ++i)
       total_n_pairs += i->size();
 
     std::vector<const particle_pairs*> out(total_n_pairs);
     auto ptr = out.begin();
-    for(auto i = tr->begin() + 1; i != tr->end(); ++i)
+    for(auto i = tr->begin(); i != tr->end(); ++i)
       for(auto j = i->begin(); j != i->end(); ++j, ++ptr)
         *ptr = &(*j);
 

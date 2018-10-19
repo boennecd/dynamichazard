@@ -362,8 +362,8 @@ public:
   /* pre-computed factorization */
   const covarmat Q;
   const covarmat Q_0;
-  const covarmat Q_proposal;
-  const covarmat Q_proposal_state;
+  const covarmat Q_proposal_xtra;
+  const covarmat Q_proposal_xtra_state;
 
   PF_data(const int n_fixed_terms_in_state_vec,
           arma::mat &X,
@@ -407,8 +407,8 @@ public:
 
       Q(Q),
       Q_0(Q_0),
-      Q_proposal(Q_tilde),
-      Q_proposal_state(err_state->map(Q_tilde).sv)
+      Q_proposal_xtra(Q_tilde),
+      Q_proposal_xtra_state(err_state->map(Q_tilde).sv)
     {
 #ifdef _OPENMP
       omp_init_lock(&PF_logger::lock);

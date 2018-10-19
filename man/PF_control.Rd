@@ -41,7 +41,7 @@ particles' weights. This causes additional sampling error but decreases the
 computation time in the M-step.}
 
 \item{nu}{integer with degrees of freedom to use in the (multivariate)
-t-distribution used as the proposal destribution. A (multivariate) normal
+t-distribution used as the proposal distribution. A (multivariate) normal
 distribution is used if it is zero.}
 }
 \value{
@@ -49,6 +49,51 @@ A list with components named as the arguments.
 }
 \description{
 Auxiliary for additional settings with \code{\link{PF_EM}}.
+}
+\details{
+The \code{method} argument can take the following values
+
+\itemize{
+\item \code{bootstrap_filter} for a bootstrap filter.
+\item \code{PF_normal_approx_w_cloud_mean} for a particle filter where a
+Gaussian approximation is used using a Taylor
+approximation made at the mean for the current particle given the mean of the
+parent particles  and/or mean of the child particles.
+\item \code{AUX_normal_approx_w_cloud_mean} for an auxiliary particle filter
+version of \code{PF_normal_approx_w_cloud_mean}.
+\item \code{PF_normal_approx_w_particles} for a filter similar to
+\code{PF_normal_approx_w_cloud_mean} and differs by making a Taylor
+approximation at a mean given each sampled parent and/or child particle.
+\item \code{AUX_normal_approx_w_particles} for an auxiliary particle filter
+version of \code{PF_normal_approx_w_particles}.
+}
+
+The \code{smoother} argument can take the following values
+\itemize{
+\item \code{Fearnhead_O_N} for the smoother in Fearnhead, Wyncoll, and Tawn
+(2010).
+\item \code{Brier_O_N_square} for the smoother in Briers, Doucet, and
+Maskell (2010).
+}
+}
+\references{
+Gordon, N. J., Salmond, D. J., and Smith, A. F. (1993) Novel approach
+to nonlinear/non-Gaussian Bayesian state estimation.
+\emph{In IEE Proceedings F (Radar and Signal Processing)},
+(Vol. 140, No. 2, pp. 107-113). IET Digital Library.
+
+Pitt, M. K., and Shephard, N. (1999) Filtering via simulation: Auxiliary
+particle filters. \emph{Journal of the American statistical association},
+\strong{94(446)}, 590-599.
+
+Fearnhead, P., Wyncoll, D., and Tawn, J. (2010) A sequential smoothing
+algorithm with linear computational cost. \emph{Biometrika}, \strong{97(2)},
+447-464.
+
+Briers, M., Doucet, A., and Maskell, S. (2010) Smoothing algorithms for
+state-space models.
+\emph{Annals of the Institute of Statistical Mathematics}, \strong{62(1)},
+61.
 }
 \seealso{
 \code{\link{PF_EM}}

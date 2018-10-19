@@ -19,12 +19,12 @@ PF_effective_sample_size <- function(object){
 #' @param type type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 #' "VAR" for [V]ector [A]uto[R]egression.
 #' @param Fmat starting value for \eqn{F} when \code{type = "VAR"}. See
-#' 'Details'.
+#' 'Details' in \code{\link{PF_EM}}.
 #' @param fixed_effects starting values for fixed effects if any. See
 #' \code{\link{ddFixed}}.
 #' @param G,theta,J,K,psi,phi parameters for a restricted \code{type = "VAR"} model.
-#' See the vignette mentioned in 'Details' and the examples linked to in
-#' 'See Also'.
+#' See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
+#' examples linked to in See Also'.
 #' @param fixed  two-sided \code{\link{formula}} to be used
 #' with \code{random} instead of \code{formula}. It is of the form
 #' \code{Surv(tstart, tstop, event) ~ x} or
@@ -48,7 +48,7 @@ PF_effective_sample_size <- function(object){
 #' \deqn{\alpha_0\sim N(a_0, Q_0)}
 #'
 #' with \eqn{Q_0 \in {\rm I\!R}^{p\times p}}. The latent states,
-#' \eqn{\alpha_t}, are related to the output throught the linear predictors
+#' \eqn{\alpha_t}, are related to the output through the linear predictors
 #'
 #' \deqn{\eta_{it} = X_t(R^+\alpha_t) + Z_t\beta}
 #'
@@ -69,7 +69,7 @@ PF_effective_sample_size <- function(object){
 #' See the examples at https://github.com/boennecd/dynamichazard/tree/master/examples.
 #'
 #' @section Warning:
-#' The function is still under development so the ouput and API may change.
+#' The function is still under development so the output and API may change.
 #'
 #' @examples
 #'\dontrun{
@@ -259,8 +259,8 @@ PF_effective_sample_size <- function(object){
 #'   control = PF_control(
 #'     N_fw_n_bw = 100L, N_smooth = 100L, N_first = 500L,
 #'     method = "AUX_normal_approx_w_cloud_mean",
-#'     Q_tilde = diag(.05^2, p),
-#'     n_max = 100L,  # should maybe be larger
+#'     nu = 5L, # sample from multivariate t-distribution
+#'     n_max = 50L,  # should maybe be larger
 #'     smoother = "Fearnhead_O_N", eps = 1e-4,
 #'     n_threads = 4L # depends on your cpu(s)
 #'   ),
@@ -270,8 +270,8 @@ PF_effective_sample_size <- function(object){
 #' # take more iterations with more particles
 #' cl <- fit$call
 #' ctrl <- cl[["control"]]
-#' ctrl[c("N_fw_n_bw", "N_smooth", "N_first", "n_max")] <- list(
-#'   400L, 1000L, 1000L, 25L)
+#' ctrl[c("N_fw_n_bw", "N_smooth", "N_smooth_final", "N_first", "n_max")] <- list(
+#'   500L, 2000L, 500L, 5000L, 30L)
 #' cl[["control"]] <- ctrl
 #' cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
 #' fit_extra <- eval(cl)
@@ -301,48 +301,7 @@ PF_EM <- function(
   Fmat, fixed_effects, G, theta, J, K, psi, phi, ...){
   #####
   # checks
-  if(length(order) == 1 && order != 1)
-    stop(sQuote('order'), " not equal to 1 is not supported")
-
-  if(is.character(model) && length(model) == 1 &&
-     !model %in% c("logit", "exponential"))
-    stop(sQuote('model'), " is not supported")
-
-  if(missing(id)){
-    if(trace > 0)
-      warning("You did not parse and Id argument")
-    id = 1:nrow(data)
-  }
-
-  if(is.character(type) && length(type) == 1 &&
-     !type %in% c("RW", "VAR"))
-    stop("Invalid ", sQuote("type"), " argument")
-
-  if(!missing(Fmat) && type != "VAR")
-    stop(sQuote("Fmat"), " should not be passed for type ", sQuote(type))
-
-  has_restrict <- !c(missing(G), missing(theta), missing(J), missing(K),
-                     missing(psi), missing(phi))
-  is_restricted <- all(has_restrict)
-  str_if_err <- paste0(
-    sQuote("G"), ", ", sQuote("theta"), ", ", sQuote("J"), ", ", sQuote("K"),
-    ", ", sQuote("psi"), ", and ", sQuote("phi"))
-  if(!(missing(Q) && missing(Fmat)) && !all(!has_restrict))
-    stop("Either supply ", sQuote("Q"), " and ", sQuote("Fmat"),
-         " or ", str_if_err)
-  if(any(has_restrict) && type != "VAR")
-    stop(str_if_err, " supplied with ", sQuote("type"),
-         " ", sQuote(type))
-  if(any(has_restrict) && !all(has_restrict))
-    stop("Missing one of ", str_if_err)
-
-  if(is.null(fixed) != is.null(random))
-    stop("supply either both ", sQuote("fixed"), " and ", sQuote("random"),
-         " or none of them")
-
-  if(!missing(formula) & !is.null(fixed) &  !is.null(random))
-    stop("Use either ", sQuote("formula"), " or ", sQuote("fixed"), " and ",
-         sQuote("random"))
+  eval(.PF_check_args_expre, environment())
 
   #####
   # check if `control` has all the needed elements or if is called as in
@@ -427,6 +386,51 @@ PF_EM <- function(
   out
 }
 
+.PF_check_args_expre <- expression({
+  if(length(order) == 1 && order != 1)
+    stop(sQuote('order'), " not equal to 1 is not supported")
+
+  if(is.character(model) && length(model) == 1 &&
+     !model %in% c("logit", "exponential"))
+    stop(sQuote('model'), " is not supported")
+
+  if(missing(id)){
+    if(trace > 0)
+      warning("You did not parse and Id argument")
+    id <- 1:nrow(data)
+  }
+
+  if(is.character(type) && length(type) == 1 &&
+     !type %in% c("RW", "VAR"))
+    stop("Invalid ", sQuote("type"), " argument")
+
+  if(!missing(Fmat) && type != "VAR")
+    stop(sQuote("Fmat"), " should not be passed for type ", sQuote(type))
+
+  has_restrict <- !c(missing(G), missing(theta), missing(J), missing(K),
+                     missing(psi), missing(phi))
+  is_restricted <- all(has_restrict)
+  str_if_err <- paste0(
+    sQuote("G"), ", ", sQuote("theta"), ", ", sQuote("J"), ", ", sQuote("K"),
+    ", ", sQuote("psi"), ", and ", sQuote("phi"))
+  if(!(missing(Q) && missing(Fmat)) && !all(!has_restrict))
+    stop("Either supply ", sQuote("Q"), " and ", sQuote("Fmat"),
+         " or ", str_if_err)
+  if(any(has_restrict) && type != "VAR")
+    stop(str_if_err, " supplied with ", sQuote("type"),
+         " ", sQuote(type))
+  if(any(has_restrict) && !all(has_restrict))
+    stop("Missing one of ", str_if_err)
+
+  if(is.null(fixed) != is.null(random))
+    stop("supply either both ", sQuote("fixed"), " and ", sQuote("random"),
+         " or none of them")
+
+  if(!missing(formula) & !is.null(fixed) &  !is.null(random))
+    stop("Use either ", sQuote("formula"), " or ", sQuote("fixed"), " and ",
+         sQuote("random"))
+})
+
 .set_PF_names <- function(obj, fixed_names, rng_names){
   fn <- length(fixed_names)
   rn <- length(rng_names)
@@ -502,8 +506,6 @@ PF_EM <- function(
 #' @param fixed_effects values for the fixed parameters.
 #' @param N_fw number of particles.
 #' @param N_first number of time zero particles to draw.
-#' @param R \eqn{R} matrix in the model. See \code{\link{PF_EM}}.
-#' @param Fmat \eqn{F} matrix in the model. See \code{\link{PF_EM}}.
 #' @param seed \code{.GlobalEnv$.Random.seed} to set. Not \code{seed} as in
 #' \code{\link{set.seed}} function. Can be used with the
 #' \code{\link{.Random.seed}} returned by \code{\link{PF_EM}}.
@@ -547,7 +549,7 @@ PF_EM <- function(
 #' # gives the same
 #' fw_ps <- PF_forward_filter(
 #'   survival::Surv(stop, event) ~ ddFixed(group), N_fw = 500, N_first = 2000,
-#'   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, Fmat = 1, R = 1,
+#'   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
 #'   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
 #'   control = ctrl, max_T = 30, seed = pf_fit$seed)
 #' all.equal(end_log_like, logLik(fw_ps))
@@ -555,7 +557,7 @@ PF_EM <- function(
 #' # will differ since we use different number of particles
 #' fw_ps <- PF_forward_filter(
 #'   survival::Surv(stop, event) ~ ddFixed(group), N_fw = 1000, N_first = 3000,
-#'   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, Fmat = 1, R = 1,
+#'   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
 #'   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
 #'   control = ctrl, max_T = 30, seed = pf_fit$seed)
 #' all.equal(end_log_like, logLik(fw_ps))
@@ -573,21 +575,36 @@ PF_forward_filter <- function (x, N_fw, N_first, ...)
 #' @export
 PF_forward_filter.PF_EM <- function(x, N_fw, N_first, seed, ...){
   cl <- x$call
-  cl <- cl[c(1, match(
-    c("formula", "data", "model", "by", "max_T", "id", "control",
-      formals(PF_control), "type", "trace", "Q_0"),
-    names(cl), 0))]
-  names(cl)[2] <- "x"
+  ma <- c(1L, match(
+    c("formula", "fixed", "random", "data", "model", "by", "max_T", "id",
+      "control", formals(PF_control), "type", "trace", "Q_0", "G", "J", "K"),
+    names(cl), 0))
+  cl <- cl[ma]
+  if(ma[2L] == 0L){ # no forumla
+    names(cl)[4L] <- "x"
+  } else # the data argument
+      names(cl)[2L] <- "x" # the formula argument
   xSym <- substitute(x)
-  cl[c("seed", "Fmat", "a_0", "Q", "R", "fixed_effects")] <-
-    lapply(
-      c("seed",    "F", "a_0", "Q", "R", "fixed_effects"),
-      function(z) substitute(y$z, list(y = xSym, z = as.symbol(z))))
+  vas <- rbind(
+    c("seed", "Fmat", "a_0", "Q", "R", "fixed_effects", "psi", "phi", "theta"),
+    c("seed", "F", "a_0", "Q", "R", "fixed_effects", "psi", "phi", "theta"))
+  for(i in 1:ncol(vas)){
+    if(!is.null(x[[vas[2, i]]]))
+      cl[[vas[1, i]]] <- substitute(
+        x$y, list(x = xSym, y = as.symbol(vas[2, i])))
+  }
   if(!missing(seed))
     cl[["seed"]] <- substitute(seed)
 
   cl[c("N_fw", "N_first")] <- list(N_fw, N_first)
-  cl[[1]] <- quote(PF_forward_filter)
+  cl[[1L]] <- quote(PF_forward_filter)
+
+  if(is.null(cl$type) || # RW is the default
+     cl$type == "RW")
+    cl["Fmat"] <- NULL
+
+  if(!is.null(cl$theta))
+    cl[c("Q", "Fmat")] <- NULL
 
   eval(cl, parent.frame())
 }
@@ -595,36 +612,73 @@ PF_forward_filter.PF_EM <- function(x, N_fw, N_first, seed, ...){
 #' @describeIn PF_forward_filter Forward particle filter with formula input.
 #' @export
 PF_forward_filter.formula <- function(
-  x, N_fw, N_first, data, model = "logit", by, max_T, id, a_0, Q_0, Q, R,
+  x, N_fw, N_first, data, model = "logit", by, max_T, id, a_0, Q_0, Q,
   fixed_effects, control = PF_control(...), seed = NULL, trace = 0,
-  type = "RW", Fmat, ...){
+  G, theta, J, K, psi, phi, type = "RW", Fmat, ...){
+  cl <- match.call()
+  idx <- match(c("x", "data"), names(cl), NA_integer_)
+  stopifnot(!anyNA(idx))
+  names(cl)[idx] <- c("formula", "x")
+  cl[[1L]] <- quote(PF_forward_filter)
+
+  eval(cl, parent.frame())
+}
+
+#' @describeIn PF_forward_filter Forward particle filter with \code{data.frame}
+#' data input as \code{x} instead of \code{data}. Can be used with \code{fixed}
+#' and \code{random} argument.
+#' @export
+PF_forward_filter.data.frame <- function(
+  x, formula, N_fw, N_first, model = "logit", by, max_T, id, a_0,
+  Q_0, Q, fixed_effects, control = PF_control(...), seed = NULL, trace = 0,
+  fixed = NULL, random = NULL, G, theta, J, K, psi, phi, type = "RW", Fmat,
+  order = 1, ...){
+  data <- x
+
+  eval(.PF_check_args_expre, environment())
   stopifnot(length(N_fw) == 1, length(N_first) == 1)
 
-  order <- 1
-  if(missing(id))
-    id = 1:nrow(data)
-
-  static_args <- .get_PF_static_args(
-    formula = x, data = data, by = by,
+  cl <- quote(.get_PF_static_args(
+    data = data, by = by,
     max_T = if(missing(max_T)) NULL else max_T, id = id,
-    trace = trace, model, order = order)
+    trace = trace, model = model, order = order))
+  if(!missing(formula))
+    cl[["formula"]] <- quote(formula) else
+      cl[c("fixed", "random")] <- list(quote(fixed), quote(random))
 
-  # make sure intputs are matrices if scalars are passed
-  . <- function(x)
-    eval(
-      substitute(
-        if(!is.matrix(X) && length(X) == 1) X <- as.matrix(X),
-        list(X = substitute(x))),
-      envir = parent.frame())
-  .(Q_0)
-  .(Q)
-  .(R)
-  .(Fmat)
+  static_args <- eval(cl, environment())
+
+  if(type == "RW"){
+    . <- function(x)
+      eval(
+        substitute(
+          if(!is.matrix(X) && length(X) == 1) X <- as.matrix(X),
+          list(X = substitute(x))),
+        envir = parent.frame())
+    .(Q_0)
+    .(Q)
+    if(order == 1L)
+      Fmat <- diag(ncol(Q))
+
+  } else if(type == "VAR"){
+    if(is_restricted){
+      Fmat <- .get_F(G, theta)
+      Q <- .get_Q(J = J, K = K, psi = psi, phi = phi)$Q
+    }
+
+    Q_0 <- get_Q_0(Fmat = Fmat, Qmat = Q)
+  }
+
+  # set R
+  if(order != 1)
+    stop("Method not implemented with ", sQuote("order"), " ", order) else
+      R <- diag(ncol(Q))
 
   .check_filter_input(
     Q = Q, Q_0 = Q_0, F. = Fmat, R = R, a_0 = a_0, Q_tilde = control$Q_tilde,
     fixed_parems = fixed_effects, est_fixed_in_E = FALSE,
     X = static_args$X, fixed_terms = static_args$fixed_terms, order = order)
+
   Q_tilde <- if(is.null(control$Q_tilde))
     diag(0., ncol(Q)) else control$Q_tilde
 
@@ -634,7 +688,7 @@ PF_forward_filter.formula <- function(
   on.exit(.GlobalEnv$.Random.seed <- old_seed)
   if(!is.null(seed)){
     stopifnot(length(seed) > 1) # make sure user did not use seed as in
-                                # `set.seed`
+    # `set.seed`
     .GlobalEnv$.Random.seed <- seed
   }
 
@@ -645,7 +699,7 @@ PF_forward_filter.formula <- function(
     tstop = static_args$tstop, risk_obj = static_args$risk_obj,
     debug = static_args$debug, model = static_args$model, Q = Q, Q_0 = Q_0,
     F = Fmat, R = R, is_forward = TRUE, a_0 = a_0, N_fw_n_bw = N_fw,
-    N_first = N_first, nu = control$nu,
+    N_first = N_first, nu = if(is.null(control$nu)) 0L else control$nu,
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
     method = control$method, n_threads = control$n_threads, Q_tilde = Q_tilde)
 
@@ -794,7 +848,8 @@ PF_forward_filter.formula <- function(
       cat("Plotting state vector mean and quantiles for iteration", i,
           "(dashed lines are means from forward and backward particle",
           "clouds)\n")
-      plot(clouds, main = paste0("EM iteration ", i))
+      plot(clouds, main = paste0("EM iteration ", i), qlvls = c(.95, .05),
+           qtype = "lines")
       plot(clouds, type = "forward_clouds", add = TRUE, qlvls = c(), lty = 2)
       plot(clouds, type = "backward_clouds", add = TRUE, qlvls = c(), lty = 3)
 
@@ -855,7 +910,7 @@ PF_forward_filter.formula <- function(
           clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
           debug = trace > 2, F = F., do_use_F = TRUE, do_compute_E_x = FALSE)
         Z <- Reduce(
-          "+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers")[-1])
+          "+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
 
         #####
         # see https://stats.stackexchange.com/q/362062/81865
@@ -1054,6 +1109,51 @@ PF_forward_filter.formula <- function(
 #' t-distribution used as the proposal distribution. A (multivariate) normal
 #' distribution is used if it is zero.
 #'
+#' @details
+#' The \code{method} argument can take the following values
+#'
+#' \itemize{
+#' \item \code{bootstrap_filter} for a bootstrap filter.
+#' \item \code{PF_normal_approx_w_cloud_mean} for a particle filter where a
+#' Gaussian approximation is used using a Taylor
+#' approximation made at the mean for the current particle given the mean of the
+#' parent particles  and/or mean of the child particles.
+#' \item \code{AUX_normal_approx_w_cloud_mean} for an auxiliary particle filter
+#' version of \code{PF_normal_approx_w_cloud_mean}.
+#' \item \code{PF_normal_approx_w_particles} for a filter similar to
+#' \code{PF_normal_approx_w_cloud_mean} and differs by making a Taylor
+#' approximation at a mean given each sampled parent and/or child particle.
+#' \item \code{AUX_normal_approx_w_particles} for an auxiliary particle filter
+#' version of \code{PF_normal_approx_w_particles}.
+#' }
+#'
+#' The \code{smoother} argument can take the following values
+#' \itemize{
+#' \item \code{Fearnhead_O_N} for the smoother in Fearnhead, Wyncoll, and Tawn
+#' (2010).
+#' \item \code{Brier_O_N_square} for the smoother in Briers, Doucet, and
+#' Maskell (2010).
+#' }
+#'
+#' @references
+#' Gordon, N. J., Salmond, D. J., and Smith, A. F. (1993) Novel approach
+#' to nonlinear/non-Gaussian Bayesian state estimation.
+#' \emph{In IEE Proceedings F (Radar and Signal Processing)},
+#' (Vol. 140, No. 2, pp. 107-113). IET Digital Library.
+#'
+#' Pitt, M. K., and Shephard, N. (1999) Filtering via simulation: Auxiliary
+#' particle filters. \emph{Journal of the American statistical association},
+#' \strong{94(446)}, 590-599.
+#'
+#' Fearnhead, P., Wyncoll, D., and Tawn, J. (2010) A sequential smoothing
+#' algorithm with linear computational cost. \emph{Biometrika}, \strong{97(2)},
+#' 447-464.
+#'
+#' Briers, M., Doucet, A., and Maskell, S. (2010) Smoothing algorithms for
+#' state-space models.
+#' \emph{Annals of the Institute of Statistical Mathematics}, \strong{62(1)},
+#' 61.
+#'
 #' @return
 #' A list with components named as the arguments.
 #'
@@ -1073,6 +1173,14 @@ PF_control <- function(
     method = method, n_max = n_max, n_threads = n_threads, smoother = smoother,
     Q_tilde = Q_tilde, est_a_0 = est_a_0, N_smooth_final = N_smooth_final,
     nu = nu)
+
+  stopifnot(
+    length(method) == 1L, method %in% c(
+      "bootstrap_filter", "PF_normal_approx_w_cloud_mean",
+      "AUX_normal_approx_w_cloud_mean", "PF_normal_approx_w_particles",
+      "AUX_normal_approx_w_particles"),
+    length(smoother) == 1L, smoother %in% c(
+      "Fearnhead_O_N", "Brier_O_N_square"))
 
   check_n_particles_expr <- function(N_xyz)
     eval(bquote({
@@ -1222,4 +1330,125 @@ get_Q_0 <- function(Qmat, Fmat){
   }
 
   out
+}
+
+#' @name get_cloud_means
+#' @title Compute Mean Estimates from Particle Cloud
+#' @description
+#' Computes the estimated means from a particle cloud.
+#'
+#' @param object object with class \code{PF_EM} or \code{PF_clouds}.
+#' @param cov_index integer vector with indices of the random effect to
+#' include.
+#' @param type character with the type of cloud to compute means for.
+#' @param ... named arguments to pass to the \code{PF_clouds} method.
+#'
+#' @return
+#' A matrix which rows are time indices and columns are random effect indices.
+#'
+#' @export
+get_cloud_means <- function(object, ...){
+  UseMethod("get_cloud_means")
+}
+
+#' @rdname get_cloud_means
+#' @export
+get_cloud_means.PF_EM <- function(object, ...){
+  cl <- match.call()
+  cl[[1]] <- quote(get_cloud_means)
+  cl$object <- bquote(.(substitute(object))$clouds)
+  eval(cl, parent.frame())
+}
+
+#' @rdname get_cloud_means
+#' @export
+get_cloud_means.PF_clouds <- function(
+  object, cov_index = NULL,
+  type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
+  ...)
+{
+  type <- type[1L]
+  stopifnot(
+    type %in% c("smoothed_clouds", "forward_clouds", "backward_clouds"))
+
+  cl <- object[[type]]
+
+  if(is.null(cov_index))
+    cov_index <- seq_len(dim(cl[[1L]]$states)[1])
+
+  do.call(rbind, sapply(cl, function(row){
+    colSums(t(row$states[cov_index, , drop = FALSE]) * drop(row$weights))
+  }, simplify = FALSE))
+}
+
+
+
+
+
+#' @name get_cloud_quantiles
+#' @title Compute Quantile Estimates from Particle Cloud
+#' @description
+#' Computes the estimated quantiles from a particle cloud.
+#'
+#' @inheritParams get_cloud_means
+#' @param type character with the type of cloud to compute quantiles for.
+#'
+#' @return
+#' A 3 dimensional array where the first dimension is the quantiles, the second
+#' dimension is the random effect, and the third dimension is the time.
+#'
+#' @export
+get_cloud_quantiles <- function(object, ...){
+  UseMethod("get_cloud_quantiles")
+}
+
+#' @rdname get_cloud_quantiles
+#' @export
+get_cloud_quantiles.PF_EM <- function(object, ...){
+  cl <- match.call()
+  cl[[1]] <- quote(get_cloud_quantiles)
+  cl$object <- bquote(.(substitute(object))$clouds)
+  eval(cl, parent.frame())
+}
+
+#' @rdname get_cloud_quantiles
+#' @export
+get_cloud_quantiles.PF_clouds <- function(
+  object, cov_index = NULL, qlvls = c(.05, .5, .95),
+  type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
+  ...)
+{
+  type <- type[1L]
+  stopifnot(
+    type %in% c("smoothed_clouds", "forward_clouds", "backward_clouds"))
+  stopifnot(length(qlvls) > 0, all(0 <= qlvls, qlvls <= 1))
+
+  cl <- object[[type]]
+
+  if(is.null(cov_index))
+    cov_index <- seq_len(dim(cl[[1L]]$states)[1])
+
+  qs <- lapply(cl, function(row){
+    out <- apply(row$states[cov_index, , drop = FALSE], 1, function(x){
+      ord <- order(x)
+      wg_cumsum <- cumsum(row$weights[ord])
+      idx <- ord[sapply(qlvls, function(q) {
+        is_lower <- wg_cumsum < q
+        if(!any(is_lower))
+          return(NA_integer_)
+        max(which(wg_cumsum < q))
+      })]
+      x[idx]
+    })
+
+    if(is.null(dim(out)))
+      out <- matrix(out, ncol = length(out))
+
+    out
+  })
+
+  if(identical(dim(qs[[1]]), c(1L, 1L)))
+    return(array(simplify2array(qs), dim = c(1L, 1L, length(qs))))
+
+  simplify2array(qs)
 }

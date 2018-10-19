@@ -1,8 +1,24 @@
+# dynamichazard 0.6.1
+* Fixed a bug in `type == "VAR"` in particle filters in the smoothing distribution. 
+This has a major impact for most calls. 
+* Fixed a bug in `type == "VAR"` in particle filters where the transition from the 
+time zero state to time one was not used in the M-step estimation. This only has 
+a larger impact for short series. 
+* Fixded a bug in `method == "bootstrap_filter"` where a wrong covariance matrix was 
+used for the proposal distribution. 
+* Fixded a bug in `method == "AUX_normal_approx_w_particles"` where a wrong covariance matrix was 
+used for the proposal distribution. 
+* Fixed a bug in the `logLik.PF_clouds`. The log-likelihood approximation was 
+too low for the auxiliary particle filters.
+* An option is added to use a (multivariate) t-distribution as the proposal 
+distribution in particle filters. 
+* A few miscellaneous functions have been added for particle filter methods.
+
 # dynamichazard 0.6.0
 * One can fit first order Vector vector autoregression models with the particle
 filter. 
 * The averages used in the Taylor approximation in the backward smoothing have 
-changed so the resuls differ for `PF_EM`.
+changed so the results differ for `PF_EM`.
 * A bug is fixed with the `..._w_particles` methods so results have changed.
 * Mode estimation is now done in the proposal distribution with more than one
 iteration.

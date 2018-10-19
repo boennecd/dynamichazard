@@ -4,6 +4,7 @@
 \alias{PF_forward_filter}
 \alias{PF_forward_filter.PF_EM}
 \alias{PF_forward_filter.formula}
+\alias{PF_forward_filter.data.frame}
 \title{Forward Particle Filter}
 \usage{
 PF_forward_filter(x, N_fw, N_first, ...)
@@ -11,8 +12,15 @@ PF_forward_filter(x, N_fw, N_first, ...)
 \method{PF_forward_filter}{PF_EM}(x, N_fw, N_first, seed, ...)
 
 \method{PF_forward_filter}{formula}(x, N_fw, N_first, data, model = "logit",
-  by, max_T, id, a_0, Q_0, Q, R, fixed_effects, control = PF_control(...),
-  seed = NULL, trace = 0, type = "RW", Fmat, ...)
+  by, max_T, id, a_0, Q_0, Q, fixed_effects, control = PF_control(...),
+  seed = NULL, trace = 0, G, theta, J, K, psi, phi, type = "RW", Fmat,
+  ...)
+
+\method{PF_forward_filter}{data.frame}(x, formula, N_fw, N_first,
+  model = "logit", by, max_T, id, a_0, Q_0, Q, fixed_effects,
+  control = PF_control(...), seed = NULL, trace = 0, fixed = NULL,
+  random = NULL, G, theta, J, K, psi, phi, type = "RW", Fmat, order = 1,
+  ...)
 }
 \arguments{
 \item{x}{an \code{PF_EM} or \code{formula} object.}
@@ -43,18 +51,54 @@ PF_forward_filter(x, N_fw, N_first, ...)
 
 \item{Q}{initial covariance matrix for the state equation.}
 
-\item{R}{\eqn{R} matrix in the model. See \code{\link{PF_EM}}.}
-
 \item{fixed_effects}{values for the fixed parameters.}
 
 \item{control}{see \code{\link{PF_control}}.}
 
 \item{trace}{argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.}
 
+\item{G}{parameters for a restricted \code{type = "VAR"} model.
+See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
+examples linked to in See Also'.}
+
+\item{theta}{parameters for a restricted \code{type = "VAR"} model.
+See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
+examples linked to in See Also'.}
+
+\item{J}{parameters for a restricted \code{type = "VAR"} model.
+See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
+examples linked to in See Also'.}
+
+\item{K}{parameters for a restricted \code{type = "VAR"} model.
+See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
+examples linked to in See Also'.}
+
+\item{psi}{parameters for a restricted \code{type = "VAR"} model.
+See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
+examples linked to in See Also'.}
+
+\item{phi}{parameters for a restricted \code{type = "VAR"} model.
+See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
+examples linked to in See Also'.}
+
 \item{type}{type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 "VAR" for [V]ector [A]uto[R]egression.}
 
-\item{Fmat}{\eqn{F} matrix in the model. See \code{\link{PF_EM}}.}
+\item{Fmat}{starting value for \eqn{F} when \code{type = "VAR"}. See
+'Details' in \code{\link{PF_EM}}.}
+
+\item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
+
+\item{fixed}{two-sided \code{\link{formula}} to be used
+with \code{random} instead of \code{formula}. It is of the form
+\code{Surv(tstart, tstop, event) ~ x} or
+\code{Surv(tstart, tstop, event) ~ - 1} for no fixed effects.}
+
+\item{random}{one-sided \code{\link{formula}} to be used
+with \code{fixed} instead of \code{formula}. It is of the form
+\code{~ z}.}
+
+\item{order}{order of the random walk.}
 }
 \value{
 An object of class \code{PF_clouds}.
@@ -75,6 +119,10 @@ model details.
 estimates of an \code{\link{PF_EM}} call.
 
 \item \code{formula}: Forward particle filter with formula input.
+
+\item \code{data.frame}: Forward particle filter with \code{data.frame}
+data input as \code{x} instead of \code{data}. Can be used with \code{fixed}
+and \code{random} argument.
 }}
 
 \examples{
@@ -113,7 +161,7 @@ pf_fit <- suppressWarnings(
 # gives the same
 fw_ps <- PF_forward_filter(
   survival::Surv(stop, event) ~ ddFixed(group), N_fw = 500, N_first = 2000,
-  data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, Fmat = 1, R = 1,
+  data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
   control = ctrl, max_T = 30, seed = pf_fit$seed)
 all.equal(end_log_like, logLik(fw_ps))
@@ -121,7 +169,7 @@ all.equal(end_log_like, logLik(fw_ps))
 # will differ since we use different number of particles
 fw_ps <- PF_forward_filter(
   survival::Surv(stop, event) ~ ddFixed(group), N_fw = 1000, N_first = 3000,
-  data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, Fmat = 1, R = 1,
+  data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
   control = ctrl, max_T = 30, seed = pf_fit$seed)
 all.equal(end_log_like, logLik(fw_ps))

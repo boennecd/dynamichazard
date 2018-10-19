@@ -98,7 +98,8 @@ test_that("PF_smooth gives same results", {
     fixed_parems = numeric(), Q = Q, a_0 = a_0, Q_tilde = diag(1e-2, n_vars + 1),
     risk_obj = risk_set, F = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
     N_fw_n_bw = 20, N_smooth = 100, N_first = 100, N_smooth_final = 100,
-    forward_backward_ESS_threshold = NULL, debug = 0, method = "PF",
+    forward_backward_ESS_threshold = NULL, debug = 0,
+    method = "bootstrap_filter",
     smoother = "Fearnhead_O_N", model = "logit", type = "RW", nu = 0L)
 
   fw_args <- list(
@@ -106,7 +107,7 @@ test_that("PF_smooth gives same results", {
     by = 1, fixed_effects = numeric(), control = PF_control(
       N_fw_n_bw = 1, N_smooth = 1, N_first = 1, method = args$method,
       Q_tilde = args$Q_tilde, n_threads = 1),
-    max_T = 10, Fmat = diag(1, 3), trace = 0, id = sims$res$id)
+    max_T = 10, trace = 0, id = sims$res$id)
   fw_args <- c(fw_args, args[
     intersect(names(args), names(formals(PF_forward_filter.formula)))])
 
@@ -470,6 +471,53 @@ test_that("compute_PF_summary_stats gives previous results", {
             "local_tests/compute_summary_stats_w_Brier_method")
 })
 
+test_that("'get_cloud_means' and 'get_cloud_quantiles' gives previous results", {
+  pf_fit <- read_to_test("local_tests/PF_head_neck")
+  class(pf_fit) <- "PF_EM"
+
+  #####
+  # means
+  m1 <- get_cloud_means(pf_fit)
+  m2 <- get_cloud_means(pf_fit$clouds)
+  expect_equal(m1, m2)
+  expect_known_value(m1, file = "PF_mean_2D.RDS")
+
+  m3 <- get_cloud_means(pf_fit, cov_index = 1L)
+  expect_equal(dim(m3), c(nrow(m1), 1L))
+  expect_equal(m3, m1[, 1L, drop = FALSE])
+
+  m4 <- get_cloud_means(pf_fit, type = "forward_clouds")
+  expect_true(!isTRUE(all.equal(m1, m4)))
+
+  m5 <- get_cloud_means(pf_fit, type = "backward_clouds")
+  expect_true(!isTRUE(all.equal(m1, m5)))
+
+  #####
+  # quantiles
+  q1 <- get_cloud_quantiles(pf_fit)
+  q2 <- get_cloud_quantiles(pf_fit$clouds)
+  expect_equal(q1, q2)
+  expect_known_value(q1, file = "PF_quantile_2D.RDS")
+
+  q3 <- get_cloud_quantiles(pf_fit, cov_index = 1L, qlvls = .5)
+  expect_equal(dim(q3), c(1L, 1L, dim(q1)[3]))
+  expect_equal(q3, q1[2L, 1L, , drop = FALSE])
+
+  q4 <- get_cloud_quantiles(pf_fit, qlvls = .5)
+  expect_equal(dim(q4), c(1L, dim(q1)[2:3]))
+  expect_equal(q4, q1[2L, , , drop = FALSE])
+
+  q5 <- get_cloud_quantiles(pf_fit, cov_index = 1L)
+  expect_equal(dim(q5), c(dim(q1)[1L], 1L, dim(q1)[3L]))
+  expect_equal(q5, q1[, 1L, , drop = FALSE])
+
+  q6 <- get_cloud_quantiles(pf_fit, type = "forward_clouds")
+  expect_true(!isTRUE(all.equal(q1, q6)))
+
+  q7 <- get_cloud_quantiles(pf_fit, type = "backward_clouds")
+  expect_true(!isTRUE(all.equal(q1, q7)))
+})
+
 test_that("´est_params_dens´ gives the same as a R version", {
   skip_on_cran()
   fit <- suppressWarnings(PF_EM(
@@ -496,7 +544,7 @@ test_that("´est_params_dens´ gives the same as a R version", {
   fw_clouds <- fit$clouds$forward_clouds
   clouds <- fit$clouds$smoothed_clouds
 
-  for(i in 2:length(clouds)){
+  for(i in 1:length(clouds)){
     out <- .(fw_clouds[[i]], clouds[[i]])
 
     sqrt_ws <- c(sqrt_ws, out$sqrt_ws)
@@ -762,7 +810,7 @@ test_that("PF_EM gives the same with restricted and unrestricted model when we e
   expect_equal(
     pf_non_restrict_Fear$F, pf_restrict_Fear$F, tolerance = 1e-6)
   expect_equal(
-    pf_non_restrict_Fear$Q, pf_restrict_Fear$Q, tolerance = 1e-6)
+    pf_non_restrict_Fear$Q, pf_restrict_Fear$Q, tolerance = 1e-5)
 })
 
 test_that("type = 'VAR' works with non-zero mean for with a single term and gives previous results", {
@@ -859,6 +907,8 @@ test_that("Using `n_smooth_final` works as expected and yields previous results"
   # plot(pf_fit_2$log_likes)
   # points(seq_along(f_fit_2$log_likes), f_fit_2$log_likes, pch = 16)
 
+  # old <- readRDS(file.path(
+  #    "previous_results", "n_smooth_final_VAR.RDS"))
   expect_known_value(f_fit_2[!names(f_fit_2) %in% c("clouds", "call")],
                      file = "n_smooth_final_VAR.RDS")
 })
@@ -899,4 +949,99 @@ test_that("`get_Q_0` returns a real matrix also when `Fmat` has a complex eigend
     out,
     structure(c(0.0621064332808536, -0.0111136683871378, -0.0111136683871378,
                 0.0250726831993073), .Dim = c(2L, 2L)))
+})
+
+test_that("'PF_forward_filter' gives the same as 'PF_EM' when it should", {
+  skip_on_cran()
+
+  #####
+  # random walk model
+  set.seed(seed <- 56219373)
+  pf_em_res <- suppressWarnings(PF_EM(
+    survival::Surv(start, stop, event) ~ group,
+    data = head_neck_cancer, type = "RW", a_0 = c(0, 0),
+    fixed_effects = numeric(),
+    by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2),
+    control = PF_control(
+      N_fw_n_bw = 25, N_smooth = 25, N_first = 25, n_max = 1,
+      n_threads = 1), max_T = 30))
+
+  set.seed(seed)
+  filter_res <- PF_forward_filter(
+    survival::Surv(start, stop, event) ~ group, N_fw = 25, N_first = 25,
+    data = head_neck_cancer, type = "RW", a_0 = c(0, 0),
+    fixed_effects = numeric(), by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2),
+    control = PF_control(
+      N_fw_n_bw = 25, N_smooth = 25, N_first = 25, n_max = 1,
+      n_threads = 1), max_T = 30)
+
+  expect_equal(filter_res$forward_clouds, pf_em_res$clouds$forward_clouds)
+
+  pf_em_res[c("a_0", "Q")] <- list(c(0, 0), diag(0.1, 2))
+  filter_res <- PF_forward_filter(pf_em_res, N_fw = 25, N_first = 25)
+  expect_equal(filter_res$forward_clouds, pf_em_res$clouds$forward_clouds)
+
+  #####
+  # dense VAR model with fixed and random arguments
+  set.seed(seed)
+  pf_em_res <- suppressWarnings(PF_EM(
+    fixed = survival::Surv(start, stop, event) ~ 1,
+    random = ~ group,
+    data = head_neck_cancer, type = "VAR", a_0 = c(0, 0),
+    fixed_effects = -2, Fmat = matrix(c(.33, .1, .1, .33), 2),
+    by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2),
+    control = PF_control(
+      N_fw_n_bw = 25, N_smooth = 25, N_first = 25, n_max = 1,
+      n_threads = 1), max_T = 30))
+
+  set.seed(seed)
+  filter_res <- PF_forward_filter(
+    head_neck_cancer, N_fw = 25, N_first = 25,
+    fixed = survival::Surv(start, stop, event) ~ 1,
+    random = ~ group,
+    type = "VAR", a_0 = c(0, 0),
+    fixed_effects = -2, by = 1, Q_0 = diag(1, 2), Q = diag(0.1, 2),
+    Fmat = matrix(c(.33, .1, .1, .33), 2),
+    control = PF_control(
+      N_fw_n_bw = 25, N_smooth = 25, N_first = 25, n_max = 1,
+      n_threads = 1), max_T = 30)
+  expect_equal(filter_res$forward_clouds, pf_em_res$clouds$forward_clouds)
+
+  pf_em_res[c("fixed_effects", "Q", "F")] <-
+    list(-2, diag(0.1, 2), matrix(c(.33, .1, .1, .33), 2))
+  filter_res <- PF_forward_filter(pf_em_res, N_fw = 25, N_first = 25)
+  expect_equal(filter_res$forward_clouds, pf_em_res$clouds$forward_clouds)
+
+  #####
+  # non-dense VAR model
+  G <- matrix(c(1, 0, 0, 1), ncol = 1)
+  J <- matrix(c(1, 1), ncol = 1)
+  K <- matrix(1, 1)
+
+  set.seed(seed)
+  pf_em_res <- suppressWarnings(PF_EM(
+    survival::Surv(start, stop, event) ~ group + ddFixed_intercept(TRUE),
+    data = head_neck_cancer, type = "VAR", a_0 = c(0, 0),
+    fixed_effects = -2, G = G, J = J, K = K, psi = log(.1),
+    phi = 1, theta = .9, by = 1, Q_0 = diag(1, 2),
+    control = PF_control(
+      N_fw_n_bw = 25, N_smooth = 25, N_first = 25, n_max = 1,
+      n_threads = 1), max_T = 30))
+
+  set.seed(seed)
+  filter_res <- PF_forward_filter(
+    head_neck_cancer, N_fw = 25, N_first = 25,
+    formula = survival::Surv(start, stop, event) ~
+      group + ddFixed_intercept(TRUE),
+    type = "VAR", a_0 = c(0, 0), G = G, J = J, K = K, phi = 1, psi = log(.1),
+    theta = .9, fixed_effects = -2, by = 1, Q_0 = diag(1, 2),
+    control = PF_control(
+      N_fw_n_bw = 25, N_smooth = 25, N_first = 25, n_max = 1,
+      n_threads = 1), max_T = 30)
+  expect_equal(filter_res$forward_clouds, pf_em_res$clouds$forward_clouds)
+
+  pf_em_res[c("theta", "phi", "psi", "fixed_effects")] <-
+    list(.9, 1, log(.1), -2)
+  filter_res <- PF_forward_filter(pf_em_res, N_fw = 25, N_first = 25)
+  expect_equal(filter_res$forward_clouds, pf_em_res$clouds$forward_clouds)
 })

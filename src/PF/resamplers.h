@@ -204,7 +204,7 @@ public:
         log_prop_transition = dmvnrm_log(
           it_ans->xi,
           // will failed if there are fixed effects in the state vector
-          data.err_state_inv->map(it_cl->get_state()).sv,
+          data.state_trans_err->map(it_cl->get_state()).sv,
           data.Q.chol_inv());
 
       } else {

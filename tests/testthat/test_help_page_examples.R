@@ -319,10 +319,10 @@ test_that("example in 'PF_EM' with gives previous results w/ a few iterations", 
     control = PF_control(
       N_fw_n_bw = 100L, N_smooth = 100L, N_first = 500L,
       method = "AUX_normal_approx_w_cloud_mean",
-      Q_tilde = diag(.05^2, p),
+      nu = 5L, # sample from multivariate t-distribution
       n_max = 2L,  # should maybe be larger
       smoother = "Fearnhead_O_N", eps = 1e-4,
-      n_threads = 4L # depends on you cpu(s)
+      n_threads = 4L # depends on your cpu(s)
     )))
 
   expect_known_value(fit[!names(fit) %in% c("clouds", "call")],
@@ -331,8 +331,8 @@ test_that("example in 'PF_EM' with gives previous results w/ a few iterations", 
   # take more iterations with more particles
   cl <- fit$call
   ctrl <- cl[["control"]]
-  ctrl[c("N_fw_n_bw", "N_smooth", "N_first", "n_max")] <- list(
-    400L, 500L, 1000L, 1L)
+  ctrl[c("N_fw_n_bw", "N_smooth", "N_smooth_final", "N_first", "n_max")] <- list(
+    200L, 1000L, 200L, 5000L, 1L)
   cl[["control"]] <- ctrl
   cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
   fit_extra <- suppressWarnings(eval(cl))
@@ -340,7 +340,8 @@ test_that("example in 'PF_EM' with gives previous results w/ a few iterations", 
   expect_known_value(fit_extra[!names(fit_extra) %in% c("clouds", "call")],
                      "local_tests/pf_man_restrict_fit_ex_more.RDS")
 
-  # plot predicted state variables
+  # plot predicted state variables. We do this just to check that it does not
+  # fail
   for(i in 1:p){
     plot(fit_extra, cov_index = i)
     abline(h = 0, lty = 2)
@@ -389,7 +390,7 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
   seed_now <- .GlobalEnv$.Random.seed
   fw_ps <- PF_forward_filter(
     survival::Surv(stop, event) ~ ddFixed(group), N_fw = 500, N_first = 2000,
-    data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, Fmat = 1, R = 1,
+    data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
     a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
     control = ctrl, max_T = 30, seed = pf_fit$seed)
   expect_true(isTRUE(all.equal(end_log_like, logLik(fw_ps))))
@@ -398,7 +399,7 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
   # will differ since we use different number of particles
   fw_ps <- PF_forward_filter(
     survival::Surv(stop, event) ~ ddFixed(group), N_fw = 1000, N_first = 3000,
-    data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2, Fmat = 1, R = 1,
+    data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
     a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
     control = ctrl, max_T = 30, seed = pf_fit$seed)
   expect_false(isTRUE(all.equal(end_log_like, logLik(fw_ps))))
