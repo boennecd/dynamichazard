@@ -208,36 +208,36 @@ Rcpp::List pf_fixed_effect_iteration(
                 << std::setw(12) << n_particles << " particles in "
                 << "`pf_fixed_effect_iteration`" << std::endl;
 
-    std::unique_ptr<data_holder> dat;
-    if(family == BINOMIAL){
-      dat.reset(new data_holder(
-          X, Y, dts, cloud, cl_weights, ran_vars, fixed_parems,
-          std::unique_ptr<glm_base>(new logistic()), block_use));
+  std::unique_ptr<data_holder> dat;
+  if(family == BINOMIAL){
+    dat.reset(new data_holder(
+        X, Y, dts, cloud, cl_weights, ran_vars, fixed_parems,
+        std::unique_ptr<glm_base>(new logistic()), block_use));
 
-    } else if(family == POISSON){
-      dat.reset(new data_holder(
-          X, Y, dts, cloud, cl_weights, ran_vars, fixed_parems,
-          std::unique_ptr<glm_base>(new exponential()), block_use));
+  } else if(family == POISSON){
+    dat.reset(new data_holder(
+        X, Y, dts, cloud, cl_weights, ran_vars, fixed_parems,
+        std::unique_ptr<glm_base>(new exponential()), block_use));
 
-    } else
-      Rcpp::stop("Family not implemented");
+  } else
+    Rcpp::stop("Family not implemented");
 
-    /* setup generators */
-    for(arma::uword i_start = 0L; i_start < n_particles; i_start += block_use)
-      pool.submit(
-        std::unique_ptr<qr_data_generator>(
-          new pf_fixed_generator(
-              *dat.get(), i_start, std::min(
-                  n_particles - 1L, i_start + block_use - 1L))));
+  /* setup generators */
+  for(arma::uword i_start = 0L; i_start < n_particles; i_start += block_use)
+    pool.submit(
+      std::unique_ptr<qr_data_generator>(
+        new pf_fixed_generator(
+            *dat.get(), i_start, std::min(
+                n_particles - 1L, i_start + block_use - 1L))));
 
-    // compute and return
-    R_F res = pool.compute();
+  // compute and return
+  R_F res = pool.compute();
 
-    return Rcpp::List::create(
-      Rcpp::Named("R") =  Rcpp::wrap(res.R),
-      Rcpp::Named("pivot") =  Rcpp::wrap(res.pivot),
-      Rcpp::Named("f") =  Rcpp::wrap(res.F),
-      Rcpp::Named("dev") =  Rcpp::wrap(res.dev));
+  return Rcpp::List::create(
+    Rcpp::Named("R") =  Rcpp::wrap(res.R),
+    Rcpp::Named("pivot") =  Rcpp::wrap(res.pivot),
+    Rcpp::Named("f") =  Rcpp::wrap(res.F),
+    Rcpp::Named("dev") =  Rcpp::wrap(res.dev));
 }
 
 // [[Rcpp::export]]

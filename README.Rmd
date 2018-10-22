@@ -18,7 +18,9 @@ knitr::opts_chunk$set(
 
 # dynamichazard
 
-The goal of dynamichazard is to estimate time-varying effects in survival analysis. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period. For more details, see the ddhazard vignette at https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf
+The goal of dynamichazard is to estimate time-varying effects in survival analysis. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period. For more details, see the ddhazard vignette at https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf.
+
+The particle filter and smoother methods can estimate more general models then the random walk model. See the /examples directory for some examples.
 
 ## Installation
 
