@@ -1,8 +1,6 @@
 test that residuals works for second order random walk
 replace `save_to_test` and `read_to_test` with `testthat::expect_known_output`
-make functions for `ddhazard` and `PF_EM` where you only take one iteration
+make functions for `ddhazard`
 and can provide your own structural matrices
 make ESS function
-make mean and quantile function for pf_clouds
-make sure plot works with forward filter only
 also scale Q as in ddhazard in the particle filter
