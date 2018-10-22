@@ -45,7 +45,7 @@ that we have a distributional assumption about the intercept and we allow some
 of the other coefficients to vary. The true values are 
 
 $$
-Q = \begin{pmatrix}0.33^2 & -3/4 \cdot .33^2 \\ -3/4 \cdot .33^2 & 0.33^2 \end{pmatrix}, \quad
+Q = \begin{pmatrix}.75^2 & -.4 \cdot .75^2 \\ -.4 \cdot .75^2 & .75^2 \end{pmatrix}, \quad
 \vec{\beta} = (-4, -2)^\top, 
 $$
 
@@ -199,10 +199,15 @@ glmer_vcor <-
   diag(attr(glmer_vcor$t, "stddev")) %*% attr(glmer_vcor$t, "correlation") %*% 
   diag(attr(glmer_vcor$t, "stddev"))
 
-glmer_vcor
-Qmat
-chol(glmer_vcor)
-chol(Qmat)
+show_covar <- function(Q){
+  cat("Standard deviations\n")
+  print(sqrt(diag(Q)))
+  cat("Lower correlation matrix\n")
+  tmp <- cov2cor(Q)
+  print(tmp[-1, -ncol(tmp)])
+}
+show_covar(glmer_vcor)
+show_covar(Qmat)
 ```
 
 The approximate log-likelihood is
@@ -227,8 +232,8 @@ We start by using the particle filter and smoother from [@fearnhead10]
 
 ```{r confs, cache = 1}
 # number of threads to use. This is run on Amazon Web services w/ the 
-# c5.9xlarge instance
-n_threads <- 32
+# c5.4xlarge instance
+n_threads <- 16
 
 # you can replace this with e.g.,  
 #   max(parallel::detectCores(logical = FALSE), 2)))
@@ -238,22 +243,20 @@ n_threads <- 32
 set.seed(26564868)
 system.time(pf_fearn <- PF_EM(
   Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
-  Q_0 = diag(3^2, 2), Q = diag(1, 2), Fmat = diag(1, 2), 
+  Q_0 = diag(3^2, 2), Q = diag(1, 2), Fmat = diag(.9, 2), 
   by = 1, type = "VAR", model = "logit", max_T = n_periods,
   control = PF_control(
     N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = .0001,
-    method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+    N_smooth_final = 500,
+    method = "PF_normal_approx_w_cloud_mean", est_a_0 = FALSE,
     n_max = 100, smoother = "Fearnhead_O_N",
-    # we add some extra variation to the proposal distributions 
-    Q_tilde = diag(.33^2, 2), n_threads = n_threads)))
+    nu = 6L, n_threads = n_threads)))
 ```
 
 `system.time` is used to show the computation time. The estimates are
 
 ```{r fearn_ests}
-chol(pf_fearn$Q)
-chol(glmer_vcor) # not far from 
-chol(Qmat)
+show_covar(pf_fearn$Q)
 
 pf_fearn$F
 pf_fearn$fixed_effects
@@ -264,6 +267,7 @@ The log-likelihood at each EM iteration is
 
 ```{r plot_log_like}
 plot(pf_fearn$log_likes, type = "l")
+logLik(pf_fearn)
 ```
 
 The smoothed estimates and 90% confidence intervals are 
@@ -311,21 +315,22 @@ pf_fearn_other <- PF_EM(
   Q_0 = diag(2^2, 2), Q = diag(.1^2, 2), Fmat = diag(.5, 2), 
   by = 1, type = "VAR", model = "logit", max_T = n_periods,
   control = PF_control(
-    N_fw_n_bw = 1000, N_smooth = 2500, N_first = 5000, eps = .0001,
-    method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
-    n_max = 250, smoother = "Fearnhead_O_N", 
-    Q_tilde = diag(.3^2, 2), n_threads = n_threads))
+    N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = .0001,
+    N_smooth_final = 500,
+    method = "PF_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+    n_max = 100, smoother = "Fearnhead_O_N",
+    nu = 6L, n_threads = n_threads))
 ```
 
 The estimates are
 
 ```{r show_est_other}
-chol(pf_fearn_other$Q)
+show_covar(pf_fearn_other$Q)
 pf_fearn_other$F
 ```
 
-Clearly, something has gone. The log-likelihood at each EM-iterations are also 
-off 
+Clearly, something has gone or we have hit a local maximum. The log-likelihood 
+at each of the EM iterations are 
 
 ```{r log_like_ohter}
 plot(pf_fearn_other$log_likes, type = "l")
@@ -341,8 +346,6 @@ plot(pf_fearn_other, qlvls = c(.05, .95), col = c("Black", "Darkblue"))
 matpoints(t(t(betas) - beta), pch = 16, col = c("Black", "Darkblue"))
 abline(h = 0, lty = 2)
 ```
-
-This is discouraging and I am not sure why the results are as they are.
 
 # Session info 
 

@@ -1,3 +1,5 @@
+utils::globalVariables("is_restricted")
+
 PF_effective_sample_size <- function(object){
   sapply(object[
     c("forward_clouds", "backward_clouds", "smoothed_clouds")],
@@ -382,7 +384,14 @@ PF_EM <- function(
   out <- .set_PF_names(out, rng_names = row.names(static_args$X),
                        fixed_names = rownames(static_args$fixed_terms))
 
-  out$call <- match.call()
+  out[c("call", "terms", "has_fixed_intercept", "xlev", "control", "type")] <-
+    list(
+      match.call(), static_args$terms, static_args$has_fixed_intercept,
+      static_args$xlev, control, type)
+  if(!is.null(fixed))
+    out$fixed <- fixed
+  if(!is.null(random))
+    out$random <- random
   out
 }
 
@@ -544,7 +553,7 @@ PF_EM <- function(
 #'     max_T = 30))
 #'
 #' # the log-likelihood in the final iteration
-#' (end_log_like <- tail(pf_fit$log_likes, 1))
+#' (end_log_like <- logLik(pf_fit))
 #'
 #' # gives the same
 #' fw_ps <- PF_forward_filter(
@@ -552,7 +561,7 @@ PF_EM <- function(
 #'   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
 #'   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
 #'   control = ctrl, max_T = 30, seed = pf_fit$seed)
-#' all.equal(end_log_like, logLik(fw_ps))
+#' all.equal(c(end_log_like), c(logLik(fw_ps)))
 #'
 #' # will differ since we use different number of particles
 #' fw_ps <- PF_forward_filter(
@@ -560,11 +569,11 @@ PF_EM <- function(
 #'   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
 #'   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
 #'   control = ctrl, max_T = 30, seed = pf_fit$seed)
-#' all.equal(end_log_like, logLik(fw_ps))
+#' all.equal(c(end_log_like), c(logLik(fw_ps)))
 #'
 #' # will differ since we use the final estimates
 #' fw_ps <- PF_forward_filter(pf_fit, N_fw = 500, N_first = 2000)
-#' all.equal(end_log_like, logLik(fw_ps))
+#' all.equal(c(end_log_like), c(logLik(fw_ps)))
 #' }
 #' @export
 PF_forward_filter <- function (x, N_fw, N_first, ...)
@@ -629,7 +638,7 @@ PF_forward_filter.formula <- function(
 #' and \code{random} argument.
 #' @export
 PF_forward_filter.data.frame <- function(
-  x, formula, N_fw, N_first, model = "logit", by, max_T, id, a_0,
+  x, N_fw, N_first, formula, model = "logit", by, max_T, id, a_0,
   Q_0, Q, fixed_effects, control = PF_control(...), seed = NULL, trace = 0,
   fixed = NULL, random = NULL, G, theta, J, K, psi, phi, type = "RW", Fmat,
   order = 1, ...){
@@ -1225,7 +1234,9 @@ PF_control <- function(
   with(tmp, list(
     n_fixed_terms_in_state_vec = 0, X = X_Y$X, fixed_terms = X_Y$fixed_terms,
     tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], risk_obj = risk_set,
-    debug = max(0, trace - 1), model = model))
+    debug = max(0, trace - 1), model = model, terms = X_Y$terms,
+    has_fixed_intercept = X_Y$has_fixed_intercept,
+    xlev = X_Y$xlev))
 }
 
 
@@ -1392,6 +1403,8 @@ get_cloud_means.PF_clouds <- function(
 #'
 #' @inheritParams get_cloud_means
 #' @param type character with the type of cloud to compute quantiles for.
+#' @param qlvls numeric vector with values in \eqn{[0,1]} with the quantiles to
+#' compute.
 #'
 #' @return
 #' A 3 dimensional array where the first dimension is the quantiles, the second

@@ -103,6 +103,7 @@ public:
           double max_weight =  -std::numeric_limits<double>::max();
           arma::uvec r_set = get_risk_set(data, t);
           unsigned int n_elem = new_cloud.size();
+          double log_N = std::log(n_elem);
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) reduction(max:max_weight)
@@ -119,7 +120,7 @@ public:
               dens_calc.log_prob_state_given_previous(
                 it->parent->get_state(), it->get_state()        , t + 1);
 
-            it->log_unnormalized_weight = it->log_weight =
+            it->log_likelihood_term = it->log_weight =
               /* nominator */
               log_prob_y_given_state + log_prob_state_given_other
               /* denoninator */
@@ -128,9 +129,19 @@ public:
             if(did_resample){
               it->log_weight +=
                 it->parent->log_weight - it->parent->log_resampling_weight;
+              /* See
+               *   Doucet, A., & Johansen, A. M. (2009). A tutorial on particle
+               *   filtering and smoothing: Fifteen years later. Handbook of
+               * nonlinear filtering, 12(656-704), 3.
+               * Page 11, 15, 21, and 26.
+               */
+              it->log_likelihood_term +=
+                it->parent->log_weight - it->parent->log_resampling_weight -
+                log_N;
 
             } else {
               it->log_weight += it->parent->log_weight;
+              it->log_likelihood_term += it->parent->log_weight;
 
             }
 
@@ -301,7 +312,7 @@ public:
             data.log(5) << ss.str();
           };
 
-          it->log_unnormalized_weight = it->log_weight =
+          it->log_likelihood_term = it->log_weight =
             /* nominator */
             (log_prob_y_given_state + log_prob_state_given_previous + log_prob_next_given_state +
               it->parent->log_weight + it->child->log_weight)
@@ -453,7 +464,7 @@ public:
 
         // add particle to smooth cloud with weight
         particle &new_p = new_cloud.set_particle(i, bw_particle.get_state());
-        new_p.log_unnormalized_weight = new_p.log_weight = this_log_weight;
+        new_p.log_likelihood_term = new_p.log_weight = this_log_weight;
 
         max_weight = MAX(max_weight, this_log_weight);
       } // end loop over bw particle

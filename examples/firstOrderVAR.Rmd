@@ -64,7 +64,7 @@ $\vec{a}_0$ and $Q_0$ are given by the invariant distribution. The unknown
 parameters to be estimated is everything but $Q_0$ and $R$ (since we fix $Q_0$ doing the estimation and we set $\vec{a}_0 = (0, 0)^\top$). This 
 example is run on the git branch "`r git_bra`" with ID "`r git_key`". The code
 can be found on 
-[the github site for the package](../examples).
+[the github site for the package](https://github.com/boennecd/dynamichazard/tree/master/examples).
 All functions which assignments are not shown and are not in the 
 `dynamichazard` package can be found on the github site.
 
@@ -73,20 +73,8 @@ All functions which assignments are not shown and are not in the
 We start by simulating the data. Feel free to skip this part as the specifications 
 are given above. First we assign the parameters for the simulation
 
-```{r assign_get_Q_0, echo = FALSE}
-# function to find Q_0
-get_Q_0 <- function(Qmat, Fmat){
-  # see https://math.stackexchange.com/q/2854333/253239
-  eg  <- eigen(Fmat)
-  las <- eg$values
-  if(any(abs(las) >= 1))
-    stop("Divergent series")
-  U   <- eg$vectors
-  U_t <- t(U)
-  T.  <- crossprod(U, Qmat %*% U)
-  Z   <- T. / (1 - tcrossprod(las))
-  solve(U_t, t(solve(U_t, t(Z))))
-}
+```{r load_dynam}
+library(dynamichazard)
 ```
 
 ```{r assign_sim_params, cache = 1}
@@ -155,7 +143,6 @@ We can fit a model without the latent variables (i.e., a constant coefficient
 model) as follows
 
 ```{r survreg_fit}
-library(survival)
 surv_fit <- survreg(Surv(tstop - tstart, y) ~ x, df, dist = "exponential")
 summary(surv_fit) # signs are flipped
 logLik(surv_fit)
@@ -171,10 +158,6 @@ in the next section.
 We start off by using the generalized two-filter smoother from [@briers09]. We 
 estimate the parameters with an EM algorithm by calling `PF_EM` as 
 follows
-
-```{r load_dynam}
-library(dynamichazard)
-```
 
 <!-- 
   knitr::opts_knit$set(output.dir = ".")
@@ -206,7 +189,14 @@ system.time(pf_Brier <- PF_EM(
 
 ```{r brier_ests_far_F}
 pf_Brier$F
-chol(pf_Brier$Q)
+show_covar <- function(Q){
+  cat("Standard deviations\n")
+  print(sqrt(diag(Q)))
+  cat("Lower correlation matrix\n")
+  tmp <- cov2cor(Q)
+  print(tmp[-1, -ncol(tmp)])
+}
+show_covar(pf_Brier$Q)
 pf_Brier$fixed_effects
 ```
 
@@ -288,7 +278,7 @@ The estimates are similar
 
 ```{r fear_ests_far_F}
 pf_Fear$F
-chol(pf_Fear$Q)
+show_covar(pf_Fear$Q)
 pf_Fear$fixed_effects
 ```
 
@@ -318,10 +308,6 @@ The log-likelihood where flat toward the end and not monotonically increasing
 
 ```{r fear_log_like_far_F_tail}
 plot(tail(pf_Fear$log_likes, 20))
-```
-
-```{r clean_up, echo = FALSE}
-rm(pf_Brier)
 ```
 
 This will not happen in an EM algorithm but may happen in an MCEM algorithm due
@@ -357,7 +343,7 @@ and the final estimates are
 
 ```{r more_parts_pf_Fear_show_params}
 pf_Fear_more$F
-chol(pf_Fear_more$Q)
+show_covar(pf_Fear_more$Q)
 pf_Fear_more$fixed_effects
 ```
 
@@ -388,8 +374,13 @@ pf_Fear_more[c("fixed_effects", "F", "Q")]
 We may question what the log-likelihood is at the true parameters. We can use 
 the `PF_forward_filter` function to perform approximate log-likelihood evaluation
 
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  knitr::load_cache("pF_forward_filter_true", path = "examples/cache/firstOrderVAR-cache/") 
+-->
+
 ```{r pF_forward_filter_true, cache = 1, dependson = c("assign_sim_params", "confs")}
-fw_true <- PF_forward_filter(
+fw_true <- PF_forward_filter( 
   Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE),
   N_fw = 10000, N_first = 10000, df, type = "VAR",
   model = "exponential", max_T = n_periods, by = 1,
@@ -407,6 +398,7 @@ The log-likelihood from the final model we estimated is
 
 ```{r end_log_like_before}
 print(tail(pf_Fear_more$log_likes, 1), digits = 7)
+print(tail(pf_Brier$log_likes, 1), digits = 7)
 ```
 
 or we can get a more precise estimate by calling (though the log-likelihood 
@@ -414,7 +406,7 @@ is evaluated at the final parameter estimates and not the iteration one
 step prior as above)
 
 ```{r end_log_like_before_precise, cache = 1, dependson = "fear_far_F"}
-print(
+print( 
   logLik(PF_forward_filter(pf_Fear_more, N_fw = 20000, N_first = 20000)), 
   digits = 7)
 ```
@@ -445,7 +437,7 @@ The final estimates are
 
 ```{r fear_true_log_like_ests}
 pf_Fear_close$F
-chol(pf_Fear_close$Q)
+show_covar(pf_Fear_close$Q)
 pf_Fear_close$fixed_effects
 ```
 
@@ -499,14 +491,14 @@ The final estimates are
 
 ```{r est_restrict_show_ests}
 pf_Fear_restrict$F
-chol(pf_Fear_restrict$Q)
+show_covar(pf_Fear_restrict$Q)
 pf_Fear_restrict$fixed_effects
 ```
 
 and a log-likelihood approximation is
 
 ```{r pf_Fear_restrict_ll, cache = 1, dependson = "est_restrict"}
-print(
+print( 
   logLik(PF_forward_filter(pf_Fear_restrict, N_fw = 20000, N_first = 20000)), 
   digits = 7)
 ```

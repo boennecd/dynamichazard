@@ -16,7 +16,7 @@ PF_forward_filter(x, N_fw, N_first, ...)
   seed = NULL, trace = 0, G, theta, J, K, psi, phi, type = "RW", Fmat,
   ...)
 
-\method{PF_forward_filter}{data.frame}(x, formula, N_fw, N_first,
+\method{PF_forward_filter}{data.frame}(x, N_fw, N_first, formula,
   model = "logit", by, max_T, id, a_0, Q_0, Q, fixed_effects,
   control = PF_control(...), seed = NULL, trace = 0, fixed = NULL,
   random = NULL, G, theta, J, K, psi, phi, type = "RW", Fmat, order = 1,
@@ -156,7 +156,7 @@ pf_fit <- suppressWarnings(
     max_T = 30))
 
 # the log-likelihood in the final iteration
-(end_log_like <- tail(pf_fit$log_likes, 1))
+(end_log_like <- logLik(pf_fit))
 
 # gives the same
 fw_ps <- PF_forward_filter(
@@ -164,7 +164,7 @@ fw_ps <- PF_forward_filter(
   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
   control = ctrl, max_T = 30, seed = pf_fit$seed)
-all.equal(end_log_like, logLik(fw_ps))
+all.equal(c(end_log_like), c(logLik(fw_ps)))
 
 # will differ since we use different number of particles
 fw_ps <- PF_forward_filter(
@@ -172,10 +172,10 @@ fw_ps <- PF_forward_filter(
   data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
   a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
   control = ctrl, max_T = 30, seed = pf_fit$seed)
-all.equal(end_log_like, logLik(fw_ps))
+all.equal(c(end_log_like), c(logLik(fw_ps)))
 
 # will differ since we use the final estimates
 fw_ps <- PF_forward_filter(pf_fit, N_fw = 500, N_first = 2000)
-all.equal(end_log_like, logLik(fw_ps))
+all.equal(c(end_log_like), c(logLik(fw_ps)))
 }
 }

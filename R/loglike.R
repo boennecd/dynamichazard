@@ -70,24 +70,49 @@ logLik.ddhazard = function(object, data = NULL, id, ...){
   val
 }
 
-#' @title Log Likelihood of a PF_clouds Object
-#' @param object an object of class \code{PF_clouds}.
+#' @title Approximate Log-Likelihood from a Particle Filter
+#' @param object an object of class \code{PF_clouds} or \code{PF_EM}.
+#' @param df degrees of freedom used in the model.
+#' @param nobs integer with number of individuals used to estimate the
+#' model.
 #' @param ... unused.
 #' @description
-#' Computes the log likelihood using the forward filter clouds. See the \code{vignette("Particle_filtering", "dynamichazard")} for details.
+#' Computes the approximate log-likelihood using the forward filter clouds. See
+#' the \code{vignette("Particle_filtering", "dynamichazard")} for details.
 #'
 #' @return
-#' The log-likelihood value given the observed data and set of parameter used when simulating the clouds.
+#' The approximate log-likelihood value given the observed data and set of
+#' parameter used when simulating the clouds. An attribute
+#' \code{"P(y_t|y_{1:(t-1)})"} has the \eqn{P(y_t|y_{1:(t-1)})} terms.
 #'
-#' @importFrom utils tail
 #' @export
-logLik.PF_clouds <- function(object, ...){
-  sum(tail(
-    sapply(lapply(object$forward_clouds,
-                  "[[", "log_unnormalized_weights"),
-           function(x){
-             .max <- max(x)
-             log(sum(exp(x - .max))) + .max - log(length(x))
-           }),
-    -1))
+logLik.PF_EM <- function(object, ...){
+  q <- ncol(object$Q)
+  type <- object$type
+  df <- if(type == "VAR"){
+    if(!is.null(object$psi))
+      with(object, length(psi) + length(phi) + length(theta)) else
+        q * (q + 1) / 2 + length(object$F)
+  } else if(type == "RW")
+    q * (q + 1) / 2 else
+      stop("Not implemented for type ", sQuote(type))
+
+  df <- df + length(object$fixed_effects)
+
+  logLik(object$clouds, df = df)
+}
+
+##' @rdname logLik.PF_EM
+##' @method logLik PF_clouds
+##' @export
+logLik.PF_clouds <- function(object, df = NA_real_, nobs = NA_integer_, ...){
+  term <- sapply(lapply(object$forward_clouds,
+                        "[[", "log_likelihood_term"),
+                 function(x){
+                   .max <- max(x)
+                   log(sum(exp(x - .max))) + .max
+                 })[-1]
+
+  structure(sum(term), "P(y_t|y_{1:(t-1)})" = term,
+            df = df, nobs = nobs, class = "logLik")
 }

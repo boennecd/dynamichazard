@@ -105,11 +105,11 @@ namespace R_BLAS_LAPACK {
 
     int inx = 1;
 
-    //F77_NAME(dger)(const int *m, const int *n, const double *alpha,
+    //F77_CALL(dger)(const int *m, const int *n, const double *alpha,
     // const double *x, const int *incx,
     // const double *y, const int *incy,
     // double *a, const int *lda);
-    F77_NAME(dsyr)(
+    F77_CALL(dsyr)(
         "U", n, alpha,
         x, &inx,
         A, n);
@@ -133,7 +133,7 @@ namespace R_BLAS_LAPACK {
     const double dum_d = 1.0;
     const int dum_i = 1L;
 
-    F77_NAME(dsymv)(
+    F77_CALL(dsymv)(
         "U", n,
         &dum_d, A, n,
         x, &dum_i, &dum_d,
@@ -161,7 +161,7 @@ namespace R_BLAS_LAPACK {
 
     const double dum_d = 1.0;
 
-    F77_NAME(dsyrk)(
+    F77_CALL(dsyrk)(
         "U", "N",
         n, k, &dum_d,
         A, n,
@@ -181,10 +181,11 @@ namespace R_BLAS_LAPACK {
      */
 
     int info;
+    char uplo[2] = { is_upper ? 'U' : 'L' }, tra[2] = { trans ? 'T' : 'N' };
 
-    F77_NAME(dtrtrs)(
-        is_upper ? "U" : "L",
-        trans ? "T" : "N",
+    F77_CALL(dtrtrs)(
+        uplo,
+        tra,
         "N",
         &n, &nrhs,
         A, &n,
@@ -203,7 +204,7 @@ namespace R_BLAS_LAPACK {
       const char *diag, const int *m, const int *n,
       const double *alpha, const double *a, const int *lda,
       double *b, const int *ldb){
-    F77_NAME(dtrmm)(
+    F77_CALL(dtrmm)(
         side, uplo, transa, diag, m, n, alpha, a, lda,
         b, ldb);
   }
@@ -212,7 +213,7 @@ namespace R_BLAS_LAPACK {
       const char *uplo, const char *trans, const char *diag,
       const int *n, const double *a, const int *lda,
       double *x, const int *incx){
-    F77_NAME(dtrmv)(
+    F77_CALL(dtrmv)(
         uplo, trans, diag, n, a, lda, x, incx);
   }
 
@@ -221,7 +222,7 @@ namespace R_BLAS_LAPACK {
       const double *x, const int *incx,
       const double *y, const int *incy,
       double *a, const int *lda){
-    F77_NAME(dger)(
+    F77_CALL(dger)(
         m, n, alpha,
         x, incx,
         y, incy,
@@ -231,19 +232,19 @@ namespace R_BLAS_LAPACK {
   double ddot(
       const int *n, const double *dx, const int *incx,
       const double *dy, const int *incy){
-    return F77_NAME(ddot)(n, dx, incx, dy, incy);
+    return F77_CALL(ddot)(n, dx, incx, dy, incy);
   }
 
   void dgetrf(
       const int* m, const int* n, double* a, const int* lda,int* ipiv,
       int* info){
-    F77_NAME(dgetrf)(m, n, a, lda, ipiv, info);
+    F77_CALL(dgetrf)(m, n, a, lda, ipiv, info);
   }
 
   void dgetrs(
       const char* trans, const int* n, const int* nrhs, const double* a,
       const int* lda, const int* ipiv, double* b, const int* ldb, int* info){
-    F77_NAME(dgetrs)(trans, n, nrhs, a, lda, ipiv, b, ldb, info);
+    F77_CALL(dgetrs)(trans, n, nrhs, a, lda, ipiv, b, ldb, info);
   }
 
   void dormqr(const char* side, const char* trans,
@@ -251,18 +252,18 @@ namespace R_BLAS_LAPACK {
               const double* a, const int* lda,
               const double* tau, double* c, const int* ldc,
               double* work, const int* lwork, int* info){
-    F77_NAME(dormqr)(
+    F77_CALL(dormqr)(
         side, trans, m, n, k, a, lda, tau, c, ldc, work, lwork, info);
   }
 
   void dgeqp3(const int* m, const int* n, double* a, const int* lda,
               int* jpvt, double* tau, double* work, const int* lwork,
               int* info){
-    F77_NAME(dgeqp3)(m, n, a, lda, jpvt, tau, work, lwork, info);
+    F77_CALL(dgeqp3)(m, n, a, lda, jpvt, tau, work, lwork, info);
   }
 
   void dgetri(const int* n, double* a, const int* lda,
               int* ipiv, double* work, const int* lwork, int* info){
-    F77_NAME(dgetri)(n, a, lda, ipiv, work, lwork, info);
+    F77_CALL(dgetri)(n, a, lda, ipiv, work, lwork, info);
   }
 }

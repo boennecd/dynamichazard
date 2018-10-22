@@ -32,13 +32,13 @@ Rcpp::List get_rcpp_list_from_cloud(
     auto n_elem = it->size();
     arma::uvec parent_idx(n_elem);
     arma::uvec child_idx(n_elem);
-    arma::vec log_unnormalized_weights(n_elem);
+    arma::vec log_likelihood_term(n_elem);
     arma::vec weights(n_elem);
     arma::mat states(state_dim, n_elem);
 
     auto idx_pr = parent_idx.begin();
     auto idx_ch = child_idx.begin();
-    auto un_w = log_unnormalized_weights.begin();
+    auto un_w = log_likelihood_term.begin();
     auto w = weights.begin();
     auto pr = it->begin();
     for(arma::uword i = 0;
@@ -48,7 +48,7 @@ Rcpp::List get_rcpp_list_from_cloud(
       *idx_ch = get_cloud_idx(pr->child);
 
       *w = exp(pr->log_weight);
-      *un_w = pr->log_unnormalized_weight;
+      *un_w = pr->log_likelihood_term;
 
       states.col(i) = pr->get_state();
     }
@@ -59,9 +59,8 @@ Rcpp::List get_rcpp_list_from_cloud(
         Rcpp::Named("child_idx") = Rcpp::wrap(child_idx),
         Rcpp::Named("weights") = Rcpp::wrap(weights),
         Rcpp::Named("states") = Rcpp::wrap(states),
-        Rcpp::Named("log_unnormalized_weights") =
-          Rcpp::wrap(log_unnormalized_weights)
-      );
+        Rcpp::Named("log_likelihood_term") =
+          Rcpp::wrap(log_likelihood_term));
   }
 
   return ans;
@@ -157,16 +156,17 @@ static std::vector<cloud> get_clouds_from_rcpp_list_util
     arma::uvec parent_idx = Rcpp::as<arma::uvec>(cloud_list["parent_idx"]);
     arma::uvec child_idx = Rcpp::as<arma::uvec>(cloud_list["child_idx"]);
     arma::vec weights = Rcpp::as<arma::vec>(cloud_list["weights"]);
-    arma::vec log_unnormalized_weights = Rcpp::as<arma::vec>(
-      cloud_list["log_unnormalized_weights"]);
+    arma::vec log_likelihood_term = Rcpp::as<arma::vec>(
+      cloud_list["log_likelihood_term"]);
     arma::mat states = Rcpp::as<arma::mat>(cloud_list["states"]);
 
     auto n_states = weights.n_elem;
     auto it_par = parent_idx.begin();
     auto it_child = child_idx.begin();
     auto it_w = weights.begin();
-    auto it_un_w = log_unnormalized_weights.begin();
-    for(unsigned j = 0; j < n_states; ++j, ++it_w, ++it_par, ++it_child, ++it_un_w){
+    auto it_un_w = log_likelihood_term.begin();
+    for(unsigned j = 0; j < n_states;
+        ++j, ++it_w, ++it_par, ++it_child, ++it_un_w){
       const particle *parent;
       if (*it_par == 0){
         parent = nullptr;
@@ -185,7 +185,7 @@ static std::vector<cloud> get_clouds_from_rcpp_list_util
       it_ans->new_particle(states.col(j), parent, child);
       particle &p = it_ans->back();
       p.log_weight = log(*it_w);
-      p.log_unnormalized_weight = *it_un_w;
+      p.log_likelihood_term = *it_un_w;
     }
 
     if(reverse && i == 0) break;

@@ -22,6 +22,9 @@ get_cloud_quantiles(object, ...)
 \item{cov_index}{integer vector with indices of the random effect to
 include.}
 
+\item{qlvls}{numeric vector with values in \eqn{[0,1]} with the quantiles to
+compute.}
+
 \item{type}{character with the type of cloud to compute quantiles for.}
 }
 \value{

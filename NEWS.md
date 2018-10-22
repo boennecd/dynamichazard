@@ -9,7 +9,7 @@ used for the proposal distribution.
 * Fixded a bug in `method == "AUX_normal_approx_w_particles"` where a wrong covariance matrix was 
 used for the proposal distribution. 
 * Fixed a bug in the `logLik.PF_clouds`. The log-likelihood approximation was 
-too low for the auxiliary particle filters.
+too high especially for the auxiliary particle filters. 
 * An option is added to use a (multivariate) t-distribution as the proposal 
 distribution in particle filters. 
 * A few miscellaneous functions have been added for particle filter methods.

@@ -64,7 +64,7 @@ cloud re_sample_cloud(const unsigned int size, const cloud cl){
     out.new_particle(to_copy.get_state(), to_copy.parent, to_copy.child);
     particle &p = out[i];
     p.log_importance_dens = to_copy.log_importance_dens;
-    p.log_unnormalized_weight = to_copy.log_unnormalized_weight;
+    p.log_likelihood_term = to_copy.log_likelihood_term;
     p.log_weight = log(((double)it->second) / size);
   }
 

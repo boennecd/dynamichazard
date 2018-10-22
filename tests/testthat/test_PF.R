@@ -248,6 +248,37 @@ test_that("PF_smooth gives same results", {
 test_that("Import and export PF cloud from Rcpp gives the same", {
   skip_on_cran()
 
+  # .lung <- lung[!is.na(lung$ph.ecog), ]
+  # .lung$age <- scale(.lung$age)
+  # # fit
+  # set.seed(43588155)
+  # pf_fit <- PF_EM(
+  #   Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
+  #   data = .lung, by = 50, id = 1:nrow(.lung),
+  #   Q_0 = diag(1, 2), Q = diag(.5^2, 2),
+  #   max_T = 600,
+  #   control = PF_control(
+  #     N_fw_n_bw = 100, N_first = 200, N_smooth = 100,
+  #     n_max = 1, nu = 5L, est_a_0 = FALSE,
+  #     smoother = "Fearnhead_O_N", method = "bootstrap_filter",
+  #     n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+  # saveRDS(
+  #   pf_fit$clouds,
+  #   "previous_results/local_tests/cloud_example_no_transition_likelihoods.RDS")
+  # pf_fit <- PF_EM(
+  #   Surv(time, status == 2) ~ ddFixed(ph.ecog) + age,
+  #   data = .lung, by = 50, id = 1:nrow(.lung),
+  #   Q_0 = diag(1, 2), Q = diag(.5^2, 2),
+  #   max_T = 600,
+  #   control = PF_control(
+  #     N_fw_n_bw = 100, N_first = 200, N_smooth = 100,
+  #     n_max = 1, nu = 5L, est_a_0 = FALSE,
+  #     smoother = "Brier_O_N_square", method = "bootstrap_filter",
+  #     n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+  # saveRDS(
+  #   pf_fit$clouds,
+  #   "previous_results/local_tests/cloud_example_with_transition_likelihoods.RDS")
+
   #####
   # Without transition_likelihoods
   test_func <- function(has_transition){
@@ -472,6 +503,9 @@ test_that("compute_PF_summary_stats gives previous results", {
 })
 
 test_that("'get_cloud_means' and 'get_cloud_quantiles' gives previous results", {
+  skip_on_cran()
+  skip_if(!dir.exists("previous_results/local_tests"))
+
   pf_fit <- read_to_test("local_tests/PF_head_neck")
   class(pf_fit) <- "PF_EM"
 

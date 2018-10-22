@@ -382,9 +382,20 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
       max_T = 30))
 
   # the log-likelihood in the final iteration
-  # dput((end_log_like <- tail(pf_fit$log_likes, 1)))
-  expect_equal((end_log_like <- tail(pf_fit$log_likes, 1)), -251.123404920722)
-
+  # dput(logLik(pf_fit))
+  expect_equal(
+    end_log_like <- logLik(pf_fit), structure(
+      -257.681175074233, "P(y_t|y_{1:(t-1)})" = c(
+        -6.71060861933579,
+        -17.5627634269578, -22.8058382197423, -23.1708581096524, -39.9362204794205,
+        -31.4941425273845, -12.9138207419967, -10.7865227878754, -10.9774543784185,
+        -10.6771704879913, -5.80142302360756, -5.57902010066932, -2.26856972504811,
+        -9.68427843436796, -7.54895491133089, -4.88347888546344, -1.69752908305435,
+        -7.49674818681715, -1.24357829312245, -6.554857506634, -4.37465208440007,
+        -0.942555157678413, -0.871838874574558, -4.25672893979116, -0.77141420956524,
+        -0.616157218686647, -4.23097329518881, -0.566549512748297, -0.658228352485867,
+        -0.598239500223801),
+      df = 2, nobs = NA_integer_, class = "logLik"))
 
   # gives the same
   seed_now <- .GlobalEnv$.Random.seed
@@ -393,7 +404,7 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
     data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
     a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
     control = ctrl, max_T = 30, seed = pf_fit$seed)
-  expect_true(isTRUE(all.equal(end_log_like, logLik(fw_ps))))
+  expect_true(isTRUE(all.equal(c(end_log_like), c(logLik(fw_ps)))))
   expect_equal(seed_now, .GlobalEnv$.Random.seed)
 
   # will differ since we use different number of particles
@@ -402,12 +413,12 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
     data = head_neck_cancer, by = 1, Q_0 = 1, Q = 0.1^2,
     a_0 = pf_fit$a_0, fixed_effects = -0.5370051,
     control = ctrl, max_T = 30, seed = pf_fit$seed)
-  expect_false(isTRUE(all.equal(end_log_like, logLik(fw_ps))))
+  expect_false(isTRUE(all.equal(c(end_log_like), c(logLik(fw_ps)))))
   expect_equal(seed_now, .GlobalEnv$.Random.seed)
 
   # will differ since we use the final estimates
   fw_ps <- PF_forward_filter(pf_fit, N_fw = 500, N_first = 2000)
-  expect_false(isTRUE(all.equal(end_log_like, logLik(fw_ps))))
+  expect_false(isTRUE(all.equal(c(end_log_like), c(logLik(fw_ps)))))
   expect_equal(seed_now, .GlobalEnv$.Random.seed)
 
   # should give the same when called again
