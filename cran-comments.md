@@ -17,6 +17,14 @@
   
 I use the build with codename trusty for the GCC 4.8.4 which has C++11 support.
 
+I am sorry for submitting so shortly after my previous release. I found two 
+major bugs in a new feature I have added. I hope you will accept this 
+submission and I understand if you do not. 
+
+I have seen the Solaris issue and I think I have fixed it. I do not have access 
+to a Solaris machine and the `solaris-x86-patched` platform on rhub fails with 
+"Build timed out".
+
 ## R CMD check results
 All platforms have a note about the package size except the win-builder with 
 the devel version.

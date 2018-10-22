@@ -142,20 +142,8 @@ $$
 
 ## Simulation
 
-```{r assign_get_Q_0, echo = FALSE}
-# function to find Q_0
-get_Q_0 <- function(Qmat, Fmat){
-  # see https://math.stackexchange.com/q/2854333/253239
-  eg  <- eigen(Fmat)
-  las <- eg$values
-  if(any(abs(las) >= 1))
-    stop("Divergent series")
-  U   <- eg$vectors
-  U_t <- t(U)
-  T.  <- crossprod(U, Qmat %*% U)
-  Z   <- T. / (1 - tcrossprod(las))
-  solve(U_t, t(solve(U_t, t(Z))))
-}
+```{r load_dynam}
+library(dynamichazard)
 ```
 
 We start by simulating the data. Feel free to skip this part as the specifications 
@@ -272,7 +260,6 @@ We can fit a model without the latent variables (i.e., a constant coefficient
 model) as follows
 
 ```{r survreg_fit}
-library(survival)
 surv_fit <- survreg(Surv(tstop - tstart, y) ~ x1 + x2 + x3 + x4, df, 
                     dist = "exponential")
 summary(surv_fit) # signs are flipped
@@ -286,10 +273,6 @@ from the particle filter in the next section.
 ## Particle filter and smoother
 We use the generalized two-filter smoother from [@fearnhead10] were we estimate 
 the full $F$ and $Q$ matrix.
-
-```{r load_dynam}
-library(dynamichazard)
-```
 
 ```{r confs, cache = 1}
 n_threads <- 4 # I ran this on a quad core machine
@@ -314,16 +297,23 @@ system.time(pf_Fear <- PF_EM(
     N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 200, smoother = "Fearnhead_O_N",
-    # we add some extra variation to the proposal distributions
-    Q_tilde = diag(.2^2, 4), n_threads = n_threads)))
+    nu = 6L, n_threads = n_threads)))
 ```
 
 `system.time` is used to show the computation time. The estimates are
 
 ```{r show_ests}
 pf_Fear$Q
-chol(pf_Fear$Q)
-chol(Q) # the true values
+show_covar <- function(Q){
+  cat("Standard deviations\n")
+  print(sqrt(diag(Q)))
+  cat("Lower correlation matrix\n")
+  tmp <- cov2cor(Q)
+  tmp[upper.tri(tmp, diag = TRUE)] <- NA_real_
+  print(tmp[-1, -ncol(tmp)], na.print = "")
+}
+show_covar(pf_Fear$Q)
+show_covar(Q) # the true values
 
 pf_Fear$F
 pf_Fear$fixed_effects # beta
@@ -346,19 +336,20 @@ means, and the full dots are the actual values. The approximate log-likelihood a
 each iteration of the EM algorithm are
 
 ```{r show_log_like}
+logLik(pf_Fear)
 plot(pf_Fear$log_likes, type = "l", ylab = "log-likelihood")
 # last elements
 plot(tail(pf_Fear$log_likes, 50), type = "l", ylab = "log-likelihood")
 ```
 
+### Restricted model 
+We fit the model where we only estimate $\vec{\theta}$, $\vec{\psi}$, and $\vec{\phi}$ as 
+follows
+
 <!-- 
   knitr::opts_knit$set(output.dir = ".")
   knitr::load_cache("pf_restrict", "pf_Fear_restric", path = "examples/cache/restrictedVAR-cache/") 
 -->
-
-### Restricted model 
-We fit the model where we only estimate $\vec{\theta}$, $\vec{\psi}$, and $\vec{\phi}$ as 
-follows
 
 ```{r pf_restrict, cache = 1, dependson = c("assign_sim_params", "confs")}
 set.seed(30520116)
@@ -372,7 +363,7 @@ pf_Fear_restric <- PF_EM(
     N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 200, smoother = "Fearnhead_O_N",
-    Q_tilde = diag(.2^2, 4), n_threads = n_threads))
+    nu = 6L, n_threads = n_threads))
 ```
 
 Notice that we pass `G`, `J`, `K`, `theta`, `psi`, and `phi` instead of `Q` and `Fmat`. 
@@ -380,7 +371,7 @@ The estimates are
 
 ```{r pf_Fear_restric_ests}
 pf_Fear_restric$Q
-chol(pf_Fear_restric$Q)
+show_covar(pf_Fear_restric$Q)
 
 pf_Fear_restric$F
 pf_Fear_restric$fixed_effects # beta
@@ -401,6 +392,7 @@ for(i in 1:4){
 The approximate log-likelihood at each iteration of the EM algorithm are
 
 ```{r pf_Fear_restric_show_log_like}
+logLik(pf_Fear_restric)
 plot(pf_Fear_restric$log_likes, type = "l", ylab = "log-likelihood")
 # last elements
 plot(tail(pf_Fear_restric$log_likes, 50), type = "l", ylab = "log-likelihood")
@@ -470,15 +462,17 @@ pf_Fear_miss <- PF_EM(
     N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 200, smoother = "Fearnhead_O_N",
-    Q_tilde = diag(.2^2, 4), n_threads = n_threads))
+    nu = 6L, n_threads = n_threads))
 ```
 
 The estimates from this model are
 
 ```{r pf_miss_ests}
 pf_Fear_miss$Q
+show_covar(pf_Fear_miss$Q)
 pf_Fear_miss$F
 pf_Fear_miss$fixed_effects
+logLik(pf_Fear_miss)
 ```
 
 An approximation of the log-likelihood is

@@ -1,12 +1,12 @@
 # dynamichazard 0.6.1
-* Fixed a bug in `type == "VAR"` in particle filters in the smoothing distribution. 
+* Fixed a bug in `type == "VAR"` in particle filters in the smoothing proposal distribution. 
 This has a major impact for most calls. 
 * Fixed a bug in `type == "VAR"` in particle filters where the transition from the 
 time zero state to time one was not used in the M-step estimation. This only has 
 a larger impact for short series. 
-* Fixded a bug in `method == "bootstrap_filter"` where a wrong covariance matrix was 
+* Fixed a bug in `method == "bootstrap_filter"` where a wrong covariance matrix was 
 used for the proposal distribution. 
-* Fixded a bug in `method == "AUX_normal_approx_w_particles"` where a wrong covariance matrix was 
+* Fixed a bug in `method == "AUX_normal_approx_w_particles"` where a wrong covariance matrix was 
 used for the proposal distribution. 
 * Fixed a bug in the `logLik.PF_clouds`. The log-likelihood approximation was 
 too high especially for the auxiliary particle filters. 
