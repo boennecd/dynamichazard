@@ -26,7 +26,7 @@ PF_effective_sample_size <- function(object){
 #' \code{\link{ddFixed}}.
 #' @param G,theta,J,K,psi,phi parameters for a restricted \code{type = "VAR"} model.
 #' See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
-#' examples linked to in See Also'.
+#' examples linked to in 'See Also'.
 #' @param fixed  two-sided \code{\link{formula}} to be used
 #' with \code{random} instead of \code{formula}. It is of the form
 #' \code{Surv(tstart, tstop, event) ~ x} or
@@ -518,6 +518,9 @@ PF_EM <- function(
 #' @param seed \code{.GlobalEnv$.Random.seed} to set. Not \code{seed} as in
 #' \code{\link{set.seed}} function. Can be used with the
 #' \code{\link{.Random.seed}} returned by \code{\link{PF_EM}}.
+#' @param G,theta,J,K,psi,phi parameters for a restricted \code{type = "VAR"} model.
+#' See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
+#' examples linked to in 'See Also'.
 #'
 #' @return
 #' An object of class \code{PF_clouds}.

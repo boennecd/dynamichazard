@@ -107,7 +107,7 @@ pf_fit <- PF_EM(
     N_fw_n_bw = 1000, N_first = 1000,
     N_smooth = 1, # Does not matter with Brier_O_N_square
     smoother = "Brier_O_N_square", # Select smoother
-    eps = .001, n_max = 100, est_a_0 = FALSE, Q_tilde = as.matrix(.2^2))
+    eps = .001, n_max = 100, est_a_0 = FALSE, nu = 6L)
   #, trace = 1 # comment back to get feedback during estimation
   )
 ```
@@ -118,6 +118,7 @@ pf_fit$Q / .5
 fit$Q
 plot(pf_fit)
 plot(pf_fit$log_likes) # log-likelihoods
+logLik(pf_fit)
 ```
 
 ```{r pf_better_log_like, cache = 1, dependson = "pf_fit"}

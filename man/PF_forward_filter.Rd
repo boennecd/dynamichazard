@@ -57,29 +57,9 @@ PF_forward_filter(x, N_fw, N_first, ...)
 
 \item{trace}{argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.}
 
-\item{G}{parameters for a restricted \code{type = "VAR"} model.
+\item{G, theta, J, K, psi, phi}{parameters for a restricted \code{type = "VAR"} model.
 See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
-examples linked to in See Also'.}
-
-\item{theta}{parameters for a restricted \code{type = "VAR"} model.
-See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
-examples linked to in See Also'.}
-
-\item{J}{parameters for a restricted \code{type = "VAR"} model.
-See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
-examples linked to in See Also'.}
-
-\item{K}{parameters for a restricted \code{type = "VAR"} model.
-See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
-examples linked to in See Also'.}
-
-\item{psi}{parameters for a restricted \code{type = "VAR"} model.
-See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
-examples linked to in See Also'.}
-
-\item{phi}{parameters for a restricted \code{type = "VAR"} model.
-See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
-examples linked to in See Also'.}
+examples linked to in 'See Also'.}
 
 \item{type}{type of state model. Either \code{"RW"} for a [R]andom [W]alk or
 "VAR" for [V]ector [A]uto[R]egression.}

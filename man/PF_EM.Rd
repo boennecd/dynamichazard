@@ -57,7 +57,7 @@ with \code{fixed} instead of \code{formula}. It is of the form
 
 \item{G, theta, J, K, psi, phi}{parameters for a restricted \code{type = "VAR"} model.
 See the vignette mentioned in 'Details' of \code{\link{PF_EM}} and the
-examples linked to in See Also'.}
+examples linked to in 'See Also'.}
 
 \item{...}{optional way to pass arguments to \code{control}.}
 }

@@ -6,12 +6,12 @@
 \usage{
 ddhazard_control(kappa = NULL, alpha = 1, beta = 0, NR_eps = NULL,
   LR = 1, n_max = 10^2, eps = 0.001, est_Q_0 = F, method = "EKF",
-  save_risk_set = T, save_data = T, eps_fixed_parems = 1e-04,
+  save_risk_set = T, save_data = T, eps_fixed_parems = 0.0001,
   fixed_parems_start = NULL, n_threads = getOption("ddhazard_max_threads"),
-  denom_term = 1e-05, fixed_terms_method = "E_step",
+  denom_term = 0.00001, fixed_terms_method = "E_step",
   Q_0_term_for_fixed_E_step = NULL, permu = if (!is.null(method)) method ==
   "SMA" else F, posterior_version = "cholesky", GMA_max_rep = 25,
-  GMA_NR_eps = 1e-04, est_a_0 = TRUE, ...)
+  GMA_NR_eps = 0.0001, est_a_0 = TRUE, ...)
 }
 \arguments{
 \item{kappa}{hyper parameter \eqn{\kappa} in the unscented Kalman Filter.}

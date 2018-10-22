@@ -4,9 +4,7 @@
 dynamichazard
 =============
 
-The goal of dynamichazard is to estimate time-varying effects in survival analysis. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period. For more details, see the ddhazard vignette at <https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf>. 
-
-The particle filter and smoother methods can estimate more general models then the random walk model. See the [/examples](/examples) directory for some examples.
+The goal of dynamichazard is to estimate time-varying effects in survival analysis. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period. For more details, see the ddhazard vignette at <https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf>
 
 Installation
 ------------
@@ -118,7 +116,7 @@ pf_fit <- PF_EM(
     N_fw_n_bw = 1000, N_first = 1000,
     N_smooth = 1, # Does not matter with Brier_O_N_square
     smoother = "Brier_O_N_square", # Select smoother
-    eps = .001, n_max = 100, est_a_0 = FALSE, Q_tilde = as.matrix(.2^2))
+    eps = .001, n_max = 100, est_a_0 = FALSE, nu = 6L)
   #, trace = 1 # comment back to get feedback during estimation
   )
 #> a_0 not supplied. IWLS estimates of static glm model is used for random walk models. Otherwise the values are zero
@@ -127,8 +125,8 @@ pf_fit <- PF_EM(
 ``` r
 # Compare estimates of Q
 pf_fit$Q / .5
-#>            [,1]
-#> [1,] 0.04034838
+#>            gendermale
+#> gendermale 0.04395086
 fit$Q
 #>            gendermale
 #> gendermale 0.01648568
@@ -144,9 +142,14 @@ plot(pf_fit$log_likes) # log-likelihoods
 ![](README-pf_plots-2.png)
 
 ``` r
+logLik(pf_fit)
+#> 'log Lik.' -795.8343 (df=5)
+```
+
+``` r
 # better estimate of final log-likelihood
 logLik(PF_forward_filter(pf_fit, N_fw = 10000, N_first = 10000))
-#> [1] -791.0708
+#> 'log Lik.' -795.8446 (df=NA)
 ```
 
 For more details, see the "Particle filters in the dynamichazard package" vignette at <https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf>
