@@ -203,7 +203,7 @@ predict_response <- function(
 
   # make function to predict for each observations
   .env <- new.env(parent = asNamespace("dynamichazard"))
-  .env$discrete_hazard_func = object$discrete_hazard_func
+  .env$discrete_hazard_func <- object$discrete_hazard_func
   .env$times <- times
   .env$parems <- parems
 

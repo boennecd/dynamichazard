@@ -7,42 +7,111 @@ template<class family>
 class family_wrapper {
   static const std::string my_name;
 
+  static bool check_eta_n_r_length(
+      const arma::vec &eta, const arma::vec &at_risk_length){
+    if((eta.n_elem != at_risk_length.n_elem and at_risk_length.n_elem > 1) or
+         eta.n_elem < at_risk_length.n_elem)
+      Rcpp::stop("Invalid `eta` and `at_risk_length`");
+
+    return true;
+  }
+
+  static bool check_outcome_eta_n_r_length(
+      const Rcpp::LogicalVector outcome, const arma::vec &eta,
+      const arma::vec &at_risk_length)
+    {
+      if(outcome.size() != eta.n_elem or
+           (eta.n_elem != at_risk_length.n_elem and at_risk_length.n_elem > 1) or
+           eta.n_elem < at_risk_length.n_elem)
+        Rcpp::stop("Invalid `outcome`, `eta` and `at_risk_length`");
+
+      return true;
+    }
+
 public:
   static std::string name(){
     return my_name;
   }
 
-  static double linkinv(const double eta, const double at_risk_length){
+  static Rcpp::NumericVector
+  linkinv(const arma::vec &eta, const arma::vec &at_risk_length){
+    check_eta_n_r_length(eta, at_risk_length);
+
     family fam;
-    return fam.linkinv(eta, exp(eta), at_risk_length);
+    Rcpp::NumericVector out(eta.n_elem);
+    const double *e = eta.begin(), *a = at_risk_length.begin();
+    bool do_inc_a = at_risk_length.n_elem > 1L;
+    for(auto o = out.begin(); o != out.end(); ++o, ++e, a += do_inc_a)
+      *o = fam.linkinv(*e, exp(*e), *a);
+
+    return out;
   }
 
-  static double mu_eta(const double eta, const double at_risk_length){
+  static Rcpp::NumericVector
+  mu_eta(const arma::vec &eta, const arma::vec &at_risk_length){
+    check_eta_n_r_length(eta, at_risk_length);
+
     family fam;
-    return fam.mu_eta(eta, exp(eta), at_risk_length);
+    Rcpp::NumericVector out(eta.n_elem);
+    const double *e = eta.begin(), *a = at_risk_length.begin();
+    bool do_inc_a = at_risk_length.n_elem > 1L;
+    for(auto o = out.begin(); o != out.end(); ++o, ++e, a += do_inc_a)
+      *o = fam.mu_eta(*e, exp(*e), *a);
+
+    return out;
   }
 
-  static double var(const double eta, const double at_risk_length){
+  static Rcpp::NumericVector
+  var(const arma::vec &eta, const arma::vec &at_risk_length){
+    check_eta_n_r_length(eta, at_risk_length);
+
     family fam;
-    return fam.var(eta, exp(eta), at_risk_length);
+    Rcpp::NumericVector out(eta.n_elem);
+    const double *e = eta.begin(), *a = at_risk_length.begin();
+    bool do_inc_a = at_risk_length.n_elem > 1L;
+    for(auto o = out.begin(); o != out.end(); ++o, ++e, a += do_inc_a)
+      *o = fam.var(*e, exp(*e), *a);
+
+    return out;
   }
 
-  static double log_like(
-      const bool outcome, const double eta, const double at_risk_length){
+  static Rcpp::NumericVector
+  log_like(const Rcpp::LogicalVector outcome, const arma::vec &eta,
+           const arma::vec &at_risk_length){
     family fam;
-    return fam.log_like(outcome, eta, exp(eta), at_risk_length);
+    Rcpp::NumericVector out(eta.n_elem);
+    const double *e = eta.begin(), *a = at_risk_length.begin();
+    const int *r = outcome.begin(), do_inc_a = at_risk_length.n_elem > 1L;
+    for(auto o = out.begin(); o != out.end(); ++o, ++r, ++e, a += do_inc_a)
+      *o = fam.log_like(*r, *e, exp(*e), *a);
+
+    return out;
   }
 
-  static double d_log_like(
-      const bool outcome, const double eta, const double at_risk_length){
+  static Rcpp::NumericVector
+  d_log_like(const Rcpp::LogicalVector outcome, const arma::vec &eta,
+             const arma::vec &at_risk_length){
     family fam;
-    return fam.d_log_like(outcome, eta, exp(eta), at_risk_length);
+    Rcpp::NumericVector out(eta.n_elem);
+    const double *e = eta.begin(), *a = at_risk_length.begin();
+    const int *r = outcome.begin(), do_inc_a = at_risk_length.n_elem > 1L;
+    for(auto o = out.begin(); o != out.end(); ++o, ++r, ++e, a += do_inc_a)
+      *o = fam.d_log_like(*r, *e, exp(*e), *a);
+
+    return out;
   }
 
-  static double dd_log_like(
-      const bool outcome, const double eta, const double at_risk_length){
+  static Rcpp::NumericVector
+  dd_log_like(const Rcpp::LogicalVector outcome, const arma::vec &eta,
+              const arma::vec &at_risk_length){
     family fam;
-    return fam.dd_log_like(outcome, eta, exp(eta), at_risk_length);
+    Rcpp::NumericVector out(eta.n_elem);
+    const double *e = eta.begin(), *a = at_risk_length.begin();
+    const int *r = outcome.begin(), do_inc_a = at_risk_length.n_elem > 1L;
+    for(auto o = out.begin(); o != out.end(); ++o, ++r, ++e, a += do_inc_a)
+      *o = fam.dd_log_like(*r, *e, exp(*e), *a);
+
+    return out;
   }
 };
 

@@ -304,8 +304,8 @@ ddhazard = function(
   }
 
   discrete_hazard_func <- function(eta, at_risk_length){
-    out <-  mapply(family$log_like, outcome = FALSE,
-                   eta = eta, at_risk_length = at_risk_length)
+    out <-  family$log_like(outcome = logical(length(eta)), eta = eta,
+                            at_risk_length = at_risk_length)
     1 - exp(out)
   }
 

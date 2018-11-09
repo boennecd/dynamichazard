@@ -80,11 +80,11 @@ hatvalues.ddhazard <- function(model, ...){
 
     # compute the working weights
     V <- local({
-      var <- mapply(
-        model$family$var, eta = etas, at_risk_length = tsto - tsta) +
+      var <-
+        model$family$var(eta = etas, at_risk_length = tsto - tsta) +
         model$control$denom_term
-      mu_eta <- mapply(
-        model$family$mu_eta, eta = etas, at_risk_length = tsto - tsta) +
+      mu_eta <-
+        model$family$mu_eta(eta = etas, at_risk_length = tsto - tsta) +
         model$control$denom_term
 
       model$weights[r_set] * mu_eta^2 / var
