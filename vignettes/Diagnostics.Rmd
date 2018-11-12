@@ -7,7 +7,7 @@ date: "`r Sys.Date()`"
 author: "Benjamin Christoffersen"
 header-includes:
    - \usepackage{bm}
-bibliography: ddhazard_bibliography.bib
+bibliography: ddbib.bib
 csl: bib_style.csl
 vignette: >
   %\VignetteIndexEntry{Diagnostics}

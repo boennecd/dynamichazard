@@ -789,7 +789,7 @@ get_design_matrix_and_risk_obj <- function(
 #' \code{method = 'GMA'}.
 #' @param est_a_0 \code{FALSE} if the starting value of the state model should
 #' be fixed.
-#' @param ... additional undocumented arguments
+#' @param ... additional undocumented arguments.
 #'
 #' @return
 #' A list with components named as the arguments.

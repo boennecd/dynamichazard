@@ -17,6 +17,11 @@ src/**/*.dll
 **/Rplots.pdf
 
 vignettes/*.md
+vignettes/*.bbl
+vignettes/ddhazard.pdf
+vignettes/*.synctex.gz
+vignettes/*-concordance.tex
+vignettes/*.tex
 vignettes/*_cache/
 vignettes/Prebuild/*_cache/
 vignettes/pandoc*.pdf
