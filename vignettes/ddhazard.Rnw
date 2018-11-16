@@ -22,6 +22,9 @@
 % algorithm and algpseudocode definitions
 \newfloat{algorithm}{t!}{lop}
 
+\algnewcommand\algorithmicor{\textbf{ or }}
+\algnewcommand\OR{\algorithmicor}
+
 \newcommand\StateX{\Statex\hspace{\algorithmicindent}}
 \newcommand\StateXX{\Statex\hspace{\algorithmicindent}\hspace{\algorithmicindent}}
 \newcommand\StateXXX{\Statex\hspace{\algorithmicindent}\hspace{\algorithmicindent}\hspace{\algorithmicindent}}
@@ -172,8 +175,8 @@ current_version <- paste0(
   current_sha)
 @
 
-This vignette will cover the \code{ddhazard} function used for estimation in the \code{dynamichazard} library. You can install the version of the library used to make this vignette from github with the \code{devtools}
-library by calling \code{\Sexpr{paste0("devtools::install\\_github(\"", current_version, "\")")}}.
+This vignette will cover the \code{ddhazard} function used for estimation in the \code{dynamichazard} package You can install the version of the package used to make this vignette from github with the \code{devtools}
+package by calling \code{\Sexpr{paste0("devtools::install\\_github(\"", current_version, "\")")}}.
 You can also get the latest version on CRAN by calling:
 
 << eval=FALSE>>=
@@ -183,7 +186,7 @@ install.packages("dynamichazard")
 
 
 \subsection{Why and when to use the ddhazard}
-The \code{ddhazard} function is intended for situation where you have a dynamic binary regression model or time-to-event model with time-varying coefficients. The advantage of the state spaces methods used here is that you can extrapolate to time periods beyond the data used in estimation. An example is forecasting firm failures given the firms present accounting data. The task is to use the present data to estimate a model and forecast the likelihood of default for the firms in the following year. Another use of this package is as an alternative to other methods of modelling time-varying coefficients in survival analysis.
+The \code{ddhazard} function is intended for situation where you have a dynamic binary regression model or time-to-event model with time-varying coefficients. The advantage of the state spaces methods used here is that you can extrapolate to time periods beyond the data used in estimation. An example is forecasting firm failures given the firms present accounting data. The task is to use the present data to estimate a model and forecast the likelihood of default for the firms in the following year.
 
 The estimation function \code{ddhazard} is implemented such that:
 
@@ -206,7 +209,7 @@ real world data set. The vignette illustrates how to use the estimation function
 discrete time model. This vignette also describes the continuous time model.
 The \emph{Bootstrap illustration} vignette shows how to use the
 \code{ddhazard\_boot} function which is a wrapper for the \code{boot} function
-from the \code{boot} library. \emph{ddhazard Diagnostics} illustrates how the
+from the \code{boot} package. \emph{ddhazard Diagnostics} illustrates how the
 \code{residuals} and \code{hatvalues} functions can be used to check the model
 fit.
 
@@ -248,7 +251,8 @@ knitr::kable(
 @
 \end{center}
 
-This is in the typical start-stop time format. The column \code{id} shows which individual the row belongs to. \code{tstart} is point at which the row is valid from and \code{tstop} is when the row is valid to. \code{event} is one if the individual dies at \code{tstop} and \code{x1} and \code{x2} are two covariates. Thus, the individual with id \code{1} dies at time \Sexpr{simple_ex$tstop[2]} while id \code{2} survives all the periods we observe. The models we look at will allow for censoring to handle an individuals like id \code{2}.
+This is in the typical start-stop time format. The column \code{id} shows which individual the row belongs to. \code{tstart} is point at which the row is valid from and \code{tstop} is when the row is valid to. \code{event} is one if the individual dies at \code{tstop} and \code{x1} and \code{x2} are two covariates. Thus, the individual with id \code{1} dies at time \Sexpr{simple_ex$tstop[2]} while id \code{2} survives all the periods we observe. The methods we look at will allow for right-censoring to handle an individuals like id \code{2},
+and left-censoring (delayed entry).
 
 We will put the observations into intervals $1, 2, \dots, d$ each with length $\psi_1, \psi_2, \dots, \psi_d$. That is, we observe a total of $d$ intervals. Assume that each $\psi_t = 1$ for simplicity. Then we define the a series of indicators for each individual given by:
 $$y_{ijt} = 1_{\left\{T_i \in (t_{i,j-1}, t_{ij}] \wedge t - 1 < t_{ij} \leq t \right\}}$$%
@@ -267,7 +271,7 @@ $$\begin{aligned}
  \proppCond{Y_{ijt} = 1}{\vec{y}_{1},\dots,\vec{y}_{t-1}, \vec{\alpha}_t} = h(\vec{\alpha}_t^\top \vec{x}_{ijt})
 \end{aligned}$$%
 %
-where $\vec{y}_t$ is the vector of outcomes given risk set $R_s$ and $h$ is the inverse link function. For example, this could be the inverse logistic function such that $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The \code{ddhazard} function estimates models in the state space form:
+where $\vec{y}_t$ is the vector of outcomes given risk set $R_t$ and $h$ is the inverse link function. For example, this could be the inverse logistic function such that $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The \code{ddhazard} function estimates models in the state space form:
 $$\begin{array}{ll}
   \vec{y}_t \sim \proppCond{\vec y_t}{\vec \alpha_t} \\
   \vec{\alpha}_{t + 1} = \mat{F}\vec{\alpha}_t + \mat{R}\vec{\eta}_t \qquad &
@@ -306,13 +310,13 @@ where $\vec \xi_t = \mat R^\top \vec\alpha_t$ and we order state equation such t
 $\vec{\alpha}_t = (\vec{\xi}_t^\top, \vec{\xi}_{t-1}^\top)^\top$ to match the definition of $\mat{F}$ and $\mat{R}$.
 The likelihood of the model where $\vec\alpha_0,\vec\alpha_1,\dots,\vec\alpha_d$ are observed can be written as follows by application of the Markov property of the model:
 \begin{align*}
-	\proppCond{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}}{\vec{y}_{t},\dots,\vec{y}_T} & =
+	\propp{\vec{\alpha}_0, \dots, \vec{\alpha}_{d},\vec{y}_{t},\dots,\vec{y}_T} & =
 		L\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} \\
 	 & = p(\vec{\alpha}_0)\prod_{t = 1}^d \proppCond{\vec{\alpha}_t}{\vec{\alpha}_{t-1}}
 		\prod_{(i,j) \in R_t} \proppCond{y_{ijt}}{\vec{\alpha}_t}
 \end{align*}%
 %
-which we can expand to:
+which we can expand to (omitting a normalization constant):
 
 \begin{align*}
 	\mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =
@@ -377,7 +381,7 @@ fits. Plots of the two sets of predicted coefficients are similar in terms of wi
 of the confidence bounds (black is the short intervals and blue is long intervals):
 
 <<fig.align='center', fig.height=2.5>>=
-par(mfcol = c(1, 2), mar = c(5, 4, 1, 1))
+par(mfcol = c(1, 2), mar = c(5, 4, 1, 1), cex = .75)
 
 for(i in 1:2){
   plot(dd_fit_short, cov_index = i, col = "Black")
@@ -391,7 +395,7 @@ vignette. The rest of this vignette is structured as follows. Section
 \ref{sec:EM} will cover the EM algorithm. This is followed by the sections
 \ref{sec:EKF}, \ref{sec:UKF}, and sections \ref{sec:SMA} and \ref{sec:GMA}
 which respectively covers the extended Kalman filter, unscented Kalman filter,
-and approximation of the posterior mode used to make the filtering in the E-step
+and approximation of the posterior mode used to perform the filtering in the E-step
 of the EM algorithm. Next, the section \ref{sec:weigths} and \ref{sec:FE} covers
 how estimation is done with weights or fixed effects. The sections
 \ref{sec:logit} and \ref{sec:conti} covers the models implemented in this
@@ -820,11 +824,11 @@ As with the EKF, a minor addition is made to the covariance matrix of the observ
 $$\widetilde{\widehat{\mat{H}}} = \widehat{\mat{H}} + \xi \mat{I}$$
 
 \subsection{Selecting hyperparameters}
-We still need to select the hyperparameters $\kappa$, $\alpha$ and $\beta$. We will cover these in the given order. $\kappa$ is usually set to $\kappa = 0$ or $\kappa = 3 - m$. \cite{julier97} state is that the latter is a "\emph{useful heuristic}" when the state equation is Gaussian and $\alpha = 1$.
+We still need to select the hyperparameters $\kappa$, $\alpha$ and $\beta$. We will cover these in the given order. $\kappa$ is usually set to $\kappa = 0$ or $\kappa = 3 - m$. \cite{julier97} argue that the latter is a "\emph{useful heuristic}" when the state equation is Gaussian and $\alpha = 1$.
 
 The default in this package is $\kappa = q (1 + \alpha^2 (0.1 -1)) / (\alpha^2 (1 - 0.1))$ and can be altered by setting the \code{kappa} argument in the \code{ddhazard\_control} call which is passed to the \code{control} argument of \code{ddhazard}. For example, \code{control = ddhazard\_control(kappa = 1, ...)} yields $\kappa = 1$. The default makes $W_0^{[m]} = 0.1$ such that all weights are positive. This ensures that $\emNotee{\mat{V}}{t}{t-1}$ and $\ukfNotee{y}{y}{t}$ are positive semi-definite. This follows since both are sum of outer products with positive weights and as $\widehat{\mat{H}}$ is a diagonal matrix with positive entries.
 
-$0<\alpha \leq 1$ controls the spread of the sigma points. Notice that $\lambda + q \rightarrow 0^+$, $W_0^{[c]},W_0^{[m]}\rightarrow -\infty$ and $W_j^{[c]}, W_j^{[m]} \rightarrow \infty$ ($j > 0$) as $\alpha \rightarrow 0^+$. Thus, the lower the value of $\alpha$, the lower the spread but the higher the absolute weights. It is generally suggested to choose $\alpha$ small. See \cite{gustafsson12, julier04}. However, initial simulation studies showed that $\alpha = 1$ yields the smallest mean square error of estimated coefficients. Thus, this is the default. The parameter can be set with the \code{alpha} argument of \code{ddhazard\_control}.
+$0<\alpha \leq 1$ controls the spread of the sigma points. Notice that $\lambda + q \rightarrow 0^+$, $W_0^{[c]},W_0^{[m]}\rightarrow -\infty$ and $W_j^{[c]}, W_j^{[m]} \rightarrow \infty$ ($j > 0$) as $\alpha \rightarrow 0^+$. Thus, the lower the value of $\alpha$, the lower the spread but the higher the absolute weights. It is generally suggested to choose $\alpha$ small \citep[see][]{gustafsson12, julier04}. However, initial simulation studies showed that $\alpha = 1$ yields the smallest mean square error of estimated coefficients. Thus, this is the default. The parameter can be set with the \code{alpha} argument of \code{ddhazard\_control}.
 
 Lastly, $\beta$ is a correction term to match the fourth-order term in the Taylor series expansion of the covariance of the observational equation. \cite{julier04} show in the appendix that the optimal value with a Gaussian state equation is $\beta = 2$. Though, initial simulation showed that $\beta = 0$ yielded the best results and is therefore the default. It can be set with the \code{beta} argument of \code{ddhazard\_control}.
 
@@ -841,7 +845,8 @@ $$\begin{aligned}
   \emNotee{\mat{V}}{t}{t - 1} = \mat{F}\emNotee{\mat{V}}{t - 1}{t - 1}\mat{F}^\top + \mat{R}\mat{Q}\mat{R}^\top
 \end{aligned}$$%
 %
-Next, we would ideally like to minimize the negative log-likelihood:
+Next, we replace the correction step with finding the mode that minimize
+the negative log-likelihood:
 
 $$\argminu{\vec{\alpha}}
   - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
@@ -859,7 +864,7 @@ Then for $k=1,2,\dots,n_t$ we:
   $$\emNote{\vec{a}}{t}{t}{k} = \argminu{\vec{\alpha}}
   -\log \proppCond{\vec{\alpha}}{\emNote{\vec{a}}{t}{t}{k-1}, \emNote{\mat{V}}{t}{t}{k-1}}
   -\log\proppCond{y_{ijt}}{\vec{\alpha}}$$
-  \item Update covariance matrix by computing the inverse of the Hessian at $\emNote{\vec{a}}{t}{t}{k}$:
+  \item Update the covariance matrix by computing the inverse of the Hessian at $\emNote{\vec{a}}{t}{t}{k}$:
  $$\emNote{\mat{V}}{t}{t}{k} = \Lparen{\Lparen{\emNote{\mat{V}}{t}{t}{k-1}}^{-1} + \left. \frac{\partial\log\proppCond{y_{ijt}}{\vec{\alpha}}}{\partial\vec{\alpha}\partial\vec{\alpha}^\top}\right|_{\vec{\alpha} = \emNote{\vec{a}}{t}{t}{k}}}^{-1}$$
 \end{enumerate}
 
@@ -918,10 +923,10 @@ $$\emNote{\vec{a}}{t}{t}{0} = \emNotee{\vec{a}}{t}{t-1},  \qquad
   \item Set $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$.
 \end{enumerate}
 
-Step \ref{enum:SMACholFirstStep} comes at an $O(q^3)$ cost per interval $1,2,\dots,d$ due to the  Cholesky decomposition. This is doable if we do not have too many coefficients. Step 2 can be performed in $O(q^2)$. The current implementation use the Fortran code from the post here \url{http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646} based on \cite{seeger04}.
+Step \ref{enum:SMACholFirstStep} comes at an $O(q^3)$ cost per interval $1,2,\dots,d$. This is doable if we do not have too many coefficients. Step 2 can be performed in $O(q^2)$. The current implementation use the Fortran code from the post here \url{http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646} based on \cite{seeger04}.
 
 Moreover, we can reduce computations time by storing $\widetilde{\mat{L}} = \Lparen{\mat{L}^{-1}}^\top$ and using that it is a triangular matrix. $\widetilde{\mat{L}}$ is also a triangular matrix. Thus, we need to do less operations when doing the matrix multiplications. Another advantage is that the rank-one update yields a positive semi definite matrix $\mat{L}\mat{L}^\top$. This is true since $\vec{x}_{ijt}\vec{x}_{ijt}^\top$ is a vector outer product and as $g$ is positive with distributions from the exponential family. Hence, $\emNote{\mat{V}}{t}{t}{k} = \Lparen{\mat{L}^{-1}}^\top\Lparen{\mat{L}^{-1}}$ will remains a positive semi definite matrix. The method described here is used if you set the argument \code{posterior\_version = "cholesky"} in the call to \code{ddhazard\_control}. The former method using the Woodbury matrix identity is used if you set \code{posterior\_version = "woodbury"}.
-Algorithm~\ref{alg:approxMode} shows the Woodbury matrix version and
+Algorithm~\ref{alg:approxMode} shows the Woodbury matrix identity version and
 Algorithm~\ref{alg:approxModeChol} shows the Cholesky decomposition version.
 
 
@@ -986,7 +991,7 @@ $$\argminu{\vec{\alpha}}
   - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
     -\sum_{(i,j) \in R_t} \log\proppCond{y_{ijt}}{\vec{\alpha}}$$
 
-This is equivalent to a L2 penalized Generalized Linear Models (GLM) since we only use models from the exponential family. This can be done with the usual iteratively reweighted ridge regression. Every iteration can be done in $O\Lparen{n_tq^2 + q^3}$. We will go through computations in the following paragraphs. First, we derive the gradient and the Hessian:
+This is equivalent to a L2 penalized Generalized Linear Models (GLM) since we only use models from the exponential family. This can be done with the usual penalized iteratively reweighted least squares. Every iteration can be done in $O\Lparen{n_tq^2 + q^3}$. We will go through computations in the following paragraphs. First, we derive the gradient and the Hessian:
 
 $$\begin{aligned}
 	 &\tilde h(\vec{\alpha}) =  - \log \proppCond{\vec{\alpha}}{\emNotee{\vec{a}}{t}{t-1}, \emNotee{\mat{V}}{t}{t-1}}
@@ -1021,7 +1026,10 @@ Algorithm~\ref{alg:GlobalMA} shows the final algorithm for the correction step w
 \Repeat
 \State %
 $\algGMAscore{\vec{a}^{(k)} =}$\label{alg:GlobalMA:Update}
-\UntilElse{$\LVert{\vec{a}^{(k)} - \vec{a}^{(k-1)}}/ (\LVert{\vec{a}^{(k-1)}} + \delta) < \epsilon$}{set $k\leftarrow k + 1$}
+\UntilElse{
+  $\LVert{\vec{a}^{(k)} - \vec{a}^{(k-1)}}/ (\LVert{\vec{a}^{(k-1)}} +
+    \delta) < \epsilon$ \OR $k \geq k_\text{max}$}{%
+    set $k\leftarrow k + 1$}
 \State $\emNotee{\mat{V}}{t}{t} = \Lparen{\tmat{G}(\vec{a}^{(k - 1)})}^{-1}$
 \end{algorithmic}
 \end{algorithm}%
@@ -1113,10 +1121,10 @@ $$\vec{u}_t (\vec{\alpha}_t) = \sum_{(i,j) \in R_t} \vec{u}_{ijt} (\vec{\alpha}_
 %
 with
 
-$$\vec{u}_t (\vec{\alpha}_t) = \sum_{f = 1}^{n_t} e_f \vec{u}_{\Lparen{R_t}_ft} (\vec{\alpha}_t), \qquad
-  \mat{U}_t (\vec{\alpha}_t) = \sum_{f = 1}^{n_t} e_f \mat{U}_{\Lparen{R_t}_ft} (\vec{\alpha}_t)$$%
+$$\vec{u}_t (\vec{\alpha}_t) = \sum_{k = 1}^{n_t} e_k \vec{u}_{\Lparen{R_t}_kt} (\vec{\alpha}_t), \qquad
+  \mat{U}_t (\vec{\alpha}_t) = \sum_{k = 1}^{n_t} e_k \mat{U}_{\Lparen{R_t}_kt} (\vec{\alpha}_t)$$%
 %
-where $\Lparen{R_t}_f$ is the $f$'th element of $R_t$.
+where $\Lparen{R_t}_k$ is the $k$'th element of $R_t$.
 
 
 \subsection{UKF}
@@ -1178,85 +1186,9 @@ $$
 \argmaxu{\vec{\gamma}} \sum_{t = 1}^d \sum_{(i,j) \in R_t} l_{ijt}(\emNotee{\vec{a}}{t}{d}, \vec{\gamma})
 $$
 
-One advantage of doing this is that the problem can be solved with regular methods for GLMs when the model is from the exponential family. However, the design matrix will be big, as each individual will yield multiple rows because of different offsets from the time-varying parameters given by $\vec{x}_{ijt}^\top \emNotee{\vec{a}}{t}{d}$. To overcome this problem, I use the Fortran code from \cite{miller1992} to do a series of rank-one updates of the QR-decomposition used to solve the iteratively re-weighted least square problem. This is the same approach as in the biglm. The computational complexity of each update is $\bigO{c^2}$, where $c$ is the dimension of $\vec{\gamma}$.
+One advantage of doing this is that the problem can be solved with regular methods for GLMs when the model is from the exponential family. However, the design matrix will be big, as each individual will yield multiple rows because of different offsets from the time-varying parameters given by $\vec{x}_{ijt}^\top \emNotee{\vec{a}}{t}{d}$. To overcome this problem, I use the Fortran code from \cite{miller1992} to do a series of rank-one updates of the QR-decomposition used to solve the iteratively re-weighted least square problem. This is the same approach as in the biglm package. The computational complexity of each update is $\bigO{c^2}$, where $c$ is the dimension of $\vec{\gamma}$.
 
-\subsection{Alternative M-step method}
-First, the method shown in the previous section is the same as simultaneously making a Taylor approximation about the fixed coefficients, $\vec{\gamma}$, and the smoothed state vectors, $\emNotee{\vec{a}}{1}{d}, \emNotee{\vec{a}}{2}{d}, \dots, \emNotee{\vec{a}}{d}{d}$ and making \emph{one iteration} with the previous method. To see this let $\widetilde{E}$ denote the conditional expectation in the previous subsection and define $\tilde{l}_{ijt}(x) = y_{ijt} \log h(x) + (1 - y_{ijt}) \log \Lparen{1 - h(x)}$ where $h$ is the inverse link function. Focussing on a single log-likelihood term, $l_{ijt}$, a Taylor approximation about a working estimate of the fixed parameter $\vec{g}$ and the smoothed state vectors yields
 
-\begin{align*}
-\widetilde{E}\Lparen{l_{ijt}({\vec{\alpha}_t}, \vec{\gamma})}
-  \hspace{-50pt} & \\
-%
-  & \approx \widetilde{E}\left(
-    l_{ijt}(\emNotee{\vec{a}}{t}{d}, \vec{g}) +
-    \tilde{l}_{ijt}^\prime(\eta_{ijt})\Lparen{\vec{\gamma} - \vec{g}}^\top
-      \vec{z}
-    \vphantom{
-    + \frac{1}{2}\tilde{l}_{ijt}^{\prime\prime}(\eta_{ijt})\Lparen{
-      \begin{pmatrix}
-        \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d} \\ \vec{\gamma} - \vec{g}
-      \end{pmatrix}^\top
-      \begin{pmatrix}
-        \vec{x}\vec{x}^\top & \vec{z}\vec{x}^\top \\
-        \vec{x}\vec{z}^\top & \vec{z}\vec{z}^\top
-      \end{pmatrix}
-      \begin{pmatrix}
-        \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d} \\ \vec{\gamma} - \vec{g}
-      \end{pmatrix}}}\right. \\
-%
-  & \hspace{50pt} \left.
-  + \frac{1}{2}\tilde{l}_{ijt}^{\prime\prime}(\eta_{ijt})\Lparen{
-      \begin{pmatrix}
-        \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d} \\ \vec{\gamma} - \vec{g}
-      \end{pmatrix}^\top
-      \begin{pmatrix}
-        \vec{x}\vec{x}^\top & \vec{z}\vec{x}^\top \\
-        \vec{x}\vec{z}^\top & \vec{z}\vec{z}^\top
-      \end{pmatrix}
-      \begin{pmatrix}
-        \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d} \\ \vec{\gamma} - \vec{g}
-      \end{pmatrix}}
-  \right) \\
-%
-  & = \widetilde{E}\Lparen{
-    \tilde{l}_{ijt}^\prime(\eta_{ijt})\Lparen{\vec{\gamma} - \vec{g}}^\top\vec{z}
-    + \frac{1}{2}\tilde{l}_{ijt}^{\prime\prime}(\eta_{ijt})\Lparen{
-    \Lparen{\Lparen{\vec{\gamma} - \vec{g}}^\top\vec{z}}^2
-    + \Lparen{\Lparen{\vec{\alpha}_t - \emNotee{\vec{a}}{t}{d}}^\top\vec{x}}^2}
-    + \dots} \\
-%
-  & =
-    \tilde{l}_{ijt}^\prime(\eta_{ijt})\Lparen{\vec{\gamma} - \vec{g}}^\top\vec{z}
-    + \frac{1}{2}\tilde{l}_{ijt}^{\prime\prime}(\eta_{ijt})
-    \Lparen{\Lparen{\vec{\gamma} - \vec{g}}^\top\vec{z}}^2 + \dots
-\end{align*}%
-%
-where $\eta_{ijt} = \vec{x}_{ijt}^\top \emNotee{\vec{a}}{t}{d} + \vec{z}_{ijt}^\top \vec{g}$ and I have temporarily set $\vec{x} = \vec{x}_{ijt}$ and $\vec{z} = \vec{z}_{ijt}$. The first order terms cancel out due the expectation and I have dropped terms that does not involve $\vec{\gamma}$ from line to line. This is the same problem that is solved in the iterative weighted least square problem described above. One alternative is to make a second order Taylor approximation \emph{only} about the smoothed state vectors. This yields
-
-\begin{align*}
-\widetilde{E}\Lparen{l_{ijt}({\vec{\alpha}_t}, \vec{\gamma})}
-  \hspace{-50pt} & \\
-%
-   & \approx \widetilde{E}\Lparen{
-    l_{it}(\emNotee{\vec{a}}{t}{d}, \vec{\gamma}) +
-    \frac{1}{2}\Lparen{\Lparen{
-      \vec{\alpha}_t - \emNotee{\vec{a}}{t}{d}}^\top
-      \vec{x}_{ijt}}^2
-    \left.\frac{\partial^2 \tilde{l}_{it}\Lparen{
-    \vec{z}_{ijt}^\top \vec{\gamma} + o}}{
-    \partial o^2} % end frac
-  \right|_{o = \vec{x}_{ijt}^\top\emNotee{\vec{a}}{t}{d}}} \\
-%
- & =
-  l_{ijt}(\emNotee{\vec{a}}{t}{d}, \vec{\gamma}) +
-  \frac{1}{2}\vec{x}_{ijt}^\top \emNotee{\mat{V}}{t}{d}\vec{x}_{ijt}
-  \left.\frac{\partial^2 \tilde{l}_{it}\Lparen{
-    \vec{z}_{ijt}^\top \vec{\gamma} + o}}{
-    \partial o^2} % end frac
-  \right|_{o = \vec{x}_{ijt}^\top\emNotee{\vec{a}}{t}{d}}
-\end{align*}%
-%
-This is not implemented in the current version of dynamichazard.
 
 \subsection{Which method to use}
 Neither the method that use the recursive least squares like method in the E-step, nor the zero order Taylor expansion in the M-step have performed consistently better on the data sets seen so far. Hence, both are valid alternatives at this point. Fixed terms can be estimated by wrapping the covariates in the formula of \code{ddhazard} in the \code{ddFixed}
@@ -1268,9 +1200,9 @@ model where \code{x1} is time-varying and \code{x2} is not.
 The  logistic model uses the inverse logit function as the inverse link function $h$. That is $h(\eta) = \exp(\eta) / (1 + \exp(\eta))$. The logistic model is fitted by setting \code{model = "logit"} in the call to \code{ddhazard}. The following paragraphs will cover the "loss" of information due to using time intervals instead of event times which motivates the continuous time model.
 
 \subsection{Event times to binary variables}
-This section will illustrate how we go from event time to binary variables for the logistic model and how this can lead to "loss" of information. It is elementary but included to stress this point and motivate the continuous time model. We will use \Sexpr{tolower(captioner::captioner()("binning_fig", display = "cite"))} as the illustration. Each horizontal line represent an individual. A cross represents when the covariate values change for the individual and a filled circle represents the death of an individual. Lines that ends with an open circle are right censored.
+This section will illustrate how we go from event time to binary variables for the logistic model and how this can lead to "loss" of information. It is elementary but included to stress this point and motivate the continuous time model. We will use \Sexpr{tolower(captioner::captioner()("binning_fig", display = "cite"))} as the illustration. Each horizontal line represent an individual. A cross represents when the covariate values change for the individual and a filled circle represents the death of an individual. Lines that ends with an open circle are right-censored.
 
-<< binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of going from event times to binary variables. Each horizontal line represents an individual. A cross indicates that new covariates are observed while a filled circle indicates that the individual have died. Open circles indicates that the individual is right censored. Vertical dashed lines are time interval borders.", fig.height=3, fig.align="center">>=
+<< binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of going from event times to binary variables. Each horizontal line represents an individual. A cross indicates that new covariates are observed while a filled circle indicates that the individual have died. Open circles indicates that the individual is right-censored. Vertical dashed lines are time interval borders.", fig.height=3, fig.align="center">>=
 par(cex = .8, mar = c(1, 4, 1, 2))
 plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = F)
 
@@ -1326,7 +1258,7 @@ for(i in seq_along(x_vals_and_point_codes)){
 text(rep(0, n_series), rev(y_pos), letters[1:n_series], cex = par()$cex * 1.5)
 @
 
-We will return to the vertical lines shortly. First, we notice that the example is where we assume that the covariates are step functions. An example hereof is a medical trial where patients get tests taken at different point in time (when they have a time at their doctor, visit the hospital or similar). As an example, ideally we would like to model that individual one has a blood pressure of $x$ at time $0$, re-visits at time $1.5$ and has a blood pressure $y$ and dies at time $2.5$ whereas individual 2 has a blood pressure if $z$ at time zero, never visits the doctor again and we know that he have not died by time $2.25$ (he is right censored).
+We will return to the vertical lines shortly. First, we notice that the example is where we assume that the covariates are step functions. An example hereof is a medical trial where patients get tests taken at different point in time (when they have a time at their doctor, visit the hospital or similar). As an example, ideally we would like to model that individual one has a blood pressure of $x$ at time $0$, re-visits at time $1.5$ and has a blood pressure $y$ and dies at time $2.5$ whereas individual 2 has a blood pressure if $z$ at time zero, never visits the doctor again and we know that he have not died by time $2.25$ (he is right-censored).
 
 However, we do not model event times in the logistic model. Instead, we model binary outcomes in each time interval. The vertical dashed lines in the figure represents the time interval borders. The first vertical line from the left is where we start our estimation, the second vertical line is where the first time interval ends and the second time intervals starts and the third vertical line is where the time interval ends. Thus, we only have two time intervals in this example.
 
@@ -1338,7 +1270,7 @@ We can now cover how the individuals (horizontal lines) are used in the estimati
 \item is a control in the first time interval with the covariates from 0. He counts as a death in the second time interval with the covariates from 1.
 \item acts like a.
 \item is a death in the first time interval with covariates from 0.
-\item is a control in the first time interval with the covariates from 0. He is a death in the second time interval with the covariates from 1.
+\item is a control in the first time interval with the covariates from 0. He counts as a death in the second time interval with the covariates from 1.
 \item is not included in any time intervals. We do not know if he survived the entire period of the first time interval and thus we cannot include him.
 \end{enumerate}%
 %
@@ -1367,7 +1299,7 @@ We make the following assumption in the continuous time model:
   (assuming that individual $i$'s $j$'th covariate is within time interval $t$).
 \end{enumerate}
 
-The instantaneous hazard change when either the individuals covariates change or the coefficients change when we change time interval. Thus, each individual's stop time is piecewise constant exponential distributed event time given the state vectors. The log-likelihood up to a normalization constant is:
+The instantaneous hazard change when either the individuals covariates change or the coefficients change when we change time interval. Thus, each individual's stop time is piecewise constant exponential distributed event time given the state vectors. The log-likelihood omitting a normalization constant:
 $$\begin{aligned}
 \mathcal{L}\Lparen{\vec{\alpha}_0, \dots, \vec{\alpha}_{d}} =&
   - \frac{1}{2} \Lparen{\vec{\alpha}_0 - \vec{a}_0}^\top \mat{Q}^{-1}_0\Lparen{\vec{\alpha}_0 - \vec{a}_0} \\
@@ -1440,10 +1372,9 @@ where we have used the final smoothed estimators. Plotting cumulative values ver
 We may be interested in looking at the predicted state error. The predicted state errors are given by:
 
 $$\widehat{\vec{\eta}}_t = \mat{R}^\top\Lparen{
-    \emNotee{\vec{a}}{t}{d} - \mat{F}\emNotee{\vec{a}}{t - 1}{d}}
-      \sim N \left( \vec{0}, \varpCond{\vec{\eta}_t}{\vec{Y}_d} \right)$$%
+    \emNotee{\vec{a}}{t}{d} - \mat{F}\emNotee{\vec{a}}{t - 1}{d}}$$%
 %
-This will require that we find the smoothed covariance matrix $\varpCond{\vec{\eta}_t}{\vec{Y}_d} = \mat{R}^\top\varpCond{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}{\vec{Y}_d}\mat{R}$ in order to standardize the predicted errors. We will explain how this can be estimated in the following paragraphs when the EKF have been used. Standard results yields:
+which we may check if they are $N \left( \vec{0}, \varpCond{\vec{\eta}_t}{\vec{Y}_d} \right)$. This will require that we find the smoothed covariance matrix $\varpCond{\vec{\eta}_t}{\vec{Y}_d} = \mat{R}^\top\varpCond{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}{\vec{Y}_d}\mat{R}$ in order to standardize the predicted errors. We will explain how this can be estimated in the following paragraphs when the EKF have been used. Standard results yields:
 
 $$\begin{aligned}
  \varpCond{\vec{\alpha}_t - \mat{F}\vec{\alpha}_{t - 1}}{\vec{Y}_d}
