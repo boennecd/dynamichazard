@@ -8,72 +8,60 @@ result <- ddhazard(
   Q_0 = diag(.1, 2),
   Q = diag(1, 2))
 
-for(use_parallel in c(T, F)){
-  # Test that we get same estimate in one period estimates
-  test_that(paste0(
-    "Testing one period in sample with use_parallel = ", use_parallel), {
-      predict_ = predict(result, new_data = data.frame(
-        start = 0:59, stop = 1:60, group = factor(rep(1, 60))),
-        use_parallel = use_parallel, max_threads = 1)
-      tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
-      expect_equal(
-        predict_$fits, c(result$discrete_hazard_func(
-          tmp_state_vecs %*% c(1, 1), 1)),
-        use.names = F, check.attributes = F)
+test_that("Testing one period in sample", {
+  predict_ = predict(result, new_data = data.frame(
+    start = 0:59, stop = 1:60, group = factor(rep(1, 60))))
+  tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
+  expect_equal(
+    predict_$fits, c(result$discrete_hazard_func(
+      tmp_state_vecs %*% c(1, 1), 1)),
+    use.names = F, check.attributes = F)
 
-      predict_ = predict(
-        result, new_data = data.frame(start = 0:59, stop = 1:60,
-                                      group = factor(rep(2, 60))),
-        use_parallel = use_parallel)
-      expect_equal(
-        predict_$fits, c(result$discrete_hazard_func(tmp_state_vecs %*% c(1, 0), 1)),
-        use.names = F, check.attributes = F)
-  })
+  predict_ = predict(
+    result, new_data = data.frame(start = 0:59, stop = 1:60,
+                                  group = factor(rep(2, 60))))
+  expect_equal(
+    predict_$fits, c(result$discrete_hazard_func(tmp_state_vecs %*% c(1, 0), 1)),
+    use.names = F, check.attributes = F)
+})
 
-  # Check with two period estimates
-  test_that(paste0("Testing two period in sample with use_parallel = ", use_parallel),{
-    predict_ = predict(
-      result, new_data = data.frame(start = 2*(0:29), stop = 2*(1:30),
-                                    group = factor(rep(1, 30))),
-      use_parallel = use_parallel)
-    tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
-    fac1 = c(result$discrete_hazard_func(
-      tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 1), 1))
-    fac2 = c(result$discrete_hazard_func(
-      tmp_state_vecs[2*(1:30), ] %*% c(1, 1), 1))
-    expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
-                 use.names = F, check.attributes = F)
+test_that("Testing two period in sample", {
+  predict_ = predict(
+    result, new_data = data.frame(start = 2*(0:29), stop = 2*(1:30),
+                                  group = factor(rep(1, 30))))
+  tmp_state_vecs <- rbind(result$state_vecs[-1, ], result$state_vecs[60, ])
+  fac1 = c(result$discrete_hazard_func(
+    tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 1), 1))
+  fac2 = c(result$discrete_hazard_func(
+    tmp_state_vecs[2*(1:30), ] %*% c(1, 1), 1))
+  expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
+               use.names = F, check.attributes = F)
 
-    predict_ = predict(result, new_data = data.frame(
-      start = 2*(0:29), stop = 2*(1:30), group = factor(rep(2, 30))),
-      use_parallel = use_parallel)
-    fac1 = c(result$discrete_hazard_func(
-      tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 0), 1))
-    fac2 = c(result$discrete_hazard_func(
-      tmp_state_vecs[2*(1:30), ] %*% c(1, 0), 1))
-    expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
-                 use.names = F, check.attributes = F)
-  })
+  predict_ = predict(result, new_data = data.frame(
+    start = 2*(0:29), stop = 2*(1:30), group = factor(rep(2, 30))))
+  fac1 = c(result$discrete_hazard_func(
+    tmp_state_vecs[2*(1:30) - 1, ] %*% c(1, 0), 1))
+  fac2 = c(result$discrete_hazard_func(
+    tmp_state_vecs[2*(1:30), ] %*% c(1, 0), 1))
+  expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
+               use.names = F, check.attributes = F)
+})
 
-  # Check forcasting
-  test_that(paste0("Testing forcasting with use_parallel = ", use_parallel),{
-    predict_ = predict(
-      result, new_data = data.frame(start = 59, stop = 69, group = factor(1)),
-      use_parallel = use_parallel)
-    fac1 = c(result$discrete_hazard_func(
-      result$state_vecs[60, ] %*% c(1, 1), 1))
-    expect_equal(predict_$fits, (1 - (1 - fac1)^10),
-                 use.names = F, check.attributes = F)
+test_that("Testing forcasting with predict", {
+  predict_ = predict(
+    result, new_data = data.frame(start = 59, stop = 69, group = factor(1)))
+  fac1 = c(result$discrete_hazard_func(
+    result$state_vecs[60, ] %*% c(1, 1), 1))
+  expect_equal(predict_$fits, (1 - (1 - fac1)^10),
+               use.names = F, check.attributes = F)
 
-    predict_ = predict(result, new_data = data.frame(
-      start = 59, stop = 69, group = factor(2)),
-      use_parallel = use_parallel)
-    fac1 = c(result$discrete_hazard_func(
-      result$state_vecs[60, ] %*% c(1, 0), 1))
-    expect_equal(predict_$fits, (1 - (1 - fac1)^10),
-                 use.names = F, check.attributes = F)
-  })
-}
+  predict_ = predict(result, new_data = data.frame(
+    start = 59, stop = 69, group = factor(2)))
+  fac1 = c(result$discrete_hazard_func(
+    result$state_vecs[60, ] %*% c(1, 0), 1))
+  expect_equal(predict_$fits, (1 - (1 - fac1)^10),
+               use.names = F, check.attributes = F)
+})
 
 # Check the terms
 test_that("Testing term prediction",{
@@ -83,16 +71,14 @@ test_that("Testing term prediction",{
                                     group = factor(g)))
     predict_terms = predict(result, new_data = data.frame(group = factor(g)),
                             type = "term")
-    expect_equal(dim(predict_terms$terms), c(60, 1, 2))
-    predict_terms$terms <- predict_terms$terms[-1, , , drop = F]
-
-    predict_terms_fit = exp(c(apply(predict_terms$terms, 1:2, sum))) /
-      (exp(c(apply(predict_terms$terms, 1:2, sum))) + 1)
+    expect_equal(dim(predict_terms$terms[[1L]]), c(59, 2))
+    predict_terms$terms <- predict_terms$terms[[1L]]
+    predict_terms_fit <- 1 / (1 + exp(-rowSums(predict_terms$terms)))
     expect_equal(unname(predict_$fits), predict_terms_fit, check.attributes = F)
   }
 })
 
-test_that("Term prediction with fixed effects",{
+test_that("Term prediction with fixed effects", {
   fit <- ddhazard(
     formula = survival::Surv(start, stop, event) ~ ddFixed(group),
     data = head_neck_cancer,
@@ -102,9 +88,10 @@ test_that("Term prediction with fixed effects",{
     predict_terms = predict(
       fit, new_data = data.frame(group = as.factor(g)), type = "term")
 
-    expect_equal(c(predict_terms$terms[,,]), c(unname(fit$state_vecs)),
+    expect_equal(c(predict_terms$terms[[1L]]), c(unname(fit$state_vecs))[-1L],
                  check.attributes = F)
-    expect_equal(c(predict_terms$fixed_terms), c((g == 1) * unname(fit$fixed_effects)))
+    expect_true(all(predict_terms$fixed_terms[[1L]] ==
+                      (g == 1) * unname(fit$fixed_effects)))
   }
 
   suppressWarnings(fit <- ddhazard(
@@ -116,67 +103,132 @@ test_that("Term prediction with fixed effects",{
       fit, new_data = data.frame(group = factor(x = g)),
       type = "term")
 
-    expect_equal(dim(predict_terms$terms), c(60, 1, 0))
+    expect_equal(dim(predict_terms$terms[[1L]]), c(59, 0))
     .which <- grepl(paste0(g, "$"), names(fit$fixed_effects))
-    expect_equal(c(predict_terms$fixed_terms),
-                 unname(fit$fixed_effects[.which]))
+    expect_true(all(
+      predict_terms$fixed_terms[[1L]] == unname(fit$fixed_effects[.which])))
   }
 })
 
 test_that("Terms prediction when parsing two observations",{
   predict_terms = predict(result, new_data = data.frame(group = factor(2:1)),
                           type = "term")
-  expect_equal(dim(predict_terms$terms), c(60, 2, 2))
+  expect_length(predict_terms, 6L)
+  expect_length(predict_terms$terms, 2)
+  expect_length(predict_terms$fixed_terms, 2)
+  expect_length(predict_terms$tstart, 2)
+  expect_length(predict_terms$tstop, 2)
+
+  expect_equal(dim(predict_terms$terms[[1L]]), c(59, 2))
+  expect_equal(dim(predict_terms$terms[[2L]]), c(59, 2))
+
+  expect_length(predict_terms$fixed_terms[[1L]], 59)
+  expect_length(predict_terms$fixed_terms[[2L]], 59)
+
+  expect_length(predict_terms$tstart[[1L]], 59)
+  expect_length(predict_terms$tstart[[2L]], 59)
+
+  expect_length(predict_terms$tstop[[1L]], 59)
+  expect_length(predict_terms$tstop[[2L]], 59)
+})
+
+test_that("Testing one period in sample with fixed effects", {
+  .data <- head_neck_cancer
+  .data$group <- relevel(.data$group, ref = 2)
+
+  result <- ddhazard(
+    formula = survival::Surv(start, stop, event) ~ ddFixed(group),
+    data = .data,
+    by = 1, a_0 = 0, Q_0 = as.matrix(1), Q = 1)
+
+  for(g in 1:2){
+    predict_ = predict(result, new_data =
+                         data.frame(start = 0:59, stop = 1:60,
+                                    group = factor(rep(g, 60))))
+    tmp_state_vecs <-
+      rbind(result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
+    expect_equal(
+      as.vector(predict_$fits),
+      c(result$discrete_hazard_func(
+        tmp_state_vecs + result$fixed_effects * (g - 1), 1)),
+      use.names = F, check.attributes = F)
+  }
+
+  # ddhazard throws a warning when static_glm could be used instead
+  result <- suppressWarnings(ddhazard(
+    formula = survival::Surv(start, stop, event) ~ -1 + ddFixed(group),
+    data = .data, by = 1))
+
+  for(g in 1:2){
+    predict_ = predict(
+      result, new_data = data.frame(
+        start = 0:59, stop = 1:60, group = factor(rep(g, 60))))
+    tmp_state_vecs <- rbind(
+      result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
+    expect_equal(
+      unname(predict_$fits),
+      rep(result$discrete_hazard_func(
+        c(c(g == 1, g == 2) %*% result$fixed_effects), 1), 60),
+      use.names = F, check.attributes = F)
+  }
 })
 
 
-for(use_parallel in c(T, F)){
-  # Test that we get same estimate in one period estimates
-  test_that(paste0(
-    "Testing one period in sample with fixed effects and use_parallel = ",
-    use_parallel), {
-      .data <- head_neck_cancer
-      .data$group <- relevel(.data$group, ref = 2)
+test_that("a warning is provided with predict if max_threads or use_parallel is used", {
+  # check that we get a warning but the result is the same
+  wa <- "'max_threads' and 'use_parallel' is not used anymore"
+  for(ty in c("term", "response")){
+    p1 <- predict(result, new_data = head_neck_cancer[1, ], type = "term")
+    expect_warning(
+      p2 <- predict(result, new_data = head_neck_cancer[1, ], type = "term",
+                    use_parallel = TRUE),
+      regexp = wa, fixed = TRUE)
+    expect_warning(
+      p3 <- predict(result, new_data = head_neck_cancer[1, ], type = "term",
+                    max_threads = TRUE),
+      regexp = wa, fixed = TRUE)
+    expect_warning(
+      p4 <- predict(result, new_data = head_neck_cancer[1, ], type = "term",
+                    use_parallel = TRUE, max_threads = TRUE),
+      regexp = wa, fixed = TRUE)
+    expect_equal(p1, p2)
+    expect_equal(p1, p3)
+    expect_equal(p1, p4)
+  }
+})
 
-      result <- ddhazard(
-        formula = survival::Surv(start, stop, event) ~ ddFixed(group),
-        data = .data,
-        by = 1, a_0 = 0, Q_0 = as.matrix(1), Q = 1)
+test_that("predict yields the correct covariance matrix", {
+  fit <- suppressWarnings(ddhazard(
+    Surv(tstart, tstop, event) ~ cbind(x1, x1^2, x1^3),
+    data = logit_sim_200$res, max_T = 10, model = "logit",
+    control = ddhazard_control(n_max = 1), Q = diag(1, 4),
+    Q_0 = diag(1, 4), by = 1))
 
-      for(g in 1:2){
-        predict_ = predict(result, new_data =
-                             data.frame(start = 0:59, stop = 1:60,
-                                        group = factor(rep(g, 60))),
-                           use_parallel = use_parallel)
-        tmp_state_vecs <-
-          rbind(result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
-        expect_equal(
-          as.vector(predict_$fits),
-          c(result$discrete_hazard_func(
-            tmp_state_vecs + result$fixed_effects * (g - 1), 1)),
-          use.names = F, check.attributes = F)
-      }
+  t_data <- within(
+    logit_sim_200$res[1:2, ], {
+      tstart <- floor(tstart)
+      tstop <- ceiling(tstop)
+    })
+  preds <- predict(
+    fit, new_data = t_data, tstart = "tstart", tstop = "tstop",
+    type = "term", sds = TRUE)
 
-      # ddhazard throws a warning when static_glm could be used instead
-      result <- suppressWarnings(ddhazard(
-        formula = survival::Surv(start, stop, event) ~ -1 + ddFixed(group),
-        data = .data, by = 1))
-
-      for(g in 1:2){
-        predict_ = predict(
-          result, new_data = data.frame(
-            start = 0:59, stop = 1:60, group = factor(rep(g, 60))),
-          use_parallel = use_parallel)
-        tmp_state_vecs <- rbind(
-          result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
-        expect_equal(
-          unname(predict_$fits),
-          rep(result$discrete_hazard_func(
-            c(c(g == 1, g == 2) %*% result$fixed_effects), 1), 60),
-                     use.names = F, check.attributes = F)
+  for(i in 1:nrow(t_data)){
+    td <- t_data[i, ]
+    XJ <- matrix(
+      c(1,     0,       0,       0,
+        0, td$x1, td$x1^2, td$x1^3), ncol = 2)
+    pd <- preds$varcov[[i]]
+    sa <- findInterval(td$tstart, fit$times, left.open = FALSE)
+    so <- findInterval(td$tstop , fit$times, left.open = TRUE)
+    i <- 0L
+    for(j in sa:so){
+      i <- i + 1L
+      expect_equal(
+        pd[, , i], crossprod(XJ, fit$state_vars[, , j + 1L] %*% XJ))
     }
-  })
-}
+  }
+})
 
 
 
@@ -272,10 +324,10 @@ test_that("Calls with second order models do not throw errors", {
                 use_parallel = .(use_parallel))))
 })
 
-test_that("predict functions throws error when model it is exponential",{
+test_that("predict functions throws error when one of the old exponential models are used",{
   dum <- structure(list(model = "exp_combined"), "class" = class(result))
-
-  expect_error(predict(dum))
+  expect_error(predict(dum), regexp = "Functions for model 'exp_combined' is not implemented",
+               fixed = TRUE)
 })
 
 test_that("Term predict work with second order random walk", {
@@ -293,8 +345,11 @@ test_that("Term predict work with second order random walk", {
   preds <- predict(f1, new_data = dum, type = "term", sds = T)
 
   # plot(f1)
-  expect_equal(preds$terms[, 1,], f1$state_vecs[, 1:2])
-  expect_equal(preds$sds[, 1, ], sqrt(t(apply(f1$state_vars, 3, diag))[, 1:2]))
+  expect_equal(preds$terms[[1L]], f1$state_vecs[-1, 1:2],
+               check.attributes = FALSE)
+  expect_equal(preds$sds[[1L]],
+               sqrt(t(apply(f1$state_vars, 3, diag))[-1, 1:2]),
+               check.attributes = FALSE)
 })
 
 ######
@@ -309,21 +364,30 @@ suppressMessages(fit <- ddhazard(
   data = pbc2_l, Q_0 = diag(rep(1e5, 4)), by = 1,
   id = pbc2_l$id,
   Q = diag(rep(1e-1, 4)), max_T = 36,
-  model = "exp_clip_time_w_jump"))
+  model = "exponential"))
 
 # plot(fit)
 
 test_that("Terms from predict with exponential outcome are correct", {
+  skip_on_cran()
+
   pred <- predict(
     fit, new_data = pbc2_l, type = "term", tstart = "tstart", tstop = "tstop")
 
-  expect_equal(dim(pred$terms), c(1 + 3600/100, nrow(pbc2_l), 4))
-  tmp_mat <- t(
-    cbind(rep(1, nrow(pbc2_l)), pbc2_l$age,
-          log(pbc2_l$bili), log(pbc2_l$protime)))
+  expect_length(pred$terms, nrow(pbc2_l))
+  tmp_mat <- with(pbc2_l, t(cbind(1, age, log(bili), log(protime))))
+  for(j in 1:nrow(pbc2_l)){
+    trs <- pred$terms[[j]]
+    idx <- findInterval(pred$tstart[[j]], fit$times,
+                        rightmost.closed = FALSE) + 1L
+    idx <- idx[idx <= nrow(fit$state_vecs)]
+    keep <- seq_along(idx)
 
-  for(i in 1:ncol(fit$state_vecs))
-    expect_equal(pred$terms[, , i], fit$state_vecs[, i] %o% tmp_mat[i,])
+    expect_equal(
+      t(trs[keep, ]), apply(
+        fit$state_vecs[idx, , drop = FALSE], 1, "*", y = tmp_mat[, j]),
+      check.attributes = FALSE)
+  }
 
   expect_message(
     respone_pred <- predict(
@@ -342,15 +406,18 @@ test_that("Terms from predict with exponential outcome are correct", {
     tmp <- test_rows[j, ]
     bins_breaks <- fit$times
     start <- findInterval(tmp$tstart, bins_breaks)
-    stop  <- findInterval(tmp$tstop, bins_breaks, left.open = T)
+    stop  <- findInterval(tmp$tstop , bins_breaks, left.open = T)
     p_survival <- 1
 
     t_min <- max(bins_breaks[start], tmp$tstart)
     for(i in start:stop){
       t_max <- min(bins_breaks[i + 1], tmp$tstop)
-      p_survival <- p_survival * exp(
+      if(t_max == t_min)
+        break
+      fa <- exp(
         - exp(fit$state_vecs[i + 1, ] %*%
                 unlist(tmp[, 1:4])) * (t_max - t_min))
+      p_survival <- p_survival * fa
       t_min <- t_max
     }
 

@@ -43,10 +43,13 @@
 predict.ddhazard = function(object, new_data,
                                 type = c("response", "term"),
                                 tstart = "start", tstop = "stop",
-                                use_parallel = F, sds = F, max_threads = getOption("ddhazard_max_threads"), ...)
+                                use_parallel, sds = F, max_threads, ...)
 {
   if(!object$model %in% c("logit", exp_model_names))
     stop("Functions for model '", object$model, "' is not implemented")
+  if(!missing(max_threads) || !missing(use_parallel))
+    warning(sQuote("max_threads"), " and ", sQuote("use_parallel"),
+            " is not used anymore")
 
   type = type[1]
   # TODO: change the code below to use terms object which has been added in
@@ -58,19 +61,26 @@ predict.ddhazard = function(object, new_data,
   object$formula <- tmp$formula_used
 
   if(type %in% c("term"))
-    return(predict_terms(object, new_data, tmp$X, sds, tmp$fixed_terms))
+    return(predict_terms(
+      object, new_data, tmp$X, tmp$fixed_terms, tstart, tstop, sds = sds))
 
   if(type %in% c("response"))
-    return(predict_response(object, new_data, tmp$X, tstart, tstop, use_parallel, sds, tmp$fixed_terms,
-                            max_threads = max_threads))
+    return(predict_response(
+      object = object, new_data = new_data, m = tmp$X,
+      tstart = tstart, tstop = tstop, fixed_terms = tmp$fixed_terms))
+
+  # object, new_data, m, tstart, tstop, fixed_terms
 
   stop("Type '", type, "' not implemented in predict.ddhazard")
 }
 
-predict_terms <- function(object, new_data, m, sds, fixed_terms){
-  # find the string index maps
-  # we have to format the string to a regexp
-  term_names_org = c("(Intercept)", attr(object$formula,"term.labels"))
+predict_terms <- function(object, new_data, m, sds, fixed_terms, tstart,
+                          tstop){
+  #####
+  # find map to terms
+  # we have to format the string to a regexp due as we do not have the
+  # `model.matrix` output...
+  term_names_org = c("(Intercept)", attr(object$formula, "term.labels"))
   # add escape version of charecters
   term_names = gsub("(\\W)", "\\\\\\1", term_names_org, perl = TRUE)
 
@@ -88,47 +98,10 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms){
 
   term_names_org <- term_names_org[found_match]
 
-  # predict terms
-  d <- length(object$times)
-  terms_res = array(
-    NA_real_, dim = c(d, nrow(new_data), length(term_names_org)),
-    dimnames = list(NULL, NULL, term_names_org))
-
-  sds_res = if(sds) terms_res else NULL
-
-  for(i in seq_along(term_names_org)){
-    terms_res[, , i] = object$state_vecs[ , terms_to_vars[[i]], drop = F] %*%
-      t(m[, terms_to_vars[[i]], drop = F])
-    if(!sds)
-      next
-
-    for(j in seq_len(d))
-      sds_res[j, , i] <- sqrt(diag(
-        m[, terms_to_vars[[i]], drop = F] %*%
-        object$state_vars[terms_to_vars[[i]], terms_to_vars[[i]], j] %*%
-        t(m[, terms_to_vars[[i]], drop = F])))
-  }
-
-  fixed_terms <- fixed_terms %*% object$fixed_effects
-
-  return(list(terms = terms_res, sds = sds_res, fixed_terms = fixed_terms))
-}
-
-#' @importFrom utils tail
-predict_response <- function(
-  object, new_data, m, tstart, tstop, use_parallel, sds, fixed_terms,
-  max_threads){
-  # change drop behavior inside this function
-  old <- `[`
-  `[` <- function(...) { old(..., drop=FALSE) }
-
-  # check order of random walk
-  if(object$order > 1)
-    warning("Predict not test with new data for order ", object$order)
-
-  # check if start and stop is provided. If so we need to use these
-  # if not, we predict for the sample period
-  d <- length(object$times) - 1
+  #####
+  # find timer periods
+  otimes <- object$times
+  d <- length(otimes) - 1L
   if(all(c(tstart, tstop) %in% colnames(new_data))){
     message("start and stop times ('", tstart, "' and '", tstop,
             "') are in data. Prediction will match these periods")
@@ -138,34 +111,36 @@ predict_response <- function(
     stop_ = new_data[[tstop]]
 
     start_order = order(start, method = "radix") - 1L
-    start <- round_if_almost_eq(start, start_order, object$times)
+    start <- round_if_almost_eq(start, start_order, otimes)
     stop_order = order(stop_, method = "radix") - 1L
-    stop_ <- round_if_almost_eq(stop_, stop_order, object$times)
+    stop_ <- round_if_almost_eq(stop_, stop_order, otimes)
 
   } else{
     message(
       "start and stop times ('", tstart, "' and '", tstop,
       "') are not in data columns. Each row in new_data will get a row for every bin")
     n_obs <- nrow(m)
-    m <- m[sapply(1:nrow(m), rep.int, times = d), ]
-    start <- rep(object$times[-(d + 1)], n_obs)
-    stop_ <- rep(object$times[-1], n_obs)
+    start <- rep(otimes[1L]    , n_obs)
+    stop_ <- rep(otimes[d + 1L], n_obs)
 
   }
 
-  if(min(start) < object$times[1])
+  if(min(start) < otimes[1])
     stop("First start time is before time zero")
 
+  #####
   # make prediction of covariates if last stop is beyond last period
-  parems = object$state_vecs
-  times = object$times
+  params = object$state_vecs
+  F_ <- object$F_
+  Q. <- object$Q
+  state_vars <- object$state_vars
 
   max_stop = max(stop_)
-  max_times = tail(object$times, 1)
+  max_times = tail(otimes, 1)
 
   # check if we have to predict state variables in the future
-  if(max_stop > (last_time <- tail(object$times, 1))){
-    last_gab = diff(tail(object$times, 2))
+  if(max_stop > (last_time <- tail(otimes, 1))){
+    last_gab = diff(tail(otimes, 2))
     new_times = seq(last_time, max_stop, last_gab)[-1]
 
     n <- length(new_times)
@@ -175,87 +150,143 @@ predict_response <- function(
     } else if(new_times[n] < max_stop)
       new_times[n] <- max_stop # needed when we use findInterval later
 
-    n_cols = dim(parems)[2]
-    parems = rbind(parems, matrix(NA_real_, nrow = length(new_times), ncol = n_cols))
-    if(object$order > 1)
-      warning(
-        "Currently forecasting wihtout drift with higher than first order random walk")
+    # predict state and covariance matrix of prediction
+    params = rbind(params, matrix(
+      NA_real_, nrow = length(new_times), ncol = dim(params)[2]))
 
-    for(t in seq_along(new_times) + length(times))
-      parems[t, ] = parems[t - 1, ]
-    times = c(times, new_times)
+    for(i in seq_along(new_times) + length(otimes))
+      params[i, ] = F_ %*% params[i - 1, ]
+
+    if(sds){
+      if(order > 1)
+        stop(sQuote("sds"), " = TRUE is not implemented with ",
+             sQuote("order"), " > 1")
+
+      new_state_vars <- array(dim = c(dim(state_vars)[1:2], nrow(params)))
+      new_state_vars[, , 1:dim(state_vars)[3]] <- state_vars
+
+      for(i in seq_along(new_times) + length(times))
+        new_state_vars[, , i] <-
+          tcrossprod(F_ %*% new_state_vars[, , i - 1L], F_) + Q.
+
+      state_vars <- new_state_vars
+    }
+
+    otimes <- c(otimes, new_times)
   }
 
-  if(length(parems) > 0){
-    parems = parems[-1, ] # remove first row it is the initial state vector
+  if(length(params) > 0){
+    # remove first row it is the initial state vector
     # we only need the current estimates (relevant for higher than 1. order)
-    parems = parems[, 1:(dim(parems)[2] / object$order)]
+    keep <- 1:(dim(params)[2] / object$order)
+    params <- params[-1, keep, drop = FALSE]
+
+    state_vars <- state_vars[keep, keep, -1, drop = FALSE]
   }
 
+  #####
   # round if needed. Post warning if we do so
-  int_start = findInterval(start, times)
-  if(any(start - times[int_start] > 0) && !object$model %in% exp_model_names)
+  int_start = findInterval(start, otimes)
+  if(any(start - otimes[int_start] > 0) && !object$model %in% exp_model_names)
     warning("Some start times are rounded down")
 
-  int_stop_ = findInterval(stop_, times, left.open = TRUE)
-  if(any(times[int_stop_] - stop_ > 0) && !object$model %in% exp_model_names)
-    warning("Some stop times are rounded up")
+  int_stop_ = findInterval(stop_, otimes, left.open = TRUE)
+  if(any(otimes[int_stop_] - stop_ > 0) && !object$model %in% exp_model_names)
+    warning("Some stop times are rounde")
 
-  # make function to predict for each observations
-  .env <- new.env(parent = asNamespace("dynamichazard"))
-  .env$discrete_hazard_func <- object$discrete_hazard_func
-  .env$times <- times
-  .env$parems <- parems
+  #####
+  # predict term
+  fixed_terms <- fixed_terms %*% object$fixed_effects
+  out <- mapply(
+    .predict_terms, sta = start, sto = stop_, x = apply(m, 1, list),
+    ista = int_start, isto = int_stop_, ft = fixed_terms,
+    MoreArgs = list(
+      params = params, state_vars = state_vars, comp_sds = sds,
+      term_idx = terms_to_vars, term_na = term_names_org, byl =
+        diff(tail(otimes, 2)), otimes = otimes), SIMPLIFY = FALSE)
 
-  apply_func = with(
-    .env, {
-
-      FUN <- function(t, i, i_max, tstart, tstop, x, offset){
-        tart <- if(i == 0) tstart else times[t]
-        ttop <- if(i == i_max) tstop else times[t + 1]
-
-        discrete_hazard_func(parems[t, ] %*% x + offset, ttop - tart)
-      }
-
-      function(istart, istop, x, tstart, tstop, offset){
-        #####
-        # compute
-        ts = istart:istop
-        is = seq_along(ts) - 1
-        i_max <- istop - istart
-        survival_probs = 1 - mapply(
-          FUN,
-          t = ts, i = is, i_max = i_max, x = x, tstart =  tstart,
-          tstop = tstop, offset = offset)
-        1 - prod(survival_probs)
-      }})
-
-  # compute hazard
-  args <- list(
-    FUN = apply_func,
-    x = apply(m, 1, list),
-    offset = if(length(object$fixed_effects) == 0)
-      rep(0, length(tstart)) else fixed_terms %*% object$fixed_effects,
-    istart = int_start, istop = int_stop_, tstart = start, tstop = stop_,
-    USE.NAMES = FALSE)
-
-  if(use_parallel){
-    no_cores <- detectCores()
-    no_cores <- if(is.na(no_cores))
-      1 else if (.Platform$OS.type == "windows")
-        1 else
-          max(min(no_cores - 1, ceiling(nrow(m) / 25)), 1)
-
-    if(max_threads > 0)
-      no_cores = min(no_cores, max_threads)
-
-    args <- c(args, list(mc.cores = no_cores))
-    fits <- do.call(mcmapply, args)
-
-  }
-  else
-    fits <- do.call(mapply, args)
-
-  return(list(
-    fits = fits, istart = times[int_start], istop = times[int_stop_ + 1L]))
+  # predict terms
+  list(
+    terms = lapply(out, "[[", "terms"),
+    sds = if(sds) lapply(out, "[[", "sds") else NULL,
+    fixed_terms = lapply(out, "[[", "fixed_terms"),
+    varcov = if(sds) lapply(out, "[[", "varcov") else NULL,
+    tstart = lapply(out, "[[", "tstart"),
+    tstop = lapply(out, "[[", "tstop"))
 }
+
+.predict_terms <- function(x, sta, sto, ista, isto, ft, comp_sds, otimes,
+                           term_idx, term_na, params, state_vars, byl)
+{
+  ts = ista:isto
+  is = seq_along(ts) - 1L
+  i_max <- isto - ista
+
+  # compute terms
+  x <- x[[1]]
+  J <- matrix(0., length(x), length(term_idx))
+  for(i in seq_along(term_na))
+    for(j in term_idx[i])
+      J[j, i] <- 1
+  XJ <- diag(x) %*% J
+  O <- params[ts, ] %*% XJ
+
+  # compute covariance matrix
+  if(comp_sds)
+  {
+    varcov <- array(dim = c(length(term_na), length(term_na), length(ts)))
+    for(i in 1:length(ts))
+      varcov[, , i] <- crossprod(XJ, state_vars[, , ts[i]] %*% XJ)
+
+    sds_res <- sqrt(t(apply(varcov, 3, diag)))
+
+  } else {
+    varcov  <- NULL
+    sds_res <- NULL
+  }
+
+  # start and stop times
+  stas <- otimes[ts]
+  stas[1] <- sta
+  stos <- otimes[ts + 1L]
+  stos[length(stos)] <- sto
+
+  # return
+  list(terms = O, sds = sds_res, fixed_terms = rep(ft, length(ts)),
+       varcov = varcov, tstart = stas, tstop = stos)
+}
+
+#' @importFrom utils tail
+predict_response <- function(
+  object, new_data, m, tstart, tstop, fixed_terms){
+  trs <- predict_terms(
+    object = object, new_data = new_data, m = m, fixed_terms = fixed_terms,
+    tstart = tstart, tstop = tstop, sds = FALSE)
+
+  has_times <- all(c(tstart, tstop) %in% colnames(new_data))
+  pevent <- with(
+    trs, mapply(
+      .predict_response, terms. = terms, fixed_terms = fixed_terms,
+      tstart = tstart, tstop = tstop, MoreArgs = list(object = object,
+                                                      has_times = has_times)))
+  if(has_times){
+    return(list(
+      fits = pevent, istart = sapply(trs$tstart, "[[", 1),
+      istop = sapply(trs$tstop, function(x) x[length(x)])))
+  }
+
+  list(fits = drop(pevent), istart = unlist(trs$tstart),
+       istop = unlist(trs$tstop))
+}
+
+.predict_response <- function(
+  terms., fixed_terms, tstart, tstop, object, has_times)
+  {
+    probs <- object$discrete_hazard_func(
+      eta = rowSums(terms.) + fixed_terms, at_risk_length = tstop - tstart)
+
+    if(has_times)
+      return(1  - prod(1 - probs))
+
+    probs
+  }
