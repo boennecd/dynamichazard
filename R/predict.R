@@ -4,28 +4,46 @@
 #'
 #' @param object result of a \code{\link{ddhazard}} call.
 #' @param new_data new data to base predictions on.
-#' @param type either \code{"response"} for predicted probability of death or \code{"term"} for predicted terms in the linear predictor.
-#' @param tstart name of the start time column in \code{new_data}. It must be on the same time scale as the tstart used in the \code{\link[survival]{Surv}(tstart, tstop, event)} in the \code{formula} passed to \code{\link{ddhazard}}.
+#' @param type either \code{"response"} for predicted probability of an event or \code{"term"} for predicted terms in the linear predictor.
+#' @param tstart name of the start time column in \code{new_data}. It must be on the same time scale as the \code{tstart} used in the \code{\link[survival]{Surv}(tstart, tstop, event)} in the \code{formula} passed to \code{\link{ddhazard}}.
 #' @param tstop same as \code{tstart} for the stop argument.
-#' @param use_parallel \code{TRUE} if computation for \code{type = "response"} should be computed in parallel with the \code{\link{mcmapply}}. Notice the limitation in the help page of \code{\link{mcmapply}}.
+#' @param use_parallel not longer supported.
 #' @param sds \code{TRUE} if point wise standard deviation should be computed. Convenient if you use functions like \code{\link[splines]{ns}} and you only want one term per term in the right hand site of the \code{formula} used in \code{\link{ddhazard}}.
-#' @param max_threads maximum number of threads to use. -1 if it should be determined by a call to \code{\link[parallel]{detectCores}}.
+#' @param max_threads not longer supported.
 #' @param ... not used.
 #'
+#' @details
+#' The function check if there are columns in \code{new_data} which names match
+#' \code{tstart} and \code{tstop}. If matched, then the bins are found which
+#' the start time to the stop time are in. If \code{tstart} and \code{tstop} are not
+#' matched then all the bins used in the estimation method will be used.
+#'
 #' @section Term:
-#' The result with \code{type = "term"} is a list with the following elements
+#' The result with \code{type = "term"} is a lists of list each having length
+#' equal to \code{nrow(new_data)}. The lists are
 #' \describe{
-#' \item{\code{terms}}{is a 3D array. The first dimension is the number of bins, the second dimension is rows in \code{new_data} and the last dimension is the state space terms.}
-#' \item{\code{sds}}{similar to \code{terms} for the point wise confidence intervals using the smoothed co-variance matrices.}
-#' \item{\code{fixed_terms}}{vector of the fixed effect terms for each observation.}
+#' \item{\code{terms}}{It's elements are matrices where the first dimension is
+#' time and the second dimension is the terms.}
+#' \item{\code{sds}}{similar to \code{terms} for the point-wise confidence
+#' intervals using the smoothed co-variance matrices. Only added if
+#' \code{sds = TRUE}.}
+#' \item{\code{fixed_terms}}{contains the fixed (non-time-varying) effect.}
+#' \item{\code{varcov}}{similar to \code{sds} but differs by containing the whole
+#' covariance matrix for the terms. It is a 3D array where the third dimension is
+#' time. Only added if \code{sds = TRUE}.}
+#' \item{\code{start}}{numeric vector with start time for each time-varying term.}
+#' \item{\code{tstop}}{numeric vector with stop time for each time-varying term.}
 #'}
 #'
 #' @section Response:
-#' The result with \code{type = "response"} is a list with the elements below. The function check if there are columns in \code{new_data} which names match \code{tstart} and \code{tstop}. If not, then each row in new data will get a predicted probability of dying in every bin.
+#' The result with \code{type = "response"} is a list with the elements below.
+#' If \code{tstart} and \code{tstop} are matched in columns in \code{new_data},
+#' then the probability will be for having an event between \code{tstart} and \code{tstop}
+#' conditional on no events before \code{tstart}.
 #' \describe{
-#' \item{\code{fits}}{fitted probability of dying.}
-#' \item{\code{istart}}{vector with the index of the first bin the elements in \code{fits} is in.}
-#' \item{\code{istop}}{vector with the index of the last bin the elements in \code{fits} is in.}
+#' \item{\code{fits}}{fitted probability of an event.}
+#' \item{\code{start}}{numeric vector with start time for each element in \code{fits}.}
+#' \item{\code{tstop}}{numeric vector with stop time for each element in \code{fits}.}
 #'}
 #'
 #' @examples
@@ -37,6 +55,11 @@
 #'  data.frame(time = 0, status = 2, bili = 3))
 #' predict(fit, type = "term", new_data =
 #'  data.frame(time = 0, status = 2, bili = 3))
+#'
+#' # probability of an event between time 0 and 2000 with bili = 3
+#' predict(fit, type = "response", new_data =
+#'           data.frame(time = 0, status = 2, bili = 3, tstart = 0, tstop = 2000),
+#'         tstart = "tstart", tstop = "tstop")
 #'
 #' @importFrom parallel mcmapply detectCores
 #' @export
@@ -197,12 +220,19 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms, tstart,
   #####
   # predict term
   fixed_terms <- fixed_terms %*% object$fixed_effects
+
+  Jt <- matrix(0., ncol(m), length(term_names_org))
+  for(i in seq_along(term_names_org))
+    for(j in terms_to_vars[i])
+      Jt[j, i] <- 1
+  XJ <- if(length(m) == 0)
+    replicate(nrow(m), list(m)) else lapply(split(m, row(m)), "*", y = Jt)
+
   out <- mapply(
-    .predict_terms, sta = start, sto = stop_, x = apply(m, 1, list),
+    .predict_terms, sta = start, sto = stop_, XJ = XJ,
     ista = int_start, isto = int_stop_, ft = fixed_terms,
     MoreArgs = list(
-      params = params, state_vars = state_vars, comp_sds = sds,
-      term_idx = terms_to_vars, term_na = term_names_org, byl =
+      params = params, state_vars = state_vars, comp_sds = sds, byl =
         diff(tail(otimes, 2)), otimes = otimes), SIMPLIFY = FALSE)
 
   # predict terms
@@ -215,28 +245,25 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms, tstart,
     tstop = lapply(out, "[[", "tstop"))
 }
 
-.predict_terms <- function(x, sta, sto, ista, isto, ft, comp_sds, otimes,
-                           term_idx, term_na, params, state_vars, byl)
+.predict_terms <- function(XJ, sta, sto, ista, isto, ft, comp_sds, otimes,
+                           params, state_vars, byl)
 {
   ts = ista:isto
   is = seq_along(ts) - 1L
   i_max <- isto - ista
 
   # compute terms
-  x <- x[[1]]
-  J <- matrix(0., length(x), length(term_idx))
-  for(i in seq_along(term_na))
-    for(j in term_idx[i])
-      J[j, i] <- 1
-  XJ <- diag(x) %*% J
-  O <- params[ts, ] %*% XJ
+  O <- if(length(XJ) == 0)
+    params[ts, , drop = FALSE] else params[ts, ] %*% XJ
 
   # compute covariance matrix
   if(comp_sds)
   {
-    varcov <- array(dim = c(length(term_na), length(term_na), length(ts)))
-    for(i in 1:length(ts))
-      varcov[, , i] <- crossprod(XJ, state_vars[, , ts[i]] %*% XJ)
+    q <- ncol(XJ)
+    d <- length(ts)
+    varcov <- apply(state_vars[, , ts, drop = FALSE], 3, function(x)
+      crossprod(XJ, x %*% XJ))
+    dim(varcov) <- c(q, q, d)
 
     sds_res <- sqrt(t(apply(varcov, 3, diag)))
 
@@ -267,8 +294,9 @@ predict_response <- function(
   pevent <- with(
     trs, mapply(
       .predict_response, terms. = terms, fixed_terms = fixed_terms,
-      tstart = tstart, tstop = tstop, MoreArgs = list(object = object,
-                                                      has_times = has_times)))
+      tstart = tstart, tstop = tstop, MoreArgs = list(
+        object = object, has_times = has_times, ddfunc =
+          object$discrete_hazard_func)))
   if(has_times){
     return(list(
       fits = pevent, istart = sapply(trs$tstart, "[[", 1),
@@ -280,9 +308,9 @@ predict_response <- function(
 }
 
 .predict_response <- function(
-  terms., fixed_terms, tstart, tstop, object, has_times)
+  terms., fixed_terms, tstart, tstop, object, has_times, ddfunc)
   {
-    probs <- object$discrete_hazard_func(
+    probs <- ddfunc(
       eta = rowSums(terms.) + fixed_terms, at_risk_length = tstop - tstart)
 
     if(has_times)
