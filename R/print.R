@@ -47,7 +47,7 @@ print.ddhazard_boot <-
 
 #' @export
 print.ddhazard<- function(x, ...){
-  cat("Call:", deparse(x$call), sep = "\n")
+  cat("Call:", paste(deparse(x$call), sep = "\n", collapse = "\n"), sep = "\n")
 
   cat("\n", sQuote(x$model), " model fitted with the ", sQuote(x$method),
       " method in ", x$n_iter, " iterations of the EM algorithm.\n", sep = "")
@@ -131,4 +131,10 @@ print.ddhazard_space_errors <- function(x, ...){
   print(errs)
 
   invisible(x)
+}
+
+#' @export
+print.ddsurvcurve <- function(x, ...){
+  cat("Predicted survival curve from call:\t",
+      paste(deparse(x$call), sep = "\n", collapse = "\n"), sep = "\n")
 }

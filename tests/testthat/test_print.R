@@ -126,3 +126,14 @@ test_that("Print function for ddhazard_space_errors object gives previous result
   expect_known_output(output <- print(errs), "space_error_print")
   expect_equal(output, errs)
 })
+
+test_that("print print.ddsurvcurve gives correct result", {
+  h1 <- suppressWarnings(ddhazard(
+    Surv(stop, event) ~ group, head_neck_cancer, by = 1, max_T = 45,
+    Q_0 = diag(2^2, 2), Q = diag(.01^2, 2), control = ddhazard_control(
+      method = "GMA", eps = 1e-1, n_max = 1)))
+  ddcurve <- ddsurvcurve(h1, new_data = data.frame(
+    group = factor(2, levels = 1:2)))
+
+  expect_known_output(ddcurve, file = "print-ddsurvcurve.txt", print = TRUE)
+})

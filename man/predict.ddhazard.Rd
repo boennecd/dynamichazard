@@ -63,8 +63,8 @@ then the probability will be for having an event between \code{tstart} and \code
 conditional on no events before \code{tstart}.
 \describe{
 \item{\code{fits}}{fitted probability of an event.}
-\item{\code{start}}{numeric vector with start time for each element in \code{fits}.}
-\item{\code{tstop}}{numeric vector with stop time for each element in \code{fits}.}
+\item{\code{istart}}{numeric vector with start time for each element in \code{fits}.}
+\item{\code{istop}}{numeric vector with stop time for each element in \code{fits}.}
 }
 }
 

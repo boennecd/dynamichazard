@@ -431,3 +431,67 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
     pf_fit, N_fw = 500, N_first = 2000, seed = .Random.seed)
   expect_false(isTRUE(all.equal(fw_ps, fw_ps_3)))
 })
+
+test_that("ddsurvcurve manual page examples give the same", {
+  pbc <- pbc_org
+  temp <- subset(pbc, id <= 312, select=c(id:sex, stage))
+  pbc2 <- tmerge(temp, temp, id=id, death = event(time, status))
+  pbc2 <- tmerge(pbc2, pbcseq, id = id, bili = tdc(day, bili))
+
+  f1 <- suppressWarnings(ddhazard(
+    Surv(tstart, tstop, death == 2) ~ ddFixed(log(bili)), pbc2, id = pbc2$id,
+    max_T = 3600, Q_0 = 1, Q = 1e-2, by = 100, model = "exponential",
+    control = ddhazard_control(method = "EKF", eps = 1e-1, n_max = 1,
+                               fixed_terms_method = "M_step")))
+
+  ddcurve <- ddsurvcurve(f1)
+  z <- plot(ddcurve, col = "DarkBlue", lwd = 2)
+  expect_known_value(ddcurve, file = "ddsurvcurve-fix-cont.RDS")
+  expect_equal(z$S(c((0:3) * 1000)), c(
+    1, 0.967806836427118, 0.937426234451691, 0.904842879418892))
+
+  nw <- data.frame(bili = 3)
+  z <- lines(ddsurvcurve(f1, new_data = nw), col = "DarkBlue")
+  expect_equal(z$S(c((0:3) * 1000)), c(
+    1, 0.866618493229879, 0.75375407181175, 0.64567672043475))
+
+  f3 <- suppressWarnings(ddhazard(
+    Surv(tstart, tstop, death == 2) ~ log(bili), pbc2, id = pbc2$id,
+    max_T = 3600, Q_0 = diag(1, 2), Q = diag(1e-2, 2), by = 100, model = "exponential",
+    control = ddhazard_control(method = "EKF", eps = 1e-1, n_max = 1)))
+
+  nw <- data.frame(
+    bili = c(2.1, 1.9, 3.3, 3.9, 3.8, 3.6, 4, 4.9, 4.2, 5.7, 10.2),
+    tstart = c(0L, 225L, 407L, 750L, 1122L, 1479L, 1849L, 2193L, 2564L, 2913L,
+               3284L),
+    tstop = c(225L, 407L, 750L, 1122L, 1479L, 1849L, 2193L, 2564L, 2913L,
+              3284L, 3600L))
+  ddcurve <- ddsurvcurve(f3, new_data = nw, tstart = "tstart", tstop = "tstop")
+  z <- lines(ddcurve, "darkorange", lwd = 2)
+  expect_equal(z$S(c((0:3) * 1000)), c(
+    1, 0.831340175284127, 0.694231628800056, 0.423403100827788))
+
+  ddcurve <- ddsurvcurve(f3, new_data = nw[-(1:5), ], tstart = "tstart",
+                         tstop = "tstop")
+  z <- lines(ddcurve, lty = 2, lwd = 2)
+  expect_equal(z$S(c((2:3) * 1000)), c(0.907583926364646, 0.553523972032861))
+
+  #####
+  # example with discrete time model
+  h1 <- suppressWarnings(ddhazard(
+    Surv(stop, event) ~ group, head_neck_cancer, by = 1, max_T = 45,
+    Q_0 = diag(2^2, 2), Q = diag(.01^2, 2), control = ddhazard_control(
+      method = "GMA", eps = 1e-1, n_max = 1)))
+
+  nw <- data.frame(group = factor(1, levels = 1:2), tstart = 0, tstop = 30)
+  ddcurve <- ddsurvcurve(h1, new_data = nw, tstart = "tstart",
+                         tstop = "tstop")
+  z <- plot(ddcurve, col = "Darkblue")
+  expect_known_value(z, file = "ddsurvcurve-fix-disc-1.RDS")
+
+  nw$group <- factor(2, levels = 1:2)
+  ddcurve <- ddsurvcurve(h1, new_data = nw, tstart = "tstart",
+                         tstop = "tstop")
+  z <- lines(ddcurve, col = "DarkOrange")
+  expect_known_value(z, file = "ddsurvcurve-fix-disc-2.RDS")
+})

@@ -282,3 +282,69 @@ plot.PF_EM <- function(x, y, ...){
   cl$x <- bquote(.(substitute(x))$clouds)
   invisible(eval(cl, parent.frame()))
 }
+
+#' @describeIn  ddsurvcurve  method for plotting survival curve.
+#' @section plot.ddsurvcurve:
+#' Returns the same as \code{lines.ddsurvcurve}.
+#' @export
+plot.ddsurvcurve <- function(x, y, xlab = "Time", ylab = "Survival", ylim,
+                             xaxs = "i", yaxs = "i", ...){
+  if(missing(ylim))
+    ylim <- c(0, 1.04)
+  if(yaxs == "i" && ylim[2] == 1)
+    ylim[2] <- 1 + .04 * diff(ylim)
+
+  plot(range(x$start, x$time), c(0, 1), type = "n", xlab = xlab, ylab = ylab,
+       ylim = ylim, xaxs = xaxs, yaxs = yaxs)
+  cl <- match.call()
+  cl[[1L]] <- quote(lines)
+  cl[c("xlab", "Survial")] <- NULL
+  invisible(eval(cl, parent.frame()))
+}
+
+#' @describeIn ddsurvcurve Method for adding survival curve to a plot.
+#' @section lines.ddsurvcurve:
+#' Either returns the objects used in the call to \code{\link{segments}} for discrete
+#' time hazard models, or the time points and survival function used to draw
+#' the survival curve.
+#' @importFrom graphics segments par
+#' @export
+lines.ddsurvcurve <- function(x, col = "Black", lty = 1, lwd = par()$lwd, ...){
+  tstart <- c(x$start, x$time[-length(x$time)])
+  tstop <- x$time
+
+  if(x$family == "logistic"){
+    yold <- c(1, x$psurv[-length(x$psurv)])
+    segments(tstart, yold, tstop, yold, col = col, lty = lty, lwd = lwd)
+    segments(tstop, yold, tstop, x$psurv, col = col, lty = lty, lwd = lwd)
+
+    return(invisible(list(tstart = tstart, yold = yold, psurv = x$psurv)))
+
+  } else if(x$family == "exponential"){
+    # find rates
+    tdiff <- tstop  - tstart
+    lambdas <- -log(1 - x$dhazard) / tdiff
+    survprev <- c(1, x$psurv[-length(x$psurv)])
+    bin_borders <- c(x$start, x$time)
+    bin_borders[length(bin_borders)] <- bin_borders[length(bin_borders)] + 1e-8
+
+    # assign survival function
+    S <- function(z){
+      idx <- findInterval(z, bin_borders, left.open = FALSE)
+      if(any(idx <= 0, idx >= max(bin_borders)))
+        stop("data points outside time range")
+
+      f1 <- survprev[idx]
+      f2 <- exp(-lambdas[idx] * (z - tstart[idx]))
+      f1 * f2
+    }
+
+    z <- seq(tstart[1], tstop[length(tstop)], length.out = 1000)
+    lines(z, S(z), col = col, lty = lty, lwd = lwd)
+
+    return(invisible(list(z = z, S = S)))
+  }
+
+  stop(sQuote("lines.ddsurvcurve"), " is not implemented for family ",
+       sQuote(x$family))
+}
