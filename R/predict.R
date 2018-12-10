@@ -181,16 +181,17 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms, tstart,
       params[i, ] = F_ %*% params[i - 1, ]
 
     if(sds){
-      if(order > 1)
+      if(object$order > 1)
         stop(sQuote("sds"), " = TRUE is not implemented with ",
              sQuote("order"), " > 1")
 
       new_state_vars <- array(dim = c(dim(state_vars)[1:2], nrow(params)))
       new_state_vars[, , 1:dim(state_vars)[3]] <- state_vars
 
+      Q_t <- Q. * last_gab
       for(i in seq_along(new_times) + length(otimes))
         new_state_vars[, , i] <-
-          tcrossprod(F_ %*% new_state_vars[, , i - 1L], F_) + Q.
+          tcrossprod(F_ %*% new_state_vars[, , i - 1L], F_) + Q_t
 
       state_vars <- new_state_vars
     }

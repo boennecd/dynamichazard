@@ -228,6 +228,35 @@ test_that("predict yields the correct covariance matrix", {
         pd[, , i], crossprod(XJ, fit$state_vars[, , j + 1L] %*% XJ))
     }
   }
+
+  # just run this to make sure that is does not fail when we ask for future
+  # sds
+  t_data$tstop[2] <- fit$times[length(fit$times)] + 5L
+  preds <- predict(
+    fit, new_data = t_data, tstart = "tstart", tstop = "tstop",
+    type = "term", sds = TRUE)
+
+  tis <- fit$times[1L]:(fit$times[length(fit$times)] + 5L)
+  cv_mats <- array(dim = c(dim(fit$state_vars)[1:2], length(tis)))
+  cv_mats[, , seq_along(fit$times)] <- fit$state_vars
+  for(i in (length(fit$times) + 1L):dim(cv_mats)[3])
+    cv_mats[, , i] <- cv_mats[, , i - 1L] + fit$Q
+
+  for(i in 1:nrow(t_data)){
+    td <- t_data[i, ]
+    XJ <- matrix(
+      c(1,     0,       0,       0,
+        0, td$x1, td$x1^2, td$x1^3), ncol = 2)
+    pd <- preds$varcov[[i]]
+    sa <- findInterval(td$tstart, tis, left.open = FALSE)
+    so <- findInterval(td$tstop , tis, left.open = TRUE)
+    i <- 0L
+    for(j in sa:so){
+      i <- i + 1L
+      expect_equal(
+        pd[, , i], crossprod(XJ, cv_mats[, , j + 1L] %*% XJ))
+    }
+  }
 })
 
 
