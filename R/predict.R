@@ -266,7 +266,9 @@ predict_terms <- function(object, new_data, m, sds, fixed_terms, tstart,
       crossprod(XJ, x %*% XJ))
     dim(varcov) <- c(q, q, d)
 
-    sds_res <- sqrt(t(apply(varcov, 3, diag)))
+    sds_res <- sqrt(apply(varcov, 3, diag))
+    sds_res <- if(is.vector(sds_res))
+      as.matrix(sds_res) else t(sds_res)
 
   } else {
     varcov  <- NULL

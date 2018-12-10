@@ -257,6 +257,18 @@ test_that("predict yields the correct covariance matrix", {
         pd[, , i], crossprod(XJ, cv_mats[, , j + 1L] %*% XJ))
     }
   }
+
+  # has correct dimension when only one variable is time-varying
+  fit <- suppressWarnings(ddhazard(
+    Surv(tstart, tstop, event) ~ ddFixed(cbind(x1, x1^2, x1^3)),
+    data = logit_sim_200$res, max_T = 10, model = "logit",
+    control = ddhazard_control(n_max = 1), Q = 1, Q_0 = 1, by = 1))
+  preds <- predict(
+    fit, new_data = t_data[1, ], tstart = "tstart", tstop = "tstop",
+    type = "term", sds = TRUE)
+  expect_equal(dim(preds$sds[[1]]), dim(preds$terms[[1L]]))
+  expect_equal(dim(preds$varcov[[1]])[3:2], dim(preds$terms[[1L]]))
+  expect_equal(dim(preds$varcov[[1]])[1], dim(preds$terms[[1L]])[2])
 })
 
 
