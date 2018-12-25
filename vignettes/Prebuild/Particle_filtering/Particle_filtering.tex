@@ -1198,21 +1198,14 @@ and where $\vecOP{\cdot}$ is the vectorization function which stacks the the col
 %
 $\mat{G}\in\mathbb{R}^{\dimRng\dimState \times g}$ is a known matrix with $g \leq \dimRng\dimState$ and we assume that it has full column rank. Similarly, $\mat{J}\in\mathbb{R}^{\dimRng \times l}$ with $l \leq \dimRng$ and $\mat{K}\in\mathbb{R}^{\dimRng(\dimRng - 1)/2 \times k}$ with $k\leq \dimRng(\dimRng - 1)/2$. Both are known and have full column rank. We assume that $\mat{G}$ is such that $\mat{F}$ is non-singular for some $\vec{\theta}$. Similarly, we assume that $\mat{J}$ and $\mat{K}$ are such that $\mat{Q}$ is a positive definite matrix for some $\vec{\psi}$ and $\vec{\phi}$ pair. $\mat{V}$ is a diagonal matrix containing the standard deviations and $\mat{C}$ is the correlation matrix.
 
-We cannot jointly maximize $\vec{\theta}$, $\vec{\psi}$, and $\vec{\phi}$ analytically but we can maximize $\vec{\theta}$ analytically conditional on $\vec{\psi}$ and $\vec{\phi}$. Hence, we can employ a Monte Carlo expectation conditional maximization algorithm in which we take two so-called conditional maximization steps \citep[see][on the, non-Monte Carlo, expectation maximization algorithm]{meng93}. We need some more notation before we show the two conditional maximization steps. Let $H^{(\dimRng, \dimState)}$ be the $(\dimRng, \dimState)$ commutation matrix so %
-%
-$$
-H^{(\dimRng, \dimState)}\vecOP{\mat{R}^+\mat{F}} 
-	= \vecOP{\Lparen{\mat{R}^+\mat{F}}^\top}
-	= \vecOP{\mat{F}^\top\mat{R}^{+\top}}
-$$%
-%
-and let superscript $(i)$ denote the M-step estimates from the $i$'th iteration of the EM algorithm. Then the first conditional maximization step is %
+We cannot jointly maximize $\vec{\theta}$, $\vec{\psi}$, and $\vec{\phi}$ analytically but we can maximize $\vec{\theta}$ analytically conditional on $\vec{\psi}$ and $\vec{\phi}$. Hence, we can employ a Monte Carlo expectation conditional maximization algorithm in which we take two so-called conditional maximization steps \citep[see][on the, non-Monte Carlo, expectation maximization algorithm]{meng93}. 
+The first conditional maximization step is %
 %
 \begin{equation}\label{eqn:restric_F_est}
 \vec{\theta}^{(i + 1)} =
-	\tilde{\mat{G}}^+
+	\mat{G}^+
 	\Lparen{\mat{Q}^{(i)} \otimes \Lparen{\mat{M}^\top\mat{W}\mat{M}}^{-1}}
-	\tilde{\mat{G}}^{+\top}\tilde{\mat{G}}^\top	
+	\mat{G}^{+\top}\mat{G}^\top	
 	\vecOP{\mat{M}^\top\mat{W}\mat{N}\mat{Q}^{-(i)}}
 \end{equation}%
 % 
@@ -1233,7 +1226,7 @@ step which updates $\vec{\psi}$ and $\vec{\phi}$ is %
    -\text{tr}\Lparen{\mat{Q}(\vec{\psi},\vec{\phi})^{-1}\mat{Z}}
 \end{align*}%
 % 
-which can be done numerically. We have made $\mat{Q}$'s dependence on $\vec{\psi}$ and $\vec{\phi}$ explicit to emphasize which factors are affected. $\mat{V}$ will not be a valid correlation matrix for all $\vec\phi\in\mathbb{R}^k$ for some choices of $\mat{K}$. The invalid values are ruled out doing the numerical optimization. This completes the two conditional maximization steps. The next E-step is then performed using $\vec{\theta}^{(i + 1)}$, $\vec{\psi}^{(i +1)}$, $\vec{\phi}^{(i + 1)}$. \citet[][see the discussion]{meng93} comments that it may be beneficial to perform an E-step between each conditional maximization step when the E-step is relatively cheap. 
+which can be done numerically. We have made $\mat{Q}$'s dependence on $\vec{\psi}$ and $\vec{\phi}$ explicit to emphasize which factors are affected. $\mat{C}$ will not be a valid correlation matrix for all $\vec\phi\in\mathbb{R}^k$ for some choices of $\mat{K}$. The invalid values are ruled out doing the numerical optimization. This completes the two conditional maximization steps. The next E-step is then performed using $\vec{\theta}^{(i + 1)}$, $\vec{\psi}^{(i +1)}$, $\vec{\phi}^{(i + 1)}$. \citet[][see the discussion]{meng93} comments that it may be beneficial to perform an E-step between each conditional maximization step when the E-step is relatively cheap. 
 This is not the case here since all the above computations are independent 
 of $\nMax$.
 Thus, if we have a moderately large number of observations at each time point relative to 
