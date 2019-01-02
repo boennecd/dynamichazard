@@ -152,8 +152,10 @@ test_that("PF_EM help page example runs and gives previous computed results", {
   if(dir.exists("previous_results/local_tests"))
     # tmp <- readRDS("previous_results/local_tests/survival_lung_example.RDS")
     expect_known_value(
-      pf_fit[names(pf_fit) != "call"], "local_tests/survival_lung_example.RDS",
+      pf_fit[!names(pf_fit) %in% c("call", "control")], "local_tests/survival_lung_example.RDS",
       tolerance = 1.49e-08)
+  expect_equal(
+    pf_fit$control$n_threads, max(parallel::detectCores(logical = FALSE), 1))
 
   # tmp <- readRDS("previous_results/survival_lung_example_cloud_means.RDS")
   expect_known_value(
@@ -215,8 +217,10 @@ test_that("Second example on PF help page gives the same result", {
       n_threads = max(parallel::detectCores(logical = FALSE), 1))))
 
   # tmp <- readRDS("previous_results/local_tests/pf_man_2nd_ppfit.RDS")
-  expect_known_value(pf_fit[!names(pf_fit) %in% c("clouds", "call")],
+  expect_known_value(pf_fit[!names(pf_fit) %in% c("clouds", "call", "control")],
                      "local_tests/pf_man_2nd_ppfit.RDS")
+  expect_equal(
+    pf_fit$control$n_threads, max(parallel::detectCores(logical = FALSE), 1))
 })
 
 test_that("example in 'PF_EM' with gives previous results w/ a few iterations", {

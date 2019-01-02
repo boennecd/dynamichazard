@@ -32,11 +32,6 @@
 get_risk_obj = function(
   Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
   min_chunk = 5000){
-  if(n_threads > 1){
-    unique_ids <- unique(id)
-    n_ids <- length(unique_ids)
-  }
-
   Y <- unclass(Y)
   start = Y[, 1]
   stop = Y[, 2]
@@ -62,56 +57,16 @@ get_risk_obj = function(
   stop_order = order(stop, method = "radix") - 1L
   stop <- round_if_almost_eq(stop, stop_order, c(min_start, event_times_in))
 
-  if(n_threads == 1 || min_chunk > n_ids){
-    return(
-      get_risk_obj_rcpp(
-        start = start, stop = stop, event = event,
-        by = by, start_order = start_order,
-        max_T = max_T,
-        order_by_id_and_rev_start = order_by_id_and_rev_start, id = id,
-        is_for_discrete_model = is_for_discrete_model,
-        min_start = min_start, event_times_in = event_times_in))
-  }
+  if(n_threads > 1)
+    warning(sQuote("n_threads"), " greater than one is no longer supported")
 
-  # find number of tasks
-  n_tasks <- min(ceiling(n_ids / min_chunk), 4 * n_threads)
-  tasks <- split(
-    unique_ids, cut(seq_along(unique_ids), n_tasks, labels = FALSE))
-
-  # find subset of risk sets
-  out <- parallel::mclapply(tasks, function(ids) {
-    my_indx <- which(id %in% ids) - 1L
-    my_start_order <- intersect(start_order, my_indx)
-    my_order_by_id_and_rev_start <-
-      intersect(order_by_id_and_rev_start,  my_indx)
-
-    local_res <- get_risk_obj_rcpp(
-      start = start, stop = stop, event = event,
-      by = by, start_order = my_start_order,
-      max_T = max_T,
-      order_by_id_and_rev_start = my_order_by_id_and_rev_start, id = id,
-      is_for_discrete_model = is_for_discrete_model,
-      min_start = min_start, event_times_in = event_times_in)
-
-    local_res$is_event_in[-(my_order_by_id_and_rev_start + 1)] <- NA_integer_
-    local_res
-    })
-
-  # combine results
-  final <- out[[1]]
-  final$risk_sets <-
-    lapply(seq_along(event_times_in), function(i){
-      do.call(c, unname(lapply(out, function(x){
-        x$risk_sets[[i]]
-      })))
-    })
-
-  for(i in 2:length(out)){
-    is_new <- which(!is.na(out[[i]]$is_event_in))
-    final$is_event_in[is_new] <- out[[i]]$is_event_in[is_new]
-  }
-
-  final
+  get_risk_obj_rcpp(
+    start = start, stop = stop, event = event,
+    by = by, start_order = start_order,
+    max_T = max_T,
+    order_by_id_and_rev_start = order_by_id_and_rev_start, id = id,
+    is_for_discrete_model = is_for_discrete_model,
+    min_start = min_start, event_times_in = event_times_in)
 }
 
 ######

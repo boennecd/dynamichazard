@@ -685,7 +685,7 @@ test_that("Reverse permutating the data frame and the initial values", {
 #####
 # By hand test of risk_obj with parallal
 
-test_that("Parallel and non-parallel version gives the same for get_risk_set", {
+test_that("Parallel and non-parallel version gives the same for get_risk_set. The former gives a warning", {
   set.seed(4296745)
   s <-
     test_sim_func_logit(
@@ -697,10 +697,12 @@ test_that("Parallel and non-parallel version gives the same for get_risk_set", {
     Y = Surv(tstart, tstop, event),
     by = 1, max_T = 10, id = id, is_for_discrete_model = T))
 
-  p2 <- with(s, get_risk_obj(
-    Y = Surv(tstart, tstop, event),
-    by = 1, max_T = 10, id = id, is_for_discrete_model = T,
-    n_threads = 2, min_chunk = 1000))
+  expect_warning(
+    p2 <- with(s, get_risk_obj(
+      Y = Surv(tstart, tstop, event),
+      by = 1, max_T = 10, id = id, is_for_discrete_model = T,
+      n_threads = 2, min_chunk = 1000)),
+    "'n_threads' greater than one is no longer supported", fixed = TRUE)
 
   for(i in 1:10)
     expect_true(setequal(p1$risk_sets[[i]],

@@ -424,8 +424,10 @@ test_that("PF_EM gives previous results on head neck data set with fixed effects
       max_T = 30))
 
   # tmp <- readRDS("previous_results/local_tests/pf_logit_w_fixed.RDS")
-  expect_known_value(pp_fit[!names(pp_fit) %in% c("clouds", "call")],
+  expect_known_value(pp_fit[!names(pp_fit) %in% c("clouds", "call", "control")],
                      "local_tests/pf_logit_w_fixed.RDS")
+  expect_equal(
+    pp_fit$control$n_threads, max(parallel::detectCores(logical = FALSE), 1))
 })
 
 test_that("compute_PF_summary_stats gives previous results", {
