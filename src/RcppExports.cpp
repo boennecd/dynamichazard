@@ -630,7 +630,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // parallelglm
-arma::vec parallelglm(arma::mat& X, arma::vec& Ys, std::string family, arma::vec beta0, arma::vec& weights, arma::vec& offsets, double tol, int nthreads, int it_max, bool trace, std::string method);
+Rcpp::NumericVector parallelglm(arma::mat& X, arma::vec& Ys, std::string family, arma::vec beta0, arma::vec& weights, arma::vec& offsets, double tol, int nthreads, int it_max, bool trace, std::string method);
 RcppExport SEXP _dynamichazard_parallelglm(SEXP XSEXP, SEXP YsSEXP, SEXP familySEXP, SEXP beta0SEXP, SEXP weightsSEXP, SEXP offsetsSEXP, SEXP tolSEXP, SEXP nthreadsSEXP, SEXP it_maxSEXP, SEXP traceSEXP, SEXP methodSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -699,6 +699,7 @@ END_RCPP
 
 RcppExport SEXP _rcpp_module_boot_dd_exponential();
 RcppExport SEXP _rcpp_module_boot_dd_logistic();
+RcppExport SEXP _rcpp_module_boot_dd_cloglog();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_PF_smooth", (DL_FUNC) &_dynamichazard_PF_smooth, 26},
@@ -747,6 +748,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_rep_vec", (DL_FUNC) &_dynamichazard_rep_vec, 2},
     {"_rcpp_module_boot_dd_exponential", (DL_FUNC) &_rcpp_module_boot_dd_exponential, 0},
     {"_rcpp_module_boot_dd_logistic", (DL_FUNC) &_rcpp_module_boot_dd_logistic, 0},
+    {"_rcpp_module_boot_dd_cloglog", (DL_FUNC) &_rcpp_module_boot_dd_cloglog, 0},
     {NULL, NULL, 0}
 };
 

@@ -15,7 +15,9 @@ PF_effective_sample_size <- function(object){
 #' @inheritParams ddhazard
 #' @param control see \code{\link{PF_control}}.
 #' @param trace argument to get progress information. Zero will yield no info and larger integer values will yield incrementally more information.
-#' @param model either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.
+#' @param model either \code{'logit'} for binary outcomes with the logistic
+#' link function, \code{'cloglog'} for binary outcomes with the inverse cloglog
+#' link function, or \code{'exponential'} for piecewise constant exponential distributed arrival times.
 #' @param seed seed to set at the start of every EM iteration. See
 #' \code{\link{set.seed}}.
 #' @param type type of state model. Either \code{"RW"} for a [R]andom [W]alk or
@@ -400,7 +402,7 @@ PF_EM <- function(
     stop(sQuote('order'), " not equal to 1 is not supported")
 
   if(is.character(model) && length(model) == 1 &&
-     !model %in% c("logit", "exponential"))
+     !model %in% c("logit", "cloglog", "exponential"))
     stop(sQuote('model'), " is not supported")
 
   if(missing(id)){
@@ -1223,8 +1225,8 @@ PF_control <- function(
   tmp <- get_design_matrix_and_risk_obj(
     formula = formula, data = data, by = by,
     max_T = if(is.null(max_T)) NULL else max_T, verbose = trace > 0,
-    is_for_discrete_model = model == "logit", id = id, fixed = fixed,
-    random = random)
+    is_for_discrete_model = model %in% c("logit", "cloglog"), id = id,
+    fixed = fixed, random = random)
 
   if(trace > 0)
     report_pre_liminary_stats_before_EM(
@@ -1246,12 +1248,12 @@ PF_control <- function(
 .PF_update_fixed <- function(
   clouds, risk_obj, R, X, fixed_terms, fixed_parems, model, nthreads,
   tstart, tstop, debug){
-  if(!model %in% c("logit", "exponential"))
+  if(!model %in% c("logit", "cloglog", "exponential"))
     stop(sQuote(model), " is not implemented with fixed effects")
 
   family_arg <- switch(
     model,
-    logit = "binomial",
+    logit = "binomial", cloglog = "cloglog",
     exponential = "poisson")
 
   R_top <- t(R)
@@ -1272,7 +1274,7 @@ PF_control <- function(
     pivot = qr.$pivot - 1)) # less one to have zero index as cpp code
 
   R <- .get_R(out[[1]])
-  drop(solve(t(R) %*% R, t(R) %*% out[[1]]$f))
+  drop(solve(crossprod(R), crossprod(R, out[[1]]$f)))
 }
 
 .get_R <- function(o){

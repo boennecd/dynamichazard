@@ -83,8 +83,11 @@ Rcpp::List ddhazard_fit_cpp(
   } else if (is_exponential_model(model)){
     fam.reset(new exponential());
 
+  } else if (model == "cloglog") {
+    fam.reset(new cloglog());
+
   } else
-    Rcpp::stop("EKF is not implemented for model '" + model  +"'");
+    Rcpp::stop("Not implemented for model '" + model  +"'");
 
   if(method == "EKF"){
     solver.reset(new EKF_solver(

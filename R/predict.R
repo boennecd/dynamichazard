@@ -68,7 +68,7 @@ predict.ddhazard = function(object, new_data,
                                 tstart = "start", tstop = "stop",
                                 use_parallel, sds = F, max_threads, ...)
 {
-  if(!object$model %in% c("logit", exp_model_names))
+  if(!object$model %in% c("logit", "cloglog", exp_model_names))
     stop("Functions for model '", object$model, "' is not implemented")
   if(!missing(max_threads) || !missing(use_parallel))
     warning(sQuote("max_threads"), " and ", sQuote("use_parallel"),
@@ -324,7 +324,7 @@ predict_response <- function(
 #' @name ddsurvcurve
 #' @title Create and plot survival curves
 #' @description
-#' The function creates a predicted surival curve for a new observation using
+#' The function creates a predicted survival curve for a new observation using
 #' a estimated \code{ddhazard} model from \code{\link{ddhazard}}. The predicted
 #' curve is based on the predicted mean path of the state vector. Thus, the
 #' survival curve will not be a "mean" curve due to the non-linear relation between
@@ -352,7 +352,7 @@ predict_response <- function(
 #' discrete  survival curve, time points for the survival curve, point of the first
 #' time period, the call, the discrete probabilities of an event in each interval
 #' conditional on survival up to that point, and the name of the distribution
-#' family.
+#' family. It should be seen as a plug-in estimate.
 #'
 #' @seealso
 #' \code{\link{ddhazard}}, and \code{\link{predict.ddhazard}}.

@@ -4,9 +4,10 @@
 \alias{plot.ddhazard_space_errors}
 \title{State Space Error Plot}
 \usage{
-\method{plot}{ddhazard_space_errors}(x, mod, cov_index = NA, t_index = NA,
-  p_cex = par()$cex * 0.2, pch = 16, ylab = "Std. state space error",
-  x_tick_loc = NA, x_tick_mark = NA, xlab = "Time", ...)
+\method{plot}{ddhazard_space_errors}(x, mod, cov_index = NA,
+  t_index = NA, p_cex = par()$cex * 0.2, pch = 16,
+  ylab = "Std. state space error", x_tick_loc = NA, x_tick_mark = NA,
+  xlab = "Time", ...)
 }
 \arguments{
 \item{x}{result of \code{\link[=residuals.ddhazard]{residuals}} with a `type` argument which yields state space errors.}

@@ -149,6 +149,9 @@ Rcpp::List PF_smooth(
   } else if (model == "exponential"){
     dens_calc.reset(new exponential_dens(*data.get()));
 
+  } else if (model == "cloglog") {
+    dens_calc.reset(new cloglog_dens(*data.get()));
+
   } else {
     std::stringstream stream;
     stream << "model '" << model << "' is not implemented";
@@ -280,6 +283,9 @@ Rcpp::List particle_filter(
 
   } else if (model == "exponential"){
     dens_calc.reset(new exponential_dens(*data.get()));
+
+  } else if (model == "cloglog") {
+    dens_calc.reset(new cloglog_dens(*data.get()));
 
   } else {
     std::stringstream stream;

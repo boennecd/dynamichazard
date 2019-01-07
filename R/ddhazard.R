@@ -5,7 +5,11 @@ if(getRversion() >= "2.15.1")
 #' @description  Function to fit dynamic hazard models using state space models.
 #' @param formula \code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.
 #' @param data \code{data.frame} or environment containing the outcome and covariates.
-#' @param model \code{"logit"} or \code{"exponential"} for the logistic link function in the first case or for the continuous time model in the latter case.
+#' @param model \code{"logit"}, \code{"cloglog"}, or \code{"exponential"} for
+#' respectively the logistic link function with discrete outcomes,
+#' the inverse cloglog link function with discrete outcomes,
+#' or for the continuous time model with piecewise constant exponentially
+#' distributed arrival times.
 #' @param by interval length of the bins in which parameters are fixed.
 #' @param max_T end of the last interval interval.
 #' @param id vector of ids for each row of the in the design matrix.
@@ -23,7 +27,16 @@ if(getRversion() >= "2.15.1")
 #'
 #' All filter methods needs a state covariance matrix \code{Q_0} and state vector \code{a_0}. An estimate from a time-invariant model is used for \code{a_0} if it is not supplied (the same model you would get from \code{\link{static_glm}}). A diagonal matrix with large entries is recommended for \code{Q_0}. What is large dependents on the data set and \code{model}. Further, a covariance matrix for the first iteration \code{Q} is needed. The \code{Q} and \code{a_0} are estimated with an EM-algorithm.
 #'
-#' The model is specified through the \code{model} argument. The logistic model is where outcomes are binned into the intervals. Be aware that there can be "loss" of information due to binning. It is key for the logit model that the \code{id} argument is provided if individuals in the data set have time-varying covariates. The the exponential model use an exponential model for the arrival times where there is no "loss" information due to binning.
+#' The model is specified through the \code{model} argument. The discrete
+#' outcome models are where outcomes are binned into the intervals.
+#' Be aware that there can be "loss" of information due to binning if outcomes
+#' are not discrete to start with. It is key for these models that the
+#' \code{id} argument is provided if individuals in the data set have
+#' time-varying covariates. The the exponential model use a piecewise constant
+#' exponential distribution
+#' for the arrival times where there is no "loss" information due to binning.
+#' Though, one of the assumptions of the model is not satisfied if outcomes
+#' are only observed in discrete time intervals.
 #'
 #' It is recommended to see the Shiny app demo for this function by calling \code{\link{ddhazard_app}()}.
 #'
@@ -114,7 +127,7 @@ ddhazard = function(
   if(any(weights != 1))
     message("lag_one_cov will not be correct when some weights are not 1")
 
-  if(model == "logit"){
+  if(model %in% c("logit", "cloglog")){
     is_for_discrete_model <- TRUE
 
   } else if (model %in% exp_model_names){
@@ -298,8 +311,15 @@ ddhazard = function(
   if(model == "logit") {
     family <- Module("dd_logistic")
 
-  } else if(model %in% exp_model_names){
+  } else if(model %in% exp_model_names) {
     family <- Module("dd_exponential")
+
+  } else if(model == "cloglog") {
+    family <- Module("dd_cloglog")
+
+  } else {
+    family <- NULL
+    warning(sQuote("family"), " element not set on returned object")
 
   }
 
@@ -641,6 +661,9 @@ get_start_values <- function(
 
   } else if(model %in% exp_model_names){
     cl$family <- "exponential"
+
+  } else if(model == "cloglog") {
+    cl$family <- "cloglog"
 
   } else
     stop("Method not implemented to find initial values for ", sQuote(model),

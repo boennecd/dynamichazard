@@ -4,9 +4,9 @@
 \alias{plot.ddhazard}
 \title{Plots for ddhazard Object}
 \usage{
-\method{plot}{ddhazard}(x, xlab = "Time", ylab = "Hazard", type = "cov",
-  plot_type = "l", cov_index, ylim, col = "black", add = F,
-  do_alter_mfcol = T, level = 0.95, ddhazard_boot, ...)
+\method{plot}{ddhazard}(x, xlab = "Time", ylab = "Hazard",
+  type = "cov", plot_type = "l", cov_index, ylim, col = "black",
+  add = F, do_alter_mfcol = T, level = 0.95, ddhazard_boot, ...)
 }
 \arguments{
 \item{x}{result of \code{\link{ddhazard}} call.}

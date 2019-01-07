@@ -7,7 +7,8 @@
 \usage{
 \method{logLik}{PF_EM}(object, ...)
 
-\method{logLik}{PF_clouds}(object, df = NA_real_, nobs = NA_integer_, ...)
+\method{logLik}{PF_clouds}(object, df = NA_real_, nobs = NA_integer_,
+  ...)
 }
 \arguments{
 \item{object}{an object of class \code{PF_clouds} or \code{PF_EM}.}

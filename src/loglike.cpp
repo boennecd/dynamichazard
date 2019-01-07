@@ -104,6 +104,9 @@ std::vector<double>
   } else if (is_exponential_model(model)){
     fam.reset(new exponential());
 
+  } else if(model == "cloglog"){
+    fam.reset(new cloglog());
+
   } else
     Rcpp::stop("Model '" + model + "' not implemented for logLike method");
 

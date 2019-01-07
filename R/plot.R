@@ -35,7 +35,7 @@ plot.ddhazard = function(x, xlab = "Time",
                              col = "black", add = F, do_alter_mfcol = T,
                              level = 0.95,
                              ddhazard_boot, ...){
-  if(!x$model %in% c("logit", exp_model_names))
+  if(!x$model %in% c("logit", "cloglog", exp_model_names))
     stop("Functions for model '", x$model, "' is not implemented")
 
   missing_boot <- missing(ddhazard_boot)
@@ -313,7 +313,7 @@ lines.ddsurvcurve <- function(x, col = "Black", lty = 1, lwd = par()$lwd, ...){
   tstart <- c(x$start, x$time[-length(x$time)])
   tstop <- x$time
 
-  if(x$family == "logistic"){
+  if(x$family %in% c("logistic", "cloglog")){
     yold <- c(1, x$psurv[-length(x$psurv)])
     segments(tstart, yold, tstop, yold, col = col, lty = lty, lwd = lwd)
     segments(tstop, yold, tstop, x$psurv, col = col, lty = lty, lwd = lwd)

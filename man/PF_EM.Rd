@@ -4,17 +4,19 @@
 \alias{PF_EM}
 \title{EM Estimation with Particle Filters and Smoothers}
 \usage{
-PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q, order = 1,
-  control = PF_control(...), trace = 0, seed = NULL, type = "RW",
-  fixed = NULL, random = NULL, Fmat, fixed_effects, G, theta, J, K, psi,
-  phi, ...)
+PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q,
+  order = 1, control = PF_control(...), trace = 0, seed = NULL,
+  type = "RW", fixed = NULL, random = NULL, Fmat, fixed_effects, G,
+  theta, J, K, psi, phi, ...)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}
 
 \item{data}{\code{data.frame} or environment containing the outcome and covariates.}
 
-\item{model}{either \code{'logit'} for binary outcomes or \code{'exponential'} for piecewise constant exponential distributed arrival times.}
+\item{model}{either \code{'logit'} for binary outcomes with the logistic
+link function, \code{'cloglog'} for binary outcomes with the inverse cloglog
+link function, or \code{'exponential'} for piecewise constant exponential distributed arrival times.}
 
 \item{by}{interval length of the bins in which parameters are fixed.}
 

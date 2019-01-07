@@ -213,7 +213,7 @@ change_new_var_name <- function(c_x, data){
 #' @inheritParams ddhazard
 #' @inheritParams get_survival_case_weights_and_data
 #' @param ... arguments passed to \code{\link{glm}} or \code{\link[speedglm]{speedglm}}. If \code{only_coef = TRUE} then the arguments are passed to \code{\link{glm.control}} if \code{\link{glm}} is used.
-#' @param family \code{"logit"} or \code{"exponential"} for a static equivalent model of \code{\link{ddhazard}}.
+#' @param family \code{"logit"}, \code{"cloglog"}, or \code{"exponential"} for a static equivalent model of \code{\link{ddhazard}}.
 #' @param model \code{TRUE} if you want to save the design matrix used in \code{\link{glm}}.
 #' @param speedglm depreciated.
 #' @param only_coef \code{TRUE} if only coefficients should be returned. This will only call the \code{speedglm::speedglm.wfit} or \code{\link{glm.fit}} which will be faster.
@@ -287,8 +287,9 @@ static_glm <- function(
     data <- data[, c(all.vars(formula), col_for_row_n)]
   }
 
-  if(family %in% c("binomial", "logit")){
-    family <- binomial()
+  if(family %in% c("binomial", "logit", "cloglog")){
+    family <- binomial(switch(
+      family, binomial = "logit", logit = "logit", cloglog = "cloglog"))
 
     tmp <- get_survival_case_weights_and_data(
       formula = formula, data = data, by = by, max_T = max_T, id = id,

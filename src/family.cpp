@@ -162,3 +162,27 @@ RCPP_MODULE(dd_logistic){
   function("dd_log_like", wrapper::dd_log_like,
            List::create(_["outcome"], _["eta"], _["at_risk_length"]));
 }
+
+template <>
+const std::string family_wrapper<cloglog>::my_name = "cloglog";
+RCPP_MODULE(dd_cloglog){
+  using namespace Rcpp;
+
+  using wrapper = family_wrapper<cloglog>;
+
+  function("name", wrapper::name);
+
+  function("linkinv", wrapper::linkinv,
+           List::create(_["eta"], _["at_risk_length"]));
+  function("mu_eta", wrapper::mu_eta,
+           List::create(_["eta"], _["at_risk_length"]));
+  function("var", wrapper::var,
+           List::create(_["eta"], _["at_risk_length"]));
+
+  function("log_like", wrapper::log_like,
+           List::create(_["outcome"], _["eta"], _["at_risk_length"]));
+  function("d_log_like", wrapper::d_log_like,
+           List::create(_["outcome"], _["eta"], _["at_risk_length"]));
+  function("dd_log_like", wrapper::dd_log_like,
+           List::create(_["outcome"], _["eta"], _["at_risk_length"]));
+}

@@ -143,6 +143,15 @@ public:
   logistic_dens(const PF_data &data): pf_base_dens(data) {};
 };
 
+/* Class for binary outcomes with inverse cloglog link */
+
+class cloglog_dens :
+  public virtual pf_base_dens,
+  public virtual cloglog {
+public:
+  cloglog_dens(const PF_data &data): pf_base_dens(data) {};
+};
+
 /* Class for piece-wise constant exponentially distributed arrival times */
 class exponential_dens :
   public virtual pf_base_dens,

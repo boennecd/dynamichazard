@@ -51,7 +51,7 @@ inline arma::vec set_offsets
     offsets = arma::log(dts);
     offsets = arma_copy(offsets, n_times);
 
-  } else if(family->name() == BINOMIAL){
+  } else if(family->name() == BINOMIAL or family->name() == CLOGLOG){
     offsets = arma::vec(dts.n_elem * n_times, arma::fill::zeros);
 
   } else
@@ -218,6 +218,11 @@ Rcpp::List pf_fixed_effect_iteration(
     dat.reset(new data_holder(
         X, Y, dts, cloud, cl_weights, ran_vars, fixed_parems,
         std::unique_ptr<glm_base>(new exponential()), block_use));
+
+  } else if(family == CLOGLOG) {
+    dat.reset(new data_holder(
+        X, Y, dts, cloud, cl_weights, ran_vars, fixed_parems,
+        std::unique_ptr<glm_base>(new cloglog()), block_use));
 
   } else
     Rcpp::stop("Family not implemented");

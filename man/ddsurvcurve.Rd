@@ -6,11 +6,11 @@
 \alias{ddsurvcurve}
 \title{Create and plot survival curves}
 \usage{
-\method{plot}{ddsurvcurve}(x, y, xlab = "Time", ylab = "Survival", ylim,
-  xaxs = "i", yaxs = "i", ...)
+\method{plot}{ddsurvcurve}(x, y, xlab = "Time", ylab = "Survival",
+  ylim, xaxs = "i", yaxs = "i", ...)
 
-\method{lines}{ddsurvcurve}(x, col = "Black", lty = 1, lwd = par()$lwd,
-  ...)
+\method{lines}{ddsurvcurve}(x, col = "Black", lty = 1,
+  lwd = par()$lwd, ...)
 
 ddsurvcurve(object, new_data, tstart = "", tstop = "")
 }
@@ -53,10 +53,10 @@ time intervals.}
 discrete  survival curve, time points for the survival curve, point of the first
 time period, the call, the discrete probabilities of an event in each interval
 conditional on survival up to that point, and the name of the distribution
-family.
+family. It should be seen as a plug-in estimate.
 }
 \description{
-The function creates a predicted surival curve for a new observation using
+The function creates a predicted survival curve for a new observation using
 a estimated \code{ddhazard} model from \code{\link{ddhazard}}. The predicted
 curve is based on the predicted mean path of the state vector. Thus, the
 survival curve will not be a "mean" curve due to the non-linear relation between

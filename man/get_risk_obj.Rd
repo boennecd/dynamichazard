@@ -4,8 +4,8 @@
 \alias{get_risk_obj}
 \title{Risk Set on an Equidistant Distant Grid}
 \usage{
-get_risk_obj(Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
-  min_chunk = 5000)
+get_risk_obj(Y, by, max_T, id, is_for_discrete_model = T,
+  n_threads = 1, min_chunk = 5000)
 }
 \arguments{
 \item{Y}{vector of outcome variable returned from \code{\link{Surv}}.}

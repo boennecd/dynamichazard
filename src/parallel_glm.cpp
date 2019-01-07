@@ -22,6 +22,8 @@
   int it_max,                                                  \
   bool trace
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+
 /* data holder class */
 class data_holder_base {
 public:
@@ -45,6 +47,12 @@ public:
     max_threads(max_threads), p(p), n(n), family(std::move(family)),
     block_size(block_size)
   {}
+};
+
+
+struct parallelglm_out {
+  arma::vec result;
+  unsigned int iter;
 };
 
 /* Similar function glm.fit in r-source/src/library/stats/R/glm.R
@@ -163,7 +171,7 @@ class parallelglm_class_quick {
   }
 
 public:
-  static arma::vec compute(COMPUTE_ARGS){
+  static parallelglm_out compute(COMPUTE_ARGS){
     uword p = X.n_rows;
     uword n = X.n_cols;
     data_holder data(
@@ -201,7 +209,11 @@ public:
     if(i == it_max)
       Rcpp::stop("parallelglm did not converge");
 
-    return beta;
+    parallelglm_out out;
+    out.result = beta;
+    out.iter = (unsigned int)MIN(i + 1L, it_max);
+
+    return out;
   }
 };
 
@@ -287,7 +299,7 @@ class parallelglm_class_QR {
   };
 
 public:
-  static arma::vec compute(COMPUTE_ARGS){
+  static parallelglm_out compute(COMPUTE_ARGS){
     uword p = X.n_rows;
     uword n = X.n_cols;
     data_holder_base data(
@@ -333,7 +345,11 @@ public:
     if(i == it_max)
       Rcpp::stop("parallelglm did not converge");
 
-    return beta;
+    parallelglm_out out;
+    out.result = beta;
+    out.iter = (unsigned int)MIN(i + 1L, it_max);
+
+    return out;
   }
 
   static R_F get_R_f(data_holder_base &data, bool first_it){
@@ -358,15 +374,19 @@ public:
 
 
 template<class TMethod>
-arma::vec parallelglm_fit(
+parallelglm_out parallelglm_fit(
     arma::mat &X, arma::vec &Ys, std::string family, arma::vec beta0,
     arma::vec &weights, arma::vec &offsets, double tol, int nthreads,
     int it_max, bool trace){
-  arma::vec result;
+  parallelglm_out result;
   if(family == BINOMIAL)
     result = TMethod::compute(
       X, beta0, Ys, weights, offsets,
       std::unique_ptr<glm_base>(new logistic()), tol, nthreads, it_max, trace);
+  else if(family == CLOGLOG)
+    result = TMethod::compute(
+      X, beta0, Ys, weights, offsets,
+      std::unique_ptr<glm_base>(new cloglog()), tol, nthreads, it_max, trace);
   else if(family == POISSON)
     result = TMethod::compute(
       X, beta0, Ys, weights, offsets,
@@ -379,7 +399,7 @@ arma::vec parallelglm_fit(
 }
 
 // [[Rcpp::export]]
-arma::vec parallelglm(
+Rcpp::NumericVector parallelglm(
     arma::mat &X, arma::vec &Ys, std::string family, arma::vec beta0,
     arma::vec &weights, arma::vec &offsets, double tol = 1e-8,
     int nthreads = 1, int it_max = 25, bool trace = false,
@@ -393,7 +413,7 @@ arma::vec parallelglm(
   if(offsets.n_elem == 0)
     offsets = arma::vec(X.n_cols, arma::fill::zeros);
 
-  arma::vec result;
+  parallelglm_out result;
   if(method == "quick")
     result = parallelglm_fit<parallelglm_class_quick>(
       X, Ys, family, beta0, weights, offsets, tol, nthreads, it_max, trace);
@@ -403,5 +423,9 @@ arma::vec parallelglm(
   else
     Rcpp::stop("'method' not implemented");
 
-  return result;
+  Rcpp::NumericVector out =
+    Rcpp::as<Rcpp::NumericVector>(Rcpp::wrap(result.result));
+  out.attr("iter") = result.iter;
+
+  return out;
 }

@@ -4,9 +4,9 @@
 \alias{predict.ddhazard}
 \title{Predict Method for ddhazard Object}
 \usage{
-\method{predict}{ddhazard}(object, new_data, type = c("response", "term"),
-  tstart = "start", tstop = "stop", use_parallel, sds = F, max_threads,
-  ...)
+\method{predict}{ddhazard}(object, new_data, type = c("response",
+  "term"), tstart = "start", tstop = "stop", use_parallel, sds = F,
+  max_threads, ...)
 }
 \arguments{
 \item{object}{result of a \code{\link{ddhazard}} call.}

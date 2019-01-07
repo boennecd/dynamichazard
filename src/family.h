@@ -2,11 +2,13 @@
 #define DDFAMILY
 
 #include "utils.h"
+#include <cmath>
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 #define BINOMIAL "binomial"
+#define CLOGLOG "cloglog"
 #define POISSON "poisson"
 
 class glm_base {
@@ -142,7 +144,7 @@ public:
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
     double p = linkinv(eta, exp_eta, at_risk_length);
-    return outcome ? log(p) : log(1 - p);
+    return outcome ? log(p) : log1p(-p);
   }
 
   double d_log_like(
@@ -193,6 +195,148 @@ public:
     return glm_initialize(y, 1);
   }
 };
+
+
+
+class cloglog : public virtual family_base, public virtual glm_base {
+  const double mu_lb = std::numeric_limits<double>::epsilon();
+  const double exp_eta_lb = -log1p(-mu_lb);
+  const double eta_lb = log(exp_eta_lb);
+
+  const double mu_ub = 1. - std::numeric_limits<double>::epsilon();
+  const double exp_eta_ub = -log(1. - mu_ub);
+  const double eta_ub = log(exp_eta_ub);
+
+public:
+  bool uses_at_risk_length() const override {
+    return false;
+  }
+
+  double offset(const double at_risk_length) const override {
+    return 0;
+  }
+
+  trunc_eta_res truncate_eta(
+      const bool outcome, const double eta, const double exp_eta,
+      const double at_risk_length) const override {
+        trunc_eta_res ans;
+        if(exp_eta < exp_eta_lb){
+          ans.eta_trunc = eta_lb;
+          ans.exp_eta_trunc = exp_eta_lb;
+
+        } else if (exp_eta > exp_eta_ub){
+          ans.eta_trunc = eta_ub;
+          ans.exp_eta_trunc = exp_eta_ub;
+
+        } else {
+          ans.eta_trunc = eta;
+          ans.exp_eta_trunc = exp_eta;
+
+        }
+
+        return ans;
+      }
+
+  double linkinv(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
+        return -expm1(-exp_eta);
+      }
+
+  double mu_eta(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
+        return exp(eta - exp_eta);
+      }
+
+  double var(
+      const double eta, const double exp_eta,
+      const double at_risk_length) const override {
+        double mu = linkinv(eta, exp_eta, at_risk_length);
+        return mu * (1 - mu);
+      }
+
+  double log_like(
+      const bool outcome, const double eta,
+      const double exp_eta, const double at_risk_length) const override {
+        double p = linkinv(eta, exp_eta, at_risk_length);
+        return outcome ? log(p) : log1p(-p);
+      }
+
+  double d_log_like(
+      const bool outcome, const double eta,
+      const double exp_eta, const double at_risk_length) const override {
+        /*
+         * y = 1: \exp\eta / (\exp\exp\eta - 1)
+         * y = 0: -\exp\eta
+         */
+        return outcome ? exp_eta / expm1(exp_eta) : - exp_eta;
+      }
+
+  double dd_log_like(
+      const bool outcome, const double eta,
+      const double exp_eta, const double at_risk_length) const override {
+        /*
+         * y = 1: \frac{\exp\eta(\exp\exp\eta - 1 - \exp(\eta + \exp\eta))}{(\exp\exp\eta - 1)^2}
+         *      :   = \frac{-(\exp(-\exp\eta) - 1) - \exp\eta}{(\exp(\exp\eta -\eta) - \exp-\eta)(-(\exp(-\exp\eta) -1)))}
+         * The numerator is: 1 - \exp(-\exp\eta) - \exp\eta \overset{y=-\exp\eta}{=} 1 -\exp y + y \approx -(\frac{y^2}{2!}+\frac{y^3}{3!} + \frac{y^4}{4!}+\cdots)
+         * y = 0: -\exp\eta
+         */
+        if(outcome){
+          const double m_expexp_eta_m1 = - expm1(-exp_eta),
+            d1 = exp(exp_eta - eta) - 1 / exp_eta;
+
+          double numerator = m_expexp_eta_m1 - exp_eta;
+          if(eta < -8){
+            /* avoid catastrophic cancellation for small eta */
+            double y = -exp_eta;
+            numerator =
+              y * y / 2. * (1. + y / 3. * (1. + y /4. * (1. + y / 5.)));
+          }
+
+          return numerator / d1 / m_expexp_eta_m1;
+        }
+
+        return - exp_eta;
+      }
+
+  /* GLM family like functions */
+  double glm_dev_resids(double y, double mu, double wt) const override {
+    return - 2 * wt * (y * log(mu) + (1 - y) * log(1 - mu));
+  }
+
+  double glm_linkfun(double mu) const override {
+    return log(-log1p(-mu));
+  }
+
+  double glm_linkinv(double eta) const override {
+    return MAX(
+      MIN(-expm1(-exp(eta)), 1. -  std::numeric_limits<double>::epsilon()),
+      std::numeric_limits<double>::epsilon());
+  }
+
+  double glm_variance(double mu) const override {
+    return mu * (1 - mu);
+  }
+
+  double glm_mu_eta(double eta) const override {
+    eta = MIN(eta, 700);
+    return MAX(exp(eta - exp(eta)), std::numeric_limits<double>::epsilon());
+  }
+
+  double glm_initialize(double y, double weight) const override {
+    return glm_linkfun((weight * y + 0.5)/(weight + 1));
+  }
+
+  std::string name() const override {
+    return CLOGLOG;
+  }
+
+  double initialize(double y) const override {
+    return glm_initialize(y, 1);
+  }
+};
+
 
 
 class exponential : public virtual family_base, public virtual glm_base  {

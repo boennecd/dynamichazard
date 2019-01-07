@@ -4,9 +4,9 @@
 \alias{get_survival_case_weights_and_data}
 \title{Get data.frame for Discrete Time Survival Models}
 \usage{
-get_survival_case_weights_and_data(formula, data, by, max_T, id, init_weights,
-  risk_obj, use_weights = T, is_for_discrete_model = T, c_outcome = "Y",
-  c_weights = "weights", c_end_t = "t")
+get_survival_case_weights_and_data(formula, data, by, max_T, id,
+  init_weights, risk_obj, use_weights = T, is_for_discrete_model = T,
+  c_outcome = "Y", c_weights = "weights", c_end_t = "t")
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}

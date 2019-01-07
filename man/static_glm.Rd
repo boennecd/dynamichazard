@@ -4,9 +4,10 @@
 \alias{static_glm}
 \title{Static glm Fit}
 \usage{
-static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
-  weights, risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
-  method_use = c("glm", "speedglm", "parallelglm_quick", "parallelglm_QR"),
+static_glm(formula, data, by, max_T, ..., id, family = "logit",
+  model = F, weights, risk_obj = NULL, speedglm = F,
+  only_coef = FALSE, mf, method_use = c("glm", "speedglm",
+  "parallelglm_quick", "parallelglm_QR"),
   n_threads = getOption("ddhazard_max_threads"))
 }
 \arguments{
@@ -22,7 +23,7 @@ static_glm(formula, data, by, max_T, ..., id, family = "logit", model = F,
 
 \item{id}{vector of ids for each row of the in the design matrix.}
 
-\item{family}{\code{"logit"} or \code{"exponential"} for a static equivalent model of \code{\link{ddhazard}}.}
+\item{family}{\code{"logit"}, \code{"cloglog"}, or \code{"exponential"} for a static equivalent model of \code{\link{ddhazard}}.}
 
 \item{model}{\code{TRUE} if you want to save the design matrix used in \code{\link{glm}}.}
 
