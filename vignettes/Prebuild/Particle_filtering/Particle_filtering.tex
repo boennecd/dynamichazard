@@ -159,11 +159,19 @@ This vignette relies heavily on \cite{fearnhead10} and there is a big overlap be
 is presented here and the paper. 
 
 \section{Method}
-The model is
+The models implemented in the package is survival analysis models for terminal
+events. These can be in discrete times where we have binary indicators
+$Y_{ik} = 1_{\{T_i \in (t_{k-1}, t_k]\}}$ which is one if the random event time
+of individual $i$ denoted by 
+$T_i\in (0,\infty)$ is in the interval $(t_{k-1}, t_k]$ and zero otherwise.
+It can also be in continuous time where we model the distribution of the event 
+time of individual $i$, $T_i$, with a
+piecewise constant exponential distribution conditional on observable covariates 
+and the path a discrete latent variable. To be more concrete, the model is
 
 \begin{equation}\label{eqn:model}
 \begin{aligned}
- 	y_{it} &\sim \pdensC{y_{it}}{\eta_{it}} &  \\
+ 	y_{it} &\sim \optorC{g}{y_{it}}{\eta_{it}} &  \\
 %
  	\vec{\eta}_{t} &= \mat{X}_t\mat R^+\vec{\alpha}_t + \vec{o}_t +  
  	\mat{Z}_t\vec{\omega} & \\
@@ -179,35 +187,34 @@ The model is
 %
 where I  denote the conditional densities as %
 $\optorC{g_t}{\vec{y}_t}{\vec{\alpha}_t} = %
-	\optorC{g}{\vec{y}_t}{\mat{X}_t\mat R^+\vec{\alpha}_t + \vec{o}_t +  \mat{Z}_t\vec{\omega}}$ and $\optorC{f}{\vec{\alpha}_t}{\vec{\alpha}_{t-1}}$. We are in a survival analysis setting where the simplest model has an indicator of an event of individual $i$ in time $t$ such that $y_{it} \in \Lbrace{0, 1}$, $\eta_{it}$ is the linear predictor, and we use the logistic function as the link function
-between $\eta_{it}$ and the probability of an event. 
- For each $t=1,\dots,\nPeriods$, we a have risk set given by $R_t \subseteq \Lbrace{1,2,\dots,n}$. 
+	\optorC{g}{\vec{y}_t}{\mat{X}_t\mat R^+\vec{\alpha}_t + \vec{o}_t +  \mat{Z}_t\vec{\omega}}$ and $\optorC{f}{\vec{\alpha}_t}{\vec{\alpha}_{t-1}}$. 
+For each $t=1,\dots,\nPeriods$, we a have risk set given by $R_t \subseteq \Lbrace{1,2,\dots,n}$. 
 Further, we let $n_t = \vert R_t \vert$ denote the number of observation 
 at risk at time $t$ 
 and $\nMax = \max_{t \in\{1,\dots \nPeriods\}} = n_t$. The observed outcomes 
 are denoted by $\vec{y}_t = \Lbrace{y_{it}}_{i \in R_t}$. $\mat{X}_t$ is the 
 design matrix of the covariates and $\vec{\alpha}_t$ is the state vector 
 containing the time-varying coefficients. 
-The $\mat{Z}_t$ is the design matrix for the fixed 
-effects and $\vec{\omega}$ are the corresponding coefficients.
+The $\mat{Z}_t$ is the design matrix for the covariates with time-invariant
+coefficients and $\vec{\omega}$ are the corresponding coefficients.
 
-Superscript $+$ denotes the Moore-Penrose inverse, %
-the $i$'th row of $\mat{X}_t$ is $\vec{x}_{it}$, $\vec{x}_{it},\vec{\epsilon}_t\in\mathbb{R}^\dimRng$%
+The $i$'th row of $\mat{X}_t$ is $\vec{x}_{it}$, $\vec{x}_{it},\vec{\epsilon}_t\in\mathbb{R}^\dimRng$%
 , $\vec\mu_0,\vec{\alpha}_t\vec\in\mathbb{R}^\dimState$%
 , $\mat{F} \in \mathbb{R}^{\dimState\times\dimState}$%
 , $\mat{Q} \in \mathbb{R}^{\dimRng\times\dimRng}$ is a positive definite matrix%
 , $\mat{Q}_0 \in \mathbb{R}^{\dimState\times\dimState}$ is a positive definite matrix%
-, $\vec{o}_t$ are known offsets%
-, and $\mat{R} \in \{0,1\}^{\dimState\times \dimRng}$%
-~with $\dimState\geq\dimRng$ contains a subset of the columns of $\mat{I}_{\dimState}$ identity matrix with no duplicate columns in $\mat{R}$. The latter implies that $\mat{R}^+ = \mat{R}^\top$ and $\mat{R}$ is left inverse (i.e., $\mat{R}^\top\mat{R} = \mat{I}_\dimRng$). $\mat{R}\mat{R}^\top$ is a $\dimState\times\dimState$ diagonal matrix with $\dimRng$ diagonal entries with value 1 and $\dimState - \dimRng$ with value zero. 
-We will order the entires of $\mat R$ such that the first $\dimRng$ columns are the 
-first $\dimRng$ columns of the identity matrix. I.e.,%
+, $\vec{o}_t$s are known offsets%
+, and $\mat{R}$ is a $\dimState\times\dimRng$ matrix%
+~with $\dimState\geq\dimRng$ which contains a subset of $r$ columns of $\mat{I}_{\dimState}$. We will order the entires of $\mat R$ such that the first $\dimRng$ columns are the 
+first $\dimRng$ columns of $\mat{I}_{\dimState}$. I.e.,%
 %
 $$\mat{R} = \begin{pmatrix}
 	\mat I_\dimRng  \\
 	\mat 0 
 \end{pmatrix}$$%
 %
+Superscript $+$ denotes the Moore-Penrose inverse, $\mat{R}^+ = \mat{R}^\top$ and $\mat{R}$ is left inverse (i.e., $\mat{R}^\top\mat{R} = \mat{I}_\dimRng$). $\mat{R}\mat{R}^\top$ is a $\dimState\times\dimState$ diagonal matrix where the $\dimRng$ 
+first diagonal entries has value 1 and the rest of the diagonal entries are zero. 
 The data sets we are working with have 
 $\nMax \gg \dimState \geq \dimRng$ (e.g. $\nMax = 100000$ and $\dimRng = 5$). We let %
 %
@@ -230,23 +237,165 @@ I will use a particle filter and smoother to get smoothed estimates of
 $\vec{\alpha}_1, \dots, \vec{\alpha}_\nPeriods$ given the outcomes 
 $\vec{y}_{1:\nPeriods} = \Lbrace{\vec{y}_1,\vec{y}_2,\dots, \vec{y}_\nPeriods}$ and use 
 an EM-algorithm to estimate $\mat{Q}$, $\vec\omega$, and $\vec\mu_0$. One choice of smoother is 
-the generalized two-filter smoother in \cite{fearnhead10} and \cite{briers09}. The rest of
- vignette is structured as follows: first I cover the particle filter and smoother in \cite{fearnhead10}. Then 
- I cover the EM-algorithm, smoother in \cite{briers09}, and other miscellaneous topics. I will end with some points
-  about the implementation.
+shown in \cite{fearnhead10} and another is the the generalized two-filter smoother shownby \cite{briers09}. 
+The rest of
+vignette is structured as follows: first I give a brief introduction to the implemented particle
+filters and smoohters. Then I cover what the effect is of some the arguments to 
+particle functions in \texttt{R} in the packages. 
+The implemented particle filter and smoother from \cite{fearnhead10} is presented next, followed by 
+the used EM-algorithm, the smoother in \cite{briers09}, and other miscellaneous topics.
+  
+\subsection{Overview}
+As a quick recap which will ease reading the next sections, we will start by 
+recalling an application of importance sampling, use this to motivate particle filtering, 
+and give a brief idea of the implemented particle smoothers. 
+Suppose we want to approximate a
+density $c(x) = \zeta\tilde c(x)$ where we only know $\tilde c(x)$ and not 
+the normalization constant $\zeta$. One way to approximate this density is 
+to %
+%
+\begin{itemize}
+  \item sample $x_1,x_2,\dots,x_\nPart$ from a distribution with density $b(x)$.
+  \item Compute the unnormalized weights $\bar w_i = \tilde c(x_i) / b(x_i)$.
+  \item Normalize the weights $w_i = \bar w_i / \sum_{i = 1}^\nPart\bar w_i$. 
+\end{itemize}%
+%
+This gives us the following discrete approximation of the density %
+%
+$$c(x) \approx \sum_{i = 1}^\nPart w_i\dirac{x_i}{x}$$%
+% 
+where $\delta_{x}$ is the Dirac delta function which has unit point mass
+at $x$. This is directly applicable to the model
+in Equation~\eqref{eqn:model} as at time 1 we want to approximate %
+%
+$$
+\pdensC{\vec\alpha_1}{\vec y_1} = \frac{
+	\optorC{g_1}{\vec y_1}{\vec\alpha_1} 
+	\int\optorC{f}{\vec\alpha_1}{\vec\alpha_0}
+	\normaldC{\vec\alpha_0}{\vec\mu_0}{\mat Q_0}d\vec\alpha_0
+	}{\pdens{\vec y_1}}
+$$%
+%
+where $\normaldC{\cdot}{\vec m}{\mat M}$ is the density function of a multivariate normal 
+distribution with mean $\vec m$ and covariance matrix $\mat M$. We can easily evaluate the 
+numerator for each $\vec\alpha_1$ but not the normalization constant, $\pdens{\vec y_1}$. 
+
+The extension to a particle filter (which I will call a forward particle filter) is that at 
+time 2 we want to approximate %
+%
+$$
+\pdensC{\vec\alpha_{1:2}}{\vec y_{1:2}} = 
+	\pdensC{\vec\alpha_1}{\vec y_1}\frac{
+		\optorC{g_2}{\vec y_2}{\vec\alpha_2}\optorC{f}{\vec\alpha_2}{\vec\alpha_1}
+	}{
+		\pdensC{\vec y_2}{\vec y_1}
+	}
+$$%
+% 
+Now, we can use the discrete approximation at time 1 of $\pdensC{\vec\alpha_1}{\vec y_1}$, 
+sample $\vec \alpha_2$ given each sampled $\vec\alpha_1$, and apply importance sampling 
+again. We can repeat this with similar arguments at time $3,4,\dots,\nPeriods$ giving us an approximation 
+of $\pdensC{\vec\alpha_{1:\nPeriods}}{\vec y_{1:\nPeriods}}$. We will call the last element of 
+a sampled path at time $t$ a particle. Further, we will denote the $j$th particle at time $t$ 
+and its' associated weight by $\partic\alpha tj$ and $\partic wtj$ respectively.  
+One issue that may arise is that 
+our samples (particles) may degenerate so essentially only one sampled path of $\vec\alpha_{1:\nPeriods}$ 
+has any weight in the end. 
+To avoid this, we may introduce a re-sampling step. One way to re-sample is using the weights 
+and letting the re-sampling weights be $\partic\beta{t+1}j = \partic wtj$ where $\partic\beta{t+1}j$ is 
+the re-sampling weight of particle $j$ at time $t$. We then sample with replacement using 
+$\partic\beta{t+1}j$. Another option when we re-sample the particles from time 
+$t$ is to use the information of the outcomes at time $t+1$, $\vec y_{t+1}$. This is called 
+an auxiliary particle filter and is introduced in \cite{pitt99}.
+
+However, we may end up with few or only one unique value at the early time 
+points (say $\vec\alpha_1$) when we re-sample. Thus, it will be useful to use a smoother to get 
+a better approximation of the marginal density $\pdensC{\vec\alpha_t}{\vec y_{1:\nPeriods}}$. To do so, 
+one idea is to use the two-filter formula from \cite{kitagawa94}. Though, this requires that
+we can evaluate $\pdensC{\vec{y}_{t:d}}{\vec{\alpha}_t}$. It turns out that we can approximate 
+this up to a constant which just what need (see Section~\ref{sec:Brier}). 
+
+The approximation uses a particle filter
+which is run backwards in time and which approximates an artificial distribution. The arguments 
+for the backward particle filter is very similar to the forward particle filter presented above. 
+The $k$th particle in the backward particle filter at 
+time $t$, its' re-sampling weight, and the associated weight will be denoted by 
+respectively $\particB{\vec{\alpha}}{t}{k}$, $\particB\beta{t-1}k$ 
+and $\particB{w}{t}{k}$. The final $i$th smoothed particle and weight at time $t$ will be denoted by 
+ $\particS{\vec{\alpha}}{t}{i}$ and $\particS{w}{t}{i}$. The latter gives us the following approximation 
+of the marginal density of $\vec\alpha_t \mid \vec y_{1:\nPeriods}$%
+%
+$$
+\pdensC{\vec\alpha_t}{\vec y_{1:\nPeriods}} \approx
+	\sum_{i = 1}^{\nPart_S} 
+	\particS{w}{t}{i}\dirac{\particS{\vec{\alpha}}{t}{i}}{\vec\alpha_t}
+$$%
+%
+if we sampled $\nPart_S$ smoothed particles at time $t$. 
+The smoothing algorithm from \cite{fearnhead10} is shown in Algorithm~\ref{alg:ONsmoother}, 
+the forward particle filter is shown Algorithm~\ref{alg:forward}, and the backward particle filter 
+is shown in Algorithm~\ref{alg:backward}.
+
+
+
+\subsection{Methods in the package}
+The \texttt{PF\_EM} method in the \texttt{dynamichazard} package contains an implementation of the described methods. You specify the number of particles by the \texttt{N\_first}, \texttt{N\_fw\_n\_bw} and \texttt{N\_smooth} argument for respectively the $\nPart_f$, $\nPart$ and $\nPart_s$ in the Algorithm \ref{alg:ONsmoother}-\ref{alg:backward}. We may want more particles in the smoothing step, $\nPart_s > \nPart$, as pointed out in the discussion in \citet[page 460 and 461]{fearnhead10}. Further, selecting $\nPart_f > \nPart$ may be preferable to ensure coverage of the state space at time $0$ and $\nPeriods + 1$.
+
+\todoin{We do not need to sample the time $0$ and $\nPeriods + 1$ particles. Instead we can make a special proposal distribution for time $1$ and time $d$. This is not implemented though...}
+
+The \texttt{method} argument specify how the filters are set up. The argument can take the following values
+
+\begin{itemize}
+	\item \texttt{"bootstrap\_filter"} for a bootstrap filter. This is where we sample using 
+	Equation \eqref{eq:bootFW}, \eqref{eq:bootBW} and \eqref{eq:bootSM}. This is fast but the proposal 
+	distribution may be a poor approximation of the distribution we want to target.
+	\item \texttt{"PF\_normal\_approx\_w\_cloud\_mean"} and \texttt{"AUX\_normal\_approx\_w\_cloud\_mean"} for 
+	the Taylor approximation of the conditional density of $\vec{y}_t$ made using the mean of the parent 
+	particles and/or mean of the child particles. See Section \ref{sec:NonLinObs}. 
+	The \texttt{PF} and \texttt{AUX} prefix specifies whether or not the auxiliary version 
+	should be used.
+	\item \texttt{"PF\_normal\_approx\_w\_particles"} and 
+	 \texttt{"AUX\_normal\_approx\_w\_particles"} for the Taylor approximation of the conditional density 
+	 of $\vec{y}_t$ made using the parent and/or child particle. 
+	  See Section \ref{sec:NonLinObs}.
+	  The \texttt{PF} and \texttt{AUX} prefix specifies whether or not the auxiliary version should be used.
+\end{itemize}
+
+The smoother is selected with the \texttt{smoother} argument. \texttt{"Fearnhead\_O\_N"} gives the smoother in Algorithm~\ref{alg:ONsmoother} and \texttt{"Brier\_O\_N\_square"} gives the smoother in Algorithm~\ref{alg:ON2smoother}. 
+The \emph{Systematic Re-sampling} \citep{kitagawa96} is used in all re-sampling steps. See \cite{douc05} for a 
+comparison of re-sampling methods. The rest of the arguments to \texttt{PF\_EM} are similar to those of the 
+\texttt{ddhazard} function.
+
+It is not clear what will give the best performance for a given data set. An advice is to use the \texttt{trace}
+argument and check the effective sample at each point in time doing the estimation. \texttt{"bootstrap\_filter"}
+may not be that much cheaper in terms of computation time as we still have to evaluate $g_t$ in Equation
+\eqref{eqn:combineWeight}, \eqref{eqn:forwardWeight}, and \eqref{eqn:backwardWeight} which is 
+$\bigO{\nMax\nPart\dimRng}$ or $\bigO{\nMax\nPart_S\dimRng}$ run times. 
+On the other hand, the \texttt{"...\_w\_particles"}
+methods are $\bigO{\nMax\nPart\dimRng^2}$ or $\bigO{\nMax\nPart_S\dimRng^2}$ run times
+with a potentially much larger constant. 
+Thus, the \texttt{"...\_w\_cloud\_mean"} may be preferred.
+
+The rest of the vignette covers the implemented methods. It is mainly included to show exactly what is 
+computed and why. Further, I cover some currently not implemented extensions that may be implemented in the 
+future. 
+
 
 \subsection{Proposal distributions and re-sampling weights}
-Algorithm~\ref{alg:ONsmoother} shows one of the generalized two-filter smoother from
-\cite{fearnhead10} in the first order state space model. This is the situation where
+Algorithm~\ref{alg:ONsmoother} shows one of the particle smoothers shown by
+\cite{fearnhead10} in the first order state space model. In this situation $\mat R = \mat I_\dimRng$,
 $\dimRng = \dimState$ and $\vec\alpha_t = \vec\xi_t$. We need to specify a series of proposal distributions and 
 re-sampling weights. To show what is implemented and why, we first 
-consider the the model where %
+consider the model where %
 %
 $$\vec y_t \mid \vec\alpha_t \sim \normal{%
 	\mat{X}_t\vec{\alpha}_t + \vec{o}_t +  \mat{Z}_t\vec{\omega}}{\mat H_t}$$%
 %
-for some known positive definite matrix $\mat H_t$. This is not implemented but deriving 
-optimal re-sampling weights and proposal distributions is possible in this case. Thus, this
+for some known positive definite matrix $\mat H_t$. This is not implemented 
+in this package but deriving 
+optimal re-sampling weights and proposal distributions is possible in this case. 
+In fact, it makes little sense to use a particle filter and particle smoother in this case
+since the Kalman filter and an exact smoother can be applied. However, the results here
 will turn out to be useful to motivate the approximations we use
 later. The state space model is%
 %
@@ -277,9 +426,7 @@ want the re-sampling weights to be
 	\mat X_t \mat Q \mat X_t^\top + \mat H_t}
 	\partic w{t-1}j\nonumber
 \end{align}%
-% 
-where $\normaldC{\cdot}{\vec m}{\mat M}$ is the density function of a multivariate normal 
-distribution with mean $\vec m$ and covariance matrix $\mat M$. 
+%  
 We can notice that setting $\partic\beta tj = \partic w{t-1}j$ yields the 
 so-called sequential importance 
 re-sampling algorithm. For the proposal distribution, the optimal proposal density is%
@@ -313,27 +460,27 @@ where we find that %
 	\label{eq:fwNormProMean}
 \end{align}%
 % 
-The $\dots$ are terms of the normalization constant. We recognize the multivariate normal distribution density and thus %
+The $\dots$ are terms of the normalization constant. We recognize the multivariate normal distribution density and thus the optimal proposal density is %
 %
 $$\IDC{\vec\alpha_t}{\partic{\vec\alpha}{t-1}j, \vec y_t}  
 	= \normaldC{\vec\alpha_t}{\vec\mu(\partic{\vec\alpha}{t-1}j)}{\mat\Sigma_t}
 $$%
 %
-We can also let proposal density be%
+Alternatively, we can use the so-called \emph{bootstrap filter} and let%
 %
-\begin{equation}
+\begin{equation}\label{eq:bootFW}
 	\IDC{\vec{\alpha}_t}{\partic{\vec{\alpha}}{t-1}{j}, \vec{y}_t} = %
 		\normaldC{\vec\alpha_t}{\mat{F}\partic{\vec{\alpha}}{t-1}{j}}{\mat{Q}}
 \end{equation}%
 %
 which we can sample from in $\bigO{\nPart \dimState^2}$ time if we have a pre-computed Cholesky 
-decomposition of $\mat{Q}$. This is often called the \emph{bootstrap filter}. This is cheap 
+decomposition of $\mat{Q}$. This is computationally cheap 
 compared to optimal solution which is $\bigO{\nPart \dimState^2  + \dimState^3 + \nMax \dimState^2}$ but it is not optimal.
 
 
 
 \subsubsection*{Backward filter (Algorithm~\ref{alg:backward})}
-We need to specify the artificial prior $\gamma_t\Lparen{\vec{\alpha}_t}$. 
+We need to specify the artificial prior $\gamma_t\Lparen{\vec{\alpha}_t}$ for our artificial backward distribution. 
 \citet[page 69 and 70]{briers09} provides recommendation on the selection. One suggestion is the artificial density function %
 %
 \begin{equation}\begin{split}\label{eq:artfiPrior}
@@ -347,7 +494,10 @@ We need to specify the artificial prior $\gamma_t\Lparen{\vec{\alpha}_t}$.
 		\mat{Q} & t > 0   \end{matrix} \right.
 \end{split}\end{equation}%
 %
-We use this artificial prior to define a distribution with the following conditional density functions%
+The backward arrows are added to stress that these are means and covariance matrices which we use in 
+the artificial distribution we target in the backward particle filter. 
+The artificial distribution we target in backward particle filters has
+the following conditional density functions%
 %
 \begin{align}
 \pdenstC{\vec{\alpha}_{t:d}}{\vec{y}_{t:\nPeriods}} &\propto 
@@ -363,7 +513,7 @@ We use this artificial prior to define a distribution with the following conditi
 		\gamma_{t+1}(\vec\alpha_{t+1})	
 	}d\vec\alpha_{t+1} \nonumber\\
 \pdenstC{\vec{\alpha}_t}{\vec{y}_{t:\nPeriods}} &\propto 
-	\optorC{g_t}{\vec y_i}{\vec\alpha_t}
+	\optorC{g_t}{\vec y_t}{\vec\alpha_t}
 	\pdenstC{\vec{\alpha}_t}{\vec{y}_{(t + 1):\nPeriods}} \nonumber\\
 \pdenstC{\vec{\alpha}_t}{\vec{\alpha}_{t +1}} &= \label{eq:bwTrans}
 	\frac{
@@ -373,7 +523,8 @@ We use this artificial prior to define a distribution with the following conditi
 \end{align}%
 %
 where we have left out some of the normalization constants. 
-Sampling from this artificial distribution turns out to be useful.
+Sampling from this artificial distribution turns out to be useful as it gives us an approximation of a
+conditional density we need up to a constant (see Section \ref{sec:Brier}).
 To derive the re-sampling weight, we first find an expression for the density $\pdenstC{\vec{\alpha}_t}{\vec{\alpha}_{t + 1}}$. 
 We can observe that %
 %
@@ -398,15 +549,15 @@ so %
 {\matLarrow{S}_t}
 \end{equation}. 
 
-As in \cite{fearnhead10}, we can show that %
+As shown by \cite{fearnhead10}, we can show that %
 %
-\begin{align*}
+\begin{align}\label{eq:BWartCovar}
 	\matLarrow{S}_t &= \matLarrow{P}_t\mat{F}^\top\matLarrow{P}_{t + 1}^{-1}\mat{Q}\mat{F}^{-\top} \\
 %
 	\vecLarrow{a}_t(\vec x) &=
 		\matLarrow{P}_t\mat{F}^\top\matLarrow{P}_{t + 1}^{-1}\vec x
-		+ \matLarrow{S}_t\matLarrow{P}_t^{-1} \vecLarrow{m}_t
-\end{align*}%
+		+ \matLarrow{S}_t\matLarrow{P}_t^{-1} \vecLarrow{m}_t \nonumber
+\end{align}%
 %
 The first equality can be shown by%
 %
@@ -485,12 +636,13 @@ $$
 		\matLarrow\Sigma_t}
 $$% 
 % 
-A computationally simpler but non-optimal option is to use a bootstrap like method and set%
+A computationally simpler but non-optimal option is to use a bootstrap filter like 
+method and set%
 %
-$$
+\begin{equation}\label{eq:bootBW}
 \IDAproxC{\vec\alpha_t}{\vec y_t, \particB{\vec{\alpha}}{t + 1}k} = 
 	\pdenstC{\vec{\alpha}_t}{\particB{\vec{\alpha}}{t + 1}k}
-$$
+\end{equation}
 
 \subsubsection*{Combining / smoothing (Algorithm~\ref{alg:ONsmoother})}
 We end this example with the conditional Gaussian observable outcome model with the 
@@ -525,7 +677,7 @@ Looking at the log density as we did before, we find that %
 	\mat X_t^\top\mat H_t^{-1}(\vec y_t - \vec h_t)} \label{eq:normalSmoothPropMean}
 \end{align}% 
 % 
-so 
+so that
 %
 $$
 \IDC{\vec\alpha_t}{\partic{\vec{\alpha}}{t-1} j,\vec y_t,
@@ -535,13 +687,13 @@ $$
 			\particB{\vec{\alpha}}{t + 1}k)}{\mat\Sigma_t}
 $$
 %
-Alternatively, we can use a bootstrap like proposal distribution with%
+Alternatively, we can use a bootstrap filter like proposal distribution with%
 % 
-\begin{align*}
+\begin{equation}\label{eq:bootSM}\begin{split}
 \matLRarrow\Sigma_t &= \Lparen{\mat Q^{-1} + \mat F^\top\mat Q^{-1}\mat F}^{-1} \\
 \vecLRarrow\mu_t(\vec x, \vecLarrow x) &= \mat\Sigma_t\Lparen{
 	\mat Q^{-1}\mat F\vec x + \mat F^\top \mat Q^{-1}\vecLarrow x}
-\end{align*}% 
+\end{split}\end{equation}% 
 % 
 This is not optimal but faster.
 
@@ -552,10 +704,16 @@ This is not optimal but faster.
 \newpage
 
 \begin{algorithm}[H]
-\caption{$\bigO{\nPart}$ generalized two-filter smoother using the method in \cite{fearnhead10}.}\label{alg:ONsmoother}
+\caption{$\bigO{\nPart}$ particle smoother using the method in \cite{fearnhead10}.}\label{alg:ONsmoother}
 \begin{algorithmic}[1]\raggedright
 \INPUT
-\Statex $\mat{Q},\mat{Q}_0,\vec{a}_0,\mat{X}_1,\dots,\mat{X}_d,\vec{y}_1,\dots,\vec{y}_d,R_1,\dots,R_d,\vec{\omega}$
+\Statex $
+	\mat{Q},\mat{Q}_0,\vec{a}_0,
+	\mat{X}_1,\dots,\mat{X}_d,
+	\mat{Z}_1,\dots,\mat{Z}_d,
+	\vec o_1,\dots,\vec o_d,
+	\vec{y}_1,\dots,\vec{y}_d,
+	R_1,\dots,R_d,\vec{\omega}$
 %
 \Statex Proposal distribution with density
 \Statex \begin{equation}
@@ -577,7 +735,7 @@ This is not optimal but faster.
 \Procedure{Smooth (combine)}{}
 \For{$t=1,\dots, \nPeriods$}
 \StateXX \emph{Re-sample}
-\State $i=1,2,\dots,\nPart_s$ pairs of $\Lparen{j_i, k_i}\in\nPart^2$ where each component 
+\State Sample $i=1,2,\dots,\nPart_s$ pairs of $\Lparen{j_i, k_i}\in\nPart^2$ where each component 
 is independently sampled using re-sampling weights $\partic{\beta}{t}{j}$ and $\particB{\beta}{t}{k}$.
 %
 \StateXX \emph{Propagate}
@@ -605,7 +763,7 @@ is independently sampled using re-sampling weights $\partic{\beta}{t}{j}$ and $\
 
 
 \begin{algorithm}[H]
-\caption{Forward filter as in \cite{pitt99}. You can compare it with \citet[page 20 and 25]{doucet09}. The version and notation below is from \citet[page 449]{fearnhead10}.}\label{alg:forward}
+\caption{Forward filter as in \cite{pitt99}. It is equivalent with \citet[page 20 and 25]{doucet09}. The version and notation below is from \citet[page 449]{fearnhead10}.}\label{alg:forward}
 \begin{algorithmic}[1]\raggedright
 \INPUT
 \Statex Proposal distribution with density 
@@ -616,7 +774,7 @@ $$
 $$
 	\partic{\beta}{t}{j} \propto h(\vec{y}_t,\partic{\vec{\alpha}}{t-1}{j})\partic{w}{t-1}{j}
 $$
-\State Sample $\partic{\vec{\alpha}}{0}{1},\dots,\partic{\vec{\alpha}}{0}{\nPart_f}$ particles from $\normal{\vec{a}_0}{\mat{Q}_0}$ and set the weights $\partic{w}{0}{1},\dots,\partic{w}{0}{\nPart_f}$ to $1 / \nPart_f$.
+\State Sample $\partic{\vec{\alpha}}{0}{1},\dots,\partic{\vec{\alpha}}{0}{\nPart_f}$ particles from $\normal{\vec\mu_0}{\mat{Q}_0}$ and set the weights $\partic{w}{0}{1},\dots,\partic{w}{0}{\nPart_f}$ to $1 / \nPart_f$.
 %
 \For{$t=1,\dots, \nPeriods$}
 \Procedure{Re-sample}{}
@@ -699,7 +857,7 @@ or $1 / \nPart_f$ at time $t = \nPeriods$.
 
 \newpage
 
-\section{Non-linear conditional observation model}
+\section{Non-linear conditional observation model}\label{sec:NonLinObs}
 If we go back to the model in Equation~\eqref{eqn:model} then $\vec y_t
 \mid \vec\alpha_t$ is not a multivariate normal distribution for the 
 implemented models.   
@@ -711,7 +869,7 @@ distribution $\widetilde{\Prob}$), and
 $\vec\alpha_t \mid \vec y_t, \vec\alpha_{t-1}, \vec\alpha_{t+1}$. 
 However, assume that $\optorC{g_t}{\vec{y}_t}{\vec{\alpha}_t}$ 
 is log-concave in $\vec{\alpha}_t$. If this is true then it is easy 
-to show that all the previous three conditional distributions are 
+to show that all of the previous three conditional distributions are 
 unimodal. Hence, we can make a multivariate normal approximation as in \cite{pitt99}. To do so, we
  make a second order Taylor expansion around some value $\vec z$ 
 to get%
@@ -734,7 +892,9 @@ k_t(\vec\alpha_t) &= \log\optorC{g_t}{\vec y_t}{\vec\eta(\vec\alpha_t)},
 \end{align*}%
 %
 where $\dots$ includes the zero order term, $\Jaco k_t$ is the Jacobian,
-and $\Hess k_t$ denotes the Hessian. We still assume that we use a first 
+and $\Hess k_t$ denotes the Hessian. I add a subscript to $\Jaco$ and $\Hess$
+to indicate when Jacobian or Hessian is with respect to a given variable.
+We still assume that we use a first 
 order state space model such that $\dimRng = \dimState$. We notice that %
 %
 \begin{align*}
@@ -751,7 +911,7 @@ $\Hess_{\vec\alpha_t}\vec\eta(\vec z) = \mat 0$. Thus, %
 %
 \begin{align*}
 \log\optorC{g_t}{\vec{y}_t}{\vec\alpha_t} &\approx 
-	\vec\alpha_t^\top\mat X_t\mat G_t(\vec z)\vec u_t(\vec z)
+	\vec\alpha_t^\top\mat X_t^\top\mat G_t(\vec z)\vec u_t(\vec z)
 	- \frac 12 \vec\alpha_t\mat X_t^\top
 	\mat G_t(\vec z)\mat X_t\vec\alpha_t \\
 \vec u_t(\vec z) &= 
@@ -775,9 +935,7 @@ The Taylor approximation is easily used in the proposal distributions. E.g., for
 	\vec u_t(\vec z)}
 \end{align*}%
 % 
-Similar arguments does not work for the re-sampling weights
-in the
- forward particle filter in Equation~\eqref{eq:fwReWeight}. However, we can use%
+As for the re-sampling weights, we can use%
 %
 \begin{align*}
 \widehat{\vec\alpha} &= \vec\mu_t(\partic{\vec\alpha}{t-1}j, \vec z) \\
@@ -806,7 +964,7 @@ in the
 		\optorC{f}{\widehat{\vec\alpha}}{\partic{\vec\alpha}{t-1}j}
 		\partic w{t-1}j
 	}{%
-		\IDC{\vec\alpha_t}{\partic{\vec\alpha}{t-1}j, \vec y_t}
+		\IDC{\widehat{\vec\alpha}}{\partic{\vec\alpha}{t-1}j, \vec y_t}
 	}
 \end{align*}
 %
@@ -845,8 +1003,8 @@ as in \cite{fearnhead10}. We can approximate the backwards particle filter re-sa
 		\mat X_t^\top \mat G_t(\vec z) \mat X_t}^{-1} \label{eq:bwPropBackCov} 
 \end{align}
 
-We may also use a multivariate t-distribution for the proposal distribution to get heavier
-tails then we do with the multivariate normal distribution.
+We may also use a multivariate $t$-distribution for the proposal distribution to get heavier
+tails than we do with the multivariate normal distribution.
 
 \subsection{Where to make the expansion}
 An options is to make the Taylor expansion at a mode for each particle or particle pair in the smoothing step. This yields%
@@ -866,7 +1024,7 @@ An options is to make the Taylor expansion at a mode for each particle or partic
 \end{align*}%
 % 
 for respectively the forward particle filter, backward particle filter, and smoother.
-The downside is a $\bigO{\dimState^2\nMax\nPart_S}$ or $\bigO{\dimState^2\nMax\nPart}$ 
+The downside is a $\bigO{\dimRng^2\nMax\nPart_S}$ or $\bigO{\dimRng^2\nMax\nPart}$ 
 computational complexity at each time point 
 as we have to evaluate $\mat X_t^\top \mat G_t(\vec z) \mat X_t$
 for each particle or particle pair. Instead we can make the approximation 
@@ -881,8 +1039,8 @@ $$
 $$%
 % 
 which will reduce the computational complexity  at each time point to %
-$\bigO{\dimState\nMax\nPart_S + \dimState^2\nMax}$ %
-or $\bigO{\dimState\nMax\nPart  + \dimState^2\nMax}$. 
+$\bigO{\dimRng\nMax\nPart_S + \dimRng\dimState\nMax}$ %
+or $\bigO{\dimRng\nMax\nPart  + \dimRng\dimState\nMax}$. 
 
 
 \section{Higher order state-space models}
@@ -914,8 +1072,8 @@ Here %
 	\normaldC{\vec\xi_t}{\mat R^+\mat F\vec\alpha_{t-1}}{\mat Q}
 \end{align*}%
 %
-where $\delta$ is the Dirac delta function and the second equality follows in the particular
-example. This is easily implemented in the forward 
+the second equality follows in a seconder order vector auto-regression. 
+This is easily implemented in the forward 
 particle filter by sampling $\vec\xi_t \mid \vec\alpha_{t-1}$ and setting the remaining
 $\dimState - \dimRng$ variables of $\vec\alpha_t$ to 
 $\mat K\mat F\vec\alpha_{t-1}$ (the last $\dimState - \dimRng$ rows of 
@@ -936,7 +1094,8 @@ $\mat F\vec\alpha_{t-1}$). It is not as easy for the backward filter. To see thi
 \end{align*}%
 %
 where the last equality holds in this example. This distribution is obviously degenerate 
-as it only has mass at the point $\vec\xi_t = \mat K\vec\alpha_{t + 1}$. 
+as it only has mass at the point $\vec\xi_t = \mat K\mat F\vec\alpha_t$ in the 
+$\text{VAR}(2)$ model. 
 
 \subsection{Backward particle filter}
 What we can do in the backward particle filter in a $\MVAR{o}$ model with $o > 1$ is to 
@@ -1038,7 +1197,13 @@ before and find the following mean and covariance matrix in the proposal distrib
 which replaces the mean and covariance matrix in Equation \eqref{eq:bwPropBackMean} and \eqref{eq:bwPropBackCov},
 $\vec z_t\in\mathbb R^\dimRng$ is the value of $\vec\xi_t$ at which we make the Taylor expansion, and
 $\mat G_t$ and $\vec u_t$ are defined in terms of $\vec\xi_t$. The new proposal distribution 
-is used in Equation \eqref{eq:bwResampleW} when we compute the re-sampling weights. 
+is used in Equation \eqref{eq:bwResampleW} when we compute the re-sampling weights where 
+we change the $\gamma_t$ and $\gamma_{t+1}$ function. The two densities are changed to be 
+$\gamma_t(\widehat{\vec\xi})$ in the numerator and 
+$\gamma_{\nPeriods + 1}(\particB{\vec{\alpha}}{\nPeriods + 1}k)$ or 
+$\gamma_{t + 1}(\particB{\vec\xi}{t + 1}k)$ at $t < \nPeriods$ in the denominator 
+where $\gamma_t$ is understood as marginal density of $\vec\xi_t$ when xi is used instead 
+of alpha.
 
 \subsection{Combining/smoothing}
 Similarly, in Algorithm~\ref{alg:ONsmoother} we sample pairs of particles 
@@ -1072,13 +1237,12 @@ where $\vec z$ is the value of $\vec\xi_t$ that we make the Taylor expansion at.
 We can evaluate the log likelihood for a particular value of $\vec{\theta} = \Lbrace{\mat{Q}, \mat{Q}_0, \vec \mu_0, \mat{F}}$ as described in \citet[page 5]{doucet09} and \citet[page 193]{malik11} using the forward particle filter shown in Algorithm~\ref{alg:forward}.
 
 \section{Parameter inference}
-In this section I first show an example of parameter estimation the first 
-order random walk using EM-algorithm \citep{dempster77}. Then I cover the 
+In this section I first show an example of parameter estimation in the first 
+order random walk using the EM-algorithm \citep{dempster77}. Then I cover the 
 general vector auto-regression model and how one can estimate the fixed 
-effects. Lastly, I will turn to estimation of observed information matrix. 
+effects. Lastly, I will turn to estimation of the observed information matrix. 
 
-The formulas for parameter estimation for the first order random with the are particularly simple. We need to estimate $\mat{Q}$ and $\vec{a}_0$ elements of $\vec{\varphi} = \Lbrace{\mat{Q}, \mat{Q}_0, \vec\mu_0}$. We do this by running Algorithm~\ref{alg:ONsmoother} for the current $\vec{\varphi}$. Then
-we compute%
+The formulas for parameter estimation for the first order random are particularly simple. We need to estimate $\mat{Q}$ and $\vec{a}_0$ elements of $\vec{\varphi} = \Lbrace{\mat{Q}, \mat{Q}_0, \vec\mu_0}$. We do this by running Algorithm~\ref{alg:ONsmoother} for the current $\vec{\varphi}$. This yields the following quantities from the E-step%
 %
 \begin{equation}\begin{split}
 \vec{t}_t^{(\vec{\varphi})} &\approx \sum_{i = 1}^{\nPart_s} \particS{\vec{\alpha}}{t}{i} \particS{w}{t}{i} \\
@@ -1090,11 +1254,11 @@ we compute%
 \end{split}\end{equation}%
 %
 %
-where $\vec{\alpha}_{s:t} = \Lbrace{\vec{\alpha}_s, \vec{\alpha}_{s +1}, \dots \vec{\alpha}_t}$, we have extended the notation in Algorithm~\ref{alg:ONsmoother} such that superscript $j_{it}$ is the index from forward cloud at time $t-1$ matching with $i$'th smoothed particle at time $t$
-The update of $\vec\mu_0$ and $\mat{Q}$ given the summary statistics is%
+where  we have extended the notation in Algorithm~\ref{alg:ONsmoother} such that superscript $j_{it}$ is the index from forward cloud at time $t-1$ matching with $i$th smoothed particle at time $t$.
+Then we carry out the M-step by updating $\vec\mu_0$ and $\mat{Q}$ given the summary statistics above%
 %
 \begin{equation}
-\vec\mu_0 = \vec{t}_0^{(\vec{\varphi})} \qquad
+\vec\mu_0 = \vec{t}_1^{(\vec{\varphi})} \qquad
 %
 \mat{Q} = \frac{1}{\nPeriods - 1}\sum_{t = 2}^\nPeriods \mat{R}^+\vec{T}_t^{(\vec{\varphi})}\mat{R}^{+\top}
 \end{equation}%
@@ -1102,41 +1266,45 @@ The update of $\vec\mu_0$ and $\mat{Q}$ given the summary statistics is%
 We then take another iteration of the EM algorithm with the new $\vec\mu_0$ and $\mat{Q}$ 
 till a convergence criteria is satisfied.  See \cite{kantas15}, \cite{del10} and \cite{schon11} for further details on parameter estimation with particle filters.
 
-\todoin{I do not think we can estimate $\vec{a}_0$ consistently so we likely just want to fix it at some value...}
-
 \subsection{Vector auto-regression models}\label{subsec:VAR}
 We start by defining the following matrices to cover estimation in general vector auto-regression models for the latent space variable %
 %
 \begin{align*}
 \mat{N} &= \Lparen{
-    	\particS{\vec{\alpha}}{2}{1}, 
-    	\particS{\vec{\alpha}}{2}{2},
+    	\particS{\vec{\alpha}}{2}{1},
     	\dots, 
     	\particS{\vec{\alpha}}{2}{\nPart_s}, 
     	\particS{\vec{\alpha}}{3}{1},
+    	\dots, 
+    	\particS{\vec{\alpha}}{3}{\nPart_s},
+    	\particS{\vec{\alpha}}{4}{1},
     	\dots, 
    		\particS{\vec{\alpha}}{\nPeriods}{\nPart_s}
 	}^\top\mat{R}^{+\top} \\
 %
 \mat{M} &= \Lparen{
-    	\partic{\vec{\alpha}}{1}{j_{12}}, 
-    	\partic{\vec{\alpha}}{1}{j_{22}},
+    	\partic{\vec{\alpha}}{1}{j_{12}},
     	\dots, 
     	\partic{\vec{\alpha}}{1}{j_{\nPart_s2}}, 
     	\partic{\vec{\alpha}}{2}{j_{13}},
+    	\dots, 
+    	\partic{\vec{\alpha}}{2}{j_{\nPart_s3}},
+    	\partic{\vec{\alpha}}{3}{j_{14}},
     	\dots, 
    		\partic{\vec{\alpha}}{\nPeriods - 1}{j_{\nPart_s\nPeriods}}
 	}^\top \\
 %
 \mat{W} &= \diag{
 		\particS{w}{2}{1}, \dots, \particS{w}{2}{\nPart_s},
-		\particS{w}{3}{1}, \dots,
-		\particS{w}{\nPeriods}{\nPart_s}
+		\particS{w}{3}{1}, \dots, \particS{w}{3}{\nPart_s},
+		\particS{w}{4}{1}, \dots,\particS{w}{\nPeriods}{\nPart_s}
 	}
 \end{align*}%
 % 
-where $\diag{\cdot}$ is a diagonal matrix which diagonal elements are the argument. We implicitly let the above depend on the result of the E-step in a given iteration of the EM algorithm to ease the notation. The goal is to estimate $\mat{F}$ and $\mat{Q}$ in Equation~\eqref{eqn:model}. We can 
- show that the M-step maximizers are%
+where $\diag{\cdot}$ is a diagonal matrix. We suppress the dependence above
+ on the result of the E-step in 
+a given iteration of the EM algorithm to ease the notation. The goal is to estimate $\mat{F}$ and $\mat{Q}$ 
+in Equation~\eqref{eqn:model}. We can show that the M-step maximizers are%
 % 
 \begin{align}
 \widehat{\mat{F}}^\top\mat{R}^{+\top} &=
@@ -1150,13 +1318,22 @@ where $\diag{\cdot}$ is a diagonal matrix which diagonal elements are the argume
 	\Lparen{\mat{N} - \mat{R}^+\widehat{\mat{F}}\mat{M}} \label{eqn:VARQ}
 \end{align}%
 %
-which is the typical vector auto-regression estimators with weights. Equation \eqref{eqn:VARF}~and \eqref{eqn:VARQ} can easily be computed in parallel using QR decompositions as in the \texttt{bam} in the \texttt{mgcv} package with a low memory footprint \citep[see][]{wood14}. This is currently implemented. Though, the gains from a parallel implementation may be small as the computation here have a computation time which is independent of the number of observations. Thus, the computation involved here is often fast
+which are the typical vector auto-regression estimators with weights. Equation \eqref{eqn:VARF}~and \eqref{eqn:VARQ} can easily be computed in parallel using QR decompositions as in the \texttt{bam} function in the \texttt{mgcv} package with a low memory footprint \citep[see][]{wood14}. This is currently implemented. Though, the gains from a parallel implementation may be small as the computation here have a computation time which is independent of the number of observations. Thus, the computation involved here is often fast
 as the dimension of the state vector is small.
 
 \subsection{Restricted vector auto-regression models}
-Suppose that we want to restrict some of the parameters of $\mat{F}$ and $\mat{Q}$. E.g., we can restrict the model to %
+Suppose that we want to restrict some of the parameters of $\mat{F}$ and $\mat{Q}$. Let%
 %
 \begin{align*}
+  (s_1,s_2,\dots, s_\dimRng)^\top&=\mat{J}\vec\psi \\
+  (o_{21},o_{31},\dots,o_{\dimRng1},o_{32},\dots,o_{r2},o_{43},\dots,o_{\dimRng,\dimRng-1})^\top&=\mat{K}\vec\phi  
+\end{align*} %
+%
+Then we can restrict the model such that %
+%
+\begin{align*}
+\sigma_i &= \exp(s_i) & 
+  \rho_{ij}&= \frac{2}{1 + \exp(-o_{ij})} - 1 \\
 \vecOP{\mat{R}^+\mat{F}} &= \mat{G}\vec{\theta} &  
   \mat{Q} &= \mat{V}\mat{C}\mat{V} \\
 \mat{V} &= \begin{pmatrix} 
@@ -1170,33 +1347,26 @@ Suppose that we want to restrict some of the parameters of $\mat{F}$ and $\mat{Q
      \rho_{21} & 1 & \ddots & \rho_{\dimRng2} \\
      \vdots & \ddots & \ddots & \vdots \\
      \rho_{\dimRng1} & \dots & \rho_{\dimRng,\dimRng-1} & 1
-   \end{pmatrix} \\
-\sigma_i &= \exp(s_i) & 
-  \rho_{ij}&= \frac{2}{1 + \exp(-o_{ij})} - 1
+   \end{pmatrix}
 \end{align*}%
-%
-with%
-%
-\begin{align*}
-  (s_1,s_2,\dots, s_\dimRng)^\top&=\mat{J}\vec\psi \\
-  (o_{21},o_{31},\dots,o_{\dimRng1},o_{32},\dots,o_{\dimRng,\dimRng-1})^\top&=\mat{K}\vec\phi  
-\end{align*} %
 %
 and where $\vecOP{\cdot}$ is the vectorization function which stacks the the columns of a matrix from left to right. E.g., %
 %
 \begin{align*}
+\vecOP{\mat{A}} &= \Lparen{
+	a_{11}, a_{21}, a_{31}, 
+	a_{12}, a_{22}, a_{32},
+	a_{13}, a_{23}, a_{33}}^\top \\
 \mat{A} &= \begin{pmatrix}
 	a_{11} & a_{12} & a_{13} \\
 	a_{21} & a_{22} & a_{23} \\
 	a_{31} & a_{32} & a_{33}
-\end{pmatrix} \\
-\vecOP{\mat{A}} &= \Lparen{
-	a_{11}, a_{21}, a_{31}, 
-	a_{12}, a_{22}, a_{32},
-	a_{13}, a_{23}, a_{33}}^\top
+\end{pmatrix}
 \end{align*}
 %
-$\mat{G}\in\mathbb{R}^{\dimRng\dimState \times g}$ is a known matrix with $g \leq \dimRng\dimState$ and we assume that it has full column rank. Similarly, $\mat{J}\in\mathbb{R}^{\dimRng \times l}$ with $l \leq \dimRng$ and $\mat{K}\in\mathbb{R}^{\dimRng(\dimRng - 1)/2 \times k}$ with $k\leq \dimRng(\dimRng - 1)/2$. Both are known and have full column rank. We assume that $\mat{G}$ is such that $\mat{F}$ is non-singular for some $\vec{\theta}$. Similarly, we assume that $\mat{J}$ and $\mat{K}$ are such that $\mat{Q}$ is a positive definite matrix for some $\vec{\psi}$ and $\vec{\phi}$ pair. $\mat{V}$ is a diagonal matrix containing the standard deviations and $\mat{C}$ is the correlation matrix.
+$\mat{G}\in\mathbb{R}^{\dimRng\dimState \times g}$ is a known matrix with $g \leq \dimRng\dimState$ and we assume that it has full column rank. Similarly, $\mat{J}\in\mathbb{R}^{\dimRng \times l}$ with $l \leq \dimRng$ and $\mat{K}\in\mathbb{R}^{\dimRng(\dimRng - 1)/2 \times k}$ with $k\leq \dimRng(\dimRng - 1)/2$. Both are known and have full column rank. 
+We assume that $\mat{G}$ is such that $\mat{F}$ is non-singular for some $\vec{\theta}$ since 
+Equation~\eqref{eq:BWartCovar} used. Further, we assume that $\mat{J}$ and $\mat{K}$ are such that $\mat{Q}$ is a positive definite matrix for some $\vec{\psi}$ and $\vec{\phi}$ pair. $\mat{V}$ is a diagonal matrix containing the standard deviations and $\mat{C}$ is the correlation matrix.
 
 We cannot jointly maximize $\vec{\theta}$, $\vec{\psi}$, and $\vec{\phi}$ analytically but we can maximize $\vec{\theta}$ analytically conditional on $\vec{\psi}$ and $\vec{\phi}$. Hence, we can employ a Monte Carlo expectation conditional maximization algorithm in which we take two so-called conditional maximization steps \citep[see][on the, non-Monte Carlo, expectation maximization algorithm]{meng93}. 
 The first conditional maximization step is %
@@ -1226,7 +1396,7 @@ step which updates $\vec{\psi}$ and $\vec{\phi}$ is %
    -\text{tr}\Lparen{\mat{Q}(\vec{\psi},\vec{\phi})^{-1}\mat{Z}}
 \end{align*}%
 % 
-which can be done numerically. We have made $\mat{Q}$'s dependence on $\vec{\psi}$ and $\vec{\phi}$ explicit to emphasize which factors are affected. $\mat{C}$ will not be a valid correlation matrix for all $\vec\phi\in\mathbb{R}^k$ for some choices of $\mat{K}$. The invalid values are ruled out doing the numerical optimization. This completes the two conditional maximization steps. The next E-step is then performed using $\vec{\theta}^{(i + 1)}$, $\vec{\psi}^{(i +1)}$, $\vec{\phi}^{(i + 1)}$. \citet[][see the discussion]{meng93} comments that it may be beneficial to perform an E-step between each conditional maximization step when the E-step is relatively cheap. 
+which can be done numerically. We have made $\mat{Q}$'s dependence on $\vec{\psi}$ and $\vec{\phi}$ explicit to emphasize which factors are affected. $\mat{C}$ may not be a valid correlation matrix for all $\vec\phi\in\mathbb{R}^k$ for some choices of $\mat{K}$. The invalid values are ruled out excluded doing the numerical optimization. This completes the two conditional maximization steps. The next E-step is then performed using $\vec{\theta}^{(i + 1)}$, $\vec{\psi}^{(i +1)}$, $\vec{\phi}^{(i + 1)}$. \citet[][see the discussion]{meng93} comments that it may be beneficial to perform an E-step between each conditional maximization step when the E-step is relatively cheap. 
 This is not the case here since all the above computations are independent 
 of $\nMax$.
 Thus, if we have a moderately large number of observations at each time point relative to 
@@ -1241,11 +1411,11 @@ If we assume that observations, $y_{it}$s, are from an exponential family then i
 
 \subsection{Observed information matrix}
 Computing the observed information matrix requires an application of the missing information principle \citep{louis82}. However we cannot evaluate the quantities we need with the output from Algorithm~\ref{alg:ONsmoother} since we only have discrete approximation of the smoothed distribution of triplet of particles, $\vec{\alpha}_{t-1:t+1}$, but need an approximation for the entire path, $\vec{\alpha}_{1:\nPeriods}$. One solution is to use the 
-methods covered in e.g., \citet[section 8.3 and chapter 11]{cappe05} and \cite{poyiadjis11}. The method in \cite{cappe05} only requires the forward particle filter output. It is though not implemented.
+methods covered in e.g., \citet[section 8.3 and chapter 11]{cappe05} and \cite{poyiadjis11}. The method in \cite{cappe05} only requires the forward particle filter output. It is not implemented, though.
 
 \section{Other filter and smoother options}
-The $\bigO{\nPart^2}$ two-filter smoother in \cite{fearnhead10} is going to be computationally expensive as an approximation is going to be needed for Equation (8) in the article.
-The non-auxiliary version in \citet{briers09} is more feasible as it only requires evaluation of $f$ in the smoothing part of the generalized two-filter smoother (see Equation (46) in the paper). Similar conclusions applies to the forward smoother in \cite{del10} and the backward smoother as presented in \cite{kantas15}. Both have a $\bigO{\nPart^2}$ computational cost.
+The $\bigO{\nPart^2}$ two-filter smoother in \cite{fearnhead10} is going to be computationally expensive as an approximation is going to be needed for Equation (8) in their article.
+The non-auxiliary version in \citet{briers09} is more feasible as it only requires evaluation of $f$ in the smoothing part of the generalized two-filter smoother (see Equation (46) in their paper). Similar conclusions applies to the forward smoother in \cite{del10} and the backward smoother as presented in \cite{kantas15}. Both have a $\bigO{\nPart^2}$ computational cost.
 
 Despite the $\bigO{\nPart^2}$ cost of the method in \citet{briers09} and \cite{del10} they are still worthy candidates as the computational cost is independent of the number of observations, $n$.  Further, the computational cost can be reduced to 
 $\bigO{\nPart\log(\nPart)}$ run times 
@@ -1255,9 +1425,9 @@ The method in \citet[see particularly section 6.2 on page 203]{malik11} can be u
 
 \citet{kantas15} show empirically that it may be worth just using a forward filter. However, the example is with a univariate outcome ($n=1$ -- not to be confused with the number of periods $\nPeriods$). The cost here of the forward filter is at least $\bigO{\nPeriods\nPart\nMax\dimState}$. Every new particle yields an $\bigO{\nPeriods\nMax\dimState}$ cost which is expensive due to the large number of outcomes, $n$. Thus, the considerations are different and a $\bigO{\nPeriods\nPart\nMax\dimState + \nPart^2}$ method will not make a big difference unless $\nPart$ is large. Another alternative is to add noise to the parameters $\vec{\theta}$ at each time $t$ and use the methods in \cite{andrieu02} or similar ideas to perform online estimation.
 
-\section{\citet{briers09}}
+\section{\citet{briers09}}\label{sec:Brier}
 The $\bigO{\nPart^2}$ smother from \citet{briers09} is also implemented as it is feasible for a moderate number of particles (though, we can use the approximations in \Citealp{kantas15} to reduce the computational complexity). It is shown in Algorithm \ref{alg:ON2smoother}. The weights in Equation~\eqref{eqn:combineWeightO2} comes from the generalized two-filter formula. 
-To motivate the smoother, we use the following result %
+To motivate the smoother, we use %
 %
 $$
 \pdensC{\vec{y}_{t:d}}{\vec{\alpha}_t} =	
@@ -1266,7 +1436,7 @@ $$
 	} {	\gamma_t(\vec{\alpha}_t) }
 $$%
 %
-to genrealize the two-filter formula in \cite{kitagawa94} as follows %
+to generalize the two-filter formula in \cite{kitagawa94} as follows %
 %
 \begin{align}
 \pdensC{\vec{\alpha}_t}{\vec{y}_{1:\nPeriods}} &= \label{eqn:brierWeightsDerive}
@@ -1307,7 +1477,7 @@ to genrealize the two-filter formula in \cite{kitagawa94} as follows %
 	}{ \optor{\gamma_t}{\particB{\vec{\alpha}}{t}{i}} }
 \end{align}%
 %
-Similar arguments leads to %
+where $\appropto$ means approximately proportional. Similar arguments leads to %
 %
 \begin{equation}\begin{split}
 \pdensC{\vec{\alpha}_{t - 1: t}}{\vec{y}_{1:\nPeriods}} \hspace{-25pt} & \hspace{25pt} \\
@@ -1399,7 +1569,7 @@ We need the latter for the EM-algorithm.
 \end{algorithmic}
 \end{algorithm}
 
-With the result above, we can show the reasoning behind cover the 
+With the result above, we can show the arguments behind the 
 smoother from \cite{fearnhead10}. Similar to Equation~\eqref{eqn:brierWeightsDerive} we find that 
 
 \begin{align*}
@@ -1441,7 +1611,6 @@ smoother from \cite{fearnhead10}. Similar to Equation~\eqref{eqn:brierWeightsDer
 %
 Thus, we can sample $\vec{\alpha}_t$ from a proposal distribution given the time $t - 1$ forward filter particle, $\partic{\vec{\alpha}}{t-1}{j}$, and time $t + 1$ backward filter particle, $\particB{\vec{\alpha}}{t + 1}{i}$, for all $\nPart^2$ particle pairs. Alternatively, we can sample the $t - 1$ and $t + 1$ particles independently which yields Algorithm~\ref{alg:ONsmoother}. Further, we can find that%
 %
-{\scriptsize
 \begin{align*}
 \pdensC{\vec{\alpha}_{t - 1:t}}{\vec{y}_{1:\nPeriods}} &=
 	\pdensC{\vec{\alpha}_{t - 1:t}}{\vec{y}_{1:{t-1}}}
@@ -1450,7 +1619,8 @@ Thus, we can sample $\vec{\alpha}_t$ from a proposal distribution given the time
 %
 &\propto \fFunc{\vec{\alpha}_t}{\vec{\alpha}_{t-1}}
 	\pdensC{\vec{\alpha}_{t - 1}}{\vec{y}_{1:t-1}}
-	\gFunc{\vec{y}_t}{\vec{\alpha}_t}{t}
+	\gFunc{\vec{y}_t}{\vec{\alpha}_t}{t} \\
+&\hspace{100pt}\cdot
 	\int \fFunc{\vec{\alpha}_{t + 1}}{\vec{\alpha}_t}
 	\frac{
 		\pdenstC{\vec{\alpha}_{t + 1}}{\vec{y}_{t + 1:\nPeriods}}	
@@ -1472,42 +1642,34 @@ Thus, we can sample $\vec{\alpha}_t$ from a proposal distribution given the time
 %
 & \appropto \sum_{i=1}^{\nPart_s}
 	\particS{w}{t}{i}
-	\dirac{\particS{\vec{\alpha}}{t}{i}}{\vec{\alpha}_t}, 
+	\dirac{\particS{\vec{\alpha}}{t}{i}}{\vec{\alpha}_t}
 	\dirac{\partic{\vec{\alpha}}{t-1}{j_i}}{\vec{\alpha}_t}
 \end{align*}
-} %
 %
 where superscripts $j_i$ are used as in Algorithm~\ref{alg:ONsmoother} implicitly dependent on $t$.
 
 
 
-\section{Implementation}
-The \texttt{PF\_EM} method in the \texttt{dynamichazard} package contains an implementation of the above described method. You specify the number of particles by the \texttt{N\_first}, \texttt{N\_fw\_n\_bw} and \texttt{N\_smooth} argument for respectively the $\nPart_f$, $\nPart$ and $\nPart_s$ in the Algorithm \ref{alg:ONsmoother}-\ref{alg:backward}. We may want more particles in the smoothing step, $\nPart_s > \nPart$, as pointed out in the discussion in \citet[page 460 and 461]{fearnhead10}. Further, selecting $\nPart_f > \nPart$ may be preferable to ensure coverage of the state space at time $0$ and $\nPeriods + 1$.
 
-\todoin{We do not need to sample the time $0$ and $\nPeriods + 1$ particles. Instead we can make a special proposal distribution for time $1$ and time $d$. This is not implemented though...}
 
-The \texttt{method} argument specify how the filters are set up. The argument can take the following values
 
-\begin{itemize}
-	\item \texttt{"bootstrap\_filter"} for a bootstrap filter.
-	\item \texttt{"PF\_normal\_approx\_w\_cloud\_mean"} and \texttt{"AUX\_normal\_approx\_w\_cloud\_mean"} for the Taylor approximation of the conditional density of $\vec{y}_t$ made around the weighted mean of the previous cloud. The \texttt{PF} and \texttt{AUX} prefix specifies whether or not the auxiliary version should be used.
-	\item \texttt{"PF\_normal\_approx\_w\_particles"} and 
-	 \texttt{"AUX\_normal\_approx\_w\_particles"} for the Taylor approximation of the conditional density of $\vec{y}_t$ made around the parent (or/and child) particle. The \texttt{PF\_} and \texttt{AUX\_} prefix specifies whether or not the auxiliary version should be used.
-\end{itemize}
 
-The smoother is selected with the \texttt{smoother} argument. \texttt{"Fearnhead\_O\_N"} gives the smoother in Algorithm~\ref{alg:ONsmoother} and \texttt{"Brier\_O\_N\_square"} gives the smoother in Algorithm~\ref{alg:ON2smoother}.
+\newpage
+\bibliographystyle{plainnat}
+\bibliography{PF}
 
-The \emph{Systematic Re-sampling} \citep{kitagawa96} is used in all re-sampling steps. See \cite{douc05} for a comparison of re-sampling methods. The rest of the arguments to \texttt{PF\_EM} are similar to those of the \texttt{ddhazard} function.
+\newpage
+\appendix
 
-\subsection{Linear maps}
-The methods describe above involves many linear maps. These are implemented with \texttt{C++} 
-abstract classes with specialized \texttt{map} member functions for particular problem to 
+\section{Vector and matrix products}
+The methods described above involves many vector and matrix products. These are implemented with \texttt{C++} 
+abstract classes with specialized \texttt{map} member functions for particular problems to 
 decrease the computation. An alternative would have been to use a sparse matrix implementation.
 It does not matter much in terms of computation time if $n_t$ is much larger then 
-the state vector's dimension. However, this section is included if anyone ever looks through 
+the state vector's dimension. However, this section for people who looks through 
 the code.  
 As an example we have a mapping matrix $\mat{A}$ which \texttt{C++} abstract member on the main 
-data object used in the package called \texttt{xyz}. E.g., this could $\mat{F}$ with name 
+data object used in the package called \texttt{xyz}. E.g., this could be $\mat{F}$ with name 
 \texttt{state\_trans}. Then the following operations are implemented %
 %
 \begin{itemize}
@@ -1546,15 +1708,7 @@ $\matLarrow{P}_t^{-1}\vecLarrow{m}_t$, and $\matLarrow{P}_t^{-1}$. This is done 
 \texttt{bw\_covar(signed int)}, %
 \texttt{uncond\_mean\_term(\allowbreak signed int)}, and 
 \texttt{uncond\_covar\_inv(\allowbreak  signed int)}. 
-The terms and factors that can will computed once using 
-Equation~\eqref{eqn:bwTransProp} are computed and stored.
-
-
-
-
-
-\newpage
-\bibliographystyle{plainnat}
-\bibliography{PF}
+The terms and factors that can be computed once are 
+computed once.
 
 \end{document}

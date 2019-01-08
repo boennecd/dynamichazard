@@ -195,7 +195,7 @@ The estimation function \code{ddhazard} is implemented such that:
   \item The dimension of the observation equation can vary through time allowing for late entry and right censoring.
   \item It is fast due to the \code{C++} implementation and supports multithreading.
   \item The methods are fast compared to e.g., sequential Monte Carlo alternatives which are also
-implemented in the pacakge (see \code{dynamichazard::PF\_EM} and
+implemented in the package (see \code{dynamichazard::PF\_EM} and
 \code{dynamichazard::PF\_forward\_filter}).
 \end{enumerate}
 

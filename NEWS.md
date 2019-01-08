@@ -1,4 +1,5 @@
 # dynamichazard 0.6.2
+* The cloglog link function is added.
 * `predict.ddhazard` has been re-written. The output with `type = "term"` 
 has changed. It now yields a list of lists. Each list contains a list for each
 `new_data` row. The time zero index is no longer included if `tstart` and 
@@ -9,7 +10,6 @@ argument and supports predictions in the future. A covariance matrix is added
 to the terms in the predictions. 
 * A method has been added to plot the survival curve for a given observation
 which may have time-varying covariates.
-
 
 # dynamichazard 0.6.1
 * Fixed a bug in `type == "VAR"` in particle filters in the smoothing proposal distribution. 
