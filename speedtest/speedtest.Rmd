@@ -24,7 +24,7 @@ matplot(fit$state_vecs, type = "l", lty = 2, add = TRUE)
 
 ```{r func_setup}
 sim_func <- function(n, p){
-  func <- asNamespace("dynamichazard")$test_sim_func_logit
+  func <- dynamichazard:::test_sim_func_logit
   set.seed(101)
   t_max <- 30L
   func(n_series = n, n_vars = p, t_max = t_max, x_range = 1, x_mean = 0,

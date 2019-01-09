@@ -1,6 +1,6 @@
 library(dynamichazard);
 library(survival);
-test_sim_func_logit <- asNamespace("dynamichazard")$test_sim_func_logit
+test_sim_func_logit <- dynamichazard:::test_sim_func_logit
 
 set.seed(9997)
 sims <- test_sim_func_logit(n_series = 1e5, n_vars = 10, t_0 = 0, t_max = 10,

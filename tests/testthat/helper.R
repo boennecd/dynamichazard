@@ -198,7 +198,7 @@ bigqr.init <- asNamespace("biglm")$bigqr.init
 # Simulated data sets to test against
 set.seed(6790753)
 
-test_sim_func_logit <- asNamespace("dynamichazard")$test_sim_func_logit
+test_sim_func_logit <- dynamichazard:::test_sim_func_logit
 get_sim <- function(n)
   test_sim_func_logit(n_series = n, n_vars = 10, t_0 = 0, t_max = 10,
                       x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(10),

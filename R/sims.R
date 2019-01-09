@@ -134,9 +134,21 @@ test_sim_func_logit <- function(
   re_draw = T, beta_start = 3, intercept_start,
   sds = rep(1, n_vars + !missing(intercept_start)),
   is_fixed = c(), lambda = 1,
-  tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
-    t_0,
-  betas, linkfunc = "logit"){
+  tstart_sampl_func = function(t_0 = t_0, t_max = t_max) t_0, betas){
+  cl <- match.call()
+  cl[["linkfunc"]] <- "logit"
+  cl[[1L]] <- bquote(
+    environment(.(cl[[1L]]))$test_sim_func_discrete)
+  eval(cl, parent.frame())
+}
+
+test_sim_func_discrete <- function(
+  n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x_range = .1, x_mean = -.1,
+  re_draw = T, beta_start = 3, intercept_start,
+  sds = rep(1, n_vars + !missing(intercept_start)),
+  is_fixed = c(), lambda = 1,
+  tstart_sampl_func = function(t_0 = t_0, t_max = t_max) t_0, betas,
+  linkfunc){
   # make output matrix
   n_row_max <- n_row_inc <- 10^5
   res <- matrix(NA_real_, nrow = n_row_inc, ncol = 4 + n_vars,

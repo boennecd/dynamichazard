@@ -1,6 +1,6 @@
 library(dynamichazard); library(testthat); library(survival)
 
-test_sim_func_logit <- asNamespace("dynamichazard")$test_sim_func_logit
+test_sim_func_logit <- dynamichazard:::test_sim_func_logit
 
 set.seed(599479)
 

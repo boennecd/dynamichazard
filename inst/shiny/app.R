@@ -3,7 +3,6 @@ if(!require(shiny))
   stop("Requires 'shiny' to run the demo")
 
 test_sim_func_exp <- dynamichazard:::test_sim_func_exp
-test_sim_func_logit <- dynamichazard:::test_sim_func_logit
 exp_model_names <- dynamichazard:::exp_model_names
 
 # Global params
@@ -359,7 +358,7 @@ server <- function(input, output) {
 
   sim_input <- reactive({
     f_choice <- if(input$sim_with == "exponential")
-      quote(test_sim_func_exp) else quote(test_sim_func_logit)
+      quote(test_sim_func_exp) else quote(test_sim_func_discrete)
 
     n_fixed <- if(input$sim_fix_options == 1)
       0 else if(input$sim_fix_options == 2)
@@ -384,6 +383,8 @@ server <- function(input, output) {
         tstart_sampl_func = .(start_fun)))
     if(input$sim_with == "cloglog")
       sim_quote[["linkfunc"]] <- "cloglog"
+    else if(input$sim_with == "logit")
+      sim_quote[["linkfunc"]] <- "logit"
 
     sim_exp <- bquote({
       set.seed(.(input$seed))

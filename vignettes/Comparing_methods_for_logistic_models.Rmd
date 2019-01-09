@@ -12,7 +12,7 @@ csl: bib_style.csl
 vignette: >
   %\VignetteIndexEntry{Comparing methods for time varying logistic models}
   %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
@@ -48,7 +48,7 @@ knitr::opts_knit$set(warning = F, message = F)
 \newcommand{\mat}[1]{\mathbf{#1}}
 
 # Introduction
-In this vignette, we compare the dynamic logistic model in `dynamichazard` with others methods within the package and methods from the `timereg` and `mgcv` packages. Further this note will serve as an illustration of how to use the `ddhazard` function for the logistic model. We will use the `pbc2` dataset from the `survival` package. The motivation is that the `pbc2` data set is commonly used in survival analysis for illustrations. It is suggested to first read  or skim `vignette("ddhazard", "dynamichazard")` to get an introduction to the models and estimation methods in this package.
+In this vignette, we compare the dynamic logistic model in `dynamichazard` with other methods within the package and methods from the `timereg` and `mgcv` packages. Further this note will serve as an illustration of how to use the `ddhazard` function for the logistic model. We will use the `pbc2` dataset from the `survival` package. The motivation is that the `pbc2` data set is commonly used in survival analysis for illustrations. It is suggested to first read  or skim `vignette("ddhazard", "dynamichazard")` to get an introduction to the models and estimation methods in this package.
 
 The note is structured as follows: First, we cover the `pbc2` data set. Then we estimate two static (non-dynamic) logistic regression models using `glm`. This is followed by a fit using a Generalized Additive model with the `gam` function in the `mgcv` package. Next, we will estimate a cox-model with time varying parameters using the `timecox` function in the `timereg` package. Finally, we will end by illustrating the methods in this package for time varying parameters in a logistic regression.
 
