@@ -135,5 +135,5 @@ test_that("print print.ddsurvcurve gives correct result", {
   ddcurve <- ddsurvcurve(h1, new_data = data.frame(
     group = factor(2, levels = 1:2)))
 
-  expect_known_output(ddcurve, file = "print-ddsurvcurve.txt", print = TRUE)
+  expect_known_output(ddcurve, file = "print-ddsurvcurve", print = TRUE)
 })

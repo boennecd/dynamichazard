@@ -1,0 +1,3 @@
+Predicted survival curve from call:	
+ddsurvcurve(object = h1, new_data = data.frame(group = factor(2, 
+    levels = 1:2)))
