@@ -63,7 +63,8 @@ namespace R_BLAS_LAPACK {
   void square_tri_inv(double *out, int n, int ldr){
     int info;
 
-    F77_CALL(dtrtri)("L", "N", &n, out, &ldr, &info);
+    char c1 = 'L', c2 = 'N';
+    F77_CALL(dtrtri)(&c1, &c2, &n, out, &ldr, &info);
 
     if(info != 0){
       std::stringstream str;
@@ -75,7 +76,8 @@ namespace R_BLAS_LAPACK {
   void symmetric_mat_chol(double *out, int n, int lda){
     int info;
 
-    F77_CALL(dpotrf)("L", &n, out, &lda, &info);
+    char c1 = 'L';
+    F77_CALL(dpotrf)(&c1, &n, out, &lda, &info);
 
     if(info != 0){
       std::stringstream str;
@@ -92,7 +94,9 @@ namespace R_BLAS_LAPACK {
     // ( 1 + ( n - 1 )*abs( INCX ) ).
 
     int incx = 1;
-    F77_CALL(dtrmv)("L", is_transpose ? "T" : "N", "N", &n, A, &lda, x, &incx);
+    char c1 = 'L', c2 = is_transpose ? 'T' : 'N', c3 = 'N';
+    F77_CALL(dtrmv)(
+        &c1, &c2, &c3, &n, A, &lda, x, &incx);
   }
 
   void sym_mat_rank_one_update(
@@ -104,13 +108,14 @@ namespace R_BLAS_LAPACK {
     // See http://www.netlib.org/lapack/explore-html/d7/d15/group__double__blas__level2_ga35ca25bb135cd7bfdd5d6190b1aa4d07.html#ga35ca25bb135cd7bfdd5d6190b1aa4d07
 
     int inx = 1;
+    char c1 = 'U';
 
     //F77_CALL(dger)(const int *m, const int *n, const double *alpha,
     // const double *x, const int *incx,
     // const double *y, const int *incy,
     // double *a, const int *lda);
     F77_CALL(dsyr)(
-        "U", n, alpha,
+        &c1, n, alpha,
         x, &inx,
         A, n);
   }
@@ -132,9 +137,10 @@ namespace R_BLAS_LAPACK {
 
     const double dum_d = 1.0;
     const int dum_i = 1L;
+    char c1 = 'U';
 
     F77_CALL(dsymv)(
-        "U", n,
+        &c1, n,
         &dum_d, A, n,
         x, &dum_i, &dum_d,
         y, &dum_i);
@@ -160,9 +166,10 @@ namespace R_BLAS_LAPACK {
     // Notice that we set UPLO to U so only the upper part is updated
 
     const double dum_d = 1.0;
+    char c1 = 'U', c2 = 'N';
 
     F77_CALL(dsyrk)(
-        "U", "N",
+        &c1, &c2,
         n, k, &dum_d,
         A, n,
         &dum_d, C, n);
@@ -181,12 +188,10 @@ namespace R_BLAS_LAPACK {
      */
 
     int info;
-    char uplo[2] = { is_upper ? 'U' : 'L' }, tra[2] = { trans ? 'T' : 'N' };
+    char c1 = is_upper ? 'U' : 'L', c2 = trans ? 'T' : 'N', c3 = 'N';
 
     F77_CALL(dtrtrs)(
-        uplo,
-        tra,
-        "N",
+        &c1, &c2, &c3,
         &n, &nrhs,
         A, &n,
         B, &n,

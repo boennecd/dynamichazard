@@ -24,3 +24,10 @@ I still get this error with the UBSAN check: https://github.com/RcppCore/Rcpp/is
 
 Though, it does not seem to trigger on CRAN and Dirk Eddelbuettel and Kevin 
 Ushey indicate that it may not be a problem.
+
+## Resubmission
+This is a resubmission. In this version I have:
+
+* Added vignettes which are currently not included due to an error in 
+  `.Rbuildignore`.
+* Tried to fix the error on Solaris in the CRAN check results.

@@ -1,3 +1,4 @@
+^CRAN-RELEASE$
 ^.*\.Rproj$
 ^\.Rproj\.user$
 \.log$
@@ -12,14 +13,11 @@ dynamichazard\.dll$
 ^\.travis\.yml$
 release_questions\.R$
 cran-comments\.md$
-
 src/pf/est_params_generic.cpp
-
 ^README
 ^README_cache
 ^examples
-
-^vignettes/[^/]*\.(?!(Rnw|bib|pdf\.asis|pdf|Rmd|csl)).*$
+^vignettes/[^\./]*\.(?!(Rnw|bib|pdf\.asis|pdf|Rmd|csl))
 vignettes/ddhazard\.pdf
 vignettes/fig
 vignettes/tex2pdf
@@ -28,7 +26,6 @@ vignettes/Diagnostics/data_prep\.R
 vignettes/Diagnostics/Rossi_ex\.html
 vignettes/Diagnostics/Rossi_source\.url
 vignettes/Diagnostics/Rossi\.txt
-
 ^\.sandbox
 ^speedtest
 tests/testthat/previous_results/local_tests

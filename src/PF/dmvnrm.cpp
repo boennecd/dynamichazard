@@ -9,8 +9,9 @@ double dmvnrm_log(
 
   // z = sigma_chol_inv.t() * z;
   int incx = 1;
+  char uplo = 'U', trans = 'T', diag = 'N';
   R_BLAS_LAPACK::dtrmv(
-    "U" /* UPLO */, "T" /* TRANS */, "N" /* diag */,
+    &uplo, &trans, &diag,
     &xdim /* N */, sigma_chol_inv.memptr() /* A */,
     &xdim /* LDA */, z.memptr() /* X */, &incx /* INCX */);
 
@@ -36,8 +37,9 @@ double dmvtrm_log(
 
   /* z = sigma_chol_inv.t() * z; */
   int incx = 1;
+  char uplo = 'U', trans = 'T', diag = 'N';
   R_BLAS_LAPACK::dtrmv(
-    "U" /* UPLO */, "T" /* TRANS */, "N" /* diag */,
+    &uplo, &trans, &diag,
     &xdim /* N */, sigma_chol_inv.memptr() /* A */,
     &xdim /* LDA */, z.memptr() /* X */, &incx /* INCX */);
 

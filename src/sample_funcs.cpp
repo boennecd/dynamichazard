@@ -59,8 +59,9 @@ arma::mat mvrnorm(const int m, const arma::mat &sigma_chol){
 
   // Y <-- Y * chol(Sigma)
   const double alpha = 1.;
+  char side = 'R', uplo = 'U', transa = 'N', diag = 'N';
   R_BLAS_LAPACK::dtrmm(
-    "R" /* side */, "U" /* UPLO */, "N" /* TRANSA */, "N" /* DIAG */,
+    &side, &uplo, &transa, &diag,
     &m /* M */, &n /* N */, &alpha /* ALPHA */,
     sigma_chol.memptr() /* A */, &n /* LDA */,
     Y.memptr() /* B */, &m /* LDB */);
