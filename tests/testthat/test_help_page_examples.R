@@ -499,3 +499,14 @@ test_that("ddsurvcurve manual page examples give the same", {
   z <- lines(ddcurve, col = "DarkOrange")
   expect_known_value(z, file = "ddsurvcurve-fix-disc-2.RDS")
 })
+
+test_that("`get_Q_0` example returns the correct covariance matrix", {
+  Fmat <- matrix(c(.8, .4, .1, .5), 2, 2)
+  Qmat <- matrix(c( 1, .5, .5,  2), 2)
+
+  x1 <- get_Q_0(Qmat = Qmat, Fmat = Fmat)
+  x2 <- Qmat
+  for(i in 1:101)
+    x2 <- tcrossprod(Fmat %*% x2, Fmat) + Qmat
+  expect_equal(x1, x2)
+})

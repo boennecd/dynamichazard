@@ -1,3 +1,6 @@
+# dynamichazard 0.6.4
+* Fixed bug in `get_Q_0`.
+
 # dynamichazard 0.6.2
 * The cloglog link function is added.
 * `predict.ddhazard` has been re-written. The output with `type = "term"` 

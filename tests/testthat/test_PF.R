@@ -692,18 +692,6 @@ test_that("A few iterations with `type = \"VAR\"' yields the same as before", {
   # Fmat <- matrix(c(.8, 0, 0, .8), 2)
   # Rmat <- diag(1    , 2)
   # Qmat <- diag(.33^2, 2)
-  # get_Q_0 <- function(Qmat, Fmat){
-  #   # see https://math.stackexchange.com/q/2854333/253239
-  #   eg  <- eigen(Fmat)
-  #   las <- eg$values
-  #   if(any(abs(las) >= 1))
-  #     stop("Divergent series")
-  #   U   <- eg$vectors
-  #   U_t <- t(U)
-  #   T.  <- crossprod(U, Qmat %*% U)
-  #   Z   <- T. / (1 - tcrossprod(las))
-  #   solve(U_t, t(solve(U_t, t(Z))))
-  # }
   # Q_0  <- get_Q_0(Qmat, Fmat)
   # beta <- c(-6.5, -2)
   #
@@ -983,8 +971,8 @@ test_that("`get_Q_0` returns a real matrix also when `Fmat` has a complex eigend
   expect_true(!is.complex(out))
   expect_equal(
     out,
-    structure(c(0.0621064332808536, -0.0111136683871378, -0.0111136683871378,
-                0.0250726831993073), .Dim = c(2L, 2L)))
+    structure(c(0.065269831500739, 0.00500931948325941, 0.0050093194832594,
+                0.031570480294995), .Dim = c(2L, 2L)))
 })
 
 test_that("'PF_forward_filter' gives the same as 'PF_EM' when it should", {

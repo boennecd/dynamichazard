@@ -165,7 +165,7 @@ follows
 -->
 
 ```{r confs, cache = 1}
-n_threads <- 4 # I ran this on a quad core machine
+n_threads <- 6
 
 # you can replace this with e.g.,  
 # max(parallel::detectCores(logical = FALSE), 2)))

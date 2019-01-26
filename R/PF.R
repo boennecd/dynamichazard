@@ -1327,6 +1327,17 @@ PF_control <- function(
 #' @return
 #' The invariant covariance matrix.
 #'
+#' @examples
+#' Fmat <- matrix(c(.8, .4, .1, .5), 2, 2)
+#' Qmat <- matrix(c( 1, .5, .5,  2), 2)
+#'
+#' x1 <- get_Q_0(Qmat = Qmat, Fmat = Fmat)
+#' x2 <- Qmat
+#' for(i in 1:101)
+#'   x2 <- tcrossprod(Fmat %*% x2, Fmat) + Qmat
+#' stopifnot(isTRUE(all.equal(x1, x2)))
+#'
+#'
 #' @export
 get_Q_0 <- function(Qmat, Fmat){
   eg  <- eigen(Fmat)
@@ -1334,10 +1345,9 @@ get_Q_0 <- function(Qmat, Fmat){
   if(any(abs(las) >= 1))
     stop("Divergent series")
   U   <- eg$vectors
-  U_t <- t(U)
-  T.  <- crossprod(U, Qmat %*% U)
+  T. <- solve(U, t(solve(U, Qmat)))
   Z   <- T. / (1 - tcrossprod(las))
-  out <- solve(U_t, t(solve(U_t, t(Z))))
+  out <- tcrossprod(U %*% Z, U)
   if(is.complex(out)){
     if(all(abs(Im(out)) < .Machine$double.eps^(3/4)))
       return(Re(out))
