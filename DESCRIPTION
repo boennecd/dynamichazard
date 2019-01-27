@@ -22,8 +22,8 @@ Description: Contains functions that lets you fit dynamic hazard models using
   more general state space models. 
 License: GPL-2
 LazyData: TRUE
-LinkingTo: Rcpp, RcppArmadillo
-Imports: parallel, Rcpp (>= 0.12.6), boot
+LinkingTo: Rcpp, RcppArmadillo, nloptr (>= 1.2.0)
+Imports: parallel, Rcpp (>= 0.12.6), boot, nloptr (>= 1.2.0)
 Depends: R (>= 3.3.0), stats, graphics, utils, survival
 RoxygenNote: 6.1.1
 Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR, R.rsp, speedglm, dichromat, colorspace, plyr, gsl, mvtnorm

@@ -1142,7 +1142,6 @@ test_that("'state_bw' gives correct results", {
   expect_equal(obj$n_hessian(chi1), cpp_out$neg_Hessian1)
 })
 
-
 test_that("'artificial_prior' gives correct results", {
   skip_if(!dir.exists("pf-internals"))
   skip_if_not_installed("mvtnorm")
@@ -1230,3 +1229,44 @@ test_that("'observational_cdist' gives correct results", {
   expect_true("implement other families...")
 })
 
+test_that("combining forward and backwards works", {
+  skip_if(!dir.exists("pf-internals"))
+  skip_if_not_installed("mvtnorm")
+
+  p1 <- c(-.5, 0)
+  p2 <- c(-.2, .2)
+  c1 <- p2
+  c2 <- p1
+  x <- c(-.33, .33)
+  F. <- matrix(c(.9, .4, 0, .8), nrow = 2)
+  Q <- matrix(c(.8, .4, .4, .4), nrow = 2)
+
+  cpp_out <- check_fw_bw_comb(
+    F = F., Q = Q, parent = p1, parent1 = p2,
+    grand_child = c1, grand_child1 = c2, x = x)
+
+  #####
+  Sig <- solve(solve(Q) + crossprod(F., solve(Q, F.)))
+  m1 <- Sig %*% (solve(Q, F. %*% p1) + crossprod(F., solve(Q, c1)))
+
+  cpp_1 <- cpp_out[[1L]]
+  expect_equal(cpp_1$mean, m1)
+  expect_equal(cpp_1$covar, Sig)
+  require(mvtnorm)
+  expect_equal(cpp_1$log_density, dmvnorm(x, m1, Sig, log = TRUE))
+
+  #####
+  m2 <- Sig %*% (solve(Q, F. %*% p2) + crossprod(F., solve(Q, c2)))
+
+  cpp_2 <- cpp_out[[2L]]
+  expect_equal(cpp_2$mean, m2)
+  expect_equal(cpp_2$covar, Sig)
+  expect_equal(cpp_2$log_density, dmvnorm(x, m2, Sig, log = TRUE))
+})
+
+expect_true("TODOs", {
+  expect_true("check t-distribution")
+  expect_true("check combiation of bw and prior")
+  expect_true("check sampling both with t and normal distribution")
+  expect_true("check mode approximation")
+})

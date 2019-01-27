@@ -431,3 +431,37 @@ Rcpp::List check_observational_cdist(
     Rcpp::Named("neg_Hessian")  = dist->neg_Hessian(state),
     Rcpp::Named("neg_Hessian1") = dist->neg_Hessian(state1));
 }
+
+// -------------------------------------------------- //
+
+#include "PF/cond_approx.h"
+
+// [[Rcpp::export]]
+Rcpp::List check_fw_bw_comb(
+    arma::mat F, arma::mat Q,
+    arma::vec parent, arma::vec parent1,
+    arma::vec grand_child, arma::vec grand_child1,
+    arma::vec x){
+  covarmat cQ(Q);
+
+  state_fw fw(parent     , F, cQ);
+  state_bw bw(grand_child, F, cQ);
+
+  std::vector<PF_cdist*> objs = { &fw, &bw };
+  cdist_comb_generator combi_gen(objs, parent, -1);
+
+  auto func = [&](arma::vec &p, arma::vec &gc){
+    std::unique_ptr<dist_comb> comb = combi_gen.
+    get_dist_comb(std::vector<arma::vec> { p, gc });
+
+    return Rcpp::List::create(
+      Rcpp::Named("log_density") = comb->log_density(x),
+      Rcpp::Named("mean") = comb->get_mean(),
+      Rcpp::Named("covar") = comb->get_covar());
+  };
+
+  return Rcpp::List::create(
+    Rcpp::Named("comb_1_1") = func(parent, grand_child),
+    Rcpp::Named("comb_2_2") = func(parent1, grand_child1));
+}
+

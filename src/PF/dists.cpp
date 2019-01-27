@@ -1,6 +1,7 @@
 #include "dists.h"
 #include "dmvnrm.h"
 #include "../utils.h"
+#include "../family.h"
 
 state_fw::state_fw(
   const arma::vec &parent, const arma::mat &F,const covarmat &Q):

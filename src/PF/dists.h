@@ -3,7 +3,6 @@
 
 #include "../arma_n_rcpp.h"
 #include "covarmat.h"
-#include "../family.h"
 
 /* conditional distribution */
 class PF_cdist {

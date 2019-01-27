@@ -1,3 +1,4 @@
+# this is a very bad name...
 approximator <- function(..., start, do_checks = FALSE){
   objs <- list(...)
   stopifnot(length(objs) > 1)
