@@ -140,6 +140,7 @@ public:
     return mu_eta(eta, exp_eta, at_risk_length);
   }
 
+  using family_base::log_like;
   double log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
@@ -147,12 +148,14 @@ public:
     return outcome ? log(p) : log1p(-p);
   }
 
+  using family_base::d_log_like;
   double d_log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
     return (exp_eta * (outcome - 1) + outcome) / (exp_eta + 1);
   }
 
+  using family_base::dd_log_like;
   double dd_log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
@@ -256,6 +259,7 @@ public:
         return mu * (1 - mu);
       }
 
+  using family_base::log_like;
   double log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
@@ -263,6 +267,7 @@ public:
         return outcome ? log(p) : log1p(-p);
       }
 
+  using family_base::d_log_like;
   double d_log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
@@ -273,6 +278,7 @@ public:
         return outcome ? exp_eta / expm1(exp_eta) : - exp_eta;
       }
 
+  using family_base::dd_log_like;
   double dd_log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
@@ -373,18 +379,21 @@ public:
     return linkinv(eta, exp_eta, at_risk_length);
   }
 
+  using family_base::log_like;
   double log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
     return outcome * eta - exp_eta * at_risk_length;
   }
 
+  using family_base::d_log_like;
   double d_log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {
     return outcome - exp_eta * at_risk_length;
   }
 
+  using family_base::dd_log_like;
   double dd_log_like(
       const bool outcome, const double eta,
       const double exp_eta, const double at_risk_length) const override {

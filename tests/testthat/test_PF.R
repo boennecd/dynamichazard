@@ -1093,6 +1093,8 @@ test_that("'state_fw' gives correct results", {
   require(mvtnorm)
   expect_equal(dmvnorm(chi, F. %*% parent, Q, TRUE), cpp_out$log_dens_func)
   expect_true(cpp_out$is_mvn)
+  expect_equal(cpp_out$dim, length(parent))
+
   expect_equal(obj$f(chi), cpp_out$log_dens)
   expect_equal(obj$f(chi1), cpp_out$log_dens1)
 
@@ -1126,6 +1128,7 @@ test_that("'state_bw' gives correct results", {
   require(mvtnorm)
   expect_equal(dmvnorm(chi, F. %*% parent, Q, TRUE), cpp_out$log_dens_func)
   expect_true(cpp_out$is_mvn)
+  expect_equal(cpp_out$dim, length(chi))
   expect_equal(obj$f(parent), cpp_out$log_dens)
   expect_equal(obj$f(parent1), cpp_out$log_dens1)
 
@@ -1165,10 +1168,65 @@ test_that("'artificial_prior' gives correct results", {
     p <- prio(ts[i])
 
     expect_true(cpp_o$is_mvn)
+    expect_equal(cpp_o$dim, length(state))
     expect_equal(cpp_o$log_dens, p$f(state))
     expect_equal(cpp_o$gradient, p$deriv(state))
     expect_equal(cpp_o$gradient_zero, p$deriv_z(state))
     expect_equal(cpp_o$neg_Hessian, p$n_hessian(state))
   }
+})
+
+test_that("'observational_cdist' gives correct results", {
+  skip_if(!dir.exists("pf-internals"))
+  skip_if_not_installed("mvtnorm")
+
+  set.seed(1)
+  n <- 50L
+  p <- 3L
+  X <- matrix(runif(n * p, -1, 1), nrow = p)
+  offset <- runif(n, -1, 1)
+  state1 <- 1:p - p / 2
+  state2 <- state1 + 1
+
+  tstop <- numeric(n)
+  tstart <- tstop + 1 + runif(n, max = 3)
+
+  bin_start <- 1
+  bin_stop  <- 2
+
+  eta <- drop(state1 %*% X) + offset
+
+  fam <- "binomial"
+  y <- 1/(1 + exp(-eta)) > runif(n)
+  is_event <- y
+
+  obj <- binom(y, t(X), offset, binomial())
+
+  cpp_out <- check_observational_cdist(
+    X = X, y = y, is_event = is_event, offsets = offset, tstart = tstart,
+    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop,
+    multithreaded = FALSE, fam = fam, state = state1,
+    state1 = state2)
+
+  cpp_out_mult <- check_observational_cdist(
+    X = X, y = y, is_event = is_event, offsets = offset, tstart = tstart,
+    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop,
+    multithreaded = TRUE, fam = fam, state = state1,
+    state1 = state2)
+  expect_equal(cpp_out, cpp_out_mult)
+
+  expect_true(!cpp_out$is_mvn)
+  expect_equal(cpp_out$dim, length(state1))
+
+  expect_equal(cpp_out$log_dens, obj$f(state1))
+  expect_equal(cpp_out$log_dens1, obj$f(state2))
+
+  expect_equal(drop(cpp_out$gradient), obj$deriv(state1))
+  expect_equal(drop(cpp_out$gradient1), obj$deriv(state2))
+
+  expect_equal(cpp_out$neg_Hessian, obj$n_hessian(state1))
+  expect_equal(drop(cpp_out$gradient1), obj$deriv(state2))
+
+  expect_true("implement other families...")
 })
 

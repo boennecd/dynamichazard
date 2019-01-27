@@ -1,5 +1,6 @@
 #include "dists.h"
 #include "dmvnrm.h"
+#include "../utils.h"
 
 state_fw::state_fw(
   const arma::vec &parent, const arma::mat &F,const covarmat &Q):
@@ -15,6 +16,10 @@ double state_fw::log_dens_func(
 
 bool state_fw::is_mvn() const {
   return true;
+}
+
+arma::uword state_fw::dim() const {
+  return parent.n_elem;
 }
 
 double state_fw::log_dens(const arma::vec &child) const {
@@ -52,6 +57,10 @@ bool state_bw::is_mvn() const {
   return true;
 }
 
+arma::uword state_bw::dim() const {
+  return child.n_elem;
+}
+
 double state_bw::log_dens(const arma::vec &parent) const {
   return dmvnrm_log(child, F * parent, Q.chol_inv());
 }
@@ -77,6 +86,10 @@ artificial_prior::artificial_prior(
 
 bool artificial_prior::is_mvn() const {
   return true;
+}
+
+arma::uword artificial_prior::dim() const {
+  return mut.n_elem;
 }
 
 double artificial_prior::log_dens(const arma::vec &state) const {
@@ -124,3 +137,131 @@ artificial_prior artificial_prior_generator::get_artificial_prior(
 
   return artificial_prior(mt.find(time)->second, Pt.find(time)->second);
 }
+
+
+
+arma::vec set_at_risk_length(
+    const arma::vec &tstart, const arma::vec &stop,
+    double bin_start, double bin_stop,
+    const bool uses_at_risk_length) {
+  if(!uses_at_risk_length)
+    return arma::vec(tstart.n_elem, arma::fill::zeros);
+
+  arma::vec out(tstart.n_elem);
+  double *o = out.begin();
+  const double *sta = tstart.begin(), *sto = stop.begin();
+  for(arma::uword i = 0; i < tstart.n_elem; ++i)
+    *(o++) = get_at_risk_length(*(sto++), bin_stop, *(sta++), bin_start);
+
+  return out;
+}
+
+#ifdef _OPENMP
+/* openMP reductions */
+#pragma omp declare reduction(armaVP: arma::vec: omp_out += omp_in) \
+  initializer(omp_priv = arma::vec(omp_orig))
+
+#pragma omp declare reduction(armaMP: arma::mat: omp_out += omp_in) \
+  initializer(omp_priv = arma::mat(omp_orig))
+#endif
+
+template<class T>
+observational_cdist<T>::observational_cdist(
+  const arma::mat &X, const arma::vec &y, const arma::uvec &is_event,
+  const arma::vec &offsets, const arma::vec &tstart, const arma::vec &tstop,
+  const double bin_start, const double bin_stop, const bool multithreaded):
+  X(X), y(y), is_event(is_event), offsets(offsets), tstart(tstart),
+  tstop(tstop), bin_start(bin_start), bin_stop(bin_stop),
+  multithreaded(multithreaded),
+  at_risk_length(set_at_risk_length(tstart, tstop, bin_start, bin_stop,
+                                    this->uses_at_risk_length())) { }
+
+template<class T>
+bool observational_cdist<T>::is_mvn() const {
+  return false;
+}
+
+template<class T>
+arma::uword observational_cdist<T>::dim() const {
+  return X.n_rows;
+}
+
+template<class T>
+double observational_cdist<T>::log_dens(const arma::vec &coefs) const {
+  bool uses_at_risk_len = this->uses_at_risk_length();
+
+  const arma::vec eta = X.t() * coefs + offsets;
+  arma::uword n = eta.n_elem;
+
+  /* compute log likelihood */
+  double result = 0;
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) reduction(+:result) \
+  if(multithreaded)
+#endif
+  for(unsigned int i = 0; i < n; ++i){
+    auto trunc_eta = this->truncate_eta(
+      is_event[i], eta[i], exp(eta[i]), at_risk_length[i]);
+    result += this->log_like(is_event[i], trunc_eta, at_risk_length[i]);
+  }
+
+  return result;
+}
+
+template<class T>
+arma::vec observational_cdist<T>::gradient(const arma::vec &coefs) const {
+  bool uses_at_risk_len = this->uses_at_risk_length();
+
+  const arma::vec eta = X.t() * coefs + offsets;
+  arma::uword n = eta.n_elem;
+
+  /* compute gradient */
+  arma::vec result(coefs.n_elem, arma::fill::zeros);
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) reduction(armaVP:result) \
+  if(multithreaded)
+#endif
+  for(unsigned int i = 0; i < n; ++i){
+    auto trunc_eta = this->truncate_eta(
+      is_event[i], eta[i], exp(eta[i]), at_risk_length[i]);
+    double d_l = this->d_log_like(is_event[i], trunc_eta, at_risk_length[i]);
+    result += X.col(i) * d_l;
+  }
+
+  return result;
+}
+
+template<class T>
+arma::vec observational_cdist<T>::gradient_zero(const arma::vec &coefs) const {
+  Rcpp::stop("'observational_cdist<T>::gradient' is not implemented");
+
+  return arma::vec();
+}
+
+template<class T>
+arma::mat observational_cdist<T>::neg_Hessian(const arma::vec &coefs) const {
+  bool uses_at_risk_len = this->uses_at_risk_length();
+
+  const arma::vec eta = X.t() * coefs  + offsets;
+  arma::uword n = eta.n_elem;
+
+  /* compute Hessian */
+  arma::mat result(coefs.n_elem, coefs.n_elem, arma::fill::zeros);
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) reduction(armaMP:result) \
+  if(multithreaded)
+#endif
+  for(unsigned int i = 0; i < n; ++i){
+    auto trunc_eta = this->truncate_eta(
+      is_event[i], eta[i], exp(eta[i]), at_risk_length[i]);
+    double dd_l = this->dd_log_like(
+      is_event[i], trunc_eta, at_risk_length[i]);
+    sym_mat_rank_one_update(dd_l, X.col(i), result);
+  }
+
+  return -arma::symmatu(result);
+}
+
+template class observational_cdist<logistic>;
+template class observational_cdist<cloglog>;
+template class observational_cdist<exponential>;

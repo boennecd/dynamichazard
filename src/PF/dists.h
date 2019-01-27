@@ -3,6 +3,7 @@
 
 #include "../arma_n_rcpp.h"
 #include "covarmat.h"
+#include "../family.h"
 
 /* conditional distribution */
 class PF_cdist {
@@ -11,6 +12,8 @@ public:
 
   /* is it a multivariate normal distribution? */
   virtual bool is_mvn() const = 0;
+  /* dimension of the present coefficient vector */
+  virtual arma::uword dim() const = 0;
   /* log density */
   virtual double log_dens(const arma::vec&) const = 0;
   /* gradient of log density */
@@ -37,6 +40,7 @@ public:
       const arma::mat&, const covarmat&);
 
   bool is_mvn() const override;
+  arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
   arma::vec gradient_zero(const arma::vec&) const override;
@@ -59,6 +63,7 @@ public:
       const arma::mat&, const covarmat&);
 
   bool is_mvn() const override;
+  arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
   arma::vec gradient_zero(const arma::vec&) const override;
@@ -77,6 +82,7 @@ public:
   ~artificial_prior() = default;
 
   bool is_mvn() const override;
+  arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
   arma::vec gradient_zero(const arma::vec&) const override;
@@ -103,25 +109,34 @@ public:
 
 /*----------------------------------------*/
 
-class observational_cdist : public PF_cdist {
-  const arma::mat &X;
-  const arma::vec &y;
-  const arma::vec &tstart;
-  const arma::vec &tstop;
-  const double bin_start;
-  const double bin_stop;
+template<class T>
+class observational_cdist :
+  public virtual PF_cdist,  public virtual T
+  {
+    const arma::mat X;
+    const arma::vec y;
+    const arma::uvec is_event;
+    const arma::vec offsets;
+    const arma::vec tstart;
+    const arma::vec tstop;
+    const double bin_start;
+    const double bin_stop;
+    const bool multithreaded;
+    const arma::vec at_risk_length;
 
 public:
-  observational_cdist(
-    const arma::mat&, const arma::vec&, const arma::vec&,
-    const arma::vec&, const double, const double);
-  ~observational_cdist() = default;
+    observational_cdist(
+      const arma::mat&, const arma::vec&, const arma::uvec&, const arma::vec&,
+      const arma::vec&, const arma::vec&, const double, const double,
+      const bool multithreaded = false);
+    ~observational_cdist() = default;
 
-  bool is_mvn() const override;
-  double log_dens(const arma::vec&) const override;
-  arma::vec gradient(const arma::vec&) const override;
-  arma::vec gradient_zero(const arma::vec&) const override;
-  arma::mat neg_Hessian(const arma::vec&) const override;
-};
+    bool is_mvn() const override;
+    arma::uword dim() const override;
+    double log_dens(const arma::vec&) const override;
+    arma::vec gradient(const arma::vec&) const override;
+    arma::vec gradient_zero(const arma::vec&) const override;
+    arma::mat neg_Hessian(const arma::vec&) const override;
+  };
 
 #endif

@@ -323,6 +323,7 @@ Rcpp::List check_state_fw(
       state_fw::log_dens_func(child, parent, F, cQ),
 
     Rcpp::Named("is_mvn") = obj.is_mvn(),
+    Rcpp::Named("dim") = obj.dim(),
 
     Rcpp::Named("log_dens")  = obj.log_dens(child),
     Rcpp::Named("log_dens1") = obj.log_dens(child1),
@@ -350,6 +351,7 @@ Rcpp::List check_state_bw(
       state_bw::log_dens_func(parent, child, F, cQ),
 
       Rcpp::Named("is_mvn") = obj.is_mvn(),
+      Rcpp::Named("dim") = obj.dim(),
 
       Rcpp::Named("log_dens")  = obj.log_dens(parent),
       Rcpp::Named("log_dens1") = obj.log_dens(parent1),
@@ -378,6 +380,7 @@ Rcpp::List check_artificial_prior(
 
     return Rcpp::List::create(
         Rcpp::Named("is_mvn") = prior.is_mvn(),
+        Rcpp::Named("dim") = prior.dim(),
 
         Rcpp::Named("log_dens")  = prior.log_dens(state),
         Rcpp::Named("gradient")  = prior.gradient(state),
@@ -389,4 +392,42 @@ Rcpp::List check_artificial_prior(
     Rcpp::Named(std::to_string(t1)) = func(t1),
     Rcpp::Named(std::to_string(t2)) = func(t2),
     Rcpp::Named(std::to_string(t3)) = func(t3));
+}
+
+// [[Rcpp::export]]
+Rcpp::List check_observational_cdist(
+    const arma::mat &X, const arma::vec &y, const arma::uvec &is_event,
+    const arma::vec &offsets, const arma::vec &tstart,
+    const arma::vec &tstop, const double bin_start, const double bin_stop,
+    const bool multithreaded, std::string fam,
+    const arma::vec state, const arma::vec state1){
+  std::unique_ptr<PF_cdist> dist;
+
+  if(fam == BINOMIAL)
+    dist.reset(new observational_cdist<logistic>(
+      X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+      multithreaded));
+  else if(fam == CLOGLOG)
+    dist.reset(new observational_cdist<cloglog>(
+        X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+        multithreaded));
+  else if(fam == POISSON)
+    dist.reset(new observational_cdist<exponential>(
+        X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+        multithreaded));
+  else
+    Rcpp::stop("'fam' not implemented");
+
+  return Rcpp::List::create(
+    Rcpp::Named("is_mvn") = dist->is_mvn(),
+    Rcpp::Named("dim") = dist->dim(),
+
+    Rcpp::Named("log_dens")  = dist->log_dens(state),
+    Rcpp::Named("log_dens1") = dist->log_dens(state1),
+
+    Rcpp::Named("gradient")  = dist->gradient(state),
+    Rcpp::Named("gradient1") = dist->gradient(state1),
+
+    Rcpp::Named("neg_Hessian")  = dist->neg_Hessian(state),
+    Rcpp::Named("neg_Hessian1") = dist->neg_Hessian(state1));
 }
