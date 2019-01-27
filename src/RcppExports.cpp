@@ -608,6 +608,56 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// check_state_fw
+Rcpp::List check_state_fw(arma::vec parent, arma::vec parent1, arma::vec child, arma::vec child1, arma::mat F, arma::mat Q);
+RcppExport SEXP _dynamichazard_check_state_fw(SEXP parentSEXP, SEXP parent1SEXP, SEXP childSEXP, SEXP child1SEXP, SEXP FSEXP, SEXP QSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type parent(parentSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type parent1(parent1SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type child(childSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type child1(child1SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type F(FSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q(QSEXP);
+    rcpp_result_gen = Rcpp::wrap(check_state_fw(parent, parent1, child, child1, F, Q));
+    return rcpp_result_gen;
+END_RCPP
+}
+// check_state_bw
+Rcpp::List check_state_bw(arma::vec parent, arma::vec parent1, arma::vec child, arma::vec child1, arma::mat F, arma::mat Q);
+RcppExport SEXP _dynamichazard_check_state_bw(SEXP parentSEXP, SEXP parent1SEXP, SEXP childSEXP, SEXP child1SEXP, SEXP FSEXP, SEXP QSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type parent(parentSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type parent1(parent1SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type child(childSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type child1(child1SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type F(FSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q(QSEXP);
+    rcpp_result_gen = Rcpp::wrap(check_state_bw(parent, parent1, child, child1, F, Q));
+    return rcpp_result_gen;
+END_RCPP
+}
+// check_artificial_prior
+Rcpp::List check_artificial_prior(arma::vec state, arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0, unsigned int t1, unsigned int t2, unsigned int t3);
+RcppExport SEXP _dynamichazard_check_artificial_prior(SEXP stateSEXP, SEXP FSEXP, SEXP QSEXP, SEXP m_0SEXP, SEXP Q_0SEXP, SEXP t1SEXP, SEXP t2SEXP, SEXP t3SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type state(stateSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type F(FSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type m_0(m_0SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q_0(Q_0SEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type t1(t1SEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type t2(t2SEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type t3(t3SEXP);
+    rcpp_result_gen = Rcpp::wrap(check_artificial_prior(state, F, Q, m_0, Q_0, t1, t2, t3));
+    return rcpp_result_gen;
+END_RCPP
+}
 // logLike_cpp
 std::vector<double> logLike_cpp(const arma::mat& X, const Rcpp::List& risk_obj, const arma::mat& F, const arma::mat& Q_0, arma::mat Q, const arma::mat& a_t_d_s, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_effects_offsets, const int order_, const std::string model);
 RcppExport SEXP _dynamichazard_logLike_cpp(SEXP XSEXP, SEXP risk_objSEXP, SEXP FSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP a_t_d_sSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_effects_offsetsSEXP, SEXP order_SEXP, SEXP modelSEXP) {
@@ -741,6 +791,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_trunc_eta_exponential_test", (DL_FUNC) &_dynamichazard_trunc_eta_exponential_test, 3},
     {"_dynamichazard_trunc_eta_exponential_test_log_eps", (DL_FUNC) &_dynamichazard_trunc_eta_exponential_test_log_eps, 0},
     {"_dynamichazard_linear_mapper_test", (DL_FUNC) &_dynamichazard_linear_mapper_test, 7},
+    {"_dynamichazard_check_state_fw", (DL_FUNC) &_dynamichazard_check_state_fw, 6},
+    {"_dynamichazard_check_state_bw", (DL_FUNC) &_dynamichazard_check_state_bw, 6},
+    {"_dynamichazard_check_artificial_prior", (DL_FUNC) &_dynamichazard_check_artificial_prior, 8},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},

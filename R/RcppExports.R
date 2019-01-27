@@ -157,6 +157,18 @@ linear_mapper_test <- function(A, x, X, z, Z, type, R) {
     .Call(`_dynamichazard_linear_mapper_test`, A, x, X, z, Z, type, R)
 }
 
+check_state_fw <- function(parent, parent1, child, child1, F, Q) {
+    .Call(`_dynamichazard_check_state_fw`, parent, parent1, child, child1, F, Q)
+}
+
+check_state_bw <- function(parent, parent1, child, child1, F, Q) {
+    .Call(`_dynamichazard_check_state_bw`, parent, parent1, child, child1, F, Q)
+}
+
+check_artificial_prior <- function(state, F, Q, m_0, Q_0, t1, t2, t3) {
+    .Call(`_dynamichazard_check_artificial_prior`, state, F, Q, m_0, Q_0, t1, t2, t3)
+}
+
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model) {
     .Call(`_dynamichazard_logLike_cpp`, X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model)
 }

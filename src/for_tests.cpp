@@ -305,3 +305,88 @@ Rcpp::List linear_mapper_test(
     Rcpp::Named("A_X_A_T") = arma::mat(ptr->map(X, both , dont_trans).sv)
   );
 }
+
+// -------------------------------------------------- //
+
+#include "PF/dists.h"
+
+// [[Rcpp::export]]
+Rcpp::List check_state_fw(
+  arma::vec parent, arma::vec parent1,
+  arma::vec child, arma::vec child1,
+  arma::mat F, arma::mat Q){
+  covarmat cQ(Q);
+  state_fw obj(parent, F, cQ);
+
+  return Rcpp::List::create(
+    Rcpp::Named("log_dens_func") =
+      state_fw::log_dens_func(child, parent, F, cQ),
+
+    Rcpp::Named("is_mvn") = obj.is_mvn(),
+
+    Rcpp::Named("log_dens")  = obj.log_dens(child),
+    Rcpp::Named("log_dens1") = obj.log_dens(child1),
+
+    Rcpp::Named("gradient")  = obj.gradient(child),
+    Rcpp::Named("gradient1") = obj.gradient(child1),
+
+    Rcpp::Named("gradient_zero")  = obj.gradient_zero(parent),
+    Rcpp::Named("gradient_zero1") = obj.gradient_zero(parent1),
+
+    Rcpp::Named("neg_Hessian")  = obj.neg_Hessian(child),
+    Rcpp::Named("neg_Hessian1") = obj.neg_Hessian(child1));
+}
+
+// [[Rcpp::export]]
+Rcpp::List check_state_bw(
+    arma::vec parent, arma::vec parent1,
+    arma::vec child, arma::vec child1,
+    arma::mat F, arma::mat Q){
+  covarmat cQ(Q);
+  state_bw obj(child, F, cQ);
+
+  return Rcpp::List::create(
+    Rcpp::Named("log_dens_func") =
+      state_bw::log_dens_func(parent, child, F, cQ),
+
+      Rcpp::Named("is_mvn") = obj.is_mvn(),
+
+      Rcpp::Named("log_dens")  = obj.log_dens(parent),
+      Rcpp::Named("log_dens1") = obj.log_dens(parent1),
+
+      Rcpp::Named("gradient")  = obj.gradient(parent),
+      Rcpp::Named("gradient1") = obj.gradient(parent1),
+
+      Rcpp::Named("gradient_zero")  = obj.gradient_zero(child),
+      Rcpp::Named("gradient_zero1") = obj.gradient_zero(child1),
+
+      Rcpp::Named("neg_Hessian")  = obj.neg_Hessian(parent),
+      Rcpp::Named("neg_Hessian1") = obj.neg_Hessian(parent1));
+}
+
+// [[Rcpp::export]]
+Rcpp::List check_artificial_prior(
+    arma::vec state,
+    arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
+    unsigned int t1, unsigned int t2, unsigned int t3){
+  covarmat cQ(Q), cQ_0(Q_0);
+
+  artificial_prior_generator gen(F, cQ, m_0, cQ_0);
+
+  auto func = [&](unsigned int i){
+    auto prior = gen.get_artificial_prior(i);
+
+    return Rcpp::List::create(
+        Rcpp::Named("is_mvn") = prior.is_mvn(),
+
+        Rcpp::Named("log_dens")  = prior.log_dens(state),
+        Rcpp::Named("gradient")  = prior.gradient(state),
+        Rcpp::Named("gradient_zero")  = prior.gradient_zero(state),
+        Rcpp::Named("neg_Hessian")  = prior.neg_Hessian(state));
+  };
+
+  return Rcpp::List::create(
+    Rcpp::Named(std::to_string(t1)) = func(t1),
+    Rcpp::Named(std::to_string(t2)) = func(t2),
+    Rcpp::Named(std::to_string(t3)) = func(t3));
+}

@@ -1069,3 +1069,106 @@ test_that("'PF_forward_filter' gives the same as 'PF_EM' when it should", {
   filter_res <- PF_forward_filter(pf_em_res, N_fw = 25, N_first = 25)
   expect_equal(filter_res$forward_clouds, pf_em_res$clouds$forward_clouds)
 })
+
+if(dir.exists("pf-internals"))
+  invisible(sapply(list.files("pf-internals", full.names = TRUE), source))
+
+test_that("'state_fw' gives correct results", {
+  skip_if(!dir.exists("pf-internals"))
+  skip_if_not_installed("mvtnorm")
+
+  parent <- c(-.25, -.1)
+  parent1 <- c(.3, .18)
+  chi <- c(.2, -.05)
+  chi1 <- c(-.2, -.07)
+  F. <- matrix(c(.9, .4, 0, .8), nrow = 2)
+  Q <- matrix(c(.8, .4, .4, .4), nrow = 2)
+
+  obj <- fw(parent = parent, F. = F., Q = Q)
+
+  cpp_out <- check_state_fw(
+    parent = parent, parent1 = parent1, child = chi, child1 = chi1,
+    F = F., Q = Q)
+
+  require(mvtnorm)
+  expect_equal(dmvnorm(chi, F. %*% parent, Q, TRUE), cpp_out$log_dens_func)
+  expect_true(cpp_out$is_mvn)
+  expect_equal(obj$f(chi), cpp_out$log_dens)
+  expect_equal(obj$f(chi1), cpp_out$log_dens1)
+
+  expect_equal(obj$deriv(chi), cpp_out$gradient)
+  expect_equal(obj$deriv(chi1), cpp_out$gradient1)
+
+  expect_equal(obj$deriv_z(parent), cpp_out$gradient_zero)
+  expect_equal(obj$deriv_z(parent1), cpp_out$gradient_zero1)
+
+  expect_equal(obj$n_hessian(chi), cpp_out$neg_Hessian)
+  expect_equal(obj$n_hessian(chi1), cpp_out$neg_Hessian1)
+})
+
+test_that("'state_bw' gives correct results", {
+  skip_if(!dir.exists("pf-internals"))
+  skip_if_not_installed("mvtnorm")
+
+  parent <- c(-.25, -.1)
+  parent1 <- c(.3, .18)
+  chi <- c(.2, -.05)
+  chi1 <- c(-.2, -.07)
+  F. <- matrix(c(.9, .4, 0, .8), nrow = 2)
+  Q <- matrix(c(.8, .4, .4, .4), nrow = 2)
+
+  obj <- bw(child = chi, F. = F., Q = Q)
+
+  cpp_out <- check_state_bw(
+    parent = parent, parent1 = parent1, child = chi, child1 = chi1,
+    F = F., Q = Q)
+
+  require(mvtnorm)
+  expect_equal(dmvnorm(chi, F. %*% parent, Q, TRUE), cpp_out$log_dens_func)
+  expect_true(cpp_out$is_mvn)
+  expect_equal(obj$f(parent), cpp_out$log_dens)
+  expect_equal(obj$f(parent1), cpp_out$log_dens1)
+
+  expect_equal(obj$deriv(parent), cpp_out$gradient)
+  expect_equal(obj$deriv(parent1), cpp_out$gradient1)
+
+  expect_equal(obj$deriv_z(chi), cpp_out$gradient_zero)
+  expect_equal(obj$deriv_z(chi1), cpp_out$gradient_zero1)
+
+  expect_equal(obj$n_hessian(chi), cpp_out$neg_Hessian)
+  expect_equal(obj$n_hessian(chi1), cpp_out$neg_Hessian1)
+})
+
+
+test_that("'artificial_prior' gives correct results", {
+  skip_if(!dir.exists("pf-internals"))
+  skip_if_not_installed("mvtnorm")
+
+  state <- c(-.25, -.1)
+  F. <- matrix(c(.9, .4, 0, .8), nrow = 2)
+  Q <- matrix(c(.8, .4, .4, .4), nrow = 2)
+  m_0 <- c(.2, .3)
+
+  prio <- prior(F. = F., Q = Q, Q_0 = Q, mu_0 = m_0)
+
+  t1 <- 1L
+  t2 <- 4L
+  t3 <- 20L
+  ts <- c(t1, t2, t3)
+
+  cpp_out <- check_artificial_prior(
+    state = state, F = F., Q = Q, m_0 = m_0, Q_0 = Q, t1 = t1, t2 = t2,
+    t3 = t3)
+
+  for(i in seq_along(cpp_out)){
+    cpp_o <- cpp_out[[i]]
+    p <- prio(ts[i])
+
+    expect_true(cpp_o$is_mvn)
+    expect_equal(cpp_o$log_dens, p$f(state))
+    expect_equal(cpp_o$gradient, p$deriv(state))
+    expect_equal(cpp_o$gradient_zero, p$deriv_z(state))
+    expect_equal(cpp_o$neg_Hessian, p$n_hessian(state))
+  }
+})
+

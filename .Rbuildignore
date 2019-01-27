@@ -29,5 +29,6 @@ vignettes/Diagnostics/Rossi\.txt
 ^\.sandbox
 ^speedtest
 tests/testthat/previous_results/local_tests
+tests/testthat/pf-internals
 data-raw
 TODO
