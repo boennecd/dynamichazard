@@ -323,6 +323,7 @@ Rcpp::List check_state_fw(
       state_fw::log_dens_func(child, parent, F, cQ),
 
     Rcpp::Named("is_mvn") = obj.is_mvn(),
+    Rcpp::Named("is_grad_z_hes_const") = obj.is_grad_z_hes_const(),
     Rcpp::Named("dim") = obj.dim(),
 
     Rcpp::Named("log_dens")  = obj.log_dens(child),
@@ -331,8 +332,8 @@ Rcpp::List check_state_fw(
     Rcpp::Named("gradient")  = obj.gradient(child),
     Rcpp::Named("gradient1") = obj.gradient(child1),
 
-    Rcpp::Named("gradient_zero")  = obj.gradient_zero(parent),
-    Rcpp::Named("gradient_zero1") = obj.gradient_zero(parent1),
+    Rcpp::Named("gradient_zero")  = obj.gradient_zero(&parent),
+    Rcpp::Named("gradient_zero1") = obj.gradient_zero(&parent1),
 
     Rcpp::Named("neg_Hessian")  = obj.neg_Hessian(child),
     Rcpp::Named("neg_Hessian1") = obj.neg_Hessian(child1));
@@ -351,6 +352,7 @@ Rcpp::List check_state_bw(
       state_bw::log_dens_func(parent, child, F, cQ),
 
       Rcpp::Named("is_mvn") = obj.is_mvn(),
+      Rcpp::Named("is_grad_z_hes_const") = obj.is_grad_z_hes_const(),
       Rcpp::Named("dim") = obj.dim(),
 
       Rcpp::Named("log_dens")  = obj.log_dens(parent),
@@ -359,8 +361,8 @@ Rcpp::List check_state_bw(
       Rcpp::Named("gradient")  = obj.gradient(parent),
       Rcpp::Named("gradient1") = obj.gradient(parent1),
 
-      Rcpp::Named("gradient_zero")  = obj.gradient_zero(child),
-      Rcpp::Named("gradient_zero1") = obj.gradient_zero(child1),
+      Rcpp::Named("gradient_zero")  = obj.gradient_zero(&child),
+      Rcpp::Named("gradient_zero1") = obj.gradient_zero(&child1),
 
       Rcpp::Named("neg_Hessian")  = obj.neg_Hessian(parent),
       Rcpp::Named("neg_Hessian1") = obj.neg_Hessian(parent1));
@@ -372,7 +374,6 @@ Rcpp::List check_artificial_prior(
     arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
     unsigned int t1, unsigned int t2, unsigned int t3){
   covarmat cQ(Q), cQ_0(Q_0);
-
   artificial_prior_generator gen(F, cQ, m_0, cQ_0);
 
   auto func = [&](unsigned int i){
@@ -380,11 +381,12 @@ Rcpp::List check_artificial_prior(
 
     return Rcpp::List::create(
         Rcpp::Named("is_mvn") = prior.is_mvn(),
+        Rcpp::Named("is_grad_z_hes_const") = prior.is_grad_z_hes_const(),
         Rcpp::Named("dim") = prior.dim(),
 
         Rcpp::Named("log_dens")  = prior.log_dens(state),
         Rcpp::Named("gradient")  = prior.gradient(state),
-        Rcpp::Named("gradient_zero")  = prior.gradient_zero(state),
+        Rcpp::Named("gradient_zero")  = prior.gradient_zero(nullptr),
         Rcpp::Named("neg_Hessian")  = prior.neg_Hessian(state));
   };
 
@@ -441,18 +443,18 @@ Rcpp::List check_fw_bw_comb(
     arma::mat F, arma::mat Q,
     arma::vec parent, arma::vec parent1,
     arma::vec grand_child, arma::vec grand_child1,
-    arma::vec x){
+    arma::vec x, int nu){
   covarmat cQ(Q);
 
   state_fw fw(parent     , F, cQ);
   state_bw bw(grand_child, F, cQ);
 
   std::vector<PF_cdist*> objs = { &fw, &bw };
-  cdist_comb_generator combi_gen(objs, parent, -1);
+  cdist_comb_generator combi_gen(objs, parent, nu);
 
   auto func = [&](arma::vec &p, arma::vec &gc){
     std::unique_ptr<dist_comb> comb = combi_gen.
-    get_dist_comb(std::vector<arma::vec> { p, gc });
+      get_dist_comb({ &p, &gc });
 
     return Rcpp::List::create(
       Rcpp::Named("log_density") = comb->log_density(x),
@@ -463,5 +465,38 @@ Rcpp::List check_fw_bw_comb(
   return Rcpp::List::create(
     Rcpp::Named("comb_1_1") = func(parent, grand_child),
     Rcpp::Named("comb_2_2") = func(parent1, grand_child1));
+}
+
+// [[Rcpp::export]]
+Rcpp::List check_prior_bw_comb(
+    arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
+    arma::vec child, arma::vec child1, arma::vec parent,
+    unsigned int t1, unsigned int t2){
+  covarmat cQ(Q), cQ_0(Q_0);
+  state_bw bw(child, F, cQ);
+  artificial_prior_generator gen(F, cQ, m_0, cQ_0);
+
+  auto func = [&](unsigned int i){
+    auto prior = gen.get_artificial_prior(i);
+    std::vector<PF_cdist*> objs = { &prior, &bw };
+    cdist_comb_generator comb(objs);
+    std::unique_ptr<dist_comb>
+      d1 = comb.get_dist_comb({ &child  }),
+      d2 = comb.get_dist_comb({ &child1 });
+
+    return Rcpp::List::create(
+      Rcpp::Named("mean1") = d1->get_mean(),
+      Rcpp::Named("mean2") = d2->get_mean(),
+
+      Rcpp::Named("covar1") = d1->get_covar(),
+      Rcpp::Named("covar2") = d2->get_covar(),
+
+      Rcpp::Named("log_dens1")  = d1->log_density(parent),
+      Rcpp::Named("log_dens2")  = d2->log_density(parent));
+  };
+
+  return Rcpp::List::create(
+    Rcpp::Named(std::to_string(t1)) = func(t1),
+    Rcpp::Named(std::to_string(t2)) = func(t2));
 }
 

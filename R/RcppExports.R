@@ -173,8 +173,12 @@ check_observational_cdist <- function(X, y, is_event, offsets, tstart, tstop, bi
     .Call(`_dynamichazard_check_observational_cdist`, X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop, multithreaded, fam, state, state1)
 }
 
-check_fw_bw_comb <- function(F, Q, parent, parent1, grand_child, grand_child1, x) {
-    .Call(`_dynamichazard_check_fw_bw_comb`, F, Q, parent, parent1, grand_child, grand_child1, x)
+check_fw_bw_comb <- function(F, Q, parent, parent1, grand_child, grand_child1, x, nu) {
+    .Call(`_dynamichazard_check_fw_bw_comb`, F, Q, parent, parent1, grand_child, grand_child1, x, nu)
+}
+
+check_prior_bw_comb <- function(F, Q, m_0, Q_0, child, child1, parent, t1, t2) {
+    .Call(`_dynamichazard_check_prior_bw_comb`, F, Q, m_0, Q_0, child, child1, parent, t1, t2)
 }
 
 logLike_cpp <- function(X, risk_obj, F, Q_0, Q, a_t_d_s, tstart, tstop, fixed_effects_offsets, order_, model) {

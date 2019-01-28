@@ -19,6 +19,10 @@ bool state_fw::is_mvn() const {
   return true;
 }
 
+bool state_fw::is_grad_z_hes_const() const {
+  return false;
+}
+
 arma::uword state_fw::dim() const {
   return parent.n_elem;
 }
@@ -32,8 +36,8 @@ arma::vec state_fw::gradient(const arma::vec &child) const {
   return arma::solve(Q.mat(), mu - child);
 }
 
-arma::vec state_fw::gradient_zero(const arma::vec &pa) const {
-  return QiF * pa;
+arma::vec state_fw::gradient_zero(const arma::vec *pa) const {
+  return QiF * *pa;
 }
 
 arma::mat state_fw::neg_Hessian(const arma::vec &child) const {
@@ -58,6 +62,10 @@ bool state_bw::is_mvn() const {
   return true;
 }
 
+bool state_bw::is_grad_z_hes_const() const {
+  return false;
+}
+
 arma::uword state_bw::dim() const {
   return child.n_elem;
 }
@@ -70,8 +78,8 @@ arma::vec state_bw::gradient(const arma::vec &parent) const {
   return FtQi * (child - F * parent);
 }
 
-arma::vec state_bw::gradient_zero(const arma::vec &ci) const {
-  return FtQi * ci;
+arma::vec state_bw::gradient_zero(const arma::vec *ci) const {
+  return FtQi * *ci;
 }
 
 arma::mat state_bw::neg_Hessian(const arma::vec &parent) const {
@@ -89,6 +97,10 @@ bool artificial_prior::is_mvn() const {
   return true;
 }
 
+bool artificial_prior::is_grad_z_hes_const() const {
+  return true;
+}
+
 arma::uword artificial_prior::dim() const {
   return mut.n_elem;
 }
@@ -102,7 +114,7 @@ arma::vec artificial_prior::gradient(const arma::vec &state) const {
   return arma::solve(Qt.mat(), mut - state);
 }
 
-arma::vec artificial_prior::gradient_zero(const arma::vec &state) const {
+arma::vec artificial_prior::gradient_zero(const arma::vec *state) const {
   return dz;
 }
 
@@ -183,6 +195,11 @@ bool observational_cdist<T>::is_mvn() const {
 }
 
 template<class T>
+bool observational_cdist<T>::is_grad_z_hes_const() const {
+  return false;
+}
+
+template<class T>
 arma::uword observational_cdist<T>::dim() const {
   return X.n_rows;
 }
@@ -233,7 +250,7 @@ arma::vec observational_cdist<T>::gradient(const arma::vec &coefs) const {
 }
 
 template<class T>
-arma::vec observational_cdist<T>::gradient_zero(const arma::vec &coefs) const {
+arma::vec observational_cdist<T>::gradient_zero(const arma::vec *coefs) const {
   Rcpp::stop("'observational_cdist<T>::gradient' is not implemented");
 
   return arma::vec();

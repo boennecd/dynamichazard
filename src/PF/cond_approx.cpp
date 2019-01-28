@@ -26,12 +26,14 @@ double mode_objective(
   return -o;
 }
 
-cdist_comb_generator::cdist_comb_generator(std::vector<PF_cdist*> &cdists, const double nu):
+cdist_comb_generator::cdist_comb_generator(std::vector<PF_cdist*> &cdists,
+                                           const int nu):
   /* all should have the same dimension */
-  cdist_comb_generator(cdists, arma::vec(cdists[0]->dim(), arma::fill::zeros), nu) { }
+  cdist_comb_generator(
+    cdists, arma::vec(cdists[0]->dim(), arma::fill::zeros), nu) { }
 
 cdist_comb_generator::cdist_comb_generator(
-  std::vector<PF_cdist*> &cdists, const arma::vec &start, const double nu):
+  std::vector<PF_cdist*> &cdists, const arma::vec &start, const int nu):
   cdists(cdists), nu(nu)
 {
   std::vector<bool> is_mvn(cdists.size());
@@ -70,7 +72,7 @@ cdist_comb_generator::cdist_comb_generator(
   for(auto K = neg_Ks.begin(); K != neg_Ks.end(); ++K)
     neg_K += *K;
 
-  covarmat Sig_obj = (nu > 2.) ?
+  covarmat Sig_obj = (nu > 2L) ?
     covarmat(neg_K.i() * (nu - 2.) / nu) :
     covarmat(neg_K.i());
 
@@ -78,6 +80,7 @@ cdist_comb_generator::cdist_comb_generator(
 
   /* mean part from non-Gaussian conditional distributions */
   k.set_size(n);
+  k.zeros();
   for(unsigned int i = 0; i < cdists.size(); ++i){
     if(cdists[i]->is_mvn())
       continue;
@@ -87,13 +90,14 @@ cdist_comb_generator::cdist_comb_generator(
 
 class cdist_comb : public dist_comb {
   std::shared_ptr<covarmat> Sig;
-  const double nu;
+  const int nu;
   arma::vec mu;
 
 public:
-  cdist_comb(const std::vector<arma::vec>&,
+  cdist_comb(const std::initializer_list<arma::vec*>&,
              std::vector<PF_cdist*>&, const arma::mat&,
-             const arma::vec&, std::shared_ptr<covarmat>, const double);
+             const arma::vec&, std::shared_ptr<covarmat>, const int);
+  ~cdist_comb() = default;
 
   arma::vec sample() const override;
   double log_density(const arma::vec&) const override;
@@ -102,40 +106,45 @@ public:
 };
 
 std::unique_ptr<dist_comb> cdist_comb_generator::get_dist_comb(
-    const std::vector<arma::vec> &states)
+    const std::initializer_list<arma::vec*> &states)
 {
   return std::unique_ptr<dist_comb>(new cdist_comb(
       states, cdists, neg_K, k, Sig, nu));
 }
 
 cdist_comb::cdist_comb(
-  const std::vector<arma::vec> &states,
+  const std::initializer_list<arma::vec*> &states,
   std::vector<PF_cdist*> &cdists, const arma::mat &K, const arma::vec &k,
-  std::shared_ptr<covarmat> Sig, const double nu): Sig(Sig), nu(nu)
+  std::shared_ptr<covarmat> Sig, const int nu): Sig(Sig), nu(nu)
 {
   auto s = states.begin();
   mu = k;
   for(auto p = cdists.begin(); p != cdists.end(); ++p){
     if(!(*p)->is_mvn())
       continue;
+    if((*p)->is_grad_z_hes_const()){
+      mu += (*p)->gradient_zero(nullptr);
+      continue;
+    }
+
     mu += (*p)->gradient_zero(*(s++));
   }
 
   /* TODO: may be expensive if called multiple times. Make decompostion
-   *       or use Sig */
+   *       or use Sig, Do not do the latter as we change sig if we use
+   *       a multivariate t-distribution... */
   mu = arma::solve(K, mu);
 }
 
 arma::vec cdist_comb::sample() const {
-  if(nu >= 2.)
-    Rcpp::stop("not implemented with nu >= 2.");
-  return mvrnorm(mu, Sig->chol());
+  if(nu >= 2L)
+    return mvtrnorm(mu, Sig->chol(), nu);
+    return mvrnorm(mu, Sig->chol());
 }
 
 double cdist_comb::log_density(const arma::vec &state) const {
-  if(nu >= 2.)
-    Rcpp::stop("not implemented with nu >= 2.");
-
+  if(nu >= 2L)
+    return dmvtrm_log(state, mu, Sig->chol_inv(), nu);
   return dmvnrm_log(state, mu, Sig->chol_inv());
 }
 

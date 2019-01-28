@@ -1093,6 +1093,7 @@ test_that("'state_fw' gives correct results", {
   require(mvtnorm)
   expect_equal(dmvnorm(chi, F. %*% parent, Q, TRUE), cpp_out$log_dens_func)
   expect_true(cpp_out$is_mvn)
+  expect_true(!cpp_out$is_grad_z_hes_const)
   expect_equal(cpp_out$dim, length(parent))
 
   expect_equal(obj$f(chi), cpp_out$log_dens)
@@ -1128,6 +1129,7 @@ test_that("'state_bw' gives correct results", {
   require(mvtnorm)
   expect_equal(dmvnorm(chi, F. %*% parent, Q, TRUE), cpp_out$log_dens_func)
   expect_true(cpp_out$is_mvn)
+  expect_true(!cpp_out$is_grad_z_hes_const)
   expect_equal(cpp_out$dim, length(chi))
   expect_equal(obj$f(parent), cpp_out$log_dens)
   expect_equal(obj$f(parent1), cpp_out$log_dens1)
@@ -1167,6 +1169,7 @@ test_that("'artificial_prior' gives correct results", {
     p <- prio(ts[i])
 
     expect_true(cpp_o$is_mvn)
+    expect_true(cpp_o$is_grad_z_hes_const)
     expect_equal(cpp_o$dim, length(state))
     expect_equal(cpp_o$log_dens, p$f(state))
     expect_equal(cpp_o$gradient, p$deriv(state))
@@ -1241,32 +1244,80 @@ test_that("combining forward and backwards works", {
   F. <- matrix(c(.9, .4, 0, .8), nrow = 2)
   Q <- matrix(c(.8, .4, .4, .4), nrow = 2)
 
-  cpp_out <- check_fw_bw_comb(
-    F = F., Q = Q, parent = p1, parent1 = p2,
-    grand_child = c1, grand_child1 = c2, x = x)
+  for(nu in c(-1L, 1L, 4L)){
+    cpp_out <- check_fw_bw_comb(
+      F = F., Q = Q, parent = p1, parent1 = p2,
+      grand_child = c1, grand_child1 = c2, x = x, nu = nu)
 
-  #####
-  Sig <- solve(solve(Q) + crossprod(F., solve(Q, F.)))
-  m1 <- Sig %*% (solve(Q, F. %*% p1) + crossprod(F., solve(Q, c1)))
+    #####
+    Sig_org <- Sig <- solve(solve(Q) + crossprod(F., solve(Q, F.)))
+    m1 <- Sig %*% (solve(Q, F. %*% p1) + crossprod(F., solve(Q, c1)))
 
-  cpp_1 <- cpp_out[[1L]]
-  expect_equal(cpp_1$mean, m1)
-  expect_equal(cpp_1$covar, Sig)
-  require(mvtnorm)
-  expect_equal(cpp_1$log_density, dmvnorm(x, m1, Sig, log = TRUE))
+    if(nu <= 2L){
+      lfunc <- dmvnorm
 
-  #####
-  m2 <- Sig %*% (solve(Q, F. %*% p2) + crossprod(F., solve(Q, c2)))
+    } else {
+      Sig <- Sig * (nu - 2L) / nu
+      lfunc <- function(x, m, s, log)
+        dmvt(x = x, delta = m, sigma = s, df = nu, log = TRUE)
 
-  cpp_2 <- cpp_out[[2L]]
-  expect_equal(cpp_2$mean, m2)
-  expect_equal(cpp_2$covar, Sig)
-  expect_equal(cpp_2$log_density, dmvnorm(x, m2, Sig, log = TRUE))
+    }
+
+    cpp_1 <- cpp_out[[1L]]
+    expect_equal(cpp_1$mean, m1)
+    expect_equal(cpp_1$covar, Sig)
+    require(mvtnorm)
+    expect_equal(cpp_1$log_density, lfunc(x, m1, Sig, log = TRUE))
+
+    #####
+    m2 <- Sig_org %*% (solve(Q, F. %*% p2) + crossprod(F., solve(Q, c2)))
+
+    cpp_2 <- cpp_out[[2L]]
+    expect_equal(cpp_2$mean, m2)
+    expect_equal(cpp_2$covar, Sig)
+    expect_equal(cpp_2$log_density, lfunc(x, m2, Sig, log = TRUE))
+  }
+})
+
+test_that("combining prior and backwards works", {
+  skip_if(!dir.exists("pf-internals"))
+  skip_if_not_installed("mvtnorm")
+
+  p <- c(-.5, 0)
+  c1 <- c(-.4, 1)
+  c2 <- c(.2, .2)
+  m_0 <- c(0, .4)
+  F. <- matrix(c(.9, .4, 0, .8), nrow = 2)
+  Q <- matrix(c(.8, .4, .4, .4), nrow = 2)
+  Q_0 <- Q * 1.1
+  t1 <- 1L
+  t2 <- 10L
+
+  bwo <- bw(child = c1, F. = F., Q = Q)
+  prio <- prior(F. = F., Q = Q, Q_0 = Q_0, mu_0 = m_0)
+
+  cpp_out <- check_prior_bw_comb(
+    F = F., Q = Q, m_0 = m_0, Q_0 = Q_0, child = c1, child1 = c2,
+    parent = p, t1 = t1, t2 = t2)
+
+  for(t. in c(t2, t1)){
+    co <- cpp_out[[as.character(t.)]]
+    app <- approximator(prio(t.), bwo, start = c1)
+
+    o1 <- app(NULL, c1)
+    o2 <- app(NULL, c2)
+    expect_equal(drop(co$mean1), o1$mu)
+    expect_equal(drop(co$mean2), o2$mu)
+
+    expect_equal(co$covar1, o1$Sig)
+    expect_equal(co$covar2, o2$Sig)
+
+    expect_equal(co$log_dens1, o1$p_ldens(p))
+    expect_equal(co$log_dens2, o2$p_ldens(p))
+  }
 })
 
 expect_true("TODOs", {
-  expect_true("check t-distribution")
-  expect_true("check combiation of bw and prior")
   expect_true("check sampling both with t and normal distribution")
   expect_true("check mode approximation")
 })

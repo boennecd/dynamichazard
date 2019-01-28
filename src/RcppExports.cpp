@@ -681,8 +681,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // check_fw_bw_comb
-Rcpp::List check_fw_bw_comb(arma::mat F, arma::mat Q, arma::vec parent, arma::vec parent1, arma::vec grand_child, arma::vec grand_child1, arma::vec x);
-RcppExport SEXP _dynamichazard_check_fw_bw_comb(SEXP FSEXP, SEXP QSEXP, SEXP parentSEXP, SEXP parent1SEXP, SEXP grand_childSEXP, SEXP grand_child1SEXP, SEXP xSEXP) {
+Rcpp::List check_fw_bw_comb(arma::mat F, arma::mat Q, arma::vec parent, arma::vec parent1, arma::vec grand_child, arma::vec grand_child1, arma::vec x, int nu);
+RcppExport SEXP _dynamichazard_check_fw_bw_comb(SEXP FSEXP, SEXP QSEXP, SEXP parentSEXP, SEXP parent1SEXP, SEXP grand_childSEXP, SEXP grand_child1SEXP, SEXP xSEXP, SEXP nuSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -693,7 +693,27 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type grand_child(grand_childSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type grand_child1(grand_child1SEXP);
     Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(check_fw_bw_comb(F, Q, parent, parent1, grand_child, grand_child1, x));
+    Rcpp::traits::input_parameter< int >::type nu(nuSEXP);
+    rcpp_result_gen = Rcpp::wrap(check_fw_bw_comb(F, Q, parent, parent1, grand_child, grand_child1, x, nu));
+    return rcpp_result_gen;
+END_RCPP
+}
+// check_prior_bw_comb
+Rcpp::List check_prior_bw_comb(arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0, arma::vec child, arma::vec child1, arma::vec parent, unsigned int t1, unsigned int t2);
+RcppExport SEXP _dynamichazard_check_prior_bw_comb(SEXP FSEXP, SEXP QSEXP, SEXP m_0SEXP, SEXP Q_0SEXP, SEXP childSEXP, SEXP child1SEXP, SEXP parentSEXP, SEXP t1SEXP, SEXP t2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type F(FSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type m_0(m_0SEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Q_0(Q_0SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type child(childSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type child1(child1SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type parent(parentSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type t1(t1SEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type t2(t2SEXP);
+    rcpp_result_gen = Rcpp::wrap(check_prior_bw_comb(F, Q, m_0, Q_0, child, child1, parent, t1, t2));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -834,7 +854,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_check_state_bw", (DL_FUNC) &_dynamichazard_check_state_bw, 6},
     {"_dynamichazard_check_artificial_prior", (DL_FUNC) &_dynamichazard_check_artificial_prior, 8},
     {"_dynamichazard_check_observational_cdist", (DL_FUNC) &_dynamichazard_check_observational_cdist, 12},
-    {"_dynamichazard_check_fw_bw_comb", (DL_FUNC) &_dynamichazard_check_fw_bw_comb, 7},
+    {"_dynamichazard_check_fw_bw_comb", (DL_FUNC) &_dynamichazard_check_fw_bw_comb, 8},
+    {"_dynamichazard_check_prior_bw_comb", (DL_FUNC) &_dynamichazard_check_prior_bw_comb, 9},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},

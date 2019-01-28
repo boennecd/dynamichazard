@@ -11,6 +11,8 @@ public:
 
   /* is it a multivariate normal distribution? */
   virtual bool is_mvn() const = 0;
+  /* is `gradient_zero` and `neg_Hessian` constant? */
+  virtual bool is_grad_z_hes_const() const = 0;
   /* dimension of the present coefficient vector */
   virtual arma::uword dim() const = 0;
   /* log density */
@@ -18,7 +20,7 @@ public:
   /* gradient of log density */
   virtual arma::vec gradient(const arma::vec&) const = 0;
   /* gradient of log density evaluated at zero vector input */
-  virtual arma::vec gradient_zero(const arma::vec&) const = 0;
+  virtual arma::vec gradient_zero(const arma::vec*) const = 0;
   /* negative Hessian of log density */
   virtual arma::mat neg_Hessian(const arma::vec&) const = 0;
 };
@@ -39,10 +41,11 @@ public:
       const arma::mat&, const covarmat&);
 
   bool is_mvn() const override;
+  bool is_grad_z_hes_const() const override;
   arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
-  arma::vec gradient_zero(const arma::vec&) const override;
+  arma::vec gradient_zero(const arma::vec*) const override;
   arma::mat neg_Hessian(const arma::vec&) const override;
 };
 
@@ -62,10 +65,11 @@ public:
       const arma::mat&, const covarmat&);
 
   bool is_mvn() const override;
+  bool is_grad_z_hes_const() const override;
   arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
-  arma::vec gradient_zero(const arma::vec&) const override;
+  arma::vec gradient_zero(const arma::vec*) const override;
   arma::mat neg_Hessian(const arma::vec&) const override;
 };
 
@@ -81,10 +85,11 @@ public:
   ~artificial_prior() = default;
 
   bool is_mvn() const override;
+  bool is_grad_z_hes_const() const override;
   arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
-  arma::vec gradient_zero(const arma::vec&) const override;
+  arma::vec gradient_zero(const arma::vec*) const override;
   arma::mat neg_Hessian(const arma::vec&) const override;
 };
 
@@ -131,10 +136,11 @@ public:
     ~observational_cdist() = default;
 
     bool is_mvn() const override;
+    bool is_grad_z_hes_const() const override;
     arma::uword dim() const override;
     double log_dens(const arma::vec&) const override;
     arma::vec gradient(const arma::vec&) const override;
-    arma::vec gradient_zero(const arma::vec&) const override;
+    arma::vec gradient_zero(const arma::vec*) const override;
     arma::mat neg_Hessian(const arma::vec&) const override;
   };
 

@@ -5,6 +5,8 @@
 
 class dist_comb {
 public:
+  virtual ~dist_comb() {}
+
   virtual arma::vec sample() const = 0;
   virtual double log_density(const arma::vec&) const = 0;
   virtual const arma::vec& get_mean() const = 0;
@@ -21,15 +23,15 @@ class cdist_comb_generator {
   std::shared_ptr<covarmat> Sig;
   arma::vec k;
   /* less than 2 implies multivariate t-distribution */
-  const double nu;
+  const int nu;
 
 public:
   cdist_comb_generator(std::vector<PF_cdist*>&, const arma::vec&,
-                       const double nu = -1);
-  cdist_comb_generator(std::vector<PF_cdist*>&, const double nu = -1);
+                       const int nu = -1L);
+  cdist_comb_generator(std::vector<PF_cdist*>&, const int nu = -1L);
 
   std::unique_ptr<dist_comb> get_dist_comb(
-      const std::vector<arma::vec>&);
+      const std::initializer_list<arma::vec*>&);
 };
 
 #endif
