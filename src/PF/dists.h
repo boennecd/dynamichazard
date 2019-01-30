@@ -115,7 +115,7 @@ public:
 /*----------------------------------------*/
 
 std::shared_ptr<PF_cdist> get_observational_cdist(
-    const std::string&, const arma::mat&, const arma::vec&, const arma::uvec&,
+    const std::string&, const arma::mat&, const arma::uvec&,
     const arma::vec&, const arma::vec&, const arma::vec&, const double,
     const double,const bool multithreaded = false);
 

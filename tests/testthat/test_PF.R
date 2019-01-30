@@ -1077,18 +1077,29 @@ sim_test_pf_internal <- function(n, p, fam, state){
   X <- matrix(runif(n * p, -1, 1), nrow = p)
   offset <- runif(n, -1, 1)
 
-  tstop <- numeric(n)
-  tstart <- tstop + 1 + runif(n, max = 3)
+  tstart <- numeric(n)
+  tstop <- tstart + 1 + runif(n, max = 3)
 
   bin_start <- 1
   bin_stop  <- 2
 
   eta <- drop(state %*% X) + offset
+  if(fam == "binomial"){
+    y <- 1/(1 + exp(-eta)) > runif(n)
 
-  y <- 1/(1 + exp(-eta)) > runif(n)
-  is_event <- y
+  } else if(fam == "cloglog"){
+    y <- -expm1(-exp(eta)) > runif(n)
 
-  list(is_event = is_event, y = y, eta = eta, bin_start = bin_start,
+  } else if(fam == "poisson"){ # TODO: poisson is missleading
+    y <- rexp(length(eta), exp(eta))
+    dt <- pmin(tstop, bin_stop) - pmax(tstart, bin_start)
+    is_event <- y <= dt
+    tstop[is_event] <- pmax(tstart[is_event], bin_start) + y[is_event]
+    y <- Surv(pmin(y, dt), is_event)
+
+  }
+
+  list(y = y, eta = eta, bin_start = bin_start,
        bin_stop = bin_stop, tstart = tstart, tstop = tstop,
        offset = offset, X = X)
 }
@@ -1206,37 +1217,41 @@ test_that("'observational_cdist' gives correct results", {
   state1 <- 1:p - p / 2
   state2 <- state1 + 1
   set.seed(1)
-  fam <- "binomial"
-  o <- sim_test_pf_internal(n = 50L, p = 3L, fam = fam, state = state1)
 
-  obj <- with(o, binom(y, t(X), offset, binomial()))
+  for(l in list(
+    list("binomial", binomial()), list("cloglog", binomial("cloglog")),
+    list("poisson", "exponential"))){
+    fam <- l[[1]]
+    o <- sim_test_pf_internal(n = 50L, p = 3L, fam = fam, state = state1)
 
-  cpp_out <- with(o, check_observational_cdist(
-    X = X, y = y, is_event = is_event, offsets = offset, tstart = tstart,
-    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop,
-    multithreaded = FALSE, fam = fam, state = state1,
-    state1 = state2))
+    obj <- with(o, odist(y, t(X), offset, l[[2]]))
 
-  cpp_out_mult <- with(o, check_observational_cdist(
-    X = X, y = y, is_event = is_event, offsets = offset, tstart = tstart,
-    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop,
-    multithreaded = TRUE, fam = fam, state = state1,
-    state1 = state2))
-  expect_equal(cpp_out, cpp_out_mult)
+    y_use <- if(fam == "poisson") o$y[, 2] else o$y
+    cpp_out <- with(o, check_observational_cdist(
+      X = X, is_event = y_use, offsets = offset, tstart = tstart,
+      tstop = tstop, bin_start = bin_start, bin_stop = bin_stop,
+      multithreaded = FALSE, fam = fam, state = state1,
+      state1 = state2))
 
-  expect_true(!cpp_out$is_mvn)
-  expect_equal(cpp_out$dim, length(state1))
+    cpp_out_mult <- with(o, check_observational_cdist(
+      X = X, is_event = y_use, offsets = offset, tstart = tstart,
+      tstop = tstop, bin_start = bin_start, bin_stop = bin_stop,
+      multithreaded = TRUE, fam = fam, state = state1,
+      state1 = state2))
+    expect_equal(cpp_out, cpp_out_mult)
 
-  expect_equal(cpp_out$log_dens, obj$f(state1))
-  expect_equal(cpp_out$log_dens1, obj$f(state2))
+    expect_true(!cpp_out$is_mvn)
+    expect_equal(cpp_out$dim, length(state1))
 
-  expect_equal(drop(cpp_out$gradient), obj$deriv(state1))
-  expect_equal(drop(cpp_out$gradient1), obj$deriv(state2))
+    expect_equal(cpp_out$log_dens, obj$f(state1))
+    expect_equal(cpp_out$log_dens1, obj$f(state2))
 
-  expect_equal(cpp_out$neg_Hessian, obj$n_hessian(state1))
-  expect_equal(drop(cpp_out$gradient1), obj$deriv(state2))
+    expect_equal(drop(cpp_out$gradient), obj$deriv(state1))
+    expect_equal(drop(cpp_out$gradient1), obj$deriv(state2))
 
-  expect_true("implement other families...")
+    expect_equal(cpp_out$neg_Hessian, obj$n_hessian(state1))
+    expect_equal(cpp_out$neg_Hessian1, obj$n_hessian(state2))
+  }
 })
 
 test_that("combining forward and backwards works", {
@@ -1340,34 +1355,33 @@ test_that("mode approximations give expected result", {
   bwo <- bw(child = c1, F. = F., Q = Q)
   prio <- prior(F. = F., Q = Q, Q_0 = Q_0, mu_0 = m_0)(t1)
 
-  fam <- "binomial"
-  o <- sim_test_pf_internal(n = 50L, p = 2L, fam = fam, state = p)
+  for(l in list(
+    list("binomial", binomial()), list("cloglog", binomial("cloglog")),
+    list("poisson", "exponential"))){
+    fam <- l[[1]]
+    o <- sim_test_pf_internal(n = 50L, p = 2L, fam = fam, state = p)
 
-  y_dist <- with(o, binom(y, t(X), offset, binomial()))
+    y_dist <- with(o, odist(y, t(X), offset, l[[2]]))
 
-  app1 <- approximator(bwo, prio, start = c1)
-  app <- approximator(bwo, prio, y_dist, start = app1(c1, NULL)$mu)
-  o1 <- app(c1, NULL)
-  o2 <- app(c2, NULL)
+    app1 <- approximator(bwo, prio, start = c1)
+    app <- approximator(bwo, prio, y_dist, start = app1(c1, NULL)$mu)
+    o1 <- app(c1, NULL)
+    o2 <- app(c2, NULL)
 
-  cpp_out <- with(o, check_prior_bw_state_comb(
-    X = X, y = y, is_event = is_event, offsets = offset, tstart = tstart,
-    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
-    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
-    t1 = t1))
+    y_use <- if(fam == "poisson") o$y[, 2] else o$y
+    cpp_out <- with(o, check_prior_bw_state_comb(
+      X = X, is_event = y_use, offsets = offset, tstart = tstart,
+      tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
+      F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+      t1 = t1))
 
-  expect_equal(drop(cpp_out$mean1), o1$mu)
-  expect_equal(drop(cpp_out$mean2), o2$mu)
+    expect_equal(drop(cpp_out$mean1), o1$mu)
+    expect_equal(drop(cpp_out$mean2), o2$mu)
 
-  expect_equal(cpp_out$covar1, o1$Sig)
-  expect_equal(cpp_out$covar2, o2$Sig)
+    expect_equal(cpp_out$covar1, o1$Sig)
+    expect_equal(cpp_out$covar2, o2$Sig)
 
-  expect_equal(cpp_out$log_dens1, o1$p_ldens(p))
-  expect_equal(cpp_out$log_dens2, o2$p_ldens(p))
-
-  expect_true("test other families")
-})
-
-expect_true("TODOs", {
-  expect_true("check sampling both with t and normal distribution")
+    expect_equal(cpp_out$log_dens1, o1$p_ldens(p))
+    expect_equal(cpp_out$log_dens2, o2$p_ldens(p))
+  }
 })

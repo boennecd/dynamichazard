@@ -659,13 +659,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // check_observational_cdist
-Rcpp::List check_observational_cdist(const arma::mat& X, const arma::vec& y, const arma::uvec& is_event, const arma::vec& offsets, const arma::vec& tstart, const arma::vec& tstop, const double bin_start, const double bin_stop, const bool multithreaded, std::string fam, const arma::vec state, const arma::vec state1);
-RcppExport SEXP _dynamichazard_check_observational_cdist(SEXP XSEXP, SEXP ySEXP, SEXP is_eventSEXP, SEXP offsetsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP bin_startSEXP, SEXP bin_stopSEXP, SEXP multithreadedSEXP, SEXP famSEXP, SEXP stateSEXP, SEXP state1SEXP) {
+Rcpp::List check_observational_cdist(const arma::mat& X, const arma::uvec& is_event, const arma::vec& offsets, const arma::vec& tstart, const arma::vec& tstop, const double bin_start, const double bin_stop, const bool multithreaded, std::string fam, const arma::vec state, const arma::vec state1);
+RcppExport SEXP _dynamichazard_check_observational_cdist(SEXP XSEXP, SEXP is_eventSEXP, SEXP offsetsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP bin_startSEXP, SEXP bin_stopSEXP, SEXP multithreadedSEXP, SEXP famSEXP, SEXP stateSEXP, SEXP state1SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type is_event(is_eventSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type offsets(offsetsSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type tstart(tstartSEXP);
@@ -676,7 +675,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type fam(famSEXP);
     Rcpp::traits::input_parameter< const arma::vec >::type state(stateSEXP);
     Rcpp::traits::input_parameter< const arma::vec >::type state1(state1SEXP);
-    rcpp_result_gen = Rcpp::wrap(check_observational_cdist(X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop, multithreaded, fam, state, state1));
+    rcpp_result_gen = Rcpp::wrap(check_observational_cdist(X, is_event, offsets, tstart, tstop, bin_start, bin_stop, multithreaded, fam, state, state1));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -718,13 +717,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // check_prior_bw_state_comb
-Rcpp::List check_prior_bw_state_comb(const arma::mat& X, const arma::vec& y, const arma::uvec& is_event, const arma::vec& offsets, const arma::vec& tstart, const arma::vec& tstop, const double bin_start, const double bin_stop, std::string fam, arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0, arma::vec child, arma::vec child1, arma::vec parent, unsigned int t1);
-RcppExport SEXP _dynamichazard_check_prior_bw_state_comb(SEXP XSEXP, SEXP ySEXP, SEXP is_eventSEXP, SEXP offsetsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP bin_startSEXP, SEXP bin_stopSEXP, SEXP famSEXP, SEXP FSEXP, SEXP QSEXP, SEXP m_0SEXP, SEXP Q_0SEXP, SEXP childSEXP, SEXP child1SEXP, SEXP parentSEXP, SEXP t1SEXP) {
+Rcpp::List check_prior_bw_state_comb(const arma::mat& X, const arma::uvec& is_event, const arma::vec& offsets, const arma::vec& tstart, const arma::vec& tstop, const double bin_start, const double bin_stop, std::string fam, arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0, arma::vec child, arma::vec child1, arma::vec parent, unsigned int t1);
+RcppExport SEXP _dynamichazard_check_prior_bw_state_comb(SEXP XSEXP, SEXP is_eventSEXP, SEXP offsetsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP bin_startSEXP, SEXP bin_stopSEXP, SEXP famSEXP, SEXP FSEXP, SEXP QSEXP, SEXP m_0SEXP, SEXP Q_0SEXP, SEXP childSEXP, SEXP child1SEXP, SEXP parentSEXP, SEXP t1SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type is_event(is_eventSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type offsets(offsetsSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type tstart(tstartSEXP);
@@ -740,7 +738,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type child1(child1SEXP);
     Rcpp::traits::input_parameter< arma::vec >::type parent(parentSEXP);
     Rcpp::traits::input_parameter< unsigned int >::type t1(t1SEXP);
-    rcpp_result_gen = Rcpp::wrap(check_prior_bw_state_comb(X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop, fam, F, Q, m_0, Q_0, child, child1, parent, t1));
+    rcpp_result_gen = Rcpp::wrap(check_prior_bw_state_comb(X, is_event, offsets, tstart, tstop, bin_start, bin_stop, fam, F, Q, m_0, Q_0, child, child1, parent, t1));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -880,10 +878,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_check_state_fw", (DL_FUNC) &_dynamichazard_check_state_fw, 6},
     {"_dynamichazard_check_state_bw", (DL_FUNC) &_dynamichazard_check_state_bw, 6},
     {"_dynamichazard_check_artificial_prior", (DL_FUNC) &_dynamichazard_check_artificial_prior, 8},
-    {"_dynamichazard_check_observational_cdist", (DL_FUNC) &_dynamichazard_check_observational_cdist, 12},
+    {"_dynamichazard_check_observational_cdist", (DL_FUNC) &_dynamichazard_check_observational_cdist, 11},
     {"_dynamichazard_check_fw_bw_comb", (DL_FUNC) &_dynamichazard_check_fw_bw_comb, 8},
     {"_dynamichazard_check_prior_bw_comb", (DL_FUNC) &_dynamichazard_check_prior_bw_comb, 9},
-    {"_dynamichazard_check_prior_bw_state_comb", (DL_FUNC) &_dynamichazard_check_prior_bw_state_comb, 17},
+    {"_dynamichazard_check_prior_bw_state_comb", (DL_FUNC) &_dynamichazard_check_prior_bw_state_comb, 16},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},

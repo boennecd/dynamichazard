@@ -398,14 +398,14 @@ Rcpp::List check_artificial_prior(
 
 // [[Rcpp::export]]
 Rcpp::List check_observational_cdist(
-    const arma::mat &X, const arma::vec &y, const arma::uvec &is_event,
+    const arma::mat &X, const arma::uvec &is_event,
     const arma::vec &offsets, const arma::vec &tstart,
     const arma::vec &tstop, const double bin_start, const double bin_stop,
     const bool multithreaded, std::string fam,
     const arma::vec state, const arma::vec state1){
   std::shared_ptr<PF_cdist> dist =
     get_observational_cdist(
-      fam, X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+      fam, X, is_event, offsets, tstart, tstop, bin_start, bin_stop,
       multithreaded);
 
   return Rcpp::List::create(
@@ -490,7 +490,7 @@ Rcpp::List check_prior_bw_comb(
 
 // [[Rcpp::export]]
 Rcpp::List check_prior_bw_state_comb(
-    const arma::mat &X, const arma::vec &y, const arma::uvec &is_event,
+    const arma::mat &X, const arma::uvec &is_event,
     const arma::vec &offsets, const arma::vec &tstart,
     const arma::vec &tstop, const double bin_start, const double bin_stop,
     std::string fam,
@@ -504,7 +504,7 @@ Rcpp::List check_prior_bw_state_comb(
   artificial_prior_generator gen(F, cQ, m_0, cQ_0);
   std::shared_ptr<PF_cdist> dist =
     get_observational_cdist(
-      fam, X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+      fam, X, is_event, offsets, tstart, tstop, bin_start, bin_stop,
       multithreaded);
 
   auto prior = gen.get_artificial_prior(t1);
