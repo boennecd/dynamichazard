@@ -3,6 +3,7 @@
 
 #include "../arma_n_rcpp.h"
 #include "covarmat.h"
+#include <memory>
 
 /* conditional distribution */
 class PF_cdist {
@@ -113,35 +114,9 @@ public:
 
 /*----------------------------------------*/
 
-template<class T>
-class observational_cdist :
-  public virtual PF_cdist,  public virtual T
-  {
-    const arma::mat X;
-    const arma::vec y;
-    const arma::uvec is_event;
-    const arma::vec offsets;
-    const arma::vec tstart;
-    const arma::vec tstop;
-    const double bin_start;
-    const double bin_stop;
-    const bool multithreaded;
-    const arma::vec at_risk_length;
-
-public:
-    observational_cdist(
-      const arma::mat&, const arma::vec&, const arma::uvec&, const arma::vec&,
-      const arma::vec&, const arma::vec&, const double, const double,
-      const bool multithreaded = false);
-    ~observational_cdist() = default;
-
-    bool is_mvn() const override;
-    bool is_grad_z_hes_const() const override;
-    arma::uword dim() const override;
-    double log_dens(const arma::vec&) const override;
-    arma::vec gradient(const arma::vec&) const override;
-    arma::vec gradient_zero(const arma::vec*) const override;
-    arma::mat neg_Hessian(const arma::vec&) const override;
-  };
+std::shared_ptr<PF_cdist> get_observational_cdist(
+    const std::string&, const arma::mat&, const arma::vec&, const arma::uvec&,
+    const arma::vec&, const arma::vec&, const arma::vec&, const double,
+    const double,const bool multithreaded = false);
 
 #endif

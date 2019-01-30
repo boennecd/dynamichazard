@@ -403,22 +403,10 @@ Rcpp::List check_observational_cdist(
     const arma::vec &tstop, const double bin_start, const double bin_stop,
     const bool multithreaded, std::string fam,
     const arma::vec state, const arma::vec state1){
-  std::unique_ptr<PF_cdist> dist;
-
-  if(fam == BINOMIAL)
-    dist.reset(new observational_cdist<logistic>(
-      X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
-      multithreaded));
-  else if(fam == CLOGLOG)
-    dist.reset(new observational_cdist<cloglog>(
-        X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
-        multithreaded));
-  else if(fam == POISSON)
-    dist.reset(new observational_cdist<exponential>(
-        X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
-        multithreaded));
-  else
-    Rcpp::stop("'fam' not implemented");
+  std::shared_ptr<PF_cdist> dist =
+    get_observational_cdist(
+      fam, X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+      multithreaded);
 
   return Rcpp::List::create(
     Rcpp::Named("is_mvn") = dist->is_mvn(),
@@ -498,5 +486,46 @@ Rcpp::List check_prior_bw_comb(
   return Rcpp::List::create(
     Rcpp::Named(std::to_string(t1)) = func(t1),
     Rcpp::Named(std::to_string(t2)) = func(t2));
+}
+
+// [[Rcpp::export]]
+Rcpp::List check_prior_bw_state_comb(
+    const arma::mat &X, const arma::vec &y, const arma::uvec &is_event,
+    const arma::vec &offsets, const arma::vec &tstart,
+    const arma::vec &tstop, const double bin_start, const double bin_stop,
+    std::string fam,
+    arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
+    arma::vec child, arma::vec child1, arma::vec parent,
+    unsigned int t1){
+  const bool multithreaded = 1;
+  covarmat cQ(Q), cQ_0(Q_0);
+
+  state_bw bw(child, F, cQ);
+  artificial_prior_generator gen(F, cQ, m_0, cQ_0);
+  std::shared_ptr<PF_cdist> dist =
+    get_observational_cdist(
+      fam, X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+      multithreaded);
+
+  auto prior = gen.get_artificial_prior(t1);
+  std::vector<PF_cdist*> objs_sta = { &prior, &bw };
+  cdist_comb_generator comb_start(objs_sta);
+
+  std::vector<PF_cdist*> objs = { &prior, &bw, dist.get() };
+  cdist_comb_generator comb(
+      objs, comb_start.get_dist_comb({ &child })->get_mean());
+  std::unique_ptr<dist_comb>
+    d1 = comb.get_dist_comb({ &child   }),
+    d2 = comb.get_dist_comb({ &child1  });
+
+  return Rcpp::List::create(
+    Rcpp::Named("mean1") = d1->get_mean(),
+    Rcpp::Named("mean2") = d2->get_mean(),
+
+    Rcpp::Named("covar1") = d1->get_covar(),
+    Rcpp::Named("covar2") = d2->get_covar(),
+
+    Rcpp::Named("log_dens1")  = d1->log_density(parent),
+    Rcpp::Named("log_dens2")  = d2->log_density(parent));
 }
 

@@ -1,5 +1,6 @@
 #ifndef COVARMAT_H
 #define COVARMAT_H
+#include <memory>
 
 #ifdef _OPENMP
 #include <omp.h>

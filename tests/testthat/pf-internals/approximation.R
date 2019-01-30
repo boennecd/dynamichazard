@@ -14,7 +14,7 @@ approximator <- function(..., start, do_checks = FALSE){
 
     opt <- nloptr(start, eval_f = eval_f, eval_grad_f = eval_grad_f,
                   opts = list(algorithm = "NLOPT_LD_LBFGS", xtol_rel = 1e-8,
-                              check_derivatives = do_checks, print_level = 1))
+                              check_derivatives = do_checks))
 
     if(opt$status < 0)
       stop("failed with code ", opt$status)
@@ -31,12 +31,13 @@ approximator <- function(..., start, do_checks = FALSE){
 
   k1 <- numeric(length(start))
   if(any(!is_mvn)){
-    os <- objs[!is_mvn]
+    for(i in seq_along(objs)){
+      if(is_mvn[i])
+        next
+      k1 <- k1 + neg_Ks[[i]] %*% val + objs[[i]]$deriv(val)
+    }
+
     objs <- objs[is_mvn]
-
-    for(i in seq_along(os))
-      k1 <- k1 + neg_Ks[[i]] %*% val + os[[i]]$deriv(val)
-
   }
 
   out <- function(...)

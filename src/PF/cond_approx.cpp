@@ -49,7 +49,8 @@ cdist_comb_generator::cdist_comb_generator(
 
   if(!all_mvn){
     /* find mode */
-    nlopt_opt opt = nlopt_create(NLOPT_LD_LBFGS, n);
+    nlopt_opt opt;
+    opt = nlopt_create(NLOPT_LD_LBFGS, n);
     nlopt_set_min_objective(opt, mode_objective, &cdists);
     nlopt_set_xtol_rel(opt, 1e-5);
 

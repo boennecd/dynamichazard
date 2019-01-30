@@ -1073,6 +1073,26 @@ test_that("'PF_forward_filter' gives the same as 'PF_EM' when it should", {
 if(dir.exists("pf-internals"))
   invisible(sapply(list.files("pf-internals", full.names = TRUE), source))
 
+sim_test_pf_internal <- function(n, p, fam, state){
+  X <- matrix(runif(n * p, -1, 1), nrow = p)
+  offset <- runif(n, -1, 1)
+
+  tstop <- numeric(n)
+  tstart <- tstop + 1 + runif(n, max = 3)
+
+  bin_start <- 1
+  bin_stop  <- 2
+
+  eta <- drop(state %*% X) + offset
+
+  y <- 1/(1 + exp(-eta)) > runif(n)
+  is_event <- y
+
+  list(is_event = is_event, y = y, eta = eta, bin_start = bin_start,
+       bin_stop = bin_stop, tstart = tstart, tstop = tstop,
+       offset = offset, X = X)
+}
+
 test_that("'state_fw' gives correct results", {
   skip_if(!dir.exists("pf-internals"))
   skip_if_not_installed("mvtnorm")
@@ -1182,39 +1202,26 @@ test_that("'observational_cdist' gives correct results", {
   skip_if(!dir.exists("pf-internals"))
   skip_if_not_installed("mvtnorm")
 
-  set.seed(1)
-  n <- 50L
-  p <- 3L
-  X <- matrix(runif(n * p, -1, 1), nrow = p)
-  offset <- runif(n, -1, 1)
+  p <- 3
   state1 <- 1:p - p / 2
   state2 <- state1 + 1
-
-  tstop <- numeric(n)
-  tstart <- tstop + 1 + runif(n, max = 3)
-
-  bin_start <- 1
-  bin_stop  <- 2
-
-  eta <- drop(state1 %*% X) + offset
-
+  set.seed(1)
   fam <- "binomial"
-  y <- 1/(1 + exp(-eta)) > runif(n)
-  is_event <- y
+  o <- sim_test_pf_internal(n = 50L, p = 3L, fam = fam, state = state1)
 
-  obj <- binom(y, t(X), offset, binomial())
+  obj <- with(o, binom(y, t(X), offset, binomial()))
 
-  cpp_out <- check_observational_cdist(
+  cpp_out <- with(o, check_observational_cdist(
     X = X, y = y, is_event = is_event, offsets = offset, tstart = tstart,
     tstop = tstop, bin_start = bin_start, bin_stop = bin_stop,
     multithreaded = FALSE, fam = fam, state = state1,
-    state1 = state2)
+    state1 = state2))
 
-  cpp_out_mult <- check_observational_cdist(
+  cpp_out_mult <- with(o, check_observational_cdist(
     X = X, y = y, is_event = is_event, offsets = offset, tstart = tstart,
     tstop = tstop, bin_start = bin_start, bin_stop = bin_stop,
     multithreaded = TRUE, fam = fam, state = state1,
-    state1 = state2)
+    state1 = state2))
   expect_equal(cpp_out, cpp_out_mult)
 
   expect_true(!cpp_out$is_mvn)
@@ -1317,7 +1324,50 @@ test_that("combining prior and backwards works", {
   }
 })
 
+test_that("mode approximations give expected result", {
+  skip_if(!dir.exists("pf-internals"))
+  skip_if_not_installed("mvtnorm")
+
+  p <- c(-.5, 0)
+  c1 <- c(-.4, 1)
+  c2 <- c(.2, .2)
+  m_0 <- c(0, .4)
+  F. <- matrix(c(.9, .4, 0, .8), nrow = 2)
+  Q <- matrix(c(.8, .4, .4, .4), nrow = 2)
+  Q_0 <- Q * 1.1
+  t1 <- 3L
+
+  bwo <- bw(child = c1, F. = F., Q = Q)
+  prio <- prior(F. = F., Q = Q, Q_0 = Q_0, mu_0 = m_0)(t1)
+
+  fam <- "binomial"
+  o <- sim_test_pf_internal(n = 50L, p = 2L, fam = fam, state = p)
+
+  y_dist <- with(o, binom(y, t(X), offset, binomial()))
+
+  app1 <- approximator(bwo, prio, start = c1)
+  app <- approximator(bwo, prio, y_dist, start = app1(c1, NULL)$mu)
+  o1 <- app(c1, NULL)
+  o2 <- app(c2, NULL)
+
+  cpp_out <- with(o, check_prior_bw_state_comb(
+    X = X, y = y, is_event = is_event, offsets = offset, tstart = tstart,
+    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
+    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+    t1 = t1))
+
+  expect_equal(drop(cpp_out$mean1), o1$mu)
+  expect_equal(drop(cpp_out$mean2), o2$mu)
+
+  expect_equal(cpp_out$covar1, o1$Sig)
+  expect_equal(cpp_out$covar2, o2$Sig)
+
+  expect_equal(cpp_out$log_dens1, o1$p_ldens(p))
+  expect_equal(cpp_out$log_dens2, o2$p_ldens(p))
+
+  expect_true("test other families")
+})
+
 expect_true("TODOs", {
   expect_true("check sampling both with t and normal distribution")
-  expect_true("check mode approximation")
 })

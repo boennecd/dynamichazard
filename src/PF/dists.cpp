@@ -153,6 +153,37 @@ artificial_prior artificial_prior_generator::get_artificial_prior(
 
 
 
+template<class T>
+class observational_cdist :
+  public virtual PF_cdist,  public virtual T
+{
+  const arma::mat X;
+  const arma::vec y;
+  const arma::uvec is_event;
+  const arma::vec offsets;
+  const arma::vec tstart;
+  const arma::vec tstop;
+  const double bin_start;
+  const double bin_stop;
+  const bool multithreaded;
+  const arma::vec at_risk_length;
+
+public:
+  observational_cdist(
+    const arma::mat&, const arma::vec&, const arma::uvec&, const arma::vec&,
+    const arma::vec&, const arma::vec&, const double, const double,
+    const bool multithreaded = false);
+  ~observational_cdist() = default;
+
+  bool is_mvn() const override;
+  bool is_grad_z_hes_const() const override;
+  arma::uword dim() const override;
+  double log_dens(const arma::vec&) const override;
+  arma::vec gradient(const arma::vec&) const override;
+  arma::vec gradient_zero(const arma::vec*) const override;
+  arma::mat neg_Hessian(const arma::vec&) const override;
+};
+
 arma::vec set_at_risk_length(
     const arma::vec &tstart, const arma::vec &stop,
     double bin_start, double bin_stop,
@@ -280,6 +311,23 @@ arma::mat observational_cdist<T>::neg_Hessian(const arma::vec &coefs) const {
   return -arma::symmatu(result);
 }
 
-template class observational_cdist<logistic>;
-template class observational_cdist<cloglog>;
-template class observational_cdist<exponential>;
+std::shared_ptr<PF_cdist> get_observational_cdist(
+    const std::string& fam, const arma::mat &X, const arma::vec &y,
+    const arma::uvec &is_event, const arma::vec &offsets,
+    const arma::vec &tstart, const arma::vec &tstop, const double bin_start,
+    const double bin_stop, const bool multithreaded){
+  if(fam == BINOMIAL)
+    return(std::shared_ptr<PF_cdist>((new observational_cdist<logistic>(
+        X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+        multithreaded))));
+  else if(fam == CLOGLOG)
+    return(std::shared_ptr<PF_cdist>((new observational_cdist<cloglog>(
+        X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+        multithreaded))));
+  else if(fam == POISSON)
+    return(std::shared_ptr<PF_cdist>((new observational_cdist<exponential>(
+        X, y, is_event, offsets, tstart, tstop, bin_start, bin_stop,
+        multithreaded))));
+
+  Rcpp::stop("'fam' not implemented");
+}
