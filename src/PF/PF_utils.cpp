@@ -1,48 +1,6 @@
 #include "PF_utils.h"
 #include "../sample_funcs.h"
 
-inline covarmat set_bw_fw_particle_combiner_Q
-  (const PF_data &data, const covarmat &Q_trans){
-  arma::mat Q_inv_arg = data.err_state->map(Q_trans.inv()).sv;
-  Q_inv_arg += data.state_trans->map(Q_inv_arg, both, trans).sv;
-  return covarmat(Q_inv_arg.i());
-}
-
-bw_fw_particle_combiner::bw_fw_particle_combiner
-  (const PF_data &data):
-  data(data), Q_trans(data.Q),
-  Q(set_bw_fw_particle_combiner_Q(data, Q_trans)) {}
-
-arma::vec bw_fw_particle_combiner::operator()
-  (const particle &fw_p, const particle &bw_p, const bool do_transform) const {
-  return this->operator()(fw_p.get_state(), bw_p.get_state(), do_transform);
-}
-
-arma::vec bw_fw_particle_combiner::operator()
-  (const arma::vec &fw_p, const arma::vec &bw_p, const bool do_transform) const {
-  /* compute part of the mean from the forward particle
-   * R Q^{-1}R^\top Fx_{t - 1}
-   * TODO: issues w/ higher orders currently... */
-  arma::vec mu = data.state_trans_err->map(fw_p).sv;
-  mu = solve_w_precomputed_chol(Q_trans.chol(), mu);
-  mu = data.err_state->map(mu).sv;
-
-  /* add part of the mean from the backward particle */
-  {
-    /* F^\top R Q^{-1} R^\top x_{t + 1}
-     * TODO: issues w/ higher orders currently... */
-    arma::vec bw_term = data.err_state_inv->map(bw_p).sv;
-    bw_term = solve_w_precomputed_chol(Q_trans.chol(), bw_term);
-    mu += data.state_trans_err->map(bw_term, trans).sv;
-  }
-
-  if(!do_transform)
-    return mu;
-
-  return Q.mat() * mu;
-}
-
-
 cloud re_sample_cloud(const unsigned int size, const cloud cl){
   if(size >= cl.size())
     Rcpp::stop("size greater than or equal to cl.size() in 're_sample_cloud'");
@@ -70,3 +28,106 @@ cloud re_sample_cloud(const unsigned int size, const cloud cl){
 
   return out;
 }
+
+
+template<bool is_forward>
+std::vector<std::unique_ptr<dist_comb>> get_approx_use_mean(
+    std::shared_ptr<PF_cdist> y_dist, cloud &PF_cloud, const PF_data &data,
+    pf_dens &dens_calc, arma::uword t){
+  unsigned int n_elem = PF_cloud.size();
+  std::vector<std::unique_ptr<dist_comb>> out(n_elem);
+
+  std::unique_ptr<PF_cdist> other;
+  std::shared_ptr<PF_cdist> prior;
+  arma::vec other_state = PF_cloud.get_weigthed_mean(), start;
+  std::vector<PF_cdist*> objs;
+  if(is_forward){
+    other = dens_calc.get_fw_dist(other_state);
+    start = other->get_mean();
+    objs = { y_dist.get(), other.get() };
+  }
+  else {
+    other = dens_calc.get_bw_dist(other_state);
+    prior = dens_calc.get_prior(t);
+    std::vector<PF_cdist*> start_objs = { other.get(), prior.get() };
+    start = cdist_comb_generator(start_objs).get_dist_comb
+      ({ &other_state })->get_mean();
+    objs = { y_dist.get(), other.get(), prior.get() };
+
+  }
+
+  cdist_comb_generator combi_gen(objs, start, data.nu, &data.xtra_covar);
+  for(unsigned int i = 0; i < n_elem; ++i){ // loop over cloud elements
+    auto it_cl = PF_cloud.begin() + i;
+    auto it_dc = out.begin() + i;
+
+    *it_dc = combi_gen.get_dist_comb({ (arma::vec*)&it_cl->get_state() });
+  }
+
+  return out;
+}
+template std::vector<std::unique_ptr<dist_comb>> get_approx_use_mean<true>(
+    std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);
+template std::vector<std::unique_ptr<dist_comb>> get_approx_use_mean<false>(
+    std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);
+
+
+
+template<bool is_forward>
+std::vector<std::unique_ptr<dist_comb>> get_approx_use_particle(
+    std::shared_ptr<PF_cdist> y_dist, cloud &PF_cloud, const PF_data &data,
+    pf_dens &dens_calc, arma::uword t){
+  unsigned int n_elem = PF_cloud.size();
+  std::vector<std::unique_ptr<dist_comb>> out(n_elem);
+
+  std::unique_ptr<PF_cdist> first_dist;
+  std::shared_ptr<PF_cdist> prior;
+  std::vector<PF_cdist*> start_objs;
+  std::unique_ptr<cdist_comb_generator> comb_start;
+  if(!is_forward){
+    first_dist = dens_calc.get_bw_dist(PF_cloud.begin()->get_state());
+    prior = dens_calc.get_prior(t);
+    start_objs = { first_dist.get(), prior.get() };
+    comb_start = std::unique_ptr<cdist_comb_generator>(
+      new cdist_comb_generator(start_objs));
+
+  }
+
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+  for(unsigned int i = 0; i < n_elem; ++i){ // loop over cloud elements
+    auto it_cl = PF_cloud.begin() + i;
+    auto it_dc = out.begin() + i;
+
+    std::unique_ptr<PF_cdist> other;
+    std::vector<PF_cdist*> objs;
+    arma::vec start;
+    if(is_forward){
+      other = dens_calc.get_fw_dist(it_cl->get_state());
+      start = other->get_mean();
+      objs = { y_dist.get(), other.get() };
+
+    }
+    else {
+      other = dens_calc.get_bw_dist(it_cl->get_state());
+      start = comb_start->get_dist_comb
+        ({ (arma::vec*)&it_cl->get_state() })->get_mean();
+      objs = { y_dist.get(), other.get(), prior.get() };
+
+    }
+
+    cdist_comb_generator combi_gen(objs, start, data.nu, &data.xtra_covar);
+
+    *it_dc =
+      combi_gen.get_dist_comb({ (arma::vec*)&it_cl->get_state() });
+  }
+
+  return out;
+}
+template std::vector<std::unique_ptr<dist_comb>>
+  get_approx_use_particle<true>(
+    std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);
+template std::vector<std::unique_ptr<dist_comb>>
+  get_approx_use_particle<false>(
+    std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);

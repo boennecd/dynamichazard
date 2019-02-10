@@ -17,6 +17,18 @@ double pf_dens::log_prob_state_given_child(
                                  data.Q);
 }
 
+std::unique_ptr<PF_cdist> pf_dens::get_fw_dist
+  (const arma::vec &parent){
+  return std::unique_ptr<state_fw>(new state_fw(
+      parent, data.state_trans->map(), data.Q));
+}
+
+std::unique_ptr<PF_cdist> pf_dens::get_bw_dist
+  (const arma::vec &child){
+  return std::unique_ptr<state_bw>(new state_bw(
+      child, data.state_trans->map(), data.Q));
+}
+
 std::shared_ptr<PF_cdist> pf_dens::get_prior(const arma::uword t){
   return std::make_shared<artificial_prior>(art_gen.get_artificial_prior(t));
 }

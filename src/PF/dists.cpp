@@ -23,6 +23,10 @@ bool state_fw::is_grad_z_hes_const() const {
   return false;
 }
 
+const arma::vec& state_fw::get_mean() const {
+  return mu;
+}
+
 arma::uword state_fw::dim() const {
   return parent.n_elem;
 }
@@ -66,6 +70,13 @@ bool state_bw::is_grad_z_hes_const() const {
   return false;
 }
 
+const arma::vec& state_bw::get_mean() const {
+  Rcpp::stop("'state_bw' is not a density in x");
+
+  arma::vec dum;
+  return dum;
+}
+
 arma::uword state_bw::dim() const {
   return child.n_elem;
 }
@@ -99,6 +110,10 @@ bool artificial_prior::is_mvn() const {
 
 bool artificial_prior::is_grad_z_hes_const() const {
   return true;
+}
+
+const arma::vec& artificial_prior::get_mean() const {
+  return mut;
 }
 
 arma::uword artificial_prior::dim() const {
@@ -176,6 +191,7 @@ public:
 
   bool is_mvn() const override;
   bool is_grad_z_hes_const() const override;
+  const arma::vec& get_mean() const override;
   arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
@@ -227,6 +243,14 @@ bool observational_cdist<T>::is_mvn() const {
 template<class T>
 bool observational_cdist<T>::is_grad_z_hes_const() const {
   return false;
+}
+
+template<class T>
+const arma::vec& observational_cdist<T>::get_mean() const {
+  Rcpp::stop("'observational_cdist<T>' is not a density in x");
+
+  arma::vec dum;
+  return dum;
 }
 
 template<class T>

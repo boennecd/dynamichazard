@@ -46,7 +46,7 @@ class PF_smooth_smoother_n_dens {
 public:
   static Rcpp::List compute(
       const PF_data &data, const std::string method,
-      pf_base_dens &dens_calc){
+      pf_dens &dens_calc){
     /* Get the smoothed particles at time 1, 2, ..., d */
     smoother_output result;
     if (method == BOOT_FILTER) {
@@ -75,6 +75,25 @@ public:
   }
 };
 
+std::string get_family(const std::string &model){
+  if(model == "logit"){
+    return BINOMIAL;
+
+  } else if (model == "exponential"){
+    return POISSON;
+
+  } else if (model == "cloglog") {
+    return CLOGLOG;
+
+  }
+
+  std::stringstream stream;
+  stream << "model '" << model << "' is not implemented";
+  Rcpp::stop(stream.str());
+
+  return "";
+}
+
 class PF_smooth_dens {
   using Fearnhead_O_N  =
     PF_smooth_smoother_n_dens<PF_smoother_Fearnhead_O_N>;
@@ -85,7 +104,7 @@ class PF_smooth_dens {
 public:
   static Rcpp::List compute(
       const PF_data &data, const std::string smoother,
-      const std::string method, pf_base_dens &dens_calc){
+      const std::string method, pf_dens &dens_calc){
     Rcpp::List ans;
 
     if(smoother == "Fearnhead_O_N"){
@@ -141,28 +160,10 @@ Rcpp::List PF_smooth(
     Rcpp::stop("'type' not implemented");
 
   Rcpp::List ans;
-
-  std::unique_ptr<pf_base_dens> dens_calc;
-  if(model == "logit"){
-    dens_calc.reset(new logistic_dens(*data.get()));
-
-  } else if (model == "exponential"){
-    dens_calc.reset(new exponential_dens(*data.get()));
-
-  } else if (model == "cloglog") {
-    dens_calc.reset(new cloglog_dens(*data.get()));
-
-  } else {
-    std::stringstream stream;
-    stream << "model '" << model << "' is not implemented";
-    Rcpp::stop(stream.str());
-
-  }
-
-  ans = PF_smooth_dens::compute(
-    *data.get(), smoother, method, *dens_calc.get());
-
-  return(ans);
+  std::string family_use = get_family(model);
+  pf_dens dens_calc(*data, family_use);
+  return PF_smooth_dens::compute(
+    *data.get(), smoother, method, dens_calc);
 }
 
 /* --------------------------------------- */
@@ -203,7 +204,7 @@ class PF_single_direction {
 public:
   static Rcpp::List compute(
       const PF_data &data, const std::string method,
-      pf_base_dens &dens_calc){
+      pf_dens &dens_calc){
     /* Get the smoothed particles at time 1, 2, ..., d */
     std::vector<cloud> result;
     if (method == BOOT_FILTER) {
@@ -235,7 +236,7 @@ public:
 
 Rcpp::List PF_single_direction_compute(
     const PF_data &data, const bool is_forward, const std::string method,
-    pf_base_dens &dens_calc){
+    pf_dens &dens_calc){
   if(is_forward)
     return PF_single_direction<true>::compute(data, method, dens_calc);
 
@@ -277,26 +278,11 @@ Rcpp::List particle_filter(
 
   Rcpp::List ans;
 
-  std::unique_ptr<pf_base_dens> dens_calc;
-  if(model == "logit"){
-    dens_calc.reset(new logistic_dens(*data.get()));
 
-  } else if (model == "exponential"){
-    dens_calc.reset(new exponential_dens(*data.get()));
-
-  } else if (model == "cloglog") {
-    dens_calc.reset(new cloglog_dens(*data.get()));
-
-  } else {
-    std::stringstream stream;
-    stream << "model '" << model << "' is not implemented";
-    Rcpp::stop(stream.str());
-
-  }
-
-  ans = PF_single_direction_compute(*data.get(), is_forward, method, *dens_calc.get());
-
-  return(ans);
+  std::string family_use = get_family(model);
+  pf_dens dens_calc(*data, family_use);
+  return PF_single_direction_compute(
+    *data.get(), is_forward, method, dens_calc);
 }
 
 // [[Rcpp::export]]

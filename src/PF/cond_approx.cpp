@@ -26,14 +26,15 @@ double mode_objective(
   return -o;
 }
 
-cdist_comb_generator::cdist_comb_generator(std::vector<PF_cdist*> &cdists,
-                                           const int nu):
+cdist_comb_generator::cdist_comb_generator
+  (std::vector<PF_cdist*> &cdists, const int nu, const arma::mat *xtra_covar):
   /* all should have the same dimension */
   cdist_comb_generator(
-    cdists, arma::vec(cdists[0]->dim(), arma::fill::zeros), nu) { }
+    cdists, arma::vec(cdists[0]->dim(), arma::fill::zeros), nu, xtra_covar) { }
 
 cdist_comb_generator::cdist_comb_generator(
-  std::vector<PF_cdist*> &cdists, const arma::vec &start, const int nu):
+  std::vector<PF_cdist*> &cdists, const arma::vec &start, const int nu,
+  const arma::mat *xtra_covar):
   cdists(cdists), nu(nu)
 {
   std::vector<bool> is_mvn(cdists.size());
@@ -73,9 +74,11 @@ cdist_comb_generator::cdist_comb_generator(
   for(auto K = neg_Ks.begin(); K != neg_Ks.end(); ++K)
     neg_K += *K;
 
+  arma::mat Sig_mat_use = (xtra_covar) ?
+    arma::mat(neg_K.i() + *xtra_covar) : arma::mat(neg_K.i());
   covarmat Sig_obj = (nu > 2L) ?
-    covarmat(neg_K.i() * (nu - 2.) / nu) :
-    covarmat(neg_K.i());
+    covarmat(Sig_mat_use * (nu - 2.) / nu) :
+    covarmat(Sig_mat_use);
 
   Sig = std::make_shared<covarmat>(std::move(Sig_obj));
 
@@ -140,7 +143,7 @@ cdist_comb::cdist_comb(
 arma::vec cdist_comb::sample() const {
   if(nu >= 2L)
     return mvtrnorm(mu, Sig->chol(), nu);
-    return mvrnorm(mu, Sig->chol());
+  return mvrnorm(mu, Sig->chol());
 }
 
 double cdist_comb::log_density(const arma::vec &state) const {

@@ -14,6 +14,9 @@ public:
   virtual bool is_mvn() const = 0;
   /* is `gradient_zero` and `neg_Hessian` constant? */
   virtual bool is_grad_z_hes_const() const = 0;
+  /* mean of the distribution if the distribution is a distribution in
+   * the argument */
+  virtual const arma::vec& get_mean() const = 0;
   /* dimension of the present coefficient vector */
   virtual arma::uword dim() const = 0;
   /* log density */
@@ -43,6 +46,7 @@ public:
 
   bool is_mvn() const override;
   bool is_grad_z_hes_const() const override;
+  const arma::vec& get_mean() const override;
   arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
@@ -67,6 +71,7 @@ public:
 
   bool is_mvn() const override;
   bool is_grad_z_hes_const() const override;
+  const arma::vec& get_mean() const override;
   arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;
@@ -87,6 +92,7 @@ public:
 
   bool is_mvn() const override;
   bool is_grad_z_hes_const() const override;
+  const arma::vec& get_mean() const override;
   arma::uword dim() const override;
   double log_dens(const arma::vec&) const override;
   arma::vec gradient(const arma::vec&) const override;

@@ -6,6 +6,7 @@
 #include "densities.h"
 #include "../arma_BLAS_LAPACK.h"
 #include "../utils.h"
+#include "cond_approx.h"
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -100,90 +101,13 @@ struct nothing {};
 
 /* ------------------------------------------- */
 
-/* The function below takes in a state \bar{\alpha} and returns
- * mu = R^\top L^\top X^\top ((-G(\bar{\alpha})) X L \bar{\alpha}
- *       + g(\bar{\alpha}))
- * Sigma = (R^\top L^\top X^\top (-G(\bar{\alpha})) X L R + Q^-1)^-1 */
+template<bool is_forward>
+std::vector<std::unique_ptr<dist_comb>> get_approx_use_mean(
+    std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);
 
-struct input_for_normal_apprx {
-  /* mean of error term              */
-  arma::vec mu;
-  /* covariance matrix of error term */
-  arma::mat Sigma;
-  arma::mat Sigma_inv;
-  arma::mat Sigma_inv_chol;
-  arma::mat Sigma_chol;
-  arma::mat sigma_chol_inv;
-};
-
-input_for_normal_apprx taylor_normal_approx(
-    pf_base_dens&, const PF_data&,
-    const unsigned int, const arma::mat&, const arma::vec&,
-    const arma::vec&, arma::uvec& /* non-const avoid copy /w arma */,
-    const unsigned int, const bool, const bool,
-    const unsigned int max_steps = 25);
-
-input_for_normal_apprx taylor_normal_approx(
-    pf_base_dens&, const PF_data&, const unsigned int,
-    const arma::mat&, const arma::vec&, const arma::vec&,
-    const unsigned int, const bool, const bool,
-    const unsigned int max_steps = 25);
-
-/* ------------------------------------------- */
-
-struct input_for_normal_apprx_w_cloud_mean : public input_for_normal_apprx {
-  /* the conditional means for each of the particles given their parents */
-  std::vector<arma::vec> mu_js;
-  std::vector<arma::vec> xi_js;
-
-  input_for_normal_apprx_w_cloud_mean(input_for_normal_apprx &&other):
-    input_for_normal_apprx(other) {}
-};
-
-input_for_normal_apprx_w_cloud_mean
-  taylor_normal_approx_w_cloud_mean(
-    pf_base_dens&, const PF_data&,
-    const unsigned int, const covarmat&, const arma::vec&, cloud&, const bool);
-
-/* ------------------------------------------- */
-
-struct input_for_normal_apprx_w_particle_mean_element {
-  arma::vec mu; /*        \hat x_t */
-  arma::vec xi; /* R^\top \hat x_t */
-  arma::mat sigma_chol_inv;
-  arma::mat sigma;
-};
-
-using input_for_normal_apprx_w_particle_mean =
-  std::vector<input_for_normal_apprx_w_particle_mean_element>;
-
-input_for_normal_apprx_w_particle_mean
-  taylor_normal_approx_w_particles(
-    pf_base_dens&, const PF_data&, const unsigned int, const covarmat&, cloud&,
-    const bool);
-
-input_for_normal_apprx_w_particle_mean
-  taylor_normal_approx_w_particles(
-    pf_base_dens&, const PF_data&, const unsigned int, const covarmat&,
-    std::vector<arma::vec>&, const bool);
-
-/* ------------------------------------------- */
-
-class bw_fw_particle_combiner {
-  const PF_data &data;
-
-public:
-  const covarmat &Q_trans;
-  const covarmat  Q;
-
-  bw_fw_particle_combiner(const PF_data&);
-
-  arma::vec operator()(const particle&, const particle&,
-                       const bool do_transform = true) const;
-
-  arma::vec operator()(const arma::vec&, const arma::vec&,
-                       const bool do_transform = true) const;
-};
+template<bool is_forward>
+std::vector<std::unique_ptr<dist_comb>> get_approx_use_particle(
+    std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);
 
 /* ------------------------------------------- */
 

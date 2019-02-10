@@ -57,7 +57,7 @@ class AUX_PF : private PF_base {
 
 public:
   static std::vector<cloud>
-  compute(const PF_data &data, pf_base_dens &dens_calc){
+  compute(const PF_data &data, pf_dens &dens_calc){
     std::vector<cloud> clouds;
     std::string direction_str = (is_forward) ? "forward" : "backward";
 
@@ -68,20 +68,17 @@ public:
     clouds.push_back(
       importance_dens::sample_first_state_n_set_weights(dens_calc, data));
 
-    /* TODO: remove */
-    auto de = dens_calc.get_pf_dens();
-
     int t = is_forward ? 1 : data.d;
     for(int iter = 1; iter <= data.d; ++iter){
       if((iter + 1) % 3 == 0)
         Rcpp::checkUserInterrupt();
 
-      std::shared_ptr<PF_cdist> y_dist = de.get_y_dist(t),
+      std::shared_ptr<PF_cdist> y_dist = dens_calc.get_y_dist(t),
         prior, prior_p1;
 
       if(!is_forward){
-        prior = de.get_prior(t);
-        prior_p1 = de.get_prior(t + 1L);
+        prior = dens_calc.get_prior(t);
+        prior_p1 = dens_calc.get_prior(t + 1L);
       }
 
       /* re-sample indicies */
@@ -90,7 +87,7 @@ public:
       arma::uvec resample_idx;
       bool did_resample;
       auto additional_resampler_out = resampler::resampler(
-        dens_calc, data, clouds.back(), t, resample_idx, did_resample);
+        dens_calc, data, clouds.back(), y_dist, t, resample_idx, did_resample);
 
       if(data.debug > 0){
         if(did_resample){
@@ -103,7 +100,7 @@ public:
       if(data.debug > 0)
         data.log(1) << "Sampling states";
       cloud new_cloud = importance_dens::sample(
-        dens_calc, data, clouds.back(), resample_idx, t,
+        y_dist, dens_calc, data, clouds.back(), resample_idx, t,
         additional_resampler_out);
 
       /* update weights */
@@ -125,9 +122,9 @@ public:
               y_dist->log_dens(it->get_state());
             double log_prob_state_given_other =
               is_forward ?
-              de.log_prob_state_given_parent(
+              dens_calc.log_prob_state_given_parent(
                 it->get_state(), it->parent->get_state()) :
-              de.log_prob_state_given_child(
+              dens_calc.log_prob_state_given_child(
                 it->get_state(), it->parent->get_state());
 
             it->log_likelihood_term = it->log_weight =
@@ -230,7 +227,7 @@ class PF_smoother_Fearnhead_O_N : private PF_base {
 
 public:
   static smoother_output
-  compute(const PF_data &data, pf_base_dens &dens_calc){
+  compute(const PF_data &data, pf_dens &dens_calc){
     smoother_output result;
     std::vector<cloud> &forward_clouds  = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
@@ -246,13 +243,10 @@ public:
     auto bw_cloud = backward_clouds.rbegin();
     ++bw_cloud; // first index is time 1 -- we need index 2 to start with
 
-    /* TODO: remove */
-    auto de = dens_calc.get_pf_dens();
-
     for(int t = 1; t <= data.d /* note the leq */;
         ++t, ++fw_cloud, ++bw_cloud){
-      std::shared_ptr<PF_cdist> y_dist = de.get_y_dist(t),
-        prior_p1 = de.get_prior(t + 1L);
+      std::shared_ptr<PF_cdist> y_dist = dens_calc.get_y_dist(t),
+        prior_p1 = dens_calc.get_prior(t + 1L);
 
       // TODO: maybe use backward cloud at time t == 1
       if(t == data.d){ // we can use the forward particle cloud
@@ -278,7 +272,7 @@ public:
         data.log(1) << "Sampling states of previous and next state";
 
       cloud new_cloud = importance_dens::sample_smooth(
-        dens_calc, data, *fw_cloud, fw_idx, *bw_cloud, bw_idx, t);
+        y_dist, dens_calc, data, *fw_cloud, fw_idx, *bw_cloud, bw_idx, t);
 
       /* update weight */
       if(data.debug > 0)
@@ -296,10 +290,10 @@ public:
           auto it = new_cloud.begin() + i;
           double log_prob_y_given_state = y_dist->log_dens(it->get_state()),
             log_prob_state_given_previous =
-              de.log_prob_state_given_parent(
+              dens_calc.log_prob_state_given_parent(
                 it->get_state(), it->parent->get_state()),
             log_prob_next_given_state =
-              de.log_prob_state_given_child(
+              dens_calc.log_prob_state_given_child(
                 it->get_state(), it->child->get_state()),
             log_importance_dens = it->log_importance_dens,
             log_artificial_prior = // TODO: have already been computed
@@ -374,7 +368,7 @@ class PF_smoother_Brier_O_N_square : private PF_base {
 
 public:
   static smoother_output
-  compute(const PF_data &data, pf_base_dens &dens_calc){
+  compute(const PF_data &data, pf_dens &dens_calc){
     smoother_output result;
     std::vector<cloud> &forward_clouds  = result.forward_clouds;
     std::vector<cloud> &backward_clouds = result.backward_clouds;
@@ -394,9 +388,6 @@ public:
     //++fw_cloud; // first index is time 0
     auto bw_cloud = backward_clouds.rbegin();
     //++bw_cloud; // first index is time 1
-
-    /* TODO: remove */
-    auto de = dens_calc.get_pf_dens();
 
     double max_weight = -std::numeric_limits<double>::max();
     for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){
@@ -426,7 +417,7 @@ public:
         continue;
       }
 
-      std::shared_ptr<PF_cdist> prior = de.get_prior(t);
+      std::shared_ptr<PF_cdist> prior = dens_calc.get_prior(t);
 
       if(data.debug > 0)
         data.log(1) << "Started smoothing at time " << t;
@@ -451,7 +442,7 @@ public:
             fw_particle != fw_cloud->end();
             ++fw_particle){
           // compute un-normalized weight of pair
-          double log_like_transition = de.log_prob_state_given_parent(
+          double log_like_transition = dens_calc.log_prob_state_given_parent(
             bw_particle.get_state(), fw_particle->get_state());
           double this_term = fw_particle->log_weight + log_like_transition;
 

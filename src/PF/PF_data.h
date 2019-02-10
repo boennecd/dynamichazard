@@ -128,70 +128,6 @@ private:
 // data holder for particle filtering
 class PF_data : public problem_data {
   using uword = arma::uword;
-
-  /* Objects used to compute P(\alpha_t \vert \alpha_{t + 1}) */
-  std::map<const uword, const std::unique_ptr<linear_mapper>> bw_mean_maps;
-  std::map<const uword, const arma::vec> bw_mean_const_term;
-  std::map<const uword, const covarmat> bw_covar_map;
-
-  /* Pre-computed objects for backward filter's */
-  std::map<const uword, const arma::vec> uncond_means;
-  std::map<const uword, const covarmat>  uncond_covarmats;
-
-  /* uncondtional mean and covariance matrix terms in backward filter's
-   * and smoother's proposal distribution in the Taylor approximation */
-  std::map<const uword, const arma::vec> uncond_mean_terms;
-  std::map<const uword, const arma::mat> uncond_covs_inv;
-
-protected:
-  virtual void set_maps(){
-    arma::vec m_t, m_t_p_1 = a_0;
-    arma::mat Q_state = err_state->map(Q.mat()).sv;
-    arma::mat P_t, P_t_p_1 = Q_0.mat();
-    for(int t = 0; t <= d + 1; ++t){
-
-      // move and update
-      m_t = std::move(m_t_p_1);
-      P_t = std::move(P_t_p_1);
-      m_t_p_1 = state_trans->map(m_t).sv;
-      P_t_p_1 = state_trans->map(P_t).sv + Q_state;
-
-      // insert map elements
-      uncond_means.insert(std::make_pair(t + 1L, m_t_p_1));
-      uncond_covarmats.insert(std::make_pair(t + 1L, covarmat(P_t_p_1)));
-
-      arma::mat S_t =
-        arma::solve(P_t_p_1, Q_state);
-      S_t = state_trans_inv->map(S_t, right).sv;
-      S_t = state_trans->map(P_t, right).sv * S_t;
-
-      /* 1. P_{t +1}^{-\top}F
-       * 2. P_t(P_{t +1}^{-\top}F)^\top */
-      arma::mat tmp = arma::solve(P_t_p_1.t(), state_trans->map());
-      bw_mean_maps.insert(std::make_pair(
-          t, std::unique_ptr<dens_mapper>(
-              new dens_mapper(arma::mat(P_t * tmp.t())))));
-
-      bw_mean_const_term.insert(std::make_pair(
-          t, S_t * arma::solve(P_t, m_t)));
-
-      bw_covar_map.insert(std::make_pair(t, std::move(S_t)));
-
-      uncond_mean_terms.insert(std::make_pair(
-          t, arma::vec(arma::solve(P_t, m_t))));
-
-      uncond_covs_inv.insert(std::make_pair(
-          t, arma::mat(P_t.i())));
-
-      if(debug > 4)
-        log(5) << "P_" << t << std::endl << P_t
-               << "m_" << t << std::endl << m_t.t()
-               << "S_" << t << std::endl << bw_covar_map.at(t).mat()
-               << "P(a_" << t << " | a_" << t  + 1 << ") mean term"
-               << std::endl << uncond_mean_terms.at(t).t();
-    }
-  }
-
 public:
   /* Number of paprticles in forward and/or backward filter */
   const uword N_fw_n_bw;
@@ -209,8 +145,7 @@ public:
   /* pre-computed factorization */
   const covarmat Q;
   const covarmat Q_0;
-  const covarmat Q_proposal_xtra;
-  const covarmat Q_proposal_xtra_state;
+  const arma::mat xtra_covar;
 
   PF_data(const int n_fixed_terms_in_state_vec,
           arma::mat &X,
@@ -252,15 +187,11 @@ public:
       N_first(N_first), nu(nu),
       work_block_size(500),
 
-      Q(Q),
-      Q_0(Q_0),
-      Q_proposal_xtra(Q_tilde),
-      Q_proposal_xtra_state(err_state->map(Q_tilde).sv)
+      Q(Q), Q_0(Q_0), xtra_covar(Q_tilde)
     {
 #ifdef _OPENMP
       omp_init_lock(&PF_logger::lock);
 #endif
-      set_maps();
     }
 
   ~PF_data(){
@@ -276,30 +207,6 @@ public:
   PF_data & operator=(const PF_data&) = delete;
   PF_data(const PF_data&) = delete;
   PF_data() = delete;
-
-  const arma::vec bw_mean(const uword t, const arma::vec &a) const {
-    return bw_mean_maps.at(t)->map(a).sv + bw_mean_const_term.at(t);
-  }
-
-  const covarmat& bw_covar(const uword t) const {
-    return bw_covar_map.at(t);
-  }
-
-  const arma::vec& uncond_mean_state(const uword t) const {
-    return uncond_means.at(t);
-  }
-
-  const covarmat& uncond_covar_state(const uword t) const {
-    return uncond_covarmats.at(t);
-  }
-
-  const arma::vec& uncond_mean_term(const int t) const {
-    return uncond_mean_terms.at(t);
-  }
-
-  const arma::mat& uncond_covar_inv(const uword t) const {
-    return uncond_covs_inv.at(t);
-  }
 };
 
 #endif

@@ -26,9 +26,12 @@ class cdist_comb_generator {
   const int nu;
 
 public:
-  cdist_comb_generator(std::vector<PF_cdist*>&, const arma::vec&,
-                       const int nu = -1L);
-  cdist_comb_generator(std::vector<PF_cdist*>&, const int nu = -1L);
+  cdist_comb_generator
+    (std::vector<PF_cdist*>&, const arma::vec&,
+     const int nu = -1L, const arma::mat *xtra_covar = nullptr);
+  cdist_comb_generator
+    (std::vector<PF_cdist*>&, const int nu = -1L,
+     const arma::mat *xtra_covar = nullptr);
 
   std::unique_ptr<dist_comb> get_dist_comb(
       const std::initializer_list<arma::vec*>&);
