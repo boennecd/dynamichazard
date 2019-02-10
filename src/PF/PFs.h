@@ -68,10 +68,21 @@ public:
     clouds.push_back(
       importance_dens::sample_first_state_n_set_weights(dens_calc, data));
 
+    /* TODO: remove */
+    auto de = dens_calc.get_pf_dens();
+
     int t = is_forward ? 1 : data.d;
     for(int iter = 1; iter <= data.d; ++iter){
       if((iter + 1) % 3 == 0)
         Rcpp::checkUserInterrupt();
+
+      std::shared_ptr<PF_cdist> y_dist = de.get_y_dist(t),
+        prior, prior_p1;
+
+      if(!is_forward){
+        prior = de.get_prior(t);
+        prior_p1 = de.get_prior(t + 1L);
+      }
 
       /* re-sample indicies */
       if(data.debug > 0)
@@ -111,14 +122,13 @@ public:
           for(unsigned int i = 0; i < n_elem; ++i){ // loop over new particles
             auto it = new_cloud.begin() + i;
             double log_prob_y_given_state =
-              dens_calc.log_prob_y_given_state(
-                it->get_state(), t, r_set, false);
+              y_dist->log_dens(it->get_state());
             double log_prob_state_given_other =
               is_forward ?
-              dens_calc.log_prob_state_given_previous(
-                it->get_state()        , it->parent->get_state(), t) :
-              dens_calc.log_prob_state_given_previous(
-                it->parent->get_state(), it->get_state()        , t + 1);
+              de.log_prob_state_given_parent(
+                it->get_state(), it->parent->get_state()) :
+              de.log_prob_state_given_child(
+                it->get_state(), it->parent->get_state());
 
             it->log_likelihood_term = it->log_weight =
               /* nominator */
@@ -147,9 +157,8 @@ public:
 
             if(!is_forward){
               it->log_weight +=
-                dens_calc.log_artificial_prior(*it, t);
-              it->log_weight -=
-                dens_calc.log_artificial_prior(*it->parent, t + 1);
+                prior->log_dens(it->get_state()) -
+                prior_p1->log_dens(it->parent->get_state());
             }
 
             max_weight = MAX(max_weight, it->log_weight);
@@ -169,8 +178,8 @@ public:
                    << " '-parent->log_resampling_weight' " << std::setw(wd) << -it->parent->log_resampling_weight;
 
               if(!is_forward)
-                ss << " 'log_artificial_prior(t)' "        << std::setw(wd) <<  dens_calc.log_artificial_prior(*it        , t)
-                   << " '-log_artificial_prior(t + 1)' "   << std::setw(wd) << -dens_calc.log_artificial_prior(*it->parent, t + 1);
+                ss << " 'log_artificial_prior(t)' "        << std::setw(wd) << prior->log_dens(it->get_state())
+                   << " '-log_artificial_prior(t + 1)' "   << std::setw(wd) << prior_p1->log_dens(it->parent->get_state());
 
               data.log(5) << ss.str();
             };
@@ -237,8 +246,14 @@ public:
     auto bw_cloud = backward_clouds.rbegin();
     ++bw_cloud; // first index is time 1 -- we need index 2 to start with
 
+    /* TODO: remove */
+    auto de = dens_calc.get_pf_dens();
+
     for(int t = 1; t <= data.d /* note the leq */;
         ++t, ++fw_cloud, ++bw_cloud){
+      std::shared_ptr<PF_cdist> y_dist = de.get_y_dist(t),
+        prior_p1 = de.get_prior(t + 1L);
+
       // TODO: maybe use backward cloud at time t == 1
       if(t == data.d){ // we can use the forward particle cloud
         ++fw_cloud; // need time d cloud
@@ -279,19 +294,16 @@ public:
 #endif
         for(unsigned int i = 0; i < n_elem; ++i){ // loop over smooth clouds
           auto it = new_cloud.begin() + i;
-          double log_prob_y_given_state =
-            dens_calc.log_prob_y_given_state(
-              it->get_state(), t, r_set, false);
-          double log_prob_state_given_previous =
-            dens_calc.log_prob_state_given_previous(
-              it->get_state()       , it->parent->get_state(), t);
-          double log_prob_next_given_state =
-            dens_calc.log_prob_state_given_previous(
-              it->child->get_state(), it->get_state()        , t + 1);
-          double log_importance_dens = it->log_importance_dens;
-          double log_artificial_prior = // TODO: have already been computed
-            dens_calc.log_artificial_prior(
-              *it->child /* note child */, t + 1 /* note t + 1 */);
+          double log_prob_y_given_state = y_dist->log_dens(it->get_state()),
+            log_prob_state_given_previous =
+              de.log_prob_state_given_parent(
+                it->get_state(), it->parent->get_state()),
+            log_prob_next_given_state =
+              de.log_prob_state_given_child(
+                it->get_state(), it->child->get_state()),
+            log_importance_dens = it->log_importance_dens,
+            log_artificial_prior = // TODO: have already been computed
+              prior_p1->log_dens(it->child->get_state());
 
           if(do_debug){
             const int wd = 11;
@@ -383,6 +395,9 @@ public:
     auto bw_cloud = backward_clouds.rbegin();
     //++bw_cloud; // first index is time 1
 
+    /* TODO: remove */
+    auto de = dens_calc.get_pf_dens();
+
     double max_weight = -std::numeric_limits<double>::max();
     for(int t = 1; t <= data.d /* note the leq */; ++t, ++fw_cloud, ++bw_cloud){
       // TODO: maybe use backward cloud at time t == 1
@@ -411,6 +426,8 @@ public:
         continue;
       }
 
+      std::shared_ptr<PF_cdist> prior = de.get_prior(t);
+
       if(data.debug > 0)
         data.log(1) << "Started smoothing at time " << t;
 
@@ -434,8 +451,8 @@ public:
             fw_particle != fw_cloud->end();
             ++fw_particle){
           // compute un-normalized weight of pair
-          double log_like_transition = dens_calc.log_prob_state_given_previous(
-            bw_particle.get_state(), fw_particle->get_state(), t);
+          double log_like_transition = de.log_prob_state_given_parent(
+            bw_particle.get_state(), fw_particle->get_state());
           double this_term = fw_particle->log_weight + log_like_transition;
 
           // add pair information and update max log term seen so far
@@ -457,7 +474,7 @@ public:
         new_trans_like[i] = std::move(pf_pairs);
 
         double log_artificial_prior = // TODO: have already been computed
-          dens_calc.log_artificial_prior(bw_particle, t);
+          prior->log_dens(bw_particle.get_state());
 
         // add likelihood from BW particle
         this_log_weight += bw_particle.log_weight - log_artificial_prior;

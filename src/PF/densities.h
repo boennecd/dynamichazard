@@ -1,6 +1,10 @@
 #ifndef DENSITIES
 #define DENSITIES
 
+#include "dists.h"
+
+// TODO: check what is needed
+
 #include "dmvnrm.h"
 #include "PF_data.h"
 #include "get_work_blocks.h"
@@ -10,6 +14,21 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+
+class pf_dens {
+  const std::string family;
+  const PF_data &data;
+  artificial_prior_generator art_gen;
+
+public:
+  pf_dens(const PF_data&, const std::string&);
+
+  double log_prob_state_given_parent(const arma::vec&, const arma::vec&);
+  double log_prob_state_given_child(const arma::vec&, const arma::vec&);
+  std::shared_ptr<PF_cdist> get_prior(const arma::uword);
+  std::shared_ptr<PF_cdist> get_y_dist(
+      const int, const bool multithreaded = false);
+};
 
 /*
   Each class has the following static functions:
@@ -35,6 +54,8 @@ protected:
 public:
   pf_base_dens(const PF_data &data): data(data) {};
   virtual ~pf_base_dens() = default;
+
+  virtual pf_dens get_pf_dens() = 0;
 
   double log_prob_state_given_previous(
       const arma::vec state, arma::vec previous_state, int t){
@@ -141,6 +162,10 @@ class logistic_dens :
   public virtual logistic {
 public:
   logistic_dens(const PF_data &data): pf_base_dens(data) {};
+
+  pf_dens get_pf_dens() {
+    return pf_dens(data, BINOMIAL);
+  }
 };
 
 /* Class for binary outcomes with inverse cloglog link */
@@ -150,6 +175,10 @@ class cloglog_dens :
   public virtual cloglog {
 public:
   cloglog_dens(const PF_data &data): pf_base_dens(data) {};
+
+  pf_dens get_pf_dens() {
+    return pf_dens(data, CLOGLOG);
+  }
 };
 
 /* Class for piece-wise constant exponentially distributed arrival times */
@@ -158,6 +187,10 @@ class exponential_dens :
   public virtual exponential {
 public:
   exponential_dens(const PF_data &data): pf_base_dens(data) {};
+
+  pf_dens get_pf_dens() {
+    return pf_dens(data, POISSON);
+  }
 };
 
 #endif
