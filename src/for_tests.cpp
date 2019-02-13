@@ -496,7 +496,7 @@ Rcpp::List check_prior_bw_state_comb(
     std::string fam,
     arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
     arma::vec child, arma::vec child1, arma::vec parent,
-    unsigned int t1){
+    unsigned int t1, arma::mat Q_xtra, unsigned int nu = -1){
   const bool multithreaded = 1;
   covarmat cQ(Q), cQ_0(Q_0);
 
@@ -511,12 +511,22 @@ Rcpp::List check_prior_bw_state_comb(
   std::vector<PF_cdist*> objs_sta = { &prior, &bw };
   cdist_comb_generator comb_start(objs_sta);
 
-  std::vector<PF_cdist*> objs = { &prior, &bw, dist.get() };
-  cdist_comb_generator comb(
-      objs, comb_start.get_dist_comb({ &child })->get_mean());
-  std::unique_ptr<dist_comb>
-    d1 = comb.get_dist_comb({ &child   }),
+  std::unique_ptr<dist_comb> d1, d2;
+  if(Q_xtra.n_cols == Q.n_cols){
+    std::vector<PF_cdist*> objs = { &prior, &bw, dist.get() };
+    cdist_comb_generator comb(
+        objs, comb_start.get_dist_comb({ &child })->get_mean(), nu, &Q_xtra);
+    d1 = comb.get_dist_comb({ &child   });
     d2 = comb.get_dist_comb({ &child1  });
+
+  } else {
+    std::vector<PF_cdist*> objs = { &prior, &bw, dist.get() };
+    cdist_comb_generator comb(
+        objs, comb_start.get_dist_comb({ &child })->get_mean(), nu);
+    d1 = comb.get_dist_comb({ &child   });
+    d2 = comb.get_dist_comb({ &child1  });
+
+  }
 
   return Rcpp::List::create(
     Rcpp::Named("mean1") = d1->get_mean(),

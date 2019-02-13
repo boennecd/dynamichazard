@@ -39,32 +39,22 @@ cloud importance_dens_base<is_forward>::sample_first_state_n_set_weights
   if(data.debug > 1){
     data.log(2) << "Sampling "
                 << (is_forward ? "first" : "state d + 1")
-                << " with chol(covariance matrix):" << std::endl
+                << " with covariance matrix:" << std::endl
                 << sampler->get_covar()
                 << "and mean:" << std::endl
                 << sampler->get_mean();
   }
 
-  if(data.nu > 0L){
-    double max_weight = -std::numeric_limits<double>::max();
-    for(arma::uword i = 0; i < data.N_first; ++i){
-      ans.new_particle(sampler->sample(), nullptr);
-      ans[i].log_weight = normal_dist->log_density(ans[i].get_state()) -
-        sampler->log_density(ans[i].get_state());
-
-      max_weight = std::max(max_weight, ans[i].log_weight);
-    }
-
-    normalize_log_weights<false, true>(ans, max_weight);
-
-    return ans;
-  }
-
-  double log_weight = -log(data.N_first);
+  double max_weight = -std::numeric_limits<double>::max();
   for(arma::uword i = 0; i < data.N_first; ++i){
     ans.new_particle(sampler->sample(), nullptr);
-    ans[i].log_weight = log_weight;
+    ans[i].log_weight = normal_dist->log_density(ans[i].get_state()) -
+      sampler->log_density(ans[i].get_state());
+
+    max_weight = std::max(max_weight, ans[i].log_weight);
   }
+
+  normalize_log_weights<false, true>(ans, max_weight);
 
   return ans;
 }
@@ -128,8 +118,17 @@ cloud importance_dens_no_y_dependence<is_forward>::
     std::vector<PF_cdist*> dists = { fw_dist.get(), bw_dist.get() };
     cdist_comb_generator comb_gen(dists, data.nu, &data.xtra_covar);
 
+    if(data.debug > 2)
+      data.log(3)
+        << "Sampling new cloud from normal distribution with Q given by"
+        << std::endl << comb_gen
+          .get_dist_comb
+          ({ (arma::vec*)&fw_cloud.begin()->get_state(), (arma::vec*)&bw_cloud.begin()->get_state() })
+          ->get_covar()
+        << std::endl;
+
     std::unique_ptr<dist_comb> sampler;
-    for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
+    for(arma::uword i = 0; i < data.N_smooth; ++i){
       const particle &fw_p = fw_cloud[*(fw_idx.begin() + i)];
       const particle &bw_p = bw_cloud[*(bw_idx.begin() + i)];
 
@@ -168,12 +167,15 @@ void importance_dens_normal_approx_w_cloud_mean<is_forward>::
 template<bool is_forward>
 cloud importance_dens_normal_approx_w_cloud_mean<is_forward>::sample
   (SAMPLE_COMMON_ARGS, nothing unused)
-  {
-    std::vector<std::unique_ptr<dist_comb>> samplers =
-      get_approx_use_mean<is_forward>(y_dist, cl, data, dens_calc, t);
+{
+  get_approx_use_mean_output samplers =
+    get_approx_use_mean<is_forward>(y_dist, cl, data, dens_calc, t);
 
-    return sample(y_dist, dens_calc, data, cl, resample_idx, t, samplers);
-  }
+  if(samplers.msg.is_error)
+    Rcpp::warning(samplers.msg.message);
+
+  return sample(y_dist, dens_calc, data, cl, resample_idx, t, samplers.dists);
+}
 
 template<bool is_forward>
 cloud importance_dens_normal_approx_w_cloud_mean<is_forward>::sample
@@ -212,6 +214,10 @@ cloud importance_dens_normal_approx_w_cloud_mean<is_forward>::
         .get_dist_comb({ &fw_mean, &bw_mean })->get_mean();
     }
     cdist_comb_generator combi_gen(objs, start, data.nu, &data.xtra_covar);
+    nlopt_return_value_msg result_code = combi_gen.get_result_code();
+
+    if(result_code.is_error)
+      Rcpp::warning(result_code.message);
 
     /* get proposal distributions */
     auto begin_fw = fw_idx.begin();
@@ -280,10 +286,12 @@ template<bool is_forward>
 cloud importance_dens_normal_approx_w_particles<is_forward>::sample
   (SAMPLE_COMMON_ARGS, nothing unused)
 {
-  std::vector<std::unique_ptr<dist_comb>> samplers =
+  get_approx_use_particle_output samplers =
     get_approx_use_particle<is_forward>(y_dist, cl, data, dens_calc, t);
+  if(samplers.msgs.has_any_errors())
+    Rcpp::warning(samplers.msgs.message());
 
-  return sample(y_dist, dens_calc, data, cl, resample_idx, t, samplers);
+  return sample(y_dist, dens_calc, data, cl, resample_idx, t, samplers.dists);
 }
 
 template<bool is_forward>
@@ -304,6 +312,14 @@ cloud importance_dens_normal_approx_w_particles<is_forward>::sample
   return ans;
 }
 
+
+#ifdef _OPENMP
+/* openMP reductions */
+#pragma omp declare reduction(                                          \
+  errReduc: nlopt_return_value_msgs: omp_out.insert(omp_in))            \
+  initializer(omp_priv = nlopt_return_value_msgs())
+#endif
+
 template<bool is_forward>
 cloud importance_dens_normal_approx_w_particles<is_forward>::
   sample_smooth(SAMPLE_SMOOTH_ARGS){
@@ -319,9 +335,10 @@ cloud importance_dens_normal_approx_w_particles<is_forward>::
     auto begin_fw = fw_idx.begin();
     auto begin_bw = bw_idx.begin();
     std::vector<std::unique_ptr<dist_comb>> samplers(data.N_smooth);
+    nlopt_return_value_msgs error_messages;
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static) reduction(errReduc:error_messages)
 #endif
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       const particle &fw_p = fw_cloud[*(begin_fw + i)];
@@ -336,10 +353,14 @@ cloud importance_dens_normal_approx_w_particles<is_forward>::
         ({ (arma::vec*)&fw_p.get_state(), (arma::vec*)&bw_p.get_state() })
         ->get_mean();
       cdist_comb_generator combi_gen(objs, start, data.nu, &data.xtra_covar);
+      error_messages.insert(combi_gen.get_result_code());
 
       samplers[i] = combi_gen.get_dist_comb
         ({ (arma::vec*)&fw_p.get_state(), (arma::vec*)&bw_p.get_state() });
     }
+
+    if(error_messages.has_any_errors())
+      Rcpp::warning(error_messages.message());
 
     /* sample */
     cloud ans;

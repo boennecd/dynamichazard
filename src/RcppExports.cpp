@@ -717,8 +717,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // check_prior_bw_state_comb
-Rcpp::List check_prior_bw_state_comb(const arma::mat& X, const arma::uvec& is_event, const arma::vec& offsets, const arma::vec& tstart, const arma::vec& tstop, const double bin_start, const double bin_stop, std::string fam, arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0, arma::vec child, arma::vec child1, arma::vec parent, unsigned int t1);
-RcppExport SEXP _dynamichazard_check_prior_bw_state_comb(SEXP XSEXP, SEXP is_eventSEXP, SEXP offsetsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP bin_startSEXP, SEXP bin_stopSEXP, SEXP famSEXP, SEXP FSEXP, SEXP QSEXP, SEXP m_0SEXP, SEXP Q_0SEXP, SEXP childSEXP, SEXP child1SEXP, SEXP parentSEXP, SEXP t1SEXP) {
+Rcpp::List check_prior_bw_state_comb(const arma::mat& X, const arma::uvec& is_event, const arma::vec& offsets, const arma::vec& tstart, const arma::vec& tstop, const double bin_start, const double bin_stop, std::string fam, arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0, arma::vec child, arma::vec child1, arma::vec parent, unsigned int t1, arma::mat Q_xtra, unsigned int nu);
+RcppExport SEXP _dynamichazard_check_prior_bw_state_comb(SEXP XSEXP, SEXP is_eventSEXP, SEXP offsetsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP bin_startSEXP, SEXP bin_stopSEXP, SEXP famSEXP, SEXP FSEXP, SEXP QSEXP, SEXP m_0SEXP, SEXP Q_0SEXP, SEXP childSEXP, SEXP child1SEXP, SEXP parentSEXP, SEXP t1SEXP, SEXP Q_xtraSEXP, SEXP nuSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -738,7 +738,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type child1(child1SEXP);
     Rcpp::traits::input_parameter< arma::vec >::type parent(parentSEXP);
     Rcpp::traits::input_parameter< unsigned int >::type t1(t1SEXP);
-    rcpp_result_gen = Rcpp::wrap(check_prior_bw_state_comb(X, is_event, offsets, tstart, tstop, bin_start, bin_stop, fam, F, Q, m_0, Q_0, child, child1, parent, t1));
+    Rcpp::traits::input_parameter< arma::mat >::type Q_xtra(Q_xtraSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type nu(nuSEXP);
+    rcpp_result_gen = Rcpp::wrap(check_prior_bw_state_comb(X, is_event, offsets, tstart, tstop, bin_start, bin_stop, fam, F, Q, m_0, Q_0, child, child1, parent, t1, Q_xtra, nu));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -881,7 +883,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_check_observational_cdist", (DL_FUNC) &_dynamichazard_check_observational_cdist, 11},
     {"_dynamichazard_check_fw_bw_comb", (DL_FUNC) &_dynamichazard_check_fw_bw_comb, 8},
     {"_dynamichazard_check_prior_bw_comb", (DL_FUNC) &_dynamichazard_check_prior_bw_comb, 9},
-    {"_dynamichazard_check_prior_bw_state_comb", (DL_FUNC) &_dynamichazard_check_prior_bw_state_comb, 16},
+    {"_dynamichazard_check_prior_bw_state_comb", (DL_FUNC) &_dynamichazard_check_prior_bw_state_comb, 18},
     {"_dynamichazard_logLike_cpp", (DL_FUNC) &_dynamichazard_logLike_cpp, 11},
     {"_dynamichazard_parallelglm", (DL_FUNC) &_dynamichazard_parallelglm, 11},
     {"_dynamichazard_get_risk_obj_rcpp", (DL_FUNC) &_dynamichazard_get_risk_obj_rcpp, 11},

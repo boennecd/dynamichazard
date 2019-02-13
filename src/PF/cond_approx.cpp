@@ -32,10 +32,14 @@ cdist_comb_generator::cdist_comb_generator
   cdist_comb_generator(
     cdists, arma::vec(cdists[0]->dim(), arma::fill::zeros), nu, xtra_covar) { }
 
+#define NLOPT_RESULT_CODE_NOT_SET -100L
+
 cdist_comb_generator::cdist_comb_generator(
   std::vector<PF_cdist*> &cdists, const arma::vec &start, const int nu,
   const arma::mat *xtra_covar):
-  cdists(cdists), nu(nu)
+  cdists(cdists), nu(nu),
+  /* just in case we do not set it */
+  nlopt_result_code(NLOPT_RESULT_CODE_NOT_SET)
 {
   std::vector<bool> is_mvn(cdists.size());
   std::transform(cdists.begin(), cdists.end(), is_mvn.begin(),
@@ -56,13 +60,15 @@ cdist_comb_generator::cdist_comb_generator(
     nlopt_set_xtol_rel(opt, 1e-5);
 
     double minf;
-    if (nlopt_optimize(opt, val.memptr(), &minf) < 0){
-      nlopt_destroy(opt);
-      Rcpp::stop("'nlopt' failed to the mode");
-    }
-
+    nlopt_result_code = nlopt_optimize(opt, val.memptr(), &minf);
     nlopt_destroy(opt);
-  }
+
+    if(nlopt_result_code < 1L)
+      /* fall back to start value */
+      val = start;
+
+  } else
+    nlopt_result_code = 1L;
 
   /* compute negative Hessian */
   std::vector<arma::mat> neg_Ks(cdists.size());
@@ -74,8 +80,10 @@ cdist_comb_generator::cdist_comb_generator(
   for(auto K = neg_Ks.begin(); K != neg_Ks.end(); ++K)
     neg_K += *K;
 
+
   arma::mat Sig_mat_use = (xtra_covar) ?
     arma::mat(neg_K.i() + *xtra_covar) : arma::mat(neg_K.i());
+
   covarmat Sig_obj = (nu > 2L) ?
     covarmat(Sig_mat_use * (nu - 2.) / nu) :
     covarmat(Sig_mat_use);
@@ -90,6 +98,55 @@ cdist_comb_generator::cdist_comb_generator(
       continue;
     k += neg_Ks[i] * val + cdists[i]->gradient(val);
   }
+}
+
+nlopt_return_value_msg::nlopt_return_value_msg():
+  nlopt_result_code(NLOPT_RESULT_CODE_NOT_SET), is_error(true), message() { }
+
+nlopt_return_value_msg::nlopt_return_value_msg(const int nlopt_result_code):
+  nlopt_result_code(nlopt_result_code),
+  is_error(nlopt_result_code < 1L or nlopt_result_code > 4L),
+  message(
+    is_error ?
+    "'nlopt' returned with codes" + std::to_string(nlopt_result_code) :
+    "") { }
+
+
+void nlopt_return_value_msgs::insert
+  (const nlopt_return_value_msgs &other){
+  for(auto o : other.msgs){
+    if (msgs.find(o.first) != msgs.end())
+      continue;
+
+    msgs[o.first] = o.second;
+    any_errors = any_errors or o.second.is_error;
+  }
+}
+
+void nlopt_return_value_msgs::insert(const nlopt_return_value_msg &&val){
+  if (msgs.find(val.nlopt_result_code) == msgs.end()){
+    msgs[val.nlopt_result_code] = val;
+    any_errors = any_errors or val.is_error;
+  }
+}
+
+bool nlopt_return_value_msgs::has_any_errors() const {
+  return any_errors;
+}
+
+std::string nlopt_return_value_msgs::message() const {
+  if(!any_errors)
+    return "";
+
+  std::string out = "'nlopt' returned with codes";
+  for(auto i : msgs)
+    out += " " + std::to_string(i.second.nlopt_result_code);
+
+  return out;
+}
+
+nlopt_return_value_msg cdist_comb_generator::get_result_code(){
+  return nlopt_return_value_msg(nlopt_result_code);
 }
 
 class cdist_comb : public dist_comb {

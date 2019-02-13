@@ -1,6 +1,8 @@
 # dynamichazard 0.6.4
-* Particle filtering implementation is changed. This may yield in different
+* Particle filtering implementation is changed. One may get slightly different 
 results.
+* `nu` in `PF_control` scales the scale matrix to get an identical covariance 
+matrix.
 * Fixed bug in `get_Q_0`.
 
 # dynamichazard 0.6.2

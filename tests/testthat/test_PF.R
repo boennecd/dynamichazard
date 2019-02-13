@@ -1359,6 +1359,7 @@ test_that("mode approximations give expected result", {
     list("binomial", binomial()), list("cloglog", binomial("cloglog")),
     list("poisson", "exponential"))){
     fam <- l[[1]]
+    set.seed(1)
     o <- sim_test_pf_internal(n = 50L, p = 2L, fam = fam, state = p)
 
     y_dist <- with(o, odist(y, t(X), offset, l[[2]]))
@@ -1373,7 +1374,7 @@ test_that("mode approximations give expected result", {
       X = X, is_event = y_use, offsets = offset, tstart = tstart,
       tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
       F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
-      t1 = t1))
+      t1 = t1, Q_xtra = structure(numeric(), .Dim = c(0L, 0L))))
 
     expect_equal(drop(cpp_out$mean1), o1$mu)
     expect_equal(drop(cpp_out$mean2), o2$mu)
@@ -1384,4 +1385,53 @@ test_that("mode approximations give expected result", {
     expect_equal(cpp_out$log_dens1, o1$p_ldens(p))
     expect_equal(cpp_out$log_dens2, o2$p_ldens(p))
   }
+
+  #####
+  # with extra covariance matrix term
+  Q_xtra <- diag(sqrt(.3), 2)
+  set.seed(1)
+  o <- sim_test_pf_internal(n = 50L, p = 2L, fam = fam, state = p)
+
+  y_dist <- with(o, odist(y, t(X), offset, l[[2]]))
+
+  app1 <- approximator(bwo, prio, start = c1)
+  app <- approximator(bwo, prio, y_dist, start = app1(c1, NULL)$mu)
+  o1 <- app(c1, NULL)
+  o2 <- app(c2, NULL)
+
+  y_use <- if(fam == "poisson") o$y[, 2] else o$y
+  cpp_out <- with(o, check_prior_bw_state_comb(
+    X = X, is_event = y_use, offsets = offset, tstart = tstart,
+    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
+    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+    t1 = t1, Q_xtra = Q_xtra))
+
+  expect_equal(drop(cpp_out$mean1), o1$mu)
+  expect_equal(drop(cpp_out$mean2), o2$mu)
+
+  Q_res <- o1$Sig + Q_xtra
+  expect_equal(cpp_out$covar1, Q_res)
+  expect_equal(cpp_out$covar2, Q_res)
+
+  expect_equal(cpp_out$log_dens1, dmvnorm(p, o1$mu, Q_res, TRUE))
+  expect_equal(cpp_out$log_dens2, dmvnorm(p, o2$mu, Q_res, TRUE))
+
+  #####
+  # with extra covariance matrix term and t-distribution
+  nu <- 4
+  cpp_out <- with(o, check_prior_bw_state_comb(
+    X = X, is_event = y_use, offsets = offset, tstart = tstart,
+    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
+    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+    t1 = t1, Q_xtra = Q_xtra, nu = nu))
+
+  expect_equal(drop(cpp_out$mean1), o1$mu)
+  expect_equal(drop(cpp_out$mean2), o2$mu)
+
+  Q_res <- (o1$Sig + Q_xtra) * (nu - 2) / nu
+  expect_equal(cpp_out$covar1, Q_res)
+  expect_equal(cpp_out$covar2, Q_res)
+
+  expect_equal(cpp_out$log_dens1, dmvt(p, o1$mu, Q_res, nu, TRUE))
+  expect_equal(cpp_out$log_dens2, dmvt(p, o2$mu, Q_res, nu, TRUE))
 })

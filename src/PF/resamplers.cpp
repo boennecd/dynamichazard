@@ -79,8 +79,11 @@ AUX_resampler_normal_approx_w_cloud_mean<is_forward>::resampler(
     pf_dens &dens_calc, const PF_data &data, cloud &PF_cloud,
     std::shared_ptr<PF_cdist> y_dist,
     arma::uword t, arma::uvec &outcome, bool &did_resample) {
-  std::vector<std::unique_ptr<dist_comb>> ans =
+  get_approx_use_mean_output ans =
     get_approx_use_mean<is_forward>(y_dist, PF_cloud, data, dens_calc, t);
+  if(ans.msg.is_error)
+    Rcpp::warning(ans.msg.message);
+
   std::shared_ptr<PF_cdist> prior, prior_p1;
   if(!is_forward){
     prior = dens_calc.get_prior(t);
@@ -96,7 +99,7 @@ AUX_resampler_normal_approx_w_cloud_mean<is_forward>::resampler(
 #endif
   for(unsigned int i = 0; i < n_elem; ++i){ // loop over cloud elements
     particle &p = PF_cloud[i];
-    std::unique_ptr<dist_comb> &dc = ans[i];
+    std::unique_ptr<dist_comb> &dc = ans.dists[i];
 
     double log_prob_y_given_state = y_dist->log_dens(dc->get_mean()),
       log_prop_transition = is_forward ?
@@ -123,7 +126,7 @@ AUX_resampler_normal_approx_w_cloud_mean<is_forward>::resampler(
     (PF_cloud, max_weight);
   outcome = sample(data, norm_out.weights, norm_out.ESS, did_resample);
 
-  return ans;
+  return std::move(ans.dists);
 }
 
 template class AUX_resampler_normal_approx_w_cloud_mean<false>;
@@ -137,8 +140,11 @@ AUX_resampler_normal_approx_w_particles<is_forward>::resampler(
   pf_dens &dens_calc, const PF_data &data, cloud &PF_cloud,
   std::shared_ptr<PF_cdist> y_dist,
   arma::uword t, arma::uvec &outcome, bool &did_resample) {
-  std::vector<std::unique_ptr<dist_comb>> ans =
+  get_approx_use_particle_output ans =
     get_approx_use_particle<is_forward>(y_dist, PF_cloud, data, dens_calc, t);
+  if(ans.msgs.has_any_errors())
+    Rcpp::warning(ans.msgs.message());
+
   std::shared_ptr<PF_cdist> prior, prior_p1;
   if(!is_forward){
     prior = dens_calc.get_prior(t);
@@ -154,7 +160,7 @@ AUX_resampler_normal_approx_w_particles<is_forward>::resampler(
 #endif
   for(unsigned int i = 0; i < n_elem; ++i){ // loop over cloud elements
     particle &p = PF_cloud[i];
-    std::unique_ptr<dist_comb> &dc = ans[i];
+    std::unique_ptr<dist_comb> &dc = ans.dists[i];
 
     double log_prob_y_given_state = y_dist->log_dens(dc->get_mean()),
       log_prop_transition = is_forward ?
@@ -181,7 +187,7 @@ AUX_resampler_normal_approx_w_particles<is_forward>::resampler(
     (PF_cloud, max_weight);
   outcome = sample(data, norm_out.weights, norm_out.ESS, did_resample);
 
-  return ans;
+  return std::move(ans.dists);
 }
 
 template class AUX_resampler_normal_approx_w_particles<false>;
