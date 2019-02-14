@@ -54,6 +54,8 @@ test_that("cloglog function gives previous result with simulated data using ddha
 
 test_that("cloglog function gives previous result with simulated data using PF_EM and PF_forward_filter", {
   skip_on_cran()
+  fi <-file.path("local_tests", "cloglog-PF-RW.RDS")
+  skip_if(!file.exists(file.path("previous_results", fi)))
 
   set.seed(1)
   fit <- suppressWarnings( # warns that method did not converge
@@ -68,7 +70,7 @@ test_that("cloglog function gives previous result with simulated data using PF_E
 
   expect_known_value(
     fit[c("EM_ests", "effective_sample_size", "log_ligkes")],
-    file = "cloglog-PF-RW.RDS", update = FALSE,
+    file = fi, update = FALSE,
     check.attributes = FALSE)
 
   set.seed(1)
@@ -82,5 +84,5 @@ test_that("cloglog function gives previous result with simulated data using PF_E
           "AUX_normal_approx_w_cloud_mean",
         n_threads = parallel::detectCores(logical = FALSE)))
 
-  expect_equal(as.numeric(logLik(fw_res)), -1002.01809392741)
+  expect_equal(as.numeric(logLik(fw_res)), -1002.0181117173082157)
 })

@@ -503,7 +503,7 @@ print(
   digits = 7)
 ```
 
-We have $2^2 + 2(2 + 1) / 2 - 2 = 5$ fewer parameters so the difference in 
+We have $2^2 + 2(2 + 1) / 2 - 4 = 3$ fewer parameters so the difference in 
 log-likelihood to the full model seems reasonable.
 
 ## References

@@ -117,14 +117,13 @@ test_that("static_glm help page examples gives the same results", {
 })
 
 # Function to compute cloud means
-get_means <- function(result){
-  means <- lapply(
+get_means <- function(result)
+  lapply(
     result[c("forward_clouds", "backward_clouds", "smoothed_clouds")],
     function(clouds)
       do.call(rbind, sapply(clouds, function(row){
         colSums(t(row$states) * drop(row$weights))
       }, simplify = FALSE)))
-}
 
 test_that("PF_EM help page example runs and gives previous computed results", {
   skip_on_cran()
@@ -152,8 +151,8 @@ test_that("PF_EM help page example runs and gives previous computed results", {
   if(dir.exists("previous_results/local_tests"))
     # tmp <- readRDS("previous_results/local_tests/survival_lung_example.RDS")
     expect_known_value(
-      pf_fit[!names(pf_fit) %in% c("call", "control")], "local_tests/survival_lung_example.RDS",
-      tolerance = 1.49e-08)
+      pf_fit[!names(pf_fit) %in% c("call", "control")],
+      "local_tests/survival_lung_example.RDS", tolerance = 1.49e-08)
   expect_equal(
     pf_fit$control$n_threads, max(parallel::detectCores(logical = FALSE), 1))
 
@@ -389,16 +388,16 @@ test_that("`PF_forward_filter` the results stated in the comments and does not a
   # dput(logLik(pf_fit))
   expect_equal(
     end_log_like <- logLik(pf_fit), structure(
-      -257.681175074233, "P(y_t|y_{1:(t-1)})" = c(
-        -6.71060861933579,
-        -17.5627634269578, -22.8058382197423, -23.1708581096524, -39.9362204794205,
-        -31.4941425273845, -12.9138207419967, -10.7865227878754, -10.9774543784185,
-        -10.6771704879913, -5.80142302360756, -5.57902010066932, -2.26856972504811,
-        -9.68427843436796, -7.54895491133089, -4.88347888546344, -1.69752908305435,
-        -7.49674818681715, -1.24357829312245, -6.554857506634, -4.37465208440007,
-        -0.942555157678413, -0.871838874574558, -4.25672893979116, -0.77141420956524,
-        -0.616157218686647, -4.23097329518881, -0.566549512748297, -0.658228352485867,
-        -0.598239500223801),
+      -258.731786156198, "P(y_t|y_{1:(t-1)})" = c(
+        -6.70941384660467,
+        -17.4991371234673, -22.7486543765548, -23.1567710570606, -40.7268735916535,
+        -32.547747619028, -12.6814755271764, -10.6604404283416, -10.9186968404081,
+        -10.6576119071216, -5.64937811314284, -5.45910379291176, -2.10659339971792,
+        -9.7217688765877, -7.55621994298938, -4.86522902610044, -1.65390885383481,
+        -7.50079904558733, -1.24740698294264, -6.5341593177666, -4.36317037539044,
+        -0.95903332721229, -0.902069557998193, -4.24515671289682, -0.840276896118074,
+        -0.678457059772247, -4.20700482272061, -0.614170469993203, -0.69285146373326,
+        -0.628205801364764),
       df = 2, nobs = NA_integer_, class = "logLik"))
 
   # gives the same

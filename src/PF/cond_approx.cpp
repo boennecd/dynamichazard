@@ -57,7 +57,8 @@ cdist_comb_generator::cdist_comb_generator(
     nlopt_opt opt;
     opt = nlopt_create(NLOPT_LD_LBFGS, n);
     nlopt_set_min_objective(opt, mode_objective, &cdists);
-    nlopt_set_xtol_rel(opt, 1e-5);
+    nlopt_set_ftol_rel(opt, 1e-6);
+    nlopt_set_vector_storage(opt, 30L);
 
     double minf;
     nlopt_result_code = nlopt_optimize(opt, val.memptr(), &minf);
@@ -79,7 +80,6 @@ cdist_comb_generator::cdist_comb_generator(
   neg_K.zeros();
   for(auto K = neg_Ks.begin(); K != neg_Ks.end(); ++K)
     neg_K += *K;
-
 
   arma::mat Sig_mat_use = (xtra_covar) ?
     arma::mat(neg_K.i() + *xtra_covar) : arma::mat(neg_K.i());
