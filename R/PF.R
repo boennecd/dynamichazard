@@ -338,7 +338,7 @@ PF_EM <- function(
     fixed_parems_start = if(missing(fixed_effects)) NULL else fixed_effects,
     fixed = fixed, random = random, type = type)
   a_0 <- start_coefs$a_0
-  fixed_parems <- start_coefs$fixed_parems_start
+  fixed_params <- start_coefs$fixed_parems_start
 
   if(is_restricted){
     model_args <- list(
@@ -366,7 +366,7 @@ PF_EM <- function(
   #####
   # build up call with symbols to get neater call stack incase of an error
   out <- .PF_EM(
-    trace = trace, seed = seed, fixed_parems = fixed_parems,
+    trace = trace, seed = seed, fixed_params = fixed_params,
     type = type, n_fixed_terms_in_state_vec =
       static_args$n_fixed_terms_in_state_vec, X = static_args$X,
     fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
@@ -707,7 +707,7 @@ PF_forward_filter.data.frame <- function(
   }
 
   out <- particle_filter(
-    fixed_parems = fixed_effects, type = type, n_fixed_terms_in_state_vec =
+    fixed_params = fixed_effects, type = type, n_fixed_terms_in_state_vec =
       static_args$n_fixed_terms_in_state_vec, X = static_args$X,
     fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
     tstop = static_args$tstop, risk_obj = static_args$risk_obj,
@@ -729,7 +729,7 @@ PF_forward_filter.data.frame <- function(
   eps, nu,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
-  fixed_parems, type, Q_tilde, est_a_0, G, J, K, theta, psi, phi){
+  fixed_params, type, Q_tilde, est_a_0, G, J, K, theta, psi, phi){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
@@ -805,7 +805,7 @@ PF_forward_filter.data.frame <- function(
 
   # setup matrices and arrays to save the estimates from each iteration
   a_0_it          <- matrix(NA_real_, n_max, length(a_0))
-  fixed_parems_it <- matrix(NA_real_, n_max, length(fixed_parems))
+  fixed_params_it <- matrix(NA_real_, n_max, length(fixed_params))
   F_it <- array(NA_real_, c(nrow(F.), ncol(F.), n_max))
   Q_it <- array(NA_real_, c(nrow(Q) , ncol(Q) , n_max))
 
@@ -836,9 +836,9 @@ PF_forward_filter.data.frame <- function(
       cat("a_0 is:\n")
       print(fit_call$a_0)
 
-      if(length(fixed_parems) > 0){
+      if(length(fixed_params) > 0){
         cat("Fixed parameters are:\n")
-        print(fixed_parems)
+        print(fixed_params)
       }
       if(type == "VAR"){
         cat("F is:\n")
@@ -886,7 +886,7 @@ PF_forward_filter.data.frame <- function(
     a_0_old <- fit_call$a_0
     Q_old <- fit_call$Q
     F_old <- fit_call$F
-    fixed_parems_old <- fixed_parems
+    fixed_params_old <- fixed_params
 
     if(type == "RW"){
       sum_stats <- compute_PF_summary_stats(
@@ -1010,14 +1010,14 @@ PF_forward_filter.data.frame <- function(
 
     #####
     # Update fixed effects
-    has_fixed_params <- length(fixed_parems) > 0
+    has_fixed_params <- length(fixed_params) > 0
     if(has_fixed_params){
       if(trace > 0)
         cat("Updating fixed effects...\n")
 
-      fit_call$fixed_parems <- fixed_parems <- .PF_update_fixed(
+      fit_call$fixed_params <- fixed_params <- .PF_update_fixed(
         clouds = clouds$smoothed_clouds, risk_obj = risk_obj, model = model,
-        R = R, X = X, fixed_terms = fixed_terms, fixed_parems = fixed_parems,
+        R = R, X = X, fixed_terms = fixed_terms, fixed_params = fixed_params,
         nthreads = n_threads, tstart = tstart, tstop = tstop,
         debug = trace > 1L)
     }
@@ -1035,8 +1035,8 @@ PF_forward_filter.data.frame <- function(
     a_0_relative_norm <- norm(t(a_0 - a_0_old)) / (norm(t(a_0_old)) + 1e-8)
     F_norm <- norm(F_old - F.) / (norm(F_old) + 1e-8)
     if(has_fixed_params)
-      fixed_params_norm <- norm(t(fixed_parems - fixed_parems_old)) /
-        (norm(t(fixed_parems)) + 1e-8)
+      fixed_params_norm <- norm(t(fixed_params - fixed_params_old)) /
+        (norm(t(fixed_params)) + 1e-8)
 
     if(trace > 0){
       msg <- "The relative norm of the change in"
@@ -1061,7 +1061,7 @@ PF_forward_filter.data.frame <- function(
 
     a_0_it[i, ] <- a_0
     if(has_fixed_params)
-      fixed_parems_it[i, ] <- fixed_parems
+      fixed_params_it[i, ] <- fixed_params
     F_it[, ,i] <- F.
     Q_it[, ,i] <- Q
 
@@ -1080,10 +1080,10 @@ PF_forward_filter.data.frame <- function(
     effective_sample_size <- PF_effective_sample_size(clouds)
 
   out <- structure(list(
-    call = cl, clouds = clouds, a_0 = a_0, fixed_effects = fixed_parems, Q = Q,
+    call = cl, clouds = clouds, a_0 = a_0, fixed_effects = fixed_params, Q = Q,
     F = fit_call$F, R = R, EM_ests = list(
       a_0             = a_0_it         [1:i, , drop = FALSE],
-      fixed_effects   = fixed_parems_it[1:i, , drop = FALSE],
+      fixed_effects   = fixed_params_it[1:i, , drop = FALSE],
       F = F_it[, , 1:i, drop = FALSE],
       Q = Q_it[, , 1:i, drop = FALSE]),
     log_likes = log_likes[1:i], n_iter = i,
@@ -1246,7 +1246,7 @@ PF_control <- function(
 
 
 .PF_update_fixed <- function(
-  clouds, risk_obj, R, X, fixed_terms, fixed_parems, model, nthreads,
+  clouds, risk_obj, R, X, fixed_terms, fixed_params, model, nthreads,
   tstart, tstop, debug){
   if(!model %in% c("logit", "cloglog", "exponential"))
     stop(sQuote(model), " is not implemented with fixed effects")
@@ -1260,27 +1260,13 @@ PF_control <- function(
   out <- pf_fixed_effect_get_QR(
     clouds = clouds, risk_obj = risk_obj, ran_vars = X,
     fixed_terms = fixed_terms, R_top = R_top, tstart = tstart,
-    tstop = tstop, fixed_parems = fixed_parems, family = family_arg,
+    tstop = tstop, fixed_params = fixed_params, family = family_arg,
     max_threads = nthreads, debug = debug)
 
-  f_stack <- do.call(c, lapply(out, "[[", "f"))
-  R_stack <- do.call(rbind, lapply(out, .get_R))
-
-  qr. <- qr(R_stack, LAPACK = TRUE)
-  f <- qr.qty(qr., f_stack)[1:nrow(fixed_terms)]
-
-  out <- list(list(
-    R = qr.R(qr.), f = f,
-    pivot = qr.$pivot - 1)) # less one to have zero index as cpp code
-
-  R <- .get_R(out[[1]])
-  drop(solve(crossprod(R), crossprod(R, out[[1]]$f)))
-}
-
-.get_R <- function(o){
-  piv <- drop(o$pivot) + 1
-  piv[piv] <- 1:length(piv)
-  o$R[, piv, drop = FALSE]
+  Xty <- Reduce("+", lapply(out, "[[", "XtWY"))
+  qr_o <- qr(do.call(rbind, lapply(out, "[[", "Rmat")))
+  qr_R <- qr.R(qr_o)
+  drop(solve(qr_R, solve(t(qr_R), Xty)))
 }
 
 .get_Q <- function(J, K, psi, phi){

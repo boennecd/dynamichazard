@@ -1,6 +1,8 @@
 # dynamichazard 0.6.4
 * Particle filtering implementation is changed. One may get slightly different 
 results.
+* Estimation with a moderat amount of fixed parameters is much faster now with 
+the particle filters.
 * `nu` in `PF_control` scales the scale matrix to get an identical covariance 
 matrix.
 * Fixed bug in `get_Q_0`.

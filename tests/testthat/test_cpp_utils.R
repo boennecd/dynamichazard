@@ -133,12 +133,3 @@ test_that("selection_matrix_map gives correct results", {
   expect_equal(
     selection_matrix_map_mat_test(L, t(X), TRUE, TRUE), t(X) %*% L)
 })
-
-test_that("copy mat and vec works", {
-  X <- matrix(rnorm(10), nrow = 2)
-  expect_equal(test_copy_mat(X, 10),
-               do.call(cbind, replicate(10, X, simplify = FALSE)))
-
-  x <- rnorm(5)
-  expect_equal(drop(test_copy_vec(x, 10)), c(replicate(10, x)))
-})

@@ -95,7 +95,7 @@ test_that("PF_smooth gives same results", {
     n_fixed_terms_in_state_vec = 0,
     X = t(X_Y$X), fixed_terms = t(X_Y$fixed_terms),
     tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], R = diag(1, ncol(Q)), Q_0 = Q_0,
-    fixed_parems = numeric(), Q = Q, a_0 = a_0, Q_tilde = diag(1e-2, n_vars + 1),
+    fixed_params = numeric(), Q = Q, a_0 = a_0, Q_tilde = diag(1e-2, n_vars + 1),
     risk_obj = risk_set, F = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
     N_fw_n_bw = 20, N_smooth = 100, N_first = 100, N_smooth_final = 100,
     forward_backward_ESS_threshold = NULL, debug = 0,
@@ -758,20 +758,6 @@ test_that("PF_EM gives the same with restricted and unrestricted model when we e
   n_obs     <- 200L
   n_periods <- 100L
 
-  # # function to find Q_0
-  # get_Q_0 <- function(Qmat, Fmat){
-  #   # see https://math.stackexchange.com/q/2854333/253239
-  #   eg  <- eigen(Fmat)
-  #   las <- eg$values
-  #   if(any(abs(las) >= 1))
-  #     stop("Divergent series")
-  #   U   <- eg$vectors
-  #   U_t <- t(U)
-  #   T.  <- crossprod(U, Qmat %*% U)
-  #   Z   <- T. / (1 - tcrossprod(las))
-  #   solve(U_t, t(solve(U_t, t(Z))))
-  # }
-  #
   # Fmat <- matrix(c(.9, 0, 0, .9), 2)
   # Rmat <- diag(1    , 2)
   # Qmat <- diag(.33^2, 2)

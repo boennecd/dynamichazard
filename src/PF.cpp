@@ -132,7 +132,7 @@ Rcpp::List PF_smooth(
     const arma::mat &R, arma::mat &Q_0,
     arma::mat &Q, const arma::mat Q_tilde, const Rcpp::List &risk_obj,
     const arma::mat &F, const int n_max, const int n_threads,
-    const arma::vec &fixed_parems, const int N_fw_n_bw, const int N_smooth,
+    const arma::vec &fixed_params, const int N_fw_n_bw, const int N_smooth,
     const int N_smooth_final,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
     const int debug, const int N_first, std::string type, const int nu,
@@ -146,14 +146,14 @@ Rcpp::List PF_smooth(
     data.reset(new random_walk<PF_data>(
         n_fixed_terms_in_state_vec,
         X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
-        risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+        risk_obj, F, n_max, n_threads, fixed_params, Q_tilde, N_fw_n_bw,
         N_smooth, N_smooth_final, forward_backward_ESS_threshold, debug,
         N_first, nu));
   else if (type == "VAR")
     data.reset(new PF_data(
         n_fixed_terms_in_state_vec,
         X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
-        risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+        risk_obj, F, n_max, n_threads, fixed_params, Q_tilde, N_fw_n_bw,
         N_smooth, N_smooth_final, forward_backward_ESS_threshold, debug,
         N_first, nu));
   else
@@ -250,7 +250,7 @@ Rcpp::List particle_filter(
     const arma::mat &R, arma::mat &Q_0,
     arma::mat &Q, const arma::mat Q_tilde, const Rcpp::List &risk_obj,
     const arma::mat &F, const int n_threads,
-    const arma::vec &fixed_parems, const int N_fw_n_bw,
+    const arma::vec &fixed_params, const int N_fw_n_bw,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
     const int debug, const int N_first, const int nu, std::string type,
     const bool is_forward, const std::string method, const std::string model){
@@ -263,14 +263,14 @@ Rcpp::List particle_filter(
     data.reset(new random_walk<PF_data>(
         n_fixed_terms_in_state_vec,
         X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
-        risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+        risk_obj, F, n_max, n_threads, fixed_params, Q_tilde, N_fw_n_bw,
         N_smooth, N_smooth_final,
         forward_backward_ESS_threshold, debug, N_first, nu));
   else if (type == "VAR")
     data.reset(new PF_data(
         n_fixed_terms_in_state_vec,
         X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
-        risk_obj, F, n_max, n_threads, fixed_parems, Q_tilde, N_fw_n_bw,
+        risk_obj, F, n_max, n_threads, fixed_params, Q_tilde, N_fw_n_bw,
         N_smooth, N_smooth_final,
         forward_backward_ESS_threshold, debug, N_first, nu));
   else

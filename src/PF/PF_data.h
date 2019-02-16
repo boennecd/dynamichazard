@@ -116,7 +116,7 @@ public:
           const arma::mat &F,
           const int n_max,
           const int n_threads,
-          const arma::vec &fixed_parems,
+          const arma::vec &fixed_params,
 
           // new arguments
           const arma::mat Q_tilde,
@@ -129,7 +129,7 @@ public:
     problem_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, Q_0, Q,
-      risk_obj, F, n_max, n_threads, fixed_parems),
+      risk_obj, F, n_max, n_threads, fixed_params),
 
       N_fw_n_bw(N_fw_n_bw), N_smooth(N_smooth), N_smooth_final(N_smooth_final),
       forward_backward_ESS_threshold(
