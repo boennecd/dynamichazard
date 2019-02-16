@@ -1,10 +1,8 @@
 #ifndef PF_UTILS
 #define PF_UTILS
 
-#include <tuple>
 #include "particles.h"
 #include "densities.h"
-#include "../arma_BLAS_LAPACK.h"
 #include "../utils.h"
 #include "cond_approx.h"
 

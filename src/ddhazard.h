@@ -24,10 +24,12 @@ public:
 
 // Classes for EKF method
 class ddhazard_data_EKF;
+class thread_pool;
 
 class EKF_solver : public Solver {
   ddhazard_data &org;
   std::unique_ptr<ddhazard_data_EKF> p_dat;
+  std::unique_ptr<thread_pool> pool;
   const std::string model;
   family_base &fam;
 

@@ -73,8 +73,7 @@ bool state_bw::is_grad_z_hes_const() const {
 const arma::vec& state_bw::get_mean() const {
   Rcpp::stop("'state_bw' is not a density in x");
 
-  arma::vec dum;
-  return dum;
+  throw std::logic_error("this code will should not be reached");
 }
 
 arma::uword state_bw::dim() const {
@@ -249,8 +248,7 @@ template<class T>
 const arma::vec& observational_cdist<T>::get_mean() const {
   Rcpp::stop("'observational_cdist<T>' is not a density in x");
 
-  arma::vec dum;
-  return dum;
+  throw std::logic_error("this code will should not be reached");
 }
 
 template<class T>
@@ -307,7 +305,7 @@ template<class T>
 arma::vec observational_cdist<T>::gradient_zero(const arma::vec *coefs) const {
   Rcpp::stop("'observational_cdist<T>::gradient' is not implemented");
 
-  return arma::vec();
+  throw std::logic_error("this code will should not be reached");
 }
 
 template<class T>
@@ -353,4 +351,5 @@ std::shared_ptr<PF_cdist> get_observational_cdist(
         multithreaded))));
 
   Rcpp::stop("'fam' not implemented");
+  throw std::logic_error("this code will should not be reached");
 }

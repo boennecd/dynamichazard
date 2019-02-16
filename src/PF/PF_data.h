@@ -4,10 +4,9 @@
 #include "../arma_n_rcpp.h"
 #include "../problem_data.h"
 #include "covarmat.h"
-#include <chrono>
-#include <ctime>
 
 /* Logger class for debug information */
+class tracker;
 class PF_logger {
 public:
 #ifdef _OPENMP
@@ -28,42 +27,25 @@ public:
     Class to prefix stream. See:
       https://stackoverflow.com/a/27336473
   */
-
   class prefixbuf : public std::streambuf
   {
     std::string     prefix;
     std::streambuf* sbuf;
     bool            need_prefix;
 
-    int sync() {
-      return this->sbuf->pubsync();
-    }
+    int sync();
 
-    int overflow(int c) {
-      if (c != std::char_traits<char>::eof()) {
-        if (this->need_prefix
-              && !this->prefix.empty()
-              && this->prefix.size() != (unsigned int)this->sbuf->sputn(&this->prefix[0], this->prefix.size())) {
-              return std::char_traits<char>::eof();
-        }
-        this->need_prefix = c == '\n';
-      }
-      return this->sbuf->sputc(c);
-    }
+    int overflow(int);
 
   public:
-    prefixbuf(std::string const& prefix, std::streambuf* sbuf)
-      : prefix(prefix), sbuf(sbuf) , need_prefix(true) {}
+    prefixbuf(std::string const&, std::streambuf*);
   };
 
   class oprefixstream
     : private virtual prefixbuf, public std::ostream
   {
   public:
-    oprefixstream(std::string const& prefix, std::ostream& out)
-      : prefixbuf(prefix, out.rdbuf())
-    , std::ios(static_cast<std::streambuf*>(this))
-    , std::ostream(static_cast<std::streambuf*>(this)) {}
+    oprefixstream(std::string const&, std::ostream&);
   };
 
   template<typename T>
@@ -93,36 +75,9 @@ private:
   const static unsigned int n_spaces = 3;
   static std::string get_prefix(const unsigned int level);
 
-  using tp = std::chrono::time_point<std::chrono::system_clock>;
-  using tp_pointer =std::unique_ptr<tp>;
+  static std::unique_ptr<tracker> last_message_time;
 
-  static tp_pointer last_message_time;
-
-  static double get_elapsed_seconds_n_set_last_message_time(){
-    double elapsed_seconds;
-
-#ifdef _OPENMP
-    omp_set_lock(&lock);
-#endif
-    tp_pointer now(new tp());
-    *now = std::chrono::system_clock::now();
-
-    if(last_message_time){
-      std::chrono::duration<double> tmp = *now - *last_message_time;
-      elapsed_seconds = tmp.count();
-    } else {
-      elapsed_seconds = std::numeric_limits<double>::quiet_NaN();
-
-    }
-
-    last_message_time.reset(now.release());
-
-#ifdef _OPENMP
-    omp_unset_lock(&lock);
-#endif
-
-    return elapsed_seconds;
-  }
+  static double get_elapsed_seconds_n_set_last_message_time();
 };
 
 // data holder for particle filtering

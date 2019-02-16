@@ -160,7 +160,8 @@ EKF_solver::EKF_solver(
   Rcpp::Nullable<Rcpp::NumericVector> NR_eps,
   const unsigned int NR_it_max, const int EKF_batch_size, family_base &fam) :
   org(p), p_dat(new ddhazard_data_EKF(
-      p, NR_eps, NR_it_max, EKF_batch_size)), model(model), fam(fam)
+      p, NR_eps, NR_it_max, EKF_batch_size)), pool(new thread_pool(org.n_threads)),
+      model(model), fam(fam)
   {}
 
 void EKF_solver::solve(){
@@ -324,7 +325,6 @@ void EKF_solver::parallel_filter_step(
     std::max(p_dat->EKF_batch_size, (int)std::ceil((double)length / org.n_threads));
   unsigned long const num_blocks= (int)std::ceil((double)length / block_size);
   std::vector<std::future<void> > futures(num_blocks - 1);
-  thread_pool pool(num_blocks-1);
 
   std::vector<EKF_filter_worker> workers;
   workers.reserve(num_blocks - 1);
@@ -341,7 +341,7 @@ void EKF_solver::parallel_filter_step(
       *p_dat.get(), block_start, block_end, dynamic_coefs, compute_H_and_z,
       i_start, bin_number, bin_tstart, bin_tstop, fam);
 
-    futures[i] = pool.submit(workers.back());
+    futures[i] = pool->submit(workers.back());
     i_start += block_size;
     block_start = block_end;
   }
