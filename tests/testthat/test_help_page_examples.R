@@ -324,7 +324,7 @@ test_that("example in 'PF_EM' with gives previous results w/ a few iterations", 
       method = "AUX_normal_approx_w_cloud_mean",
       nu = 5L, # sample from multivariate t-distribution
       n_max = 2L,  # should maybe be larger
-      smoother = "Fearnhead_O_N", eps = 1e-4,
+      smoother = "Fearnhead_O_N", eps = 1e-4, covar_fac = 1.2,
       n_threads = 4L # depends on your cpu(s)
     )))
 

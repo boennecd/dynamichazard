@@ -98,8 +98,8 @@ test_that("PF_smooth gives same results", {
     fixed_params = numeric(), Q = Q, a_0 = a_0, Q_tilde = diag(1e-2, n_vars + 1),
     risk_obj = risk_set, F = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
     N_fw_n_bw = 20, N_smooth = 100, N_first = 100, N_smooth_final = 100,
-    forward_backward_ESS_threshold = NULL, debug = 0,
-    method = "bootstrap_filter",
+    forward_backward_ESS_threshold = NULL, debug = 0, ftol_rel = 1e-6,
+    method = "bootstrap_filter", covar_fac = -1,
     smoother = "Fearnhead_O_N", model = "logit", type = "RW", nu = 0L)
 
   fw_args <- list(
@@ -1342,8 +1342,8 @@ test_that("mode approximations give expected result", {
   prio <- prior(F. = F., Q = Q, Q_0 = Q_0, mu_0 = m_0)(t1)
 
   for(l in list(
-    list("binomial", binomial()), list("cloglog", binomial("cloglog")),
-    list("poisson", "exponential"))){
+    list("poisson", "exponential"),
+    list("cloglog", binomial("cloglog")), list("binomial", binomial()))){
     fam <- l[[1]]
     set.seed(1)
     o <- sim_test_pf_internal(n = 50L, p = 2L, fam = fam, state = p)
@@ -1420,4 +1420,47 @@ test_that("mode approximations give expected result", {
 
   expect_equal(cpp_out$log_dens1, dmvt(p, o1$mu, Q_res, nu, TRUE))
   expect_equal(cpp_out$log_dens2, dmvt(p, o2$mu, Q_res, nu, TRUE))
+
+  #####
+  # with extra covariance matrix term, scaled and t-distribution
+  nu <- 4
+  covar_fac <- 1.5
+  cpp_out <- with(o, check_prior_bw_state_comb(
+    X = X, is_event = y_use, offsets = offset, tstart = tstart,
+    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
+    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+    t1 = t1, Q_xtra = Q_xtra, nu = nu, covar_fac = covar_fac))
+
+  expect_equal(drop(cpp_out$mean1), o1$mu)
+  expect_equal(drop(cpp_out$mean2), o2$mu)
+
+  Q_res <- (o1$Sig + Q_xtra) * (nu - 2) / nu * covar_fac
+  expect_equal(cpp_out$covar1, Q_res)
+  expect_equal(cpp_out$covar2, Q_res)
+
+  expect_equal(cpp_out$log_dens1, dmvt(p, o1$mu, Q_res, nu, TRUE))
+  expect_equal(cpp_out$log_dens2, dmvt(p, o2$mu, Q_res, nu, TRUE))
+
+  #####
+  # lower threshold in mode approximation
+  ftol_rel <- 1e-3
+  app <- approximator(bwo, prio, y_dist, start = app1(c1, NULL)$mu,
+                      ftol_rel = ftol_rel)
+  o1 <- app(c1, NULL)
+  o2 <- app(c2, NULL)
+  cpp_out <- with(o, check_prior_bw_state_comb(
+    X = X, is_event = y_use, offsets = offset, tstart = tstart,
+    tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
+    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+    t1 = t1, Q_xtra = Q_xtra, ftol_rel = ftol_rel))
+
+  expect_equal(drop(cpp_out$mean1), o1$mu)
+  expect_equal(drop(cpp_out$mean2), o2$mu)
+
+  Q_res <- o1$Sig + Q_xtra
+  expect_equal(cpp_out$covar1, Q_res)
+  expect_equal(cpp_out$covar2, Q_res)
+
+  expect_equal(cpp_out$log_dens1, dmvnorm(p, o1$mu, Q_res, TRUE))
+  expect_equal(cpp_out$log_dens2, dmvnorm(p, o2$mu, Q_res, TRUE))
 })

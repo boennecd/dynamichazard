@@ -265,7 +265,7 @@ PF_effective_sample_size <- function(object){
 #'     method = "AUX_normal_approx_w_cloud_mean",
 #'     nu = 5L, # sample from multivariate t-distribution
 #'     n_max = 50L,  # should maybe be larger
-#'     smoother = "Fearnhead_O_N", eps = 1e-4,
+#'     smoother = "Fearnhead_O_N", eps = 1e-4, covar_fac = 1.2,
 #'     n_threads = 4L # depends on your cpu(s)
 #'   ),
 #'   trace = 1L)
@@ -381,7 +381,8 @@ PF_EM <- function(
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
     method = control$method, n_max = control$n_max,
     n_threads = control$n_threads, smoother = control$smoother,
-    Q_tilde = control$Q_tilde, est_a_0 = control$est_a_0)
+    Q_tilde = control$Q_tilde, est_a_0 = control$est_a_0,
+    covar_fac = control$covar_fac, ftol_rel = control$ftol_rel)
 
   out <- .set_PF_names(out, rng_names = row.names(static_args$X),
                        fixed_names = rownames(static_args$fixed_terms))
@@ -715,7 +716,8 @@ PF_forward_filter.data.frame <- function(
     F = Fmat, R = R, is_forward = TRUE, a_0 = a_0, N_fw_n_bw = N_fw,
     N_first = N_first, nu = if(is.null(control$nu)) 0L else control$nu,
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
-    method = control$method, n_threads = control$n_threads, Q_tilde = Q_tilde)
+    method = control$method, n_threads = control$n_threads, Q_tilde = Q_tilde,
+    covar_fac = control$covar_fac, ftol_rel = control$ftol_rel)
 
   structure(list(
     forward_clouds = out, backward_clouds = list(), smoothed_clouds = list(),
@@ -726,10 +728,10 @@ PF_forward_filter.data.frame <- function(
 .PF_EM <- function(
   n_fixed_terms_in_state_vec, X, fixed_terms, tstart, tstop, Q_0, Q, a_0, F.,
   R, risk_obj, n_max, n_threads, N_fw_n_bw, N_smooth, N_smooth_final, N_first,
-  eps, nu,
+  eps, nu, covar_fac,
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
-  fixed_params, type, Q_tilde, est_a_0, G, J, K, theta, psi, phi){
+  fixed_params, type, Q_tilde, est_a_0, G, J, K, theta, psi, phi, ftol_rel){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
@@ -1122,6 +1124,10 @@ PF_forward_filter.data.frame <- function(
 #' @param nu integer with degrees of freedom to use in the (multivariate)
 #' t-distribution used as the proposal distribution. A (multivariate) normal
 #' distribution is used if it is zero.
+#' @param covar_fac factor to scale the covariance matrix with. Ignored if
+#' the values is less than or equal to zero.
+#' @param ftol_rel tolerance passed to \code{\link{nloptr}} in mode
+#' approximation.
 #'
 #' @details
 #' The \code{method} argument can take the following values
@@ -1180,13 +1186,14 @@ PF_control <- function(
   eps = 1e-2, forward_backward_ESS_threshold = NULL,
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
-  Q_tilde = NULL, est_a_0 = TRUE, N_smooth_final = N_smooth, nu = 0L){
+  Q_tilde = NULL, est_a_0 = TRUE, N_smooth_final = N_smooth, nu = 0L,
+  covar_fac = -1, ftol_rel = 1e-6){
   control <- list(
     N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
     forward_backward_ESS_threshold = forward_backward_ESS_threshold,
     method = method, n_max = n_max, n_threads = n_threads, smoother = smoother,
     Q_tilde = Q_tilde, est_a_0 = est_a_0, N_smooth_final = N_smooth_final,
-    nu = nu)
+    nu = nu, covar_fac = covar_fac, ftol_rel = ftol_rel)
 
   stopifnot(
     length(method) == 1L, method %in% c(
@@ -1212,7 +1219,8 @@ PF_control <- function(
     N_smooth_final <= N_smooth)
   stopifnot(
     typeof(nu) %in% c("double", "integer"), length(nu) == 1L, nu >= 0L,
-    as.integer(nu) == nu)
+    as.integer(nu) == nu, is.numeric(covar_fac), is.numeric(ftol_rel),
+    ftol_rel > 0)
 
   return(control)
 }

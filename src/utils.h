@@ -13,8 +13,13 @@ inline double get_at_risk_length(
 }
 
 inline arma::uvec get_risk_set(
+    const Rcpp::List risk_sets, const unsigned int t /* refers to bin 0, 1, 2, ... */){
+  return Rcpp::as<arma::uvec>(risk_sets[t - 1]) - 1;
+}
+
+inline arma::uvec get_risk_set(
     const problem_data &data, const unsigned int t /* refers to bin 0, 1, 2, ... */){
-  return Rcpp::as<arma::uvec>(data.risk_sets[t - 1]) - 1;
+  return get_risk_set(data.risk_sets, t);
 }
 
 struct get_bin_times_result {
@@ -22,20 +27,27 @@ struct get_bin_times_result {
 };
 
 inline get_bin_times_result get_bin_times(
-    const problem_data &data, const unsigned int t /* refers to bin 0, 1, 2, ... */){
+    const double min_start, const std::vector<double> &I_len,
+    const unsigned int t /* refers to bin 0, 1, 2, ... */){
   get_bin_times_result ans;
   double &start = ans.start;
   double &stop = ans.stop;
 
-  start = data.min_start;
+  start = min_start;
   unsigned int i = 0;
   for(; i + 1 < t; ++i)
-    start += data.I_len[i];
+    start += I_len[i];
 
-  stop = start + data.I_len[i];
+  stop = start + I_len[i];
 
   return ans;
 }
+
+inline get_bin_times_result get_bin_times
+  (const problem_data &data, const unsigned int t ){
+  return get_bin_times(data.min_start, data.I_len, t);
+}
+
 
 inline double lambert_W0(const double x){
   /*

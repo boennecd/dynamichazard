@@ -23,14 +23,16 @@ cloud importance_dens_base<is_forward>::sample_first_state_n_set_weights
   if(is_forward){
     std::shared_ptr<PF_cdist> prior = dens_calc.get_prior(0L);
     std::vector<PF_cdist*> dists = { prior.get() };
-    sampler = cdist_comb_generator(dists, data.nu, &data.xtra_covar)
+    sampler = cdist_comb_generator(
+      dists, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel)
       .get_dist_comb({ });
     normal_dist = cdist_comb_generator(dists, -1L).get_dist_comb({ });
 
   } else {
     std::shared_ptr<PF_cdist> prior = dens_calc.get_prior(data.d + 1L);
     std::vector<PF_cdist*> dists = { prior.get() };
-    sampler = cdist_comb_generator(dists, data.nu, &data.xtra_covar)
+    sampler = cdist_comb_generator(
+      dists, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel)
       .get_dist_comb({ });
     normal_dist = cdist_comb_generator(dists, -1L).get_dist_comb({ });
 
@@ -87,7 +89,8 @@ cloud importance_dens_no_y_dependence<is_forward>::
       dists = { d1.get(), prior.get() };
 
     }
-    cdist_comb_generator comb_gen(dists, data.nu, &data.xtra_covar);
+    cdist_comb_generator comb_gen(
+        dists, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel);
 
     auto it = resample_idx.begin();
     std::unique_ptr<dist_comb> sampler;
@@ -116,7 +119,8 @@ cloud importance_dens_no_y_dependence<is_forward>::
         /* does not matter which one we use */
         bw_cloud.begin()->get_state());
     std::vector<PF_cdist*> dists = { fw_dist.get(), bw_dist.get() };
-    cdist_comb_generator comb_gen(dists, data.nu, &data.xtra_covar);
+    cdist_comb_generator comb_gen(
+        dists, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel);
 
     if(data.debug > 2)
       data.log(3)
@@ -213,7 +217,8 @@ cloud importance_dens_normal_approx_w_cloud_mean<is_forward>::
       start = cdist_comb_generator(start_objs)
         .get_dist_comb({ &fw_mean, &bw_mean })->get_mean();
     }
-    cdist_comb_generator combi_gen(objs, start, data.nu, &data.xtra_covar);
+    cdist_comb_generator combi_gen(
+        objs, start, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel);
     nlopt_return_value_msg result_code = combi_gen.get_result_code();
 
     if(result_code.is_error)
@@ -352,7 +357,9 @@ cloud importance_dens_normal_approx_w_particles<is_forward>::
       arma::vec start = fw_bw_comb.get_dist_comb
         ({ (arma::vec*)&fw_p.get_state(), (arma::vec*)&bw_p.get_state() })
         ->get_mean();
-      cdist_comb_generator combi_gen(objs, start, data.nu, &data.xtra_covar);
+      cdist_comb_generator combi_gen(
+          objs, start, data.nu, &data.xtra_covar, data.covar_fac,
+          data.ftol_rel);
       error_messages.insert(combi_gen.get_result_code());
 
       samplers[i] = combi_gen.get_dist_comb

@@ -50,10 +50,12 @@ class cdist_comb_generator {
 public:
   cdist_comb_generator
     (std::vector<PF_cdist*>&, const arma::vec&,
-     const int nu = -1L, const arma::mat *xtra_covar = nullptr);
+     const int nu = -1L, const arma::mat *xtra_covar = nullptr,
+     const double covar_fac = -1, const double ftol_rel = 1e-6);
   cdist_comb_generator
     (std::vector<PF_cdist*>&, const int nu = -1L,
-     const arma::mat *xtra_covar = nullptr);
+     const arma::mat *xtra_covar = nullptr, const double covar_fac = -1,
+     const double ftol_rel = 1e-6);
 
   nlopt_return_value_msg get_result_code();
 

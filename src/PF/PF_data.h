@@ -2,8 +2,8 @@
 #define PF_DATA
 
 #include "../arma_n_rcpp.h"
-#include "../problem_data.h"
 #include "covarmat.h"
+#include <thread>
 
 /* Logger class for debug information */
 class tracker;
@@ -81,9 +81,33 @@ private:
 };
 
 // data holder for particle filtering
-class PF_data : public problem_data {
+class PF_data {
   using uword = arma::uword;
 public:
+  const int d;
+  const Rcpp::List risk_sets;
+
+  /* these are not const due the arma::mat constructor which does not allow
+  * copy_aux_mem = false with const pointer. They should not be changed
+  * though...                                                              */
+  arma::mat X;
+  arma::mat fixed_terms;
+
+  const std::vector<double> I_len;
+  const arma::mat F;
+  const arma::uword state_dim;
+
+  const int n_threads;
+
+  const arma::vec &tstart;
+  const arma::vec &tstop;
+  const arma::ivec &is_event_in_bin;
+
+  const double min_start;
+
+  arma::vec fixed_params;
+  arma::vec fixed_effects;
+
   /* Number of paprticles in forward and/or backward filter */
   const uword N_fw_n_bw;
   const uword N_smooth;
@@ -96,6 +120,7 @@ public:
   const uword N_first;
   const int nu;
   const unsigned long work_block_size;
+  const double covar_fac, ftol_rel;
 
   /* pre-computed factorization */
   const covarmat Q;
@@ -125,24 +150,43 @@ public:
           const uword N_smooth_final,
           Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
           const unsigned int debug,
-          const uword N_first, const int nu) :
-    problem_data(
-      n_fixed_terms_in_state_vec,
-      X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, L, Q_0, Q,
-      risk_obj, F, n_max, n_threads, fixed_params),
+          const uword N_first, const int nu, const double covar_fac,
+          const double ftol_rel) :
+    d(Rcpp::as<int>(risk_obj["d"])),
+    risk_sets(Rcpp::as<Rcpp::List>(risk_obj["risk_sets"])),
 
-      N_fw_n_bw(N_fw_n_bw), N_smooth(N_smooth), N_smooth_final(N_smooth_final),
-      forward_backward_ESS_threshold(
-        forward_backward_ESS_threshold.isNotNull() ?
-          Rcpp::as<Rcpp::NumericVector>(forward_backward_ESS_threshold)[0] :
-          N_fw_n_bw / 2.),
+    X(X.begin(), X.n_rows, X.n_cols, false),
+    fixed_terms(fixed_terms.begin(), fixed_terms.n_rows,
+                fixed_terms.n_cols, false),
+    I_len(Rcpp::as<std::vector<double> >(risk_obj["I_len"])), F(F),
+    state_dim(a_0.size()),
 
-      a_0(a_0),
-      debug(debug),
-      N_first(N_first), nu(nu),
-      work_block_size(500),
+    n_threads((n_threads > 0) ? n_threads : std::thread::hardware_concurrency()),
 
-      Q(Q), Q_0(Q_0), xtra_covar(Q_tilde)
+    tstart(tstart),
+    tstop(tstop),
+    is_event_in_bin(is_event_in_bin),
+    min_start(Rcpp::as<double>(risk_obj["min_start"])),
+
+    fixed_params(fixed_params),
+    fixed_effects(
+      (fixed_terms.n_elem > 0) ?
+      fixed_terms.t() * fixed_params :
+      arma::vec(X.n_cols, arma::fill::zeros)),
+
+    N_fw_n_bw(N_fw_n_bw), N_smooth(N_smooth), N_smooth_final(N_smooth_final),
+    forward_backward_ESS_threshold(
+      forward_backward_ESS_threshold.isNotNull() ?
+        Rcpp::as<Rcpp::NumericVector>(forward_backward_ESS_threshold)[0] :
+        N_fw_n_bw / 2.),
+
+    a_0(a_0),
+    debug(debug),
+    N_first(N_first), nu(nu),
+    work_block_size(500),
+
+    covar_fac(covar_fac), ftol_rel(ftol_rel), Q(Q), Q_0(Q_0),
+    xtra_covar(Q_tilde)
     {
 #ifdef _OPENMP
       omp_init_lock(&PF_logger::lock);

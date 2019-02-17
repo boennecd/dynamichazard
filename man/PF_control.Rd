@@ -9,7 +9,8 @@ PF_control(N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"),
   smoother = "Fearnhead_O_N", Q_tilde = NULL, est_a_0 = TRUE,
-  N_smooth_final = N_smooth, nu = 0L)
+  N_smooth_final = N_smooth, nu = 0L, covar_fac = -1,
+  ftol_rel = 1e-06)
 }
 \arguments{
 \item{N_fw_n_bw}{number of particles to use in forward and backward filter.}
@@ -44,6 +45,12 @@ computation time in the M-step.}
 \item{nu}{integer with degrees of freedom to use in the (multivariate)
 t-distribution used as the proposal distribution. A (multivariate) normal
 distribution is used if it is zero.}
+
+\item{covar_fac}{factor to scale the covariance matrix with. Ignored if
+the values is less than or equal to zero.}
+
+\item{ftol_rel}{tolerance passed to \code{\link{nloptr}} in mode
+approximation.}
 }
 \value{
 A list with components named as the arguments.

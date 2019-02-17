@@ -27,16 +27,18 @@ double mode_objective(
 }
 
 cdist_comb_generator::cdist_comb_generator
-  (std::vector<PF_cdist*> &cdists, const int nu, const arma::mat *xtra_covar):
+  (std::vector<PF_cdist*> &cdists, const int nu, const arma::mat *xtra_covar,
+   const double covar_fac, const double ftol_rel):
   /* all should have the same dimension */
   cdist_comb_generator(
-    cdists, arma::vec(cdists[0]->dim(), arma::fill::zeros), nu, xtra_covar) { }
+    cdists, arma::vec(cdists[0]->dim(), arma::fill::zeros), nu, xtra_covar,
+    covar_fac, ftol_rel) { }
 
 #define NLOPT_RESULT_CODE_NOT_SET -100L
 
 cdist_comb_generator::cdist_comb_generator(
   std::vector<PF_cdist*> &cdists, const arma::vec &start, const int nu,
-  const arma::mat *xtra_covar):
+  const arma::mat *xtra_covar, const double covar_fac, const double ftol_rel):
   cdists(cdists), nu(nu),
   /* just in case we do not set it */
   nlopt_result_code(NLOPT_RESULT_CODE_NOT_SET)
@@ -57,7 +59,7 @@ cdist_comb_generator::cdist_comb_generator(
     nlopt_opt opt;
     opt = nlopt_create(NLOPT_LD_LBFGS, n);
     nlopt_set_min_objective(opt, mode_objective, &cdists);
-    nlopt_set_ftol_rel(opt, 1e-6);
+    nlopt_set_ftol_rel(opt, ftol_rel);
     nlopt_set_vector_storage(opt, 30L);
 
     double minf;
@@ -83,6 +85,8 @@ cdist_comb_generator::cdist_comb_generator(
 
   arma::mat Sig_mat_use = (xtra_covar) ?
     arma::mat(neg_K.i() + *xtra_covar) : arma::mat(neg_K.i());
+  if(covar_fac > 0)
+    Sig_mat_use *= covar_fac;
 
   covarmat Sig_obj = (nu > 2L) ?
     covarmat(Sig_mat_use * (nu - 2.) / nu) :

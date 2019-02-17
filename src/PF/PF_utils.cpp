@@ -57,7 +57,8 @@ get_approx_use_mean_output get_approx_use_mean(
 
   }
 
-  cdist_comb_generator combi_gen(objs, start, data.nu, &data.xtra_covar);
+  cdist_comb_generator combi_gen(
+      objs, start, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel);
   for(unsigned int i = 0; i < n_elem; ++i){ // loop over cloud elements
     auto it_cl = PF_cloud.begin() + i;
     auto it_dc = out.begin() + i;
@@ -129,7 +130,8 @@ get_approx_use_particle_output get_approx_use_particle(
 
     }
 
-    cdist_comb_generator combi_gen(objs, start, data.nu, &data.xtra_covar);
+    cdist_comb_generator combi_gen(
+        objs, start, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel);
     error_messages.insert(combi_gen.get_result_code());
 
     *it_dc =

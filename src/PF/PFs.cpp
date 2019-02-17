@@ -94,7 +94,7 @@ AUX_PF<T_resampler, T_importance_dens, is_forward>::
       {
           const bool do_debug = data.debug > 4;
           double max_weight =  -std::numeric_limits<double>::max();
-          arma::uvec r_set = get_risk_set(data, t);
+          arma::uvec r_set = get_risk_set(data.risk_sets, t);
           unsigned int n_elem = new_cloud.size();
           double log_N = std::log(n_elem);
 
@@ -264,7 +264,7 @@ PF_smoother_Fearnhead_O_N<T_resampler, T_importance_dens>::
         {
             const bool do_debug = data.debug > 4;
             double max_weight = -std::numeric_limits<double>::max();
-            arma::uvec r_set = get_risk_set(data, t);
+            arma::uvec r_set = get_risk_set(data.risk_sets, t);
             unsigned int n_elem = new_cloud.size();
 
 #ifdef _OPENMP

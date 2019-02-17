@@ -130,8 +130,7 @@ Rcpp::List pf_fixed_effect_get_QR(
     const arma::mat &fixed_terms, const arma::mat &R_top,
     const arma::vec &tstart, const arma::vec &tstop,
     const arma::vec &fixed_params, const std::string family,
-    const int max_threads, const bool debug,
-    const unsigned int max_bytes = 5000000){
+    const int max_threads, const bool debug){
   const unsigned int n_clouds = clouds.size();
   Rcpp::List risk_sets = Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]);
   arma::ivec is_event_in = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
