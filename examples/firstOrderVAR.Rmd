@@ -155,7 +155,7 @@ in the next section.
 
 ## Particle filter and smoother
 
-We start off by using the generalized two-filter smoother from [@briers09]. We 
+We start off by using the generalized two-filter smoother from @briers09. We 
 estimate the parameters with an EM algorithm by calling `PF_EM` as 
 follows
 
@@ -182,7 +182,7 @@ system.time(pf_Brier <- PF_EM(
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 100, smoother = "Brier_O_N_square",
     # we add some extra variation to the proposal distributions
-    Q_tilde = diag(.3^2, 2), n_threads = n_threads)))
+    nu = 8, covar_fac = 1.1, n_threads = n_threads)))
 ```
 
 `system.time` is used to show the computation time. The estimated parameters are
@@ -254,7 +254,7 @@ approximate log-likelihoods from the particle filter at the EM iterations are
 plot(pf_Brier$log_likes)
 ```
 
-We can compare the output above with the smoother from [@fearnhead10]
+We can compare the output above with the smoother from @fearnhead10
 
 <!-- 
   knitr::opts_knit$set(output.dir = ".")
@@ -268,10 +268,10 @@ system.time(pf_Fear <- PF_EM(
   Q_0 = diag(1, 2), Q = diag(1, 2), Fmat = matrix(c(.1, 0, 0, .1), 2), 
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
   control = PF_control(
-    N_fw_n_bw = 500, N_smooth = 2000, N_first = 2000, eps = .001,
+    N_fw_n_bw = 1000, N_smooth = 2000, N_first = 2000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 100, smoother = "Fearnhead_O_N",
-    Q_tilde = diag(.3^2, 2), n_threads = n_threads)))
+    nu = 8, covar_fac = 1.1, n_threads = n_threads)))
 ```
 
 The estimates are similar
@@ -291,7 +291,7 @@ plot(pf_Fear$effective_sample_size$smoothed_clouds, type = "h",
 ```
 
 However, there are many options to reduce the computation time for the former smoother as e.g, 
-mentioned in [@briers09] but those are not implemented. The smoothed estimates are 
+mentioned in @briers09 but those are not implemented. The smoothed estimates are 
 also rather close to what we saw before 
 
 ```{r fear_plot_far_F}
@@ -330,7 +330,7 @@ pf_Fear_more <- PF_EM(
     N_fw_n_bw = 5000, N_smooth = 10000, N_first = 5000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 10, smoother = "Fearnhead_O_N",   
-    Q_tilde = diag(.3^2, 2), n_threads = n_threads))
+    nu = 8, covar_fac = 1.1, n_threads = n_threads))
 ```
 
 The log-likelihoods from these iterations are 
@@ -348,26 +348,127 @@ pf_Fear_more$fixed_effects
 ```
 
 ### Averaging
-Averaging is sometimes argued for in MCEM algorithm. E.g., see [@cappe05] 
-section 11.1.2.2. The idea is to take an average over the last M step 
-estimates. This is easily done with the package since the M step estimates 
-from each iterations is stored in the `EM_ests` element. 
+Averaging is sometimes argued for in MCEM algorithm. E.g., see @cappe05 
+section 11.1.2.2. The idea is to take an average the estimates or sufficient 
+sufficient statistic after some iteration number. As of this writing, 
+the present implementation does not allow one to change the number of particles
+at each iteration as suggested in @cappe05.
 
-```{r show_EM_ests}
-lapply(pf_Fear_more$EM_ests, dim)
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  knitr::load_cache("averaging", "pf_Fear_avg", path = "examples/cache/firstOrderVAR-cache/") 
+-->
+
+```{r averaging, cache = 1, dependson = c("assign_sim_params", "confs")}
+set.seed(30520116)
+system.time(pf_Fear_avg <- PF_EM(
+  Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
+  Q_0 = diag(1, 2), Q = diag(1, 2), Fmat = matrix(c(.1, 0, 0, .1), 2), 
+  by = 1, type = "VAR", model = "exponential", max_T = n_periods, 
+  control = PF_control(
+    N_fw_n_bw = 200, N_smooth = 400, N_first = 1000, eps = 1e-5,
+    method = "AUX_normal_approx_w_cloud_mean",
+    n_max = 300, smoother = "Fearnhead_O_N", averaging_start = 150L,
+    nu = 8, covar_fac = 1.1, n_threads = n_threads)))
 ```
 
-We can average over say the last 5 M-step estimates as follows
+```{r show_averaging_res}
+pf_Fear_avg$F
+show_covar(pf_Fear_avg$Q)
+pf_Fear_avg$fixed_effects
 
-```{r comp_avgs}
-lapply(pf_Fear_more$EM_ests[c("fixed_effects", "F", "Q")], function(x){
-  if(length(dim(x)) == 2)
-    apply(x[6:10, ], 2, mean) else
-      apply(x[, , 6:10], c(1, 2), mean)
-})
+plot(pf_Fear_avg$log_likes, type = "l")
+```
 
-# the M-step estimates from the final iteration was 
-pf_Fear_more[c("fixed_effects", "F", "Q")]
+### Stochastic gradient descent
+
+We will run stochastic gradient descent a as in @polyak92 which is described 
+in @cappe05 [page 414]. 
+
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  knitr::load_cache("sgd", path = "examples/cache/firstOrderVAR-cache/") 
+-->
+
+```{r sgd, cache=1}
+#####
+# fit to start from
+set.seed(30520116)
+pf_start <- PF_EM(
+  Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
+  Q_0 = diag(1, 2), Q = diag(1, 2), Fmat = matrix(c(.1, 0, 0, .1), 2), 
+  by = 1, type = "VAR", model = "exponential", max_T = n_periods, 
+  control = PF_control(
+    N_fw_n_bw = 200, N_smooth = 400, N_first = 1000, eps = 1e-5,
+    method = "AUX_normal_approx_w_cloud_mean",
+    n_max = 1L, smoother = "Fearnhead_O_N",
+    nu = 8, covar_fac = 1.1, n_threads = n_threads))
+
+#####
+# get object to perform computation and matrices and vectors for output
+comp_obj <- PF_get_score_n_hess(pf_start)
+n_runs <- 200L
+state <- matrix(
+  NA_real_, n_runs + 1L, length(pf_start$F) + length(pf_start$Q))
+obs   <- matrix(
+  NA_real_, n_runs + 1L, length(pf_start$fixed_effects))
+state[1, ] <- c(pf_start$F, pf_start$Q)
+obs  [1, ] <- pf_start$fixed_effects
+lls <- rep(NA_real_, n_runs)
+debug <- FALSE
+
+# number of particles to use
+ns <- ceiling(exp(seq(log(500), log(5000), length.out = n_runs)))
+
+# step sizes
+lrs <- .005 * (1:n_runs)^(-1/2)
+
+# point to start averaging
+avg_start <- 100L
+
+for(i in 1:n_runs){
+  comp_obj$set_n_particles(N_fw = ns[i], N_first = ns[i])
+  fw <- comp_obj$run_particle_filter()
+  lls[i] <- logLik(fw)
+  score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
+  state_i <- state[i + 1L, ]  <- state[i, ]  + lrs[i] * score$state$score
+  obs_i   <- obs  [i + 1L, ]  <- obs  [i, ]  + lrs[i] * score$observation$score
+  
+  if(debug){
+    msg <- paste0(sprintf("It %4d Log-likelihood %6.1f", i, lls[i])) 
+    cat(msg, "\n", rep("-", nchar(msg)), "\n", sep = "")
+  }
+  
+  if(i > avg_start){
+    idx <- avg_start:i
+    state_i <- colMeans(state[idx, ])
+    obs_i   <- colMeans(obs  [idx, ])
+    
+  }
+  
+  o <- comp_obj$set_parameters(state = state_i, obs = obs_i)
+  
+  if(debug){
+    print(o$Fmat)
+    print(o$Q)
+    print(o$fixed_effects)
+    cat("\n")
+  }
+}
+```
+
+The results are illustrated below
+
+```{r show_sgd_res}
+# approximate log-likelihood at each iteration
+par(mar = c(5, 4, .5, .5))
+plot(lls, xlab = "Iteration", ylab = "Log-likelihood", type = "l")
+print(max(lls), digits = 5)
+
+# the estimates
+o$Fmat
+show_covar(o$Q)
+o$fixed_effects
 ```
 
 ### Log-likehood evaluation 
@@ -380,18 +481,18 @@ the `PF_forward_filter` function to perform approximate log-likelihood evaluatio
 -->
 
 ```{r pF_forward_filter_true, cache = 1, dependson = c("assign_sim_params", "confs")}
-fw_true <- PF_forward_filter( 
+fw_precise <- PF_forward_filter( 
   Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE),
-  N_fw = 10000, N_first = 10000, df, type = "VAR",
+  N_fw = 100000, N_first = 100000, df, type = "VAR",
   model = "exponential", max_T = n_periods, by = 1,
   control = PF_control(
     N_fw_n_bw = 1, N_smooth = 1, N_first = 1,
     method = "AUX_normal_approx_w_cloud_mean",
-    smoother = "Fearnhead_O_N", Q_tilde = diag(.3^2, 2), 
-    n_threads = n_threads),
+    smoother = "Fearnhead_O_N",
+    n_threads = n_threads, nu = 8, covar_fac = 1.1),
   Fmat = Fmat, a_0 = c(0, 0), Q = Qmat, Q_0 = Q_0, R = diag(1, 2),
   fixed_effects = beta)
-logLik(fw_true)
+logLik(fw_precise)
 ```
 
 The log-likelihood from the final model we estimated is
@@ -430,7 +531,7 @@ pf_Fear_close <- PF_EM(
     N_fw_n_bw = 500, N_smooth = 2000, N_first = 2000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 100, smoother = "Fearnhead_O_N",
-    Q_tilde = diag(.3^2, 2), n_threads = n_threads))
+    nu = 8, covar_fac = 1.1, n_threads = n_threads))
 ```
 
 The final estimates are
@@ -484,7 +585,7 @@ pf_Fear_restrict <- PF_EM(
     N_fw_n_bw = 500, N_smooth = 2000, N_first = 2000, eps = .001,
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 100, smoother = "Fearnhead_O_N",
-    Q_tilde = diag(.3^2, 2), n_threads = n_threads))
+    nu = 8, covar_fac = 1.1, n_threads = n_threads))
 ```
 
 The final estimates are

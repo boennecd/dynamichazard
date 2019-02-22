@@ -100,8 +100,9 @@ arma::mat out_mat_prod(const arma::mat &A){
  Maybe use BLAS DTRSM as backsolve and forward solve in R (see
  r-source/src/main/array.c)
 */
-template<>
-arma::vec solve_w_precomputed_chol(const arma::mat &chol_decomp, const arma::vec& B){
+arma::vec solve_w_precomputed_chol
+  (const arma::mat &chol_decomp, const arma::vec& B)
+{
   arma::vec out = B; /* take copy */
   int n = out.n_elem;
 
@@ -109,6 +110,21 @@ arma::vec solve_w_precomputed_chol(const arma::mat &chol_decomp, const arma::vec
     chol_decomp.memptr(), out.memptr(), true, true  /* transpose */, n, 1);
   R_BLAS_LAPACK::triangular_sys_solve(
     chol_decomp.memptr(), out.memptr(), true, false /* don't transpose */, n, 1);
+
+  return out;
+}
+
+
+arma::mat solve_w_precomputed_chol
+  (const arma::mat &chol_decomp, const arma::mat& B)
+{
+  arma::mat out = B; /* take copy */
+  int n = out.n_rows, p = B.n_cols;
+
+  R_BLAS_LAPACK::triangular_sys_solve(
+    chol_decomp.memptr(), out.memptr(), true, true  /* transpose */, n, p);
+  R_BLAS_LAPACK::triangular_sys_solve(
+    chol_decomp.memptr(), out.memptr(), true, false /* don't transpose */, n, p);
 
   return out;
 }

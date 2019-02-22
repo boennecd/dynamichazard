@@ -186,3 +186,23 @@ RCPP_MODULE(dd_cloglog){
   function("dd_log_like", wrapper::dd_log_like,
            List::create(_["outcome"], _["eta"], _["at_risk_length"]));
 }
+
+
+
+template<class T>
+std::unique_ptr<T> get_fam(const std::string family){
+  if(family == BINOMIAL){
+    return std::unique_ptr<T>(new logistic());
+
+  } else if(family == POISSON){
+    return std::unique_ptr<T>(new exponential());
+
+  } else if(family == CLOGLOG){
+    return std::unique_ptr<T>(new cloglog());
+
+  } else
+    Rcpp::stop("Family not implemented");
+}
+
+template std::unique_ptr<glm_base> get_fam<glm_base>(const std::string);
+template std::unique_ptr<family_base> get_fam<family_base>(const std::string);

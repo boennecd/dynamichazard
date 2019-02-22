@@ -19,20 +19,6 @@ inline arma::vec set_offsets(const arma::vec &dts, const glm_base *family){
   return offsets;
 }
 
-std::unique_ptr<glm_base> get_fam(const std::string family){
-  if(family == BINOMIAL){
-    return std::unique_ptr<glm_base>(new logistic());
-
-  } else if(family == POISSON){
-    return std::unique_ptr<glm_base>(new exponential());
-
-  } else if(family == CLOGLOG){
-    return std::unique_ptr<glm_base>(new cloglog());
-
-  } else
-    Rcpp::stop("Family not implemented");
-}
-
 class pf_fixed_it_worker {
   const arma::mat X;
   const arma::vec Y;
@@ -50,7 +36,7 @@ public:
                      arma::mat &&ran_vars, const arma::vec &fixed_params,
                      const std::string family, const bool debug):
   X(X), Y(Y), dts(dts), cloud(cloud), cl_weights(cl_weights),
-  ran_vars(ran_vars), fixed_params(fixed_params), family(get_fam(family)),
+  ran_vars(ran_vars), fixed_params(fixed_params), family(get_fam<glm_base>(family)),
   debug(debug)
   {}
 

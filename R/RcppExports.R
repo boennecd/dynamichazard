@@ -17,6 +17,10 @@ PF_est_params_dens <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_e
     .Call(`_dynamichazard_PF_est_params_dens`, rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0, only_QR)
 }
 
+PF_get_score_n_hess_cpp <- function(fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, only_score = FALSE) {
+    .Call(`_dynamichazard_PF_get_score_n_hess_cpp`, fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, only_score)
+}
+
 pf_fixed_effect_get_QR <- function(clouds, risk_obj, ran_vars, fixed_terms, R_top, tstart, tstop, fixed_params, family, max_threads, debug) {
     .Call(`_dynamichazard_pf_fixed_effect_get_QR`, clouds, risk_obj, ran_vars, fixed_terms, R_top, tstart, tstop, fixed_params, family, max_threads, debug)
 }
@@ -77,6 +81,10 @@ PF_cloud_to_rcpp_and_back <- function(rcpp_list) {
     .Call(`_dynamichazard_PF_cloud_to_rcpp_and_back`, rcpp_list)
 }
 
+test_get_ancestors <- function(rcpp_list) {
+    .Call(`_dynamichazard_test_get_ancestors`, rcpp_list)
+}
+
 chol_rank_one_update_test <- function(R, x) {
     invisible(.Call(`_dynamichazard_chol_rank_one_update_test`, R, x))
 }
@@ -97,8 +105,8 @@ sym_mat_rank_one_update_test <- function(alpha, x, A) {
     invisible(.Call(`_dynamichazard_sym_mat_rank_one_update_test`, alpha, x, A))
 }
 
-solve_w_precomputed_chol_test <- function(chol_decomp, B) {
-    .Call(`_dynamichazard_solve_w_precomputed_chol_test`, chol_decomp, B)
+solve_w_precomputed_chol_test <- function(chol_decomp, B, D) {
+    .Call(`_dynamichazard_solve_w_precomputed_chol_test`, chol_decomp, B, D)
 }
 
 solve_LU_inv <- function(A) {

@@ -5,6 +5,7 @@
 #include "densities.h"
 #include "../utils.h"
 #include "cond_approx.h"
+#include <set>
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -164,9 +165,45 @@ Rcpp::List get_rcpp_list_from_cloud(
 
 smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list);
 
+template<bool is_smooth, const bool reverse>
+std::vector<cloud> get_cloud_from_rcpp_list
+  (const Rcpp::List &, const std::vector<cloud> *fw = nullptr,
+   const std::vector<cloud> *bw = nullptr);
+
 /* ------------------------------------------- */
 
 cloud re_sample_cloud(const unsigned int, const cloud);
+
+/* ------------------------------------------- */
+
+std::vector<std::set<arma::uword> > get_ancestors
+  (const std::vector<cloud>&);
+
+struct score_n_hess_dat;
+class score_n_hess {
+  arma::vec a_state;
+  arma::vec a_obs;
+  arma::mat B_state;
+  arma::mat B_obs;
+  bool is_set;
+public:
+  const arma::mat &get_a_state() const;
+  const arma::mat &get_a_obs() const;
+  const arma::mat &get_B_state() const;
+  const arma::mat &get_B_obs() const;
+
+  score_n_hess();
+  score_n_hess(const score_n_hess_dat&, const particle&, const particle&,
+               const bool);
+
+  score_n_hess& operator+=(const score_n_hess&);
+};
+
+std::vector<score_n_hess> PF_get_score_n_hess
+  (const std::vector<cloud>&, const arma::mat&,const arma::mat&,
+   const std::vector<arma::uvec>&, const arma::ivec&, const arma::vec&,
+   const arma::mat&, const arma::mat&, const arma::vec&, const arma::vec&,
+   const arma::vec&, const std::string, const int, const bool, const bool);
 
 #undef USE_PRIOR_IN_BW_FILTER_DEFAULT
 #undef MAX

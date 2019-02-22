@@ -138,10 +138,9 @@ Rcpp::List get_rcpp_list_from_cloud(
 
 /* Function to turn an Rcpp::List into a clouds of particles */
 template<bool is_smooth, const bool reverse>
-static std::vector<cloud> get_clouds_from_rcpp_list_util
+static std::vector<cloud> get_cloud_from_rcpp_list
   (const Rcpp::List &rcpp_list,
-   const std::vector<cloud> *fw = nullptr,
-   const std::vector<cloud> *bw = nullptr)
+   const std::vector<cloud> *fw, const std::vector<cloud> *bw)
 {
   unsigned int n_periods = rcpp_list.size();
   std::vector<cloud> ans(n_periods);
@@ -203,10 +202,10 @@ smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
   std::vector<cloud> &smooth_clouds = ans.smoothed_clouds;
 
   fw_clouds =
-    get_clouds_from_rcpp_list_util<false, false>(rcpp_list["forward_clouds"]);
+    get_cloud_from_rcpp_list<false, false>(rcpp_list["forward_clouds"]);
   bw_clouds =
-    get_clouds_from_rcpp_list_util<false, true>(rcpp_list["backward_clouds"]);
-  smooth_clouds = get_clouds_from_rcpp_list_util<true, false>(
+    get_cloud_from_rcpp_list<false, true>(rcpp_list["backward_clouds"]);
+  smooth_clouds = get_cloud_from_rcpp_list<true, false>(
     rcpp_list["smoothed_clouds"], &fw_clouds, &bw_clouds);
 
   // Set transition likelihoods

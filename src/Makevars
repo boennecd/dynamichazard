@@ -1,4 +1,4 @@
-PF_FILES    = PF/PFs.cpp PF/covarmat.cpp PF/resamplers.cpp PF/densities.cpp PF/cond_approx.cpp PF/dists.cpp PF/importance_samplers.cpp PF/PF_utils.cpp PF/est_params_dens.cpp PF/smoother_output.cpp PF/est_params_RW.cpp PF/r_to_cpp_clouds_n_reverse.cpp PF_fixed_effects.cpp PF.cpp PF/PF_logger.cpp PF/dmvnrm.cpp PF/particles.cpp
+PF_FILES    = PF/PF_score_n_Hess.cpp PF/PFs.cpp PF/covarmat.cpp PF/resamplers.cpp PF/densities.cpp PF/cond_approx.cpp PF/dists.cpp PF/importance_samplers.cpp PF/PF_utils.cpp PF/est_params_dens.cpp PF/smoother_output.cpp PF/est_params_RW.cpp PF/r_to_cpp_clouds_n_reverse.cpp PF_fixed_effects.cpp PF.cpp PF/PF_logger.cpp PF/dmvnrm.cpp PF/particles.cpp
 DDHAZ_FILES = ddhazard_fit.cpp loglike.cpp risk_obj.cpp ddhazard/EKF_solver.cpp ddhazard/UKF_solver.cpp ddhazard/SMA_solver.cpp ddhazard/GMA_solver.cpp
 MISC_FILES  = parallel_qr.cpp lin_maps.cpp family.cpp utils.cpp BLAS_LAPACK/R_BLAS_LAPACK.cpp BLAS_LAPACK/arma_BLAS_LAPACK.cpp for_tests.cpp sample_funcs.cpp RcppExports.cpp bigglm_wrapper.cpp estimate_fixed_effects_M_step.cpp parallel_glm.cpp thread_pool.cpp
 

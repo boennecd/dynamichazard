@@ -317,13 +317,14 @@ test_that("example in 'PF_EM' with gives previous results w/ a few iterations", 
     fixed = Surv(tstart, tstop, y) ~ x, random = ~ grp + x - 1,
     data = df, model = "logit", by = 1L, max_T = max(df$tstop),
     Q_0 = diag(1.5^2, p), id = df$id, type = "VAR",
-    G = G, theta = c(.5, .5), J = J, psi = log(c(.1, .1)),
-    K = K, phi = log(-(c(.4, 0) + 1) / (c(.4, 0) - 1)),
+    G = G, theta = c(0.905, .292), J = J, psi = log(c(0.261, 0.116)),
+    K = K, phi = log(-(c(0.63, -0.015) + 1) / (c(0.63, -0.015) - 1)),
+    fixed_effects = c(-5.8, 0.049),
     control = PF_control(
       N_fw_n_bw = 100L, N_smooth = 100L, N_first = 500L,
       method = "AUX_normal_approx_w_cloud_mean",
       nu = 5L, # sample from multivariate t-distribution
-      n_max = 2L,  # should maybe be larger
+      n_max = 5L,  averaging_start = 1L,
       smoother = "Fearnhead_O_N", eps = 1e-4, covar_fac = 1.2,
       n_threads = 4L # depends on your cpu(s)
     )))
@@ -334,8 +335,9 @@ test_that("example in 'PF_EM' with gives previous results w/ a few iterations", 
   # take more iterations with more particles
   cl <- fit$call
   ctrl <- cl[["control"]]
-  ctrl[c("N_fw_n_bw", "N_smooth", "N_smooth_final", "N_first", "n_max")] <- list(
-    200L, 1000L, 200L, 5000L, 1L)
+  ctrl[c("N_fw_n_bw", "N_smooth", "N_smooth_final", "N_first",
+         "n_max", "averaging_start")] <- list(
+    200L, 1000L, 200L, 5000L, 2L, 1L)
   cl[["control"]] <- ctrl
   cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
   fit_extra <- suppressWarnings(eval(cl))
@@ -508,4 +510,33 @@ test_that("`get_Q_0` example returns the correct covariance matrix", {
   for(i in 1:101)
     x2 <- tcrossprod(Fmat %*% x2, Fmat) + Qmat
   expect_equal(x1, x2)
+})
+
+test_that("'PF_get_score_n_hess' gives previous results", {
+  library(dynamichazard)
+  ## Not run:
+  .lung <- lung[!is.na(lung$ph.ecog), ]
+  # standardize
+  .lung$age <- scale(.lung$age)
+
+  set.seed(43588155)
+  pf_fit <- suppressWarnings(PF_EM(
+    fixed = Surv(time, status == 2) ~ ph.ecog + age,
+    random = ~ age, model = "exponential",
+    data = .lung, by = 50, id = 1:nrow(.lung), type = "VAR", Q_0 = diag(1, 2),
+    fixed_effects = c(-6.3, 0.42, 0.22),
+    Q = structure(c(0.068, -0.044, -0.044, 0.039), .Dim = c(2L, 2L)),
+    Fmat = structure(c(0.67, 0.23, -0.24, 0.63), .Dim = c(2L, 2L)),
+    max_T = 800,
+    control = PF_control(
+      N_fw_n_bw = 250, N_first = 1000, N_smooth = 500, covar_fac = 1.1,
+      nu = 6, n_max = 5L, eps = 1e-5, est_a_0 = FALSE, averaging_start = 100L,
+      n_threads = 2L)))
+
+  comp_obj <- PF_get_score_n_hess(pf_fit)
+  comp_obj$set_n_particles(N_fw = 10000L, N_first = 10000L)
+  comp_obj$run_particle_filter()
+  o <- comp_obj$get_get_score_n_hess()
+
+  expect_known_output(o, "PF_get_score_n_hess-help-res.RDS")
 })

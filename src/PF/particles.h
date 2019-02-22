@@ -36,9 +36,6 @@ class cloud : private std::vector<particle> {
 
 public:
   using Base::size_type;
-  using Base::iterator;
-  using Base::const_iterator;
-  using Base::reverse_iterator;
 
   cloud(): Base() {}
   cloud(size_type count): Base(count) {}
@@ -53,8 +50,12 @@ public:
   using Base::begin;
   using Base::end;
   using Base::rbegin;
-  using Base::back;
   using Base::rend;
+  using Base::iterator;
+  using Base::const_iterator;
+  using Base::reverse_iterator;
+  using Base::const_reverse_iterator;
+  using Base::back;
   using Base::operator[];
   using Base::reserve;
   using Base::size;

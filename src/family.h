@@ -437,6 +437,9 @@ public:
   }
 };
 
+template<class T>
+std::unique_ptr<T> get_fam(const std::string);
+
 #undef MIN
 #undef MAX
 #endif

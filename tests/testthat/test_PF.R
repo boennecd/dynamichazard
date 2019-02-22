@@ -554,6 +554,28 @@ test_that("'get_cloud_means' and 'get_cloud_quantiles' gives previous results", 
   expect_true(!isTRUE(all.equal(q1, q7)))
 })
 
+test_that("'get_ancestors' yields the correct result", {
+  skip_on_cran()
+  skip_if(!dir.exists("previous_results/local_tests"))
+
+  pf_fit <- read_to_test("local_tests/PF_head_neck")
+  class(pf_fit) <- "PF_EM"
+
+  cpp_out <- test_get_ancestors(pf_fit$clouds)
+
+  fw <- pf_fit$clouds$forward_clouds
+  n_ele <- length(fw)
+  correct <- list()
+  correct[[n_ele]] <- seq_len(length(fw[[n_ele]]$weights))
+  for(i in rev(seq_len(n_ele - 1L)))
+    correct[[i]] <- unique(fw[[i + 1L]]$parent_idx[correct[[i + 1L]]])
+
+  for(i in seq_along(correct))
+    correct[[i]] <- correct[[i]] - 1L
+
+  expect_equal(correct, cpp_out)
+})
+
 test_that("´est_params_dens´ gives the same as a R version", {
   skip_on_cran()
   fit <- suppressWarnings(PF_EM(
@@ -1463,4 +1485,146 @@ test_that("mode approximations give expected result", {
 
   expect_equal(cpp_out$log_dens1, dmvnorm(p, o1$mu, Q_res, TRUE))
   expect_equal(cpp_out$log_dens2, dmvnorm(p, o2$mu, Q_res, TRUE))
+})
+
+test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
+  skip_on_cran()
+
+  .lung <- lung[!is.na(lung$ph.ecog), ]
+  # standardize
+  .lung$age <- scale(.lung$age)
+
+  # fit
+  set.seed(43588155)
+  pf_fit <- suppressWarnings(PF_EM(
+    Surv(time, status == 2) ~ ddFixed(ph.ecog) + ddFixed(age) + age,
+    data = .lung, by = 50, id = 1:nrow(.lung), Q_0 = diag(1, 2),
+    Fmat = structure(c(0.96, -0.00045, 0.066, 0.37), .Dim = c(2L, 2L)),
+    Q = structure(c(0.071, -0.055, -0.055, 0.058), .Dim = c(2L, 2L)),
+    max_T = 800, fixed_effects = c(0.36, 0.1), type = "VAR",
+    control = PF_control(
+      N_fw_n_bw = 500, N_first = 2500, N_smooth = 100,
+      n_max = 1, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
+      n_threads = max(parallel::detectCores(logical = FALSE), 1))))
+
+  test_logit_func <- function(fit){
+    org_cl <- fit$call
+    ma <- match(
+      c("formula", "data", "by", "max_T", "id", "trace", "model", "order",
+        "fixed", "fixed", "random"), names(org_cl), nomatch = 0L)
+    sta_arg_call <- org_cl[c(1L, ma)]
+
+    # add defaults where needed
+    def_args <- c("trace", "model", "fixed", "random", "order")
+    if(any(is_missing <- !def_args %in% names(sta_arg_call)))
+      sta_arg_call[def_args[is_missing]] <- formals(PF_EM)[def_args[is_missing]]
+    sta_arg_call[[1L]] <- quote(dynamichazard:::.get_PF_static_args)
+
+    static_args <- eval(sta_arg_call)
+    fw <- fit$clouds$forward_clouds
+
+    a_sta_old <- B_sta_old <- a_obs_old <- B_obs_old <- NULL
+    k <- length(fit$F)
+    K <- solve(fit$Q)
+    K3_2 <- K * 3 / 2
+    for(i in seq_len(length(fw) - 1L) + 1L){
+      fw_i <- fw[[i]]
+      ps <- fw_i$states
+      par_idx <- fw_i$parent_idx
+      parents <- fw[[i - 1L]]$states[, par_idx]
+
+      R_i <- static_args$risk_obj$risk_sets[[i - 1L]]
+      X_i <- static_args$X[, R_i, drop = FALSE]
+      Z_i <- static_args$fixed_terms[, R_i, drop = FALSE]
+      y_i <- static_args$risk_obj$is_event_in[R_i] == (i - 2L)
+
+      eta <- drop(crossprod(Z_i, fit$fixed_effects))
+
+      #####
+      # state equation
+      a_sta <- matrix(0., ncol(ps), k * 2L)
+      B_sta <- array(0, c(k * 2L, k * 2L, ncol(ps)))
+      r0 <- ps - fit$F %*% parents
+      r1 <- solve(fit$Q, r0)
+      for(j in 1:ncol(ps)){
+        a_sta[j, 1:k] <- tcrossprod(r1[, j], parents[, j])
+        a_sta[j, 1:k + k] <-
+          solve(fit$Q, tcrossprod(r0[, j] * .5, r1[, j]) - diag(.5, k / 2L))
+
+        B_sta[1:k, 1:k, j] <- -kronecker(K, tcrossprod(parents[, j]))
+        B_sta[1:k + k, 1:k, j    ] <- 0L
+        B_sta[1:k    , 1:k + k, j] <- 0L
+        B_sta[1:k + k, 1:k + k, j] <- kronecker(tcrossprod(r1[, j]) - K3_2, K)
+      }
+
+      if(!is.null(a_sta_old))
+        a_sta <- a_sta + a_sta_old[par_idx, ]
+      if(!is.null(B_sta_old))
+        B_sta <- B_sta + B_sta_old[, , par_idx]
+
+      a_sta_old <- a_sta
+      B_sta_old <- B_sta
+
+      #####
+      # observational equation
+      a_obs <- apply(ps, 2, function(x){
+        eta <- eta + drop(crossprod(X_i, x))
+        exp_eta <- exp(eta)
+        drop(crossprod((exp_eta * (y_i - 1) + y_i) / (1 + exp_eta), t(Z_i)))
+      })
+      if(!is.matrix(a_obs))
+        a_obs <- as.matrix(a_obs) else a_obs <- t(a_obs)
+      B_obs <- apply(ps, 2, function(x){
+        eta <- eta + drop(crossprod(X_i, x))
+        exp_eta <- exp(eta)
+        crossprod(-t(Z_i) * exp(eta) / (1 + exp(eta))^2, t(Z_i))
+      })
+      B_obs <- array(B_obs, dim = c(NCOL(a_obs), NCOL(a_obs), NROW(a_obs)))
+
+      if(!is.null(a_obs_old))
+        a_obs <- a_obs + a_obs_old[par_idx, ]
+      if(!is.null(B_obs_old))
+        B_obs <- B_obs + B_obs_old[, , par_idx]
+
+      a_obs_old <- a_obs
+      B_obs_old <- B_obs
+    }
+
+    #####
+    # state equation
+    ws <- drop(tail(fw, 1)[[1L]]$weights)
+    S_state <- colSums(a_sta * ws)
+
+    info_obj_sta <- matrix(0., NCOL(a_sta), NCOL(a_sta))
+    for(i in seq_along(ws))
+      info_obj_sta <-
+      info_obj_sta + ws[i] * (tcrossprod(a_sta[i, ]) + B_sta[, , i])
+
+    #####
+    # observation equation
+    S_obj <- colSums(a_obs * ws)
+    info_obj_obj <- matrix(0., NCOL(a_obs), NCOL(a_obs))
+    for(i in seq_along(ws))
+      info_obj_obj <-
+      info_obj_obj + ws[i] * (tcrossprod(a_obs[i, ]) + B_obs[, , i])
+
+    list(
+      state = list(score =
+                     S_state, neg_obs_info = tcrossprod(S_state) - info_obj_sta),
+      observation = list(
+        score = S_obj, neg_obs_info = tcrossprod(S_obj) - info_obj_obj))
+  }
+
+  test_out <- test_logit_func(pf_fit)
+  expect_output(func_out <- PF_get_score_n_hess(pf_fit),
+                regexp = "Using '.lung' as the 'data' argument", fixed = TRUE)
+
+  expect_equal(test_out, func_out$get_get_score_n_hess(only_score = FALSE),
+               check.attributes = FALSE)
+
+  # only score
+  test_out$state$neg_obs_info[] <- NA_real_
+  test_out$observation$neg_obs_info[] <- NA_real_
+  expect_equal(test_out, func_out$get_get_score_n_hess(only_score = TRUE),
+               check.attributes = FALSE)
 })

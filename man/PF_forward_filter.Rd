@@ -107,6 +107,11 @@ data input as \code{x} instead of \code{data}. Can be used with \code{fixed}
 and \code{random} argument.
 }}
 
+\section{Warning}{
+
+The function is still under development so the output and API may change.
+}
+
 \examples{
 \dontrun{
 # head-and-neck cancer study data. See Efron, B. (1988) doi:10.2307/2288857

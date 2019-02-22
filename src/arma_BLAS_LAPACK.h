@@ -20,8 +20,8 @@ arma::vec sym_mat_times_vec(const arma::vec&, const arma::mat&);
 
 arma::mat out_mat_prod(const arma::mat &);
 
-template<class T>
-arma::vec solve_w_precomputed_chol(const arma::mat&, const T&);
+arma::vec solve_w_precomputed_chol(const arma::mat&, const arma::vec&);
+arma::mat solve_w_precomputed_chol(const arma::mat&, const arma::mat&);
 
 class LU_factorization {
   const int M;

@@ -189,6 +189,8 @@ public:
     xtra_covar(Q_tilde)
     {
 #ifdef _OPENMP
+      omp_set_num_threads(n_threads);
+      omp_set_nested(0);
       omp_init_lock(&PF_logger::lock);
 #endif
     }

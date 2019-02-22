@@ -118,6 +118,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// PF_get_score_n_hess_cpp
+Rcpp::List PF_get_score_n_hess_cpp(const Rcpp::List fw_cloud, const arma::mat& Q, const arma::mat& F, Rcpp::List risk_obj, const arma::mat& ran_vars, const arma::mat& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_params, const std::string family, const int max_threads, const bool debug, const bool only_score);
+RcppExport SEXP _dynamichazard_PF_get_score_n_hess_cpp(SEXP fw_cloudSEXP, SEXP QSEXP, SEXP FSEXP, SEXP risk_objSEXP, SEXP ran_varsSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_paramsSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP debugSEXP, SEXP only_scoreSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::List >::type fw_cloud(fw_cloudSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type F(FSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type risk_obj(risk_objSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type ran_vars(ran_varsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type fixed_terms(fixed_termsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tstart(tstartSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tstop(tstopSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type fixed_params(fixed_paramsSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type family(familySEXP);
+    Rcpp::traits::input_parameter< const int >::type max_threads(max_threadsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type debug(debugSEXP);
+    Rcpp::traits::input_parameter< const bool >::type only_score(only_scoreSEXP);
+    rcpp_result_gen = Rcpp::wrap(PF_get_score_n_hess_cpp(fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, only_score));
+    return rcpp_result_gen;
+END_RCPP
+}
 // pf_fixed_effect_get_QR
 Rcpp::List pf_fixed_effect_get_QR(Rcpp::List clouds, Rcpp::List risk_obj, const arma::mat& ran_vars, const arma::mat& fixed_terms, const arma::mat& R_top, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_params, const std::string family, const int max_threads, const bool debug);
 RcppExport SEXP _dynamichazard_pf_fixed_effect_get_QR(SEXP cloudsSEXP, SEXP risk_objSEXP, SEXP ran_varsSEXP, SEXP fixed_termsSEXP, SEXP R_topSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_paramsSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP debugSEXP) {
@@ -369,6 +392,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// test_get_ancestors
+Rcpp::List test_get_ancestors(const Rcpp::List& rcpp_list);
+RcppExport SEXP _dynamichazard_test_get_ancestors(SEXP rcpp_listSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type rcpp_list(rcpp_listSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_get_ancestors(rcpp_list));
+    return rcpp_result_gen;
+END_RCPP
+}
 // chol_rank_one_update_test
 void chol_rank_one_update_test(arma::mat& R, arma::vec x);
 RcppExport SEXP _dynamichazard_chol_rank_one_update_test(SEXP RSEXP, SEXP xSEXP) {
@@ -428,14 +462,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // solve_w_precomputed_chol_test
-arma::vec solve_w_precomputed_chol_test(const arma::mat& chol_decomp, const arma::vec& B);
-RcppExport SEXP _dynamichazard_solve_w_precomputed_chol_test(SEXP chol_decompSEXP, SEXP BSEXP) {
+Rcpp::List solve_w_precomputed_chol_test(const arma::mat& chol_decomp, const arma::vec& B, const arma::mat& D);
+RcppExport SEXP _dynamichazard_solve_w_precomputed_chol_test(SEXP chol_decompSEXP, SEXP BSEXP, SEXP DSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type chol_decomp(chol_decompSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type B(BSEXP);
-    rcpp_result_gen = Rcpp::wrap(solve_w_precomputed_chol_test(chol_decomp, B));
+    Rcpp::traits::input_parameter< const arma::mat& >::type D(DSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_w_precomputed_chol_test(chol_decomp, B, D));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -823,6 +858,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_particle_filter", (DL_FUNC) &_dynamichazard_particle_filter, 25},
     {"_dynamichazard_compute_PF_summary_stats", (DL_FUNC) &_dynamichazard_compute_PF_summary_stats, 10},
     {"_dynamichazard_PF_est_params_dens", (DL_FUNC) &_dynamichazard_PF_est_params_dens, 9},
+    {"_dynamichazard_PF_get_score_n_hess_cpp", (DL_FUNC) &_dynamichazard_PF_get_score_n_hess_cpp, 13},
     {"_dynamichazard_pf_fixed_effect_get_QR", (DL_FUNC) &_dynamichazard_pf_fixed_effect_get_QR, 11},
     {"_dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &_dynamichazard_bigglm_regcf_rcpp, 6},
     {"_dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &_dynamichazard_ddhazard_fit_cpp, 40},
@@ -838,12 +874,13 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_SMA_hepler_logit_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_logit_compute_length, 5},
     {"_dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_compute_length, 6},
     {"_dynamichazard_PF_cloud_to_rcpp_and_back", (DL_FUNC) &_dynamichazard_PF_cloud_to_rcpp_and_back, 1},
+    {"_dynamichazard_test_get_ancestors", (DL_FUNC) &_dynamichazard_test_get_ancestors, 1},
     {"_dynamichazard_chol_rank_one_update_test", (DL_FUNC) &_dynamichazard_chol_rank_one_update_test, 2},
     {"_dynamichazard_square_tri_inv_test", (DL_FUNC) &_dynamichazard_square_tri_inv_test, 2},
     {"_dynamichazard_symmetric_mat_chol_test", (DL_FUNC) &_dynamichazard_symmetric_mat_chol_test, 2},
     {"_dynamichazard_tri_mat_times_vec_test", (DL_FUNC) &_dynamichazard_tri_mat_times_vec_test, 4},
     {"_dynamichazard_sym_mat_rank_one_update_test", (DL_FUNC) &_dynamichazard_sym_mat_rank_one_update_test, 3},
-    {"_dynamichazard_solve_w_precomputed_chol_test", (DL_FUNC) &_dynamichazard_solve_w_precomputed_chol_test, 2},
+    {"_dynamichazard_solve_w_precomputed_chol_test", (DL_FUNC) &_dynamichazard_solve_w_precomputed_chol_test, 3},
     {"_dynamichazard_solve_LU_inv", (DL_FUNC) &_dynamichazard_solve_LU_inv, 1},
     {"_dynamichazard_solve_LU_mat", (DL_FUNC) &_dynamichazard_solve_LU_mat, 2},
     {"_dynamichazard_solve_LU_vec", (DL_FUNC) &_dynamichazard_solve_LU_vec, 2},

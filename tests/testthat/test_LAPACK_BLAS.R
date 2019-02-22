@@ -170,17 +170,20 @@ test_that("solve_w_precomputed_chol_test gives solve solution", {
   for(n in c(5, 10, 50, 100)){
     r_mat <- get_random_sym_post_def_mat(n)
     B <- rnorm(n)
+    D <- matrix(rnorm(n * n), n, n)
     .chol <- chol(r_mat)
 
     B_copy <- B
     B_copy[1] <- B_copy[1] - 1
     B_copy[1] <- B_copy[1] + 1
 
-    cpp_out <- solve_w_precomputed_chol_test(.chol, B)
-    R_out <- solve(r_mat, B)
+    cpp_out <- solve_w_precomputed_chol_test(.chol, B, D)
+    R_out_1 <- solve(r_mat, B)
+    R_out_2 <- solve(r_mat, D)
 
     expect_equal(B, B_copy)
-    expect_equal(drop(cpp_out), R_out, check.attributes = FALSE)
+    expect_equal(drop(cpp_out$B), R_out_1, check.attributes = FALSE)
+    expect_equal(drop(cpp_out$D), R_out_2, check.attributes = FALSE)
   }
 })
 

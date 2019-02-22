@@ -144,6 +144,22 @@ Rcpp::List PF_cloud_to_rcpp_and_back(const Rcpp::List &rcpp_list){
   return get_rcpp_list_from_cloud(cpp_result);
 }
 
+// [[Rcpp::export]]
+Rcpp::List test_get_ancestors(const Rcpp::List &rcpp_list){
+  auto cpp_result = get_clouds_from_rcpp_list(rcpp_list);
+
+
+  std::vector<std::set<arma::uword> > output =
+    get_ancestors(cpp_result.forward_clouds);
+
+  Rcpp::List out(output.size());
+  unsigned int i = 0;
+  for(auto tp : output)
+    out[i++] = Rcpp::wrap(tp);
+
+  return out;
+}
+
 // -------------------------------------------------- //
 
 #include "arma_BLAS_LAPACK.h"
@@ -174,8 +190,11 @@ void sym_mat_rank_one_update_test(const double alpha, const arma::vec &x, arma::
 }
 
 // [[Rcpp::export]]
-arma::vec solve_w_precomputed_chol_test(const arma::mat &chol_decomp, const arma::vec& B){
-  return(solve_w_precomputed_chol(chol_decomp, B));
+Rcpp::List solve_w_precomputed_chol_test
+  (const arma::mat &chol_decomp, const arma::vec& B, const arma::mat &D){
+  return Rcpp::List::create(
+    Rcpp::Named("B") = solve_w_precomputed_chol(chol_decomp, B),
+    Rcpp::Named("D") = solve_w_precomputed_chol(chol_decomp, D));
 }
 
 // [[Rcpp::export]]

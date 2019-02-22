@@ -3,6 +3,9 @@
 results.
 * Estimation with a moderat amount of fixed parameters is much faster now with 
 the particle filters.
+* Averaging is possible with `PF_EM`.
+* `PF_get_score_n_hess` is added to compute the approximate negative 
+observation matrix and score vector.
 * `nu` in `PF_control` scales the scale matrix to get an identical covariance 
 matrix.
 * Fixed bug in `get_Q_0`.

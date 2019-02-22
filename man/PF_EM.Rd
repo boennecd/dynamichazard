@@ -289,7 +289,7 @@ fit <- PF_EM(
     N_fw_n_bw = 100L, N_smooth = 100L, N_first = 500L,
     method = "AUX_normal_approx_w_cloud_mean",
     nu = 5L, # sample from multivariate t-distribution
-    n_max = 50L,  # should maybe be larger
+    n_max = 100L,  averaging_start = 50L,
     smoother = "Fearnhead_O_N", eps = 1e-4, covar_fac = 1.2,
     n_threads = 4L # depends on your cpu(s)
   ),
@@ -299,8 +299,8 @@ plot(fit$log_likes) # log-likelihood approximation at each iterations
 # take more iterations with more particles
 cl <- fit$call
 ctrl <- cl[["control"]]
-ctrl[c("N_fw_n_bw", "N_smooth", "N_smooth_final", "N_first", "n_max")] <- list(
-  500L, 2000L, 500L, 5000L, 30L)
+ctrl[c("N_fw_n_bw", "N_smooth", "N_smooth_final", "N_first", "n_max",
+       "averaging_start")] <- list(500L, 2000L, 500L, 5000L, 30L, 1L)
 cl[["control"]] <- ctrl
 cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
 fit_extra <- eval(cl)
