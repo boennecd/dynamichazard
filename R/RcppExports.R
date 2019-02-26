@@ -17,8 +17,8 @@ PF_est_params_dens <- function(rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_e
     .Call(`_dynamichazard_PF_est_params_dens`, rcpp_list, n_threads, a_0, Q, Q_0, R, debug, do_est_a_0, only_QR)
 }
 
-PF_get_score_n_hess_cpp <- function(fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, only_score = FALSE) {
-    .Call(`_dynamichazard_PF_get_score_n_hess_cpp`, fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, only_score)
+PF_get_score_n_hess_cpp <- function(fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, a_0, R, Q_0, Q_tilde, N_fw_n_bw, N_first, nu, covar_fac, ftol_rel, method, forward_backward_ESS_threshold, use_O_n_sq = FALSE, only_score = FALSE) {
+    .Call(`_dynamichazard_PF_get_score_n_hess_cpp`, fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, a_0, R, Q_0, Q_tilde, N_fw_n_bw, N_first, nu, covar_fac, ftol_rel, method, forward_backward_ESS_threshold, use_O_n_sq, only_score)
 }
 
 pf_fixed_effect_get_QR <- function(clouds, risk_obj, ran_vars, fixed_terms, R_top, tstart, tstop, fixed_params, family, max_threads, debug) {
@@ -83,6 +83,10 @@ PF_cloud_to_rcpp_and_back <- function(rcpp_list) {
 
 test_get_ancestors <- function(rcpp_list) {
     .Call(`_dynamichazard_test_get_ancestors`, rcpp_list)
+}
+
+test_get_resample_idx_n_log_weight <- function(log_weights, log_resample_weights, resample_idx) {
+    .Call(`_dynamichazard_test_get_resample_idx_n_log_weight`, log_weights, log_resample_weights, resample_idx)
 }
 
 chol_rank_one_update_test <- function(R, x) {

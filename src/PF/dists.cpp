@@ -258,8 +258,6 @@ arma::uword observational_cdist<T>::dim() const {
 
 template<class T>
 double observational_cdist<T>::log_dens(const arma::vec &coefs) const {
-  bool uses_at_risk_len = this->uses_at_risk_length();
-
   const arma::vec eta = X.t() * coefs + offsets;
   arma::uword n = eta.n_elem;
 
@@ -280,8 +278,6 @@ double observational_cdist<T>::log_dens(const arma::vec &coefs) const {
 
 template<class T>
 arma::vec observational_cdist<T>::gradient(const arma::vec &coefs) const {
-  bool uses_at_risk_len = this->uses_at_risk_length();
-
   const arma::vec eta = X.t() * coefs + offsets;
   arma::uword n = eta.n_elem;
 
@@ -310,8 +306,6 @@ arma::vec observational_cdist<T>::gradient_zero(const arma::vec *coefs) const {
 
 template<class T>
 arma::mat observational_cdist<T>::neg_Hessian(const arma::vec &coefs) const {
-  bool uses_at_risk_len = this->uses_at_risk_length();
-
   const arma::vec eta = X.t() * coefs  + offsets;
   arma::uword n = eta.n_elem;
 

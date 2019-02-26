@@ -17,6 +17,11 @@ void cloud::new_particle(
   emplace_back(state, parent, size(), child);
 }
 
+void cloud::new_particle(particle &&other){
+  emplace_back(other);
+  back().cloud_idx = size() - 1L;
+}
+
 particle& cloud::set_particle(
     arma::uword idx, arma::vec state,
     const particle *parent, const particle *child){

@@ -1,6 +1,12 @@
 #ifndef AUX_PF_H
 #define AUX_PF_H
 
+#define BOOT_FILTER "bootstrap_filter"
+#define PF_APPROX_CLOUD_MEAN "PF_normal_approx_w_cloud_mean"
+#define AUX_APPROX_CLOUD_MEAN "AUX_normal_approx_w_cloud_mean"
+#define PF_APPROX_PARTICLE "PF_normal_approx_w_particles"
+#define AUX_APPROX_PARTICLE "AUX_normal_approx_w_particles"
+
 #include "PF_utils.h"
 
 class PF_base {

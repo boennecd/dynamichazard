@@ -4,12 +4,6 @@
 #include "PF/densities.h"
 #include "PF/est_params.h"
 
-#define BOOT_FILTER "bootstrap_filter"
-#define PF_APPROX_CLOUD_MEAN "PF_normal_approx_w_cloud_mean"
-#define AUX_APPROX_CLOUD_MEAN "AUX_normal_approx_w_cloud_mean"
-#define PF_APPROX_PARTICLE "PF_normal_approx_w_particles"
-#define AUX_APPROX_PARTICLE "AUX_normal_approx_w_particles"
-
 /* --------------------------------------- */
 
 template<
@@ -74,25 +68,6 @@ public:
     return(get_rcpp_list_from_cloud(result, &data));
   }
 };
-
-std::string get_family(const std::string &model){
-  if(model == "logit"){
-    return BINOMIAL;
-
-  } else if (model == "exponential"){
-    return POISSON;
-
-  } else if (model == "cloglog") {
-    return CLOGLOG;
-
-  }
-
-  std::stringstream stream;
-  stream << "model '" << model << "' is not implemented";
-  Rcpp::stop(stream.str());
-
-  return "";
-}
 
 class PF_smooth_dens {
   using Fearnhead_O_N  =
@@ -322,15 +297,19 @@ Rcpp::List PF_est_params_dens(
 
 // [[Rcpp::export]]
 Rcpp::List PF_get_score_n_hess_cpp(
-  const Rcpp::List fw_cloud, const arma::mat &Q,
+  const Rcpp::List fw_cloud, arma::mat &Q,
   const arma::mat &F, Rcpp::List risk_obj,
-  const arma::mat &ran_vars, const arma::mat &fixed_terms,
+  arma::mat &ran_vars, arma::mat &fixed_terms,
   const arma::vec &tstart, const arma::vec &tstop,
   const arma::vec &fixed_params, const std::string family,
-  const int max_threads, const bool debug, const bool only_score = false)
+  const int max_threads, const bool debug, const arma::vec &a_0,
+  const arma::mat &R, arma::mat &Q_0, const arma::mat &Q_tilde,
+  const arma::uword N_fw_n_bw, const arma::uword N_first, const double nu,
+  const double covar_fac, const double ftol_rel, const std::string method,
+  Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
+  const bool use_O_n_sq = false, const bool only_score = false)
 {
-  std::vector<cloud> clouds_cpp =
-    get_cloud_from_rcpp_list<false, false>(fw_cloud);
+  std::vector<cloud> clouds_cpp;
   const Rcpp::List risk_sets_R = Rcpp::as<Rcpp::List>(risk_obj["risk_sets"]);
   std::vector<arma::uvec> risk_sets(risk_sets_R.size());
   for(unsigned int i = 0; i < risk_sets_R.size(); ++i)
@@ -339,14 +318,24 @@ Rcpp::List PF_get_score_n_hess_cpp(
   arma::ivec is_event_in = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
   arma::vec event_times = Rcpp::as<arma::vec>(risk_obj["event_times"]);
 
-  std::vector<score_n_hess> out_cpp = PF_get_score_n_hess
-    (clouds_cpp, Q, F, risk_sets, is_event_in, event_times, ran_vars,
+  std::vector<std::unique_ptr<score_n_hess_base> > out_cpp;
+  if(use_O_n_sq){
+    out_cpp = PF_get_score_n_hess_O_N_sq
+    (Q, F, risk_sets, risk_obj, is_event_in, event_times, ran_vars,
      fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug,
-     only_score);
+     only_score, a_0, R, Q_0, Q_tilde, N_fw_n_bw, N_first, nu, covar_fac,
+     ftol_rel, forward_backward_ESS_threshold, method);
+
+  } else {
+    clouds_cpp = get_cloud_from_rcpp_list<false, false>(fw_cloud);
+    out_cpp = PF_get_score_n_hess
+      (clouds_cpp, Q, F, risk_sets, is_event_in, event_times, ran_vars,
+       fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug,
+       only_score);
+  }
 
   arma::uword
-    p = out_cpp[0].get_a_state().n_elem, q = out_cpp[0].get_a_obs().n_elem,
-    n = out_cpp.size();
+    p = out_cpp[0]->get_a_state().n_elem, q = out_cpp[0]->get_a_obs().n_elem;
   int i_p = p, i_q = q;
   arma::vec S_state(p, arma::fill::zeros), S_obs(q, arma::fill::zeros);
   arma::mat neg_obs_info_state_dd(p, p, arma::fill::zeros),
@@ -354,10 +343,8 @@ Rcpp::List PF_get_score_n_hess_cpp(
             neg_obs_info_obs_dd  (q, q, arma::fill::zeros),
             neg_obs_info_obs_d   (q, q, arma::fill::zeros);
 
-  /* TODO: issue w/ catastrophic cancellation? */
-  auto pi = clouds_cpp.back().begin();
-  for(auto o = out_cpp.begin(); o != out_cpp.end(); ++o, ++pi){
-    double w = exp(pi->log_weight);
+  for(auto &o : out_cpp){
+    const double w = o->get_weight();
     S_state += w * o->get_a_state();
     S_obs   += w * o->get_a_obs();
 

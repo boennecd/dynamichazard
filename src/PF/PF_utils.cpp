@@ -147,3 +147,11 @@ template get_approx_use_particle_output
 template get_approx_use_particle_output
   get_approx_use_particle<false>(
     std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);
+
+
+double get_weight_from_particle(const particle &p) {
+  return p.log_weight;
+}
+double get_resample_weight_from_particle(const particle &p){
+  return p.log_resampling_weight;
+}

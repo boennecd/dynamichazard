@@ -845,7 +845,7 @@ test_that("PF_EM gives the same with restricted and unrestricted model when we e
     pf_non_restrict_Fear$Q, pf_restrict_Fear$Q, tolerance = 1e-5)
 })
 
-test_that("type = 'VAR' works with non-zero mean for with a single term and gives previous results", {
+test_that("type = 'VAR' works with non-zero mean with a single term and gives previous results", {
   # had somes issues when with an example like this
   set.seed(30520116)
   pf_Fear <- suppressWarnings(PF_EM(
@@ -1547,7 +1547,7 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
       r0 <- ps - fit$F %*% parents
       r1 <- solve(fit$Q, r0)
       for(j in 1:ncol(ps)){
-        a_sta[j, 1:k] <- tcrossprod(r1[, j], parents[, j])
+        a_sta[j, 1:k] <- tcrossprod(parents[, j], r1[, j])
         a_sta[j, 1:k + k] <-
           solve(fit$Q, tcrossprod(r0[, j] * .5, r1[, j]) - diag(.5, k / 2L))
 
@@ -1599,6 +1599,14 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
     for(i in seq_along(ws))
       info_obj_sta <-
       info_obj_sta + ws[i] * (tcrossprod(a_sta[i, ]) + B_sta[, , i])
+
+    d <- ncol(fit$Q)
+    K <- matrix(0., 2L * d * d, 2L * d * d)
+    K[1:(d * d), 1:(d * d)] <- dynamichazard:::.get_cum_mat(d, d)
+    diag(K[-(1:(d * d)), -(1:(d * d))]) <- 1
+
+    S_state <- drop(K %*% S_state)
+    info_obj_sta <- tcrossprod(K %*% info_obj_sta, K)
 
     #####
     # observation equation

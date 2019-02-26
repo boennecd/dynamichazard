@@ -404,62 +404,102 @@ pf_start <- PF_EM(
     n_max = 1L, smoother = "Fearnhead_O_N",
     nu = 8, covar_fac = 1.1, n_threads = n_threads))
 
-#####
-# get object to perform computation and matrices and vectors for output
-comp_obj <- PF_get_score_n_hess(pf_start)
-n_runs <- 200L
-state <- matrix(
-  NA_real_, n_runs + 1L, length(pf_start$F) + length(pf_start$Q))
-obs   <- matrix(
-  NA_real_, n_runs + 1L, length(pf_start$fixed_effects))
-state[1, ] <- c(pf_start$F, pf_start$Q)
-obs  [1, ] <- pf_start$fixed_effects
-lls <- rep(NA_real_, n_runs)
-debug <- FALSE
+sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE, 
+                avg_start = 100L)
+{
+  #####
+  # get object to perform computation and matrices and vectors for output
+  comp_obj <- PF_get_score_n_hess(pf_start, use_O_n_sq = use_O_n_sq)
+  state <- matrix(
+    NA_real_, n_runs + 1L, length(pf_start$F) + length(pf_start$Q))
+  obs   <- matrix(
+    NA_real_, n_runs + 1L, length(pf_start$fixed_effects))
+  state[1, ] <- c(pf_start$F, pf_start$Q)
+  obs  [1, ] <- pf_start$fixed_effects
+  lls <- rep(NA_real_, n_runs)
+  
+  for(i in 1:n_runs){
+    comp_obj$set_n_particles(N_fw = ns[i], N_first = ns[i])
+    fw <- comp_obj$run_particle_filter()
+    lls[i] <- logLik(fw)
+    score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
+    state_i <- state[i + 1L, ]  <- state[i, ]  + lrs[i] * score$state$score
+    obs_i   <- obs  [i + 1L, ]  <- obs  [i, ]  + lrs[i] * score$observation$score
+    
+    if(debug){
+      msg <- paste0(sprintf("It %4d Log-likelihood %6.1f", i, lls[i])) 
+      cat(msg, "\n", rep("-", nchar(msg)), "\n", sep = "")
+    }
+    
+    if(i > avg_start){
+      idx <- avg_start:i
+      state_i <- colMeans(state[idx, ])
+      obs_i   <- colMeans(obs  [idx, ])
+      
+    }
+    
+    o <- comp_obj$set_parameters(state = state_i, obs = obs_i)
+    
+    if(debug){
+      print(o$Fmat)
+      print(o$Q)
+      print(o$fixed_effects)
+      cat("\n")
+    }
+  }
+  
+  list(o = o, lls = lls, state = state, obs = obs)
+}
 
+# number of iterations
+n_runs <- 200L
 # number of particles to use
 ns <- ceiling(exp(seq(log(500), log(5000), length.out = n_runs)))
-
 # step sizes
 lrs <- .005 * (1:n_runs)^(-1/2)
 
-# point to start averaging
-avg_start <- 100L
-
-for(i in 1:n_runs){
-  comp_obj$set_n_particles(N_fw = ns[i], N_first = ns[i])
-  fw <- comp_obj$run_particle_filter()
-  lls[i] <- logLik(fw)
-  score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
-  state_i <- state[i + 1L, ]  <- state[i, ]  + lrs[i] * score$state$score
-  obs_i   <- obs  [i + 1L, ]  <- obs  [i, ]  + lrs[i] * score$observation$score
-  
-  if(debug){
-    msg <- paste0(sprintf("It %4d Log-likelihood %6.1f", i, lls[i])) 
-    cat(msg, "\n", rep("-", nchar(msg)), "\n", sep = "")
-  }
-  
-  if(i > avg_start){
-    idx <- avg_start:i
-    state_i <- colMeans(state[idx, ])
-    obs_i   <- colMeans(obs  [idx, ])
-    
-  }
-  
-  o <- comp_obj$set_parameters(state = state_i, obs = obs_i)
-  
-  if(debug){
-    print(o$Fmat)
-    print(o$Q)
-    print(o$fixed_effects)
-    cat("\n")
-  }
-}
+out <- sgd(n_runs = n_runs, ns = ns, lrs = lrs)
+lls <- out$lls
+o <- out$o
 ```
 
 The results are illustrated below
 
 ```{r show_sgd_res}
+# approximate log-likelihood at each iteration
+par(mar = c(5, 4, .5, .5))
+plot(lls, xlab = "Iteration", ylab = "Log-likelihood", type = "l")
+print(max(lls), digits = 5)
+
+# the estimates
+o$Fmat
+show_covar(o$Q)
+o$fixed_effects
+```
+
+We can also use the method from @Poyiadjis11. The present implementation 
+scales poorly in the number of particles but the method has a variance 
+that may be linear in the number of time periods instead of quadratic. 
+This is important for long time series.
+
+```{r O_N_sq_sgd, cache = 1}
+# number of iterations
+n_runs <- 200L
+# number of particles to use
+ns <- ceiling(exp(seq(log(500), log(1000), length.out = n_runs)))
+# step sizes
+lrs <- .005 * (1:n_runs)^(-1/2)
+
+out <- sgd(n_runs = n_runs, ns = ns, lrs = lrs, use_O_n_sq = TRUE, 
+           avg_start = 100L)
+lls <- out$lls
+o <- out$o
+```
+
+The results are illustrated below (the log-likelihoods approximation from 
+the forward particle filter are poor approximations due to few particles).
+
+```{r O_N_sq_show_sgd_res}
 # approximate log-likelihood at each iteration
 par(mar = c(5, 4, .5, .5))
 plot(lls, xlab = "Iteration", ylab = "Log-likelihood", type = "l")
@@ -550,7 +590,7 @@ plot(pf_Fear_close$log_likes, type = "l")
 
 ### Restricted model 
 The model can be written as in terms of 2 parameters for the state model by 
-writting it as 
+writing it as 
 
 $$
 F = \begin{pmatrix}

@@ -150,22 +150,29 @@ template class importance_dens_no_y_dependence<true>;
 template class importance_dens_no_y_dependence<false>;
 
 
+inline void debug_msg_while_sampling_w_cloud_mean
+  (const PF_data &data, const particle &p, const arma::vec &mu)
+{
+  auto log = data.log(5);
+  log << "Sampled particle:" << std::endl
+      << p.get_state().t()
+      << "from normal distribution with mean:" << std::endl
+      << mu.t()
+      << "The parent had state:" << std::endl
+      << p.parent->get_state().t();
+
+  if(p.child){
+    log << "and the child had state" << std::endl
+        << p.child->get_state().t();
+  }
+}
+
 template<bool is_forward>
 void importance_dens_normal_approx_w_cloud_mean<is_forward>::
   debug_msg_while_sampling
-  (const PF_data &data, const particle &p, const arma::vec &mu){
-    auto log = data.log(5);
-    log << "Sampled particle:" << std::endl
-        << p.get_state().t()
-        << "from normal distribution with mean:" << std::endl
-        << mu.t()
-        << "The parent had state:" << std::endl
-        << p.parent->get_state().t();
-
-    if(p.child){
-      log << "and the child had state" << std::endl
-          << p.child->get_state().t();
-    }
+  (const PF_data &data, const particle &p, const arma::vec &mu)
+{
+  debug_msg_while_sampling_w_cloud_mean(data, p, mu);
 }
 
 template<bool is_forward>
@@ -261,6 +268,67 @@ cloud importance_dens_normal_approx_w_cloud_mean<is_forward>::
 
 template class importance_dens_normal_approx_w_cloud_mean<true>;
 template class importance_dens_normal_approx_w_cloud_mean<false>;
+
+
+
+template<bool is_forward>
+void importance_dens_normal_approx_w_cloud_mean_independent<is_forward>::
+  debug_msg_while_sampling
+  (const PF_data &data, const particle &p, const arma::vec &mu)
+{
+  debug_msg_while_sampling_w_cloud_mean(data, p, mu);
+}
+
+template<bool is_forward>
+cloud importance_dens_normal_approx_w_cloud_mean_independent<is_forward>::sample
+  (SAMPLE_COMMON_ARGS, nothing unused)
+{
+  /* make cloud with only mean */
+  arma::vec mean_state = cl.get_weigthed_mean();
+  cloud dummy_cl;
+  dummy_cl.new_particle(mean_state, nullptr);
+  dummy_cl.back().log_weight = 0.;
+
+  if(data.debug > 1)
+    data.log(2) << "Making mode approximation at state vector" << std::endl
+                << dummy_cl.get_weigthed_mean().t();
+
+  /* get approximation */
+  get_approx_use_mean_output samplers =
+    get_approx_use_mean<is_forward>(y_dist, dummy_cl, data, dens_calc, t);
+
+  if(samplers.msg.is_error)
+    Rcpp::warning(samplers.msg.message);
+
+  return
+    sample(y_dist, dens_calc, data, cl, resample_idx, t,
+           samplers.dists.back());
+}
+
+template<bool is_forward>
+cloud importance_dens_normal_approx_w_cloud_mean_independent<is_forward>::sample
+  (SAMPLE_COMMON_ARGS, std::unique_ptr<dist_comb> &sampler)
+{
+  cloud ans;
+  ans.reserve(data.N_fw_n_bw);
+
+  if(data.debug > 1)
+    data.log(2L) << "Sampling with mean" << std::endl
+                 << sampler->get_mean().t()
+                 << "and covariance matrix" << std::endl
+                 << sampler->get_covar();
+
+  for(arma::uword i = 0; i < data.N_fw_n_bw; ++i){
+    ans.new_particle(sampler->sample(), nullptr);
+    ans[i].log_importance_dens = sampler->log_density(ans[i].get_state());
+
+  }
+
+  return ans;
+}
+
+template class importance_dens_normal_approx_w_cloud_mean_independent<true>;
+template class importance_dens_normal_approx_w_cloud_mean_independent<false>;
 
 
 

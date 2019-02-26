@@ -1507,16 +1507,29 @@ get_cloud_quantiles.PF_clouds <- function(
 #' Returns a list of functions to approximate the negative observation matrix
 #' and score vector.
 #'
-#' @param object Object of class \code{\link{PF_EM}}.
+#' @param object object of class \code{\link{PF_EM}}.
 #' @param debug \code{TRUE} if debug information should be printed to the
 #' console.
+#' @param use_O_n_sq \code{TRUE} if the method from Poyiadjis et al. (2011)
+#' should be used.
 #'
 #' @details
 #' The score vector and negative observed information matrix are computed
-#' the particle filter. This comes at an \eqn{O(d^2)} variance where \eqn{d}
-#' is the number of periods. Thus, the approximation may be poor for long
+#' with the (forward)
+#' particle filter. This comes at an \eqn{O(d^2)} variance where \eqn{d}
+#' is the number of periods, \eqn{d}. Thus, the approximation may be poor for long
 #' series. The score vector can be used to perform stochastic gradient
 #' descent.
+#'
+#' If \code{use_O_n_sq} is \code{TRUE} then the method in Poyiadjis et al. (2011)
+#' is used. This may only have a variance which is linear in the number of
+#' time periods. However, the present implementation is \eqn{O(N^2)} where
+#' \eqn{N} is the number of particles. The method uses a particle filter as
+#' in Section 3.1
+#' of Lin et al. (2005). There is no need to call
+#' \code{run_particle_filter} unless one wants a new approximation of the
+#' log-likelihood as a separate filter is run with \code{get_get_score_n_hess}
+#' when \code{use_O_n_sq} is \code{TRUE}.
 #'
 #' @section Warning:
 #' The function is still under development so the output and API may change.
@@ -1525,35 +1538,46 @@ get_cloud_quantiles.PF_clouds <- function(
 #' See the examples at https://github.com/boennecd/dynamichazard/tree/master/examples.
 #'
 #' @references
-#' Cappe, O. and Moulines, E. (2005) Recursive computation of the score and
-#' observed information matrix in hidden markov models.
+#' Cappe, O. and Moulines, E. (2005) Recursive Computation of the Score and
+#' Observed Information Matrix in Hidden Markov Models.
 #' \emph{IEEE/SP 13th Workshop on Statistical Signal Processing}.
-#'
-#' Doucet, A., and Tadić, V. B. (2003) Parameter estimation in general
-#' state-space models using particle methods.
-#' \emph{Annals of the Institute of Statistical Mathematics}, \strong{55(2)},
-#' 409–422.
 #'
 #' Cappe, O., Moulines, E. and Ryden, T. (2005) Inference in Hidden Markov
 #' Models (Springer Series in Statistics). Springer-Verlag.
 #'
+#' Doucet, A., and Tadić, V. B. (2003) Parameter Estimation in General
+#' State-Space Models Using Particle Methods.
+#' \emph{Annals of the Institute of Statistical Mathematics}, \strong{55(2)},
+#' 409–422.
+#'
+#' Lin, M. T., Zhang, J. L., Cheng, Q. and Chen, R. (2005) Independent
+#' Particle Filters. \emph{Journal of the American Statistical Association},
+#' \strong{100(472)}, 1412-1421.
+#'
+#' Poyiadjis, G., Doucet, A. and Singh, S. S. (2011) Particle Approximations of
+#' the Score and Observed Information Matrix in State Space Models with
+#' Application to Parameter Estimation. \emph{Biometrika}, \strong{98(1)},
+#' 65--80.
+#'
 #' @return
 #' A list with the following functions as elements
-#' \item{run_particle_filter}{function to run particle fitler as with
+#' \item{run_particle_filter}{function to run particle filter as with
 #' \code{\link{PF_forward_filter}}.}
 #' \item{set_parameters}{function to set the parameters in the model.
 #' The first argument is a vectorized version of \eqn{F} matrix and \eqn{Q}
 #' matrix. The second argument is the fixed effect coefficients.}
 #' \item{set_n_particles}{sets the number of particles to use in
-#' \code{run_particle_filter}.}
+#' \code{run_particle_filter} and \code{get_get_score_n_hess} when
+#' \code{use_O_n_sq} is \code{TRUE}.}
 #' \item{get_get_score_n_hess}{computes the approximate negative observation
 #' matrix and score vector. The argument toggles whether the approximate
 #' negative observation matrix should be computed. The last particle cloud
-#' from \code{run_particle_filter} is used.}
+#' from \code{run_particle_filter} is used when \code{use_O_n_sq} is
+#' \code{FALSE}.}
 #'
 #' @examples
-#' library(dynamichazard)
 #' \dontrun{
+#' library(dynamichazard)
 #' .lung <- lung[!is.na(lung$ph.ecog), ]
 #' # standardize
 #' .lung$age <- scale(.lung$age)
@@ -1573,11 +1597,28 @@ get_cloud_quantiles.PF_clouds <- function(
 #' comp_obj <- PF_get_score_n_hess(pf_fit)
 #' comp_obj$set_n_particles(N_fw = 10000L, N_first = 10000L)
 #' comp_obj$run_particle_filter()
-#' comp_obj$get_get_score_n_hess()
+#' (o1 <- comp_obj$get_get_score_n_hess())
+#'
+#' # O(N^2) method with lower variance
+#' comp_obj <- PF_get_score_n_hess(pf_fit, use_O_n_sq = TRUE)
+#' comp_obj$set_n_particles(N_fw = 2500L, N_first = 2500L)
+#' (o2 <- comp_obj$get_get_score_n_hess())
+#'
+#' # approximations may have large variance
+#' o3 <- replicate(10L, {
+#'   runif(1)
+#'   pf_fit$seed <- .Random.seed
+#'   comp_obj <- PF_get_score_n_hess(pf_fit)
+#'   comp_obj$set_n_particles(N_fw = 10000L, N_first = 10000L)
+#'   comp_obj$run_particle_filter()
+#'   comp_obj$get_get_score_n_hess()
+#' }, simplify = FALSE)
+#' sapply(o3, function(x) x$state$score)
+#' sapply(o3, function(x) sqrt(diag(solve(x$state$neg_obs_info))[1:4]))
 #' }
 #'
 #' @export
-PF_get_score_n_hess <- function(object, debug = FALSE){
+PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
   stopifnot(inherits(object, "PF_EM"))
 
   #####
@@ -1686,17 +1727,29 @@ PF_get_score_n_hess <- function(object, debug = FALSE){
 
   # return the score and negative Hessian estimates
   get_get_score_n_hess <- function(only_score = FALSE){
+    assign(".Random.seed", seed, envir = .GlobalEnv)
     cpp_res <- PF_get_score_n_hess_cpp(
       fw_cloud = fw_cloud, Q = Q, F = Fmat,
       risk_obj = static_args$risk_obj, ran_vars = static_args$X,
       fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
       tstop = static_args$tstop, fixed_params = fixed_effects,
       max_threads = object$control$n_threads, family = family_arg,
-      debug = debug, only_score = only_score)
+      debug = debug, only_score = only_score, a_0 = a_0, R = R,
+      Q_0 = Q_0, Q_tilde = Q_tilde, N_fw_n_bw = N_fw, N_first = N_first,
+      nu = ctrl$nu, covar_fac = ctrl$covar_fac, ftol_rel = ctrl$ftol_rel,
+      method = ctrl$method,
+      forward_backward_ESS_threshold = ctrl$forward_backward_ESS_threshold,
+      use_O_n_sq = use_O_n_sq)
 
+    d <- ncol(Q)
+    K <- matrix(0., 2L * d * d, 2L * d * d)
+    K[1:(d * d), 1:(d * d)] <- .get_cum_mat(d, d)
+    diag(K[-(1:(d * d)), -(1:(d * d))]) <- 1
+    score_state <- K %*% drop(cpp_res$S_state)
     neg_obs_info_state <- with(
       cpp_res,
       tcrossprod(S_state) - E_second_deriv_state - E_score_outer_state)
+    neg_obs_info_state <- tcrossprod(K %*% neg_obs_info_state, K)
 
     score_obs <- drop(cpp_res$S_obs)
     neg_obs_obs <- with(
@@ -1707,7 +1760,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE){
 
     list(
       state = list(
-        score = drop(cpp_res$S_state), neg_obs_info = neg_obs_info_state),
+        score = drop(score_state), neg_obs_info = neg_obs_info_state),
       observation = list(score = score_obs, neg_obs_info = neg_obs_obs))
   }
 

@@ -28,4 +28,6 @@ public:
       const int, const bool multithreaded = false);
 };
 
+std::string get_family(const std::string&);
+
 #endif

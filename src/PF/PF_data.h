@@ -132,7 +132,7 @@ public:
           arma::mat &fixed_terms,
           const arma::vec &tstart,
           const arma::vec &tstop, const arma::ivec &is_event_in_bin,
-          const arma::colvec &a_0,
+          const arma::vec &a_0,
           const arma::mat &R,
           const arma::mat &L,
           arma::mat &Q_0,

@@ -80,7 +80,7 @@ inline normalize_weights_output normalize_log_weights(
   (container, max_weight);
 }
 
-struct normalize_log_resampling_weight_F{
+struct normalize_log_resampling_weight_F {
   static inline double& get(particle &p){
     return p.log_resampling_weight;
   }
@@ -92,6 +92,20 @@ inline normalize_weights_output normalize_log_resampling_weight(
     normalize_weights
     <normalize_log_resampling_weight_F, compute_ESS, update_particles>
     (cl, max_weight);
+}
+
+struct normalize_log_std_vec_double {
+  static inline double& get(double &d){
+    return d;
+  }
+};
+template<bool compute_ESS, bool update>
+inline normalize_weights_output normalize_log_weights(
+    std::vector<double> &ws, const double max_weight){
+  return
+  normalize_weights
+  <normalize_log_std_vec_double, compute_ESS, update>
+  (ws, max_weight);
 }
 
 /* ------------------------------------------- */
@@ -176,34 +190,86 @@ cloud re_sample_cloud(const unsigned int, const cloud);
 
 /* ------------------------------------------- */
 
+template
+  <class TContainer,
+   double (*FWeight)(const typename TContainer::value_type&),
+   double (*FReWeight)(const typename TContainer::value_type&)>
+  std::map<arma::uword, double>
+  get_resample_idx_n_log_weight
+    (const TContainer &container,
+     const arma::uvec &resample_idx)
+  {
+    std::map<arma::uword, double> out;
+    std::map<arma::uword, unsigned int> count;
+    for(auto x : resample_idx){
+      std::map<arma::uword, double>::iterator it = out.find(x);
+      if(it == out.end()){
+        out[x] = FWeight(container[x]) - FReWeight(container[x]);
+        count[x] = 1L;
+        continue;
+
+      }
+
+      count[x] += 1L;
+
+    }
+
+    double max_weight = std::numeric_limits<double>::epsilon();
+    for(auto x : count){
+      out[x.first] += std::log(x.second);
+      max_weight = MAX(max_weight, out[x.first]);
+    }
+
+    /* renormalize */
+    double norm_constant = 0;
+    for(auto &x : out){
+      x.second = MAX(
+        exp(x.second - max_weight), std::numeric_limits<double>::epsilon());
+
+      norm_constant += x.second;
+    }
+
+    const double log_norm_constant = log(norm_constant);
+    for(auto &x : out)
+      x.second = log(x.second) - log_norm_constant;
+
+    return out;
+  }
+
+double get_weight_from_particle(const particle&);
+double get_resample_weight_from_particle(const particle&);
+
+/* ------------------------------------------- */
+
 std::vector<std::set<arma::uword> > get_ancestors
   (const std::vector<cloud>&);
 
-struct score_n_hess_dat;
-class score_n_hess {
-  arma::vec a_state;
-  arma::vec a_obs;
-  arma::mat B_state;
-  arma::mat B_obs;
-  bool is_set;
+class score_n_hess_base {
 public:
-  const arma::mat &get_a_state() const;
-  const arma::mat &get_a_obs() const;
-  const arma::mat &get_B_state() const;
-  const arma::mat &get_B_obs() const;
+  virtual const arma::mat &get_a_state() const = 0;
+  virtual const arma::mat &get_a_obs() const = 0;
+  virtual const arma::mat &get_B_state() const = 0;
+  virtual const arma::mat &get_B_obs() const = 0;
+  virtual const double get_weight() const = 0;
 
-  score_n_hess();
-  score_n_hess(const score_n_hess_dat&, const particle&, const particle&,
-               const bool);
-
-  score_n_hess& operator+=(const score_n_hess&);
+  virtual ~score_n_hess_base() = default;
 };
 
-std::vector<score_n_hess> PF_get_score_n_hess
+std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess
   (const std::vector<cloud>&, const arma::mat&,const arma::mat&,
    const std::vector<arma::uvec>&, const arma::ivec&, const arma::vec&,
    const arma::mat&, const arma::mat&, const arma::vec&, const arma::vec&,
    const arma::vec&, const std::string, const int, const bool, const bool);
+
+std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq
+  (arma::mat&, const arma::mat&, const std::vector<arma::uvec>&,
+   const Rcpp::List&, const arma::ivec&, const arma::vec&,
+   arma::mat&, arma::mat&, const arma::vec&,
+   const arma::vec&, const arma::vec&, const std::string, const int,
+   const bool, const bool, const arma::vec&, const arma::mat&, arma::mat&,
+   const arma::mat&, const arma::uword, const arma::uword, const double,
+   const double, const double, Rcpp::Nullable<Rcpp::NumericVector>,
+   const std::string);
 
 #undef USE_PRIOR_IN_BW_FILTER_DEFAULT
 #undef MAX

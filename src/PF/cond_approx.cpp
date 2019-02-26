@@ -7,7 +7,6 @@ double mode_objective(
     unsigned int n, const double *x, double *grad, void *data_in)
 {
   std::vector<PF_cdist*> *data = (std::vector<PF_cdist*> *) data_in;
-  unsigned int dim = (*data->begin())->dim();
   arma::vec state(x, n);
 
   if (grad) {

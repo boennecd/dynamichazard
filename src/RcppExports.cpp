@@ -119,25 +119,37 @@ BEGIN_RCPP
 END_RCPP
 }
 // PF_get_score_n_hess_cpp
-Rcpp::List PF_get_score_n_hess_cpp(const Rcpp::List fw_cloud, const arma::mat& Q, const arma::mat& F, Rcpp::List risk_obj, const arma::mat& ran_vars, const arma::mat& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_params, const std::string family, const int max_threads, const bool debug, const bool only_score);
-RcppExport SEXP _dynamichazard_PF_get_score_n_hess_cpp(SEXP fw_cloudSEXP, SEXP QSEXP, SEXP FSEXP, SEXP risk_objSEXP, SEXP ran_varsSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_paramsSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP debugSEXP, SEXP only_scoreSEXP) {
+Rcpp::List PF_get_score_n_hess_cpp(const Rcpp::List fw_cloud, arma::mat& Q, const arma::mat& F, Rcpp::List risk_obj, arma::mat& ran_vars, arma::mat& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::vec& fixed_params, const std::string family, const int max_threads, const bool debug, const arma::vec& a_0, const arma::mat& R, arma::mat& Q_0, const arma::mat& Q_tilde, const arma::uword N_fw_n_bw, const arma::uword N_first, const double nu, const double covar_fac, const double ftol_rel, const std::string method, Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold, const bool use_O_n_sq, const bool only_score);
+RcppExport SEXP _dynamichazard_PF_get_score_n_hess_cpp(SEXP fw_cloudSEXP, SEXP QSEXP, SEXP FSEXP, SEXP risk_objSEXP, SEXP ran_varsSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP fixed_paramsSEXP, SEXP familySEXP, SEXP max_threadsSEXP, SEXP debugSEXP, SEXP a_0SEXP, SEXP RSEXP, SEXP Q_0SEXP, SEXP Q_tildeSEXP, SEXP N_fw_n_bwSEXP, SEXP N_firstSEXP, SEXP nuSEXP, SEXP covar_facSEXP, SEXP ftol_relSEXP, SEXP methodSEXP, SEXP forward_backward_ESS_thresholdSEXP, SEXP use_O_n_sqSEXP, SEXP only_scoreSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::List >::type fw_cloud(fw_cloudSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type Q(QSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type F(FSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type risk_obj(risk_objSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type ran_vars(ran_varsSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type fixed_terms(fixed_termsSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type ran_vars(ran_varsSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type fixed_terms(fixed_termsSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type tstart(tstartSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type tstop(tstopSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type fixed_params(fixed_paramsSEXP);
     Rcpp::traits::input_parameter< const std::string >::type family(familySEXP);
     Rcpp::traits::input_parameter< const int >::type max_threads(max_threadsSEXP);
     Rcpp::traits::input_parameter< const bool >::type debug(debugSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type a_0(a_0SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type Q_0(Q_0SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Q_tilde(Q_tildeSEXP);
+    Rcpp::traits::input_parameter< const arma::uword >::type N_fw_n_bw(N_fw_n_bwSEXP);
+    Rcpp::traits::input_parameter< const arma::uword >::type N_first(N_firstSEXP);
+    Rcpp::traits::input_parameter< const double >::type nu(nuSEXP);
+    Rcpp::traits::input_parameter< const double >::type covar_fac(covar_facSEXP);
+    Rcpp::traits::input_parameter< const double >::type ftol_rel(ftol_relSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::NumericVector> >::type forward_backward_ESS_threshold(forward_backward_ESS_thresholdSEXP);
+    Rcpp::traits::input_parameter< const bool >::type use_O_n_sq(use_O_n_sqSEXP);
     Rcpp::traits::input_parameter< const bool >::type only_score(only_scoreSEXP);
-    rcpp_result_gen = Rcpp::wrap(PF_get_score_n_hess_cpp(fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, only_score));
+    rcpp_result_gen = Rcpp::wrap(PF_get_score_n_hess_cpp(fw_cloud, Q, F, risk_obj, ran_vars, fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug, a_0, R, Q_0, Q_tilde, N_fw_n_bw, N_first, nu, covar_fac, ftol_rel, method, forward_backward_ESS_threshold, use_O_n_sq, only_score));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -400,6 +412,19 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::List& >::type rcpp_list(rcpp_listSEXP);
     rcpp_result_gen = Rcpp::wrap(test_get_ancestors(rcpp_list));
+    return rcpp_result_gen;
+END_RCPP
+}
+// test_get_resample_idx_n_log_weight
+Rcpp::List test_get_resample_idx_n_log_weight(const arma::vec& log_weights, const arma::vec& log_resample_weights, const arma::uvec& resample_idx);
+RcppExport SEXP _dynamichazard_test_get_resample_idx_n_log_weight(SEXP log_weightsSEXP, SEXP log_resample_weightsSEXP, SEXP resample_idxSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type log_weights(log_weightsSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type log_resample_weights(log_resample_weightsSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type resample_idx(resample_idxSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_get_resample_idx_n_log_weight(log_weights, log_resample_weights, resample_idx));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -858,7 +883,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_particle_filter", (DL_FUNC) &_dynamichazard_particle_filter, 25},
     {"_dynamichazard_compute_PF_summary_stats", (DL_FUNC) &_dynamichazard_compute_PF_summary_stats, 10},
     {"_dynamichazard_PF_est_params_dens", (DL_FUNC) &_dynamichazard_PF_est_params_dens, 9},
-    {"_dynamichazard_PF_get_score_n_hess_cpp", (DL_FUNC) &_dynamichazard_PF_get_score_n_hess_cpp, 13},
+    {"_dynamichazard_PF_get_score_n_hess_cpp", (DL_FUNC) &_dynamichazard_PF_get_score_n_hess_cpp, 25},
     {"_dynamichazard_pf_fixed_effect_get_QR", (DL_FUNC) &_dynamichazard_pf_fixed_effect_get_QR, 11},
     {"_dynamichazard_bigglm_regcf_rcpp", (DL_FUNC) &_dynamichazard_bigglm_regcf_rcpp, 6},
     {"_dynamichazard_ddhazard_fit_cpp", (DL_FUNC) &_dynamichazard_ddhazard_fit_cpp, 40},
@@ -875,6 +900,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_SMA_hepler_exp_compute_length", (DL_FUNC) &_dynamichazard_SMA_hepler_exp_compute_length, 6},
     {"_dynamichazard_PF_cloud_to_rcpp_and_back", (DL_FUNC) &_dynamichazard_PF_cloud_to_rcpp_and_back, 1},
     {"_dynamichazard_test_get_ancestors", (DL_FUNC) &_dynamichazard_test_get_ancestors, 1},
+    {"_dynamichazard_test_get_resample_idx_n_log_weight", (DL_FUNC) &_dynamichazard_test_get_resample_idx_n_log_weight, 3},
     {"_dynamichazard_chol_rank_one_update_test", (DL_FUNC) &_dynamichazard_chol_rank_one_update_test, 2},
     {"_dynamichazard_square_tri_inv_test", (DL_FUNC) &_dynamichazard_square_tri_inv_test, 2},
     {"_dynamichazard_symmetric_mat_chol_test", (DL_FUNC) &_dynamichazard_symmetric_mat_chol_test, 2},

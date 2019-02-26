@@ -28,9 +28,9 @@ void PF_base::debug_msg_after_weighting(
                   << " unique particles where up to " << max_size
                   << " is possible. ";
 
-      data.log(2) << "(min, max) log weights are: ("
-                  << min_w  << ", " << max_w  <<  "). "
-                  << "ESS (before re-weighting) is: " << ESS;
+    data.log(2) << "(min, max) log weights are: ("
+                << min_w  << ", " << max_w  <<  "). "
+                << "ESS (before re-weighting) is: " << ESS;
   }
 }
 
@@ -42,7 +42,8 @@ template<
   bool is_forward>
 std::vector<cloud>
 AUX_PF<T_resampler, T_importance_dens, is_forward>::
-  compute(const PF_data &data, pf_dens &dens_calc){
+  compute(const PF_data &data, pf_dens &dens_calc)
+{
   std::vector<cloud> clouds;
   std::string direction_str = (is_forward) ? "forward" : "backward";
 
@@ -50,140 +51,140 @@ AUX_PF<T_resampler, T_importance_dens, is_forward>::
     data.log(1) << "Running " << direction_str << " filter"
                 << "\nSampling first particle at time "
                 << static_cast<std::string>(is_forward ? "0" : "d + 1");
-    clouds.push_back(
-      importance_dens::sample_first_state_n_set_weights(dens_calc, data));
+  clouds.push_back(
+    importance_dens::sample_first_state_n_set_weights(dens_calc, data));
 
-    int t = is_forward ? 1 : data.d;
-    for(int iter = 1; iter <= data.d; ++iter){
-      if((iter + 1) % 3 == 0)
-        Rcpp::checkUserInterrupt();
+  int t = is_forward ? 1 : data.d;
+  for(int iter = 1; iter <= data.d; ++iter){
+    if((iter + 1) % 3 == 0)
+      Rcpp::checkUserInterrupt();
 
-      std::shared_ptr<PF_cdist> y_dist = dens_calc.get_y_dist(t),
-        prior, prior_p1;
+    std::shared_ptr<PF_cdist> y_dist = dens_calc.get_y_dist(t),
+      prior, prior_p1;
 
-      if(!is_forward){
-        prior = dens_calc.get_prior(t);
-        prior_p1 = dens_calc.get_prior(t + 1L);
-      }
+    if(!is_forward){
+      prior = dens_calc.get_prior(t);
+      prior_p1 = dens_calc.get_prior(t + 1L);
+    }
 
-      /* re-sample indicies */
-      if(data.debug > 0)
-        data.log(1) << "Starting iteration " << t << ". Re-sampling weights";
-      arma::uvec resample_idx;
-      bool did_resample;
-      auto additional_resampler_out = resampler::resampler(
-        dens_calc, data, clouds.back(), y_dist, t, resample_idx, did_resample);
+    /* re-sample indicies */
+    if(data.debug > 0)
+      data.log(1) << "Starting iteration " << t << ". Re-sampling weights";
+    arma::uvec resample_idx;
+    bool did_resample;
+    auto additional_resampler_out = resampler::resampler(
+      dens_calc, data, clouds.back(), y_dist, t, resample_idx, did_resample);
 
-      if(data.debug > 0){
-        if(did_resample){
-          data.log(1) << "Did resample";
-        } else
-          data.log(1) << "Did not re-sample";
-      }
+    if(data.debug > 0){
+      if(did_resample){
+        data.log(1) << "Did resample";
+      } else
+        data.log(1) << "Did not re-sample";
+    }
 
-      /* sample new cloud */
-      if(data.debug > 0)
-        data.log(1) << "Sampling states";
-      cloud new_cloud = importance_dens::sample(
-        y_dist, dens_calc, data, clouds.back(), resample_idx, t,
-        additional_resampler_out);
+    /* sample new cloud */
+    if(data.debug > 0)
+      data.log(1) << "Sampling states";
+    cloud new_cloud = importance_dens::sample(
+      y_dist, dens_calc, data, clouds.back(), resample_idx, t,
+      additional_resampler_out);
 
-      /* update weights */
-      if(data.debug > 0)
-        data.log(1) << "Updating weights";
-      {
-          const bool do_debug = data.debug > 4;
-          double max_weight =  -std::numeric_limits<double>::max();
-          arma::uvec r_set = get_risk_set(data.risk_sets, t);
-          unsigned int n_elem = new_cloud.size();
-          double log_N = std::log(n_elem);
+    /* update weights */
+    if(data.debug > 0)
+      data.log(1) << "Updating weights";
+    {
+        const bool do_debug = data.debug > 4;
+        double max_weight =  -std::numeric_limits<double>::max();
+        arma::uvec r_set = get_risk_set(data.risk_sets, t);
+        unsigned int n_elem = new_cloud.size();
+        double log_N = std::log(n_elem);
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) reduction(max:max_weight)
 #endif
-          for(unsigned int i = 0; i < n_elem; ++i){ // loop over new particles
-            auto it = new_cloud.begin() + i;
-            double log_prob_y_given_state =
-              y_dist->log_dens(it->get_state());
-            double log_prob_state_given_other =
-              is_forward ?
-              dens_calc.log_prob_state_given_parent(
-                it->get_state(), it->parent->get_state()) :
-              dens_calc.log_prob_state_given_child(
-                it->get_state(), it->parent->get_state());
+        for(unsigned int i = 0; i < n_elem; ++i){ // loop over new particles
+          auto it = new_cloud.begin() + i;
+          double log_prob_y_given_state =
+            y_dist->log_dens(it->get_state());
+          double log_prob_state_given_other =
+            is_forward ?
+            dens_calc.log_prob_state_given_parent(
+              it->get_state(), it->parent->get_state()) :
+            dens_calc.log_prob_state_given_child(
+              it->get_state(), it->parent->get_state());
 
-            it->log_likelihood_term = it->log_weight =
-              /* nominator */
-              log_prob_y_given_state + log_prob_state_given_other
-              /* denoninator */
-              - it->log_importance_dens;
+          it->log_likelihood_term = it->log_weight =
+            /* nominator */
+            log_prob_y_given_state + log_prob_state_given_other
+            /* denoninator */
+            - it->log_importance_dens;
 
-              if(did_resample){
-                it->log_weight +=
-                  it->parent->log_weight - it->parent->log_resampling_weight;
-                /* See
-                *   Doucet, A., & Johansen, A. M. (2009). A tutorial on particle
-                *   filtering and smoothing: Fifteen years later. Handbook of
-                * nonlinear filtering, 12(656-704), 3.
-                * Page 11, 15, 21, and 26.
-                */
-                it->log_likelihood_term +=
-                  it->parent->log_weight - it->parent->log_resampling_weight -
-                  log_N;
+            if(did_resample){
+              it->log_weight +=
+                it->parent->log_weight - it->parent->log_resampling_weight;
+              /* See
+              *   Doucet, A., & Johansen, A. M. (2009). A tutorial on particle
+              *   filtering and smoothing: Fifteen years later. Handbook of
+              * nonlinear filtering, 12(656-704), 3.
+              * Page 11, 15, 21, and 26.
+              */
+              it->log_likelihood_term +=
+                it->parent->log_weight - it->parent->log_resampling_weight -
+                log_N;
 
-              } else {
-                it->log_weight += it->parent->log_weight;
-                it->log_likelihood_term += it->parent->log_weight;
+            } else {
+              it->log_weight += it->parent->log_weight;
+              it->log_likelihood_term += it->parent->log_weight;
 
-              }
+            }
 
-              if(!is_forward){
-                it->log_weight +=
-                  prior->log_dens(it->get_state()) -
-                  prior_p1->log_dens(it->parent->get_state());
-              }
+            if(!is_forward){
+              it->log_weight +=
+                prior->log_dens(it->get_state()) -
+                prior_p1->log_dens(it->parent->get_state());
+            }
 
-              max_weight = MAX(max_weight, it->log_weight);
+            max_weight = MAX(max_weight, it->log_weight);
 
-              if(do_debug){
-                const int wd = 11;
-                std::stringstream ss;
+            if(do_debug){
+              const int wd = 11;
+              std::stringstream ss;
 
-                ss << std::setprecision(6)
-                   << "log-like terms"
-                   << " 'log_prob_y_given_state' "           << std::setw(wd) << log_prob_y_given_state
-                   << " 'log_prob_state_given_other' "       << std::setw(wd) << log_prob_state_given_other
-                   << " '-log_importance_dens' "             << std::setw(wd) << -it->log_importance_dens;
+              ss << std::setprecision(6)
+                 << "log-like terms"
+                 << " 'log_prob_y_given_state' "           << std::setw(wd) << log_prob_y_given_state
+                 << " 'log_prob_state_given_other' "       << std::setw(wd) << log_prob_state_given_other
+                 << " '-log_importance_dens' "             << std::setw(wd) << -it->log_importance_dens;
 
-                if(did_resample)
-                  ss << " 'parent->log_weight' "             << std::setw(wd) << it->parent->log_weight
-                     << " '-parent->log_resampling_weight' " << std::setw(wd) << -it->parent->log_resampling_weight;
+              if(did_resample)
+                ss << " 'parent->log_weight' "             << std::setw(wd) << it->parent->log_weight
+                   << " '-parent->log_resampling_weight' " << std::setw(wd) << -it->parent->log_resampling_weight;
 
-                  if(!is_forward)
-                    ss << " 'log_artificial_prior(t)' "        << std::setw(wd) << prior->log_dens(it->get_state())
-                       << " '-log_artificial_prior(t + 1)' "   << std::setw(wd) << prior_p1->log_dens(it->parent->get_state());
+              if(!is_forward)
+                ss << " 'log_artificial_prior(t)' "        << std::setw(wd) << prior->log_dens(it->get_state())
+                   << " '-log_artificial_prior(t + 1)' "   << std::setw(wd) << prior_p1->log_dens(it->parent->get_state());
 
-                    data.log(5) << ss.str();
-              };
+              data.log(5) << ss.str();
+            };
 
-          } // end loop over new particle
+        } // end loop over new particle
 
-          normalize_log_weights<false, true>(new_cloud, max_weight);
-      }
-
-      debug_msg_after_weighting(data, new_cloud);
-
-      /* Add cloud  */
-      clouds.push_back(std::move(new_cloud));
-
-      if(is_forward)
-        ++t;
-      else
-        --t;
+        normalize_log_weights<false, true>(new_cloud, max_weight);
     }
 
-    return(clouds);
+    debug_msg_after_weighting(data, new_cloud);
+
+    /* Add cloud  */
+    clouds.push_back(std::move(new_cloud));
+
+    if(is_forward)
+      ++t;
+    else
+      --t;
   }
+
+  return(clouds);
+}
 
 
 
@@ -248,83 +249,84 @@ PF_smoother_Fearnhead_O_N<T_resampler, T_importance_dens>::
       if(data.debug > 0)
         data.log(1) << "Started smoothing at time " << t
                     << "\nRe-sampling indices of previous and next state";
-        arma::uvec fw_idx = sample_idx(data, *fw_cloud); // sample forward particles
-        arma::uvec bw_idx = sample_idx(data, *bw_cloud); // sample backward particle
 
-        /* sample states */
-        if(data.debug > 0)
-          data.log(1) << "Sampling states of previous and next state";
+      arma::uvec fw_idx = sample_idx(data, *fw_cloud); // sample forward particles
+      arma::uvec bw_idx = sample_idx(data, *bw_cloud); // sample backward particle
 
-        cloud new_cloud = importance_dens::sample_smooth(
-          y_dist, dens_calc, data, *fw_cloud, fw_idx, *bw_cloud, bw_idx, t);
+      /* sample states */
+      if(data.debug > 0)
+        data.log(1) << "Sampling states of previous and next state";
 
-        /* update weight */
-        if(data.debug > 0)
-          data.log(1) << "Weighting particles";
-        {
-            const bool do_debug = data.debug > 4;
-            double max_weight = -std::numeric_limits<double>::max();
-            arma::uvec r_set = get_risk_set(data.risk_sets, t);
-            unsigned int n_elem = new_cloud.size();
+      cloud new_cloud = importance_dens::sample_smooth(
+        y_dist, dens_calc, data, *fw_cloud, fw_idx, *bw_cloud, bw_idx, t);
+
+      /* update weight */
+      if(data.debug > 0)
+        data.log(1) << "Weighting particles";
+      {
+        const bool do_debug = data.debug > 4;
+        double max_weight = -std::numeric_limits<double>::max();
+        arma::uvec r_set = get_risk_set(data.risk_sets, t);
+        unsigned int n_elem = new_cloud.size();
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static) reduction(max:max_weight)
 #endif
-            for(unsigned int i = 0; i < n_elem; ++i){ // loop over smooth clouds
-              auto it = new_cloud.begin() + i;
-              double log_prob_y_given_state = y_dist->log_dens(it->get_state()),
-                log_prob_state_given_previous =
-                  dens_calc.log_prob_state_given_parent(
-                    it->get_state(), it->parent->get_state()),
-                    log_prob_next_given_state =
-                      dens_calc.log_prob_state_given_child(
-                        it->get_state(), it->child->get_state()),
-                        log_importance_dens = it->log_importance_dens,
-                        log_artificial_prior = // TODO: have already been computed
-                          prior_p1->log_dens(it->child->get_state());
+        for(unsigned int i = 0; i < n_elem; ++i){ // loop over smooth clouds
+          auto it = new_cloud.begin() + i;
+          double log_prob_y_given_state = y_dist->log_dens(it->get_state()),
+            log_prob_state_given_previous =
+              dens_calc.log_prob_state_given_parent(
+                it->get_state(), it->parent->get_state()),
+                log_prob_next_given_state =
+                  dens_calc.log_prob_state_given_child(
+                    it->get_state(), it->child->get_state()),
+                    log_importance_dens = it->log_importance_dens,
+                    log_artificial_prior = // TODO: have already been computed
+                      prior_p1->log_dens(it->child->get_state());
 
-              if(do_debug){
-                const int wd = 11;
-                std::stringstream ss;
+          if(do_debug){
+            const int wd = 11;
+            std::stringstream ss;
 
-                ss << std::setprecision(6)
-                   << "log-like terms"
-                   << " 'log_prob_y_given_state' "            << std::setw(wd) << log_prob_y_given_state
-                   << " 'log_prob_state_given_previous' "     << std::setw(wd) << log_prob_state_given_previous
-                   << " 'log_prob_next_given_state' "         << std::setw(wd) << log_prob_next_given_state
-                   << " 'parent->log_weight' "                << std::setw(wd) << it->parent->log_weight
-                   << " 'child->log_weight' "                 << std::setw(wd) << it->child->log_weight
-                   << " 'log_importance_dens' "               << std::setw(wd) << log_importance_dens
-                   << " 'parent->log_resampling_weight' "     << std::setw(wd) << it->parent->log_resampling_weight
-                   << " 'child->log_resampling_weight' "      << std::setw(wd) << it->child->log_resampling_weight
-                   << " 'log_artificial_prior' "              << std::setw(wd) << log_artificial_prior;
+            ss << std::setprecision(6)
+               << "log-like terms"
+               << " 'log_prob_y_given_state' "            << std::setw(wd) << log_prob_y_given_state
+               << " 'log_prob_state_given_previous' "     << std::setw(wd) << log_prob_state_given_previous
+               << " 'log_prob_next_given_state' "         << std::setw(wd) << log_prob_next_given_state
+               << " 'parent->log_weight' "                << std::setw(wd) << it->parent->log_weight
+               << " 'child->log_weight' "                 << std::setw(wd) << it->child->log_weight
+               << " 'log_importance_dens' "               << std::setw(wd) << log_importance_dens
+               << " 'parent->log_resampling_weight' "     << std::setw(wd) << it->parent->log_resampling_weight
+               << " 'child->log_resampling_weight' "      << std::setw(wd) << it->child->log_resampling_weight
+               << " 'log_artificial_prior' "              << std::setw(wd) << log_artificial_prior;
 
-                data.log(5) << ss.str();
-              };
+            data.log(5) << ss.str();
+          };
 
-              it->log_likelihood_term = it->log_weight =
-                /* nominator */
-                (log_prob_y_given_state + log_prob_state_given_previous + log_prob_next_given_state +
-                it->parent->log_weight + it->child->log_weight)
-                /* denoninator */
-                - (log_importance_dens + it->parent->log_resampling_weight +
-                it->child->log_resampling_weight + log_artificial_prior);
+          it->log_likelihood_term = it->log_weight =
+            /* nominator */
+            (log_prob_y_given_state + log_prob_state_given_previous + log_prob_next_given_state +
+            it->parent->log_weight + it->child->log_weight)
+            /* denoninator */
+            - (log_importance_dens + it->parent->log_resampling_weight +
+            it->child->log_resampling_weight + log_artificial_prior);
 
-              max_weight = MAX(max_weight, it->log_weight);
-            } // end over smooth clouds
+          max_weight = MAX(max_weight, it->log_weight);
+        } // end over smooth clouds
 
-            normalize_log_weights<false, true>(new_cloud, max_weight);
-        }
+        normalize_log_weights<false, true>(new_cloud, max_weight);
+      }
 
-        debug_msg_after_weighting(data, new_cloud);
+      debug_msg_after_weighting(data, new_cloud);
 
-        if(data.N_smooth_final < data.N_smooth){
-          new_cloud = re_sample_cloud(data.N_smooth_final, new_cloud);
-          debug_msg_after_weighting(data, new_cloud, true, data.N_smooth_final);
-        }
+      if(data.N_smooth_final < data.N_smooth){
+        new_cloud = re_sample_cloud(data.N_smooth_final, new_cloud);
+        debug_msg_after_weighting(data, new_cloud, true, data.N_smooth_final);
+      }
 
-        /* Add cloud  */
-        smoothed_clouds.push_back(std::move(new_cloud));
+      /* Add cloud  */
+      smoothed_clouds.push_back(std::move(new_cloud));
     }
 
     return result;

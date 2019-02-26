@@ -160,6 +160,47 @@ Rcpp::List test_get_ancestors(const Rcpp::List &rcpp_list){
   return out;
 }
 
+double get_weight_from_dpair(const std::pair<double, double> &x){
+  return std::get<0>(x);
+}
+
+double get_resample_weight_from_dpair(const std::pair<double, double> &x){
+  return std::get<1>(x);
+}
+
+// [[Rcpp::export]]
+Rcpp::List test_get_resample_idx_n_log_weight
+  (const arma::vec &log_weights, const arma::vec &log_resample_weights,
+   const arma::uvec &resample_idx)
+{
+  std::vector<std::pair<double, double> > data_holder;
+  auto lrw = log_resample_weights.begin();
+  for(auto x : log_weights)
+    data_holder.emplace_back(x, *(lrw++));
+
+  std::map<arma::uword, double> out =
+    get_resample_idx_n_log_weight
+    <std::vector<std::pair<double, double> >, get_weight_from_dpair,
+     get_resample_weight_from_dpair>
+    (data_holder, resample_idx);
+
+  unsigned int n_elem = out.size();
+  arma::uvec idx(n_elem);
+  arma::vec log_weights_out(n_elem);
+
+  auto i = idx.begin();
+  auto lw = log_weights_out.begin();
+  for(auto x : out){
+    *(i++)  = x.first;
+    *(lw++) = x.second;
+
+  }
+
+  return Rcpp::List::create(
+    Rcpp::Named("idx") = std::move(idx),
+    Rcpp::Named("log_weights") = std::move(log_weights_out));
+}
+
 // -------------------------------------------------- //
 
 #include "arma_BLAS_LAPACK.h"

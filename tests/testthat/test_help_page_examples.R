@@ -513,6 +513,8 @@ test_that("`get_Q_0` example returns the correct covariance matrix", {
 })
 
 test_that("'PF_get_score_n_hess' gives previous results", {
+  skip_on_cran()
+
   library(dynamichazard)
   ## Not run:
   .lung <- lung[!is.na(lung$ph.ecog), ]
@@ -533,10 +535,37 @@ test_that("'PF_get_score_n_hess' gives previous results", {
       nu = 6, n_max = 5L, eps = 1e-5, est_a_0 = FALSE, averaging_start = 100L,
       n_threads = 2L)))
 
-  comp_obj <- PF_get_score_n_hess(pf_fit)
+  expect_output(comp_obj <- PF_get_score_n_hess(pf_fit),
+                "Using '.lung' as the 'data' argument",
+                fixed = TRUE)
   comp_obj$set_n_particles(N_fw = 10000L, N_first = 10000L)
   comp_obj$run_particle_filter()
   o <- comp_obj$get_get_score_n_hess()
 
-  expect_known_output(o, "PF_get_score_n_hess-help-res.RDS")
+  expect_known_value(o, "PF_get_score_n_hess-help-res.RDS")
+
+  expect_output(comp_obj <- PF_get_score_n_hess(pf_fit, use_O_n_sq = TRUE),
+                "Using '.lung' as the 'data' argument",
+                fixed = TRUE)
+  comp_obj$set_n_particles(N_fw = 250L, N_first = 250L)
+  o <- comp_obj$get_get_score_n_hess()
+
+  expect_known_value(o, "PF_get_score_n_hess-help-res-O_N_sq.RDS")
+
+  expect_output(o <- replicate(2L, {
+      runif(1)
+      pf_fit$seed <- .Random.seed
+      comp_obj <- PF_get_score_n_hess(pf_fit)
+      comp_obj$set_n_particles(N_fw = 1000L, N_first = 1000L)
+      comp_obj$run_particle_filter()
+      comp_obj$get_get_score_n_hess()
+    }, simplify = FALSE), "Using '.lung' as the 'data' argument",
+    fixed = TRUE)
+
+  for(s in names(o[[1L]])){
+    x1 <- o[[1L]][[s]]
+    x2 <- o[[2L]][[s]]
+    for(z in names(x1))
+      expect_true(!isTRUE(all.equal(x1[[z]], x2[[z]])))
+  }
 })

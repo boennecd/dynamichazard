@@ -133,3 +133,27 @@ test_that("selection_matrix_map gives correct results", {
   expect_equal(
     selection_matrix_map_mat_test(L, t(X), TRUE, TRUE), t(X) %*% L)
 })
+
+
+
+test_that("'get_resample_idx_n_log_weight' gives correct results", {
+  ws <- c(rep(1, 5), rep(2, 5))
+  ws <- log(ws / sum(ws))
+
+  rws <- 1:10
+  rws <- log(rws / sum(rws))
+
+  idx <- c(2, 2, 2, 4:6, 8, 8, 8, 8)
+
+  count <- table(idx)
+  idx_out <- as.integer(names(count)) - 1L
+  ws_out <- ws[idx_out + 1L] - rws[idx_out + 1L] + log(count)
+  ws_out <- exp(ws_out)
+  ws_out <- log(ws_out / sum(ws_out))
+
+  cpp_out <- test_get_resample_idx_n_log_weight(
+    log_weights = ws, log_resample_weights = rws, resample_idx = idx - 1L)
+
+  expect_equal(idx_out, drop(cpp_out$idx))
+  expect_equal(c(ws_out), drop(cpp_out$log_weights), check.attributes = FALSE)
+})

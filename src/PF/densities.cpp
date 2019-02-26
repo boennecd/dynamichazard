@@ -40,4 +40,23 @@ std::shared_ptr<PF_cdist> pf_dens::get_y_dist(
     family, data.X.cols(r_set), std::move(is_event),
     data.fixed_effects(r_set),  data.tstart(r_set), data.tstop(r_set),
     bin_start_stop.start, bin_start_stop.stop, multithreaded);
-};
+}
+
+std::string get_family(const std::string &model){
+  if(model == "logit" || model == "binomial"){
+    return BINOMIAL;
+
+  } else if (model == "exponential" || model == "poisson"){
+    return POISSON;
+
+  } else if (model == "cloglog") {
+    return CLOGLOG;
+
+  }
+
+  std::stringstream stream;
+  stream << "model '" << model << "' is not implemented";
+  Rcpp::stop(stream.str());
+
+  return "";
+}

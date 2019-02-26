@@ -101,7 +101,7 @@ public:
     QR_factorization qr(XtWsqrt);
     arma::uvec piv = qr.pivot();
     piv(piv) = arma::regspace<arma::uvec>(0, 1, piv.n_elem - 1);
-    res.Rmat =  qr.R().cols(piv);
+    Rmat =  qr.R().cols(piv);
 
     for(arma::uword i = 0; i < n; ++i)
       XtWY += X.col(i) * res_sum(i);

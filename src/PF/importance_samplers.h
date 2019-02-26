@@ -71,6 +71,27 @@ public:
 };
 
 /*
+ Same as above except that it is independent of the parent particle. See:
+  Lin, Ming T., Junni L. Zhang, Qiansheng Cheng, and Rong Chen. "Independent
+  particle filters." Journal of the American Statistical Association 100,
+  no. 472 (2005): 1412-1421.
+ Notice: the returned cloud will have null pointers to parents as they
+         have no parents.
+*/
+
+template<bool is_forward>
+class importance_dens_normal_approx_w_cloud_mean_independent  :
+  public importance_dens_base<is_forward> {
+  static void debug_msg_while_sampling(
+      const PF_data&, const particle&, const arma::vec&);
+
+public:
+  static cloud sample(SAMPLE_COMMON_ARGS, nothing);
+  static cloud sample
+    (SAMPLE_COMMON_ARGS, std::unique_ptr<dist_comb>&);
+};
+
+/*
   Sampler which makes a normal approximation for the observed outcome made
   around the mean of the parent particle.
 */
