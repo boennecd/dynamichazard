@@ -184,28 +184,23 @@ state_derivs_output get_state_derivs_output
 {
   arma::uword k = p.get_state().n_elem,
     B_sta_end_1 = k * k - 1L, B_sta_end_2 = 2L * k * k - 1L;
-  arma::vec a_state(k * k * 2L, arma::fill::zeros);
+  arma::vec a_state(k * k * 2L);
   arma::mat B_state;
-  if(!only_score)
-    B_state.zeros(k * k * 2L, k * k * 2L);
 
   /* TODO: move some of this computation to somwhere else (e.g., the kronecker
    *       product)... */
 
   arma::vec innovation = p.get_state() - dat.F * parent.get_state();
   arma::vec innovation_std = solve_w_precomputed_chol(dat.Q_chol, innovation);
-  arma::mat Fd = parent.get_state() * innovation_std.t(),
-    Qd = (innovation / 2) * innovation_std.t();
+  arma::mat Fd(a_state.memptr(), k, k, false);
+  Fd = parent.get_state() * innovation_std.t();
+  arma::mat Qd(a_state.memptr() + B_sta_end_1 + 1L, k, k, false);
+  Qd = (innovation / 2) * innovation_std.t();
   Qd.diag() -= .5;
   Qd = solve_w_precomputed_chol(dat.Q_chol, Qd);
 
-  double *a_state_it = a_state.begin();
-  for(auto f = Fd.begin(); f != Fd.end(); ++f, ++a_state_it)
-    *a_state_it = *f;
-  for(auto qd = Qd.begin(); qd != Qd.end(); ++qd, ++a_state_it)
-    *a_state_it = *qd;
-
   if(!only_score){
+    B_state.set_size(k * k * 2L, k * k * 2L);
     B_state.submat(0L, 0L, B_sta_end_1, B_sta_end_1) =
     arma::kron(dat.K, (-parent.get_state()) * parent.get_state().t());
 
@@ -403,15 +398,15 @@ public:
   score_n_hess_O_N_sq(
     const score_n_hess_dat&, const particle&,
     const cloud&, const std::vector<double>&,
-    const std::vector<score_n_hess_O_N_sq>, const bool);
+    const std::vector<score_n_hess_O_N_sq>&, const bool);
 };
 
-const double neg_one = -1;
+static const double neg_one = -1;
 
 score_n_hess_O_N_sq::score_n_hess_O_N_sq(
   const score_n_hess_dat &dat, const particle &p,
   const cloud &old_cl, const std::vector<double> &ws,
-  const std::vector<score_n_hess_O_N_sq> old_score_n_hess,
+  const std::vector<score_n_hess_O_N_sq> &old_score_n_hess,
   const bool only_score): weight(exp(p.log_weight))
 {
   /* is it first iteration? */
