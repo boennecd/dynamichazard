@@ -58,7 +58,7 @@ git_bra <- gsub(regexp, "\\2", git_bra)
 ```
 
 where we set $X_t = Z_t$ so the 
-random random coefficients have a non-zero mean. The unknown 
+random coefficients have a non-zero mean. The unknown 
 parameters to be estimated is $Q$. We are going the estimate a more general model 
 of the form 
 
@@ -76,9 +76,9 @@ $$
 where $F$ is a $2\times 2$ matrix to be estimated. This 
 example is run on the git branch "`r git_bra`" with ID "`r git_key`". The code
 can be found on 
-[the github site for the package](../examples).
+[the Github site for the package](../examples).
 All functions which assignments are not shown and are not in the 
-`dynamichazard` package can be found on the github site.
+`dynamichazard` package can be found on the Github site.
 
 ## Simulation
 
@@ -155,8 +155,7 @@ of observations towards the end.
 We start by estimating "the correct" model (without dependence between the 
 latent states) using `lme4::glmer`. We do this to compare the approximate log-likelihood
 from the Laplace approximation in `glmer` to the approximations we get from the 
-forward particle filter in the next section doing the EM algorithm Further, we do this to see how 
-much we "lose" by estimating a more general model. 
+forward particle filter in the next section.
 
 ```{r load_lme4}
 library(lme4)
@@ -217,7 +216,7 @@ logLik(glmer_fit)
 ```
 
 ## Particle filter and smoother
-We start by using the particle filter and smoother from [@fearnhead10]
+We start by using the particle filter and smoother from @fearnhead10
 
 <!-- 
   # there is an issue since another chunk is called fearnhead_xyz
@@ -231,12 +230,18 @@ We start by using the particle filter and smoother from [@fearnhead10]
 -->
 
 ```{r confs, cache = 1}
-# number of threads to use. This is run on Amazon Web services w/ the 
-# c5.4xlarge instance
-n_threads <- 16
+n_threads <- 6
 
 # you can replace this with e.g.,  
 #   max(parallel::detectCores(logical = FALSE), 2)))
+
+# control object
+dd_ctrl <- PF_control(
+    N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = .0001,
+    N_smooth_final = 500,
+    method = "PF_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+    n_max = 500L, smoother = "Fearnhead_O_N", averaging_start = 100L,
+    nu = 6L, covar_fac = 1.1, n_threads = n_threads)
 ```
 
 ```{r fearnhead, cache = 1, dependson = c("assign_sim_params", "confs")}
@@ -245,12 +250,7 @@ system.time(pf_fearn <- PF_EM(
   Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
   Q_0 = diag(3^2, 2), Q = diag(1, 2), Fmat = diag(.9, 2), 
   by = 1, type = "VAR", model = "logit", max_T = n_periods,
-  control = PF_control(
-    N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = .0001,
-    N_smooth_final = 500,
-    method = "PF_normal_approx_w_cloud_mean", est_a_0 = FALSE,
-    n_max = 100, smoother = "Fearnhead_O_N",
-    nu = 6L, n_threads = n_threads)))
+  control = dd_ctrl))
 ```
 
 `system.time` is used to show the computation time. The estimates are
@@ -314,12 +314,7 @@ pf_fearn_other <- PF_EM(
   Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,
   Q_0 = diag(2^2, 2), Q = diag(.1^2, 2), Fmat = diag(.5, 2), 
   by = 1, type = "VAR", model = "logit", max_T = n_periods,
-  control = PF_control(
-    N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = .0001,
-    N_smooth_final = 500,
-    method = "PF_normal_approx_w_cloud_mean", est_a_0 = FALSE,
-    n_max = 100, smoother = "Fearnhead_O_N",
-    nu = 6L, n_threads = n_threads))
+  control = dd_ctrl)
 ```
 
 The estimates are
@@ -329,17 +324,14 @@ show_covar(pf_fearn_other$Q)
 pf_fearn_other$F
 ```
 
-Clearly, something has gone or we have hit a local maximum. The log-likelihood 
-at each of the EM iterations are 
+The log-likelihood at each of the EM iterations are 
 
 ```{r log_like_ohter}
 plot(pf_fearn_other$log_likes, type = "l")
 tail(pf_fearn_other$log_likes, 4)
 ```
 
-These are not increasing with a Monte Carlo in both the 
-approximation of the log likelihood and E-step as expected with 
-a MCEM algorithm. The smoothed estimates are
+The smoothed estimates are
 
 ```{r plot_smooth_est_other}
 plot(pf_fearn_other, qlvls = c(.05, .95), col = c("Black", "Darkblue"))
@@ -352,6 +344,5 @@ abline(h = 0, lty = 2)
 ```{r ses_info}
 sessionInfo()
 ```
-
 
 # References

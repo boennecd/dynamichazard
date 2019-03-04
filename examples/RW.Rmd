@@ -15,13 +15,6 @@ knitr::opts_chunk$set(
 options(digits = 4, scipen = 10, width = 70)
 ```
 
-```{r confs, echo = FALSE, cache = 1}
-n_threads <- 4 # I ran this on a quad core machine
-
-# you can replace this with e.g.,  
-# max(parallel::detectCores(logical = FALSE), 2)))
-```
-
 ```{r ass_cols, echo = FALSE}
 palette(c("black", "darkblue"))
 ```
@@ -169,18 +162,27 @@ We start by using the particle filter and smoother from [@fearnhead10]
   knitr:::cache$load(gsub("(.+)(\\.RData)$", "\\1", fs))
 -->
 
+```{r confs, echo = FALSE, cache = 1}
+n_threads <- 6
+
+# you can replace this with e.g.,  
+# max(parallel::detectCores(logical = FALSE), 2)))
+
+# assign control variable
+dd_ctrl <- PF_control(
+  N_fw_n_bw = 500, N_smooth = 10000, N_first = 5000, eps = .0001,
+  method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+  n_max = 500, smoother = "Fearnhead_O_N", averaging_start = 100L,
+  nu = 6, covar_fac = 1.1, n_threads = n_threads)
+```
+
 ```{r fearnhead, cache = 1, dependson = c("assign_sim_params", "confs")}
 set.seed(26564868)
 system.time(pf_fearn <- PF_EM(
   Surv(tstart, tstop, y) ~ x, df,
   Q_0 = diag(3^2, 2), Q = diag(1, 2), 
   by = 1, type = "RW", model = "logit", max_T = n_periods,
-  control = PF_control(
-    N_fw_n_bw = 500, N_smooth = 10000, N_first = 5000, eps = .0001,
-    method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
-    n_max = 200, smoother = "Fearnhead_O_N",
-    # we add some extra variation to the proposal distributions 
-    Q_tilde = diag(.1^2, 2), n_threads = n_threads)))
+  control = dd_ctrl))
 ```
 
 `system.time` is used to show the computation time. The final estimates and true values are 
@@ -246,11 +248,7 @@ pf_fearn_w_a_0 <- PF_EM(
   Surv(tstart, tstop, y) ~ x, df,
   Q_0 = diag(3^2, 2), Q = diag(1, 2), 
   by = 1, type = "RW", model = "logit", max_T = n_periods,
-  control = PF_control(
-    N_fw_n_bw = 500, N_smooth = 10000, N_first = 5000, eps = .0001,
-    method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 200, smoother = "Fearnhead_O_N",
-    Q_tilde = diag(.1^2, 2), n_threads = n_threads))
+  control = dd_ctrl)
 ```
 
 The estimates are

@@ -248,7 +248,7 @@ plot_cloud(pf_Brier)
 ```
 
 The dashed non-vertical lines are the true curve and the continuous is the smoothed estimate. The 
-approximate log-likelihoods from the particle filter at the EM iterations are
+approximate log-likelihoods from the particle filter at each EM iteration are
 
 ```{r brier_log_like_far_F}
 plot(pf_Brier$log_likes)
@@ -311,8 +311,8 @@ plot(tail(pf_Fear$log_likes, 20))
 ```
 
 This will not happen in an EM algorithm but may happen in an MCEM algorithm due
-to the Monte Carlo error. We may want to take a few more EM iterations with an
-increase the number of particle. We can do this as follows
+to the Monte Carlo error. We may want to take a few more EM iterations with
+more particles. We can do this as follows
 
 <!-- 
   knitr::opts_knit$set(output.dir = ".")
@@ -368,7 +368,7 @@ system.time(pf_Fear_avg <- PF_EM(
   control = PF_control(
     N_fw_n_bw = 200, N_smooth = 400, N_first = 1000, eps = 1e-5,
     method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 300, smoother = "Fearnhead_O_N", averaging_start = 150L,
+    n_max = 1000L, smoother = "Fearnhead_O_N", averaging_start = 150L,
     nu = 8, covar_fac = 1.1, n_threads = n_threads)))
 ```
 
@@ -382,7 +382,7 @@ plot(pf_Fear_avg$log_likes, type = "l")
 
 ### Stochastic gradient descent
 
-We will run stochastic gradient descent a as in @polyak92 which is described 
+We will run stochastic gradient descent as in @polyak92 which is described 
 in @cappe05 [page 414]. 
 
 <!-- 
@@ -404,6 +404,7 @@ pf_start <- PF_EM(
     n_max = 1L, smoother = "Fearnhead_O_N",
     nu = 8, covar_fac = 1.1, n_threads = n_threads))
 
+# function to perform stochastic gradient descent
 sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE, 
                 avg_start = 100L)
 {
@@ -511,7 +512,7 @@ show_covar(o$Q)
 o$fixed_effects
 ```
 
-### Log-likehood evaluation 
+### Log-likelihood evaluation 
 We may question what the log-likelihood is at the true parameters. We can use 
 the `PF_forward_filter` function to perform approximate log-likelihood evaluation
 
@@ -598,8 +599,8 @@ F = \begin{pmatrix}
       0 & \theta
     \end{pmatrix}, \quad
 Q = \begin{pmatrix}
-    \exp(\psi) & 0 \\
-    0 & \exp(\psi)
+    \exp(2\psi) & 0 \\
+    0 & \exp(2\psi)
     \end{pmatrix}
 $$
 

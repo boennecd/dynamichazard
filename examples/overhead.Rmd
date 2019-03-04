@@ -68,9 +68,9 @@ $\vec{a}_0$ and $Q_0$ are given by the invariant distribution. The unknown
 parameters to be estimated is everything but $Q_0$ and $R$ (since we fix $Q_0$ doing the estimation and we set $\vec{a}_0 = (0, 0)^\top$). This 
 example is run on the git branch "`r git_bra`" with ID "`r git_key`". The code
 can be found on 
-[the github site for the package](../examples).
+[the Github site for the package](../examples).
 All functions which assignments are not shown and are not in the 
-`dynamichazard` package can be found on the github site.
+`dynamichazard` package can be found on the Github site.
 
 ## Simulation
 
@@ -162,7 +162,7 @@ of observations towards the end.
 
 ## Particle filter and smoother
 
-We use the generalized two-filter smoother from [@fearnhead10]
+We use the generalized two-filter smoother from @fearnhead10
 
 ```{r load_pkg, cache = 1}
 library(dynamichazard)
@@ -170,7 +170,7 @@ library(dynamichazard)
 
 ```{r ass_test_func, cache = 1}
 func <- function(N_fw_n_bw, N_smooth, N_first){
-  lapply(1:12, function(n_threads){
+  lapply(1:6, function(n_threads){
     set.seed(30520116)
     suppressWarnings(ti <- system.time(pf_Fear <- PF_EM(
       Surv(tstart, tstop, y) ~ x + ddFixed(x) + ddFixed_intercept(TRUE), df,

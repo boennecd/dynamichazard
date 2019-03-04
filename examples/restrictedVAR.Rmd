@@ -83,9 +83,9 @@ $\vec{a}_0$ and $Q_0$ are given by the invariant distribution. The unknown
 parameters to be estimated is everything but $Q_0$ and $R$ (since we fix $Q_0$ doing the estimation and we set $\vec{a}_0 = (0, 0,0,0)^\top$). This 
 example is run on the git branch "`r git_bra`" with ID "`r git_key`". The code
 can be found on 
-[the github site for the package](../examples).
+[the Github site for the package](../examples).
 All functions which assignments are not shown and are not in the 
-`dynamichazard` package can be found on the github site.
+`dynamichazard` package can be found on the Github site.
 
 We are going to estimate the parameters in an unrestricted model where we 
 estimate the $Q$ and $F$ and a restricted model where we estimate 
@@ -271,14 +271,21 @@ log-likelihood with this models with the log-likelihood approximation we get
 from the particle filter in the next section.
 
 ## Particle filter and smoother
-We use the generalized two-filter smoother from [@fearnhead10] were we estimate 
+We use the generalized two-filter smoother from @fearnhead10 were we estimate 
 the full $F$ and $Q$ matrix.
 
 ```{r confs, cache = 1}
-n_threads <- 4 # I ran this on a quad core machine
+n_threads <- 6 
 
 # you can replace this with e.g.,  
 # max(parallel::detectCores(logical = FALSE), 2)))
+
+# control object
+dd_ctrl <- PF_control(
+  N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = 1e-4,
+  method = "AUX_normal_approx_w_cloud_mean", 
+  n_max = 500, smoother = "Fearnhead_O_N", averaging_start = 150L,
+  nu = 6L, covar_fac = 1.1, n_threads = n_threads)
 ```
 
 <!-- 
@@ -293,11 +300,7 @@ system.time(pf_Fear <- PF_EM(
     ddFixed(x1) + ddFixed(x2) + ddFixed(x3) + ddFixed(x4), 
   df, Q_0 = diag(1, 4), Q = diag(1, 4), Fmat = diag(.1, 4), 
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
-  control = PF_control(
-    N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = .001,
-    method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 200, smoother = "Fearnhead_O_N",
-    nu = 6L, n_threads = n_threads)))
+  control = dd_ctrl))
 ```
 
 `system.time` is used to show the computation time. The estimates are
@@ -359,11 +362,7 @@ pf_Fear_restric <- PF_EM(
   df, Q_0 = diag(1, 4), G = G, J = J, theta = c(.1, .1, 0), K = K, 
   psi = c(0, 0), phi = 0,
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
-  control = PF_control(
-    N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = .001,
-    method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 200, smoother = "Fearnhead_O_N",
-    nu = 6L, n_threads = n_threads))
+  control = dd_ctrl)
 ```
 
 Notice that we pass `G`, `J`, `K`, `theta`, `psi`, and `phi` instead of `Q` and `Fmat`. 
@@ -399,7 +398,7 @@ plot(tail(pf_Fear_restric$log_likes, 50), type = "l", ylab = "log-likelihood")
 ```
 
 We can get a better estimate of the log-likelihood at the final estimate for 
-the two models by running the particle filter with more estimates as follows
+the two models by running the particle filter with more particles as follows
 
 ```{r better_est_log_like_before, echo = FALSE}
 old_dig <- getOption("digits")
@@ -429,10 +428,10 @@ F = \begin{pmatrix}
     . & . & \theta_3 & . \\
     . & . & . & \theta_4 \end{pmatrix}, \quad
 Q = \begin{pmatrix}
-    \exp(\psi_1) & . & . & . \\
-    . & \exp(\psi_2) & . & . \\
-    . & . & \exp(\psi_3) & . \\ 
-    . & . & . & \exp(\psi_4) 
+    \exp(2\psi_1) & . & . & . \\
+    . & \exp(2\psi_2) & . & . \\
+    . & . & \exp(2\psi_3) & . \\ 
+    . & . & . & \exp(2\psi_4) 
     \end{pmatrix}
 $$
 We can estimate such a model by making the following calls
@@ -458,11 +457,7 @@ pf_Fear_miss <- PF_EM(
   df, Q_0 = diag(1, 4), G = G_miss, J = J_miss, K = K_miss, 
   theta = rep(.1, 4), psi = rep(0, 4), phi = vector(),
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
-  control = PF_control(
-    N_fw_n_bw = 200, N_smooth = 500, N_first = 1000, eps = .001,
-    method = "AUX_normal_approx_w_cloud_mean",
-    n_max = 200, smoother = "Fearnhead_O_N",
-    nu = 6L, n_threads = n_threads))
+  control = dd_ctrl)
 ```
 
 The estimates from this model are
@@ -489,6 +484,5 @@ logLik(PF_forward_filter(pf_Fear_miss, N_fw = 10000, N_first = 10000))
 ```{r pf_miss_log_likeli_after, echo = FALSE}
 options(digits = old_dig)
 ```
-
 
 # References

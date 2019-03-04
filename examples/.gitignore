@@ -1,7 +1,7 @@
 /*
 !.gitignore
 !*.Rmd
-!*.html
+!(?!old).html
 !*.bib
 !*.md
 !/fig/

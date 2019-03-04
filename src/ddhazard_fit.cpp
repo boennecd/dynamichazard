@@ -126,7 +126,7 @@ Rcpp::List ddhazard_fit_cpp(
   }
 
   arma::mat varying_only_F = F_;
-  arma::span span_fixed_params;
+  arma::span span_fixed_params(0, 0);
   if(p_data->any_fixed_in_E_step){
     if(p_data->any_fixed_in_E_step){
       arma::uword a = p_data->covar_dim - p_data->n_params_state_vec_fixed;
@@ -136,11 +136,8 @@ Rcpp::List ddhazard_fit_cpp(
 
       span_fixed_params = arma::span(a, b);
 
-    } else{
+    } else {
       varying_only_F = arma::mat();
-
-      // avoid wmaybe-uninitialized
-      span_fixed_params = arma::span(0, 0);
 
     }
   }
