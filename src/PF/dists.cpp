@@ -5,7 +5,7 @@
 
 state_fw::state_fw(
   const arma::vec &parent, const arma::mat &F,const covarmat &Q):
-  parent(parent), F(F), Q(Q),
+  parent(parent), Q(Q),
   /* TODO: maybe exploit that we have decomposition of Q */
   QiF(arma::solve(Q.mat(), F)), mu(F * parent) { }
 
@@ -140,7 +140,7 @@ arma::mat artificial_prior::neg_Hessian(const arma::vec &state) const {
 
 artificial_prior_generator::artificial_prior_generator(
   const arma::mat &F, const covarmat &Q, const arma::vec &mu_0,
-  const covarmat &Q_0): F(F), Q(Q), mu_0(mu_0), Q_0(Q_0) {
+  const covarmat &Q_0): F(F), Q(Q) {
   mt.insert(std::make_pair(0L, mu_0));
   Pt.insert(std::make_pair(0L, covarmat(Q_0)));
 }

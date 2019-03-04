@@ -31,7 +31,6 @@ public:
 
 class state_fw : public PF_cdist {
   const arma::vec &parent;
-  const arma::mat &F;
   const covarmat &Q;
   const arma::mat QiF;
   const arma::vec mu;
@@ -105,8 +104,6 @@ class artificial_prior_generator {
 
   const arma::mat &F;
   const covarmat &Q;
-  const arma::vec &mu_0;
-  const covarmat &Q_0;
 
   std::map<const uword, const arma::vec> mt;
   std::map<const uword, const covarmat> Pt;

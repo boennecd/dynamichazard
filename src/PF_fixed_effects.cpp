@@ -28,7 +28,6 @@ class pf_fixed_it_worker {
   const arma::mat ran_vars;
   const arma::vec &fixed_params;
   std::unique_ptr<glm_base> family;
-  const bool debug;
 
 public:
   pf_fixed_it_worker(arma::mat &&X, arma::vec &&Y, arma::vec &&dts,
@@ -36,9 +35,8 @@ public:
                      arma::mat &&ran_vars, const arma::vec &fixed_params,
                      const std::string family, const bool debug):
   X(X), Y(Y), dts(dts), cloud(cloud), cl_weights(cl_weights),
-  ran_vars(ran_vars), fixed_params(fixed_params), family(get_fam<glm_base>(family)),
-  debug(debug)
-  {}
+  ran_vars(ran_vars), fixed_params(fixed_params),
+  family(get_fam<glm_base>(family)) {}
 
   struct result {
     arma::mat Rmat;

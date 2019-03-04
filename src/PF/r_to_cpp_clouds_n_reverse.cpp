@@ -138,7 +138,7 @@ Rcpp::List get_rcpp_list_from_cloud(
 
 /* Function to turn an Rcpp::List into a clouds of particles */
 template<bool is_smooth, const bool reverse>
-static std::vector<cloud> get_cloud_from_rcpp_list
+std::vector<cloud> get_cloud_from_rcpp_list
   (const Rcpp::List &rcpp_list,
    const std::vector<cloud> *fw, const std::vector<cloud> *bw)
 {
