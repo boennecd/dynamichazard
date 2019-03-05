@@ -1526,7 +1526,7 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
     a_sta_old <- B_sta_old <- a_obs_old <- B_obs_old <- NULL
     k <- length(fit$F)
     K <- solve(fit$Q)
-    K3_2 <- K * 3 / 2
+    K1_2 <- K / 2
     for(i in seq_len(length(fw) - 1L) + 1L){
       fw_i <- fw[[i]]
       ps <- fw_i$states
@@ -1551,10 +1551,12 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
         a_sta[j, 1:k + k] <-
           solve(fit$Q, tcrossprod(r0[, j] * .5, r1[, j]) - diag(.5, k / 2L))
 
-        B_sta[1:k, 1:k, j] <- -kronecker(K, tcrossprod(parents[, j]))
-        B_sta[1:k + k, 1:k, j    ] <- 0L
-        B_sta[1:k    , 1:k + k, j] <- 0L
-        B_sta[1:k + k, 1:k + k, j] <- kronecker(tcrossprod(r1[, j]) - K3_2, K)
+        B_sta[1:k, 1:k, j] <- - kronecker(K, tcrossprod(parents[, j]))
+        off_block <- - kronecker(K, tcrossprod(r1[, j], parents[, j]))
+        B_sta[1:k + k, 1:k, j    ] <- off_block
+        B_sta[1:k    , 1:k + k, j] <- t(off_block)
+        B_sta[1:k + k, 1:k + k, j] <-
+          - kronecker(K, tcrossprod(r1[, j]) - K1_2)
       }
 
       if(!is.null(a_sta_old))

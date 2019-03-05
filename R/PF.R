@@ -1667,7 +1667,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
   n_f <- length(Fmat)
   R <- object$R
   a_0 <- object$a_0
-  Q_0 <- if(type == "VAR") get_Q_0(Q, Fmat) else object$call$Q_0
+  Q_0 <- if(type == "VAR") get_Q_0(Q, Fmat) else eval(object$call$Q_0)
   if(!is.matrix(Q_0))
     Q_0 <- as.matrix(Q_0)
 
@@ -1744,7 +1744,9 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
     d <- ncol(Q)
     K <- matrix(0., 2L * d * d, 2L * d * d)
     K[1:(d * d), 1:(d * d)] <- .get_cum_mat(d, d)
-    diag(K[-(1:(d * d)), -(1:(d * d))]) <- 1
+    if(d > 1)
+      diag(K[-(1:(d * d)), -(1:(d * d))]) <- 1 else
+        K[-(1:(d * d)), -(1:(d * d))] <- 1
     score_state <- K %*% drop(cpp_res$S_state)
     neg_obs_info_state <- with(
       cpp_res,

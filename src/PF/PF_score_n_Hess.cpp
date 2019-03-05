@@ -110,7 +110,7 @@ struct score_n_hess_dat {
   const arma::mat &Q;
   const arma::mat Q_chol;
   const arma::mat K;
-  const arma::mat K_3_2;
+  const arma::mat K_1_2;
 
   score_n_hess_dat(arma::mat &&X, arma::vec &&y, arma::vec &&dts,
                    arma::mat &&ran_vars, const arma::vec &fixed_params,
@@ -118,7 +118,7 @@ struct score_n_hess_dat {
                    const arma::mat &Q):
     X(X), eta(X.t() * fixed_params), y(y), dts(dts), ran_vars(ran_vars),
     family(get_fam<family_base>(family)), F(F), Q(Q), Q_chol(arma::chol(Q)),
-    K(Q.i()), K_3_2(K * 1.5)
+    K(Q.i()), K_1_2(K * .5)
   { }
 };
 
@@ -202,12 +202,12 @@ state_derivs_output get_state_derivs_output
   if(!only_score){
     B_state.set_size(k * k * 2L, k * k * 2L);
     B_state.submat(0L, 0L, B_sta_end_1, B_sta_end_1) =
-    arma::kron(dat.K, (-parent.get_state()) * parent.get_state().t());
-
-    B_state.submat(0L, B_sta_end_1 + 1L, B_sta_end_1, B_sta_end_2).zeros();
+      arma::kron(dat.K, (-parent.get_state()) * parent.get_state().t());
+    B_state.submat(0L, B_sta_end_1 + 1L, B_sta_end_1, B_sta_end_2) =
+      arma::kron(dat.K, (-parent.get_state()) * innovation_std.t());
     B_state.submat
       (B_sta_end_1 + 1L, B_sta_end_1 + 1L, B_sta_end_2, B_sta_end_2) =
-        arma::kron(innovation_std * innovation_std.t() - dat.K_3_2, dat.K);
+        -arma::kron(dat.K, innovation_std * innovation_std.t() - dat.K_1_2);
   }
 
   return { std::move(a_state), std::move(B_state) };
