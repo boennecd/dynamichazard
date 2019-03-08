@@ -65,7 +65,7 @@ public:
     for(auto pairs = i_start; pairs != i_end; ++pairs){
       const particle_pairs &pas = **pairs; /* pairs iterator for a pointer */
 
-      if(exp(pas.log_weight) < 1e-8){ /* don't keep */
+      if(exp(pas.log_weight) < 1e-16){ /* don't keep */
         i += pas.transition_pairs.size();
         continue;
       }
@@ -75,7 +75,7 @@ public:
           pair != pas.transition_pairs.end();
           ++pair, ++i){
         double w_sqrt = exp((pas.log_weight + pair->log_weight) / 2);
-        if(w_sqrt < 1e-8) /* don't keep */
+        if(w_sqrt < 1e-16) /* don't keep */
           continue;
 
         keep[i]  = 1L;
@@ -166,7 +166,7 @@ PF_parameters
      * where F is the output from qr_parallel.compute().
      */
     out.Q = res.dev - res.F.t() * res.F;
-    out.Q /= (dat.tr->size() - 1);
+    out.Q /= dat.tr->size();
 
     // update a_0
     /* TODO: needs to be updated for higher order models. Need Full F matrix */

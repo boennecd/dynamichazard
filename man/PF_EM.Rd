@@ -299,8 +299,8 @@ plot(fit$log_likes) # log-likelihood approximation at each iterations
 # take more iterations with more particles
 cl <- fit$call
 ctrl <- cl[["control"]]
-ctrl[c("N_fw_n_bw", "N_smooth", "N_smooth_final", "N_first", "n_max",
-       "averaging_start")] <- list(500L, 2000L, 500L, 5000L, 30L, 1L)
+ctrl[c("N_fw_n_bw", "N_smooth", "N_first", "n_max",
+       "averaging_start")] <- list(500L, 2000L, 5000L, 200L, 30L)
 cl[["control"]] <- ctrl
 cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
 fit_extra <- eval(cl)

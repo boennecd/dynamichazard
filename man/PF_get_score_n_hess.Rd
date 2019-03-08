@@ -96,8 +96,8 @@ o3 <- replicate(10L, {
   comp_obj$run_particle_filter()
   comp_obj$get_get_score_n_hess()
 }, simplify = FALSE)
-sapply(o3, function(x) x$state$score)
-sapply(o3, function(x) sqrt(diag(solve(x$state$neg_obs_info))[1:4]))
+sapply(o3, function(x) x$observation$score)
+sapply(o3, function(x) sqrt(diag(solve(x$observation$neg_obs_info))))
 }
 
 }

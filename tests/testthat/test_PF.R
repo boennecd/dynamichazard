@@ -617,10 +617,10 @@ test_that("´est_params_dens´ gives the same as a R version", {
 
   qr_obj <- qr(wX)
   qty <- qr.qty(qr_obj, wY)[1:ncol(wX), ]
-  Q <- (crossprod(wY) - crossprod(qty)) / (length(clouds) - 1)
+  Q <- (crossprod(wY) - crossprod(qty)) / length(clouds)
   expect_equal(Q, fit$Q, check.attributes = FALSE)
 
-  Q <- crossprod(wY - wX %*% lm_fit$coefficients) / (length(clouds) - 1)
+  Q <- crossprod(wY - wX %*% lm_fit$coefficients) / length(clouds)
   expect_equal(Q, fit$Q, check.attributes = FALSE)
 })
 

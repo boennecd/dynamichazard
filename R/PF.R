@@ -274,8 +274,8 @@ PF_effective_sample_size <- function(object){
 #' # take more iterations with more particles
 #' cl <- fit$call
 #' ctrl <- cl[["control"]]
-#' ctrl[c("N_fw_n_bw", "N_smooth", "N_smooth_final", "N_first", "n_max",
-#'        "averaging_start")] <- list(500L, 2000L, 500L, 5000L, 30L, 1L)
+#' ctrl[c("N_fw_n_bw", "N_smooth", "N_first", "n_max",
+#'        "averaging_start")] <- list(500L, 2000L, 5000L, 200L, 30L)
 #' cl[["control"]] <- ctrl
 #' cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
 #' fit_extra <- eval(cl)
@@ -903,8 +903,8 @@ get_Q_tilde <- function(x, n_vars)
       if(est_a_0)
         a_0 <- drop(sum_stats[[1]]$E_xs)
       Q <- Reduce(
-        "+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers")[-1])
-      Q <- Q / (length(sum_stats) - 1)
+        "+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
+      Q <- Q / length(sum_stats)
 
       fit_call$a_0 <- a_0
       fit_call$Q <- Q
@@ -940,7 +940,7 @@ get_Q_tilde <- function(x, n_vars)
 
         # assign log-likelihood function
         idx <- 1:length(psi)
-        nobs <- length(sum_stats) - 1
+        nobs <- length(sum_stats)
         ll <- function(par){
           psi <- par[ idx]
           phi <- par[-idx]
@@ -1613,8 +1613,8 @@ get_cloud_quantiles.PF_clouds <- function(
 #'   comp_obj$run_particle_filter()
 #'   comp_obj$get_get_score_n_hess()
 #' }, simplify = FALSE)
-#' sapply(o3, function(x) x$state$score)
-#' sapply(o3, function(x) sqrt(diag(solve(x$state$neg_obs_info))[1:4]))
+#' sapply(o3, function(x) x$observation$score)
+#' sapply(o3, function(x) sqrt(diag(solve(x$observation$neg_obs_info))))
 #' }
 #'
 #' @export
