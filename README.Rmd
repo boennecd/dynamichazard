@@ -73,7 +73,7 @@ fit <- ddhazard(
   Q = .1^2,                       # Covariance matrix for state equation in 
                                   # first iteration
   Q_0 = 1,                        # Covariance matrix for the prior
-  control = list(
+  control = ddhazard_control(
     eps = .001,                   # tolerance for EM-algorithm
     LR = .9,                      # Learning rate
     n_max = 100                   # Max number iterations in EM
@@ -96,6 +96,11 @@ Bootstrapping only slightly changes the confidence bounds. An example of a paper
 ## Example - particle filter and smoother
 A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data. We only use a time-varying effect for gender this time.
 
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  knitr::load_cache("pf_fit", path = "README_cache/markdown_github/") 
+-->
+
 ```{r pf_fit, cache = 1}
 set.seed(20170907)
 pf_fit <- PF_EM(
@@ -109,7 +114,8 @@ pf_fit <- PF_EM(
     N_fw_n_bw = 1000, N_first = 1000,
     N_smooth = 1, # Does not matter with Brier_O_N_square
     smoother = "Brier_O_N_square", # Select smoother
-    eps = .001, n_max = 100, est_a_0 = FALSE, nu = 6L)
+    eps = 1e-5, n_max = 1000, est_a_0 = FALSE, nu = 6L, 
+    covar_fac = 1.2, averaging_start = 150L)
   #, trace = 1 # comment back to get feedback during estimation
   )
 ```
