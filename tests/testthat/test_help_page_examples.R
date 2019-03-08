@@ -516,7 +516,6 @@ test_that("'PF_get_score_n_hess' gives previous results", {
   skip_on_cran()
 
   library(dynamichazard)
-  ## Not run:
   .lung <- lung[!is.na(lung$ph.ecog), ]
   # standardize
   .lung$age <- scale(.lung$age)

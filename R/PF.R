@@ -987,7 +987,7 @@ get_Q_tilde <- function(x, n_vars)
         Q_full <- Z / nobs
         deter <- determinant(Q_full, logarithm = TRUE)
         ll_full <- -(nobs * deter$modulus + nobs * ncol(Q_full)) / 2
-        ctrl <- list(fnscale = if(ll_full < 0) ll_full else -ll_full,
+        ctrl <- list(fnscale = -abs(ll_full),
                      reltol = .Machine$double.eps^(3/4))
 
         out_optim <-
@@ -1211,7 +1211,7 @@ PF_control <- function(
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
   Q_tilde = NULL, est_a_0 = TRUE, N_smooth_final = N_smooth, nu = 0L,
-  covar_fac = -1, ftol_rel = 1e-6, averaging_start = -1L){
+  covar_fac = -1, ftol_rel = 1e-8, averaging_start = -1L){
   control <- list(
     N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
     forward_backward_ESS_threshold = forward_backward_ESS_threshold,

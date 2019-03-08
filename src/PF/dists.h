@@ -8,7 +8,7 @@
 /* conditional distribution */
 class PF_cdist {
 public:
-  virtual ~PF_cdist() {}
+  virtual ~PF_cdist() = default;
 
   /* is it a multivariate normal distribution? */
   virtual bool is_mvn() const = 0;
@@ -29,7 +29,7 @@ public:
   virtual arma::mat neg_Hessian(const arma::vec&) const = 0;
 };
 
-class state_fw : public PF_cdist {
+class state_fw final : public PF_cdist {
   const arma::vec &parent;
   const covarmat &Q;
   const arma::mat QiF;
@@ -53,7 +53,7 @@ public:
   arma::mat neg_Hessian(const arma::vec&) const override;
 };
 
-class state_bw : public PF_cdist {
+class state_bw final : public PF_cdist {
   const arma::vec &child;
   const arma::mat &F;
   const covarmat &Q;
@@ -80,7 +80,7 @@ public:
 
 /*----------------------------------------*/
 
-class artificial_prior : public PF_cdist {
+class artificial_prior final : public PF_cdist {
   const arma::vec &mut;
   const covarmat &Qt;
   const arma::vec dz;

@@ -1,5 +1,5 @@
 # this is a very bad name...
-approximator <- function(..., start, do_checks = FALSE, ftol_rel = 1e-6){
+approximator <- function(..., start, do_checks = FALSE, ftol_rel = 1e-8){
   objs <- list(...)
   stopifnot(length(objs) > 1)
 
@@ -14,8 +14,8 @@ approximator <- function(..., start, do_checks = FALSE, ftol_rel = 1e-6){
 
     opt <- nloptr(start, eval_f = eval_f, eval_grad_f = eval_grad_f,
                   opts = list(
-                    algorithm = "NLOPT_LD_LBFGS", ftol_rel = ftol_rel,
-                    check_derivatives = do_checks, vector_storage = 30L))
+                    algorithm = "NLOPT_LD_SLSQP", ftol_rel = ftol_rel,
+                    check_derivatives = do_checks))
 
     if(opt$status < 0)
       stop("failed with code ", opt$status)

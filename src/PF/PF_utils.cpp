@@ -46,8 +46,10 @@ get_approx_use_mean_output get_approx_use_mean(
     other = dens_calc.get_fw_dist(other_state);
     start = other->get_mean();
     objs = { y_dist.get(), other.get() };
+
   }
-  else {
+  else
+  {
     other = dens_calc.get_bw_dist(other_state);
     prior = dens_calc.get_prior(t);
     std::vector<PF_cdist*> start_objs = { other.get(), prior.get() };

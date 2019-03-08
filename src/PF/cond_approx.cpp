@@ -56,17 +56,16 @@ cdist_comb_generator::cdist_comb_generator(
   if(!all_mvn){
     /* find mode */
     nlopt_opt opt;
-    opt = nlopt_create(NLOPT_LD_LBFGS, n);
+    opt = nlopt_create(NLOPT_LD_SLSQP, n);
     nlopt_set_min_objective(opt, mode_objective, &cdists);
     nlopt_set_ftol_rel(opt, ftol_rel);
-    nlopt_set_vector_storage(opt, 30L);
 
     double minf;
     nlopt_result_code = nlopt_optimize(opt, val.memptr(), &minf);
     nlopt_destroy(opt);
 
     if(nlopt_result_code < 1L)
-      /* fall back to start value */
+      /* fallback to start value */
       val = start;
 
   } else
@@ -152,7 +151,7 @@ nlopt_return_value_msg cdist_comb_generator::get_result_code(){
   return nlopt_return_value_msg(nlopt_result_code);
 }
 
-class cdist_comb : public dist_comb {
+class cdist_comb final : public dist_comb {
   std::shared_ptr<covarmat> Sig;
   const int nu;
   arma::vec mu;

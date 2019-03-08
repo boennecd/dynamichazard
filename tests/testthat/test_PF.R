@@ -98,7 +98,7 @@ test_that("PF_smooth gives same results", {
     fixed_params = numeric(), Q = Q, a_0 = a_0, Q_tilde = diag(1e-2, n_vars + 1),
     risk_obj = risk_set, F = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
     N_fw_n_bw = 20, N_smooth = 100, N_first = 100, N_smooth_final = 100,
-    forward_backward_ESS_threshold = NULL, debug = 0, ftol_rel = 1e-6,
+    forward_backward_ESS_threshold = NULL, debug = 0, ftol_rel = 1e-8,
     method = "bootstrap_filter", covar_fac = -1,
     smoother = "Fearnhead_O_N", model = "logit", type = "RW", nu = 0L)
 
@@ -1376,13 +1376,15 @@ test_that("mode approximations give expected result", {
     app <- approximator(bwo, prio, y_dist, start = app1(c1, NULL)$mu)
     o1 <- app(c1, NULL)
     o2 <- app(c2, NULL)
+    Q_xtra <- Q
+    Q_xtra[] <- 0
 
     y_use <- if(fam == "poisson") o$y[, 2] else o$y
     cpp_out <- with(o, check_prior_bw_state_comb(
       X = X, is_event = y_use, offsets = offset, tstart = tstart,
       tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
       F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
-      t1 = t1, Q_xtra = structure(numeric(), .Dim = c(0L, 0L))))
+      t1 = t1, Q_xtra = Q_xtra))
 
     expect_equal(drop(cpp_out$mean1), o1$mu)
     expect_equal(drop(cpp_out$mean2), o2$mu)

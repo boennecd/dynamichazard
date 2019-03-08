@@ -41,7 +41,7 @@ cloud importance_dens_base<is_forward>::sample_first_state_n_set_weights
   if(data.debug > 1){
     data.log(2) << "Sampling "
                 << (is_forward ? "first" : "state d + 1")
-                << " with covariance matrix:" << std::endl
+                << " with covariance/scale matrix:" << std::endl
                 << sampler->get_covar()
                 << "and mean:" << std::endl
                 << sampler->get_mean();
@@ -124,7 +124,7 @@ cloud importance_dens_no_y_dependence<is_forward>::
 
     if(data.debug > 2)
       data.log(3)
-        << "Sampling new cloud from normal distribution with Q given by"
+        << "Sampling new cloud from covariance/scale matrix"
         << std::endl << comb_gen
           .get_dist_comb
           ({ (arma::vec*)&fw_cloud.begin()->get_state(), (arma::vec*)&bw_cloud.begin()->get_state() })
@@ -235,6 +235,21 @@ cloud importance_dens_normal_approx_w_cloud_mean<is_forward>::
     auto begin_fw = fw_idx.begin();
     auto begin_bw = bw_idx.begin();
     std::vector<std::unique_ptr<dist_comb>> samplers(data.N_smooth);
+
+    if(data.debug > 2){
+      auto tmp_dist = combi_gen.get_dist_comb({ &fw_mean, &bw_mean });
+
+      data.log(3)
+        << "Sampling new cloud from covariance/scale matrix"
+        << '\n' << tmp_dist->get_covar()
+        << "found with parent cloud mean"
+        << '\n' << fw_mean.t()
+        << "and with child could mean"
+        << '\n' << bw_mean.t()
+        << "The mean of the proposal distribution for the above two values are"
+        << '\n' << tmp_dist->get_mean().t();
+
+    }
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)

@@ -185,7 +185,7 @@ check_prior_bw_comb <- function(F, Q, m_0, Q_0, child, child1, parent, t1, t2) {
     .Call(`_dynamichazard_check_prior_bw_comb`, F, Q, m_0, Q_0, child, child1, parent, t1, t2)
 }
 
-check_prior_bw_state_comb <- function(X, is_event, offsets, tstart, tstop, bin_start, bin_stop, fam, F, Q, m_0, Q_0, child, child1, parent, t1, Q_xtra, nu = -1L, covar_fac = -1, ftol_rel = 1e-6) {
+check_prior_bw_state_comb <- function(X, is_event, offsets, tstart, tstop, bin_start, bin_stop, fam, F, Q, m_0, Q_0, child, child1, parent, t1, Q_xtra, nu = -1L, covar_fac = -1, ftol_rel = 1e-8) {
     .Call(`_dynamichazard_check_prior_bw_state_comb`, X, is_event, offsets, tstart, tstop, bin_start, bin_stop, fam, F, Q, m_0, Q_0, child, child1, parent, t1, Q_xtra, nu, covar_fac, ftol_rel)
 }
 

@@ -557,7 +557,7 @@ Rcpp::List check_prior_bw_state_comb(
     arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
     arma::vec child, arma::vec child1, arma::vec parent,
     unsigned int t1, arma::mat Q_xtra, unsigned int nu = -1,
-    const double covar_fac = -1, const double ftol_rel = 1e-6){
+    const double covar_fac = -1, const double ftol_rel = 1e-8){
   const bool multithreaded = 1;
   covarmat cQ(Q), cQ_0(Q_0);
 

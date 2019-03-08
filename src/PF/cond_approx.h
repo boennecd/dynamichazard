@@ -5,7 +5,7 @@
 
 class dist_comb {
 public:
-  virtual ~dist_comb() {}
+  virtual ~dist_comb() = default;
 
   virtual arma::vec sample() const = 0;
   virtual double log_density(const arma::vec&) const = 0;

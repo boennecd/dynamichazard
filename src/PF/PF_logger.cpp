@@ -23,10 +23,7 @@ PF_logger::~PF_logger(){
 #ifdef _OPENMP
     omp_set_lock(&lock);
 #endif
-
-    os << std::endl;
-    Rcpp::Rcout << os.str();
-
+    Rcpp::Rcout << os.str() << std::endl;
 #ifdef _OPENMP
     omp_unset_lock(&lock);
 #endif
