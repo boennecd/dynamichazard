@@ -1517,7 +1517,7 @@ get_cloud_quantiles.PF_clouds <- function(
 #' The score vector and negative observed information matrix are computed
 #' with the (forward)
 #' particle filter. This comes at an \eqn{O(d^2)} variance where \eqn{d}
-#' is the number of periods, \eqn{d}. Thus, the approximation may be poor for long
+#' is the number of periods. Thus, the approximation may be poor for long
 #' series. The score vector can be used to perform stochastic gradient
 #' descent.
 #'

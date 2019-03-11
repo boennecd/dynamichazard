@@ -50,7 +50,7 @@ regarding which attributes that have vendor specific raw value. Further,
 "The values in the files are the values reported by the drives. Sometimes,
 those values are out of whack. For example, in a few cases the RAW value of
 SMART 9 (Drive life in hours) reported a value that would make a drive 10+
-years old, which was not possible. In other words, it’s a good idea to have
+years old, which was not possible. In other words, it's a good idea to have
 bounds checks when you process the data."
 
 See this github page for the processing steps
