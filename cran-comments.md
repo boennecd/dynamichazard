@@ -1,7 +1,7 @@
 ## Test environments
 * Ubuntu 18.04 LTS
   R version 3.5.2
-* Ubuntu 14.04.5 LTS (on travis-ci with codename: trusty)
+* Ubuntu 16.04.5 LTS (on travis-ci with codename: xenial)
   R version 3.5.2
 * win-builder (devel and release)
 * Local Ubuntu 18.04 with R 3.5.2 and with clang 6.0.0 with ASAN and 
@@ -13,8 +13,6 @@
   debian-gcc-devel
   debian-gcc-release
   linux-x86_64-rocker-gcc-san
-  
-I use the build with codename trusty for the GCC 4.8.4 which has C++11 support.
 
 ## R CMD check results
 All platforms have a note about the package size except the win-builder with 
@@ -22,12 +20,10 @@ the devel version.
 
 I still get this error with the UBSAN check: https://github.com/RcppCore/Rcpp/issues/874#issue-337282814
 
-Though, it does not seem to trigger on CRAN and Dirk Eddelbuettel and Kevin 
-Ushey indicate that it may not be a problem.
+I have added `suppressWarnings(RNGversion("3.5.0"))` when I run the tests. 
 
-## Resubmission
-This is a resubmission. In this version I have:
+The C++ code has been more or less been rewritten for the particle filters and
+smoothers which may have fixed the error on r-patched-solaris-x86 which I 
+cannot reproduce.
 
-* Added vignettes which are currently not included due to an error in 
-  `.Rbuildignore`.
-* Tried to fix the error on Solaris in the CRAN check results.
+I have used Ghostscript this time so the tarball is less than 5 MB.
