@@ -440,14 +440,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // square_tri_inv_test
-void square_tri_inv_test(const arma::mat& R, arma::mat& out);
-RcppExport SEXP _dynamichazard_square_tri_inv_test(SEXP RSEXP, SEXP outSEXP) {
+arma::mat square_tri_inv_test(const arma::mat& R);
+RcppExport SEXP _dynamichazard_square_tri_inv_test(SEXP RSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type R(RSEXP);
-    Rcpp::traits::input_parameter< arma::mat& >::type out(outSEXP);
-    square_tri_inv_test(R, out);
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(square_tri_inv_test(R));
+    return rcpp_result_gen;
 END_RCPP
 }
 // symmetric_mat_chol_test
@@ -902,7 +902,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_dynamichazard_test_get_ancestors", (DL_FUNC) &_dynamichazard_test_get_ancestors, 1},
     {"_dynamichazard_test_get_resample_idx_n_log_weight", (DL_FUNC) &_dynamichazard_test_get_resample_idx_n_log_weight, 3},
     {"_dynamichazard_chol_rank_one_update_test", (DL_FUNC) &_dynamichazard_chol_rank_one_update_test, 2},
-    {"_dynamichazard_square_tri_inv_test", (DL_FUNC) &_dynamichazard_square_tri_inv_test, 2},
+    {"_dynamichazard_square_tri_inv_test", (DL_FUNC) &_dynamichazard_square_tri_inv_test, 1},
     {"_dynamichazard_symmetric_mat_chol_test", (DL_FUNC) &_dynamichazard_symmetric_mat_chol_test, 2},
     {"_dynamichazard_tri_mat_times_vec_test", (DL_FUNC) &_dynamichazard_tri_mat_times_vec_test, 4},
     {"_dynamichazard_sym_mat_rank_one_update_test", (DL_FUNC) &_dynamichazard_sym_mat_rank_one_update_test, 3},

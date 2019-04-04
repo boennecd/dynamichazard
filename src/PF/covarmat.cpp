@@ -2,9 +2,9 @@
 
 #ifdef _OPENMP
 class LockGuard {
-  omp_lock_t& m_lock;
+  omp_lock_t &m_lock;
 public:
-  explicit LockGuard(omp_lock_t& lock) : m_lock(lock){
+  explicit LockGuard(omp_lock_t &lock) : m_lock(lock){
     omp_set_lock(&m_lock);
   }
 
@@ -25,7 +25,7 @@ const arma::mat& covarmat::get_mat(output what) const {
 #pragma omp atomic read
   is_computed = *this_flag;
   if(!is_computed){
-    LockGuard guard(*lock.get());
+    LockGuard guard(*lock);
 #pragma omp atomic read
     is_computed = *this_flag;
     if(!is_computed){
@@ -49,7 +49,7 @@ const arma::mat& covarmat::get_mat(output what) const {
 #pragma omp atomic read
   is_computed = *this_flag;
   if(!is_computed){
-    LockGuard guard(*lock.get());
+    LockGuard guard(*lock);
 #pragma omp atomic read
     is_computed = *this_flag;
     if(!is_computed){
@@ -73,7 +73,7 @@ const arma::mat& covarmat::get_mat(output what) const {
 #pragma omp atomic read
   is_computed = *this_flag;
   if(!is_computed){
-    LockGuard guard(*lock.get());
+    LockGuard guard(*lock);
 #pragma omp atomic read
     is_computed = *this_flag;
     if(!is_computed){
@@ -106,8 +106,8 @@ const arma::mat& covarmat::inv() const {
 
 covarmat::covarmat(const covarmat &other): covarmat(other.mat()) { }
 
-covarmat::~covarmat(){
 #ifdef _OPENMP
+covarmat::~covarmat(){
   omp_destroy_lock(lock.get());
-#endif
 }
+#endif

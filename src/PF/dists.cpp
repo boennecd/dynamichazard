@@ -216,11 +216,8 @@ arma::vec set_at_risk_length(
 
 #ifdef _OPENMP
 /* openMP reductions */
-#pragma omp declare reduction(armaVP: arma::vec: omp_out += omp_in) \
-  initializer(omp_priv = arma::vec(omp_orig))
-
-#pragma omp declare reduction(armaMP: arma::mat: omp_out += omp_in) \
-  initializer(omp_priv = arma::mat(omp_orig))
+#pragma omp declare reduction(armaVP: arma::vec: omp_out += omp_in)
+#pragma omp declare reduction(armaMP: arma::mat: omp_out += omp_in)
 #endif
 
 template<class T>
@@ -284,10 +281,17 @@ arma::vec observational_cdist<T>::gradient(const arma::vec &coefs) const {
   /* compute gradient */
   arma::vec result(coefs.n_elem, arma::fill::zeros);
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) reduction(armaVP:result) \
-  if(multithreaded)
+  bool first_it = true;
+#pragma omp parallel for schedule(static) if(multithreaded)\
+  reduction(armaVP:result) firstprivate(first_it)
 #endif
   for(unsigned int i = 0; i < n; ++i){
+#ifdef _OPENMP
+    if(first_it){
+      result.zeros(coefs.n_elem);
+      first_it = false;
+    }
+#endif
     auto trunc_eta = this->truncate_eta(
       is_event[i], eta[i], exp(eta[i]), at_risk_length[i]);
     double d_l = this->d_log_like(is_event[i], trunc_eta, at_risk_length[i]);
@@ -312,10 +316,17 @@ arma::mat observational_cdist<T>::neg_Hessian(const arma::vec &coefs) const {
   /* compute Hessian */
   arma::mat result(coefs.n_elem, coefs.n_elem, arma::fill::zeros);
 #ifdef _OPENMP
+  bool first_it = true;
 #pragma omp parallel for schedule(static) reduction(armaMP:result) \
-  if(multithreaded)
+  if(multithreaded) firstprivate(first_it)
 #endif
   for(unsigned int i = 0; i < n; ++i){
+#ifdef _OPENMP
+    if(first_it){
+      result.zeros(coefs.n_elem, coefs.n_elem);
+      first_it = false;
+    }
+#endif
     auto trunc_eta = this->truncate_eta(
       is_event[i], eta[i], exp(eta[i]), at_risk_length[i]);
     double dd_l = this->dd_log_like(

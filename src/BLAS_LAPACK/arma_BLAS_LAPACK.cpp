@@ -21,15 +21,12 @@ void chol_rank_one_update(arma::mat &R, arma::vec x){
   R_BLAS_LAPACK::ddhazard_dchur(R.memptr(), copy_x.memptr(), n, n);
 }
 
-void square_tri_inv(const arma::mat &R, arma::mat &out){
-  // Take copy
-  out = R;
+void square_tri_inv(arma::mat &out){
   int n = out.n_cols;
-
   R_BLAS_LAPACK::square_tri_inv(out.memptr(), n, n);
 }
 
-void symmetric_mat_chol(const arma::mat& A, arma::mat & out){
+void symmetric_mat_chol(const arma::mat& A, arma::mat &out){
   // Take copy
   out = A;
 

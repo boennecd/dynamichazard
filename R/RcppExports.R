@@ -93,8 +93,8 @@ chol_rank_one_update_test <- function(R, x) {
     invisible(.Call(`_dynamichazard_chol_rank_one_update_test`, R, x))
 }
 
-square_tri_inv_test <- function(R, out) {
-    invisible(.Call(`_dynamichazard_square_tri_inv_test`, R, out))
+square_tri_inv_test <- function(R) {
+    .Call(`_dynamichazard_square_tri_inv_test`, R)
 }
 
 symmetric_mat_chol_test <- function(A, out) {

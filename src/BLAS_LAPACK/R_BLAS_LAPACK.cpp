@@ -68,7 +68,7 @@ namespace R_BLAS_LAPACK {
 
     if(info != 0){
       std::stringstream str;
-      str << "Got error code '" << info << "' when making rank one update of cholesky decomposition";
+      str << "Got error code '" << info << "' from 'dtrtri'";
       Rcpp::stop(str.str());
     }
   }

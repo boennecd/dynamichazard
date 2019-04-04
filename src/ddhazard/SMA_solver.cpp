@@ -108,7 +108,8 @@ void SMA::solve(){
       arma::mat L;
       arma::mat L_inv = arma::inv_sympd(V); // only temporary
       symmetric_mat_chol(L_inv, L); // Cholesky decomposition of information matrix
-      square_tri_inv(L, L_inv); // V = L_inv^T * L_inv
+      L_inv = L;
+      square_tri_inv(L_inv); // V = L_inv^T * L_inv
       arma::vec inter_vec(L.n_cols);
 
       for(auto it = r_set.begin(); it != r_set.end(); it++){
@@ -140,7 +141,8 @@ void SMA::solve(){
         arma::vec rank_1_update_vec(x_ * sqrt(neg_second_d));
         rank_1_update_vec = p_dat.state_lp_inv->map(rank_1_update_vec).sv;
         chol_rank_one_update(L, rank_1_update_vec);
-        square_tri_inv(L, L_inv);
+        L_inv = L;
+        square_tri_inv(L_inv);
       }
 
       V = L_inv.t() * L_inv;

@@ -95,9 +95,7 @@ test_that("Square triangular inversion works followed by rank one update", {
     r_mat <- get_random_sym_post_def_mat(n)
 
     d1 <- t(chol(r_mat))
-    d2 <- matrix(0, ncol = n, nrow = n)
-
-    square_tri_inv_test(d1, d2)
+    d2 <- square_tri_inv_test(d1)
 
     expect_equal(solve(d1), d2)
   }

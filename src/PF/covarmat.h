@@ -12,8 +12,7 @@
 class covarmat {
 private:
 #ifdef _OPENMP
-  std::unique_ptr<omp_lock_t> lock =
-    std::unique_ptr<omp_lock_t>((new omp_lock_t()));
+  std::unique_ptr<omp_lock_t> lock;
 #endif
 
   enum output { e_mat, e_chol, e_chol_inv, e_inv };
@@ -48,13 +47,16 @@ public:
     chol_inv_(new arma::mat(arma::size(Q), arma::fill::zeros)),
     inv_     (new arma::mat(arma::size(Q), arma::fill::zeros)) {
 #ifdef _OPENMP
+    lock.reset(new omp_lock_t());
     omp_init_lock(lock.get());
 #endif
   }
 
   covarmat(const covarmat&);
 
+#ifdef _OPENMP
   ~covarmat();
+#endif
 };
 
 #endif

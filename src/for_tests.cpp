@@ -211,8 +211,10 @@ void chol_rank_one_update_test(arma::mat &R, arma::vec x){
 }
 
 // [[Rcpp::export]]
-void square_tri_inv_test(const arma::mat &R, arma::mat &out){
-  return square_tri_inv(R, out);
+arma::mat square_tri_inv_test(const arma::mat &R){
+  arma::mat cp = R;
+  square_tri_inv(cp);
+  return cp;
 }
 
 // [[Rcpp::export]]
