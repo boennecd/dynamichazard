@@ -1,3 +1,6 @@
+# dynamichazard 0.6.5
+* Minor bug fixes.
+
 # dynamichazard 0.6.4
 * Particle filtering implementation is changed. One may get slightly different 
   results.
