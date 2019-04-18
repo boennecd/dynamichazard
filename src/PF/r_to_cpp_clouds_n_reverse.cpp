@@ -193,6 +193,17 @@ std::vector<cloud> get_cloud_from_rcpp_list
   return ans;
 }
 
+
+template
+std::vector<cloud> get_cloud_from_rcpp_list<false, false>
+(const Rcpp::List&, const std::vector<cloud>*, const std::vector<cloud>*);
+template
+std::vector<cloud> get_cloud_from_rcpp_list<true, false>
+(const Rcpp::List&, const std::vector<cloud>*, const std::vector<cloud>*);
+template
+  std::vector<cloud> get_cloud_from_rcpp_list<false, true>
+  (const Rcpp::List&, const std::vector<cloud>*, const std::vector<cloud>*);
+
 smoother_output get_clouds_from_rcpp_list(const Rcpp::List &rcpp_list){
   smoother_output ans;
 
