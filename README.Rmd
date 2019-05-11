@@ -12,15 +12,15 @@ knitr::opts_chunk$set(
   error = FALSE)
 ```
 
+# dynamichazard
+
 [![Build Status on Travis](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard)
 [![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)		
 [![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/dynamichazard)](http://cran.rstudio.com/web/packages/dynamichazard/index.html)
 
-# dynamichazard
-
 The goal of dynamichazard is to estimate time-varying effects in survival analysis. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period. For more details, see the ddhazard vignette at https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf.
 
-The particle filter and smoother methods can estimate more general models then the random walk model. See the /examples directory for some examples.
+The particle filter and smoother methods can estimate more general models then the random walk model. See the [/examples](/examples) directory for some examples.
 
 ## Installation
 
