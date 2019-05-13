@@ -93,7 +93,6 @@ AUX_PF<T_resampler, T_importance_dens, is_forward>::
     if(data.debug > 0)
       data.log(1) << "Updating weights";
     {
-        const bool do_debug = data.debug > 4;
         double max_weight =  -std::numeric_limits<double>::max();
         arma::uvec r_set = get_risk_set(data.risk_sets, t);
         unsigned int n_elem = new_cloud.size();
@@ -145,27 +144,6 @@ AUX_PF<T_resampler, T_importance_dens, is_forward>::
             }
 
             max_weight = MAX(max_weight, it->log_weight);
-
-            if(do_debug){
-              const int wd = 11;
-              std::stringstream ss;
-
-              ss << std::setprecision(6)
-                 << "log-like terms"
-                 << " 'log_prob_y_given_state' "           << std::setw(wd) << log_prob_y_given_state
-                 << " 'log_prob_state_given_other' "       << std::setw(wd) << log_prob_state_given_other
-                 << " '-log_importance_dens' "             << std::setw(wd) << -it->log_importance_dens;
-
-              if(did_resample)
-                ss << " 'parent->log_weight' "             << std::setw(wd) << it->parent->log_weight
-                   << " '-parent->log_resampling_weight' " << std::setw(wd) << -it->parent->log_resampling_weight;
-
-              if(!is_forward)
-                ss << " 'log_artificial_prior(t)' "        << std::setw(wd) << prior->log_dens(it->get_state())
-                   << " '-log_artificial_prior(t + 1)' "   << std::setw(wd) << prior_p1->log_dens(it->parent->get_state());
-
-              data.log(5) << ss.str();
-            };
 
         } // end loop over new particle
 
@@ -264,7 +242,6 @@ PF_smoother_Fearnhead_O_N<T_resampler, T_importance_dens>::
       if(data.debug > 0)
         data.log(1) << "Weighting particles";
       {
-        const bool do_debug = data.debug > 4;
         double max_weight = -std::numeric_limits<double>::max();
         arma::uvec r_set = get_risk_set(data.risk_sets, t);
         unsigned int n_elem = new_cloud.size();
@@ -284,25 +261,6 @@ PF_smoother_Fearnhead_O_N<T_resampler, T_importance_dens>::
                     log_importance_dens = it->log_importance_dens,
                     log_artificial_prior = // TODO: have already been computed
                       prior_p1->log_dens(it->child->get_state());
-
-          if(do_debug){
-            const int wd = 11;
-            std::stringstream ss;
-
-            ss << std::setprecision(6)
-               << "log-like terms"
-               << " 'log_prob_y_given_state' "            << std::setw(wd) << log_prob_y_given_state
-               << " 'log_prob_state_given_previous' "     << std::setw(wd) << log_prob_state_given_previous
-               << " 'log_prob_next_given_state' "         << std::setw(wd) << log_prob_next_given_state
-               << " 'parent->log_weight' "                << std::setw(wd) << it->parent->log_weight
-               << " 'child->log_weight' "                 << std::setw(wd) << it->child->log_weight
-               << " 'log_importance_dens' "               << std::setw(wd) << log_importance_dens
-               << " 'parent->log_resampling_weight' "     << std::setw(wd) << it->parent->log_resampling_weight
-               << " 'child->log_resampling_weight' "      << std::setw(wd) << it->child->log_resampling_weight
-               << " 'log_artificial_prior' "              << std::setw(wd) << log_artificial_prior;
-
-            data.log(5) << ss.str();
-          };
 
           it->log_likelihood_term = it->log_weight =
             /* nominator */

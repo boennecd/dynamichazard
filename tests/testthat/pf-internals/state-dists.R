@@ -1,7 +1,7 @@
 get_Q_0 <- function(Qmat, Fmat){
   eg  <- eigen(Fmat)
   las <- eg$values
-  if(any(abs(las) >= 1))
+  if(any(Mod(las) >= 1))
     stop("Divergent series")
   U   <- eg$vectors
   T. <- solve(U, t(solve(U, Qmat)))

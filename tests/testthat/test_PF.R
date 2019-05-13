@@ -1640,3 +1640,49 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
   expect_equal(test_out, func_out$get_get_score_n_hess(only_score = TRUE),
                check.attributes = FALSE)
 })
+
+test_that("warns with randow walk model when covariates are in both fixed and random", {
+  skip_on_cran()
+
+  set.seed(43588155)
+  expect_warning(
+    pf_fit <- PF_EM(
+      fixed = Surv(tstart, tstop, death == 2) ~
+        age + edema  + log(albumin) + log(protime) + log(bili),
+      random = ~ log(bili),
+      data = pbc2, Q_0 = diag(1, 2), Q = diag(1, 2),
+      by = 50L, id = pbc2$id, a_0 = c(0, 0),
+      fixed_effects = c(-15, 0, 0, 0, 0, 0),
+      model = "exponential", max_T = 100L,
+      control = PF_control(
+        N_fw_n_bw = 50, N_smooth = 50, N_first = 50, eps = 1e-3,
+        method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+        n_max = 1L)),
+    regexp = "The following terms are in both 'fixed' and 'random' with 'type = \"RW\"':  'intercept', 'log(bili)'",
+    fixed = TRUE)
+})
+
+test_that("works when there are time periods outside where we have data and with a single fixed and random effect", {
+  skip_on_cran()
+  dir <- "local_tests"
+  skip_if_not(dir.exists(file.path("previous_results", dir)))
+
+  cap_ti <- 20L
+  head_neck_cancer <- subset(head_neck_cancer, stop < cap_ti)
+
+  set.seed(43588155)
+  suppressWarnings(pf_fit <- PF_EM(
+    fixed = Surv(start, stop, event) ~ 1, random = ~ I((group == 2) + 0.) - 1,
+    data = head_neck_cancer, Q_0 = diag(1, 1), Q = diag(0.0923169242234624, 1),
+    fixed_effects = -2.68255823834327,
+    a_0 = -0.745106571679811,
+    by = 1L, id = head_neck_cancer$id, type = "RW",
+    model = "cloglog", max_T = cap_ti + 6L,
+    control = PF_control(
+      N_fw_n_bw = 400, N_smooth = 1000L, N_first = 1000L,
+      method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
+      n_max = 1L)))
+
+  expect_known_value(
+    get_cloud_means(pf_fit), file.path(dir, "pf-rw-w-no-obs-periods.RDS"))
+})

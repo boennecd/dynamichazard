@@ -563,7 +563,8 @@ get_state_eq_matrices <-  function(
       if(n > 0){
         if(pos_def){
           eg <- eigen(X)
-          tol <- if(is_zero_ok) 0. else  sqrt(.Machine$double.eps)
+          tol <- if(is_zero_ok) 0. else
+            .Machine$double.eps * NCOL(X) * max(abs(eg$values))
           if(!all(eg$values >= tol))
             stop(sQuote(Xstr), " is not positive definite")
         } else

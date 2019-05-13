@@ -9,11 +9,6 @@
 class tracker;
 class PF_logger {
 public:
-#ifdef _OPENMP
-  static omp_lock_t lock; /* NOTICE: have to call omp_init_lock somewhere
-                             before usage!                                */
-#endif
-
   PF_logger(const bool log, const unsigned int level);
 
   PF_logger(PF_logger&& other);
@@ -191,15 +186,8 @@ public:
 #ifdef _OPENMP
       omp_set_num_threads(n_threads);
       omp_set_nested(0);
-      omp_init_lock(&PF_logger::lock);
 #endif
     }
-
-  ~PF_data(){
-#ifdef _OPENMP
-    omp_destroy_lock(&PF_logger::lock);
-#endif
-  }
 
   PF_logger log(const unsigned int level) const{
     return PF_logger(level <= debug, level);

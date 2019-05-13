@@ -5,8 +5,17 @@
 using tp = std::chrono::time_point<std::chrono::system_clock>;
 using tp_pointer = std::unique_ptr<tp>;
 
+inline void check_is_main_thread(){
+#ifdef _OPENMP
+  if(omp_get_thread_num() != 0L)
+    throw std::runtime_error("'PF_logger' method called not by main thread");
+#endif
+}
+
 PF_logger::PF_logger(const bool log, const unsigned int level):
-  log(log), level(level) {}
+  log(log), level(level) {
+  check_is_main_thread();
+}
 
 PF_logger::PF_logger(PF_logger&& other):
   log(other.log), level(other.level)
@@ -20,13 +29,7 @@ PF_logger::PF_logger(PF_logger&& other):
 
 PF_logger::~PF_logger(){
   if(log){
-#ifdef _OPENMP
-    omp_set_lock(&lock);
-#endif
     Rcpp::Rcout << os.str() << std::endl;
-#ifdef _OPENMP
-    omp_unset_lock(&lock);
-#endif
   }
 }
 
@@ -65,16 +68,6 @@ PF_logger::oprefixstream::oprefixstream(std::string const& prefix, std::ostream&
 std::string PF_logger::get_prefix(const unsigned int level){
   std::stringstream ss;
 
-#ifdef _OPENMP
-  unsigned int me;
-  if(omp_get_level() > 1 && !omp_get_nested()){
-    me = omp_get_ancestor_thread_num(omp_get_level() - 1);
-
-  } else
-    me = omp_get_thread_num();
-  ss << "Thread:" << std::setw(3) << me  << "\t";
-#endif
-
   ss << "delta T: " << std::setw(10) << std::setprecision(6)
      << get_elapsed_seconds_n_set_last_message_time() << "\t";
 
@@ -92,16 +85,11 @@ public:
 
 std::unique_ptr<tracker> PF_logger::last_message_time;
 
-#ifdef _OPENMP
-omp_lock_t PF_logger::lock;
-#endif
-
 double PF_logger::get_elapsed_seconds_n_set_last_message_time(){
   double elapsed_seconds;
 
-#ifdef _OPENMP
-  omp_set_lock(&lock);
-#endif
+  check_is_main_thread();
+
   tp_pointer now(new tp());
   *now = std::chrono::system_clock::now();
 
@@ -114,10 +102,6 @@ double PF_logger::get_elapsed_seconds_n_set_last_message_time(){
   }
 
   last_message_time.reset(new tracker(*now.release()));
-
-#ifdef _OPENMP
-  omp_unset_lock(&lock);
-#endif
 
   return elapsed_seconds;
 }

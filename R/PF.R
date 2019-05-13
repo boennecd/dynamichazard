@@ -328,6 +328,26 @@ PF_EM <- function(
     max_T = if(missing(max_T)) NULL else max_T, id = id,
     trace = trace, model, order = order, fixed = fixed, random = random)
 
+  if(type == "RW" && !missing(fixed) && !missing(random))
+    local({
+      func <- function(x){
+        v <- attr(x, "term.labels")
+        if(attr(x, "intercept"))
+          v <- c("intercept", v)
+        v
+      }
+
+      rvars <- func(static_args$terms$random)
+      fvars <- func(static_args$terms$fixed)
+
+      un <- intersect(rvars, fvars)
+      if(length(un) > 0L)
+        warning(paste0(
+          "The following terms are in both ", sQuote("fixed"), " and ",
+          sQuote("random"), " with ", sQuote("type = \"RW\""), ":  ",
+          paste0(sQuote(un), collapse = ", ")))
+    })
+
   #####
   # find matrices for state equation
   start_coefs <- get_start_values(
@@ -1362,7 +1382,7 @@ get_family_arg <- function(model)
 get_Q_0 <- function(Qmat, Fmat){
   eg  <- eigen(Fmat)
   las <- eg$values
-  if(any(abs(las) >= 1))
+  if(any(Mod(las) >= 1))
     stop("Divergent series")
   U   <- eg$vectors
   T. <- solve(U, t(solve(U, Qmat)))

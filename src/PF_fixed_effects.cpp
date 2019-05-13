@@ -36,7 +36,27 @@ public:
                      const std::string family, const bool debug):
   X(X), Y(Y), dts(dts), cloud(cloud), cl_weights(cl_weights),
   ran_vars(ran_vars), fixed_params(fixed_params),
-  family(get_fam<glm_base>(family)) {}
+  family(get_fam<glm_base>(family)) {
+#ifdef DDHAZ_DEBUG
+    auto throw_invalid_arg = [](const std::string &what){
+      throw std::invalid_argument("pf_fixed_it_worker: invalid '" +
+                                  what + "'");
+    };
+
+    const unsigned long n_obs = X.n_cols;
+    if(n_obs < 1L)
+      throw_invalid_arg("n_obs");
+    if(X.n_rows != fixed_params.n_elem)
+      throw_invalid_arg("X");
+    if((cloud.n_cols != 0L and ran_vars.n_rows != cloud.col(0).n_elem) or
+         ran_vars.n_cols != n_obs)
+      throw_invalid_arg("ran_vars");
+    if(Y.n_elem != n_obs)
+      throw_invalid_arg("Y");
+    if(dts.n_elem != n_obs)
+      throw_invalid_arg("dts");
+#endif
+  }
 
   struct result {
     arma::mat Rmat;
@@ -127,7 +147,9 @@ Rcpp::List pf_fixed_effect_get_QR(
   for(unsigned int i = 0; i < n_clouds; ++i){
     Rcpp::List cl = Rcpp::as<Rcpp::List>(clouds[i]);
     arma::uvec risk_set = Rcpp::as<arma::uvec>(risk_sets[i]);
-    risk_set.for_each([](arma::uvec::elem_type& val) { val -= 1L; } );
+    if(risk_set.n_elem == 0L)
+      continue;
+    risk_set -= 1L;
 
     arma::mat ran_vars_i = ran_vars   .cols(risk_set);
     arma::mat X_i        = fixed_terms.cols(risk_set);
@@ -161,8 +183,9 @@ Rcpp::List pf_fixed_effect_get_QR(
     futures.push_back(pool.submit(std::move(wo)));
   }
 
-  Rcpp::List out(n_clouds);
-  for(unsigned long i = 0; i < n_clouds; ++i)
+  const unsigned n_futures = futures.size();
+  Rcpp::List out(n_futures);
+  for(unsigned long i = 0; i < n_futures; ++i)
   {
     pf_fixed_it_worker::result res = futures[i].get();
     out[i] = Rcpp::List::create(

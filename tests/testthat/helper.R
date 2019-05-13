@@ -1,3 +1,5 @@
+suppressWarnings(RNGversion("3.5.0"))
+
 # Run before test
 # See https://github.com/hadley/testthat/issues/544#issuecomment-260053774
 

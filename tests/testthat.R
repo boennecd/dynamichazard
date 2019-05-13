@@ -2,6 +2,5 @@
 Sys.setenv("R_TESTS" = "")
 
 options(deparse.max.lines = 5)
-suppressWarnings(RNGversion("3.5.0"))
 
 testthat::test_check("dynamichazard", reporter = "summary")

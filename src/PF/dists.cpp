@@ -258,6 +258,9 @@ double observational_cdist<T>::log_dens(const arma::vec &coefs) const {
   const arma::vec eta = X.t() * coefs + offsets;
   arma::uword n = eta.n_elem;
 
+  if(n < 1L)
+    return 0.;
+
   /* compute log likelihood */
   double result = 0;
 #ifdef _OPENMP
@@ -276,16 +279,19 @@ double observational_cdist<T>::log_dens(const arma::vec &coefs) const {
 template<class T>
 arma::vec observational_cdist<T>::gradient(const arma::vec &coefs) const {
   const arma::vec eta = X.t() * coefs + offsets;
-  arma::uword n = eta.n_elem;
+  const arma::uword n = eta.n_elem;
 
   /* compute gradient */
   arma::vec result(coefs.n_elem, arma::fill::zeros);
+  if(n < 1L)
+    return result;
+
 #ifdef _OPENMP
   bool first_it = true;
 #pragma omp parallel for schedule(static) if(multithreaded)\
   reduction(armaVP:result) firstprivate(first_it)
 #endif
-  for(unsigned int i = 0; i < n; ++i){
+  for(unsigned i = 0; i < n; ++i){
 #ifdef _OPENMP
     if(first_it){
       result.zeros(coefs.n_elem);
@@ -311,10 +317,14 @@ arma::vec observational_cdist<T>::gradient_zero(const arma::vec *coefs) const {
 template<class T>
 arma::mat observational_cdist<T>::neg_Hessian(const arma::vec &coefs) const {
   const arma::vec eta = X.t() * coefs  + offsets;
-  arma::uword n = eta.n_elem;
+  const arma::uword n = eta.n_elem;
 
   /* compute Hessian */
   arma::mat result(coefs.n_elem, coefs.n_elem, arma::fill::zeros);
+
+  if(n < 1L)
+    return result;
+
 #ifdef _OPENMP
   bool first_it = true;
 #pragma omp parallel for schedule(static) reduction(armaMP:result) \

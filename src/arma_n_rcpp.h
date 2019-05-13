@@ -10,14 +10,9 @@
   #define ARMA_DONT_USE_OPENMP 1
 #endif
 
+#ifndef DDHAZ_DEBUG
 #define ARMA_NO_DEBUG
-// Note: This also disables the check in inv(A, B) for whether inversion is succesfull it seems http://arma.sourceforge.net/docs.html#inv
-// from armadillo config.hpp
-//// Uncomment the above line if you want to disable all run-time checks.
-//// This will result in faster code, but you first need to make sure that your code runs correctly!
-//// We strongly recommend to have the run-time checks enabled during development,
-//// as this greatly aids in finding mistakes in your code, and hence speeds up development.
-//// We recommend that run-time checks be disabled _only_ for the shipped version of your program.
+#endif
 
 #include <RcppArmadillo.h>
 
