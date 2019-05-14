@@ -1,3 +1,9 @@
+# dynamichazard 0.6.6
+* the nlopt optimizer used in the mode estimation used in some particle 
+  filters has been changed. Previously, `SLSQP` was used but this could 
+  take a lot of time in some cases.
+* fix bug in `PF_EM` when some periods do not have any observations.
+
 # dynamichazard 0.6.5
 * Minor bug fixes.
 

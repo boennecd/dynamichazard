@@ -70,8 +70,7 @@ test_that("cloglog function gives previous result with simulated data using PF_E
 
   expect_known_value(
     fit[c("EM_ests", "effective_sample_size", "log_ligkes")],
-    file = fi, update = FALSE,
-    check.attributes = FALSE)
+    file = fi, check.attributes = FALSE)
 
   set.seed(1)
   fw_res <- PF_forward_filter(

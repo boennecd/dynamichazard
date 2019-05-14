@@ -54,14 +54,23 @@ cdist_comb_generator::cdist_comb_generator(
   arma::vec val = start;
 
   if(!all_mvn){
-    /* find mode */
+    /* find mode. TODO: replace with penalized iteratively reweighted least
+     *                  squares */
     nlopt_opt opt;
-    opt = nlopt_create(NLOPT_LD_SLSQP, n);
+    opt = nlopt_create(NLOPT_LD_TNEWTON, n);
     nlopt_set_min_objective(opt, mode_objective, &cdists);
     nlopt_set_ftol_rel(opt, ftol_rel);
+    nlopt_set_vector_storage(opt, 500L);
 
     double minf;
-    nlopt_result_code = nlopt_optimize(opt, val.memptr(), &minf);
+    try {
+      nlopt_result_code = nlopt_optimize(opt, val.memptr(), &minf);
+
+    } catch (...)  {
+      nlopt_destroy(opt);
+      throw;
+
+    }
     nlopt_destroy(opt);
 
     if(nlopt_result_code < 1L)

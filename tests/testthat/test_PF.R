@@ -111,7 +111,7 @@ test_that("PF_smooth gives same results", {
   fw_args <- c(fw_args, args[
     intersect(names(args), names(formals(PF_forward_filter.formula)))])
 
-  test_func <- function(test_file_name, update = FALSE){
+  test_func <- function(test_file_name, update = do_update_tests){
     get_func <- quote(
       function(x){
         cloud <- bquote(.(substitute(x)))
@@ -351,7 +351,7 @@ test_that("PF_EM gives previous results on head neck data set", {
     max_T = 45)
 
   test_func <- function(
-    smoother, file_name, do_update = FALSE, do_print_fname = FALSE){
+    smoother, file_name, do_update = do_update_tests, do_print_fname = FALSE){
     f1 <- paste0("local_tests/", file_name)
     f2 <- paste0(file_name, "_cloud_means")
 
@@ -440,7 +440,7 @@ test_that("compute_PF_summary_stats gives previous results", {
   a_0 <- c(-3.6, 0)
   R <- diag(1, 2)
 
-  test_func <- function(data_file, test_file, do_update = FALSE){
+  test_func <- function(data_file, test_file, do_update = do_update_tests){
     q <- bquote({
       test_if_file_exists(
         .(data_file),

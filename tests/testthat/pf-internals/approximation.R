@@ -14,7 +14,7 @@ approximator <- function(..., start, do_checks = FALSE, ftol_rel = 1e-8){
 
     opt <- nloptr(start, eval_f = eval_f, eval_grad_f = eval_grad_f,
                   opts = list(
-                    algorithm = "NLOPT_LD_SLSQP", ftol_rel = ftol_rel,
+                    algorithm = "NLOPT_LD_TNEWTON", ftol_rel = ftol_rel,
                     check_derivatives = do_checks))
 
     if(opt$status < 0)
