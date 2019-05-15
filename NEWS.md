@@ -1,4 +1,8 @@
 # dynamichazard 0.6.6
+* two errors in `PF_get_score_n_hess` is fixed. One is that an off diagonal 
+  block in the observed information matrix was not computed. The other is that
+  parts of the score and observed information matrix was only correct if 
+  parts of them were multiplied by the duplication matrix.
 * the nlopt optimizer used in the mode estimation used in some particle 
   filters has been changed. Previously, `SLSQP` was used but this could 
   take a lot of time in some cases.

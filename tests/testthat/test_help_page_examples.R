@@ -513,12 +513,48 @@ test_that("`get_Q_0` example returns the correct covariance matrix", {
 
 test_that("'PF_get_score_n_hess' gives previous results", {
   skip_on_cran()
-
+  #####
+  # same as manual page
   library(dynamichazard)
   .lung <- lung[!is.na(lung$ph.ecog), ]
   # standardize
   .lung$age <- scale(.lung$age)
 
+  set.seed(43588155)
+  suppressWarnings(pf_fit <- PF_EM(
+    fixed = Surv(time, status == 2) ~ ph.ecog + age,
+    random = ~ 1, model = "exponential",
+    data = .lung, by = 50, id = 1:nrow(.lung),
+    Q_0 = as.matrix(1), Q = as.matrix(0.040353), type = "VAR",
+    max_T = 800, Fmat = as.matrix(0.77156),
+    fixed_effects =
+      c(`(Intercept)` = -6.343, ph.ecog = 0.41836, age = 0.10481),
+    control = PF_control(
+      N_fw_n_bw = 250, N_first = 2000, N_smooth = 500, covar_fac = 1.1,
+      nu = 6, n_max = 1L, eps = 1e-4, averaging_start = 200L,
+      n_threads = max(parallel::detectCores(logical = FALSE), 1))))
+
+  comp_obj <- PF_get_score_n_hess(pf_fit)
+  comp_obj$set_n_particles(N_fw = 1000L, N_first = 1000L)
+  comp_obj$run_particle_filter()
+  o1 <- comp_obj$get_get_score_n_hess()
+  expect_known_value(o1, "PF_get_score_n_hess-help-res.RDS")
+
+  # check that we get the same when we only request the score
+  o1_score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
+  expect_equal(o1$score, o1_score$score)
+
+  comp_obj <- PF_get_score_n_hess(pf_fit, use_O_n_sq = TRUE)
+  comp_obj$set_n_particles(N_fw = 250L, N_first = 250L)
+  o2 <- comp_obj$get_get_score_n_hess()
+  expect_known_value(o2, "PF_get_score_n_hess-help-res-O_N_sq.RDS")
+
+  # check that we get the same when we only request the score
+  o2_score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
+  expect_equal(o2$score, o2_score$score)
+
+  #####
+  # we also run the old 2D test
   set.seed(43588155)
   pf_fit <- suppressWarnings(PF_EM(
     fixed = Surv(time, status == 2) ~ ph.ecog + age,
@@ -536,34 +572,23 @@ test_that("'PF_get_score_n_hess' gives previous results", {
   expect_output(comp_obj <- PF_get_score_n_hess(pf_fit),
                 "Using '.lung' as the 'data' argument",
                 fixed = TRUE)
-  comp_obj$set_n_particles(N_fw = 10000L, N_first = 10000L)
+  comp_obj$set_n_particles(N_fw = 1000L, N_first = 1000L)
   comp_obj$run_particle_filter()
   o <- comp_obj$get_get_score_n_hess()
+  expect_known_value(o, "PF_get_score_n_hess-help-res-old.RDS")
 
-  expect_known_value(o, "PF_get_score_n_hess-help-res.RDS")
+  # check that we get the same when we only request the score
+  o_score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
+  expect_equal(o$score, o_score$score)
 
   expect_output(comp_obj <- PF_get_score_n_hess(pf_fit, use_O_n_sq = TRUE),
                 "Using '.lung' as the 'data' argument",
                 fixed = TRUE)
   comp_obj$set_n_particles(N_fw = 250L, N_first = 250L)
   o <- comp_obj$get_get_score_n_hess()
+  expect_known_value(o, "PF_get_score_n_hess-help-res-O_N_sq-old.RDS")
 
-  expect_known_value(o, "PF_get_score_n_hess-help-res-O_N_sq.RDS")
-
-  expect_output(o <- replicate(2L, {
-      runif(1)
-      pf_fit$seed <- .Random.seed
-      comp_obj <- PF_get_score_n_hess(pf_fit)
-      comp_obj$set_n_particles(N_fw = 1000L, N_first = 1000L)
-      comp_obj$run_particle_filter()
-      comp_obj$get_get_score_n_hess()
-    }, simplify = FALSE), "Using '.lung' as the 'data' argument",
-    fixed = TRUE)
-
-  for(s in names(o[[1L]])){
-    x1 <- o[[1L]][[s]]
-    x2 <- o[[2L]][[s]]
-    for(z in names(x1))
-      expect_true(!isTRUE(all.equal(x1[[z]], x2[[z]])))
-  }
+  # check that we get the same when we only request the score
+  o_score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
+  expect_equal(o$score, o_score$score)
 })

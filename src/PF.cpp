@@ -318,6 +318,7 @@ Rcpp::List PF_get_score_n_hess_cpp(
   arma::ivec is_event_in = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
   arma::vec event_times = Rcpp::as<arma::vec>(risk_obj["event_times"]);
 
+  /* get intermediary values */
   std::vector<std::unique_ptr<score_n_hess_base> > out_cpp;
   if(use_O_n_sq){
     out_cpp = PF_get_score_n_hess_O_N_sq
@@ -334,50 +335,37 @@ Rcpp::List PF_get_score_n_hess_cpp(
        only_score);
   }
 
-  arma::uword
-    p = out_cpp[0]->get_a_state().n_elem, q = out_cpp[0]->get_a_obs().n_elem;
-  int i_p = p, i_q = q;
-  arma::vec S_state(p, arma::fill::zeros), S_obs(q, arma::fill::zeros);
-  arma::mat neg_obs_info_state_dd(p, p, arma::fill::zeros),
-            neg_obs_info_state_d (p, p, arma::fill::zeros),
-            neg_obs_info_obs_dd  (q, q, arma::fill::zeros),
-            neg_obs_info_obs_d   (q, q, arma::fill::zeros);
+  /* compute score vector, weigthed sum of outer products of scores, and
+   * weighted sum of hessian terms */
+  const int dscore = out_cpp[0]->get_score().n_elem;
+  arma::vec score      (dscore, arma::fill::zeros);
+  arma::mat score_outer(dscore, dscore, arma::fill::zeros),
+            hess_terms (dscore, dscore, arma::fill::zeros);
 
   for(auto &o : out_cpp){
     const double w = o->get_weight();
-    S_state += w * o->get_a_state();
-    S_obs   += w * o->get_a_obs();
+    score += w * o->get_score();
 
     if(!only_score){
       R_BLAS_LAPACK::sym_mat_rank_one_update
-        (&i_p, &w, o->get_a_state().memptr(), neg_obs_info_state_d.memptr());
-      R_BLAS_LAPACK::sym_mat_rank_one_update
-        (&i_q, &w, o->get_a_obs()  .memptr(), neg_obs_info_obs_d  .memptr());
+        (&dscore, &w, o->get_score().memptr(), score_outer.memptr());
+      hess_terms += w * o->get_hess_terms();
 
-      neg_obs_info_state_dd += w * o->get_B_state();
-      neg_obs_info_obs_dd   += w * o->get_B_obs();
     }
   }
 
   if(!only_score){
-    neg_obs_info_state_d    = arma::symmatu(neg_obs_info_state_d);
-    neg_obs_info_state_dd   = arma::symmatu(neg_obs_info_state_dd);
-    neg_obs_info_obs_d      = arma::symmatu(neg_obs_info_obs_d);
-    neg_obs_info_obs_dd     = arma::symmatu(neg_obs_info_obs_dd);
+    score_outer    = arma::symmatu(score_outer);
+    hess_terms     = arma::symmatu(hess_terms);
 
   } else {
-    neg_obs_info_state_d.fill(NA_REAL);
-    neg_obs_info_state_dd.fill(NA_REAL);
-    neg_obs_info_obs_d.fill(NA_REAL);
-    neg_obs_info_obs_dd.fill(NA_REAL);
+    score_outer.fill(NA_REAL);
+    hess_terms.fill(NA_REAL);
 
   }
 
   return Rcpp::List::create(
-    Rcpp::Named("S_state")              = std::move(S_state),
-    Rcpp::Named("S_obs")                = std::move(S_obs),
-    Rcpp::Named("E_second_deriv_state") = std::move(neg_obs_info_state_dd),
-    Rcpp::Named("E_second_deriv_obs")   = std::move(neg_obs_info_obs_dd),
-    Rcpp::Named("E_score_outer_state")  = std::move(neg_obs_info_state_d),
-    Rcpp::Named("E_score_outer_obs")    = std::move(neg_obs_info_obs_d));
+    Rcpp::Named("score")       = std::move(score),
+    Rcpp::Named("score_outer") = std::move(score_outer),
+    Rcpp::Named("hess_terms")  = std::move(hess_terms));
 }

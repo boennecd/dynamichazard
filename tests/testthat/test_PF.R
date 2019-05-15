@@ -1525,7 +1525,7 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
     static_args <- eval(sta_arg_call)
     fw <- fit$clouds$forward_clouds
 
-    a_sta_old <- B_sta_old <- a_obs_old <- B_obs_old <- NULL
+    scores_old <- hess_old <- NULL
     k <- length(fit$F)
     K <- solve(fit$Q)
     K1_2 <- K / 2
@@ -1542,32 +1542,27 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
 
       eta <- drop(crossprod(Z_i, fit$fixed_effects))
 
+      nf <- NROW(Z_i)
+      score_dim <- nf + k * 2L
+      scores <- matrix(0., ncol(ps), score_dim)
+      hess <- array(0, c(score_dim, score_dim, ncol(ps)))
+
       #####
       # state equation
-      a_sta <- matrix(0., ncol(ps), k * 2L)
-      B_sta <- array(0, c(k * 2L, k * 2L, ncol(ps)))
       r0 <- ps - fit$F %*% parents
       r1 <- solve(fit$Q, r0)
       for(j in 1:ncol(ps)){
-        a_sta[j, 1:k] <- tcrossprod(parents[, j], r1[, j])
-        a_sta[j, 1:k + k] <-
+        scores[j, nf + 1:k] <- tcrossprod(parents[, j], r1[, j])
+        scores[j, nf + 1:k + k] <-
           solve(fit$Q, tcrossprod(r0[, j] * .5, r1[, j]) - diag(.5, k / 2L))
 
-        B_sta[1:k, 1:k, j] <- - kronecker(K, tcrossprod(parents[, j]))
+        hess[nf + 1:k, nf + 1:k, j] <- - kronecker(K, tcrossprod(parents[, j]))
         off_block <- - kronecker(K, tcrossprod(r1[, j], parents[, j]))
-        B_sta[1:k + k, 1:k, j    ] <- off_block
-        B_sta[1:k    , 1:k + k, j] <- t(off_block)
-        B_sta[1:k + k, 1:k + k, j] <-
+        hess[nf + 1:k + k, nf + 1:k    , j] <- off_block
+        hess[nf + 1:k    , nf + 1:k + k, j] <- t(off_block)
+        hess[nf + 1:k + k, nf + 1:k + k, j] <-
           - kronecker(K, tcrossprod(r1[, j]) - K1_2)
       }
-
-      if(!is.null(a_sta_old))
-        a_sta <- a_sta + a_sta_old[par_idx, ]
-      if(!is.null(B_sta_old))
-        B_sta <- B_sta + B_sta_old[, , par_idx]
-
-      a_sta_old <- a_sta
-      B_sta_old <- B_sta
 
       #####
       # observational equation
@@ -1576,55 +1571,47 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
         exp_eta <- exp(eta)
         drop(crossprod((exp_eta * (y_i - 1) + y_i) / (1 + exp_eta), t(Z_i)))
       })
-      if(!is.matrix(a_obs))
-        a_obs <- as.matrix(a_obs) else a_obs <- t(a_obs)
+      scores[, 1:nf] <- if(!is.matrix(a_obs)) as.matrix(a_obs) else t(a_obs)
       B_obs <- apply(ps, 2, function(x){
         eta <- eta + drop(crossprod(X_i, x))
         exp_eta <- exp(eta)
         crossprod(-t(Z_i) * exp(eta) / (1 + exp(eta))^2, t(Z_i))
       })
-      B_obs <- array(B_obs, dim = c(NCOL(a_obs), NCOL(a_obs), NROW(a_obs)))
+      hess[1:nf, 1:nf, ] <- array(B_obs, dim = c(nf, nf, dim(hess)[[3]]))
 
-      if(!is.null(a_obs_old))
-        a_obs <- a_obs + a_obs_old[par_idx, ]
-      if(!is.null(B_obs_old))
-        B_obs <- B_obs + B_obs_old[, , par_idx]
+      if(!is.null(scores_old))
+        scores <- scores + scores_old[par_idx, ]
+      if(!is.null(hess_old))
+        hess <- hess + hess_old[, , par_idx]
 
-      a_obs_old <- a_obs
-      B_obs_old <- B_obs
+      scores_old <- scores
+      hess_old   <- hess
     }
 
-    #####
-    # state equation
     ws <- drop(tail(fw, 1)[[1L]]$weights)
-    S_state <- colSums(a_sta * ws)
+    score <- colSums(scores * ws)
 
-    info_obj_sta <- matrix(0., NCOL(a_sta), NCOL(a_sta))
+    info_obj <- matrix(0., NCOL(scores), NCOL(scores))
     for(i in seq_along(ws))
-      info_obj_sta <-
-      info_obj_sta + ws[i] * (tcrossprod(a_sta[i, ]) + B_sta[, , i])
+      info_obj <-
+        info_obj + ws[i] * (tcrossprod(scores[i, ]) + hess[, , i])
 
-    d <- ncol(fit$Q)
-    K <- matrix(0., 2L * d * d, 2L * d * d)
-    K[1:(d * d), 1:(d * d)] <- dynamichazard:::.get_cum_mat(d, d)
-    diag(K[-(1:(d * d)), -(1:(d * d))]) <- 1
+    dfix <- NROW(Z_i)
+    n_rng <- NROW(X_i)
+    out_dim <- dfix + n_rng * n_rng + (n_rng * (n_rng + 1L)) / 2L
+    trans_mat <- matrix(0, out_dim, length(score))
 
-    S_state <- drop(K %*% S_state)
-    info_obj_sta <- tcrossprod(K %*% info_obj_sta, K)
+    ifix <- 1:dfix
+    trans_mat[ifix, ifix]          <- diag(dfix)
+    idF  <- dfix + 1:(n_rng * n_rng)
+    trans_mat[idF, idF]            <- dynamichazard:::.get_cum_mat(n_rng, n_rng)
+    idQ <- dfix + n_rng * n_rng + 1:((n_rng * (n_rng + 1L)) / 2L)
+    trans_mat[idQ, -c(ifix, idF)] <- t(dynamichazard:::.get_dup_mat(n_rng))
 
-    #####
-    # observation equation
-    S_obj <- colSums(a_obs * ws)
-    info_obj_obj <- matrix(0., NCOL(a_obs), NCOL(a_obs))
-    for(i in seq_along(ws))
-      info_obj_obj <-
-      info_obj_obj + ws[i] * (tcrossprod(a_obs[i, ]) + B_obs[, , i])
-
+    neg_info = tcrossprod(score) - info_obj
     list(
-      state = list(score =
-                     S_state, neg_obs_info = tcrossprod(S_state) - info_obj_sta),
-      observation = list(
-        score = S_obj, neg_obs_info = tcrossprod(S_obj) - info_obj_obj))
+      score = drop(trans_mat %*% score),
+      neg_info = tcrossprod(trans_mat %*% neg_info, trans_mat))
   }
 
   test_out <- test_logit_func(pf_fit)
@@ -1635,8 +1622,7 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
                check.attributes = FALSE)
 
   # only score
-  test_out$state$neg_obs_info[] <- NA_real_
-  test_out$observation$neg_obs_info[] <- NA_real_
+  test_out$neg_info[] <- NA_real_
   expect_equal(test_out, func_out$get_get_score_n_hess(only_score = TRUE),
                check.attributes = FALSE)
 })

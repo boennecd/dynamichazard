@@ -24,6 +24,8 @@ public:
 
   using Base::begin;
   using Base::end;
+  using Base::cbegin;
+  using Base::cend;
   using Base::rbegin;
   using Base::rend;
   using Base::iterator;
