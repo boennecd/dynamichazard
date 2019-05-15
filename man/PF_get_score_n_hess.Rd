@@ -65,24 +65,26 @@ library(dynamichazard)
 # standardize
 .lung$age <- scale(.lung$age)
 
+# fit model
 set.seed(43588155)
 pf_fit <- PF_EM(
   fixed = Surv(time, status == 2) ~ ph.ecog + age,
-  random = ~ age, model = "exponential",
+  random = ~ 1, model = "exponential",
   data = .lung, by = 50, id = 1:nrow(.lung),
-  Q_0 = diag(1, 2), Q = diag(.5^2, 2), type = "VAR",
-  max_T = 800,
+  Q_0 = as.matrix(1), Q = as.matrix(.5^2), type = "VAR",
+  max_T = 800, Fmat = as.matrix(.5),
   control = PF_control(
     N_fw_n_bw = 250, N_first = 2000, N_smooth = 500, covar_fac = 1.1,
-    nu = 6, n_max = 1000L, eps = 1e-5, est_a_0 = FALSE, averaging_start = 100L,
+    nu = 6, n_max = 1000L, eps = 1e-4, averaging_start = 200L,
     n_threads = max(parallel::detectCores(logical = FALSE), 1)))
 
+# compute score and observed information matrix
 comp_obj <- PF_get_score_n_hess(pf_fit)
 comp_obj$set_n_particles(N_fw = 10000L, N_first = 10000L)
 comp_obj$run_particle_filter()
 (o1 <- comp_obj$get_get_score_n_hess())
 
-# O(N^2) method with lower variance
+# O(N^2) method with lower variance as a function of time
 comp_obj <- PF_get_score_n_hess(pf_fit, use_O_n_sq = TRUE)
 comp_obj$set_n_particles(N_fw = 2500L, N_first = 2500L)
 (o2 <- comp_obj$get_get_score_n_hess())
@@ -96,10 +98,9 @@ o3 <- replicate(10L, {
   comp_obj$run_particle_filter()
   comp_obj$get_get_score_n_hess()
 }, simplify = FALSE)
-sapply(o3, function(x) x$observation$score)
-sapply(o3, function(x) sqrt(diag(solve(x$observation$neg_obs_info))))
+sapply(o3, function(x) x$score)
+sapply(o3, function(x) sqrt(diag(solve(x$neg_info))))
 }
-
 }
 \references{
 Cappe, O. and Moulines, E. (2005) Recursive Computation of the Score and

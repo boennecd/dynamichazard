@@ -119,7 +119,7 @@ nlopt_return_value_msg::nlopt_return_value_msg(const int nlopt_result_code):
   is_error(nlopt_result_code < 1L or nlopt_result_code > 4L),
   message(
     is_error ?
-    "'nlopt' returned with codes" + std::to_string(nlopt_result_code) :
+    "'nlopt' returned with codes " + std::to_string(nlopt_result_code) :
     "") { }
 
 

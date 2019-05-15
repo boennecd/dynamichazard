@@ -3,12 +3,24 @@
 #include "importance_samplers.h"
 #include "resamplers.h"
 
+extern "C" {
+  void F77_NAME(dsyr)(
+      const char *uplo, const int *n, const double *alpha,
+      const double *x, const int *incx,
+      double *a, const int *lda);
+}
+
+constexpr static char C_U = 'U';
+constexpr static int I_ONE = 1L;
+static const double D_ONE = 1, D_NEG_ONE = -1;
+
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-void print_means_score_n_hess
-  (const std::vector<const score_n_hess_base*> &dat, const unsigned int t){
-  arma::vec obs;
-  arma::vec state;
+inline void print_means_score_n_hess
+  (const std::vector<const score_n_hess_base*> &dat, const unsigned int t,
+   const bool has_hess){
+  arma::vec score;
+  arma::mat hess_terms;
 
   /* normalize */
   double norm = 0;
@@ -24,20 +36,26 @@ void print_means_score_n_hess
   w = ws.begin();
   for(auto i : dat){
     if(first){
-      obs   = *w * i->get_a_obs();
-      state = *(w++) * i->get_a_state();
+      score   = *w * i->get_score();
+      if(has_hess)
+        hess_terms  = *w * i->get_hess_terms();
       first = false;
       continue;
 
     }
 
-    obs   += *w * i->get_a_obs();
-    state += *(w++) * i->get_a_state();
+    score    += *w * i->get_score();
+    if(has_hess)
+      hess_terms   += *w * i->get_hess_terms();
 
   }
 
-  Rcpp::Rcout << "Obs   score at " << t << ": " << obs.t()
-              << "State score at " << t << ": " << state.t();
+  Rcpp::Rcout << "Score at " << t << '\n' << score.t();
+
+  if(has_hess)
+    Rcpp::Rcout
+              << "Hessian terms at " << t << '\n' << hess_terms;
+
 
 }
 
@@ -77,20 +95,24 @@ std::vector<std::set<arma::uword> > get_ancestors
 /* functions and classes to make approximations as in
  * Cappé, Olivier, and Eric Moulines. "Recursive computation of the score and observed information matrix in hidden Markov models." In IEEE/SP 13th Workshop on Statistical Signal Processing, 2005, pp. 703-708. IEEE, 2005. */
 
+/* object to compute the score and Hessian for a given particle up to a
+ * given point in time */
 struct score_n_hess_dat;
 class score_n_hess : public score_n_hess_base {
-  arma::vec a_state;
-  arma::vec a_obs;
-  arma::mat B_state;
-  arma::mat B_obs;
+  arma::vec score;
+  arma::mat hess_terms;
   bool is_set;
   double weight;
 public:
-  const arma::mat &get_a_state() const override;
-  const arma::mat &get_a_obs() const override;
-  const arma::mat &get_B_state() const override;
-  const arma::mat &get_B_obs() const override;
-  const double get_weight() const override;
+  const arma::vec &get_score() const override {
+    return score;
+  }
+  const arma::mat &get_hess_terms() const override {
+    return hess_terms;
+  }
+  const double get_weight() const override {
+    return weight;
+  }
 
   score_n_hess();
   score_n_hess(const score_n_hess_dat&, const particle&, const particle&,
@@ -99,6 +121,8 @@ public:
   score_n_hess& operator+=(const score_n_hess&);
 };
 
+/* object used to store the data needed in computation of the gradient and
+ * Hessian terms */
 struct score_n_hess_dat {
   const arma::mat X;
   const arma::vec eta;
@@ -122,6 +146,7 @@ struct score_n_hess_dat {
   { }
 };
 
+/* function to create a type of the above for a given point in time */
 score_n_hess_dat get_score_n_hess_dat
   (const arma::mat &ran_vars, const arma::mat &fixed_terms,
    const arma::ivec &is_event_in, const arma::vec &event_times,
@@ -156,95 +181,88 @@ score_n_hess_dat get_score_n_hess_dat
   };
 }
 
-const arma::mat &score_n_hess::get_a_state() const {
-  return a_state;
-}
-const arma::mat &score_n_hess::get_a_obs() const {
-  return a_obs;
-}
-const arma::mat &score_n_hess::get_B_state() const {
-  return B_state;
-}
-const arma::mat &score_n_hess::get_B_obs() const {
-  return B_obs;
-}
-const double score_n_hess::get_weight() const {
-  return weight;
-}
-
-
-struct state_derivs_output {
-  const arma::vec a_state;
-  const arma::mat B_state;
+struct derivs_output {
+  const arma::vec score;
+  const arma::mat hess_terms;
 };
 
-state_derivs_output get_state_derivs_output
+/* function to compute the score and Hessian terms */
+derivs_output get_derivs_output
   (const score_n_hess_dat &dat, const particle &p, const particle &parent,
-   const bool only_score)
-{
-  arma::uword k = p.get_state().n_elem,
-    B_sta_end_1 = k * k - 1L, B_sta_end_2 = 2L * k * k - 1L;
-  arma::vec a_state(k * k * 2L);
-  arma::mat B_state;
+   const bool only_score) {
+  const int
+    dfixd     = dat.X.n_rows,
+    dsate     = p.get_state().n_elem, dsatesq = dsate * dsate,
+    score_dim = dfixd + 2L * dsatesq;
+  const arma::uword n = dat.X.n_cols;
 
-  /* TODO: move some of this computation to somwhere else (e.g., the kronecker
-   *       product)... */
+  /* setup score and Hessian terms */
+  arma::vec score(score_dim, arma::fill::zeros);
+  arma::mat hess_terms =
+    only_score ?
+    arma::mat() : arma::mat(score_dim, score_dim, arma::fill::zeros);
 
-  arma::vec innovation = p.get_state() - dat.F * parent.get_state();
-  arma::vec innovation_std = solve_w_precomputed_chol(dat.Q_chol, innovation);
-  arma::mat Fd(a_state.memptr(), k, k, false);
-  Fd = parent.get_state() * innovation_std.t();
-  arma::mat Qd(a_state.memptr() + B_sta_end_1 + 1L, k, k, false);
-  Qd = (innovation / 2) * innovation_std.t();
-  Qd.diag() -= .5;
-  Qd = solve_w_precomputed_chol(dat.Q_chol, Qd);
+  /* we will only compute the upper part of the Hessian. We copy it to the
+   * lower part later. Start with terms from observation equation */
+  {
+    const arma::span obs_span(0L, dfixd - 1L);
+    for(arma::uword i = 0; i < n; ++i){
+      double eta = dat.eta[i] + arma::dot(dat.ran_vars.col(i), p.get_state());
 
-  if(!only_score){
-    B_state.set_size(k * k * 2L, k * k * 2L);
-    B_state.submat(0L, 0L, B_sta_end_1, B_sta_end_1) =
-      arma::kron(dat.K, (-parent.get_state()) * parent.get_state().t());
-    B_state.submat(0L, B_sta_end_1 + 1L, B_sta_end_1, B_sta_end_2) =
-      arma::kron(dat.K, (-parent.get_state()) * innovation_std.t());
-    B_state.submat
-      (B_sta_end_1 + 1L, B_sta_end_1 + 1L, B_sta_end_2, B_sta_end_2) =
-        -arma::kron(dat.K, innovation_std * innovation_std.t() - dat.K_1_2);
-  }
+      /* terms from observation equation */
+      auto trunc_eta = dat.family->truncate_eta(
+        dat.y[i], eta, exp(eta), dat.dts[i]);
+      const double d  =
+        dat.family->d_log_like (dat.y[i], trunc_eta, dat.dts[i]);
+      score(obs_span) += d * dat.X.col(i);
 
-  return { std::move(a_state), std::move(B_state) };
-}
-
-struct obs_derivs_output {
-  const arma::vec a_obs;
-  const arma::mat B_obs;
-};
-
-obs_derivs_output get_obs_derivs_output
-  (const score_n_hess_dat &dat, const particle &p, const bool only_score)
-{
-  arma::uword q = dat.X.n_rows, n = dat.X.n_cols;
-  int qi = q;
-  arma::vec a_obs(q, arma::fill::zeros);
-  arma::mat B_obs;
-  if(!only_score)
-    B_obs.zeros(q, q);
-
-  for(arma::uword i = 0; i < n; ++i){
-    double eta = dat.eta[i] + arma::dot(dat.ran_vars.col(i), p.get_state());
-
-    /* terms from observation equation */
-    auto trunc_eta = dat.family->truncate_eta(
-      dat.y[i], eta, exp(eta), dat.dts[i]);
-    double d  = dat.family->d_log_like (dat.y[i], trunc_eta, dat.dts[i]);
-    a_obs += d * dat.X.col(i);
-
-    if(!only_score){
-      double dd = dat.family->dd_log_like(dat.y[i], trunc_eta, dat.dts[i]);
-      R_BLAS_LAPACK::sym_mat_rank_one_update
-        (&qi, &dd, dat.X.colptr(i), B_obs.memptr());
+      if(!only_score){
+        const double dd =
+          dat.family->dd_log_like(dat.y[i], trunc_eta, dat.dts[i]);
+        F77_CALL(dsyr)(
+            &C_U, &dfixd, &dd, dat.X.colptr(i), &I_ONE, hess_terms.memptr(),
+            &score_dim);
+      }
     }
   }
 
-  return { std::move(a_obs), std::move(B_obs) };
+  /* then terms from state equation */
+  {
+    double * const score_state = score.memptr() + dfixd;
+
+    /* handle dL/dF */
+    arma::vec innovation = p.get_state() - dat.F * parent.get_state();
+    arma::vec innovation_Qinv =
+      solve_w_precomputed_chol(dat.Q_chol, innovation);
+    arma::mat Fd(score_state, dsate, dsate, false);
+    Fd = parent.get_state() * innovation_Qinv.t();
+
+    /* handle dL/dQ */
+    arma::mat Qd(score_state + dsatesq, dsate, dsate, false);
+    Qd = (innovation / 2.) * innovation_Qinv.t();
+    Qd.diag() -= .5;
+    Qd = solve_w_precomputed_chol(dat.Q_chol, Qd);
+
+    if(!only_score){
+      const arma::span Fspan(dfixd          , dfixd + dsatesq - 1L),
+                       Qspan(dfixd + dsatesq, dfixd + 2L * dsatesq - 1L);
+      hess_terms(Fspan, Fspan) =
+        arma::kron(
+          dat.K, (-parent.get_state()) * parent.get_state().t());
+      hess_terms(Fspan, Qspan) =
+        arma::kron(
+          dat.K, (-parent.get_state()) * innovation_Qinv.t());
+      hess_terms(Qspan, Qspan) =
+          arma::kron(
+            dat.K, (-innovation_Qinv) * innovation_Qinv.t() + dat.K_1_2);
+    }
+  }
+
+  /* not needed as we later copy the upper part to the lower part*/
+  // if(!only_score)
+  //   hess_terms = arma::symmatu(hess_terms);
+
+  return { std::move(score), std::move(hess_terms) };
 }
 
 score_n_hess::score_n_hess():
@@ -254,33 +272,19 @@ score_n_hess::score_n_hess
   (const score_n_hess_dat &dat, const particle &p, const particle &parent,
    const bool only_score): is_set(true), weight(exp(p.log_weight))
 {
-  {
-    state_derivs_output o =
-      get_state_derivs_output(dat, p, parent, only_score);
-    a_state = std::move(o.a_state);
-    B_state = std::move(o.B_state);
-  }
-
-  {
-    obs_derivs_output o =
-      get_obs_derivs_output(dat, p, only_score);
-    a_obs = std::move(o.a_obs);
-    B_obs = std::move(o.B_obs);
-  }
+  auto o = get_derivs_output(dat, p, parent, only_score);
+  score = std::move(o.score);
+  hess_terms = std::move(o.hess_terms);
 }
 
 score_n_hess& score_n_hess::operator+=(const score_n_hess& rhs){
   if(is_set){
-    a_state += rhs.a_state;
-    a_obs += rhs.a_obs;
-    B_state += rhs.B_state;
-    B_obs += rhs.B_obs;
+    score      += rhs.score;
+    hess_terms += rhs.hess_terms;
 
   } else {
-    a_state = rhs.a_state;
-    a_obs = rhs.a_obs;
-    B_state = rhs.B_state;
-    B_obs = rhs.B_obs;
+    score      = rhs.score;
+    hess_terms = rhs.hess_terms;
 
   }
 
@@ -322,7 +326,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess
   auto r_obj = risk_obj.begin();
   bool is_first = true;
 
-  unsigned int i = 0;
+  unsigned i = 0;
   for(; particle_idxs != needed_particles.end();
       ++particle_idxs, ++r_obj, ++cl_i, ++i){
     score_n_hess_dat dat = get_score_n_hess_dat(
@@ -330,7 +334,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess
       *r_obj, i, fixed_params, family, F, Q);
 
     /* setup workers to perform computation */
-    unsigned int n_parts = particle_idxs->size();
+    const unsigned n_parts = particle_idxs->size();
     std::vector<std::future<score_n_hess> > futures;
     futures.reserve(n_parts);
     const cloud &cl = *cl_i;
@@ -362,7 +366,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess
       for(auto x : old_res)
         to_print_list.emplace_back(&x.second);
 
-      print_means_score_n_hess(to_print_list, i + 1L);
+      print_means_score_n_hess(to_print_list, i + 1L, !only_score);
 
     }
   }
@@ -377,124 +381,190 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess
 
 
 
-/* functions and classes to make approximations as in
+/* functions and classes to make approximations suggested in
  * Poyiadjis, George, Arnaud Doucet, and Sumeetpal S. Singh. "Particle approximations of the score and observed information matrix in state space models with application to parameter estimation." Biometrika 98, no. 1 (2011): 65-80. */
 
-class score_n_hess_O_N_sq : public score_n_hess_base {
-  arma::vec a_state;
-  arma::vec a_obs;
-  arma::mat B_state;
-  arma::mat B_obs;
-  double weight;
-public:
+namespace {
+  /* struct used to save some computations in the member function in next
+   * class */
+  class extended_particle {
+    const particle &p;
+  public:
+    /* stores Q^{-1}Fp */
+    const arma::vec QiFp;
 
-  const arma::mat &get_a_state() const override;
-  const arma::mat &get_a_obs() const override;
-  const arma::mat &get_B_state() const override;
-  const arma::mat &get_B_obs() const override;
-  const double get_weight() const override;
+    extended_particle(const particle &p, const score_n_hess_dat &dat):
+      p(p), QiFp(([&]{
+        arma::vec out = dat.F * p.get_state();
+        out = solve_w_precomputed_chol(dat.Q_chol, out);
+        return out;
+      })()) { }
 
-  score_n_hess_O_N_sq() = default;
-  score_n_hess_O_N_sq(
-    const score_n_hess_dat&, const particle&,
-    const cloud&, const std::vector<double>&,
-    const std::vector<score_n_hess_O_N_sq>&, const bool);
-};
+    const arma::vec& get_state() const {
+      return p.get_state();
+    }
+  };
 
-static const double neg_one = -1;
+  /* class to perform computation of the aforementioned algorithm */
+  class score_n_hess_O_N_sq : public score_n_hess_base {
+    arma::vec score;
+    arma::mat hess_terms;
+    double weight;
+  public:
+    const arma::vec &get_score() const override {
+      return score;
+    }
+    const arma::mat &get_hess_terms() const override {
+      return hess_terms;
+    }
+    const double get_weight() const override {
+      return weight;
+    }
+
+    score_n_hess_O_N_sq() = default;
+    score_n_hess_O_N_sq(
+      const score_n_hess_dat&, const particle&,
+      const std::vector<extended_particle>&, const std::vector<double>&,
+      const std::vector<score_n_hess_O_N_sq>&, const bool);
+  };
+}
 
 score_n_hess_O_N_sq::score_n_hess_O_N_sq(
   const score_n_hess_dat &dat, const particle &p,
-  const cloud &old_cl, const std::vector<double> &ws,
+  const std::vector<extended_particle> &old_cl, const std::vector<double> &ws,
   const std::vector<score_n_hess_O_N_sq> &old_score_n_hess,
   const bool only_score): weight(exp(p.log_weight))
 {
   /* is it first iteration? */
   const bool is_first_it = old_score_n_hess.size() < 1L;
 
+  const int
+      dfixd     = dat.X.n_rows,
+      dsate     = p.get_state().n_elem, dsatesq = dsate * dsate,
+      score_dim = dfixd + 2L * dsatesq;
+  const arma::uword n = dat.X.n_cols;
+
+  /* setup score and Hessian terms */
+  score.zeros(score_dim);
+  hess_terms =
+    only_score ?
+    arma::mat() : arma::mat(score_dim, score_dim, arma::fill::zeros);
+
+  /* compute terms from observation equation */
+  const arma::span obs_span(0L, dfixd - 1L), sta_span(dfixd, score_dim - 1L);
   {
-    obs_derivs_output o =
-      get_obs_derivs_output(dat, p, only_score);
-    a_obs = std::move(o.a_obs);
-    B_obs = std::move(o.B_obs);
-  }
+    for(arma::uword i = 0; i < n; ++i){
+      double eta = dat.eta[i] + arma::dot(dat.ran_vars.col(i), p.get_state());
 
-  const arma::vec a_obs_org = a_obs;
-
-  const int dim_state = p.get_state().n_elem * p.get_state().n_elem * 2L,
-    dim_obs = a_obs.n_elem;
-  a_state.zeros(dim_state);
-  if(!only_score)
-    B_state.zeros(dim_state, dim_state);
-
-  auto w = ws.begin();
-  auto old_res = old_score_n_hess.begin();
-  for(const auto parent : old_cl){
-    double w_i = exp(*(w++));
-
-    state_derivs_output o =
-      get_state_derivs_output(dat, p, parent, only_score);
-    if(!is_first_it){
-      arma::vec term_obs   = a_obs_org + old_res->get_a_obs(),
-                term_state = o.a_state + old_res->get_a_state();
-
-      a_state += w_i * term_state;
-      a_obs   += w_i * old_res->get_a_obs();
+      /* terms from observation equation */
+      auto trunc_eta = dat.family->truncate_eta(
+        dat.y[i], eta, exp(eta), dat.dts[i]);
+      const double d =
+        dat.family->d_log_like (dat.y[i], trunc_eta, dat.dts[i]);
+      score(obs_span) += d * dat.X.col(i);
 
       if(!only_score){
-        B_state += w_i * (old_res->get_B_state() + o.B_state);
-        B_obs   += w_i *  old_res->get_B_obs();
-
-        /* add extra outer cross-product terms */
-        R_BLAS_LAPACK::sym_mat_rank_one_update
-          (&dim_obs  , &w_i, term_obs.memptr()  , B_obs.memptr());
-        R_BLAS_LAPACK::sym_mat_rank_one_update
-          (&dim_state, &w_i, term_state.memptr(), B_state.memptr());
-
+        const double dd =
+          dat.family->dd_log_like(dat.y[i], trunc_eta, dat.dts[i]);
+        F77_CALL(dsyr)(
+            &C_U, &dfixd, &dd, dat.X.colptr(i), &I_ONE, hess_terms.memptr(),
+            &score_dim);
       }
-
-      ++old_res;
-      continue;
-
     }
 
-    /* first iteration */
-    a_state += w_i * o.a_state;
+    if(!only_score)
+      F77_CALL(dsyr)(
+        &C_U, &dfixd, &D_ONE, score.memptr(), &I_ONE, hess_terms.memptr(),
+        &score_dim);
+  }
 
-    if(!only_score){
-      B_state += w_i * o.B_state;
+  /* take a copy of the gradient w.r.t. the terms from the observation equation */
+  const arma::vec obs_score_term =
+    only_score ? arma::vec() : score(obs_span);
 
-      /* add extra outer cross-product terms */
-      R_BLAS_LAPACK::sym_mat_rank_one_update
-        (&dim_state, &w_i, o.a_state.memptr(), B_state.memptr());
+  /* compute terms from state equation and handle additional outer product
+   * terms with this algorithm */
+  const arma::span Fspan(dfixd          , dfixd + dsatesq - 1L),
+                   Qspan(dfixd + dsatesq, dfixd + 2L * dsatesq - 1L);
+  {
+    /* setup objects which we will use to store score terms */
+    arma::vec
+      score_terms   (score_dim, arma::fill::zeros);
+    arma::mat
+      score_terms_Fd(score_terms.memptr() + dfixd          , dsate, dsate, false),
+      score_terms_Qd(score_terms.memptr() + dfixd + dsatesq, dsate, dsate, false);
 
+    auto w = ws.begin();
+    auto old_res = old_score_n_hess.begin();
+    const arma::vec Qip = solve_w_precomputed_chol(dat.Q_chol, p.get_state());
+
+    for(auto parent = old_cl.cbegin(); parent !=  old_cl.cend();
+        ++w, ++old_res, ++parent){
+      double w_i = exp(*w);
+
+      /* handle dL/dF */
+      /* Q^{-1}(y - F x) */
+      const arma::vec innovation_Qinv = Qip - parent->QiFp;
+      score_terms_Fd = parent->get_state() * innovation_Qinv.t();
+
+      /* handle dL/dQ */
+      score_terms_Qd =
+        (innovation_Qinv / 2) * innovation_Qinv.t() - dat.K_1_2;
+
+      /* add old score terms */
+      if(!is_first_it){
+        score_terms(obs_span)  = old_res->get_score()(obs_span);
+        score_terms(sta_span) += old_res->get_score()(sta_span);
+      }
+
+      /* add terms to score */
+      score += w_i * score_terms;
+
+      if(!only_score){
+        /* add terms Hessian given state variables */
+        hess_terms(Fspan, Fspan) +=
+          arma::kron(
+            dat.K, ((-w_i) * parent->get_state()) * parent->get_state().t());
+        hess_terms(Fspan, Qspan) +=
+          arma::kron(
+            dat.K, ((-w_i) * parent->get_state()) * innovation_Qinv.t());
+        hess_terms(Qspan, Qspan) +=
+          arma::kron(
+            dat.K, w_i * ((- innovation_Qinv) * innovation_Qinv.t() + dat.K_1_2));
+
+        /* add outer product of score terms from state equation and old the
+         * state's score vector */
+        F77_CALL(dsyr)(
+            &C_U, &score_dim, &w_i, score_terms.memptr(), &I_ONE,
+            hess_terms.memptr(), &score_dim);
+
+        if(!is_first_it)
+          hess_terms += w_i * old_res->get_hess_terms();
+      }
     }
   }
 
   if(!only_score){
-    if(!is_first_it)
-      R_BLAS_LAPACK::sym_mat_rank_one_update
-        (&dim_obs, &neg_one, a_obs.memptr(), B_obs.memptr());
-    R_BLAS_LAPACK::sym_mat_rank_one_update
-      (&dim_state, &neg_one, a_state.memptr(), B_state.memptr());
+    /* we lag one outer product in the Hessian term between the score terms
+     * from the observation equation and the sum of the weighted score terms
+     * from the previous state and the state equation */
+    {
+      arma::vec tmp = score;
+      tmp(obs_span) -= obs_score_term;
+      R_BLAS_LAPACK::dger(
+        &dfixd, &score_dim, &D_ONE, obs_score_term.memptr(),
+        &I_ONE, tmp.memptr(), &I_ONE, hess_terms.memptr(), &score_dim);
 
+    }
+
+   /* subtract outer product of score */
+   F77_CALL(dsyr)(
+     &C_U, &score_dim, &D_NEG_ONE, score.memptr(), &I_ONE, hess_terms.memptr(),
+     &score_dim);
+
+   /* not needed as we later copy the upper part to the lower part */
+   // hess_terms = arma::symmatu(hess_terms);
   }
-}
-
-const arma::mat &score_n_hess_O_N_sq::get_a_state() const {
-  return a_state;
-}
-const arma::mat &score_n_hess_O_N_sq::get_a_obs() const {
-  return a_obs;
-}
-const arma::mat &score_n_hess_O_N_sq::get_B_state() const {
-  return B_state;
-}
-const arma::mat &score_n_hess_O_N_sq::get_B_obs() const {
-  return B_obs;
-}
-const double score_n_hess_O_N_sq::get_weight() const {
-  return weight;
 }
 
 #define PF_GET_SCORE_N_HESS_O_N_SQ_ARGS                                   \
@@ -547,7 +617,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq_comp
                 << old_cl.get_weigthed_mean().t();
 
   /* run particle filter and compute smoothed functionals recursively */
-  for(unsigned int t = 1;  t <= (unsigned int)data.d; ++t, ++r_obj){
+  for(unsigned t = 1;  t <= (unsigned)data.d; ++t, ++r_obj){
     if((t + 1L) % 3L == 0L)
       Rcpp::checkUserInterrupt();
 
@@ -584,7 +654,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq_comp
       old_cl_resampled.reserve(new_idx_n_weights.size());
       old_n_hess_O_N_sqs_resampled.reserve(new_idx_n_weights.size());
 
-      for(auto it : new_idx_n_weights)
+      for(auto &it : new_idx_n_weights)
       {
         old_cl_resampled.new_particle(std::move(old_cl[it.first]));
         old_cl_resampled.back().log_weight = it.second;
@@ -607,7 +677,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq_comp
       data.log(1) << "Setting weights";
 
     /* N x N log weights matrix */
-    unsigned int n_elem = new_cl.size();
+    const unsigned n_elem = new_cl.size();
     std::vector<std::vector<double> > ws(n_elem);
     {
       double max_weight = -std::numeric_limits<double>::max();
@@ -625,7 +695,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq_comp
         part_ws.resize(old_cl.size());
         auto part_ws_j = part_ws.begin();
         double max_weight_inner = -std::numeric_limits<double>::max();
-        for(const auto parent : old_cl){ /* loop over parents */
+        for(const auto &parent : old_cl){ /* loop over parents */
           *(part_ws_j) =
             parent.log_weight +
             dens_calc.log_prob_state_given_parent(
@@ -667,16 +737,27 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq_comp
     if(data.debug > 0)
       data.log(1) << "Computing smoothed functionals";
 
-    /* TODO: use an openMP reduction */
+
+    /* setup vector of extended particle class that we will use to save some
+     * computation in the next calls */
+    const std::vector<extended_particle> ex_old_cl = ([&]{
+      std::vector<extended_particle> out;
+      out.reserve(old_cl.size());
+      for(auto &x : old_cl)
+        out.emplace_back(x, dat);
+
+      return out;
+    })();
+
     new_n_hess_O_N_sqs.clear();
     new_n_hess_O_N_sqs.resize(n_elem);
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-    for(unsigned int j = 0; j < n_elem; ++j){ // loop over new particles
+    for(unsigned j = 0; j < n_elem; ++j){ // loop over new particles
       new_n_hess_O_N_sqs[j] = score_n_hess_O_N_sq(
-        dat, *(new_cl.begin() + j), old_cl, ws[j], old_n_hess_O_N_sqs,
+        dat, *(new_cl.begin() + j), ex_old_cl, ws[j], old_n_hess_O_N_sqs,
         only_score);
 
     }
@@ -687,23 +768,21 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq_comp
     if(data.debug > 0){
       std::vector<const score_n_hess_base*> to_print_list;
       to_print_list.reserve(old_n_hess_O_N_sqs.size());
-      for(auto x : old_n_hess_O_N_sqs)
+      for(auto &x : old_n_hess_O_N_sqs)
         to_print_list.emplace_back(&x);
 
-      print_means_score_n_hess(to_print_list, t);
+      print_means_score_n_hess(to_print_list, t, !only_score);
 
     }
   }
 
   std::vector<std::unique_ptr<score_n_hess_base> > out;
   out.reserve(old_n_hess_O_N_sqs.size());
-  for(auto x : old_n_hess_O_N_sqs)
+  for(auto &x : old_n_hess_O_N_sqs)
     out.emplace_back(new score_n_hess_O_N_sq(std::move(x)));
 
   return out;
 }
-
-
 
 std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq
   (PF_GET_SCORE_N_HESS_O_N_SQ_ARGS, const std::string method)

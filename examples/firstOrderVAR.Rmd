@@ -413,8 +413,20 @@ sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE,
   comp_obj <- PF_get_score_n_hess(pf_start, use_O_n_sq = use_O_n_sq)
   state <- matrix(
     NA_real_, n_runs + 1L, length(pf_start$F) + length(pf_start$Q))
+  
+  # setup matrix to map from gradient to the state (the covariance part is only
+  # the lower diagonal)
+  dF <- length(pf_start$F)
+  dQ <- NCOL(pf_start$Q)
+  nQ <- (dQ * (dQ + 1L)) / 2L
+  K <- matrix(0., ncol(state), length(pf_start$F) + nQ)
+  K[  1:dF ,   1:dF] <- diag(dF)
+  # can use e.g., matrixcal instead to get the duplication matrix
+  K[-(1:dF), -(1:dF)] <- dynamichazard:::.get_dup_mat(dQ)
+  
+  dfix <- length(pf_start$fixed_effects)
   obs   <- matrix(
-    NA_real_, n_runs + 1L, length(pf_start$fixed_effects))
+    NA_real_, n_runs + 1L, dfix)
   state[1, ] <- c(pf_start$F, pf_start$Q)
   obs  [1, ] <- pf_start$fixed_effects
   lls <- rep(NA_real_, n_runs)
@@ -424,24 +436,47 @@ sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE,
     fw <- comp_obj$run_particle_filter()
     lls[i] <- logLik(fw)
     score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
-    state_i <- state[i + 1L, ]  <- state[i, ]  + lrs[i] * score$state$score
-    obs_i   <- obs  [i + 1L, ]  <- obs  [i, ]  + lrs[i] * score$observation$score
+    sc <- score$score
     
-    if(debug){
-      msg <- paste0(sprintf("It %4d Log-likelihood %6.1f", i, lls[i])) 
-      cat(msg, "\n", rep("-", nchar(msg)), "\n", sep = "")
-    }
-    
-    if(i > avg_start){
-      idx <- avg_start:i
-      state_i <- colMeans(state[idx, ])
-      obs_i   <- colMeans(obs  [idx, ])
+    # step-half until we have a valid set a of parameters 
+    lr <- lrs[i]
+    n_halfs <- 0L
+    n_halfs_max <- 25L
+    while((n_halfs <- n_halfs + 1L) <= n_halfs_max){
+      state_i <- 
+        state[i + 1L, ]  <- state[i, ]  + lr * drop(K %*% sc[-(1:dfix)])
+      obs_i   <- 
+        obs  [i + 1L, ]  <- obs  [i, ]  + lr * sc[1:dfix]
+      lr <- lr / 2
       
+      if(i > avg_start){
+        idx <- avg_start:i
+        state_i <- colMeans(state[idx, , drop = FALSE])
+        obs_i   <- colMeans(obs  [idx, , drop = FALSE])
+      
+      }
+      
+      # check that system is stationary
+      Ftmp <- matrix(state_i[1:dQ^2], dQ, dQ)
+      if(any(Mod(eigen(Ftmp)$values) >= 1))
+        next
+      
+      # set parameters
+      o <- comp_obj$set_parameters(state = state_i, obs = obs_i)
+      
+      # Q is positive definite 
+      if(all(eigen(o$Q)$values > 0.))
+        break
     }
     
-    o <- comp_obj$set_parameters(state = state_i, obs = obs_i)
+    if(n_halfs > n_halfs_max)
+      stop("step halvings failed")
     
     if(debug){
+      msg <- paste0(sprintf("It %4d Log-likelihood %10.2f (max %10.2f)", i, 
+                            lls[i], max(lls, na.rm = TRUE))) 
+      cat(msg, "\n", rep("-", nchar(msg)), "\n", sep = "")
+      cat(sprintf("Gradient norm %14.4f\n", norm(t(sc))))
       print(o$Fmat)
       print(o$Q)
       print(o$fixed_effects)
@@ -453,13 +488,13 @@ sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE,
 }
 
 # number of iterations
-n_runs <- 200L
+n_runs <- 400L
 # number of particles to use
-ns <- ceiling(exp(seq(log(500), log(5000), length.out = n_runs)))
+ns <- ceiling(exp(seq(log(100), log(1000), length.out = n_runs)))
 # step sizes
-lrs <- .005 * (1:n_runs)^(-1/2)
+lrs <- .005 * (1:n_runs)^(-3/5)
 
-out <- sgd(n_runs = n_runs, ns = ns, lrs = lrs)
+out <- sgd(n_runs = n_runs, ns = ns, lrs = lrs, avg_start = 200L)
 lls <- out$lls
 o <- out$o
 ```
@@ -468,7 +503,7 @@ The results are illustrated below
 
 ```{r show_sgd_res}
 # approximate log-likelihood at each iteration
-par(mar = c(5, 4, .5, .5))
+par(mar = c(5, 4, 1, 1))
 plot(lls, xlab = "Iteration", ylab = "Log-likelihood", type = "l")
 print(max(lls), digits = 5)
 
@@ -480,29 +515,29 @@ o$fixed_effects
 
 We can also use the method from @Poyiadjis11. The present implementation 
 scales poorly in the number of particles but the method has a variance 
-that may be linear in the number of time periods instead of quadratic. 
+that may be linear in the number of time periods instead of at least quadratic. 
 This is important for long time series.
 
-```{r O_N_sq_sgd, cache = 1}
+```{r O_N_sq_sgd, cache = 1, dependson = "sgd"}
 # number of iterations
-n_runs <- 200L
+n_runs <- 400L
 # number of particles to use
-ns <- ceiling(exp(seq(log(500), log(1000), length.out = n_runs)))
+ns <- ceiling(exp(seq(log(200), log(500), length.out = n_runs)))
 # step sizes
-lrs <- .005 * (1:n_runs)^(-1/2)
+lrs <- .004 * (1:n_runs)^(-2/3)
 
 out <- sgd(n_runs = n_runs, ns = ns, lrs = lrs, use_O_n_sq = TRUE, 
-           avg_start = 100L)
+           avg_start = 200L)
 lls <- out$lls
 o <- out$o
 ```
 
-The results are illustrated below (the log-likelihoods approximation from 
+The results are illustrated below (the log-likelihood approximations from 
 the forward particle filter are poor approximations due to few particles).
 
 ```{r O_N_sq_show_sgd_res}
 # approximate log-likelihood at each iteration
-par(mar = c(5, 4, .5, .5))
+par(mar = c(5, 4, 1, 1))
 plot(lls, xlab = "Iteration", ylab = "Log-likelihood", type = "l")
 print(max(lls), digits = 5)
 
@@ -511,6 +546,68 @@ o$Fmat
 show_covar(o$Q)
 o$fixed_effects
 ```
+
+We can approximate standard errors as follows
+
+<button onclick="show_obs_info()" style="
+    color: #494949 !important;
+    background: #ffffff;
+    padding: 5px;
+    border: 4px solid #494949 !important;
+    border-radius: 6px;
+    display: inline-block;
+    margin: 5px 0;"
+>Show/hide code and result</button>
+
+<script>
+function show_obs_info() {
+  var x = document.getElementById("obsInfo");
+  if (x.style.display === "none") {
+    x.style.display = "block";
+  } else {
+    x.style.display = "none";
+  }
+}
+</script>
+
+<div id="obsInfo" style = "display: none;">
+
+```{r obs_info_sgd, cache = 1, dependson = "O_N_sq_sgd"}
+set.seed(24680530)
+aprxs <- replicate(10, {
+  # make approximation
+  runif(1)
+  pf_start$seed <- .Random.seed
+  sink(tempfile())
+  comp_obj <- PF_get_score_n_hess(pf_start, use_O_n_sq = TRUE)
+  sink()
+  comp_obj$set_parameters(
+    state = c(o$Fmat, o$Q), obs = o$fixed_effects)
+  comp_obj$set_n_particles(N_fw = 1000L, N_first = 1000L)
+  comp_obj$run_particle_filter()
+  comp_out <- comp_obj$get_get_score_n_hess()
+  
+  # return approximate score and standard erors 
+  list(
+    score = comp_out$score, 
+    ses = suppressWarnings(rbind(
+      full = sqrt(diag(solve(comp_out$neg_info))),
+      # assuming expected gradient is zero
+      `w/o gradient` = 
+        sqrt(diag(solve(comp_out$neg_info - tcrossprod(comp_out$score)))))))
+}, simplify = FALSE)
+```
+
+```{r show_obs_info_sgd}
+# may be quite noisy...
+aperm(simplify2array(lapply(aprxs, "[[", "ses")), c(1, 3, 2))
+
+# the gradient estimates are not exaclty zero in each run (may seem like it 
+# has not converged from score below and the `sgd` output)
+t(sapply(aprxs, "[[", "score"))
+```
+
+</div>
 
 ### Log-likelihood evaluation 
 We may question what the log-likelihood is at the true parameters. We can use 

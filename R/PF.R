@@ -742,10 +742,16 @@ PF_forward_filter.data.frame <- function(
     method = control$method, n_threads = control$n_threads, Q_tilde = Q_tilde,
     covar_fac = control$covar_fac, ftol_rel = control$ftol_rel)
 
-  structure(list(
-    forward_clouds = out, backward_clouds = list(), smoothed_clouds = list(),
-    transition_likelihoods = list()), class = "PF_clouds")
+  .create_PF_clouds(out)
 }
+
+.create_PF_clouds <- function(
+  forward_clouds, backward_clouds = list(), smoothed_clouds = list(),
+  transition_likelihoods = list())
+  structure(list(
+    forward_clouds = forward_clouds, backward_clouds = backward_clouds,
+    smoothed_clouds = smoothed_clouds,
+    transition_likelihoods = transition_likelihoods), class = "PF_clouds")
 
 get_Q_tilde <- function(x, n_vars)
   if(is.null(x)) diag(0, n_vars) else x
@@ -1357,6 +1363,28 @@ get_family_arg <- function(model)
   K
 }
 
+# see https://gist.github.com/boennecd/09ab5b0baae4738089530ae37bc9812e
+.get_dup_mat <- function(n){
+  if(n == 1L)
+    return(as.matrix(1.))
+
+  stopifnot(is.integer(n), n > 1L)
+  nq <- n * (n + 1L) / 2L
+
+  o <- matrix(0L, n, n)
+  o[lower.tri(o, diag = TRUE)] <- 1:nq
+  o[upper.tri(o)] <- t(o)[upper.tri(o)]
+  o <- c(o)
+
+  nn <- n * n
+  out <- matrix(0L, nn, nq)
+  for(i in 1:nn)
+    out[i, o[i]] <- 1L
+
+  out
+}
+
+
 #' @title Compute Time-Invariant Covariance Matrix
 #' @description
 #' Computes the invariant covariance matrix for a vector autoregression model.
@@ -1602,24 +1630,26 @@ get_cloud_quantiles.PF_clouds <- function(
 #' # standardize
 #' .lung$age <- scale(.lung$age)
 #'
+#' # fit model
 #' set.seed(43588155)
 #' pf_fit <- PF_EM(
 #'   fixed = Surv(time, status == 2) ~ ph.ecog + age,
-#'   random = ~ age, model = "exponential",
+#'   random = ~ 1, model = "exponential",
 #'   data = .lung, by = 50, id = 1:nrow(.lung),
-#'   Q_0 = diag(1, 2), Q = diag(.5^2, 2), type = "VAR",
-#'   max_T = 800,
+#'   Q_0 = as.matrix(1), Q = as.matrix(.5^2), type = "VAR",
+#'   max_T = 800, Fmat = as.matrix(.5),
 #'   control = PF_control(
 #'     N_fw_n_bw = 250, N_first = 2000, N_smooth = 500, covar_fac = 1.1,
-#'     nu = 6, n_max = 1000L, eps = 1e-5, est_a_0 = FALSE, averaging_start = 100L,
+#'     nu = 6, n_max = 1000L, eps = 1e-4, averaging_start = 200L,
 #'     n_threads = max(parallel::detectCores(logical = FALSE), 1)))
 #'
+#' # compute score and observed information matrix
 #' comp_obj <- PF_get_score_n_hess(pf_fit)
 #' comp_obj$set_n_particles(N_fw = 10000L, N_first = 10000L)
 #' comp_obj$run_particle_filter()
 #' (o1 <- comp_obj$get_get_score_n_hess())
 #'
-#' # O(N^2) method with lower variance
+#' # O(N^2) method with lower variance as a function of time
 #' comp_obj <- PF_get_score_n_hess(pf_fit, use_O_n_sq = TRUE)
 #' comp_obj$set_n_particles(N_fw = 2500L, N_first = 2500L)
 #' (o2 <- comp_obj$get_get_score_n_hess())
@@ -1633,10 +1663,9 @@ get_cloud_quantiles.PF_clouds <- function(
 #'   comp_obj$run_particle_filter()
 #'   comp_obj$get_get_score_n_hess()
 #' }, simplify = FALSE)
-#' sapply(o3, function(x) x$observation$score)
-#' sapply(o3, function(x) sqrt(diag(solve(x$observation$neg_obs_info))))
+#' sapply(o3, function(x) x$score)
+#' sapply(o3, function(x) sqrt(diag(solve(x$neg_info))))
 #' }
-#'
 #' @export
 PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
   stopifnot(inherits(object, "PF_EM"))
@@ -1674,7 +1703,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
   model <- if(is.null(org_cl$model)) formals(PF_EM)$model else org_cl$model
   family_arg <- get_family_arg(model)
 
-  # additional
+  # handle additional arguments
   ctrl <- object$control
   seed <- object$seed
   type <- if(is.null(object$call$type))
@@ -1713,10 +1742,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
       method = ctrl$method, n_threads = ctrl$n_threads, Q_tilde = Q_tilde,
       covar_fac = ctrl$covar_fac, ftol_rel = ctrl$ftol_rel)
 
-    structure(list(
-      forward_clouds = fw_cloud, backward_clouds = list(),
-      smoothed_clouds = list(), transition_likelihoods = list()),
-      class = "PF_clouds")
+    .create_PF_clouds(fw_cloud)
   }
 
   # set the number of particles to use
@@ -1745,7 +1771,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
                    Q_0 = Q_0))
   }
 
-  # return the score and negative Hessian estimates
+  # returns the score and potentially the negative Hessian estimates
   get_get_score_n_hess <- function(only_score = FALSE){
     assign(".Random.seed", seed, envir = .GlobalEnv)
     cpp_res <- PF_get_score_n_hess_cpp(
@@ -1761,29 +1787,51 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
       forward_backward_ESS_threshold = ctrl$forward_backward_ESS_threshold,
       use_O_n_sq = use_O_n_sq)
 
-    d <- ncol(Q)
-    K <- matrix(0., 2L * d * d, 2L * d * d)
-    K[1:(d * d), 1:(d * d)] <- .get_cum_mat(d, d)
-    if(d > 1)
-      diag(K[-(1:(d * d)), -(1:(d * d))]) <- 1 else
-        K[-(1:(d * d)), -(1:(d * d))] <- 1
-    score_state <- K %*% drop(cpp_res$S_state)
-    neg_obs_info_state <- with(
-      cpp_res,
-      tcrossprod(S_state) - E_second_deriv_state - E_score_outer_state)
-    neg_obs_info_state <- tcrossprod(K %*% neg_obs_info_state, K)
+    # compute negative observed information matrix and score vector. We have
+    # to: multiply parts of them part it by a commutation, and parts by
+    # a duplication matrix
 
-    score_obs <- drop(cpp_res$S_obs)
-    neg_obs_obs <- with(
-      cpp_res,
-      tcrossprod(score_obs) - E_second_deriv_obs - E_score_outer_obs)
-    names(score_obs) <- rownames(neg_obs_obs) <- colnames(neg_obs_obs) <-
-      names(fixed_effects)
+    # first define a few lengths
+    dfix <- length(fixed_effects)
+    n_rng <- NCOL(Q)
+    drng <- 2L * n_rng * n_rng
+    org_dim <- dfix + drng
+    stopifnot(length(cpp_res$score) == org_dim)
 
-    list(
-      state = list(
-        score = drop(score_state), neg_obs_info = neg_obs_info_state),
-      observation = list(score = score_obs, neg_obs_info = neg_obs_obs))
+    # output dimension and matrix to multiply objects by
+    out_dim <- dfix + n_rng * n_rng + (n_rng * (n_rng + 1L)) / 2L
+    trans_mat <- matrix(0, out_dim, org_dim)
+
+    ifix <- 1:dfix
+    trans_mat[ifix, ifix]          <- diag(dfix)
+    # TODO: avoid this by changing other computations in c++
+    idF  <- dfix + 1:(n_rng * n_rng)
+    trans_mat[idF, idF]            <- .get_cum_mat(n_rng, n_rng)
+    idQ <- dfix + n_rng * n_rng + 1:((n_rng * (n_rng + 1L)) / 2L)
+    trans_mat[idQ, -c(ifix, idF)] <- t(.get_dup_mat(n_rng))
+
+    # transform objects
+    score <- cpp_res$score <- drop(trans_mat %*% cpp_res$score)
+    cpp_res$score_outer <- tcrossprod(
+      trans_mat %*% cpp_res$score_outer, trans_mat)
+    cpp_res$hess_terms <- tcrossprod(
+      trans_mat %*% cpp_res$hess_terms, trans_mat)
+
+    # compute output and return
+    neg_info <- with(cpp_res,
+                     tcrossprod(score) - score_outer - hess_terms)
+
+    # set names
+    fnames <- rownames(static_args$fixed_terms)
+    rnames <- rownames(static_args$X)
+    dnames <- c(fnames,
+                outer(rnames, rnames, function(x, y) paste0("F:", x, ".", y)))
+    tmp <- outer(rnames, rnames, function(x, y) paste0("Q:", x, ".", y))
+    dnames <- c(dnames, tmp[lower.tri(tmp, diag = TRUE)])
+    names(score) <- dnames
+    dimnames(neg_info) <- list(dnames, dnames)
+
+    list(score = score, neg_info = neg_info)
   }
 
   list(
