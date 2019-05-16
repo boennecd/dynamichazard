@@ -2,7 +2,7 @@
 % Please edit documentation in R/PF.R
 \name{PF_get_score_n_hess}
 \alias{PF_get_score_n_hess}
-\title{Approximate Negative Observation Matrix and Score Vector}
+\title{Approximate Observed Information Matrix and Score Vector}
 \usage{
 PF_get_score_n_hess(object, debug = FALSE, use_O_n_sq = FALSE)
 }
@@ -25,18 +25,18 @@ matrix. The second argument is the fixed effect coefficients.}
 \item{set_n_particles}{sets the number of particles to use in
 \code{run_particle_filter} and \code{get_get_score_n_hess} when
 \code{use_O_n_sq} is \code{TRUE}.}
-\item{get_get_score_n_hess}{computes the approximate negative observation
-matrix and score vector. The argument toggles whether the approximate
-negative observation matrix should be computed. The last particle cloud
+\item{get_get_score_n_hess}{approximate the observed information
+matrix and score vector. The argument toggles whether or not to approximate
+the observed information matrix. The last particle cloud
 from \code{run_particle_filter} is used when \code{use_O_n_sq} is
 \code{FALSE}.}
 }
 \description{
-Returns a list of functions to approximate the negative observation matrix
+Returns a list of functions to approximate the observed information matrix
 and score vector.
 }
 \details{
-The score vector and negative observed information matrix are computed
+The score vector and observed information matrix are computed
 with the (forward)
 particle filter. This comes at an \eqn{O(d^2)} variance where \eqn{d}
 is the number of periods. Thus, the approximation may be poor for long
@@ -99,7 +99,7 @@ o3 <- replicate(10L, {
   comp_obj$get_get_score_n_hess()
 }, simplify = FALSE)
 sapply(o3, function(x) x$score)
-sapply(o3, function(x) sqrt(diag(solve(x$neg_info))))
+sapply(o3, function(x) sqrt(diag(solve(x$obs_info))))
 }
 }
 \references{

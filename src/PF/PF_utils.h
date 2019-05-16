@@ -7,8 +7,6 @@
 #include "cond_approx.h"
 #include <set>
 
-#define MAX(a,b) (((a)>(b))?(a):(b))
-
 struct normalize_weights_output {
   double ESS = 0.;
   double log_sum_logs;
@@ -26,7 +24,8 @@ inline normalize_weights_output normalize_weights(T &container, const double max
   double norm_constant = 0;
   for(auto it = container.begin(); it != container.end(); ++it, ++w){
     /* back transform weights */
-    *w = MAX(exp(F::get(*it) - max_weight), std::numeric_limits<double>::epsilon());
+    *w = std::max(
+      exp(F::get(*it) - max_weight), std::numeric_limits<double>::epsilon());
 
     norm_constant += *w;
   }

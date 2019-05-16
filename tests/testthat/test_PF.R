@@ -1608,10 +1608,10 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
     idQ <- dfix + n_rng * n_rng + 1:((n_rng * (n_rng + 1L)) / 2L)
     trans_mat[idQ, -c(ifix, idF)] <- t(dynamichazard:::.get_dup_mat(n_rng))
 
-    neg_info = tcrossprod(score) - info_obj
+    obs_info = tcrossprod(score) - info_obj
     list(
       score = drop(trans_mat %*% score),
-      neg_info = tcrossprod(trans_mat %*% neg_info, trans_mat))
+      obs_info = tcrossprod(trans_mat %*% obs_info, trans_mat))
   }
 
   test_out <- test_logit_func(pf_fit)
@@ -1622,7 +1622,7 @@ test_that("'PF_get_score_n_hess' gives the same as an R implementation", {
                check.attributes = FALSE)
 
   # only score
-  test_out$neg_info[] <- NA_real_
+  test_out$obs_info[] <- NA_real_
   expect_equal(test_out, func_out$get_get_score_n_hess(only_score = TRUE),
                check.attributes = FALSE)
 })

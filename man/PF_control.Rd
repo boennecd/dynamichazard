@@ -10,7 +10,7 @@ PF_control(N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
   n_threads = getOption("ddhazard_max_threads"),
   smoother = "Fearnhead_O_N", Q_tilde = NULL, est_a_0 = TRUE,
   N_smooth_final = N_smooth, nu = 0L, covar_fac = -1,
-  ftol_rel = 0.00000001, averaging_start = -1L)
+  ftol_rel = 1e-08, averaging_start = -1L)
 }
 \arguments{
 \item{N_fw_n_bw}{number of particles to use in forward and backward filter.}

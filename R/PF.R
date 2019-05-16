@@ -1550,9 +1550,9 @@ get_cloud_quantiles.PF_clouds <- function(
 }
 
 
-#' @title Approximate Negative Observation Matrix and Score Vector
+#' @title Approximate Observed Information Matrix and Score Vector
 #' @description
-#' Returns a list of functions to approximate the negative observation matrix
+#' Returns a list of functions to approximate the observed information matrix
 #' and score vector.
 #'
 #' @param object object of class \code{\link{PF_EM}}.
@@ -1562,7 +1562,7 @@ get_cloud_quantiles.PF_clouds <- function(
 #' should be used.
 #'
 #' @details
-#' The score vector and negative observed information matrix are computed
+#' The score vector and observed information matrix are computed
 #' with the (forward)
 #' particle filter. This comes at an \eqn{O(d^2)} variance where \eqn{d}
 #' is the number of periods. Thus, the approximation may be poor for long
@@ -1617,9 +1617,9 @@ get_cloud_quantiles.PF_clouds <- function(
 #' \item{set_n_particles}{sets the number of particles to use in
 #' \code{run_particle_filter} and \code{get_get_score_n_hess} when
 #' \code{use_O_n_sq} is \code{TRUE}.}
-#' \item{get_get_score_n_hess}{computes the approximate negative observation
-#' matrix and score vector. The argument toggles whether the approximate
-#' negative observation matrix should be computed. The last particle cloud
+#' \item{get_get_score_n_hess}{approximate the observed information
+#' matrix and score vector. The argument toggles whether or not to approximate
+#' the observed information matrix. The last particle cloud
 #' from \code{run_particle_filter} is used when \code{use_O_n_sq} is
 #' \code{FALSE}.}
 #'
@@ -1664,7 +1664,7 @@ get_cloud_quantiles.PF_clouds <- function(
 #'   comp_obj$get_get_score_n_hess()
 #' }, simplify = FALSE)
 #' sapply(o3, function(x) x$score)
-#' sapply(o3, function(x) sqrt(diag(solve(x$neg_info))))
+#' sapply(o3, function(x) sqrt(diag(solve(x$obs_info))))
 #' }
 #' @export
 PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
@@ -1787,7 +1787,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
       forward_backward_ESS_threshold = ctrl$forward_backward_ESS_threshold,
       use_O_n_sq = use_O_n_sq)
 
-    # compute negative observed information matrix and score vector. We have
+    # compute observed information matrix and score vector. We have
     # to: multiply parts of them part it by a commutation, and parts by
     # a duplication matrix
 
@@ -1818,7 +1818,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
       trans_mat %*% cpp_res$hess_terms, trans_mat)
 
     # compute output and return
-    neg_info <- with(cpp_res,
+    obs_info <- with(cpp_res,
                      tcrossprod(score) - score_outer - hess_terms)
 
     # set names
@@ -1829,9 +1829,9 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
     tmp <- outer(rnames, rnames, function(x, y) paste0("Q:", x, ".", y))
     dnames <- c(dnames, tmp[lower.tri(tmp, diag = TRUE)])
     names(score) <- dnames
-    dimnames(neg_info) <- list(dnames, dnames)
+    dimnames(obs_info) <- list(dnames, dnames)
 
-    list(score = score, neg_info = neg_info)
+    list(score = score, obs_info = obs_info)
   }
 
   list(

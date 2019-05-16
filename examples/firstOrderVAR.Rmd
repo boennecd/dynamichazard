@@ -390,7 +390,7 @@ in @cappe05 [page 414].
   knitr::load_cache("sgd", path = "examples/cache/firstOrderVAR-cache/") 
 -->
 
-```{r sgd, cache=1}
+```{r assg_pf_start}
 #####
 # fit to start from
 set.seed(30520116)
@@ -403,7 +403,9 @@ pf_start <- PF_EM(
     method = "AUX_normal_approx_w_cloud_mean",
     n_max = 1L, smoother = "Fearnhead_O_N",
     nu = 8, covar_fac = 1.1, n_threads = n_threads))
+```
 
+```{r sgd, cache=1}
 # function to perform stochastic gradient descent
 sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE, 
                 avg_start = 100L)
@@ -591,10 +593,10 @@ aprxs <- replicate(10, {
   list(
     score = comp_out$score, 
     ses = suppressWarnings(rbind(
-      full = sqrt(diag(solve(comp_out$neg_info))),
+      full = sqrt(diag(solve(comp_out$obs_info))),
       # assuming expected gradient is zero
       `w/o gradient` = 
-        sqrt(diag(solve(comp_out$neg_info - tcrossprod(comp_out$score)))))))
+        sqrt(diag(solve(comp_out$obs_info - tcrossprod(comp_out$score)))))))
 }, simplify = FALSE)
 ```
 
