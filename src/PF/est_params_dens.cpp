@@ -42,7 +42,7 @@ public:
 };
 
 /* generator for chunks for QR decomposition */
-class generator_dens : public qr_data_generator {
+class generator_dens final : public qr_data_generator {
   const update_parameters_data &dat;
   pair_iterator i_start;
   pair_iterator i_end;
@@ -75,8 +75,6 @@ public:
           pair != pas.transition_pairs.end();
           ++pair, ++i){
         double w_sqrt = exp((pas.log_weight + pair->log_weight) / 2);
-        if(w_sqrt < 1e-16) /* don't keep */
-          continue;
 
         keep[i]  = 1L;
         Y.col(i) = w_sqrt * Y_val;
@@ -99,13 +97,13 @@ public:
 PF_parameters
   est_params_dens
   (const smoother_output &sm_output, const arma::vec &a_0, const arma::mat &Q,
-   const arma::mat &Q_0, const arma::mat &R, int max_threads,
+   const arma::mat &Q_0, const arma::mat &R, const int max_threads,
    const bool do_est_a_0, const bool debug,
-   const unsigned long int max_bytes, const bool only_QR){
+   const unsigned long max_bytes, const bool only_QR){
     update_parameters_data dat(sm_output, R);
 
     /* setup generators */
-    const unsigned long int max_per_block =
+    const unsigned long max_per_block =
         max_bytes / ((dat.n_elem_X + dat.n_elem_Y) * 8L) + 1L;
 
     if(debug)
@@ -136,7 +134,7 @@ PF_parameters
 
     /* compute new estimates. The notation is a bit confusing. The output from
      * qr_parallel.compute() is the R and F in
-     *   (R^\top R)^{-1} X = R^\top F
+     *   R^\top R X = R^\top F
      *
      * where X is the new coef matrix which is PF_parameters.F. */
     R_F res = qr_calc.compute();
@@ -157,7 +155,7 @@ PF_parameters
     out.R_top_F = arma::solve(R_from_QR    , out.R_top_F,
                               arma::solve_opts::no_approx);
 
-    /* current values is (R^\top F)^\top ! */
+    /* current values is F^\top */
     arma::inplace_trans(out.R_top_F);
 
     /* use that
@@ -170,14 +168,14 @@ PF_parameters
 
     // update a_0
     /* TODO: needs to be updated for higher order models. Need Full F matrix */
-    out.a_0 = arma::zeros<arma::vec>(a_0.n_elem);
+    out.a_0.zeros(a_0.n_elem);
     if(do_est_a_0){
       inv_mapper inv_map(out.R_top_F);
       const std::vector<particle_pairs> &first_particles =
         dat.tr->operator[](0);
 
-      for(auto i = first_particles.begin(); i != first_particles.end(); ++i)
-          out.a_0 += exp(i->log_weight) * i->p->get_state();
+      for(auto &i : first_particles)
+          out.a_0 += exp(i.log_weight) * i.p->get_state();
     }
 
     return out;

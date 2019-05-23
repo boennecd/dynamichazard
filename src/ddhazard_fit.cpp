@@ -54,7 +54,7 @@ Rcpp::List ddhazard_fit_cpp(
     Rcpp::stop("risk_obj has 'is_for_discrete_model' = false which should be true for model '" + model  +"'");
   }
 
-  static const double Q_warn_eps = sqrt(std::numeric_limits<double>::epsilon());
+  static const double Q_warn_eps = sqrt(std::numeric_limits<double>::lowest());
 
   // Declare non constants and intialize some of them
   double delta_t, test_max_diff;

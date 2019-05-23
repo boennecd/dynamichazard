@@ -31,8 +31,8 @@ struct PF_parameters {
 PF_parameters
   est_params_dens
   (const smoother_output&, const arma::vec&, const arma::mat&,
-   const arma::mat&, const arma::mat&, int, const bool, const bool,
-   const unsigned long int max_bytes = 5000000,
+   const arma::mat&, const arma::mat&, const int, const bool, const bool,
+   const unsigned long max_bytes = 5000000,
    const bool only_QR = false);
 
 #endif

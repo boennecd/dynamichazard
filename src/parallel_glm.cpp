@@ -115,7 +115,7 @@ class parallelglm_class_quick {
         double varmu  = data.family->glm_variance(mu);
         double mu_eta_val = data.family->glm_mu_eta(*eta);
 
-        if(std::abs(mu_eta_val) < sqrt(std::numeric_limits<double>::epsilon()))
+        if(std::abs(mu_eta_val) < std::numeric_limits<double>::epsilon())
           continue;
 
         double z = (*eta - *offset) + (*y - mu)/mu_eta_val;
@@ -318,7 +318,7 @@ public:
       data.beta = &beta;
 
       R_F R_f_out = get_R_f(data, i == 0);
-      /* TODO: can maybe done smarter using that R is triangular befor
+      /* TODO: can maybe done smarter using that R is triangular before
        *       permutation */
       arma::mat R = R_f_out.R_rev_piv();
       beta = arma::solve(R.t(), R.t() * R_f_out.F.col(0),

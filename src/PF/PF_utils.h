@@ -24,8 +24,7 @@ inline normalize_weights_output normalize_weights(T &container, const double max
   double norm_constant = 0;
   for(auto it = container.begin(); it != container.end(); ++it, ++w){
     /* back transform weights */
-    *w = std::max(
-      exp(F::get(*it) - max_weight), std::numeric_limits<double>::epsilon());
+    *w = exp(F::get(*it) - max_weight);
 
     norm_constant += *w;
   }
@@ -224,8 +223,7 @@ template
     /* re-normalize */
     double norm_constant = 0;
     for(auto &x : out){
-      x.second = std::max(
-        exp(x.second - max_weight), std::numeric_limits<double>::epsilon());
+      x.second = exp(x.second - max_weight);
 
       norm_constant += x.second;
     }

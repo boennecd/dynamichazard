@@ -24,7 +24,7 @@ std::shared_ptr<smoother_output::trans_like_obj>
     if(!do_make_if_len_0 || transition_likelihoods->size() > 0)
       return transition_likelihoods;
 
-    unsigned int n_clouds = smoothed_clouds.size();
+    const unsigned n_clouds = smoothed_clouds.size();
     std::shared_ptr<trans_like_obj> out =
       std::make_shared<trans_like_obj>(n_clouds);
     auto out_begin = out->begin();

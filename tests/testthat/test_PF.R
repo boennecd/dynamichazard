@@ -1672,3 +1672,45 @@ test_that("works when there are time periods outside where we have data and with
   expect_known_value(
     get_cloud_means(pf_fit), file.path(dir, "pf-rw-w-no-obs-periods.RDS"))
 })
+
+test_that("'fix_seed = FALSE' yields different results at each call", {
+  skip_on_cran()
+
+  set.seed(seed <- 1L)
+  same_seed_call <- suppressWarnings(
+    PF_EM(fixed = Surv(stop, event) ~ group, random = ~ 1, model = "logit",
+          max_T = 30L, by = 1L, data = head_neck_cancer,
+          Q = as.matrix(1), Fmat = as.matrix(.9),
+          type = "VAR", control = PF_control(
+            N_fw_n_bw = 100L, N_smooth = 100L, N_first = 100L, n_max = 3L,
+            fix_seed = TRUE)))
+
+  call_2 <- same_seed_call$call
+  call_2[["control"]]$fix_seed <- FALSE
+  set.seed(seed)
+  diff_seed <- suppressWarnings(eval(call_2, environment()))
+
+  # just check one element
+  expect_equal(diff_seed$EM_ests     $fixed_effects[1, ],
+               same_seed_call$EM_ests$fixed_effects[1, ])
+
+  expect_true(!isTRUE(all.equal(
+    diff_seed$EM_ests     $fixed_effects[-1, ],
+    same_seed_call$EM_ests$fixed_effects[-1, ])))
+
+  # check particle filter
+  f1 <- PF_forward_filter(diff_seed, N_fw = 100L, N_first = 100L)
+  f2 <- PF_forward_filter(diff_seed, N_fw = 100L, N_first = 100L)
+  expect_true(!isTRUE(all.equal(f1, f2)))
+
+  # check score and Hessian method
+  o <- PF_get_score_n_hess(diff_seed)
+  o$set_n_particles(N_fw = 100L, N_first = 100L)
+  expect_true(!isTRUE(all.equal(o$run_particle_filter(),
+                                o$run_particle_filter())))
+
+  o <- PF_get_score_n_hess(diff_seed, use_O_n_sq = TRUE)
+  o$set_n_particles(N_fw = 50L, N_first = 50L)
+  expect_true(!isTRUE(all.equal(o$get_get_score_n_hess(),
+                                o$get_get_score_n_hess())))
+})

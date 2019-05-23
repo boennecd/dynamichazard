@@ -403,7 +403,7 @@ PF_EM <- function(
     n_threads = control$n_threads, smoother = control$smoother,
     Q_tilde = control$Q_tilde, est_a_0 = control$est_a_0,
     covar_fac = control$covar_fac, ftol_rel = control$ftol_rel,
-    averaging_start = control$averaging_start)
+    averaging_start = control$averaging_start, fix_seed = control$fix_seed)
 
   out <- .set_PF_names(out, rng_names = row.names(static_args$X),
                        fixed_names = rownames(static_args$fixed_terms))
@@ -634,6 +634,8 @@ PF_forward_filter.PF_EM <- function(x, N_fw, N_first, seed, ...){
   }
   if(!missing(seed))
     cl[["seed"]] <- substitute(seed)
+  else if(!x$control$fix_seed)
+    cl[["seed"]] <- NULL
 
   cl[c("N_fw", "N_first")] <- list(N_fw, N_first)
   cl[[1L]] <- quote(PF_forward_filter)
@@ -720,14 +722,16 @@ PF_forward_filter.data.frame <- function(
 
   Q_tilde <- get_Q_tilde(control$Q_tilde, ncol(Q))
 
-  # set the seed
-  old_seed <- .GlobalEnv$.Random.seed
-  # to make sure the user has the same `rng.kind`
-  on.exit(.GlobalEnv$.Random.seed <- old_seed)
   if(!is.null(seed)){
+    # set the seed
+    old_seed <- .GlobalEnv$.Random.seed
+    # to make sure the user has the same `rng.kind`
+    on.exit(.GlobalEnv$.Random.seed <- old_seed)
+
     stopifnot(length(seed) > 1) # make sure user did not use seed as in
     # `set.seed`
-    .GlobalEnv$.Random.seed <- seed
+    if(control$fix_seed)
+      .GlobalEnv$.Random.seed <- seed
   }
 
   out <- particle_filter(
@@ -764,7 +768,7 @@ get_Q_tilde <- function(x, n_vars)
   forward_backward_ESS_threshold = NULL, debug = 0, trace,
   method = "AUX_normal_approx_w_particles", seed = NULL, smoother, model,
   fixed_params, type, Q_tilde, est_a_0, G, J, K, theta, psi, phi, ftol_rel,
-  averaging_start){
+  averaging_start, fix_seed){
   cl <- match.call()
   n_vars <- nrow(X)
   fit_call <- cl
@@ -790,7 +794,7 @@ get_Q_tilde <- function(x, n_vars)
   }
 
   fit_call[c("eps", "seed", "F.", "trace", "est_a_0", "G", "J", "K",
-             "theta", "psi", "phi", "averaging_start")] <- NULL
+             "theta", "psi", "phi", "averaging_start", "fix_seed")] <- NULL
 
   # print Q and F structure
   if(trace > 0 && is_restricted){
@@ -889,7 +893,8 @@ get_Q_tilde <- function(x, n_vars)
 
     #####
     # find clouds
-    assign(".Random.seed", seed, envir = .GlobalEnv)
+    if(fix_seed)
+      assign(".Random.seed", seed, envir = .GlobalEnv)
     clouds <- eval(fit_call, envir = parent.frame())
 
     if(trace > 0){
@@ -1178,6 +1183,9 @@ get_Q_tilde <- function(x, n_vars)
 #' approximation.
 #' @param averaging_start index to start averaging. Values less then or equal
 #' to zero yields no averaging.
+#' @param fix_seed \code{TRUE} if the same seed should be used. E.g., in
+#' \code{\link{PF_EM}} the same seed will be used in each iteration of the
+#' E-step of the MCEM algorithm.
 #'
 #' @details
 #' The \code{method} argument can take the following values
@@ -1237,14 +1245,14 @@ PF_control <- function(
   method = "AUX_normal_approx_w_cloud_mean", n_max = 25,
   n_threads = getOption("ddhazard_max_threads"), smoother = "Fearnhead_O_N",
   Q_tilde = NULL, est_a_0 = TRUE, N_smooth_final = N_smooth, nu = 0L,
-  covar_fac = -1, ftol_rel = 1e-8, averaging_start = -1L){
+  covar_fac = -1, ftol_rel = 1e-8, averaging_start = -1L, fix_seed = TRUE){
   control <- list(
     N_fw_n_bw = N_fw_n_bw, N_smooth = N_smooth, N_first = N_first, eps = eps,
     forward_backward_ESS_threshold = forward_backward_ESS_threshold,
     method = method, n_max = n_max, n_threads = n_threads, smoother = smoother,
     Q_tilde = Q_tilde, est_a_0 = est_a_0, N_smooth_final = N_smooth_final,
     nu = nu, covar_fac = covar_fac, ftol_rel = ftol_rel,
-    averaging_start = averaging_start)
+    averaging_start = averaging_start, fix_seed = fix_seed)
 
   stopifnot(
     length(method) == 1L, method %in% c(
@@ -1267,12 +1275,12 @@ PF_control <- function(
   stopifnot(
     typeof(N_smooth_final) %in% c("double", "integer"),
     length(N_smooth_final) == 1L, as.integer(N_smooth_final) == N_smooth_final,
-    N_smooth_final <= N_smooth)
-  stopifnot(
+    N_smooth_final <= N_smooth,
     typeof(nu) %in% c("double", "integer"), length(nu) == 1L, nu >= 0L,
     as.integer(nu) == nu, is.numeric(covar_fac), is.numeric(ftol_rel),
     ftol_rel > 0,
-    is.integer(averaging_start))
+    is.integer(averaging_start),
+    is.logical(fix_seed), length(fix_seed) == 1L)
 
   return(control)
 }
@@ -1729,7 +1737,8 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
   fw_cloud <- object$clouds$forward_clouds
   # runs particle filter and returns the particle clouds
   run_particle_filter <- function(){
-    assign(".Random.seed", seed, envir = .GlobalEnv)
+    if(ctrl$fix_seed)
+      assign(".Random.seed", seed, envir = .GlobalEnv)
     fw_cloud <<- particle_filter(
       fixed_params = fixed_effects, type = type, n_fixed_terms_in_state_vec =
         static_args$n_fixed_terms_in_state_vec, X = static_args$X,
@@ -1773,13 +1782,14 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
 
   # returns the score and potentially the negative Hessian estimates
   get_get_score_n_hess <- function(only_score = FALSE){
-    assign(".Random.seed", seed, envir = .GlobalEnv)
+    if(ctrl$fix_seed)
+      assign(".Random.seed", seed, envir = .GlobalEnv)
     cpp_res <- PF_get_score_n_hess_cpp(
       fw_cloud = fw_cloud, Q = Q, F = Fmat,
       risk_obj = static_args$risk_obj, ran_vars = static_args$X,
       fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
       tstop = static_args$tstop, fixed_params = fixed_effects,
-      max_threads = object$control$n_threads, family = family_arg,
+      max_threads = ctrl$n_threads, family = family_arg,
       debug = debug, only_score = only_score, a_0 = a_0, R = R,
       Q_0 = Q_0, Q_tilde = Q_tilde, N_fw_n_bw = N_fw, N_first = N_first,
       nu = ctrl$nu, covar_fac = ctrl$covar_fac, ftol_rel = ctrl$ftol_rel,

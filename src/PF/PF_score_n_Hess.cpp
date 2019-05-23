@@ -213,7 +213,7 @@ derivs_output get_derivs_output
       auto trunc_eta = dat.family->truncate_eta(
         dat.y[i], eta, exp(eta), dat.dts[i]);
       const double d  =
-        dat.family->d_log_like (dat.y[i], trunc_eta, dat.dts[i]);
+        dat.family->d_log_like(dat.y[i], trunc_eta, dat.dts[i]);
       score(obs_span) += d * dat.X.col(i);
 
       if(!only_score){
@@ -258,7 +258,7 @@ derivs_output get_derivs_output
     }
   }
 
-  /* not needed as we later copy the upper part to the lower part*/
+  /* not needed as we later copy the upper part to the lower part */
   // if(!only_score)
   //   hess_terms = arma::symmatu(hess_terms);
 
@@ -694,7 +694,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq_comp
         std::vector<double> &part_ws = ws[j];
         part_ws.resize(old_cl.size());
         auto part_ws_j = part_ws.begin();
-        double max_weight_inner = -std::numeric_limits<double>::max();
+        double max_weight_inner = -std::numeric_limits<double>::infinity();
         for(const auto &parent : old_cl){ /* loop over parents */
           *(part_ws_j) =
             parent.log_weight +

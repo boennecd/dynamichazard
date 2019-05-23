@@ -316,8 +316,9 @@ public:
   }
 
   double glm_linkinv(double eta) const override {
+    const double mu = -expm1(-exp(eta));
     return MAX(
-      MIN(-expm1(-exp(eta)), 1. -  std::numeric_limits<double>::epsilon()),
+      MIN(mu, 1. -  std::numeric_limits<double>::epsilon()),
       std::numeric_limits<double>::epsilon());
   }
 
@@ -327,7 +328,8 @@ public:
 
   double glm_mu_eta(double eta) const override {
     eta = MIN(eta, 700);
-    return MAX(exp(eta - exp(eta)), std::numeric_limits<double>::epsilon());
+    const double x = exp(eta - exp(eta));
+    return MAX(x, std::numeric_limits<double>::epsilon());
   }
 
   double glm_initialize(double y, double weight) const override {
