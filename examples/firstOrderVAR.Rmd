@@ -4,6 +4,8 @@ author: "Benjamin Christoffersen"
 date: "`r Sys.Date()`"
 output: html_document
 bibliography: bibliography.bib
+nocite: | 
+  @kingma14
 ---
 
 ```{r setup, include=FALSE}
@@ -179,7 +181,7 @@ system.time(pf_Brier <- PF_EM(
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
   control = PF_control(
     N_fw_n_bw = 750, N_smooth = 1, N_first = 2000, eps = .001,
-    method = "AUX_normal_approx_w_cloud_mean",
+    method = "AUX_normal_approx_w_cloud_mean", fix_seed = FALSE,
     n_max = 100, smoother = "Brier_O_N_square",
     # we add some extra variation to the proposal distributions
     nu = 8, covar_fac = 1.1, n_threads = n_threads)))
@@ -269,7 +271,7 @@ system.time(pf_Fear <- PF_EM(
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
   control = PF_control(
     N_fw_n_bw = 1000, N_smooth = 2000, N_first = 2000, eps = .001,
-    method = "AUX_normal_approx_w_cloud_mean",
+    method = "AUX_normal_approx_w_cloud_mean", fix_seed = FALSE,
     n_max = 100, smoother = "Fearnhead_O_N",
     nu = 8, covar_fac = 1.1, n_threads = n_threads)))
 ```
@@ -328,7 +330,7 @@ pf_Fear_more <- PF_EM(
   model = "exponential", max_T = n_periods,
   control = PF_control(
     N_fw_n_bw = 5000, N_smooth = 10000, N_first = 5000, eps = .001,
-    method = "AUX_normal_approx_w_cloud_mean",
+    method = "AUX_normal_approx_w_cloud_mean", fix_seed = FALSE,
     n_max = 10, smoother = "Fearnhead_O_N",   
     nu = 8, covar_fac = 1.1, n_threads = n_threads))
 ```
@@ -367,7 +369,7 @@ system.time(pf_Fear_avg <- PF_EM(
   by = 1, type = "VAR", model = "exponential", max_T = n_periods, 
   control = PF_control(
     N_fw_n_bw = 200, N_smooth = 400, N_first = 1000, eps = 1e-5,
-    method = "AUX_normal_approx_w_cloud_mean",
+    method = "AUX_normal_approx_w_cloud_mean", fix_seed = FALSE, 
     n_max = 1000L, smoother = "Fearnhead_O_N", averaging_start = 150L,
     nu = 8, covar_fac = 1.1, n_threads = n_threads)))
 ```
@@ -400,38 +402,55 @@ pf_start <- PF_EM(
   by = 1, type = "VAR", model = "exponential", max_T = n_periods, 
   control = PF_control(
     N_fw_n_bw = 200, N_smooth = 400, N_first = 1000, eps = 1e-5,
-    method = "AUX_normal_approx_w_cloud_mean",
+    method = "AUX_normal_approx_w_cloud_mean", fix_seed = FALSE,
     n_max = 1L, smoother = "Fearnhead_O_N",
     nu = 8, covar_fac = 1.1, n_threads = n_threads))
 ```
 
 ```{r sgd, cache=1}
-# function to perform stochastic gradient descent
-sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE, 
-                avg_start = 100L)
+# Function to perform stochastic gradient descent. Uses Adam algorithm 
+# suggested by Kingma et al. (2015).
+# 
+# Args: 
+#   object: an object of class PF_EM. 
+#   n_runs: number of iterations. 
+#   ns: number of particles at each iteration. 
+#   debug: TRUE if information should be printed during estimation. 
+#   use_O_n_sq: TRUE if O(N^2) method should be used. 
+#   lr: learning rate. 
+#   mp: decay rate for first moment. 
+#   vp: decay rate for second moment.
+# 
+# Returns: 
+#   list with final estimates, log-likelihood approximations at each iteration,
+#   and estimates at each iteration.
+sgd <- function(object, n_runs, ns, debug = FALSE, use_O_n_sq = FALSE, 
+                lr = .001, mp = .9, vp = .999)
 {
   #####
   # get object to perform computation and matrices and vectors for output
-  comp_obj <- PF_get_score_n_hess(pf_start, use_O_n_sq = use_O_n_sq)
+  comp_obj <- PF_get_score_n_hess(object, use_O_n_sq = use_O_n_sq)
   state <- matrix(
-    NA_real_, n_runs + 1L, length(pf_start$F) + length(pf_start$Q))
+    NA_real_, n_runs + 1L, length(object$F) + length(object$Q))
   
   # setup matrix to map from gradient to the state (the covariance part is only
   # the lower diagonal)
-  dF <- length(pf_start$F)
-  dQ <- NCOL(pf_start$Q)
+  dF <- length(object$F)
+  dQ <- NCOL(object$Q)
   nQ <- (dQ * (dQ + 1L)) / 2L
-  K <- matrix(0., ncol(state), length(pf_start$F) + nQ)
+  K <- matrix(0., ncol(state), length(object$F) + nQ)
   K[  1:dF ,   1:dF] <- diag(dF)
   # can use e.g., matrixcal instead to get the duplication matrix
   K[-(1:dF), -(1:dF)] <- dynamichazard:::.get_dup_mat(dQ)
   
-  dfix <- length(pf_start$fixed_effects)
+  dfix <- length(object$fixed_effects)
   obs   <- matrix(
     NA_real_, n_runs + 1L, dfix)
-  state[1, ] <- c(pf_start$F, pf_start$Q)
-  obs  [1, ] <- pf_start$fixed_effects
+  state[1, ] <- c(object$F, object$Q)
+  obs  [1, ] <- object$fixed_effects
   lls <- rep(NA_real_, n_runs)
+  
+  mv <- vv <- rep(0., ncol(K) + dfix)
   
   for(i in 1:n_runs){
     comp_obj$set_n_particles(N_fw = ns[i], N_first = ns[i])
@@ -440,23 +459,22 @@ sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE,
     score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
     sc <- score$score
     
+    mv <- mp * mv + (1 - mp) * sc
+    vv <- vp * vv + (1 - vp) * sc^2
+    muse <- mv / (1 - mp^i)
+    vuse <- vv / (1 - vp^i)
+    direc <- muse / (sqrt(vuse) + 1e-8)
+    
     # step-half until we have a valid set a of parameters 
-    lr <- lrs[i]
     n_halfs <- 0L
     n_halfs_max <- 25L
+    lri <- lr
     while((n_halfs <- n_halfs + 1L) <= n_halfs_max){
       state_i <- 
-        state[i + 1L, ]  <- state[i, ]  + lr * drop(K %*% sc[-(1:dfix)])
+        state[i + 1L, ]  <- state[i, ]  + lri * drop(K %*% direc[-(1:dfix)])
       obs_i   <- 
-        obs  [i + 1L, ]  <- obs  [i, ]  + lr * sc[1:dfix]
-      lr <- lr / 2
-      
-      if(i > avg_start){
-        idx <- avg_start:i
-        state_i <- colMeans(state[idx, , drop = FALSE])
-        obs_i   <- colMeans(obs  [idx, , drop = FALSE])
-      
-      }
+        obs  [i + 1L, ]  <- obs  [i, ]  + lri * direc[1:dfix]
+      lri <- lri / 2
       
       # check that system is stationary
       Ftmp <- matrix(state_i[1:dQ^2], dQ, dQ)
@@ -493,10 +511,8 @@ sgd <- function(n_runs, ns, lrs, debug = FALSE, use_O_n_sq = FALSE,
 n_runs <- 400L
 # number of particles to use
 ns <- ceiling(exp(seq(log(100), log(1000), length.out = n_runs)))
-# step sizes
-lrs <- .005 * (1:n_runs)^(-3/5)
 
-out <- sgd(n_runs = n_runs, ns = ns, lrs = lrs, avg_start = 200L)
+out <- sgd(n_runs = n_runs, ns = ns, object = pf_start, lr = .005)
 lls <- out$lls
 o <- out$o
 ```
@@ -520,16 +536,19 @@ scales poorly in the number of particles but the method has a variance
 that may be linear in the number of time periods instead of at least quadratic. 
 This is important for long time series.
 
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  knitr::load_cache("O_N_sq_sgd", path = "examples/cache/firstOrderVAR-cache/") 
+-->
+
 ```{r O_N_sq_sgd, cache = 1, dependson = "sgd"}
 # number of iterations
-n_runs <- 400L
+n_runs <- 600L
 # number of particles to use
-ns <- ceiling(exp(seq(log(200), log(500), length.out = n_runs)))
-# step sizes
-lrs <- .004 * (1:n_runs)^(-2/3)
+ns <- ceiling(exp(seq(log(100), log(500), length.out = n_runs)))
 
-out <- sgd(n_runs = n_runs, ns = ns, lrs = lrs, use_O_n_sq = TRUE, 
-           avg_start = 200L)
+out <- sgd(n_runs = n_runs, ns = ns, use_O_n_sq = TRUE,  object = pf_start, 
+           lr = .005)
 lls <- out$lls
 o <- out$o
 ```
@@ -574,23 +593,27 @@ function show_obs_info() {
 
 <div id="obsInfo" style = "display: none;">
 
+<!-- 
+  knitr::opts_knit$set(output.dir = ".")
+  knitr::load_cache("obs_info_sgd", path = "examples/cache/firstOrderVAR-cache/") 
+-->
+
 ```{r obs_info_sgd, cache = 1, dependson = "O_N_sq_sgd"}
 set.seed(24680530)
 aprxs <- replicate(10, {
   # make approximation
-  runif(1)
-  pf_start$seed <- .Random.seed
   sink(tempfile())
   comp_obj <- PF_get_score_n_hess(pf_start, use_O_n_sq = TRUE)
   sink()
   comp_obj$set_parameters(
     state = c(o$Fmat, o$Q), obs = o$fixed_effects)
-  comp_obj$set_n_particles(N_fw = 1000L, N_first = 1000L)
+  comp_obj$set_n_particles(N_fw = 1000L, N_first = 10000L)
   comp_obj$run_particle_filter()
   comp_out <- comp_obj$get_get_score_n_hess()
   
-  # return approximate score and standard erors 
+  # return approximate observed information matrix, score and standard erors 
   list(
+    obs_info = comp_out$obs_info,
     score = comp_out$score, 
     ses = suppressWarnings(rbind(
       full = sqrt(diag(solve(comp_out$obs_info))),
@@ -607,6 +630,24 @@ aperm(simplify2array(lapply(aprxs, "[[", "ses")), c(1, 3, 2))
 # the gradient estimates are not exaclty zero in each run (may seem like it 
 # has not converged from score below and the `sgd` output)
 t(sapply(aprxs, "[[", "score"))
+
+# we can consider expanding averages instead
+run_means <- apply(sapply(aprxs, "[[", "score"), 1L, function(x)
+  sapply(seq_along(x), function(i) mean(x[1:i])))
+matplot(run_means, type = "l", xlab = "Elements in expanding mean", 
+        ylab = "score", lty = 1, col = "black")
+abline(h = 0, lty = 2)
+tail(run_means, 1) # final values
+
+run_means_info <- simplify2array(lapply(aprxs, "[[", "obs_info"))
+run_means_info <- apply(run_means_info, 1:2, function(x)
+  sapply(seq_along(x), function(i) mean(x[1:i])))
+run_means_info_se <- apply(run_means_info, 1L, function(x)
+  sqrt(diag(solve(x))))
+matplot(t(run_means_info_se), type = "l", xlab = "Elements in expanding mean", 
+        ylab = "Approximate standard errors", lty = 1, col = "black", 
+        ylim = c(0, max(run_means_info_se, na.rm = TRUE)))
+run_means_info_se[, ncol(run_means_info_se)] # final values
 ```
 
 </div>
@@ -669,7 +710,7 @@ pf_Fear_close <- PF_EM(
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
   control = PF_control(
     N_fw_n_bw = 500, N_smooth = 2000, N_first = 2000, eps = .001,
-    method = "AUX_normal_approx_w_cloud_mean",
+    method = "AUX_normal_approx_w_cloud_mean", fix_seed = FALSE,
     n_max = 100, smoother = "Fearnhead_O_N",
     nu = 8, covar_fac = 1.1, n_threads = n_threads))
 ```
@@ -723,7 +764,7 @@ pf_Fear_restrict <- PF_EM(
   by = 1, type = "VAR", model = "exponential", max_T = n_periods,
   control = PF_control(
     N_fw_n_bw = 500, N_smooth = 2000, N_first = 2000, eps = .001,
-    method = "AUX_normal_approx_w_cloud_mean",
+    method = "AUX_normal_approx_w_cloud_mean", fix_seed = FALSE,
     n_max = 100, smoother = "Fearnhead_O_N",
     nu = 8, covar_fac = 1.1, n_threads = n_threads))
 ```

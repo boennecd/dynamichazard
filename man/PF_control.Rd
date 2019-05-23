@@ -10,7 +10,7 @@ PF_control(N_fw_n_bw = NULL, N_smooth = NULL, N_first = NULL,
   n_threads = getOption("ddhazard_max_threads"),
   smoother = "Fearnhead_O_N", Q_tilde = NULL, est_a_0 = TRUE,
   N_smooth_final = N_smooth, nu = 0L, covar_fac = -1,
-  ftol_rel = 1e-08, averaging_start = -1L)
+  ftol_rel = 0.00000001, averaging_start = -1L, fix_seed = TRUE)
 }
 \arguments{
 \item{N_fw_n_bw}{number of particles to use in forward and backward filter.}
@@ -49,11 +49,15 @@ distribution is used if it is zero.}
 \item{covar_fac}{factor to scale the covariance matrix with. Ignored if
 the values is less than or equal to zero.}
 
-\item{ftol_rel}{tolerance passed to \code{\link{nloptr}} in mode
+\item{ftol_rel}{relative convergence tolerance of mode objective in mode
 approximation.}
 
 \item{averaging_start}{index to start averaging. Values less then or equal
 to zero yields no averaging.}
+
+\item{fix_seed}{\code{TRUE} if the same seed should be used. E.g., in
+\code{\link{PF_EM}} the same seed will be used in each iteration of the
+E-step of the MCEM algorithm.}
 }
 \value{
 A list with components named as the arguments.

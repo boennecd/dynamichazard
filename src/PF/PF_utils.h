@@ -114,7 +114,6 @@ struct nothing {};
 
 struct get_approx_use_mean_output {
   std::vector<std::unique_ptr<dist_comb>> dists;
-  nlopt_return_value_msg msg;
 };
 
 template<bool is_forward>
@@ -123,7 +122,6 @@ get_approx_use_mean_output get_approx_use_mean(
 
 struct get_approx_use_particle_output {
   std::vector<std::unique_ptr<dist_comb>> dists;
-  nlopt_return_value_msgs msgs;
 };
 template<bool is_forward>
 get_approx_use_particle_output get_approx_use_particle(

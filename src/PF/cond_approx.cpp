@@ -1,28 +1,39 @@
 #include "cond_approx.h"
 #include "../sample_funcs.h"
 #include "dmvnrm.h"
-#include <nloptrAPI.h>
 
-double mode_objective(
-    unsigned int n, const double *x, double *grad, void *data_in)
-{
-  std::vector<PF_cdist*> *data = (std::vector<PF_cdist*> *) data_in;
-  arma::vec state(x, n);
+namespace {
+  struct mode_object_result {
+    const double objective;
+    const arma::vec grad;
+    const arma::mat hess;
+  };
+}
 
-  if (grad) {
-    arma::vec gr(grad, n, false);
-    gr.zeros();
+inline mode_object_result mode_objective
+  (const arma::vec &state, const std::vector<PF_cdist*> &dists,
+   const bool do_grad_n_hess){
+  arma::vec grad;
+  arma::mat hess;
+  const arma::uword dim = state.n_elem;
 
-    for(auto d = data->begin(); d != data->end(); ++d)
-      gr += (*d)->gradient(state);
-    gr *= -1;
+  if(do_grad_n_hess){
+    grad.zeros(dim);
+    hess.zeros(dim, dim);
+
   }
 
   double o = 0.;
-  for(auto d = data->begin(); d != data->end(); ++d)
-    o += (*d)->log_dens(state);
+  for(auto &d : dists){
+    o += d->log_dens(state);
 
-  return -o;
+    if(do_grad_n_hess){
+      grad += d->gradient(state);
+      hess -= d->neg_Hessian(state);
+    }
+  }
+
+  return { o, std::move(grad), std::move(hess) };
 }
 
 cdist_comb_generator::cdist_comb_generator
@@ -33,14 +44,10 @@ cdist_comb_generator::cdist_comb_generator
     cdists, arma::vec(cdists[0]->dim(), arma::fill::zeros), nu, xtra_covar,
     covar_fac, ftol_rel) { }
 
-#define NLOPT_RESULT_CODE_NOT_SET -100L
-
 cdist_comb_generator::cdist_comb_generator(
   std::vector<PF_cdist*> &cdists, const arma::vec &start, const int nu,
   const arma::mat *xtra_covar, const double covar_fac, const double ftol_rel):
-  cdists(cdists), nu(nu),
-  /* just in case we do not set it */
-  nlopt_result_code(NLOPT_RESULT_CODE_NOT_SET)
+  cdists(cdists), nu(nu)
 {
   std::vector<bool> is_mvn(cdists.size());
   std::transform(cdists.begin(), cdists.end(), is_mvn.begin(),
@@ -53,32 +60,50 @@ cdist_comb_generator::cdist_comb_generator(
   unsigned int n = cdists[0]->dim();
   arma::vec val = start;
 
-  if(!all_mvn){
-    /* find mode. TODO: replace with penalized iteratively reweighted least
-     *                  squares */
-    nlopt_opt opt;
-    opt = nlopt_create(NLOPT_LD_TNEWTON, n);
-    nlopt_set_min_objective(opt, mode_objective, &cdists);
-    nlopt_set_ftol_rel(opt, ftol_rel);
-    nlopt_set_vector_storage(opt, 500L);
+  mode_object_result derivs_info = ([&]{
+    if(!all_mvn){
+      /* find mode. TODO: replace with penalized iteratively reweighted least
+      *                  squares */
+      static constexpr unsigned i_max = 500L;
+      for(unsigned i = 0; i < 500L; ++i){
+        /* get original objective value, gradient, and Hessian estimate */
+        const mode_object_result start_info = mode_objective(val, cdists, true);
 
-    double minf;
-    try {
-      nlopt_result_code = nlopt_optimize(opt, val.memptr(), &minf);
+        /* find direction */
+        const arma::vec direction = arma::solve(
+          start_info.hess, -start_info.grad);
 
-    } catch (...)  {
-      nlopt_destroy(opt);
-      throw;
+        /* step-half to find solution */
+        double step_size = 1.;
+        static constexpr unsigned j_max = 20L;
+        unsigned j = 0;
+        for(; j < j_max; ++j, step_size /= 2.){
+          const arma::vec new_val = val + step_size * direction;
+          const mode_object_result new_info =
+            mode_objective(new_val, cdists, false);
 
+          const double obj_diff = new_info.objective - start_info.objective;
+          if(obj_diff > 0.){
+            /* found better value. Check if have converged and update final
+             * parameter */
+            val = std::move(new_val);
+
+            if(obj_diff / (std::abs(new_info.objective) + 1e-16) < ftol_rel)
+              return mode_objective(val, cdists, true);
+
+            break;
+          }
+        }
+
+        if(j >= j_max or i + 1L >= i_max)
+          /* should not reach this point */
+          return start_info;
+      }
     }
-    nlopt_destroy(opt);
 
-    if(nlopt_result_code < 1L)
-      /* fallback to start value */
-      val = start;
-
-  } else
-    nlopt_result_code = 1L;
+    /* we do not need to do any optimization */
+    return mode_objective(start, cdists, true);
+  })();
 
   /* compute negative Hessian */
   std::vector<arma::mat> neg_Ks(cdists.size());
@@ -109,55 +134,6 @@ cdist_comb_generator::cdist_comb_generator(
       continue;
     k += neg_Ks[i] * val + cdists[i]->gradient(val);
   }
-}
-
-nlopt_return_value_msg::nlopt_return_value_msg():
-  nlopt_result_code(NLOPT_RESULT_CODE_NOT_SET), is_error(true), message() { }
-
-nlopt_return_value_msg::nlopt_return_value_msg(const int nlopt_result_code):
-  nlopt_result_code(nlopt_result_code),
-  is_error(nlopt_result_code < 1L or nlopt_result_code > 4L),
-  message(
-    is_error ?
-    "'nlopt' returned with codes " + std::to_string(nlopt_result_code) :
-    "") { }
-
-
-void nlopt_return_value_msgs::insert
-  (const nlopt_return_value_msgs &other){
-  for(auto o : other.msgs){
-    if (msgs.find(o.first) != msgs.end())
-      continue;
-
-    msgs[o.first] = o.second;
-    any_errors = any_errors or o.second.is_error;
-  }
-}
-
-void nlopt_return_value_msgs::insert(const nlopt_return_value_msg &&val){
-  if (msgs.find(val.nlopt_result_code) == msgs.end()){
-    msgs[val.nlopt_result_code] = val;
-    any_errors = any_errors or val.is_error;
-  }
-}
-
-bool nlopt_return_value_msgs::has_any_errors() const {
-  return any_errors;
-}
-
-std::string nlopt_return_value_msgs::message() const {
-  if(!any_errors)
-    return "";
-
-  std::string out = "'nlopt' returned with codes";
-  for(auto i : msgs)
-    out += " " + std::to_string(i.second.nlopt_result_code);
-
-  return out;
-}
-
-nlopt_return_value_msg cdist_comb_generator::get_result_code(){
-  return nlopt_return_value_msg(nlopt_result_code);
 }
 
 class cdist_comb final : public dist_comb {

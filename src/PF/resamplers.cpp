@@ -81,8 +81,6 @@ AUX_resampler_normal_approx_w_cloud_mean<is_forward>::resampler(
     arma::uword t, arma::uvec &outcome, bool &did_resample) {
   get_approx_use_mean_output ans =
     get_approx_use_mean<is_forward>(y_dist, PF_cloud, data, dens_calc, t);
-  if(ans.msg.is_error)
-    Rcpp::warning(ans.msg.message);
 
   std::shared_ptr<PF_cdist> prior, prior_p1;
   if(!is_forward){
@@ -142,8 +140,6 @@ AUX_resampler_normal_approx_w_particles<is_forward>::resampler(
   arma::uword t, arma::uvec &outcome, bool &did_resample) {
   get_approx_use_particle_output ans =
     get_approx_use_particle<is_forward>(y_dist, PF_cloud, data, dens_calc, t);
-  if(ans.msgs.has_any_errors())
-    Rcpp::warning(ans.msgs.message());
 
   std::shared_ptr<PF_cdist> prior, prior_p1;
   if(!is_forward){

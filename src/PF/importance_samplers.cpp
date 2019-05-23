@@ -182,9 +182,6 @@ cloud importance_dens_normal_approx_w_cloud_mean<is_forward>::sample
   get_approx_use_mean_output samplers =
     get_approx_use_mean<is_forward>(y_dist, cl, data, dens_calc, t);
 
-  if(samplers.msg.is_error)
-    Rcpp::warning(samplers.msg.message);
-
   return sample(y_dist, dens_calc, data, cl, resample_idx, t, samplers.dists);
 }
 
@@ -226,10 +223,6 @@ cloud importance_dens_normal_approx_w_cloud_mean<is_forward>::
     }
     cdist_comb_generator combi_gen(
         objs, start, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel);
-    nlopt_return_value_msg result_code = combi_gen.get_result_code();
-
-    if(result_code.is_error)
-      Rcpp::warning(result_code.message);
 
     /* get proposal distributions */
     auto begin_fw = fw_idx.begin();
@@ -312,9 +305,6 @@ cloud importance_dens_normal_approx_w_cloud_mean_independent<is_forward>::sample
   get_approx_use_mean_output samplers =
     get_approx_use_mean<is_forward>(y_dist, dummy_cl, data, dens_calc, t);
 
-  if(samplers.msg.is_error)
-    Rcpp::warning(samplers.msg.message);
-
   return
     sample(y_dist, dens_calc, data, cl, resample_idx, t,
            samplers.dists.back());
@@ -376,8 +366,6 @@ cloud importance_dens_normal_approx_w_particles<is_forward>::sample
 {
   get_approx_use_particle_output samplers =
     get_approx_use_particle<is_forward>(y_dist, cl, data, dens_calc, t);
-  if(samplers.msgs.has_any_errors())
-    Rcpp::warning(samplers.msgs.message());
 
   return sample(y_dist, dens_calc, data, cl, resample_idx, t, samplers.dists);
 }
@@ -400,14 +388,6 @@ cloud importance_dens_normal_approx_w_particles<is_forward>::sample
   return ans;
 }
 
-
-#ifdef _OPENMP
-/* openMP reductions */
-#pragma omp declare reduction(                                          \
-  errReduc: nlopt_return_value_msgs: omp_out.insert(omp_in))            \
-  initializer(omp_priv = nlopt_return_value_msgs())
-#endif
-
 template<bool is_forward>
 cloud importance_dens_normal_approx_w_particles<is_forward>::
   sample_smooth(SAMPLE_SMOOTH_ARGS){
@@ -423,10 +403,9 @@ cloud importance_dens_normal_approx_w_particles<is_forward>::
     auto begin_fw = fw_idx.begin();
     auto begin_bw = bw_idx.begin();
     std::vector<std::unique_ptr<dist_comb>> samplers(data.N_smooth);
-    nlopt_return_value_msgs error_messages;
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) reduction(errReduc:error_messages)
+#pragma omp parallel for schedule(static)
 #endif
     for(arma::uword i = 0; i < data.N_smooth; ++i){
       const particle &fw_p = fw_cloud[*(begin_fw + i)];
@@ -443,14 +422,10 @@ cloud importance_dens_normal_approx_w_particles<is_forward>::
       cdist_comb_generator combi_gen(
           objs, start, data.nu, &data.xtra_covar, data.covar_fac,
           data.ftol_rel);
-      error_messages.insert(combi_gen.get_result_code());
 
       samplers[i] = combi_gen.get_dist_comb
         ({ (arma::vec*)&fw_p.get_state(), (arma::vec*)&bw_p.get_state() });
     }
-
-    if(error_messages.has_any_errors())
-      Rcpp::warning(error_messages.message());
 
     /* sample */
     cloud ans;

@@ -22,11 +22,11 @@ Description: Contains functions that lets you fit dynamic hazard models using
   more general state space models. 
 License: GPL-2
 LazyData: TRUE
-LinkingTo: Rcpp, RcppArmadillo, nloptr (>= 1.2.0)
-Imports: parallel, Rcpp (>= 0.12.6), boot, nloptr (>= 1.2.0)
+LinkingTo: Rcpp, RcppArmadillo
+Imports: parallel, Rcpp (>= 0.12.6), boot
 Depends: R (>= 3.3.0), stats, graphics, utils, survival
 RoxygenNote: 6.1.1
-Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR, R.rsp, speedglm, dichromat, colorspace, plyr, gsl, mvtnorm
+Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR, R.rsp, speedglm, dichromat, colorspace, plyr, gsl, mvtnorm, nloptr (>= 1.2.0)
 VignetteBuilder: knitr, R.rsp
 BugReports: https://github.com/boennecd/dynamichazard/issues
 SystemRequirements: C++11

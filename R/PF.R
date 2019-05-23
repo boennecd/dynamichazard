@@ -1179,7 +1179,7 @@ get_Q_tilde <- function(x, n_vars)
 #' distribution is used if it is zero.
 #' @param covar_fac factor to scale the covariance matrix with. Ignored if
 #' the values is less than or equal to zero.
-#' @param ftol_rel tolerance passed to \code{\link{nloptr}} in mode
+#' @param ftol_rel relative convergence tolerance of mode objective in mode
 #' approximation.
 #' @param averaging_start index to start averaging. Values less then or equal
 #' to zero yields no averaging.

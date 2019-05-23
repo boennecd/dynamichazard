@@ -68,22 +68,13 @@ get_approx_use_mean_output get_approx_use_mean(
     *it_dc = combi_gen.get_dist_comb({ (arma::vec*)&it_cl->get_state() });
   }
 
-  return { std::move(out), combi_gen.get_result_code() };
+  return { std::move(out) };
 }
 
 template get_approx_use_mean_output get_approx_use_mean<true>(
     std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);
 template get_approx_use_mean_output get_approx_use_mean<false>(
     std::shared_ptr<PF_cdist>, cloud&, const PF_data&, pf_dens&, arma::uword);
-
-
-
-#ifdef _OPENMP
-/* openMP reductions */
-#pragma omp declare reduction(                                          \
-errReduc: nlopt_return_value_msgs: omp_out.insert(omp_in))              \
-  initializer(omp_priv = nlopt_return_value_msgs())
-#endif
 
 template<bool is_forward>
 get_approx_use_particle_output get_approx_use_particle(
@@ -106,10 +97,9 @@ get_approx_use_particle_output get_approx_use_particle(
       new cdist_comb_generator(start_objs));
 
   }
-  nlopt_return_value_msgs error_messages;
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) reduction(errReduc:error_messages)
+#pragma omp parallel for schedule(static)
 #endif
   for(unsigned int i = 0; i < n_elem; ++i){ // loop over cloud elements
     auto it_cl = PF_cloud.begin() + i;
@@ -134,13 +124,11 @@ get_approx_use_particle_output get_approx_use_particle(
 
     cdist_comb_generator combi_gen(
         objs, start, data.nu, &data.xtra_covar, data.covar_fac, data.ftol_rel);
-    error_messages.insert(combi_gen.get_result_code());
 
     *it_dc =
       combi_gen.get_dist_comb({ (arma::vec*)&it_cl->get_state() });
   }
 
-  out.msgs = std::move(error_messages);
   return out;
 }
 template get_approx_use_particle_output
