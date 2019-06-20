@@ -246,7 +246,7 @@ public:
   virtual const arma::vec &get_score() const = 0;
   /* the betas in https://doi.org/10.1093/biomet/asq062 */
   virtual const arma::mat &get_hess_terms() const = 0;
-  virtual const double get_weight() const = 0;
+  virtual double get_weight() const = 0;
 
   virtual ~score_n_hess_base() = default;
 };

@@ -34,7 +34,7 @@ devtools::install_github("boennecd/dynamichazard")
 You can also download the package from CRAN by calling:
 
 ```R
-installed.packages("dynamichazard")
+install.packages("dynamichazard")
 ```
 
 ## Example - ddhazard

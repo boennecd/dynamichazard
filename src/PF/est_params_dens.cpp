@@ -7,7 +7,7 @@ using pair_iterator = std::vector<const particle_pairs*>::const_iterator;
 class update_parameters_data {
   /* function to create a list of pointers to be used in loops later */
   std::vector<const smoother_output::particle_pairs*>
-  set_pairs(){ /* TODO: Just store two start and end iterators */
+  set_pairs(){ /* TODO: Just store a start and end iterators */
     std::vector<const particle_pairs*>::size_type total_n_pairs = 0L;
     for(auto i = tr->begin(); i != tr->end(); ++i)
       total_n_pairs += i->size();
@@ -16,7 +16,7 @@ class update_parameters_data {
     auto ptr = out.begin();
     for(auto i = tr->begin(); i != tr->end(); ++i)
       for(auto j = i->begin(); j != i->end(); ++j, ++ptr)
-        *ptr = &(*j);
+        *ptr = &*j;
 
     return out;
   }
@@ -46,12 +46,12 @@ class generator_dens final : public qr_data_generator {
   const update_parameters_data &dat;
   pair_iterator i_start;
   pair_iterator i_end;
-  const unsigned long int n_pairs;
+  const std::size_t n_pairs;
 
 public:
   generator_dens
     (const update_parameters_data &dat, pair_iterator i_start,
-     pair_iterator i_end, const unsigned long int n_pairs):
+     pair_iterator i_end, const std::size_t n_pairs):
     dat(dat), i_start(i_start), i_end(i_end), n_pairs(n_pairs) { }
 
   qr_work_chunk get_chunk() const override {
@@ -104,7 +104,7 @@ PF_parameters
 
     /* setup generators */
     const unsigned long max_per_block =
-        max_bytes / ((dat.n_elem_X + dat.n_elem_Y) * 8L) + 1L;
+        max_bytes / (dat.n_elem_X + dat.n_elem_Y) / 8L + 1L;
 
     if(debug)
       Rcpp::Rcout << "Running `est_params_dens` with `max_per_block` "
@@ -159,7 +159,7 @@ PF_parameters
     arma::inplace_trans(out.R_top_F);
 
     /* use that
-     *    Q = Y^\top Y - F^\top F
+     *    Q = (Y^\top Y - F^\top F) / d
      *
      * where F is the output from qr_parallel.compute().
      */

@@ -543,9 +543,9 @@ This is important for long time series.
 
 ```{r O_N_sq_sgd, cache = 1, dependson = "sgd"}
 # number of iterations
-n_runs <- 600L
+n_runs <- 400L
 # number of particles to use
-ns <- ceiling(exp(seq(log(100), log(500), length.out = n_runs)))
+ns <- ceiling(exp(seq(log(200), log(1000), length.out = n_runs)))
 
 out <- sgd(n_runs = n_runs, ns = ns, use_O_n_sq = TRUE,  object = pf_start, 
            lr = .005)

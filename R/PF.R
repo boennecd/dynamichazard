@@ -1806,7 +1806,6 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
     n_rng <- NCOL(Q)
     drng <- 2L * n_rng * n_rng
     org_dim <- dfix + drng
-    stopifnot(length(cpp_res$score) == org_dim)
 
     # output dimension and matrix to multiply objects by
     out_dim <- dfix + n_rng * n_rng + (n_rng * (n_rng + 1L)) / 2L

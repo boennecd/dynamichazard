@@ -110,7 +110,7 @@ public:
   const arma::mat &get_hess_terms() const override {
     return hess_terms;
   }
-  const double get_weight() const override {
+  double get_weight() const override {
     return weight;
   }
 
@@ -417,7 +417,7 @@ namespace {
     const arma::mat &get_hess_terms() const override {
       return hess_terms;
     }
-    const double get_weight() const override {
+    double get_weight() const override {
       return weight;
     }
 
@@ -471,11 +471,6 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
             &score_dim);
       }
     }
-
-    if(!only_score)
-      F77_CALL(dsyr)(
-        &C_U, &dfixd, &D_ONE, score.memptr(), &I_ONE, hess_terms.memptr(),
-        &score_dim);
   }
 
   /* take a copy of the gradient w.r.t. the terms from the observation equation */
@@ -515,7 +510,8 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
       if(!is_first_it){
         score_terms(obs_span)  = old_res->get_score()(obs_span);
         score_terms(sta_span) += old_res->get_score()(sta_span);
-      }
+      } else
+        score_terms(obs_span).zeros();
 
       /* add terms to score */
       score += w_i * score_terms;
@@ -532,8 +528,8 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
           arma::kron(
             dat.K, w_i * ((- innovation_Qinv) * innovation_Qinv.t() + dat.K_1_2));
 
-        /* add outer product of score terms from state equation and old the
-         * state's score vector */
+        /* add outer product of score terms from this pair */
+        score_terms(obs_span) += obs_score_term;
         F77_CALL(dsyr)(
             &C_U, &score_dim, &w_i, score_terms.memptr(), &I_ONE,
             hess_terms.memptr(), &score_dim);
@@ -545,18 +541,6 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
   }
 
   if(!only_score){
-    /* we lag one outer product in the Hessian term between the score terms
-     * from the observation equation and the sum of the weighted score terms
-     * from the previous state and the state equation */
-    {
-      arma::vec tmp = score;
-      tmp(obs_span) -= obs_score_term;
-      R_BLAS_LAPACK::dger(
-        &dfixd, &score_dim, &D_ONE, obs_score_term.memptr(),
-        &I_ONE, tmp.memptr(), &I_ONE, hess_terms.memptr(), &score_dim);
-
-    }
-
    /* subtract outer product of score */
    F77_CALL(dsyr)(
      &C_U, &score_dim, &D_NEG_ONE, score.memptr(), &I_ONE, hess_terms.memptr(),
@@ -618,7 +602,7 @@ std::vector<std::unique_ptr<score_n_hess_base> > PF_get_score_n_hess_O_N_sq_comp
 
   /* run particle filter and compute smoothed functionals recursively */
   for(unsigned t = 1;  t <= (unsigned)data.d; ++t, ++r_obj){
-    if((t + 1L) % 3L == 0L)
+    if(t % 5L == 0L)
       Rcpp::checkUserInterrupt();
 
     std::shared_ptr<PF_cdist> y_dist = dens_calc.get_y_dist(t);
