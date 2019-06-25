@@ -539,7 +539,8 @@ test_that("'PF_get_score_n_hess' gives previous results", {
   comp_obj$set_n_particles(N_fw = 1000L, N_first = 1000L)
   comp_obj$run_particle_filter()
   o1 <- comp_obj$get_get_score_n_hess()
-  expect_known_value(o1, "PF_get_score_n_hess-help-res.RDS")
+  expect_known_value(o1, "PF_get_score_n_hess-help-res.RDS",
+                     tolerance = .Machine$double.eps^(1/3))
 
   # check that we get the same when we only request the score
   o1_score <- comp_obj$get_get_score_n_hess(only_score = TRUE)
