@@ -2,5 +2,3 @@ test that residuals works for second order random walk
 replace `save_to_test` and `read_to_test` with `testthat::expect_known_output`
 make ESS function
 also scale Q as in ddhazard in the particle filter
-There are some redundant computations in one of the approximations of the 
-observed information matrix

@@ -1,5 +1,5 @@
 @article{dempster77,
-  title={Maximum likelihood from incomplete data via the EM algorithm},
+  title={Maximum likelihood from incomplete data via the {EM} algorithm},
   author={Dempster, Arthur P and Laird, Nan M and Rubin, Donald B},
   journal={Journal of the royal statistical society. Series B (methodological)},
   pages={1--38},
@@ -16,7 +16,7 @@
  number = {2},
  pages = {226--233},
  publisher = {[Royal Statistical Society, Wiley]},
- title = {Finding the Observed Information Matrix when Using the EM Algorithm},
+ title = {Finding the Observed Information Matrix when Using the {EM} Algorithm},
  volume = {44},
  year = {1982}
 }
@@ -30,14 +30,14 @@
  number = {2},
  pages = {267--278},
  publisher = {[Oxford University Press, Biometrika Trust]},
- title = {Maximum Likelihood Estimation via the ECM Algorithm: A General Framework},
+ title = {Maximum Likelihood Estimation via the {ECM} Algorithm: {A} General Framework},
  volume = {80},
  year = {1993}
 }
 
 @Article{kitagawa94,
 author="Kitagawa, Genshiro",
-title="The two-filter formula for smoothing and an implementation of the Gaussian-sum smoother",
+title="The two-filter formula for smoothing and an implementation of the {G}aussian-sum smoother",
 journal="Annals of the Institute of Statistical Mathematics",
 year="1994",
 month="Dec",
@@ -52,7 +52,7 @@ url="https://doi.org/10.1007/BF00773470"
 }
 
 @article{kitagawa96,
-  title={Monte Carlo filter and smoother for non-Gaussian nonlinear state space models},
+  title={Monte Carlo filter and smoother for non-{G}aussian nonlinear state space models},
   author={Kitagawa, Genshiro},
   journal={Journal of computational and graphical statistics},
   volume={5},
@@ -60,6 +60,20 @@ url="https://doi.org/10.1007/BF00773470"
   pages={1--25},
   year={1996},
   publisher={Taylor \& Francis}
+}
+
+@article{Durbin97,
+ ISSN = {00063444},
+ URL = {http://www.jstor.org/stable/2337587},
+ abstract = {State space models are considered for observations which have non-Gaussian distributions. We obtain accurate approximations to the loglikelihood for such models by Monte Carlo simulation. Devices are introduced which improve the accuracy of the approximations and which increase computational efficiency. The loglikelihood function is maximised numerically to obtain estimates of the unknown hyperparameters. Standard errors of the estimates due to simulation are calculated. Details are given for the important special cases where the observations come from an exponential family distribution and where the observation equation is linear but the observation errors are non-Gaussian. The techniques are illustrated with a series for which the observations have a Poisson distribution and a series for which the observation have a t-distribution.},
+ author = {J. Durbin and S. J. Koopman},
+ journal = {Biometrika},
+ number = {3},
+ pages = {669--684},
+ publisher = {[Oxford University Press, Biometrika Trust]},
+ title = {Monte Carlo Maximum Likelihood Estimation for Non-{G}aussian State Space Models},
+ volume = {84},
+ year = {1997}
 }
 
 @article{de97,
@@ -123,7 +137,7 @@ url="https://doi.org/10.1023/A:1008935410038"
 }
 
 @article{andrieu02,
-  title={Particle filtering for partially observed Gaussian state space models},
+  title={Particle filtering for partially observed {G}aussian state space models},
   author={Andrieu, Christophe and Doucet, Arnaud},
   journal={Journal of the Royal Statistical Society: Series B (Statistical Methodology)},
   volume={64},
@@ -158,6 +172,20 @@ url="https://doi.org/10.1023/A:1008935410038"
  year = {2005},
  isbn = {978-0-387-40264-2, 978-1-4419-2319-6},
  publisher = {Springer-Verlag New York},
+}
+
+@article{Lin05,
+ ISSN = {01621459},
+ URL = {http://www.jstor.org/stable/27590681},
+ abstract = {Sequential Monte Carlo methods, especially the particle filter (PF) and its various modifications, have been used effectively in dealing with stochastic dynamic systems. The standard PF samples the current state through the underlying state dynamics, then uses the current observation to evaluate the sample's importance weight. However, there is a set of problems in which the current observation provides significant information about the current state but the state dynamics are weak, and thus sampling using the current observation often produces more efficient samples than sampling using the state dynamics. In this article we propose a new variant of the PF, the independent particle filter (IPF), to deal with these problems. The IPF generates exchangeable samples of the current state from a sampling distribution that is conditionally independent of the previous states, a special case of which uses only the current observation. Each sample can then be matched with multiple samples of the previous states in evaluating the importance weight. We present some theoretical results showing that this strategy improves efficiency of estimation as well as reduces resampling frequency. We also discuss some extensions of the IPF, and use several synthetic examples to demonstrate the effectiveness of the method.},
+ author = {Ming T. Lin and Junni L. Zhang and Qiansheng Cheng and Rong Chen},
+ journal = {Journal of the American Statistical Association},
+ number = {472},
+ pages = {1412--1421},
+ publisher = {[American Statistical Association, Taylor & Francis, Ltd.]},
+ title = {Independent Particle Filters},
+ volume = {100},
+ year = {2005}
 } 
 
 
