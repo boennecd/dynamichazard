@@ -4,11 +4,10 @@
 *  The CHARACTER UPLO and TRANS arguments is replaced by
 *  LOGICAL UPPER and DOTRAN so LSAME is not needed
 *
-*      SUBROUTINE DCHUR(UPLO,TRANS,N,M,R,LDR,X,Z,LDZ,Y,RHO,C,S,INFO)
-      SUBROUTINE DCHUR(UPPER,DOTRAN,N,M,R,LDR,X,Z,LDZ,Y,RHO,C,S,INFO)
+      SUBROUTINE DCHUR(UPLO,TRANS,N,M,R,LDR,X,Z,LDZ,Y,RHO,C,S,INFO)
 *     .. Scalar Arguments ..
-*      CHARACTER UPLO,TRANS
-      LOGICAL UPPER,DOTRAN
+      CHARACTER UPLO,TRANS
+*      LOGICAL UPPER,DOTRAN
       INTEGER N,M,LDR,LDZ,INFO
 *     .. Array Arguments ..
       DOUBLE PRECISION R(LDR,*)
@@ -142,12 +141,12 @@
 *      http://infoscience.epfl.ch/record/161468/files/cholupdate.pdf
 *
 *     .. Local Scalars ..
-*      LOGICAL UPPER,DOTRAN
+      LOGICAL UPPER,DOTRAN
       INTEGER I
       DOUBLE PRECISION SC,W
 *     .. External Functions ..
-*      LOGICAL LSAME
-*      EXTERNAL LSAME
+      LOGICAL LSAME
+      EXTERNAL LSAME
 *     .. External Subroutines ..
       EXTERNAL DROT,DROTG
 *     .. Intrinsic Functions ..
@@ -157,14 +156,14 @@
 *     Test the input parameters.
 *
       INFO=0
-*      UPPER=LSAME(UPLO,'U')
-*      DOTRAN=LSAME(TRANS,'T')
-*      IF( .NOT. UPPER .AND. .NOT. LSAME(UPLO,'L') ) THEN
-*        INFO=-1
-*      ELSE IF( .NOT.DOTRAN .AND. .NOT. LSAME(TRANS,'N') ) THEN
-*        INFO=-2
-*      ELSE IF( N.LT.0 ) THEN
-      IF( N.LT.0 ) THEN
+      UPPER=LSAME(UPLO,'U')
+      DOTRAN=LSAME(TRANS,'T')
+      IF( .NOT. UPPER .AND. .NOT. LSAME(UPLO,'L') ) THEN
+        INFO=-1
+      ELSE IF( .NOT.DOTRAN .AND. .NOT. LSAME(TRANS,'N') ) THEN
+        INFO=-2
+      ELSE IF( N.LT.0 ) THEN
+      ELSE IF( N.LT.0 ) THEN
         INFO=-3
       ELSE IF( M.LT.0 ) THEN
         INFO=-4

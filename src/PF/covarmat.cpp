@@ -18,10 +18,11 @@ const arma::mat& covarmat::get_mat(output what) const {
   if(what == e_mat)
     return(*mat_.get());
 
-  bool is_computed, *this_flag;
+  bool *this_flag;
 
   this_flag = is_chol_set.get();
 #ifdef _OPENMP
+  bool is_computed;
 #pragma omp atomic read
   is_computed = *this_flag;
   if(!is_computed){

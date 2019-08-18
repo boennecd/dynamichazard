@@ -7,12 +7,12 @@ extern "C" {
   void F77_NAME(dsyr)(
       const char *uplo, const int *n, const double *alpha,
       const double *x, const int *incx,
-      double *a, const int *lda);
+      double *a, const int *lda, size_t);
 }
 
 constexpr static char C_U = 'U';
 constexpr static int I_ONE = 1L;
-static const double D_ONE = 1, D_NEG_ONE = -1;
+static const double D_NEG_ONE = -1;
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -221,7 +221,7 @@ derivs_output get_derivs_output
           dat.family->dd_log_like(dat.y[i], trunc_eta, dat.dts[i]);
         F77_CALL(dsyr)(
             &C_U, &dfixd, &dd, dat.X.colptr(i), &I_ONE, hess_terms.memptr(),
-            &score_dim);
+            &score_dim, 1);
       }
     }
   }
@@ -468,7 +468,7 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
           dat.family->dd_log_like(dat.y[i], trunc_eta, dat.dts[i]);
         F77_CALL(dsyr)(
             &C_U, &dfixd, &dd, dat.X.colptr(i), &I_ONE, hess_terms.memptr(),
-            &score_dim);
+            &score_dim, 1);
       }
     }
   }
@@ -532,7 +532,7 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
         score_terms(obs_span) += obs_score_term;
         F77_CALL(dsyr)(
             &C_U, &score_dim, &w_i, score_terms.memptr(), &I_ONE,
-            hess_terms.memptr(), &score_dim);
+            hess_terms.memptr(), &score_dim, 1);
 
         if(!is_first_it)
           hess_terms += w_i * old_res->get_hess_terms();
@@ -544,7 +544,7 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
    /* subtract outer product of score */
    F77_CALL(dsyr)(
      &C_U, &score_dim, &D_NEG_ONE, score.memptr(), &I_ONE, hess_terms.memptr(),
-     &score_dim);
+     &score_dim, 1);
 
    /* not needed as we later copy the upper part to the lower part */
    // hess_terms = arma::symmatu(hess_terms);

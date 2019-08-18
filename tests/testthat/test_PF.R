@@ -763,8 +763,11 @@ test_that("A few iterations with `type = \"VAR\"' yields the same as before", {
       Q_tilde = diag(.3^2, 2), n_threads = 4)))
 
   # old <- readRDS(file.path("previous_results", "PF_VARS.RDS"))
-  expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
-                     file = "PF_VARS.RDS")
+  expect_known_value(pf_Fear[!names(pf_Fear) %in% c("clouds", "terms")],
+                     file = "PF_VARS.RDS",
+                     # low tol because of a large difference on Solaris.
+                     # Likely due to re-sampling being triggered at some point
+                     tolerance = 1e-3)
 })
 
 test_that("Commutation matrix is correct", {
@@ -860,8 +863,10 @@ test_that("type = 'VAR' works with non-zero mean with a single term and gives pr
 
   # old <- readRDS(file.path(
   #    "previous_results", "PF_VARS_non_zero_mean_inter.RDS"))
-  expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
-                     file = "PF_VARS_non_zero_mean_inter.RDS")
+  expect_known_value(pf_Fear[!names(pf_Fear) %in% c("clouds", "terms")],
+                     file = "PF_VARS_non_zero_mean_inter.RDS",
+
+                     )
 
   pf_Fear <- suppressWarnings(PF_EM(
     Surv(start, stop, event) ~ group + ddFixed(group) + ddFixed_intercept(),
@@ -875,8 +880,11 @@ test_that("type = 'VAR' works with non-zero mean with a single term and gives pr
 
   # old <- readRDS(file.path(
   #    "previous_results", "PF_VARS_non_zero_mean_slope.RDS"))
-  expect_known_value(pf_Fear[!names(pf_Fear) %in% "clouds"],
-                     file = "PF_VARS_non_zero_mean_slope.RDS")
+  expect_known_value(pf_Fear[!names(pf_Fear) %in% c("clouds", "terms")],
+                     file = "PF_VARS_non_zero_mean_slope.RDS",
+                     # low tol because of a large difference on Solaris.
+                     # Likely due to re-sampling being triggered at some point
+                     tolerance = 1e-3)
 })
 
 test_that("Using `n_smooth_final` works as expected and yields previous results", {
@@ -895,7 +903,7 @@ test_that("Using `n_smooth_final` works as expected and yields previous results"
       n_max = 1, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
       n_threads = 1)))
 
-  expect_known_value(f_fit_1[!names(f_fit_1) %in% c("clouds", "call")],
+  expect_known_value(f_fit_1[!names(f_fit_1) %in% c("clouds", "call", "terms")],
                      file = "n_smooth_final_RW.RDS")
 
   # # compare with the following after you change `n_max`
@@ -941,8 +949,10 @@ test_that("Using `n_smooth_final` works as expected and yields previous results"
 
   # old <- readRDS(file.path(
   #    "previous_results", "n_smooth_final_VAR.RDS"))
-  expect_known_value(f_fit_2[!names(f_fit_2) %in% c("clouds", "call")],
-                     file = "n_smooth_final_VAR.RDS")
+  expect_known_value(
+    f_fit_2[!names(f_fit_2) %in% c("clouds", "call", "terms", "fixed",
+                                   "random")],
+    file = "n_smooth_final_VAR.RDS")
 })
 
 test_that("sampling with a t-distribution gives previous results", {
@@ -965,7 +975,7 @@ test_that("sampling with a t-distribution gives previous results", {
     tail(t_fit$effective_sample_size$backward_clouds, 1),
     length(tail(t_fit$clouds$backward_clouds, 1)[[1L]]$weights))
 
-  expect_known_value(t_fit[!names(t_fit) %in% c("clouds", "call")],
+  expect_known_value(t_fit[!names(t_fit) %in% c("clouds", "call", "terms")],
                      file = "pf_t_dist_proposal.RDS")
 })
 

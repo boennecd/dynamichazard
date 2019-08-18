@@ -3,17 +3,14 @@
 #include <R_ext/Lapack.h>
 #include "../R_BLAS_LAPACK.h"
 
+static const char C_N = 'N', C_L = 'L';
+
 namespace R_BLAS_LAPACK {
   extern "C"
   {
-    // Non LAPACK function to make rank one update of of chol decomp
-    // We could use the LINPACK function dchex. See
-    //  http://www.netlib.org/linpack/dchex.f
-    // See http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=2646
-    // I use the macro from r-source/src/include/R_ext/RS.h
     void F77_NAME(dchur)(
-        int*,   // UPPER
-        int*,   // DOTRAN
+        const char*,   // UPLO
+        const char*,   // TRANS
         int*,    // N
         int*,    // M
         double*, // R
@@ -25,7 +22,9 @@ namespace R_BLAS_LAPACK {
         double*, // RHO
         double*, // C
         double*, // S
-        int*     // INFO
+        int*,     // INFO,
+        size_t,
+        size_t
     );
   }
 
@@ -41,14 +40,11 @@ namespace R_BLAS_LAPACK {
     int ldz = 1;
     double z, y, rho;
 
-    int UPPER = false;
-    int DOTRAN = false;
-
     F77_CALL(dchur)(
-        &UPPER,   // lower triangular
-        &DOTRAN,   // does not matter. Relates to Z
+        &C_L,   // lower triangular
+        &C_N,   // does not matter. Relates to Z
         &n, &m, R, &ldr,
-        x, &z, &ldz, &y, &rho, c, s, &info);
+        x, &z, &ldz, &y, &rho, c, s, &info, 1, 1);
 
     delete[] c;
     delete[] s;
