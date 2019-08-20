@@ -8,5 +8,10 @@
   UBSAN checks
 * `rhub::check_for_cran()`
 
-## R CMD check results
+## Resubmission
+This is a resubmission. In this version I have:
+
+* Used the `FCLEN` macro in the extern declaration of `dsyr` and `FCONE` 
+  when calling `dsyr`.
+
 There is a note about the size on most platforms.

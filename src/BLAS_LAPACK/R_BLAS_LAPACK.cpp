@@ -1,4 +1,5 @@
 #include <Rcpp.h>
+#include "../Rconfig-wrap.h"
 #include <R_ext/BLAS.h>
 #include <R_ext/Lapack.h>
 #include "../R_BLAS_LAPACK.h"
@@ -22,9 +23,8 @@ namespace R_BLAS_LAPACK {
         double*, // RHO
         double*, // C
         double*, // S
-        int*,     // INFO,
-        size_t,
-        size_t
+        int*     // INFO,
+        FCLEN FCLEN
     );
   }
 
@@ -44,7 +44,7 @@ namespace R_BLAS_LAPACK {
         &C_L,   // lower triangular
         &C_N,   // does not matter. Relates to Z
         &n, &m, R, &ldr,
-        x, &z, &ldz, &y, &rho, c, s, &info, 1, 1);
+        x, &z, &ldz, &y, &rho, c, s, &info FCONE FCONE);
 
     delete[] c;
     delete[] s;
@@ -60,7 +60,7 @@ namespace R_BLAS_LAPACK {
     int info;
 
     char c1 = 'L', c2 = 'N';
-    F77_CALL(dtrtri)(&c1, &c2, &n, out, &ldr, &info);
+    F77_CALL(dtrtri)(&c1, &c2, &n, out, &ldr, &info FCONE FCONE);
 
     if(info != 0){
       std::stringstream str;
@@ -73,7 +73,7 @@ namespace R_BLAS_LAPACK {
     int info;
 
     char c1 = 'L';
-    F77_CALL(dpotrf)(&c1, &n, out, &lda, &info);
+    F77_CALL(dpotrf)(&c1, &n, out, &lda, &info FCONE);
 
     if(info != 0){
       std::stringstream str;
@@ -92,7 +92,7 @@ namespace R_BLAS_LAPACK {
     int incx = 1;
     char c1 = 'L', c2 = is_transpose ? 'T' : 'N', c3 = 'N';
     F77_CALL(dtrmv)(
-        &c1, &c2, &c3, &n, A, &lda, x, &incx);
+        &c1, &c2, &c3, &n, A, &lda, x, &incx FCONE FCONE FCONE);
   }
 
   void sym_mat_rank_one_update(
@@ -113,7 +113,7 @@ namespace R_BLAS_LAPACK {
     F77_CALL(dsyr)(
         &c1, n, alpha,
         x, &inx,
-        A, n);
+        A, n FCONE);
   }
 
   void sym_mat_vec_mult(
@@ -139,7 +139,7 @@ namespace R_BLAS_LAPACK {
         &c1, n,
         &dum_d, A, n,
         x, &dum_i, &dum_d,
-        y, &dum_i);
+        y, &dum_i FCONE);
   }
 
   void symmetric_rank_k_update(
@@ -168,7 +168,7 @@ namespace R_BLAS_LAPACK {
         &c1, &c2,
         n, k, &dum_d,
         A, n,
-        &dum_d, C, n);
+        &dum_d, C, n FCONE FCONE);
   }
 
   void triangular_sys_solve(
@@ -191,7 +191,7 @@ namespace R_BLAS_LAPACK {
         &n, &nrhs,
         A, &n,
         B, &n,
-        &info);
+        &info FCONE FCONE FCONE);
 
     if(info != 0){
       std::stringstream str;
@@ -207,7 +207,7 @@ namespace R_BLAS_LAPACK {
       double *b, const int *ldb){
     F77_CALL(dtrmm)(
         side, uplo, transa, diag, m, n, alpha, a, lda,
-        b, ldb);
+        b, ldb FCONE FCONE FCONE);
   }
 
   void dtrmv(
@@ -215,7 +215,7 @@ namespace R_BLAS_LAPACK {
       const int *n, const double *a, const int *lda,
       double *x, const int *incx){
     F77_CALL(dtrmv)(
-        uplo, trans, diag, n, a, lda, x, incx);
+        uplo, trans, diag, n, a, lda, x, incx FCONE FCONE FCONE);
   }
 
   void dger(
@@ -245,7 +245,7 @@ namespace R_BLAS_LAPACK {
   void dgetrs(
       const char* trans, const int* n, const int* nrhs, const double* a,
       const int* lda, const int* ipiv, double* b, const int* ldb, int* info){
-    F77_CALL(dgetrs)(trans, n, nrhs, a, lda, ipiv, b, ldb, info);
+    F77_CALL(dgetrs)(trans, n, nrhs, a, lda, ipiv, b, ldb, info FCONE);
   }
 
   void dormqr(const char* side, const char* trans,
@@ -254,7 +254,8 @@ namespace R_BLAS_LAPACK {
               const double* tau, double* c, const int* ldc,
               double* work, const int* lwork, int* info){
     F77_CALL(dormqr)(
-        side, trans, m, n, k, a, lda, tau, c, ldc, work, lwork, info);
+        side, trans, m, n, k, a, lda, tau, c, ldc, work, lwork, info
+        FCONE FCONE);
   }
 
   void dgeqp3(const int* m, const int* n, double* a, const int* lda,
