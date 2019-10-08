@@ -1,8 +1,7 @@
 #ifndef RCONFIG_WRAP_H
 #define RCONFIG_WRAP_H
-#define USE_FC_LEN_T
 #include <Rconfig.h>
-
+#include <R_ext/BLAS.h>
 #ifndef FCLEN
 #define FCLEN
 #endif

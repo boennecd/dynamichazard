@@ -65,4 +65,7 @@ namespace R_BLAS_LAPACK {
 
   void dgetri(const int*, double*, const int*,
               int*, double*, const int*, int*);
+
+  void dsyr(const char*, const int*, const double*, const double*,
+            const int*,double*, const int*);
 }

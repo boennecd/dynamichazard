@@ -2,14 +2,6 @@
 #include "../thread_pool.h"
 #include "importance_samplers.h"
 #include "resamplers.h"
-#include "../Rconfig-wrap.h"
-
-extern "C" {
-  void F77_NAME(dsyr)(
-      const char *uplo, const int *n, const double *alpha,
-      const double *x, const int *incx,
-      double *a, const int *lda FCLEN);
-}
 
 constexpr static char C_U = 'U';
 constexpr static int I_ONE = 1L;
@@ -220,9 +212,9 @@ derivs_output get_derivs_output
       if(!only_score){
         const double dd =
           dat.family->dd_log_like(dat.y[i], trunc_eta, dat.dts[i]);
-        F77_CALL(dsyr)(
+        R_BLAS_LAPACK::dsyr(
             &C_U, &dfixd, &dd, dat.X.colptr(i), &I_ONE, hess_terms.memptr(),
-            &score_dim FCONE);
+            &score_dim);
       }
     }
   }
@@ -467,9 +459,9 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
       if(!only_score){
         const double dd =
           dat.family->dd_log_like(dat.y[i], trunc_eta, dat.dts[i]);
-        F77_CALL(dsyr)(
+        R_BLAS_LAPACK::dsyr(
             &C_U, &dfixd, &dd, dat.X.colptr(i), &I_ONE, hess_terms.memptr(),
-            &score_dim FCONE);
+            &score_dim);
       }
     }
   }
@@ -531,9 +523,9 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
 
         /* add outer product of score terms from this pair */
         score_terms(obs_span) += obs_score_term;
-        F77_CALL(dsyr)(
+        R_BLAS_LAPACK::dsyr(
             &C_U, &score_dim, &w_i, score_terms.memptr(), &I_ONE,
-            hess_terms.memptr(), &score_dim FCONE);
+            hess_terms.memptr(), &score_dim);
 
         if(!is_first_it)
           hess_terms += w_i * old_res->get_hess_terms();
@@ -543,9 +535,9 @@ score_n_hess_O_N_sq::score_n_hess_O_N_sq(
 
   if(!only_score){
    /* subtract outer product of score */
-   F77_CALL(dsyr)(
+   R_BLAS_LAPACK::dsyr(
      &C_U, &score_dim, &D_NEG_ONE, score.memptr(), &I_ONE, hess_terms.memptr(),
-     &score_dim FCONE);
+     &score_dim);
 
    /* not needed as we later copy the upper part to the lower part */
    // hess_terms = arma::symmatu(hess_terms);

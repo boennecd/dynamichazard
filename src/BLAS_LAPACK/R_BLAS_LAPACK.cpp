@@ -1,6 +1,5 @@
 #include <Rcpp.h>
 #include "../Rconfig-wrap.h"
-#include <R_ext/BLAS.h>
 #include <R_ext/Lapack.h>
 #include "../R_BLAS_LAPACK.h"
 
@@ -26,6 +25,11 @@ namespace R_BLAS_LAPACK {
         int*     // INFO,
         FCLEN FCLEN
     );
+
+    void F77_NAME(dsyr)(
+      const char *uplo, const int *n, const double *alpha,
+      const double *x, const int *incx,
+      double *a, const int *lda FCLEN);
   }
 
   void ddhazard_dchur(double *R, double *x, int n, int ldr){
@@ -207,7 +211,7 @@ namespace R_BLAS_LAPACK {
       double *b, const int *ldb){
     F77_CALL(dtrmm)(
         side, uplo, transa, diag, m, n, alpha, a, lda,
-        b, ldb FCONE FCONE FCONE);
+        b, ldb FCONE FCONE FCONE FCONE);
   }
 
   void dtrmv(
@@ -267,5 +271,11 @@ namespace R_BLAS_LAPACK {
   void dgetri(const int* n, double* a, const int* lda,
               int* ipiv, double* work, const int* lwork, int* info){
     F77_CALL(dgetri)(n, a, lda, ipiv, work, lwork, info);
+  }
+
+  void dsyr(const char *uplo, const int *n, const double *alpha,
+            const double *x, const int *incx,
+            double *a, const int *lda){
+    F77_CALL(dsyr)(uplo, n, alpha, x, incx, a, lda FCONE);
   }
 }
