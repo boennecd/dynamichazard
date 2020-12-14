@@ -4,8 +4,7 @@
 \alias{print.ddhazard_boot}
 \title{Summary Statistics for a ddhazard_boot Object}
 \usage{
-\method{print}{ddhazard_boot}(x, digits = getOption("digits"),
-  index = 1L:ncol(boot.out$t), ...)
+\method{print}{ddhazard_boot}(x, digits = getOption("digits"), index = 1L:ncol(boot.out$t), ...)
 }
 \arguments{
 \item{x}{returned object from a \code{\link{ddhazard_boot}} call.}

@@ -189,7 +189,7 @@ public:
   {
 #ifdef _OPENMP
     omp_set_num_threads(n_threads);
-    omp_set_nested(0);
+    omp_set_max_active_levels(1);
 #endif
   }
 

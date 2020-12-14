@@ -4,9 +4,16 @@
 \alias{ddhazard_boot}
 \title{Bootstrap for ddhazard Object}
 \usage{
-ddhazard_boot(ddhazard_fit, strata, unique_id, R = 100,
-  do_stratify_with_event = F, do_sample_weights = F,
-  LRs = ddhazard_fit$control$LR * 2^(0:(-4)), print_errors = F)
+ddhazard_boot(
+  ddhazard_fit,
+  strata,
+  unique_id,
+  R = 100,
+  do_stratify_with_event = F,
+  do_sample_weights = F,
+  LRs = ddhazard_fit$control$LR * 2^(0:(-4)),
+  print_errors = F
+)
 }
 \arguments{
 \item{ddhazard_fit}{returned object from a \code{\link{ddhazard}} call.}

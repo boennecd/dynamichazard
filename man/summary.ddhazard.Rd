@@ -7,8 +7,7 @@
 \usage{
 \method{print}{summary.ddhazard}(x, digits = getOption("digits"), ...)
 
-\method{summary}{ddhazard}(object,
-  var_indices = 1:ncol(object$state_vecs), max_print = 10, ...)
+\method{summary}{ddhazard}(object, var_indices = 1:ncol(object$state_vecs), max_print = 10, ...)
 }
 \arguments{
 \item{x}{object returned from \code{summary.ddhazard}.}

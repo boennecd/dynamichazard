@@ -1,4 +1,4 @@
-context("Testing ddhazard w/ generic things and w/ the the EKF ")
+context("Testing ddhazard w/ generic things and w/ the the EKF")
 
 # Test on data set that is one of Farhmiers papers
 result <- ddhazard(
@@ -244,7 +244,7 @@ test_that("est_a_0 fixes the time zero value", {
 
 test_that("Result of exponential model gives previous results w/ simulated data", {
   result_exp <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    formula = survival::Surv(tstart, tstop, event) ~ . - id,
     data = exp_sim_500$res,
     by = 1,
     Q_0 = diag(1e5, 11),

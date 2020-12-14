@@ -37,7 +37,7 @@ test_that("UKF on head_neck works with logit model", {
 test_that("UKF does not fail and both methods give the same",{
   sims <- logit_sim_200
   res_new <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    formula = survival::Surv(tstart, tstop, event) ~ . - id,
     by = 1,
     data = sims$res,
     a_0 = rep(0, ncol(sims$res) + 1 - 4),
@@ -50,7 +50,7 @@ test_that("UKF does not fail and both methods give the same",{
     max_T = 10)
 
   res_old <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+    formula = survival::Surv(tstart, tstop, event) ~ . - id,
     by = 1,
     data = sims$res,
     a_0 = rep(0, ncol(sims$res) + 1 - 4),
@@ -68,7 +68,7 @@ test_that("UKF does not fail and both methods give the same",{
 test_that("Changing time scale in UKF does no change results when other parems are changed accoridngly",{
   sims <- logit_sim_200
 
-  arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+  arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - id,
                    by = 1,
                    data = sims$res,
                    a_0 = rep(0, ncol(sims$res) + 1 - 4),
@@ -101,7 +101,7 @@ test_that("Changing time scale in UKF does no change results when other parems a
 test_that("Testing UKF against prev computed values",{
   sims <- logit_sim_200
 
-  arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+  arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - id,
                    by = 1,
                    data = sims$res,
                    a_0 = rep(0, ncol(sims$res) + 1 - 4),
@@ -127,7 +127,7 @@ test_that("Testing UKF against prev computed values",{
 test_that("Altering UKF alpha, beta and kappa change the results",{
   sims <- logit_sim_200
 
-  arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+  arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ . - id,
                    by = 1,
                    data = sims$res,
                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
@@ -168,7 +168,7 @@ test_that("UKF works on simulated data works with exponential model and gives pr
   sims <- exp_sim_200
 
   result_exp <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    formula = survival::Surv(tstart, tstop, event) ~ . - id,
     data = sims$res,
     by = (by_ <- 1),
     Q_0 = diag(1, 11),
@@ -206,7 +206,7 @@ test_that("UKF second order model works (that is, gives no errors...)", {
     expect_no_error(
       result_sim <-
         ddhazard(
-          formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id,
+          formula = survival::Surv(tstart, tstop, event) ~ . - id,
            by = 1,
            data = sims$res,
            Q_0 = diag(c(

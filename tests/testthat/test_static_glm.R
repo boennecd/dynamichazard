@@ -6,7 +6,7 @@ sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
                             intercept_start = -3, sds = c(.1, rep(1, 3)))
 
 test_that("Static glm yields expected number of events, correct rows and same result when supplying risk_obj", {
-  form <- survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event
+  form <- survival::Surv(tstart, tstop, event) ~ . - id
   res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "binomial", model = T)
@@ -34,7 +34,7 @@ test_that("static glm gives results with exponential that match previous computa
                             x_range = 1, x_mean = .5, re_draw = T, beta_start = 0,
                             intercept_start = -3, sds = c(.1, rep(1, 3)))
 
-  form <- survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event
+  form <- survival::Surv(tstart, tstop, event) ~ . - id
   res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "exponential", model = T)
@@ -57,7 +57,7 @@ test_that("static glm gives results with exponential that match previous computa
 })
 
 test_that("design_matrix yields equal result with different values of use_weights", {
-  form <- formula(survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event, data = sims$res)
+  form <- formula(survival::Surv(tstart, tstop, event) ~ . - id, data = sims$res)
   res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
     family = "logit", model = T)
@@ -115,7 +115,7 @@ test_that("Gives depreciated warning about speedglm argument", {
 test_that("Gets same with different methods", {
   skip_if_not_installed("speedglm")
 
-  frm <- Surv(tstart, tstop, event) ~ . - tstart - tstop - event - id + x1^2
+  frm <- Surv(tstart, tstop, event) ~ . - id + x1^2
 
   for(fam in c("logit", "exponential")){
     sims <- if(fam == "logit")

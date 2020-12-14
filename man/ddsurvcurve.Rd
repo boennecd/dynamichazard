@@ -6,11 +6,9 @@
 \alias{ddsurvcurve}
 \title{Create and plot survival curves}
 \usage{
-\method{plot}{ddsurvcurve}(x, y, xlab = "Time", ylab = "Survival",
-  ylim, xaxs = "i", yaxs = "i", ...)
+\method{plot}{ddsurvcurve}(x, y, xlab = "Time", ylab = "Survival", ylim, xaxs = "i", yaxs = "i", ...)
 
-\method{lines}{ddsurvcurve}(x, col = "Black", lty = 1,
-  lwd = par()$lwd, ...)
+\method{lines}{ddsurvcurve}(x, col = "Black", lty = 1, lwd = par()$lwd, ...)
 
 ddsurvcurve(object, new_data, tstart = "", tstop = "")
 }

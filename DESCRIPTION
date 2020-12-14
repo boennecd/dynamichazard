@@ -1,7 +1,7 @@
 Package: dynamichazard
 Type: Package
 Title: Dynamic Hazard Models using State Space Models
-Version: 0.6.6
+Version: 0.6.7
 Authors@R: c(person("Benjamin", "Christoffersen", 
                     email = "boennecd@gmail.com", 
                     role = c("cre", "aut")),
@@ -25,7 +25,7 @@ LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo
 Imports: parallel, Rcpp (>= 0.12.6), boot
 Depends: R (>= 3.5.0), stats, graphics, utils, survival
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
 Suggests: testthat, knitr, rmarkdown, timereg, captioner, biglm, httr, mgcv, shiny, formatR, R.rsp, speedglm, dichromat, colorspace, plyr, gsl, mvtnorm, nloptr (>= 1.2.0)
 VignetteBuilder: knitr, R.rsp
 BugReports: https://github.com/boennecd/dynamichazard/issues

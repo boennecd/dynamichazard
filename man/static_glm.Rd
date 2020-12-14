@@ -4,11 +4,23 @@
 \alias{static_glm}
 \title{Static glm Fit}
 \usage{
-static_glm(formula, data, by, max_T, ..., id, family = "logit",
-  model = F, weights, risk_obj = NULL, speedglm = F,
-  only_coef = FALSE, mf, method_use = c("glm", "speedglm",
-  "parallelglm_quick", "parallelglm_QR"),
-  n_threads = getOption("ddhazard_max_threads"))
+static_glm(
+  formula,
+  data,
+  by,
+  max_T,
+  ...,
+  id,
+  family = "logit",
+  model = F,
+  weights,
+  risk_obj = NULL,
+  speedglm = F,
+  only_coef = FALSE,
+  mf,
+  method_use = c("glm", "speedglm", "parallelglm_quick", "parallelglm_QR"),
+  n_threads = getOption("ddhazard_max_threads")
+)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}

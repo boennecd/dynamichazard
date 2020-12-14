@@ -4,10 +4,33 @@
 \alias{PF_EM}
 \title{EM Estimation with Particle Filters and Smoothers}
 \usage{
-PF_EM(formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q,
-  order = 1, control = PF_control(...), trace = 0, seed = NULL,
-  type = "RW", fixed = NULL, random = NULL, Fmat, fixed_effects, G,
-  theta, J, K, psi, phi, ...)
+PF_EM(
+  formula,
+  data,
+  model = "logit",
+  by,
+  max_T,
+  id,
+  a_0,
+  Q_0,
+  Q,
+  order = 1,
+  control = PF_control(...),
+  trace = 0,
+  seed = NULL,
+  type = "RW",
+  fixed = NULL,
+  random = NULL,
+  Fmat,
+  fixed_effects,
+  G,
+  theta,
+  J,
+  K,
+  psi,
+  phi,
+  ...
+)
 }
 \arguments{
 \item{formula}{\code{\link[survival]{coxph}} like formula with \code{\link[survival]{Surv}(tstart, tstop, event)} on the left hand site of \code{~}.}

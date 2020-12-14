@@ -168,7 +168,7 @@ test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
 test_that("logLik for simulated data versus old results", {
   sims <- logit_sim_200
   result = ddhazard(
-    survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    survival::Surv(tstart, tstop, event) ~ . - id,
     sims$res,
     by = 1, Q = diag(1e-2, 11),
     Q_0 = diag(1e5, 11),
@@ -187,7 +187,7 @@ test_that("logLik for simulated data versus old results", {
 
   sims <- exp_sim_200
   result <- ddhazard(
-    survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    survival::Surv(tstart, tstop, event) ~ . - id,
     sims$res,
     by = 1, Q = diag(1e-2, 11),
     Q_0 = diag(1e5, 11),

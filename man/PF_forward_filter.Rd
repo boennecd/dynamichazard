@@ -11,16 +11,62 @@ PF_forward_filter(x, N_fw, N_first, ...)
 
 \method{PF_forward_filter}{PF_EM}(x, N_fw, N_first, seed, ...)
 
-\method{PF_forward_filter}{formula}(x, N_fw, N_first, data,
-  model = "logit", by, max_T, id, a_0, Q_0, Q, fixed_effects,
-  control = PF_control(...), seed = NULL, trace = 0, G, theta, J, K,
-  psi, phi, type = "RW", Fmat, ...)
+\method{PF_forward_filter}{formula}(
+  x,
+  N_fw,
+  N_first,
+  data,
+  model = "logit",
+  by,
+  max_T,
+  id,
+  a_0,
+  Q_0,
+  Q,
+  fixed_effects,
+  control = PF_control(...),
+  seed = NULL,
+  trace = 0,
+  G,
+  theta,
+  J,
+  K,
+  psi,
+  phi,
+  type = "RW",
+  Fmat,
+  ...
+)
 
-\method{PF_forward_filter}{data.frame}(x, N_fw, N_first, formula,
-  model = "logit", by, max_T, id, a_0, Q_0, Q, fixed_effects,
-  control = PF_control(...), seed = NULL, trace = 0, fixed = NULL,
-  random = NULL, G, theta, J, K, psi, phi, type = "RW", Fmat,
-  order = 1, ...)
+\method{PF_forward_filter}{data.frame}(
+  x,
+  N_fw,
+  N_first,
+  formula,
+  model = "logit",
+  by,
+  max_T,
+  id,
+  a_0,
+  Q_0,
+  Q,
+  fixed_effects,
+  control = PF_control(...),
+  seed = NULL,
+  trace = 0,
+  fixed = NULL,
+  random = NULL,
+  G,
+  theta,
+  J,
+  K,
+  psi,
+  phi,
+  type = "RW",
+  Fmat,
+  order = 1,
+  ...
+)
 }
 \arguments{
 \item{x}{an \code{PF_EM} or \code{formula} object.}

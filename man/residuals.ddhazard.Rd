@@ -4,8 +4,12 @@
 \alias{residuals.ddhazard}
 \title{Residuals Method for ddhazard Object}
 \usage{
-\method{residuals}{ddhazard}(object, type = c("std_space_error",
-  "space_error", "pearson", "raw"), data = NULL, ...)
+\method{residuals}{ddhazard}(
+  object,
+  type = c("std_space_error", "space_error", "pearson", "raw"),
+  data = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{result of \code{\link{ddhazard}} call.}

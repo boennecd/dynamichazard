@@ -4,7 +4,8 @@
 \name{hds}
 \alias{hds}
 \title{Hard Drive Failures}
-\format{A \code{data.frame} with the following columns:
+\format{
+A \code{data.frame} with the following columns:
 \describe{
   \item{serial_number}{Serial number for the hard disk which the row belongs
   to.}
@@ -22,7 +23,8 @@
   \item{min_date,max_date}{first and last date in the original source.}
   \item{min_hours,max_hours}{smallest and largest value of the SMART 9
   attribute in the original source.}
-}}
+}
+}
 \source{
 Raw data from \url{https://www.backblaze.com/b2/hard-drive-test-data.html}.
 Data have been processed to get a start-stop \code{data.frame} format.

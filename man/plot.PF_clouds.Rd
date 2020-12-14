@@ -4,10 +4,20 @@
 \alias{plot.PF_clouds}
 \title{Plot of Clouds from a PF_clouds Object}
 \usage{
-\method{plot}{PF_clouds}(x, y, type = c("smoothed_clouds",
-  "forward_clouds", "backward_clouds"), ylim, add = FALSE,
-  qlvls = c(0.05, 0.5, 0.95), pch = 4, lty = 1, col, ..., cov_index,
-  qtype = c("points", "lines"))
+\method{plot}{PF_clouds}(
+  x,
+  y,
+  type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
+  ylim,
+  add = FALSE,
+  qlvls = c(0.05, 0.5, 0.95),
+  pch = 4,
+  lty = 1,
+  col,
+  ...,
+  cov_index,
+  qtype = c("points", "lines")
+)
 }
 \arguments{
 \item{x}{an object of class \code{PF_clouds}.}

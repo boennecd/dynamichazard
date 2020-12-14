@@ -10,8 +10,12 @@ get_cloud_means(object, ...)
 
 \method{get_cloud_means}{PF_EM}(object, ...)
 
-\method{get_cloud_means}{PF_clouds}(object, cov_index = NULL,
-  type = c("smoothed_clouds", "forward_clouds", "backward_clouds"), ...)
+\method{get_cloud_means}{PF_clouds}(
+  object,
+  cov_index = NULL,
+  type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
+  ...
+)
 }
 \arguments{
 \item{object}{object with class \code{PF_EM} or \code{PF_clouds}.}

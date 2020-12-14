@@ -10,9 +10,13 @@ get_cloud_quantiles(object, ...)
 
 \method{get_cloud_quantiles}{PF_EM}(object, ...)
 
-\method{get_cloud_quantiles}{PF_clouds}(object, cov_index = NULL,
-  qlvls = c(0.05, 0.5, 0.95), type = c("smoothed_clouds",
-  "forward_clouds", "backward_clouds"), ...)
+\method{get_cloud_quantiles}{PF_clouds}(
+  object,
+  cov_index = NULL,
+  qlvls = c(0.05, 0.5, 0.95),
+  type = c("smoothed_clouds", "forward_clouds", "backward_clouds"),
+  ...
+)
 }
 \arguments{
 \item{object}{object with class \code{PF_EM} or \code{PF_clouds}.}

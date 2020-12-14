@@ -298,7 +298,7 @@ test_that("get_survival_case_weights_and_data and predict yields consistent resu
   preds <- 1 - tapply(preds$fits, s$res$id, function(x) prod(1 - x))
 
   other_s <- get_survival_case_weights_and_data(
-    formula = survival::Surv(tstart, tstop, event) ~ . - tstart - tstop - id - event,
+    formula = survival::Surv(tstart, tstop, event) ~ . - id,
     data = s$res, max_T = 10, by = 1, id = s$res$id,
     use_weights = F)$X
 

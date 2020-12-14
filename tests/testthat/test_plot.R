@@ -72,7 +72,7 @@ test_that("Alters mfcol and sets it back", {
                     intercept_start = -5, sds = c(.1, rep(1, 10)))
 
   suppressMessages(result_exp <- ddhazard(
-    formula = survival::Surv(tstart, tstop, event) ~ . - id - tstart - tstop - event,
+    formula = survival::Surv(tstart, tstop, event) ~ . - id,
     data = sims$res,
     by = (by_ <- 1),
     Q_0 = diag(10, 11),
