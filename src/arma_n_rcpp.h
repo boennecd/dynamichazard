@@ -20,33 +20,30 @@
 template<typename T>
 inline
 void
-my_print(const T &X, std::string msg = "", std::string prefix = "")
+my_print(const T &X, std::string const msg = "",
+         std::string const prefix = "")
 {
-  // See armadillo-code/include/armadillo_bits/arma_ostream_meat.hpp
-  std::stringstream os;
+  arma::mat X_mat = X;
+  if(X_mat.n_cols == 1)
+    X_mat = X_mat.t();
 
-  const std::streamsize cell_width = 14;
-
+  auto const org_width = Rcpp::Rcout.width();
   if(msg != "")
-    os << prefix << msg << std::endl;
+    Rcpp::Rcout << prefix << msg << std::endl;
 
-  arma::mat to_print = X;
-  if(X.n_cols == 1)
-    to_print = to_print.t();
-
-  for(arma::uword row=0; row < to_print.n_rows; ++row)
+  for(arma::uword row=0; row < X_mat.n_rows; ++row)
   {
-    os << prefix;
+    Rcpp::Rcout << prefix;
 
-    for(arma::uword col=0; col < to_print.n_cols; ++col){
-      os.width(cell_width);
-      arma::arma_ostream::print_elem(os, to_print.at(row,col), true);
+    for(arma::uword col=0; col < X_mat.n_cols; ++col){
+      Rcpp::Rcout.width(14L);
+      Rcpp::Rcout << X_mat.at(row, col);
     }
 
-    os << std::endl;
+    Rcpp::Rcout << '\n';
   }
 
-  Rcpp::Rcout << os.str();
+  Rcpp::Rcout.width(org_width);
 }
 
 // Inversion methods
