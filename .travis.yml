@@ -8,11 +8,8 @@ dist: xenial
 before_install:
   - sudo apt-get install ghostscript
   - sudo apt-get install libgsl-dev
-  - tlmgr install algorithmicx
-  - tlmgr install algorithms
-  - tlmgr install xkeyval
 
-r_build_args: --compact-vignettes=gs+qpdf
-r_check_args: --compact-vignettes=gs+qpdf
+r_build_args: --compact-vignettes=gs+qpdf --no-build-vignettes
+r_check_args: --compact-vignettes=gs+qpdf --no-build-vignettes
 
 after_failure: "cat /home/travis/build/boennecd/dynamichazard/dynamichazard.Rcheck/00install.out"

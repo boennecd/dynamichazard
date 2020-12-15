@@ -849,6 +849,8 @@ test_that("PF_EM gives the same with restricted and unrestricted model when we e
 })
 
 test_that("type = 'VAR' works with non-zero mean with a single term and gives previous results", {
+  skip_on_os("solaris")
+
   # had somes issues when with an example like this
   set.seed(30520116)
   pf_Fear <- suppressWarnings(PF_EM(
@@ -868,6 +870,7 @@ test_that("type = 'VAR' works with non-zero mean with a single term and gives pr
 
                      )
 
+  set.seed(30520116)
   pf_Fear <- suppressWarnings(PF_EM(
     Surv(start, stop, event) ~ group + ddFixed(group) + ddFixed_intercept(),
     head_neck_cancer, Q_0 = 1, Q = .2, Fmat = diag(1e-2, 1),
