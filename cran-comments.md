@@ -6,7 +6,7 @@
 * Ubuntu 18.04 LTS with gcc 10.1.0
   R version 3.6.3 with valgrind
 * Ubuntu 18.04 LTS with clang-6.0.0 
-  R devel 2020-11-30 r79529 with ASAN and UBSAN
+  R devel 2020-12-15 r79637 with ASAN and UBSAN
 * Ubuntu 18.04 LTS with gcc 10.1.0 
   R devel 2020-11-30 r79529 with ASAN and UBSAN
 * Ubuntu 16.04 LTS (on travis-ci)

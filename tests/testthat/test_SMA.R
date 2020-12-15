@@ -117,6 +117,7 @@ test_that("Logit model for posterior_approx gives previous found values with wei
 })
 
 test_that("Chaning the learning changes the result for the posterior approx method",{
+  skip_on_cran()
   ctrl <- ddhazard_control(est_Q_0 = F, method = "SMA",
                            save_data = F, save_risk_set = F)
   cl <-  quote(ddhazard(
