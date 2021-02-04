@@ -359,17 +359,21 @@ static_glm <- function(
   method_use, only_coef, c_outcome, c_weights, family, offset, data, mf,
   n_threads, formula, model, ...){
   if(method_use == "speedglm" && requireNamespace("speedglm", quietly = T)){
-    if(only_coef){
-      fit <- speedglm::speedglm.wfit(
-        X = mf, y = data[[c_outcome]], weights = data[[c_weights]],
-        family = family, offset = offset, ...)
+    weights_use <- data[[c_weights]]
 
-      return(fit$coefficients)
+    if(only_coef){
+      cl <- list(quote(speedglm::speedglm.wfit),
+                 X = mf, y = data[[c_outcome]], weights = weights_use,
+                 family = family, offset = offset)
+      cl <- as.call(c(cl, list(...)))
+
+      return(eval(cl)$coefficients)
     }
 
-    return(drop(speedglm::speedglm(
-      formula = formula, data = data, family = family, model = model,
-      weights = data[[c_weights]], ...)))
+    cl <- list(quote(speedglm::speedglm), formula = formula, data = data,
+               family = family, model = model, weights = weights_use)
+    cl <- as.call(c(cl, list(...)))
+    return(drop(eval(cl)))
 
   } else if(method_use == "glm"){
     if(only_coef){
