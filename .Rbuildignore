@@ -10,7 +10,6 @@
 \.txt$
 Rplots\.pdf$
 dynamichazard\.dll$
-^\.travis\.yml$
 release_questions\.R$
 cran-comments\.md$
 src/pf/est_params_generic.cpp
@@ -32,3 +31,4 @@ tests/testthat/previous_results/local_tests
 tests/testthat/pf-internals
 data-raw
 TODO
+^\.github$

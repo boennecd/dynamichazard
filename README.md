@@ -1,12 +1,22 @@
 dynamichazard
 =============
 
-[![Build Status on Travis](https://travis-ci.org/boennecd/dynamichazard.svg?branch=master,osx)](https://travis-ci.org/boennecd/dynamichazard) [![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)
-[![CRAN RStudio mirror downloads](http://cranlogs.r-pkg.org/badges/dynamichazard)](http://cran.rstudio.com/web/packages/dynamichazard/index.html)
+[![R-CMD-check](https://github.com/boennecd/dynamichazard/workflows/R-CMD-check/badge.svg)](https://github.com/boennecd/dynamichazard/actions)
+[![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)  
+[![CRAN RStudio mirror
+downloads](http://cranlogs.r-pkg.org/badges/dynamichazard)](http://cran.rstudio.com/web/packages/dynamichazard/index.html)
 
-The goal of dynamichazard is to estimate time-varying effects in survival analysis. The time-varying effects are estimated with state space models where the coefficients follow a given order random walk. The advantageous of using state space models is that you can extrapolate beyond the last observed time period. For more details, see the ddhazard vignette at <https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf>.
+The goal of dynamichazard is to estimate time-varying effects in
+survival analysis. The time-varying effects are estimated with state
+space models where the coefficients follow a given order random walk.
+The advantageous of using state space models is that you can extrapolate
+beyond the last observed time period. For more details, see the ddhazard
+vignette at
+<a href="https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf" class="uri">https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf</a>.
 
-The particle filter and smoother methods can estimate more general models then the random walk model. See the [/examples](/examples) directory for some examples.
+The particle filter and smoother methods can estimate more general
+models then the random walk model. See the [/examples](/examples)
+directory for some examples.
 
 Installation
 ------------
@@ -21,24 +31,50 @@ devtools::install_github("boennecd/dynamichazard")
 You can also download the package from CRAN by calling:
 
 ``` r
-installed.packages("dynamichazard")
+install.packages("dynamichazard")
 ```
 
 Example - ddhazard
 ------------------
 
-I will use the `aids` data set from the `JMbayes` package. The data set is from a a randomized clinical trial between two drugs for HIV or aids patients. The event is when the patient die. Patient are right censored at the end of the study. The data set is longitudinal/panel format with rows for patient. Though, the only longitudinal variable is the `CD4` count (T-cells count) which is presumably affected by the drug. Thus, I will not use it in the model. The other the other columns of interest are:
+I will use the `aids` data set from the `JMbayes` package. The data set
+is from a a randomized clinical trial between two drugs for HIV or aids
+patients. The event is when the patient die. Patient are right censored
+at the end of the study. The data set is longitudinal/panel format with
+rows for patient. Though, the only longitudinal variable is the `CD4`
+count (T-cells count) which is presumably affected by the drug. Thus, I
+will not use it in the model. The other the other columns of interest
+are:
 
--   `AZT` is one of the two enrolment criteria. It indicates whether the patient was enrolled due to intolerance to the drug zidovudine or whether the drug failed prior to the study start.
--   `prevOI` is the other enrolment criteria. Patients are enrolled either due AIDS diagnosis or two CD4 counts of 300 or fewer. The variable indicates which is the case.
--   `drug` is either `ddC` or `ddI` depending on which of the two drugs the patient is randomly assigned to.
+-   `AZT` is one of the two enrollment criteria. It indicates whether
+    the patient was enrolled due to intolerance to the drug zidovudine
+    or whether the drug failed prior to the study start.
+-   `prevOI` is the other enrollment criteria. Patients are enrolled
+    either due AIDS diagnosis or two CD4 counts of 300 or fewer. The
+    variable indicates which is the case.
+-   `drug` is either `ddC` or `ddI` depending on which of the two drugs
+    the patient is randomly assigned to.
 -   `gender`.
 
 The analysis is given below with comments:
 
 ``` r
 library(dynamichazard)
+#> Loading required package: survival
 library(JMbayes) # Contain the aids data set
+#> Loading required package: nlme
+#> Loading required package: doParallel
+#> Loading required package: foreach
+#> Loading required package: iterators
+#> Loading required package: parallel
+#> Loading required package: rstan
+#> Loading required package: StanHeaders
+#> Loading required package: ggplot2
+#> rstan (Version 2.21.2, GitRev: 2e1f913d3ca3)
+#> For execution on a local, multicore CPU with excess RAM we recommend calling
+#> options(mc.cores = parallel::detectCores()).
+#> To avoid recompilation of unchanged Stan programs, we recommend calling
+#> rstan_options(auto_write = TRUE)
 
 # We remove the data we dont neeed
 aids <- aids[aids$Time == aids$stop, ]
@@ -98,17 +134,25 @@ plot(fit, ddhazard_boot = boot_out)
 
 ![](README-ddhazard_fit-2.png)
 
-Bootstrapping only slightly changes the confidence bounds. An example of a paper analyzing the CD4 count can be found in Guo & Carlin (2004). They also fit a static model (time-invariant coefficients) of the survival times with an exponential model. The estimates are comparable with those above as expected.
+Bootstrapping only slightly changes the confidence bounds. An example of
+a paper analyzing the CD4 count can be found in Guo & Carlin (2004).
+They also fit a static model (time-invariant coefficients) of the
+survival times with an exponential model. The estimates are comparable
+with those above as expected.
 
 Example - particle filter and smoother
 --------------------------------------
 
-A particle filter and smoother is also included in the package. The computational complexity of these methods match those of the extended Kalman filter but with a much larger constant. Below, I fit a model for the `aids` data. We only use a time-varying effect for gender this time.
+A particle filter and smoother is also included in the package. The
+computational complexity of these methods match those of the extended
+Kalman filter but with a much larger constant. Below, I fit a model for
+the `aids` data. We only use a time-varying effect for gender this time.
 
 <!-- 
   knitr::opts_knit$set(output.dir = ".")
   knitr::load_cache("pf_fit", path = "README_cache/markdown_github/") 
 -->
+
 ``` r
 set.seed(20170907)
 pf_fit <- PF_EM(
@@ -156,12 +200,16 @@ logLik(pf_fit)
 ``` r
 # better estimate of final log-likelihood
 logLik(PF_forward_filter(pf_fit, N_fw = 10000, N_first = 10000))
-#> 'log Lik.' -795.9351 (df=NA)
+#> 'log Lik.' -795.9264 (df=NA)
 ```
 
-For more details, see the "Particle filters in the dynamichazard package" vignette at <https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf>
+For more details, see the “Particle filters in the dynamichazard
+package” vignette at
+<a href="https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf" class="uri">https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf</a>
 
 References
 ==========
 
-Guo, X., & Carlin, B. P. (2004). Separate and joint modeling of longitudinal and event time data using standard computer packages. *The American Statistician*, *58*(1), 16–24.
+Guo, X., & Carlin, B. P. (2004). Separate and joint modeling of
+longitudinal and event time data using standard computer packages. *The
+American Statistician*, *58*(1), 16–24.
