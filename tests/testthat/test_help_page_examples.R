@@ -152,7 +152,8 @@ test_that("PF_EM help page example runs and gives previous computed results", {
     # tmp <- readRDS("previous_results/local_tests/survival_lung_example.RDS")
     expect_known_value(
       pf_fit[!names(pf_fit) %in% c("call", "control")],
-      "local_tests/survival_lung_example.RDS", tolerance = 1.49e-08)
+      "local_tests/survival_lung_example.RDS",
+      tolerance = .Machine$double.eps^(3/9))
   expect_equal(
     pf_fit$control$n_threads, max(parallel::detectCores(logical = FALSE), 1))
 

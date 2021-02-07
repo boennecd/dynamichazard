@@ -179,8 +179,9 @@ test_that("PF_smooth gives same results", {
       old_args <- args
       args$n_threads <- max(parallel::detectCores(logical = FALSE), 1)
 
+      tol <-  .Machine$double.eps^(3/9)
       result_multi <- .(cl)
-      expect_equal(result_multi, result)
+      expect_equal(result_multi, result, tolerance = tol)
 
       args <- old_args
 
@@ -197,7 +198,7 @@ test_that("PF_smooth gives same results", {
       .file <- paste0(.(test_file_name), "_cloud_means.RDS")
       eval(substitute(
         expect_known_value(
-          get_means(result), .file, tolerance = 1.49e-08, update = .(update)),
+          get_means(result), .file, tolerance = tol, update = .(update)),
         list(.file = .file)), envir = environment())
 
       # This one may be skipped as the test file is large-ish
@@ -206,7 +207,7 @@ test_that("PF_smooth gives same results", {
         test_if_file_exists(
           .file,
           expect_known_value(
-            result, .file, tolerance = 1.49e-08, update = .(update))),
+            result, .file, tolerance = tol, update = .(update))),
         list(.file = .file)), envir = environment())
     })
 
