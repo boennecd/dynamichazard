@@ -21,9 +21,9 @@ start_args <- list(
   sd_intercept = .2, sd_coef = .5, est_with_model = "exponential",
   est_with_method = "EKF", est_fix_options = 1, LR = 1,
   order = 1, denom_term = 1, fixed_terms_method = "M_step",
-  use_extra_correction = F, beta = 0, alpha = 1,
+  use_extra_correction = FALSE, beta = 0, alpha = 1,
   SMA_version = "woodbury", GMA_max_rep = 25,
-  GMA_NR_eps = 2, more_options = F, debug = FALSE,
+  GMA_NR_eps = 2, more_options = FALSE, debug = FALSE,
   n_threads = max(1, parallel::detectCores(logical = FALSE)))
 
 if(exists("input_args")){
@@ -48,7 +48,7 @@ breaks <-  function(model){
 rug_dens <- function(case_times, control_count, model){
   breaks <- breaks(model)
   n_breaks <- length(breaks)
-  case_count <- hist(case_times, plot = F, breaks = breaks)$counts
+  case_count <- hist(case_times, plot = FALSE, breaks = breaks)$counts
 
   b <- 2
   cases_cols_scale <- log((case_count + 1) / max(control_count), b)
@@ -374,7 +374,7 @@ server <- function(input, output) {
       .(f_choice)(
         n_series = .(n_series_input()),
         n_vars = 5,
-        t_max = .(t_max), re_draw = T, beta_start = runif(5, min = -1.5, max = 1.5),
+        t_max = .(t_max), re_draw = TRUE, beta_start = runif(5, min = -1.5, max = 1.5),
         intercept_start = -3.5,
         sds = c(.(input$sd_intercept), rep(.(input$sd_coef), 5)),
         x_range = .(x_range), x_mean = .(x_mean), lambda = .(5 / t_max),
@@ -610,10 +610,10 @@ server <- function(input, output) {
     matplot(x, sims$beta, lty = 1, type = "l",
             ylim = range(sims$beta, fit$state_vecs, fit$fixed_effects),
             ylab = "Coefficients", xlab = "Time", cex.lab = 1.4,
-            frame = FALSE, axes=F, xlim = c(0 - .2, t_max + .2), xaxs = "i",
+            frame = FALSE, axes=FALSE, xlim = c(0 - .2, t_max + .2), xaxs = "i",
             col = cols)
     matplot(x, fit$state_vecs[, 1:(6 - n_fixed)],
-            lty = 2, type = "l", add = T,
+            lty = 2, type = "l", add = TRUE,
             col = cols[(1+n_fixed):6])
 
     for(i in (1+n_fixed):6){

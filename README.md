@@ -2,7 +2,7 @@ dynamichazard
 =============
 
 [![R-CMD-check](https://github.com/boennecd/dynamichazard/workflows/R-CMD-check/badge.svg)](https://github.com/boennecd/dynamichazard/actions)
-[![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)  
+[![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)
 [![CRAN RStudio mirror
 downloads](http://cranlogs.r-pkg.org/badges/dynamichazard)](http://cran.rstudio.com/web/packages/dynamichazard/index.html)
 

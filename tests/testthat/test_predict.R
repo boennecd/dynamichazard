@@ -15,14 +15,14 @@ test_that("Testing one period in sample", {
   expect_equal(
     predict_$fits, c(result$discrete_hazard_func(
       tmp_state_vecs %*% c(1, 1), 1)),
-    use.names = F, check.attributes = F)
+    use.names = FALSE, check.attributes = FALSE)
 
   predict_ = predict(
     result, new_data = data.frame(start = 0:59, stop = 1:60,
                                   group = factor(rep(2, 60))))
   expect_equal(
     predict_$fits, c(result$discrete_hazard_func(tmp_state_vecs %*% c(1, 0), 1)),
-    use.names = F, check.attributes = F)
+    use.names = FALSE, check.attributes = FALSE)
 })
 
 test_that("Testing two period in sample", {
@@ -35,7 +35,7 @@ test_that("Testing two period in sample", {
   fac2 = c(result$discrete_hazard_func(
     tmp_state_vecs[2*(1:30), ] %*% c(1, 1), 1))
   expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
-               use.names = F, check.attributes = F)
+               use.names = FALSE, check.attributes = FALSE)
 
   predict_ = predict(result, new_data = data.frame(
     start = 2*(0:29), stop = 2*(1:30), group = factor(rep(2, 30))))
@@ -44,7 +44,7 @@ test_that("Testing two period in sample", {
   fac2 = c(result$discrete_hazard_func(
     tmp_state_vecs[2*(1:30), ] %*% c(1, 0), 1))
   expect_equal(predict_$fits, 1 - (1 - fac1) * (1 - fac2),
-               use.names = F, check.attributes = F)
+               use.names = FALSE, check.attributes = FALSE)
 })
 
 test_that("Testing forcasting with predict", {
@@ -53,14 +53,14 @@ test_that("Testing forcasting with predict", {
   fac1 = c(result$discrete_hazard_func(
     result$state_vecs[60, ] %*% c(1, 1), 1))
   expect_equal(predict_$fits, (1 - (1 - fac1)^10),
-               use.names = F, check.attributes = F)
+               use.names = FALSE, check.attributes = FALSE)
 
   predict_ = predict(result, new_data = data.frame(
     start = 59, stop = 69, group = factor(2)))
   fac1 = c(result$discrete_hazard_func(
     result$state_vecs[60, ] %*% c(1, 0), 1))
   expect_equal(predict_$fits, (1 - (1 - fac1)^10),
-               use.names = F, check.attributes = F)
+               use.names = FALSE, check.attributes = FALSE)
 })
 
 # Check the terms
@@ -74,7 +74,7 @@ test_that("Testing term prediction",{
     expect_equal(dim(predict_terms$terms[[1L]]), c(59, 2))
     predict_terms$terms <- predict_terms$terms[[1L]]
     predict_terms_fit <- 1 / (1 + exp(-rowSums(predict_terms$terms)))
-    expect_equal(unname(predict_$fits), predict_terms_fit, check.attributes = F)
+    expect_equal(unname(predict_$fits), predict_terms_fit, check.attributes = FALSE)
   }
 })
 
@@ -89,7 +89,7 @@ test_that("Term prediction with fixed effects", {
       fit, new_data = data.frame(group = as.factor(g)), type = "term")
 
     expect_equal(c(predict_terms$terms[[1L]]), c(unname(fit$state_vecs))[-1L],
-                 check.attributes = F)
+                 check.attributes = FALSE)
     expect_true(all(predict_terms$fixed_terms[[1L]] ==
                       (g == 1) * unname(fit$fixed_effects)))
   }
@@ -146,12 +146,12 @@ test_that("Testing one period in sample with fixed effects", {
                          data.frame(start = 0:59, stop = 1:60,
                                     group = factor(rep(g, 60))))
     tmp_state_vecs <-
-      rbind(result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
+      rbind(result$state_vecs[-1, , drop = FALSE], result$state_vecs[60, ])
     expect_equal(
       as.vector(predict_$fits),
       c(result$discrete_hazard_func(
         tmp_state_vecs + result$fixed_effects * (g - 1), 1)),
-      use.names = F, check.attributes = F)
+      use.names = FALSE, check.attributes = FALSE)
   }
 
   # ddhazard throws a warning when static_glm could be used instead
@@ -164,12 +164,12 @@ test_that("Testing one period in sample with fixed effects", {
       result, new_data = data.frame(
         start = 0:59, stop = 1:60, group = factor(rep(g, 60))))
     tmp_state_vecs <- rbind(
-      result$state_vecs[-1, , drop = F], result$state_vecs[60, ])
+      result$state_vecs[-1, , drop = FALSE], result$state_vecs[60, ])
     expect_equal(
       unname(predict_$fits),
       rep(result$discrete_hazard_func(
         c(c(g == 1, g == 2) %*% result$fixed_effects), 1), 60),
-      use.names = F, check.attributes = F)
+      use.names = FALSE, check.attributes = FALSE)
   }
 })
 
@@ -300,7 +300,7 @@ test_that("get_survival_case_weights_and_data and predict yields consistent resu
   other_s <- get_survival_case_weights_and_data(
     formula = survival::Surv(tstart, tstop, event) ~ . - id,
     data = s$res, max_T = 10, by = 1, id = s$res$id,
-    use_weights = F)$X
+    use_weights = FALSE)$X
 
   other_s$tstart <- other_s$t - 1
   other_s$tstop <- other_s$t
@@ -355,11 +355,11 @@ test_that("Calls with second order models do not throw errors", {
     by = 1,
     a_0 = rep(0, 2 * 2), Q_0 = diag(10, 2 * 2),
     Q = diag(c(1.0e-4, 1.0e-4)),
-    control = ddhazard_control(n_max = 1e3, save_risk_set = T, est_Q_0 = F),
+    control = ddhazard_control(n_max = 1e3, save_risk_set = TRUE, est_Q_0 = FALSE),
     order = 2)
 
   for(g in c(0, 1))
-    for(use_parallel in c(T, F))
+    for(use_parallel in c(TRUE, FALSE))
       expect_no_error(bquote(
         predict(result, new_data = data.frame(start = 0:59, stop = 1:60, group = rep(.(g), 60)),
                 use_parallel = .(use_parallel))))
@@ -383,7 +383,7 @@ test_that("Term predict work with second order random walk", {
   dum <- data.frame(
     bili = exp(1))
 
-  preds <- predict(f1, new_data = dum, type = "term", sds = T)
+  preds <- predict(f1, new_data = dum, type = "term", sds = TRUE)
 
   # plot(f1)
   expect_equal(preds$terms[[1L]], f1$state_vecs[-1, 1:2],
@@ -447,7 +447,7 @@ test_that("Terms from predict with exponential outcome are correct", {
     tmp <- test_rows[j, ]
     bins_breaks <- fit$times
     start <- findInterval(tmp$tstart, bins_breaks)
-    stop  <- findInterval(tmp$tstop , bins_breaks, left.open = T)
+    stop  <- findInterval(tmp$tstop , bins_breaks, left.open = TRUE)
     p_survival <- 1
 
     t_min <- max(bins_breaks[start], tmp$tstart)
@@ -479,7 +479,7 @@ test_that("Different non-integer time_scales gives the same result with predict 
       formula = survival::Surv(start * .by, stop * .by, event) ~ group,
       data = head_neck_cancer,
       by = .by,
-      control = ddhazard_control(est_Q_0 = F, save_data = F),
+      control = ddhazard_control(est_Q_0 = FALSE, save_data = FALSE),
       a_0 = rep(0, 2), Q_0 = diag(1e2, 2), Q = diag(1e-2 / .by, 2),
       id = head_neck_cancer$id, order = 1)
 

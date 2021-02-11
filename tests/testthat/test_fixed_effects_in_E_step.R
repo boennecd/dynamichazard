@@ -7,7 +7,7 @@ test_that("Works with EKF and logit model and with one fixed and one non-fixed",
             data = head_neck_cancer,
             by = 1,
             control = ddhazard_control(
-              fixed_terms_method = "E_step", save_risk_set = F, save_data = F))
+              fixed_terms_method = "E_step", save_risk_set = FALSE, save_data = FALSE))
 
           # plot(fit)
           # fit$fixed_effects
@@ -40,8 +40,8 @@ test_that("Works with EKF and continous time model and that it work with one fix
                   data = head_neck_cancer, max_T = 35,
                   by = 1, model = "exponential",
                   control = ddhazard_control(
-                    fixed_terms_method = "E_step", save_risk_set = F,
-                    save_data = F))
+                    fixed_terms_method = "E_step", save_risk_set = FALSE,
+                    save_data = FALSE))
 
   # plot(fit$state_vecs)
   # fit$fixed_effects
@@ -62,12 +62,12 @@ test_that("Works with UKF and logit model", {
                   by = 1,
                   control = ddhazard_control(
                     fixed_terms_method = "E_step",
-                    save_risk_set = F, save_data = F,
+                    save_risk_set = FALSE, save_data = FALSE,
                     method = "UKF"))
 
 
   # matplot(sims_logit$betas, lty = 1, type = "l")
-  # matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:5)
+  # matplot(fit$state_vecs, lty = 2, type = "l", add = TRUE, col = 3:5)
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "Q", "lag_one_cov")]
@@ -82,10 +82,10 @@ test_that("Works with second order random walk and logit model", {
                   by = 1, order = 2,
                   control = ddhazard_control(
                     fixed_terms_method = "E_step",
-                    save_risk_set = F, save_data = F, LR = .5))
+                    save_risk_set = FALSE, save_data = FALSE, LR = .5))
 
   # matplot(sims_logit$betas, lty = 1, type = "l")
-  # matplot(fit$state_vecs[, 1:3], lty = 2, type = "l", add = T, col = 3:5)
+  # matplot(fit$state_vecs[, 1:3], lty = 2, type = "l", add = TRUE, col = 3:5)
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "Q", "lag_one_cov")]
@@ -101,8 +101,8 @@ test_that("Get loglike to work so you can use verbose with E-step fixed effects"
                     data = sims_logit$res, id = sims_logit$res$id,
                     by = 1, order = 2,
                     control = ddhazard_control(
-                      fixed_terms_method = "E_step", save_risk_set = F,
-                      save_data = F, LR = 1 / 1.25),
+                      fixed_terms_method = "E_step", save_risk_set = FALSE,
+                      save_data = FALSE, LR = 1 / 1.25),
                     verbose = 5)
     , regexp = "Iteration\\s+\\d+\\sended with conv criteria\\s+\\d+.\\d+\\s+The log likelihood of the mean path is\\s+")
 })
@@ -121,12 +121,12 @@ test_that("Works with UKF and continous time model", {
                   data = sims_exp$res, id = sims_exp$res$id,
                   by = 1, model = "exponential", max_T = 10,
                   control = ddhazard_control(
-                    fixed_terms_method = "E_step", save_risk_set = F,
-                    save_data = F, method = "UKF"))
+                    fixed_terms_method = "E_step", save_risk_set = FALSE,
+                    save_data = FALSE, method = "UKF"))
 
   # matplot(sims_exp$betas, lty = 1, type = "l",
   #         ylim = range(fit$fixed_effects, fit$state_vecs, sims_exp$betas))
-  # matplot(fit$state_vecs, lty = 2, type = "l", add = T, col = 3:4)
+  # matplot(fit$state_vecs, lty = 2, type = "l", add = TRUE, col = 3:4)
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "Q", "lag_one_cov")]
@@ -139,13 +139,13 @@ test_that("Works with second order random walk and continous time model",{
                   data = sims_exp$res, id = sims_exp$res$id,
                   by = 1, model = "exp_clip_time_w_jump", max_T = 10,
                   control = ddhazard_control(
-                    fixed_terms_method = "E_step", save_risk_set = F,
-                    save_data = F, method = "UKF"),
+                    fixed_terms_method = "E_step", save_risk_set = FALSE,
+                    save_data = FALSE, method = "UKF"),
                   order = 2)
 
   # matplot(sims_exp$betas, lty = 1, type = "l",
   #         ylim = range(fit$fixed_effects, fit$state_vecs, sims_exp$betas))
-  # matplot(fit$state_vecs[, 1:2], lty = 2, type = "l", add = T, col = 3:4)
+  # matplot(fit$state_vecs[, 1:2], lty = 2, type = "l", add = TRUE, col = 3:4)
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "Q", "lag_one_cov")]

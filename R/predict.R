@@ -66,7 +66,7 @@
 predict.ddhazard = function(object, new_data,
                                 type = c("response", "term"),
                                 tstart = "start", tstop = "stop",
-                                use_parallel, sds = F, max_threads, ...)
+                                use_parallel, sds = FALSE, max_threads, ...)
 {
   if(!object$model %in% c("logit", "cloglog", exp_model_names))
     stop("Functions for model '", object$model, "' is not implemented")
@@ -79,7 +79,7 @@ predict.ddhazard = function(object, new_data,
   #       in version 0.5.0 to get the index of potential fixed effects
   tmp = get_design_matrix(
     formula = object$formula,
-    data = new_data, response = F, Terms = object$terms, xlev = object$xlev,
+    data = new_data, response = FALSE, Terms = object$terms, xlev = object$xlev,
     has_fixed_intercept = object$has_fixed_intercept)
   object$formula <- tmp$formula_used
 
@@ -469,7 +469,7 @@ ddsurvcurve <- function(object, new_data, tstart = "", tstop = ""){
     #       in version 0.5.0 to get the index of potential fixed effects
     tmp = get_design_matrix(
       formula = object$formula,
-      data = new_data, response = F, Terms = object$terms, xlev = object$xlev,
+      data = new_data, response = FALSE, Terms = object$terms, xlev = object$xlev,
       has_fixed_intercept = object$has_fixed_intercept)
     object$formula <- tmp$formula_used
     trs <- predict_response(

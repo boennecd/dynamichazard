@@ -17,7 +17,7 @@ ddhazard(
   order = 1,
   weights,
   control = ddhazard_control(),
-  verbose = F
+  verbose = FALSE
 )
 }
 \arguments{

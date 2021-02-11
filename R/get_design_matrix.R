@@ -1,5 +1,5 @@
 get_design_matrix <- function(
-  formula, data, response = T, predictors = T,
+  formula, data, response = TRUE, predictors = TRUE,
   Terms = NULL, has_fixed_intercept = NULL, xlev = NULL, fixed = NULL,
   random = NULL){
   if(is.null(fixed) && is.null(random))
@@ -16,7 +16,7 @@ get_design_matrix <- function(
 # find the design matrix and returns the left hand side and right hand side of
 # objects in the formula
 .get_design_matrix_one_frm <- function(
-  formula, data, response = T, predictors = T,
+  formula, data, response = TRUE, predictors = TRUE,
   Terms = NULL, has_fixed_intercept = NULL, xlev = NULL){
   if(!response && !predictors)
     stop(sQuote("get_design_matrix"),
@@ -99,9 +99,9 @@ get_design_matrix <- function(
           (fixed_terms_indicies - attr(Terms, "response")))
     }
 
-    fixed_terms <- X[, fixed_terms_indicies, drop = F]
+    fixed_terms <- X[, fixed_terms_indicies, drop = FALSE]
     if(length(fixed_terms_indicies) > 0)
-      X <- X[, -fixed_terms_indicies, drop = F]
+      X <- X[, -fixed_terms_indicies, drop = FALSE]
     if(has_fixed_intercept){
       fixed_terms <- cbind(`(Intercept)` = 1, fixed_terms)
       if(!do_keep_random_intercept)
@@ -128,7 +128,7 @@ get_design_matrix <- function(
 }
 
 .get_design_matrix_two_frms <- function(
-  data, response = T, predictors = T, Terms = NULL, xlev = NULL, fixed = NULL,
+  data, response = TRUE, predictors = TRUE, Terms = NULL, xlev = NULL, fixed = NULL,
   random = NULL){
   if(!is.null(Terms) || !is.null(xlev))
     stop("method not implemented")

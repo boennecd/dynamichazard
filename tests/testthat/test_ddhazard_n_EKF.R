@@ -6,7 +6,7 @@ result <- ddhazard(
   data = head_neck_cancer,
   by = 1,
   control = ddhazard_control(
-    est_Q_0 = F, save_data = F, save_risk_set = F),
+    est_Q_0 = FALSE, save_data = FALSE, save_risk_set = FALSE),
   a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
   max_T = 45,
   id = head_neck_cancer$id, order = 1)
@@ -41,7 +41,7 @@ test_that("Get expected warning when no Q or Q_0 is passed", {
     data = head_neck_cancer,
     by = 1,
     control = ddhazard_control(
-      est_Q_0 = F, save_data = F, save_risk_set = F),
+      est_Q_0 = FALSE, save_data = FALSE, save_risk_set = FALSE),
     a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1))
@@ -93,7 +93,7 @@ test_that("exponential model and logit moels hazzard functions differs", {
     data = head_neck_cancer,
     by = 1,
     control = ddhazard_control(
-      est_Q_0 = F, save_data = F, save_risk_set = F),
+      est_Q_0 = FALSE, save_data = FALSE, save_risk_set = FALSE),
     a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1)
@@ -138,7 +138,7 @@ test_that("Various ways of passing control gives the same but some with warnings
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = list(est_Q_0 = F, save_data = F),
+    control = list(est_Q_0 = FALSE, save_data = FALSE),
     a_0 = rep(0, 2), Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1))
@@ -152,11 +152,11 @@ test_that("Various ways of passing control gives the same but some with warnings
   expect_silent(f2 <- eval(cl))
   expect_equal(f1[names(f1) != "call"], f2[names(f2) != "call"])
 
-  cl$control <- quote(ddhazard_control(est_Q_0 = F, save_data = F))
+  cl$control <- quote(ddhazard_control(est_Q_0 = FALSE, save_data = FALSE))
   expect_silent(f3 <- eval(cl))
   expect_equal(f1[names(f1) != "call"], f3[names(f3) != "call"])
 
-  cl$control <- ddhazard_control(est_Q_0 = F, save_data = F)
+  cl$control <- ddhazard_control(est_Q_0 = FALSE, save_data = FALSE)
   expect_silent(f4 <- eval(cl))
   expect_equal(f1[names(f1) != "call"], f4[names(f4) != "call"])
 })
@@ -170,7 +170,7 @@ test_that("Different non-integer time_scales gives the same result with ddhazard
       formula = survival::Surv(start * .by, stop * .by, event) ~ group,
       data = head_neck_cancer,
       by = .by,
-      control = ddhazard_control(est_Q_0 = F, save_data = F),
+      control = ddhazard_control(est_Q_0 = FALSE, save_data = FALSE),
       a_0 = rep(0, 2), Q_0 = diag(1e2, 2), Q = diag(1e-2 / .by, 2),
       id = head_neck_cancer$id, order = 1))
 
@@ -250,14 +250,14 @@ test_that("Result of exponential model gives previous results w/ simulated data"
     Q_0 = diag(1e5, 11),
     Q = diag(1e-3, 11),
     control = ddhazard_control(
-      save_data = F, save_risk_set = F,
+      save_data = FALSE, save_risk_set = FALSE,
       method = "EKF"),
     max_T = 10,
     id = exp_sim_500$res$id, order = 1,
     model = "exponential")
 
   # matplot(exp_sim_500$betas, type = "l", lty = 1)
-  # matplot(result_exp$state_vecs, lty = 2, type = "l", add = T)
+  # matplot(result_exp$state_vecs, lty = 2, type = "l", add = TRUE)
   result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
   expect_known_value(
     result_exp, "sim_exp.RDS", tolerance = 1e-5, update = FALSE)
@@ -271,7 +271,7 @@ test_that("Permutating data does not change the results", {
     Q_0 = diag(rep(10000, 2)), Q = diag(rep(0.1, 2))))
 
   r1 <- eval(cl)
-  cl$control <- quote(ddhazard_control(permu = T))
+  cl$control <- quote(ddhazard_control(permu = TRUE))
   r2 <- eval(cl)
 
   # plot(r1)
@@ -304,7 +304,7 @@ test_that("Permutating data does not change the results", {
   #####
   # With weigths
   set.seed(94884214)
-  w <- sample(1:3, nrow(pbc2), replace = T)
+  w <- sample(1:3, nrow(pbc2), replace = TRUE)
 
   cl <- quote(ddhazard(
     Surv(tstart, tstop, death == 2) ~ age + edema +

@@ -156,8 +156,8 @@ knitr::knit_hooks$set(default_opts = function(before, options, envir) {
 
 options(digist = 4)
 knitr::opts_chunk$set(
-  echo = TRUE, warning = F, message = F, dpi = 126, fig.height=3.5, fig.width = 6)
-knitr::opts_knit$set(warning = F, message = F,  default_opts = T)
+  echo = TRUE, warning = FALSE, message = FALSE, dpi = 126, fig.height=3.5, fig.width = 6)
+knitr::opts_knit$set(warning = FALSE, message = FALSE,  default_opts = TRUE)
 @
 
 
@@ -247,7 +247,7 @@ stopifnot(any(simple_ex$event[simple_ex$id == 1] == 1) &&
 << echo = FALSE, results='asis'>>=
 knitr::kable(
   head(simple_ex, 10), digits = 4, format = "latex",
-  booktabs = T, row.names = FALSE, align = rep("r", 6))
+  booktabs = TRUE, row.names = FALSE, align = rep("r", 6))
 @
 \end{center}
 
@@ -385,7 +385,7 @@ par(mfcol = c(1, 2), mar = c(5, 4, 1, 1), cex = .75)
 
 for(i in 1:2){
   plot(dd_fit_short, cov_index = i, col = "Black")
-  plot(dd_fit_wide, cov_index = i, col = "DarkBlue", add = T)
+  plot(dd_fit_wide, cov_index = i, col = "DarkBlue", add = TRUE)
 }
 @
 
@@ -410,7 +410,7 @@ dynamichazard::ddhazard_app()
 The app will allow you to compare the methods and models described here on simulated data sets.
 
 \section{EM algorithm}\label{sec:EM}
-An EM algorithm is used to estimate the initial state space vector $\vec{\alpha}_0$ and the co-variance matrix $\mat{Q}$. Optionally $\mat{Q}_0$ is also estimated if \code{control = ddhazard\_control(est\_Q\_0 = T, ...)}. Though,
+An EM algorithm is used to estimate the initial state space vector $\vec{\alpha}_0$ and the co-variance matrix $\mat{Q}$. Optionally $\mat{Q}_0$ is also estimated if \code{control = ddhazard\_control(est\_Q\_0 = TRUE, ...)}. Though,
 we do not have sufficient information to estimate this matrix. Define
 
 $$\emNotee{\vec{a}}{t}{s} = \expecpCond{\vec{\alpha}_t}{\vec{y}_1,\dots,\vec{y}_s},  \qquad
@@ -1204,7 +1204,7 @@ This section will illustrate how we go from event time to binary variables for t
 
 << binning_fig, echo=FALSE, results="hide", fig.cap = "Illustration of going from event times to binary variables. Each horizontal line represents an individual. A cross indicates that new covariates are observed while a filled circle indicates that the individual have died. Open circles indicates that the individual is right-censored. Vertical dashed lines are time interval borders.", fig.height=3, fig.align="center">>=
 par(cex = .8, mar = c(1, 4, 1, 2))
-plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = F)
+plot(c(0, 4), c(0, 1), type="n", xlab="", ylab="", axes = FALSE)
 
 abline(v = c(0.5, 1.5, 2.5), lty = 2)
 
@@ -1233,7 +1233,7 @@ x_vals_and_point_codes = list(
         c(4, 1)))
 
 x_vals_and_point_codes = x_vals_and_point_codes[
-  c(n_series, sample(n_series - 1, n_series - 1, replace = F))]
+  c(n_series, sample(n_series - 1, n_series - 1, replace = FALSE))]
 
 for(i in seq_along(x_vals_and_point_codes)){
   vals = x_vals_and_point_codes[[i]]

@@ -15,31 +15,31 @@ if(interactive()){
 
 test_that("NR method for logit function gives correct values for logit", {
   expect_equal(
-    SMA_hepler_logit_compute_length(0, .3, .6, 1, T),
+    SMA_hepler_logit_compute_length(0, .3, .6, 1, TRUE),
     -0.117687, tolerance = 1e-5)
   expect_equal(
-    SMA_hepler_logit_compute_length(0, .3, .6, 1, F),
+    SMA_hepler_logit_compute_length(0, .3, .6, 1, FALSE),
     -1.34459, tolerance = 1e-5)
 
   expect_equal(
-    SMA_hepler_logit_compute_length(0, .1, .4, 1, T),
+    SMA_hepler_logit_compute_length(0, .1, .4, 1, TRUE),
     0.222731, tolerance = 1e-5)
   expect_equal(
-    SMA_hepler_logit_compute_length(0, .1, .4, 1, F),
+    SMA_hepler_logit_compute_length(0, .1, .4, 1, FALSE),
     -2.4115, tolerance = 1e-5)
 
   expect_equal(
-    SMA_hepler_logit_compute_length(1, .2, .3, 1, T),
+    SMA_hepler_logit_compute_length(1, .2, .3, 1, TRUE),
     -0.0518549, tolerance = 1e-5)
   expect_equal(
-    SMA_hepler_logit_compute_length(1, .2, .3, 1,  F),
+    SMA_hepler_logit_compute_length(1, .2, .3, 1,  FALSE),
     -1.62284, tolerance = 1e-5)
 
   expect_equal(
-    SMA_hepler_logit_compute_length(1, .3, .1, 5, T),
+    SMA_hepler_logit_compute_length(1, .3, .1, 5, TRUE),
     0.909057, tolerance = 1e-5)
   expect_equal(
-    SMA_hepler_logit_compute_length(1, .3, .1, 5,  F),
+    SMA_hepler_logit_compute_length(1, .3, .1, 5,  FALSE),
     -2.15823, tolerance = 1e-5)
 })
 
@@ -99,7 +99,7 @@ test_that("Logit model for posterior_approx gives previous found values with wei
     data = head_neck_cancer,
     by = 1,
     control = ddhazard_control(
-      est_Q_0 = F, method = "SMA", save_data = F, save_risk_set = F,
+      est_Q_0 = FALSE, method = "SMA", save_data = FALSE, save_risk_set = FALSE,
       eps = 1e-2),
     Q_0 = diag(100000, 2), Q = diag(0.01, 2),
     max_T = 45, order = 1))
@@ -107,7 +107,7 @@ test_that("Logit model for posterior_approx gives previous found values with wei
   f1 <- eval(cl) # no weigths
 
   set.seed(10211)
-  ws <- sample(1:3, nrow(head_neck_cancer), replace = T)
+  ws <- sample(1:3, nrow(head_neck_cancer), replace = TRUE)
   cl$weights <- quote(ws)
   f2 <- eval(cl) # with weigths
 
@@ -118,8 +118,8 @@ test_that("Logit model for posterior_approx gives previous found values with wei
 
 test_that("Chaning the learning changes the result for the posterior approx method",{
   skip_on_cran()
-  ctrl <- ddhazard_control(est_Q_0 = F, method = "SMA",
-                           save_data = F, save_risk_set = F)
+  ctrl <- ddhazard_control(est_Q_0 = FALSE, method = "SMA",
+                           save_data = FALSE, save_risk_set = FALSE)
   cl <-  quote(ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
@@ -184,31 +184,31 @@ test_that("Posterior gives previous found results with large by length for pbc d
 
 test_that("NR method for logit function gives correct values for Exponential", {
   expect_equal(
-    SMA_hepler_exp_compute_length(0, .2, .1, 1, T, 1),
+    SMA_hepler_exp_compute_length(0, .2, .1, 1, TRUE, 1),
     -0.0733015, tolerance = 1e-5)
   expect_equal(
-    SMA_hepler_exp_compute_length(0, .2, .1, 1, F, 1),
+    SMA_hepler_exp_compute_length(0, .2, .1, 1, FALSE, 1),
     -1.09029, tolerance = 1e-5)
 
   expect_equal(
-    SMA_hepler_exp_compute_length(4, .4, .1, 1, T, 1),
+    SMA_hepler_exp_compute_length(4, .4, .1, 1, TRUE, 1),
     -2.8445, tolerance = 1e-5)
   expect_equal(
-    SMA_hepler_exp_compute_length(4, .4, .1, 1, F, 1),
+    SMA_hepler_exp_compute_length(4, .4, .1, 1, FALSE, 1),
     -3.12465, tolerance = 1e-5)
 
   expect_equal(
-    SMA_hepler_exp_compute_length(0, 1, .2, 2, T, 1),
+    SMA_hepler_exp_compute_length(0, 1, .2, 2, TRUE, 1),
     -0.0506302, tolerance = 1e-5)
   expect_equal(
-    SMA_hepler_exp_compute_length(0, 1, .2, 2, F, 1),
+    SMA_hepler_exp_compute_length(0, 1, .2, 2, FALSE, 1),
     -0.631692, tolerance = 1e-5)
 
   expect_equal(
-    SMA_hepler_exp_compute_length(0, .5, .05, 1, T, 10),
+    SMA_hepler_exp_compute_length(0, .5, .05, 1, TRUE, 10),
     -1.43386, tolerance = 1e-5)
   expect_equal(
-    SMA_hepler_exp_compute_length(0, .5, .05, 1, F, 10),
+    SMA_hepler_exp_compute_length(0, .5, .05, 1, FALSE, 10),
     -1.76385, tolerance = 1e-5)
 })
 

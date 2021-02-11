@@ -74,7 +74,7 @@ test_that("PF_smooth gives same results", {
   set.seed(78095324)
   sims <- test_sim_func_logit(
     n_series = 250, n_vars = n_vars, t_0 = 0, t_max = 10,
-    x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(n_vars),
+    x_range = 1, x_mean = 0, re_draw = TRUE, beta_start = rnorm(n_vars),
     intercept_start = -3, sds = c(.1, rep(.5, n_vars)))
 
   frm <- Surv(tstart, tstop, event) ~ . - id

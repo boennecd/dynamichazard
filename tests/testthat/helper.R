@@ -132,13 +132,13 @@ save_to_test <- function(obj, file_name, tolerance = sqrt(.Machine$double.eps)){
 
   cat("Largest sizes:\n")
   if(is.list(obj))
-    print(head(sort(unlist(lapply(obj, object.size)), decreasing = T))) else
+    print(head(sort(unlist(lapply(obj, object.size)), decreasing = TRUE))) else
       print(object.size(obj))
 
   root <- gsub("(.+dynamichazard)(.*)", "\\1", getwd())
   out_file <- paste0(
     root, "/tests/testthat/previous_results/", file_name, ".RDS")
-  saveRDS(obj, compress = T, out_file)
+  saveRDS(obj, compress = TRUE, out_file)
 
   cat("RDS file size is ", file.size(out_file) / 1000, "KB\n", sep = "")
 
@@ -209,7 +209,7 @@ set.seed(6790753)
 test_sim_func_logit <- dynamichazard:::test_sim_func_logit
 get_sim <- function(n)
   test_sim_func_logit(n_series = n, n_vars = 10, t_0 = 0, t_max = 10,
-                      x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(10),
+                      x_range = 1, x_mean = 0, re_draw = TRUE, beta_start = rnorm(10),
                       is_fixed = 2:4,
                       intercept_start = -3, sds = c(.1, rep(.5, 10)))
 logit_sim_200 <- get_sim(200)
@@ -228,7 +228,7 @@ test_sim_func_exp <- asNamespace("dynamichazard")$test_sim_func_exp
 
 get_sim <- function(n)
   test_sim_func_exp(n_series = n, n_vars = 10, t_0 = 0, t_max = 10,
-                      x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(10),
+                      x_range = 1, x_mean = 0, re_draw = TRUE, beta_start = rnorm(10),
                       is_fixed = 2:4,
                       intercept_start = -3, sds = c(.1, rep(.5, 10)))
 exp_sim_200 <- get_sim(200)

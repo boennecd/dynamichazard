@@ -9,7 +9,7 @@ get_risk_obj(
   by,
   max_T,
   id,
-  is_for_discrete_model = T,
+  is_for_discrete_model = TRUE,
   n_threads = 1,
   min_chunk = 5000
 )

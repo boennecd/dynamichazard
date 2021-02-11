@@ -1,9 +1,9 @@
 context("Testing boot")
 
 test_that("Throws error when risk_set or data is not saved",{
-  for(tmp in list(c(T, F),
-                  c(F, T),
-                  c(F, F))){
+  for(tmp in list(c(TRUE, FALSE),
+                  c(FALSE, TRUE),
+                  c(FALSE, FALSE))){
     fit <- ddhazard(
       formula = survival::Surv(stop, event) ~ group,
       data = head_neck_cancer, max_T = 40,
@@ -24,11 +24,11 @@ test_that("boot yields previously computed values with pbc", {
         log(albumin) + log(protime) + log(bili), pbc2,
       id = pbc2$id, by = 100, max_T = 3600,
       Q_0 = diag(rep(10000, 6)), Q = diag(rep(0.001, 6)),
-      control = ddhazard_control(save_risk_set = T, save_data = T, eps = .1)))
+      control = ddhazard_control(save_risk_set = TRUE, save_data = TRUE, eps = .1)))
 
   #####
   set.seed(993)
-  tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = F, R = 99)
+  tmp <- ddhazard_boot(fit, do_sample_weights = FALSE, do_stratify_with_event = FALSE, R = 99)
 
   expect_no_error(plot(fit, ddhazard_boot = tmp))
 
@@ -40,7 +40,7 @@ test_that("boot yields previously computed values with pbc", {
 
   #####
   set.seed(994)
-  tmp <- ddhazard_boot(fit, do_sample_weights = T, do_stratify_with_event = F, R = 99)
+  tmp <- ddhazard_boot(fit, do_sample_weights = TRUE, do_stratify_with_event = FALSE, R = 99)
 
   expect_no_error(plot(fit, ddhazard_boot = tmp))
 
@@ -52,7 +52,7 @@ test_that("boot yields previously computed values with pbc", {
 
   #####
   set.seed(995)
-  tmp <- ddhazard_boot(fit, do_sample_weights = F, do_stratify_with_event = T, R = 99)
+  tmp <- ddhazard_boot(fit, do_sample_weights = FALSE, do_stratify_with_event = TRUE, R = 99)
 
   expect_no_error(plot(fit, ddhazard_boot = tmp))
 
@@ -64,7 +64,7 @@ test_that("boot yields previously computed values with pbc", {
 
   #####
   set.seed(999)
-  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = T, do_stratify_with_event = T, R = 99))
+  suppressWarnings(tmp <- ddhazard_boot(fit, do_sample_weights = TRUE, do_stratify_with_event = TRUE, R = 99))
 
   expect_no_error(plot(fit, ddhazard_boot = tmp))
 
@@ -97,14 +97,14 @@ test_that("Boot works with posterior_approx and gives previous found results", {
   expect_equal(tmp, read_to_test("boot_posterior_approx"), tolerance = 1.490116e-08)
 })
 
-test_that("Boot do result differs when control$permu = T",{
+test_that("Boot do result differs when control$permu = TRUE",{
   set.seed(5705870)
   f1 <-  ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
     control = ddhazard_control(
-      est_Q_0 = F, permu = T, method = "SMA"),
+      est_Q_0 = FALSE, permu = TRUE, method = "SMA"),
     Q_0 = diag(1e5, 2), Q = diag(0.01, 2),
     max_T = 45)
 

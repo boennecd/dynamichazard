@@ -3,7 +3,7 @@ context("testing cloglog link function")
 set.seed(57826639)
 dat <- test_sim_func_discrete(
   n_series = 400, n_vars = 2, t_0 = 0, t_max = 30,
-  x_range = 1, x_mean = 0, re_draw = T, beta_start = rnorm(2),
+  x_range = 1, x_mean = 0, re_draw = TRUE, beta_start = rnorm(2),
   is_fixed = 2,
   intercept_start = -4, sds = c(.1, rep(.5, 2)), linkfunc = "cloglog")
 

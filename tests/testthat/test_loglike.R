@@ -41,7 +41,7 @@ test_that("logLik for head_neck_cancer data set match previous results", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = ddhazard_control(est_Q_0 = F),
+    control = ddhazard_control(est_Q_0 = FALSE),
     a_0 = rep(0, 2), Q_0 = diag(1e5, 2),
     Q = diag(1e-2, 2),
     max_T = 45,
@@ -70,13 +70,13 @@ test_that("Saving or not saving risk set or data gives the same result", {
     Q = diag(.2, 2),
     max_T = 45,
     id = head_neck_cancer$id, order = 1,
-    verbose = F))
+    verbose = FALSE))
 
   control_fit <- eval(cl)
   control_fit$logLik <- logLik(control_fit)
 
-  for(save_risk_set in c(T, F))
-    for(save_data in c(T, F)){
+  for(save_risk_set in c(TRUE, FALSE))
+    for(save_data in c(TRUE, FALSE)){
       if(save_risk_set && save_data)
         next
 
@@ -98,7 +98,7 @@ test_that("logLik for head_neck_cancer data set with second order model", {
     by = 1,
     Q_0 = diag(10, 4),
     Q = diag(1e-3, 2),
-    control = ddhazard_control(est_Q_0 = F, eps = 2e-3),
+    control = ddhazard_control(est_Q_0 = FALSE, eps = 2e-3),
     max_T = 45,
     id = head_neck_cancer$id, order = 2)
 
@@ -120,7 +120,7 @@ test_that("logLik for head_neck_cancer data set match previous results with fixe
     data = head_neck_cancer,
     by = 1,
     control = ddhazard_control(
-      est_Q_0 = F, fixed_terms_method = "M_step"),
+      est_Q_0 = FALSE, fixed_terms_method = "M_step"),
     a_0 = 0, Q_0 = 1e5, Q = 1e-2,
     max_T = 45,
     id = head_neck_cancer$id, order = 1)
@@ -149,7 +149,7 @@ test_that("logLik for head_neck_cancer data with only fixed match bigglm", {
 
   tmp_design <- get_survival_case_weights_and_data(
     formula = form, data = head_neck_cancer, by = 1, max_T = 45, id = head_neck_cancer$id,
-    use_weights = F)
+    use_weights = FALSE)
 
   glm_fit <- glm(Y ~ as.factor(group), binomial(), tmp_design$X)
 
@@ -176,7 +176,7 @@ test_that("logLik for simulated data versus old results", {
     id = sims$res$id, order = 1)
 
   # matplot(sims$betas, lty = 1, type = "l")
-  # matplot(result$state_vecs, type = "l", lty = 2, add = T)
+  # matplot(result$state_vecs, type = "l", lty = 2, add = TRUE)
 
   log_like <- logLik(object = result)
 
@@ -193,11 +193,11 @@ test_that("logLik for simulated data versus old results", {
     Q_0 = diag(1e5, 11),
     max_T = 10,
     id = sims$res$id, order = 1,
-    verbose = F, model = "exponential",
+    verbose = FALSE, model = "exponential",
     control = ddhazard_control(n_max = 150))
 
   # matplot(sims$betas, lty = 1, type = "l")
-  # matplot(result$state_vecs, type = "l", lty = 2, add = T)
+  # matplot(result$state_vecs, type = "l", lty = 2, add = TRUE)
 
   log_like <- logLik(object = result, data_ = sims$res, id =  sims$res$id)
 
@@ -212,17 +212,17 @@ test_that("logLik for simulated data versus old results", {
     sims$res,
     by = 1,
     control = ddhazard_control(
-      n_max = 10^4, eps = 10^-2, est_Q_0 = F, fixed_terms_method = "M_step"),
+      n_max = 10^4, eps = 10^-2, est_Q_0 = FALSE, fixed_terms_method = "M_step"),
     Q_0 = diag(1e5, 9),
     Q = diag(1e-2, 9),
     max_T = 10,
     id = sims$res$id, order = 1,
-    verbose = F)
+    verbose = FALSE)
 
   log_like <- logLik(result)
 
   # matplot(sims$betas, lty = 1, type = "l")
-  # matplot(result$state_vecs, type = "l", lty = 2, add = T, col = c(1, 4:11))
+  # matplot(result$state_vecs, type = "l", lty = 2, add = TRUE, col = c(1, 4:11))
   # abline(h = result$fixed_effects, col = 2:3, lty = 2)
   old <- structure(-180.8480151206968,
                    class = "logLik")
@@ -238,12 +238,12 @@ test_that("logLik for simulated data versus old results", {
     Q = diag(1e-2, 9),
     max_T = 10, model = "exponential",
     id = sims$res$id, order = 1,
-    verbose = F)
+    verbose = FALSE)
 
   log_like <- logLik(result)
 
   # matplot(sims$betas, lty = 1, type = "l")
-  # matplot(result$state_vecs, type = "l", lty = 2, add = T, col = c(1, 4:11))
+  # matplot(result$state_vecs, type = "l", lty = 2, add = TRUE, col = c(1, 4:11))
   # abline(h = result$fixed_effects, col = 2:3, lty = 2)
   # dput(log_like)
 

@@ -12,8 +12,8 @@ get_survival_case_weights_and_data(
   id,
   init_weights,
   risk_obj,
-  use_weights = T,
-  is_for_discrete_model = T,
+  use_weights = TRUE,
+  is_for_discrete_model = TRUE,
   c_outcome = "Y",
   c_weights = "weights",
   c_end_t = "t"

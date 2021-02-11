@@ -8,8 +8,8 @@ test_that("Passing fewer weigths than rows in design mat throws error",{
       data = head_neck_cancer,
       by = 1,
       control = ddhazard_control(
-        est_Q_0 = F, n_max = 10^4, eps = 10^-4,
-        save_data = F, save_risk_set = F),
+        est_Q_0 = FALSE, n_max = 10^4, eps = 10^-4,
+        save_data = FALSE, save_risk_set = FALSE),
       a_0 = rep(0, 2), Q_0 = diag(1, 2),
       max_T = 45,
       id = head_neck_cancer$id, order = 1,
@@ -37,7 +37,7 @@ test_that("Using weights yields a message about lag_one_cov", {
 
 test_that("Making large design mat and using weights yield the same with EKF",{
   set.seed(9191)
-  tmp <- sample.int(nrow(head_neck_cancer), 100, replace = T)
+  tmp <- sample.int(nrow(head_neck_cancer), 100, replace = TRUE)
   dum_design <- head_neck_cancer[tmp, ]
 
   ws <- sapply(1:nrow(head_neck_cancer), function(x) sum(tmp == x))
@@ -70,7 +70,7 @@ test_that("Making large design mat and using weights yield the same with EKF",{
 
 test_that("Making large design mat and using weights yield the same with UKF",{
   set.seed(9191)
-  tmp <- sample.int(nrow(head_neck_cancer), 100, replace = T)
+  tmp <- sample.int(nrow(head_neck_cancer), 100, replace = TRUE)
   dum_design <- head_neck_cancer[tmp, ]
 
   ws <- sapply(1:nrow(head_neck_cancer), function(x) sum(tmp == x))

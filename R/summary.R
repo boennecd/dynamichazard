@@ -31,8 +31,8 @@ summary.ddhazard <- function(
       c(1, which(i1 %in% i2))
     } else
       1:nrow(state_vecs)
-    out <- cbind(state_vecs[time_indices, var_indices, drop = F],
-                 sqrt(state_vars[time_indices, var_indices, drop = F]))
+    out <- cbind(state_vecs[time_indices, var_indices, drop = FALSE],
+                 sqrt(state_vars[time_indices, var_indices, drop = FALSE]))
 
     colnames(out) <- c(colnames(out)[seq_along(var_indices)],
                        rep("  sd ", length(var_indices)))

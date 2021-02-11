@@ -9,12 +9,12 @@ design = get_design_matrix(
   survival::Surv(tstart, tstop, event) ~ x1 + x2 +x3, sims)
 
 test_that("Testing get design marix", {
-  expect_equal(design$Y[, 1], sims$tstart, check.attributes = F, use.names = F)
-  expect_equal(design$Y[, 2], sims$tstop, check.attributes = F, use.names = F)
-  expect_equal(design$Y[, 3], sims$event, check.attributes = F, use.names = F)
+  expect_equal(design$Y[, 1], sims$tstart, check.attributes = FALSE, use.names = FALSE)
+  expect_equal(design$Y[, 2], sims$tstop, check.attributes = FALSE, use.names = FALSE)
+  expect_equal(design$Y[, 3], sims$event, check.attributes = FALSE, use.names = FALSE)
 
   expect_equal(colnames(design$X), c("(Intercept)", "x1", "x2", "x3"))
-  expect_equal(design$X[, 2:4], as.matrix(sims[, c("x1", "x2", "x3")]), check.attributes = F)
+  expect_equal(design$X[, 2:4], as.matrix(sims[, c("x1", "x2", "x3")]), check.attributes = FALSE)
   })
 
 ########
@@ -84,9 +84,9 @@ test_that("Fixed terms works as expected",{
               x1 + ddFixed(dum(x2)) + x3), sims)
 
   expect_equal(design_with_fixed$X[, c("x1", "x3")], as.matrix(sims[, c("x1", "x3")]),
-               check.attributes = F)
+               check.attributes = FALSE)
   expect_equal(as.matrix(design_with_fixed$fixed_terms), dum(sims$x2),
-               check.attributes = F)
+               check.attributes = FALSE)
 })
 
 test_that("Fixed terms works as expected",{
@@ -95,7 +95,7 @@ test_that("Fixed terms works as expected",{
 
   expect_equal(
     design_with_fixed$X[, c("x1", "x2", "x3")],
-    as.matrix(sims[, c("x1", "x2", "x3")]), check.attributes = F)
+    as.matrix(sims[, c("x1", "x2", "x3")]), check.attributes = FALSE)
   expect_length(design_with_fixed$fixed_terms, 0)
 
 
@@ -103,29 +103,29 @@ test_that("Fixed terms works as expected",{
     survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + x3), sims)
   expect_equal(design_with_fixed$X[, c("x1", "x3")],
                as.matrix(sims[, c("x1", "x3")]),
-               check.attributes = F)
+               check.attributes = FALSE)
   expect_equal(as.matrix(design_with_fixed$fixed_terms),
                as.matrix(sims[, c("x2")]),
-               check.attributes = F)
+               check.attributes = FALSE)
 
 
   design_with_fixed <- get_design_matrix(
     survival::Surv(tstart, tstop, event) ~ x1 + ddFixed(x2) + ddFixed(x3),
     sims)
-  expect_equal(design_with_fixed$X[, c("x1"), drop = F],
+  expect_equal(design_with_fixed$X[, c("x1"), drop = FALSE],
                as.matrix(sims[, c("x1")]),
-               check.attributes = F)
+               check.attributes = FALSE)
   expect_equal(as.matrix(design_with_fixed$fixed_terms),
                as.matrix(sims[, c("x2", "x3")]),
-               check.attributes = F)
+               check.attributes = FALSE)
 })
 
 
 ############
 # test rcpp get risk set function
 
-ids_to_row_indicies <- tapply(seq_len(nrow(sims)), sims$id, identity, simplify = F)
-for(do_truncate in c(F, T)){
+ids_to_row_indicies <- tapply(seq_len(nrow(sims)), sims$id, identity, simplify = FALSE)
+for(do_truncate in c(FALSE, TRUE)){
   # Truncate on second round
   if(do_truncate){
     sims$tstart = round(sims$tstart, digits = 2)
@@ -172,7 +172,7 @@ for(do_truncate in c(F, T)){
       expect_lte(max(design$Y[, 2][design$Y[, 3] == 1]), length(risk_set$risk_sets) * by_)
       expect_gte(max(design$Y[, 2][design$Y[, 3] == 1]), (length(risk_set$risk_sets) - 1) * by_)
 
-      expect_equal(sims$event, design$Y[, 3], check.attributes = F, use.names = F)
+      expect_equal(sims$event, design$Y[, 3], check.attributes = FALSE, use.names = FALSE)
       })
 
     inside_of_bin <- !seq_len(nrow(sims)) %in% is_in_a_bin
@@ -184,7 +184,7 @@ for(do_truncate in c(F, T)){
     if(sum(inside_of_bin_and_event) > 0)
       test_that("All those inside of bins with events have has the correct previous row as event", {
         ids <- sims$id[inside_of_bin_and_event]
-        ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = F)
+        ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = FALSE)
 
         for(id in ids_to_check){
           rows_ <- sims[ids_to_row_indicies[[id]], ]
@@ -250,7 +250,7 @@ for(do_truncate in c(F, T)){
     if(sum(inside_of_bin_and_event) > 0)
       test_that("All those inside of bins with events have has the correct previous row as event", {
         ids <- sims$id[inside_of_bin_and_event]
-        ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = F)
+        ids_to_check <- sample(ids, size = min(1e3, length(ids)), replace = FALSE)
         for(id in ids_to_check){
           rows_ <- sims[ids_to_row_indicies[[id]], ]
           event_time <- max(rows_$tstop)
@@ -272,7 +272,7 @@ for(do_truncate in c(F, T)){
 # Further test for design mat
 
 # Test without Y
-arg_list <- list(formula = formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), data = sims, response = T)
+arg_list <- list(formula = formula(survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3), data = sims, response = TRUE)
 design <- do.call(get_design_matrix, arg_list)
 
 arg_list$response <- F
@@ -353,7 +353,7 @@ test_that("dimension are correct with get_design_matrix with different combinati
 
 # Test that removal of intercepts works as in lm
 arg_list <- list(formula = survival::Surv(tstart, tstop, event) ~ x1 + x2 + x3,
-                 data = sims, response = T)
+                 data = sims, response = TRUE)
 design <- do.call(get_design_matrix, arg_list)
 
 arg_list$formula <- survival::Surv(tstart, tstop, event) ~ -1 + x1 + x2 + x3
@@ -371,7 +371,7 @@ test_that("is_for_discrete_model logic work",{
 
   data_ <- data.frame(matrix(
     dimnames = list(NULL, c("id", "tstart", "tstop", "event")),
-    ncol = 4, byrow = T, data = c(
+    ncol = 4, byrow = TRUE, data = c(
       # Id 1:
       #   is in bin 1 in either method
       #   has event
@@ -440,7 +440,7 @@ test_that("is_for_discrete_model logic work",{
   arg_list <- list(Y = survival::Surv(data_$tstart, data_$tstop, data_$event),
                    by = by_, max_T = t_max, id = data_$id)
 
-  arg_list$is_for_discrete_model <- T
+  arg_list$is_for_discrete_model <- TRUE
   get_risk_obj_discrete <- do.call(get_risk_obj, arg_list)
 
   expect_equal(get_risk_obj_discrete$is_event_in,
@@ -499,7 +499,7 @@ plot_exp <- expression({
 
 # The test data
 test_dat <- data.frame(matrix(
-  byrow = T, ncol = 4,
+  byrow = TRUE, ncol = 4,
   dimnames = list(NULL, c("tstart", "tstop", "event", "id")), c(
     0,   1, 0, 1,
     1,   2, 1, 1, # 2
@@ -537,7 +537,7 @@ test_dat <- data.frame(matrix(
 
 risk_obj <- with(test_dat, get_risk_obj(
   Y = Surv(tstart, tstop, event),
-  by = 1, max_T = 2, id = id, is_for_discrete_model = T))
+  by = 1, max_T = 2, id = id, is_for_discrete_model = TRUE))
 
 test_that("Each risk set contain the expect indvidual with the correct rows", {
   risk_sets_by_ids <- lapply(risk_obj$risk_sets, function(x) test_dat$id[x])
@@ -565,7 +565,7 @@ risk_obj_org <- risk_obj <- get_risk_obj(X_Y$Y, 100, max_T = 3600, pbc2$id)
 X_Y[1:2] <- lapply(X_Y[1:2], data.frame)
 X_Y_org <- X_Y
 
-w_org <- w <- sample(1:3, replace = T, nrow(pbc2))
+w_org <- w <- sample(1:3, replace = TRUE, nrow(pbc2))
 
 eval(get_permu_data_exp(X_Y[1:3], risk_obj, w))
 
@@ -626,7 +626,7 @@ risk_obj_org <- risk_obj <- get_risk_obj(X_Y$Y, 100, max_T = 3600, pbc2$id)
 X_Y[1:2] <- lapply(X_Y[1:2], data.frame)
 X_Y_org <- X_Y
 
-w_org <- w <- sample(1:3, replace = T, nrow(pbc2))
+w_org <- w <- sample(1:3, replace = TRUE, nrow(pbc2))
 
 eval(get_order_data_exp(X_Y[1:3], risk_obj, w))
 
@@ -695,12 +695,12 @@ test_that("Parallel and non-parallel version gives the same for get_risk_set. Th
 
   p1 <- with(s, get_risk_obj(
     Y = Surv(tstart, tstop, event),
-    by = 1, max_T = 10, id = id, is_for_discrete_model = T))
+    by = 1, max_T = 10, id = id, is_for_discrete_model = TRUE))
 
   expect_warning(
     p2 <- with(s, get_risk_obj(
       Y = Surv(tstart, tstop, event),
-      by = 1, max_T = 10, id = id, is_for_discrete_model = T,
+      by = 1, max_T = 10, id = id, is_for_discrete_model = TRUE,
       n_threads = 2, min_chunk = 1000)),
     "'n_threads' greater than one is no longer supported", fixed = TRUE)
 

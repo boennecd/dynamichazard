@@ -27,9 +27,9 @@ test_that("Expecting plot calls to succed with first order model", {
   suppressMessages(pbc_fit <- ddhazard(
     formula = survival::Surv(tstart/100, tstop/100, death == 2) ~ log(bili) + log(protime),
     data = pbc2, model = "exp_clip_time", by = 1, max_T = 36,
-    Q_0 = diag(2, 3), Q = diag(1e-3, 3), verbose = F,
+    Q_0 = diag(2, 3), Q = diag(1e-3, 3), verbose = FALSE,
     id = pbc2$id,
-    control = ddhazard_control(LR = 1, eps = 1e-3, save_risk_set = F)))
+    control = ddhazard_control(LR = 1, eps = 1e-3, save_risk_set = FALSE)))
 
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 1))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 2))
@@ -42,7 +42,7 @@ test_that("Expecting plot calls to succed with second order model", {
   result = ddhazard(
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
-    by = 1, control = ddhazard_control(eps = 1e-2, est_Q_0 = F),
+    by = 1, control = ddhazard_control(eps = 1e-2, est_Q_0 = FALSE),
     a_0 = rep(0, 4), Q_0 = diag(1, 4),
     Q = diag(c(5e-3, 5e-3)),
     order = 2,
@@ -57,7 +57,7 @@ test_that("Expecting plot calls to succed with second order model", {
     data = pbc2, model = "exp_clip_time", by = 1, max_T = 36,
     Q_0 = diag(5, 6), Q = diag(c(rep(1e-3, 3))),
     id = pbc2$id, order = 2,
-    control = ddhazard_control(LR = .01, eps = 1e-2, save_risk_set = F)))
+    control = ddhazard_control(LR = .01, eps = 1e-2, save_risk_set = FALSE)))
 
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 1))
   expect_no_error(plot(pbc_fit, type = "cov", cov_index = 2))
@@ -68,7 +68,7 @@ test_that("Expecting plot calls to succed with second order model", {
 test_that("Alters mfcol and sets it back", {
   set.seed(747)
   sims <- test_sim_func_exp(n_series = 2e2, n_vars = 10, t_0 = 0, t_max = 10,
-                    x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+                    x_range = 1, x_mean = 0, re_draw = TRUE, beta_start = 0,
                     intercept_start = -5, sds = c(.1, rep(1, 10)))
 
   suppressMessages(result_exp <- ddhazard(
@@ -78,11 +78,11 @@ test_that("Alters mfcol and sets it back", {
     Q_0 = diag(10, 11),
     Q = diag(1e-2, 11),
     control = ddhazard_control(
-      est_Q_0 = F, eps = 10^-2, n_max = 10^3,
-      save_data = F, save_risk_set = F, denom_term = 1e-2),
+      est_Q_0 = FALSE, eps = 10^-2, n_max = 10^3,
+      save_data = FALSE, save_risk_set = FALSE, denom_term = 1e-2),
     max_T = 10,
     id = sims$res$id, order = 1,
-    verbose = F,
+    verbose = FALSE,
     model = "exp_clip_time"))
 
   for(i in 1:10){

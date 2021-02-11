@@ -15,7 +15,7 @@
 #' dynamichazard::ddhazard_app(seed = 1, more_options = TRUE)
 #'}
 #' @export
-ddhazard_app = function(quietly = F, ...) {
+ddhazard_app = function(quietly = FALSE, ...) {
   for(pkg in c("shiny", "formatR")){
     if (!requireNamespace(pkg, quietly = TRUE)) {
       stop(pkg, " needed for this function to work. Please install it.",

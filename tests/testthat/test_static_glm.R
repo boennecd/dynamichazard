@@ -2,14 +2,14 @@ context("Testing static_glm")
 
 set.seed(615015)
 sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
-                            x_range = 1, x_mean = .5, re_draw = T, beta_start = 0,
+                            x_range = 1, x_mean = .5, re_draw = TRUE, beta_start = 0,
                             intercept_start = -3, sds = c(.1, rep(1, 3)))
 
 test_that("Static glm yields expected number of events, correct rows and same result when supplying risk_obj", {
   form <- survival::Surv(tstart, tstop, event) ~ . - id
   res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
-    family = "binomial", model = T)
+    family = "binomial", model = TRUE)
 
   fail_rows <- sims$res[sims$res$event & sims$res$tstop <= 10, ]
   fail_rows_static <- res$model[res$model$Y == 1, ]
@@ -31,13 +31,13 @@ test_that("Static glm yields expected number of events, correct rows and same re
 test_that("static glm gives results with exponential that match previous computations", {
   set.seed(33587)
   sims <- test_sim_func_exp(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
-                            x_range = 1, x_mean = .5, re_draw = T, beta_start = 0,
+                            x_range = 1, x_mean = .5, re_draw = TRUE, beta_start = 0,
                             intercept_start = -3, sds = c(.1, rep(1, 3)))
 
   form <- survival::Surv(tstart, tstop, event) ~ . - id
   res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
-    family = "exponential", model = T)
+    family = "exponential", model = TRUE)
 
   tmp <- res["coefficients"]
   # print(unname(c(tmp$coefficients)), digits = 16)
@@ -48,7 +48,7 @@ test_that("static glm gives results with exponential that match previous computa
   # test with lower max_T
   res_lower <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 6, id = sims$res$id,
-    family = "exponential", model = T)
+    family = "exponential", model = TRUE)
 
   tmp <- res_lower["coefficients"]
 
@@ -60,7 +60,7 @@ test_that("design_matrix yields equal result with different values of use_weight
   form <- formula(survival::Surv(tstart, tstop, event) ~ . - id, data = sims$res)
   res <- static_glm(
     form = form, data = sims$res, by = 1, max_T = 10, id = sims$res$id,
-    family = "logit", model = T)
+    family = "logit", model = TRUE)
 
   res <- res[c("coefficients")]
   # save_to_test(res, "static1")
@@ -68,7 +68,7 @@ test_that("design_matrix yields equal result with different values of use_weight
   expect_equal(res, read_to_test("static1"))
 
   data_f <- get_survival_case_weights_and_data(formula = form, data = sims$res, by = 1,
-                                               max_T = 10, id = sims$res$id, use_weights = F)$X
+                                               max_T = 10, id = sims$res$id, use_weights = FALSE)$X
 
   expect_true(all(data_f$weigths == 1))
 
@@ -88,14 +88,14 @@ test_that("get_survival_case_weights_and_data work w/ factors and weights",{
   suppressWarnings(
     res <- get_survival_case_weights_and_data(
       Surv(start, stop, rep(1, 5)) ~ x,
-      data = tmp, by = 1, max_T = 10, use_weights = F))
+      data = tmp, by = 1, max_T = 10, use_weights = FALSE))
 
   expect_equal(tmp$x, res$X$x[1:5*2])
 })
 
 test_that("Gets error with only_coef = TRUE and no mf",{
   expect_error(
-    static_glm(only_coef = T),
+    static_glm(only_coef = TRUE),
     "^mf must be supplied when .only_coef = TRUE.$")
 })
 
@@ -190,7 +190,7 @@ test_that("get_survival_case_weights_and_data works with observation in counting
     id     = c(1 , 1, 2),
     tstart = c(0 , 3, 0),
     tstop  = c(.5, 4, 4),
-    event  = c(  F, T, F),
+    event  = c(FALSE, TRUE, FALSE),
     x      = 1:3)
 
   res <- get_survival_case_weights_and_data(
@@ -230,7 +230,7 @@ test_that("get_survival_case_weights_and_data works with observation in counting
     id     = c(1, 1  , 1  , 2),
     tstart = c(0, 1.5, 3.5, 0),
     tstop  = c(1, 2  , 4  , 4),
-    event  = c(F, F  , T  , F),
+    event  = c(FALSE, FALSE, TRUE, FALSE),
     x      = 1:4)
 
   res <- get_survival_case_weights_and_data(

@@ -39,13 +39,13 @@ if(getRversion() >= "2.15.1")
 #' @export
 ddhazard_boot <- function(
   ddhazard_fit,  strata, unique_id, R = 100,
-  do_stratify_with_event = F, do_sample_weights = F,
-  LRs = ddhazard_fit$control$LR * 2^(0:(-4)), print_errors = F){
-  if(is.unsorted(-LRs, strictly = T) && any(LRs <=0))
+  do_stratify_with_event = FALSE, do_sample_weights = FALSE,
+  LRs = ddhazard_fit$control$LR * 2^(0:(-4)), print_errors = FALSE){
+  if(is.unsorted(-LRs, strictly = TRUE) && any(LRs <=0))
     stop("LRs need to be stricly decreasing postive numbers")
 
   if(is.null(ddhazard_fit$risk_set) || is.null(ddhazard_fit$data))
-    stop("Cannot bootstrap estimates when ddhazard has been called with control = list(save_risk_set = F, save_data = F, ...)")
+    stop("Cannot bootstrap estimates when ddhazard has been called with control = list(save_risk_set = FALSE, save_data = FALSE, ...)")
 
   list2env(ddhazard_fit[c("control", "id", "data", "order", "model")],
            environment())
@@ -71,7 +71,7 @@ ddhazard_boot <- function(
   if(do_stratify_with_event){
     is_event <- as.factor(tapply(ddhazard_fit$risk_set$is_event_in, id,
                                  function(x) sum(x > -1) == 1))
-    strata <- interaction(strata, is_event, drop = T)
+    strata <- interaction(strata, is_event, drop = TRUE)
 
   }
 
@@ -121,7 +121,7 @@ ddhazard_boot <- function(
     boot_X_Y <- X_Y
     for(el_name in c("X", "fixed_terms", "Y"))
       boot_X_Y[[el_name]] <- boot_X_Y[[el_name]][
-        which_rows_are_included, , drop = F]
+        which_rows_are_included, , drop = FALSE]
 
     # adjust risk set
     boot_risk_set <- ddhazard_fit$risk_set
@@ -161,7 +161,7 @@ ddhazard_boot <- function(
       tryCatch({
         suppressWarnings(est <- ddhazard_no_validation(
           a_0 = a_0, Q_0 = Q_0, R = R_mat, L = L,
-          F. = F., verbose = F, Q = Q,
+          F. = F., verbose = FALSE, Q = Q,
           risk_set= boot_risk_set, X_Y = boot_X_Y,
           model = model,
           LR = l,

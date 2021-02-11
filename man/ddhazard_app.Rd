@@ -4,7 +4,7 @@
 \alias{ddhazard_app}
 \title{ddhazard Demo}
 \usage{
-ddhazard_app(quietly = F, ...)
+ddhazard_app(quietly = FALSE, ...)
 }
 \arguments{
 \item{quietly}{\code{TRUE} if no messages should be printed when the app is run.}

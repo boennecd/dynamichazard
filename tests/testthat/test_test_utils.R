@@ -16,7 +16,7 @@ test_that("Testing util functions to sim for test", {
 
     seed <- 101
     set.seed(seed)
-    new_func(re_draw = T)
+    new_func(re_draw = TRUE)
     res1 <- new_func(10)
     set.seed(seed)
     res2 <- func(10)

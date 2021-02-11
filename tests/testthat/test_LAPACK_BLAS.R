@@ -125,22 +125,22 @@ test_that("Triangular matrix times vector works", {
 
     v1 <- rnorm(n)
     out <- rep(0, n)
-    tri_mat_times_vec_test(d1, v1, out, F)
+    tri_mat_times_vec_test(d1, v1, out, FALSE)
     expect_equal(c(d1 %*% v1), out)
 
     v2 <- rnorm(n)
     out <- rep(0, n)
-    tri_mat_times_vec_test(d1, v2, out, T)
+    tri_mat_times_vec_test(d1, v2, out, TRUE)
     expect_equal(c(t(d1) %*% v2), out)
 
     v3 <- rnorm(n / 2)
     out <- rep(0, n)
-    tri_mat_times_vec_test(d1, v3, out, F)
+    tri_mat_times_vec_test(d1, v3, out, FALSE)
     expect_equal(c(d1[, 1:(n/2)] %*% v3), out)
 
     v4 <- rnorm(n / 2)
     out <- rep(0, n)
-    tri_mat_times_vec_test(d1, v4, out, T)
+    tri_mat_times_vec_test(d1, v4, out, TRUE)
     expect_equal(c(t(d1)[, 1:(n/2)] %*% v4), out)
   }
 })

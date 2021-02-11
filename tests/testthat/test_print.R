@@ -53,7 +53,7 @@ test_that("print.ddhazard_boot gives the expected output", {
     Q = diag(1e-2, 9),
     max_T = 10, model = "exponential",
     id = sims$res$id, order = 1,
-    verbose = F)
+    verbose = FALSE)
 
   set.seed(999)
   boot_out <- ddhazard_boot(result, R = 19)
@@ -75,7 +75,7 @@ test_that("print.ddhazard_boot gives the expected output", {
     Q = diag(1e-2, 11),
     max_T = 10, model = "exponential",
     id = sims$res$id, order = 1,
-    verbose = F)
+    verbose = FALSE)
 
   set.seed(1992)
   boot_out <- ddhazard_boot(result, R = 19)

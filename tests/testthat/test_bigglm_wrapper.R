@@ -236,7 +236,7 @@ get_data_func <- with(new.env(), {
   cursor <- 0
   chunksize <- chunksize
 
-  function(reset = F){
+  function(reset = FALSE){
     if(reset){
       cursor <<- 0
       return(invisible())
@@ -251,10 +251,10 @@ get_data_func <- with(new.env(), {
   }})
 
 test_that("I did not mess up with get_data_func", {
-  get_data_func(T)
+  get_data_func(TRUE)
   expect_equal(sims$res[1:chunksize, ], get_data_func())
   expect_equal(sims$res[1:chunksize + chunksize, ], get_data_func())
-  get_data_func(T)
+  get_data_func(TRUE)
   expect_equal(sims$res[1:chunksize, ], get_data_func())
   expect_equal(sims$res[1:chunksize + chunksize, ], get_data_func())
 })

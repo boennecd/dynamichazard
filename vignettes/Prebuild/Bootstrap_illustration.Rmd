@@ -7,7 +7,7 @@ csl: ../bib_style.csl
 output: pdf_document
 ---
 
-```{r setup, include=FALSE, cache=F}
+```{r setup, include=FALSE, cache=FALSE}
 knitr::knit_hooks$set(
   default_opts = function(before, options, envir) {
     if (before){
@@ -29,10 +29,10 @@ options(digist = 4)
 knitr::opts_chunk$set(
   echo = TRUE, fig.height = 5, dpi = 144, 
   dev = "png",
-  cache = T, 
+  cache = TRUE, 
   cache.path = "cache/bootstrap/",
   fig.path = "figure/bootstrap/")
-knitr::opts_knit$set(default_opts = T)
+knitr::opts_knit$set(default_opts = TRUE)
 
 options(ddhazard_max_threads = max(parallel::detectCores() - 2, 1))
 ```
@@ -204,8 +204,8 @@ In this section, we will test the coverage of the pointwise confidence intervals
 The simulation is to mimic a situation where we assume that the coefficients are not random (as the model implies) but we do not know the shape of the coefficient curves across time. We setup the parameters for the experiment below and plot the coefficients without noise:
 
 ```{r, echo=FALSE, eval=FALSE}
-if(requireNamespace("dichromat", quietly = T, warn.conflicts = F) && 
-   requireNamespace("colorspace", quietly = T, warn.conflicts = F)
+if(requireNamespace("dichromat", quietly = TRUE, warn.conflicts = FALSE) && 
+   requireNamespace("colorspace", quietly = TRUE, warn.conflicts = FALSE)
    ){
   cols <- dichromat::colorschemes$Categorical.12[(1:5)*2]
   
@@ -256,7 +256,7 @@ base_mat <- do.call(
     n_vals <- ceiling(i / ((tmax - 1) * mlt)) * ((tmax - 1) / n_start_grps) + 1
     data.frame(id = rep(i, n_vals),
                tstart = tmax - n_vals:1)
-  }, simplify = F))
+  }, simplify = FALSE))
 base_mat$tstop <- base_mat$tstart + 1
 nrows <- nrow(base_mat)
 
@@ -290,7 +290,7 @@ sim_func <- function(){
   has_died <- unlist(tapply(
     sim_mat$dies, sim_mat$id, function(x){
       is_death <- which(x)
-      if(length(is_death) == 0) rep(F, length(x)) else 1:length(x) > is_death[1]
+      if(length(is_death) == 0) rep(FALSE, length(x)) else 1:length(x) > is_death[1]
     }))
   sim_mat <- sim_mat[!has_died, ]
   
@@ -448,8 +448,8 @@ boot_exp <- expression({
     # Bootstrap fits
     boot_out <- ddhazard_boot(fit,
                               strata = as.factor(sim_list$sims$tstart),
-                              do_stratify_with_event = F,
-                              do_sample_weights = F, R = R, 
+                              do_stratify_with_event = FALSE,
+                              do_sample_weights = FALSE, R = R, 
                               LRs = LRs)
     
     # Compute coverage and add to output
@@ -471,8 +471,8 @@ n_fails # number of failed estimations
 The mean of the fraction of the overages for the two methods are printed below. That is, the mean of the fraction for each coefficient from each run that did not fail:
 
 ```{r}
-colMeans(coverage_smooth, na.rm = T)
-colMeans(coverage_boot, na.rm = T)
+colMeans(coverage_smooth, na.rm = TRUE)
+colMeans(coverage_boot, na.rm = TRUE)
 ```
 
 Finally, we can make a boxplot of the fraction of coverage in each trail as follows:
@@ -499,8 +499,8 @@ n_fails # number of failed estimations
 The means and box plot are given below:
 
 ```{r}
-colMeans(coverage_smooth, na.rm = T)
-colMeans(coverage_boot, na.rm = T)
+colMeans(coverage_smooth, na.rm = TRUE)
+colMeans(coverage_boot, na.rm = TRUE)
 ```
 
 ```{r}

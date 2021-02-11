@@ -7,7 +7,7 @@ get_exp_draw <- function(cmpfun = TRUE) {
     n_cur <- NULL
     draws <- NULL
 
-    function(n, re_draw = F){
+    function(n, re_draw = FALSE){
       if(re_draw || is_first){
         n_max <<- n_draws
         n_cur <<- 1
@@ -37,7 +37,7 @@ get_exp_draw <- function(cmpfun = TRUE) {
   })
 
   if(cmpfun)
-    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = T)) else
+    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = TRUE)) else
       out
 }
 
@@ -48,7 +48,7 @@ get_norm_draw <- function(cmpfun = TRUE) {
     n_cur <- NULL
     draws <- NULL
 
-    function(n, re_draw = F){
+    function(n, re_draw = FALSE){
       if(re_draw || is_first){
         n_max <<- n_draws
         n_cur <<- 1
@@ -78,7 +78,7 @@ get_norm_draw <- function(cmpfun = TRUE) {
   })
 
   if(cmpfun)
-    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = T)) else
+    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = TRUE)) else
       out
 }
 
@@ -89,7 +89,7 @@ get_unif_draw <- function(cmpfun = TRUE) {
     n_cur <- NULL
     draws <- NULL
 
-    function(n, re_draw = F){
+    function(n, re_draw = FALSE){
       if(re_draw || is_first){
         n_max <<- n_draws
         n_cur <<- 1
@@ -119,7 +119,7 @@ get_unif_draw <- function(cmpfun = TRUE) {
   })
 
   if(cmpfun)
-    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = T)) else
+    compiler::cmpfun(out, options = list(optimize = 2, suppressAll = TRUE)) else
       out
 }
 
@@ -131,7 +131,7 @@ get_unif_draw <- function(cmpfun = TRUE) {
 # define functions to simulate outcomes
 test_sim_func_logit <- function(
   n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x_range = .1, x_mean = -.1,
-  re_draw = T, beta_start = 3, intercept_start,
+  re_draw = TRUE, beta_start = 3, intercept_start,
   sds = rep(1, n_vars + !missing(intercept_start)),
   is_fixed = c(), lambda = 1,
   tstart_sampl_func = function(t_0 = t_0, t_max = t_max) t_0, betas){
@@ -144,7 +144,7 @@ test_sim_func_logit <- function(
 
 test_sim_func_discrete <- function(
   n_series, n_vars = 10L, t_0 = 0L, t_max = 10L, x_range = .1, x_mean = -.1,
-  re_draw = T, beta_start = 3, intercept_start,
+  re_draw = TRUE, beta_start = 3, intercept_start,
   sds = rep(1, n_vars + !missing(intercept_start)),
   is_fixed = c(), lambda = 1,
   tstart_sampl_func = function(t_0 = t_0, t_max = t_max) t_0, betas,
@@ -160,9 +160,9 @@ test_sim_func_discrete <- function(
   get_norm_draw <- get_norm_draw()
 
   if(re_draw){
-    get_unif_draw(re_draw = T)
-    get_exp_draw(re_draw = T)
-    get_norm_draw(re_draw = T)
+    get_unif_draw(re_draw = TRUE)
+    get_exp_draw(re_draw = TRUE)
+    get_norm_draw(re_draw = TRUE)
   }
 
   if(length(beta_start) == 1)
@@ -177,7 +177,7 @@ test_sim_func_discrete <- function(
     betas[1, ] <- if(use_intercept) c(intercept_start, beta_start) else beta_start
     betas <- apply(betas, 2, cumsum)
 
-    betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
+    betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = TRUE,
                                 nrow = nrow(betas))
   } else
     use_intercept = ncol(betas) >= n_vars
@@ -246,7 +246,7 @@ test_sim_func_discrete <- function(
 
 test_sim_func_exp <- function(
   n_series, n_vars = 10, t_0 = 0, t_max = 10, x_range = 1, x_mean = 0,
-  re_draw = T, beta_start = 1, intercept_start,
+  re_draw = TRUE, beta_start = 1, intercept_start,
   sds = rep(1, n_vars + !missing(intercept_start)),
   is_fixed = c(), lambda = 1,
   tstart_sampl_func = function(t_0 = t_0, t_max = t_max)
@@ -263,9 +263,9 @@ test_sim_func_exp <- function(
   get_norm_draw <- get_norm_draw()
 
   if(re_draw){
-    get_unif_draw(re_draw = T)
-    get_exp_draw(re_draw = T)
-    get_norm_draw(re_draw = T)
+    get_unif_draw(re_draw = TRUE)
+    get_exp_draw(re_draw = TRUE)
+    get_norm_draw(re_draw = TRUE)
   }
 
   if(length(beta_start) == 1)
@@ -280,7 +280,7 @@ test_sim_func_exp <- function(
     if(use_intercept) c(intercept_start, beta_start) else beta_start
   betas <- apply(betas, 2, cumsum)
 
-  betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = T,
+  betas[, is_fixed] <- matrix(rep(betas[1, is_fixed], nrow(betas)), byrow = TRUE,
                               nrow = nrow(betas))
 
   ceiler <- function(x, level=1) round(x + 5*10^(-level-1), level)

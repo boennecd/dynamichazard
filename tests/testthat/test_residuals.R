@@ -17,7 +17,7 @@ cl_logit <- quote(ddhazard(
     by = (by_ <- 1),
     Q_0 = diag(1e-2, 3),
     Q = diag(1000000, 3),
-    control = ddhazard_control(est_Q_0 = F, eps = .1), # Just want a fit
+    control = ddhazard_control(est_Q_0 = FALSE, eps = .1), # Just want a fit
     max_T = 10,
     id = logit_sim_200$res$id))
 
@@ -44,13 +44,13 @@ test_that("residuals functions throws error for some types when method is UKF",{
 test_that("Residuals work when data is saved on the fit", {
   for(ty in c("pearson", "raw")){
     cl_cur <- cl_logit
-    cl_cur$control <- quote(ddhazard_control(save_data = T))
+    cl_cur$control <- quote(ddhazard_control(save_data = TRUE))
     fit_saved_data <- eval(cl_cur)
 
     expect_true(!is.null(fit_saved_data$data))
     fit_saved_data$res <- residuals(fit_saved_data, type = ty)
 
-    cl_cur$control <- quote(ddhazard_control(save_data = F))
+    cl_cur$control <- quote(ddhazard_control(save_data = FALSE))
     fit_not_saved_data <- eval(cl_cur)
 
     expect_true(is.null(fit_not_saved_data$data))
@@ -72,13 +72,13 @@ test_that("Residuals work when data is saved on the fit and fixed effects are pr
   cl_new$Q <- diag(.1, 2)
 
   for(ty in c("pearson", "raw")){
-    cl_new$control <- quote(ddhazard_control(save_data = T))
+    cl_new$control <- quote(ddhazard_control(save_data = TRUE))
     fit_saved_data <- eval(cl_new)
 
     expect_true(!is.null(fit_saved_data$data))
     fit_saved_data$res <- residuals(fit_saved_data, type = ty)
 
-    cl_new$control <- quote(ddhazard_control(save_data = F))
+    cl_new$control <- quote(ddhazard_control(save_data = FALSE))
     fit_not_saved_data <- eval(cl_new)
 
     expect_true(is.null(fit_not_saved_data$data))
@@ -144,7 +144,7 @@ local({
     data = pbc, Q_0 = diag(rep(1e8, 2)), by = 100, id = pbc$id,
     Q = diag(rep(1e-2, 2)), max_T = 3600,
     a = rep(0, 2),
-    control = ddhazard_control(est_Q_0 = F, eps = .1))
+    control = ddhazard_control(est_Q_0 = FALSE, eps = .1))
 
   test_that("Pearson residuals and raw residuals for logistic model are consistent with each other", {
     pearson_res <- residuals(object = fit, type = "pearson", data = pbc)

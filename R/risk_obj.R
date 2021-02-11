@@ -30,7 +30,7 @@
 #'
 #' @export
 get_risk_obj = function(
-  Y, by, max_T, id, is_for_discrete_model = T, n_threads = 1,
+  Y, by, max_T, id, is_for_discrete_model = TRUE, n_threads = 1,
   min_chunk = 5000){
   Y <- unclass(Y)
   start = Y[, 1]
@@ -74,7 +74,7 @@ get_risk_obj = function(
 
 permu_txt <-
   "for(i in seq_along(data))
-      data[[i]] <- data[[i]][permu, , drop = F]
+      data[[i]] <- data[[i]][permu, , drop = FALSE]
 
     for(i in seq_along(risk_obj$risk_sets))
       risk_obj$risk_sets[[i]] <-
@@ -92,7 +92,7 @@ get_permu_data_exp <- function(data, risk_obj, weights){
   weights <- deparse(substitute(weights))
 
   txt_exp <- paste0(
-    "permu <- sample(nrow(data[[1]]), replace = F)
+    "permu <- sample(nrow(data[[1]]), replace = FALSE)
 
     ", permu_txt)
 
@@ -107,7 +107,7 @@ permu_rev_txt <-
   "org_order <- order(permu)
 
   for(i in seq_along(data))
-    data[[i]] <- data[[i]][org_order, , drop = F]
+    data[[i]] <- data[[i]][org_order, , drop = FALSE]
 
   for(i in seq_along(risk_obj$risk_sets))
     risk_obj$risk_sets[[i]] <- attr(risk_obj$risk_sets[[i]], 'org')

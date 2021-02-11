@@ -91,7 +91,7 @@ if(getRversion() >= "2.15.1")
 #' @export
 ddhazard = function(
   formula, data, model = "logit", by, max_T, id, a_0, Q_0, Q = Q_0, order = 1,
-  weights, control = ddhazard_control(), verbose = F){
+  weights, control = ddhazard_control(), verbose = FALSE){
   #####
   # checks
   if (model %in% c("exp_bin", "exp_clip_time", "exp_clip_time_w_jump")){
@@ -267,23 +267,23 @@ ddhazard = function(
 
   if(est_fixed_in_E){
     # Recover the X and fixed term design matricies
-    X_Y$fixed_terms <- X_Y$X[n_params + 1:n_fixed, , drop = F]
+    X_Y$fixed_terms <- X_Y$X[n_params + 1:n_fixed, , drop = FALSE]
     if(n_params > 0)
-      X_Y$X <- X_Y$X[1:n_params, , drop = F] else
+      X_Y$X <- X_Y$X[1:n_params, , drop = FALSE] else
         X_Y$X <- matrix(nrow = 0, ncol = ncol(X_Y$X))
 
     # We need to change the dimension of various arrays
-    result$V_t_d_s <- result$V_t_d_s[-indicies_fix, -indicies_fix, , drop = F]
+    result$V_t_d_s <- result$V_t_d_s[-indicies_fix, -indicies_fix, , drop = FALSE]
 
     result$fixed_effects <- result$a_t_d_s[1, indicies_fix]
-    result$a_t_d_s <- result$a_t_d_s[, -indicies_fix, drop = F]
+    result$a_t_d_s <- result$a_t_d_s[, -indicies_fix, drop = FALSE]
 
-    result$B_s <- result$B_s[-indicies_fix, -indicies_fix, , drop = F]
+    result$B_s <- result$B_s[-indicies_fix, -indicies_fix, , drop = FALSE]
 
     result$lag_one_cov <-
-      result$lag_one_cov[-indicies_fix, -indicies_fix, , drop = F]
+      result$lag_one_cov[-indicies_fix, -indicies_fix, , drop = FALSE]
 
-    F. <- F.[-indicies_fix, -indicies_fix, drop = F]
+    F. <- F.[-indicies_fix, -indicies_fix, drop = FALSE]
   }
 
   if(control$permu)
@@ -824,14 +824,14 @@ get_design_matrix_and_risk_obj <- function(
 ddhazard_control <- function(
   kappa = NULL, alpha = 1, beta = 0,
   NR_eps = NULL, LR = 1, n_max = 10^2, eps = 1e-3,
-  est_Q_0 = F, method = "EKF", save_risk_set = T,
-  save_data = T, eps_fixed_parems = 1e-4,
+  est_Q_0 = FALSE, method = "EKF", save_risk_set = TRUE,
+  save_data = TRUE, eps_fixed_parems = 1e-4,
   fixed_parems_start = NULL,
   n_threads = getOption("ddhazard_max_threads"),
   denom_term = 1e-5,
   fixed_terms_method = "E_step",
   Q_0_term_for_fixed_E_step = NULL,
-  permu = if(!is.null(method)) method == "SMA" else F,
+  permu = if(!is.null(method)) method == "SMA" else FALSE,
   posterior_version = "cholesky", GMA_max_rep = 25, GMA_NR_eps = 1e-4,
   est_a_0 = TRUE, ...) {
   dts <- list(...)
@@ -876,6 +876,6 @@ ddhazard_control <- function(
 
 ddhazard_control_xtra_get <- function()
   list(
-    max_it_fixed_params = 25, fixed_effect_chunk_size = 1e4, debug = F,
+    max_it_fixed_params = 25, fixed_effect_chunk_size = 1e4, debug = FALSE,
     LR_max_try = 10, LR_decrease_fac = 0.9, use_pinv = FALSE,
     criteria = "delta_coef", EKF_batch_size = 500L)

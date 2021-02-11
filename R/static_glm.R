@@ -43,14 +43,14 @@
 #' @export
 get_survival_case_weights_and_data <- function(
   formula, data, by, max_T, id, init_weights, risk_obj,
-  use_weights = T, is_for_discrete_model = T,
+  use_weights = TRUE, is_for_discrete_model = TRUE,
   c_outcome = "Y",
   c_weights = "weights",
   c_end_t = "t"){
   #####
   # checks
 
-  X_Y <- get_design_matrix(formula, data, predictors = F)
+  X_Y <- get_design_matrix(formula, data, predictors = FALSE)
   formula_used <- X_Y$formula_used
 
   if(missing(init_weights))
@@ -250,8 +250,8 @@ change_new_var_name <- function(c_x, data){
 #'
 #' @export
 static_glm <- function(
-  formula, data, by, max_T, ..., id, family = "logit", model = F, weights,
-  risk_obj = NULL, speedglm = F, only_coef = FALSE, mf,
+  formula, data, by, max_T, ..., id, family = "logit", model = FALSE, weights,
+  risk_obj = NULL, speedglm = FALSE, only_coef = FALSE, mf,
   method_use = c("glm", "speedglm", "parallelglm_quick", "parallelglm_QR"),
   n_threads = getOption("ddhazard_max_threads")){
   if(only_coef && missing(mf))
@@ -358,7 +358,7 @@ static_glm <- function(
 .static_glm_fit <- function(
   method_use, only_coef, c_outcome, c_weights, family, offset, data, mf,
   n_threads, formula, model, ...){
-  if(method_use == "speedglm" && requireNamespace("speedglm", quietly = T)){
+  if(method_use == "speedglm" && requireNamespace("speedglm", quietly = TRUE)){
     weights_use <- data[[c_weights]]
 
     if(only_coef){

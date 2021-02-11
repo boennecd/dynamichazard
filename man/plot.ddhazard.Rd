@@ -13,8 +13,8 @@
   cov_index,
   ylim,
   col = "black",
-  add = F,
-  do_alter_mfcol = T,
+  add = FALSE,
+  do_alter_mfcol = TRUE,
   level = 0.95,
   ddhazard_boot,
   ...

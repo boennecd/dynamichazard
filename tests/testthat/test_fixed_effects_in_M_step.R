@@ -2,7 +2,7 @@ context("Testing test_fixed_effects_in_M_step")
 
 set.seed(548237)
 sims <- test_sim_func_logit(n_series = 1e3, n_vars = 3, t_0 = 0, t_max = 10,
-                            x_range = 1, x_mean = 0, re_draw = T, beta_start = 0,
+                            x_range = 1, x_mean = 0, re_draw = TRUE, beta_start = 0,
                             intercept_start = -4, sds = c(.1, rep(1, 3)))
 
 test_that("Only fixed effects yields same results as bigglm with logit model", {
@@ -19,7 +19,7 @@ test_that("Only fixed effects yields same results as bigglm with logit model", {
 
   tmp_design <- get_survival_case_weights_and_data(
     form, data = sims$res, by = 1, id = sims$res$id,
-    use_weights = F, max_T = 10)
+    use_weights = FALSE, max_T = 10)
 
   did_fail <- tryCatch(
     suppressWarnings(res2 <- bigglm(
@@ -64,7 +64,7 @@ test_that("Only fixed effects yields same results as bigglm and static_glm with 
 
   tmp_design <- get_survival_case_weights_and_data(
     form, data = sims$res, by = 1, id = sims$res$id,
-    use_weights = F, max_T = 10, is_for_discrete_model = F)
+    use_weights = FALSE, max_T = 10, is_for_discrete_model = FALSE)
 
   did_fail <- tryCatch(
     res2 <- bigglm(
@@ -130,13 +130,13 @@ test_that("Gets previous results with exponential model with some fixed terms", 
     form, data = sims$res, model = "exponential", by = 1,
     id = sims$res$id, max_T = 10, control = ddhazard_control(
       eps_fixed_parems = 1e-12, fixed_effect_chunk_size = 1e3,
-      save_risk_set = F, save_data = F, n_max = 1e2,
+      save_risk_set = FALSE, save_data = FALSE, n_max = 1e2,
       fixed_terms_method = "M_step"),
     Q_0 = diag(100000, 3), Q = diag(.01, 3))
 
   # matplot(sims$betas[, 1:4], type = "l", lty = 2
   #         ylim = range(sims$betas, res1$state_vecs, res1$fixed_effects))
-  # matplot(res1$state_vecs, add = T, col = 2:4, type = "l", lty = 1)
+  # matplot(res1$state_vecs, add = TRUE, col = 2:4, type = "l", lty = 1)
   # abline(h = res1$fixed_effects)
   # res1$fixed_effects
   res1 <- res1[c("state_vars","state_vecs","fixed_effects")]
@@ -153,11 +153,11 @@ test_that("UKF with fixed effects works", {
     data = sims$res, model = "logit", by = 1, id = sims$res$id, max_T = 10,
     control = ddhazard_control(
       method = "UKF", fixed_parems_start = rep(0, 2),
-      save_data = F, save_risk_set = F,
+      save_data = FALSE, save_risk_set = FALSE,
       fixed_terms_method = "M_step"))
 
   # matplot(sims$betas, type = "l", lty = 1)
-  # matplot(fit$state_vecs, type = "l", lty = 2, col = 3:4, add = T)
+  # matplot(fit$state_vecs, type = "l", lty = 2, col = 3:4, add = TRUE)
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
   fit <- fit[c("state_vars", "state_vecs", "fixed_effects")]
   # save_to_test(fit, "fixed_terms_UKF")
@@ -175,7 +175,7 @@ test_that("UKF with fixed effects works", {
 
 
   # matplot(sims$betas, type = "l", lty = 1)
-  # matplot(fit$state_vecs, type = "l", lty = 2, col = 3:4, add = T)
+  # matplot(fit$state_vecs, type = "l", lty = 2, col = 3:4, add = TRUE)
   # abline(h = fit$fixed_effects, col = 1:2, lty = 2)
 
   fit <- fit[c("state_vars", "state_vecs", "fixed_effects")]
@@ -224,7 +224,7 @@ test_that("Only fixed effects yields same results as bigglm and static_glm with 
 
   tmp_design <- get_survival_case_weights_and_data(
     form, data = sims$res, by = 1, id = sims$res$id,
-    use_weights = F, max_T = 10, is_for_discrete_model = F)
+    use_weights = FALSE, max_T = 10, is_for_discrete_model = FALSE)
 
   did_fail <- tryCatch(
     res2 <- bigglm(

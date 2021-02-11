@@ -39,9 +39,9 @@ options(digits = 3, width = 80, warn = -1)
 
 knitr::opts_chunk$set(
   echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6,
-  warning = F, message = F, plot_2x1 = FALSE)
+  warning = FALSE, message = FALSE, plot_2x1 = FALSE)
 
-knitr::opts_knit$set(warning = F, message = F)
+knitr::opts_knit$set(warning = FALSE, message = FALSE)
 ```
 
 \renewcommand{\vec}[1]{\bm{#1}}
@@ -130,7 +130,7 @@ library(dynamichazard)
 pbc2_big_frame <- get_survival_case_weights_and_data(
   Surv(tstart, tstop, death == 2) ~ age + edema + log(albumin) + log(protime) +
     log(bili), data = pbc2, id = pbc2$id, by = 100, max_T = 3600, 
-  use_weights = F)
+  use_weights = FALSE)
 pbc2_big_frame <- pbc2_big_frame$X
 ```
 
@@ -140,13 +140,13 @@ The code above uses the `Surv` function on the left hand side of the formula. Th
 pbc2_big_frame[pbc2_big_frame$id == 282, ]
 ```
 
-Notice that three new columns have been added: `Y` which is the outcome, `t` which is the stop time in the bin and `weights` which is the weight to be used in a regression. We see that the first row in the initial data frame for individual `282` has three rows now since the row is in three bins (the bins at times $(0,100],(100,200]$ and $(200,300]$). We could just use weights instead. This is what we get if we set `use_weights = T`:
+Notice that three new columns have been added: `Y` which is the outcome, `t` which is the stop time in the bin and `weights` which is the weight to be used in a regression. We see that the first row in the initial data frame for individual `282` has three rows now since the row is in three bins (the bins at times $(0,100],(100,200]$ and $(200,300]$). We could just use weights instead. This is what we get if we set `use_weights = TRUE`:
 
 ```{r}
 pbc2_small_frame <- get_survival_case_weights_and_data(
   Surv(tstart, tstop, death == 2) ~ age + edema + log(albumin) + log(protime) +
     log(bili), data = pbc2, id = pbc2$id, by = 100, max_T = 3600, 
-  use_weights = T)
+  use_weights = TRUE)
 pbc2_small_frame <- pbc2_small_frame$X
 ```
 
@@ -187,7 +187,7 @@ knitr::kable(
           summary(glm_fit_big)[["coefficients"]][, "Std. Error"],
         "Sds without bins" = 
           summary(glm_simple)[["coefficients"]][, "Std. Error"]),
-  row.names = T)
+  row.names = TRUE)
 ```
 
 To end this section, you can skip making data frame with `get_survival_case_weights_and_data` by calling the `static_glm` function from `dynamichazard` package. The call below yields the same results as shown:
@@ -217,7 +217,7 @@ $$\begin{aligned}
 where $\pi_{it}$ is the probability that the $i$'th individual dies of cancer, $t$ is the stop time of the bin and $a_i$, $e_i$, $al_{it}$, $p_{it}$ and $b_{it}$ are respectively the $i$'th individual's age, edema, albumin, protime and bilirunbin. The extra subscript $t$ is added to refer to the level of the covariate in the bin at time $t$. It is important to notice that we will use the same bins as shown previously. In particular, we will use the `pbc2_big_frame` data frame from before. $\vec{f}_{\cdot}$ are a smooth function. We will use cubic regression splines with knots spread evenly through the covariate values. We fit the model with the following call:
 
 ```{r message=FALSE}
-library(mgcv, quietly = T)
+library(mgcv, quietly = TRUE)
 spline_fit <- gam(
   formula = Y ~ 
     # cr is cubic spline with k knots
@@ -232,7 +232,7 @@ spline_fit <- gam(
 The above estimates the GAM model where the likelihood is penalized by a L2 norm for each of the spline functions. The tuning parameters are chosen by generalized cross validation.<!-- As suggested in the help menu in regard to  the number of knots `k`, *"... [the] exact choice of k is not generally critical: it should be chosen to be large enough that you are reasonably sure of having enough degrees of freedom to represent the underlying ‘truth’ reasonably well, but small enough to maintain reasonable computational efficiency"*. See `?gam` or `?choose.k` for details --> Below are plots of the estimates:
 
 ```{r, fig.height = 4.5, mySettings=FALSE, fig.cap="Plots of estimated effects in the GAM model. The effective degree of freedom is noted in the parentheses on the y-axis and is computed given the number knots and final tuning parameter for spline function. For instance, `s(t,2.43):age` means that the effective degrees of freedom for `age` is `2.43`."}
-plot(spline_fit, scale = 0, page = 1, rug = F)
+plot(spline_fit, scale = 0, page = 1, rug = FALSE)
 ```
 
 Further, we compare the result with static model. Recall that our static model had the following estimates:
@@ -381,7 +381,7 @@ dd_fit_UKF <- ddhazard(
    Q_0 = diag(rep(1, 6)), Q = diag(rep(0.01, 6)),
    control = 
      ddhazard_control(method = "UKF", beta = 0, alpha = 1, 
-                      debug = T)) # <-- prints information in each iteration
+                      debug = TRUE)) # <-- prints information in each iteration
 sink()
 close(tmp_file)
 ```
@@ -455,7 +455,7 @@ for(i in 1:6){
 
 
 ```{r, echo=FALSE}
-par_old <- par(no.readonly = T)
+par_old <- par(no.readonly = TRUE)
 par(mfcol = c(2, 3))
 par(cex = par_old$cex * .85, mar = par_old$mar * 1.33)
 for(i in 1:6){

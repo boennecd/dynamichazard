@@ -11,7 +11,7 @@
   tstart = "start",
   tstop = "stop",
   use_parallel,
-  sds = F,
+  sds = FALSE,
   max_threads,
   ...
 )

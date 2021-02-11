@@ -145,14 +145,14 @@ test_that("GAM works w/ weights", {
     formula = survival::Surv(start, stop, event) ~ group,
     data = head_neck_cancer,
     by = 1,
-    control = ddhazard_control(est_Q_0 = F, method = "GMA"),
+    control = ddhazard_control(est_Q_0 = FALSE, method = "GMA"),
     Q_0 = diag(1, 2), Q = diag(0.01, 2),
     max_T = 45, order = 1))
 
   f1 <- eval(cl) # no weigths
 
   set.seed(10211)
-  ws <- sample(1:3, nrow(head_neck_cancer), replace = T)
+  ws <- sample(1:3, nrow(head_neck_cancer), replace = TRUE)
   cl$weights = ws
   f2 <- eval(cl) # with weigths
 

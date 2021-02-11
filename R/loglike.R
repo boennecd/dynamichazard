@@ -41,10 +41,10 @@ logLik.ddhazard = function(object, data = NULL, id, ...){
       stop("id need to compute log likelihood. Please, pass the id used in 'ddhazard' call")
 
     if(object$model %in% exp_model_names){
-      is_for_discrete_model <- F
+      is_for_discrete_model <- FALSE
 
     } else if (object$model == "logit"){
-      is_for_discrete_model <- T
+      is_for_discrete_model <- TRUE
 
     } else
       stop("logLik not implemented for model '", object$model, "'")

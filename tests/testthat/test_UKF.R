@@ -23,7 +23,7 @@ test_that("UKF on head_neck works with logit model", {
       eps = 10^-3, method = "UKF", beta = 0, alpha = 1),
     max_T = 30,
     id = head_neck_cancer$id, order = 1,
-    verbose = F,
+    verbose = FALSE,
     model = "logit"
   ))
 
@@ -43,8 +43,8 @@ test_that("UKF does not fail and both methods give the same",{
     a_0 = rep(0, ncol(sims$res) + 1 - 4),
     Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
     Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
-    verbose = F,
-    control = ddhazard_control(eps = 1e-2, est_Q_0 = F, method = "UKF",
+    verbose = FALSE,
+    control = ddhazard_control(eps = 1e-2, est_Q_0 = FALSE, method = "UKF",
                                kappa = 0.1, alpha = 1, beta = 0),
     id = sims$res$id,
     max_T = 10)
@@ -57,7 +57,7 @@ test_that("UKF does not fail and both methods give the same",{
     Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
     Q = diag(rep(1, ncol(sims$res) + 1 - 4)),
     control = ddhazard_control(
-      est_Q_0 = F, kappa = 0.1, alpha = 1, beta = 0, eps = 1e-2, method = "UKF_org"),
+      est_Q_0 = FALSE, kappa = 0.1, alpha = 1, beta = 0, eps = 1e-2, method = "UKF_org"),
     id = sims$res$id,
     max_T = 10)
 
@@ -75,9 +75,9 @@ test_that("Changing time scale in UKF does no change results when other parems a
                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
                    Q = diag(rep(1e-2, ncol(sims$res) + 1 - 4)),
                    control = list(kappa = 0.1, alpha = 1, beta = 0,
-                                  est_Q_0 = F, method = "UKF", eps = 1e-2),
+                                  est_Q_0 = FALSE, method = "UKF", eps = 1e-2),
                    id = sims$res$id,
-                   verbose = F,
+                   verbose = FALSE,
                    max_T = 10)
 
   res <- do.call(ddhazard, arg_list)
@@ -108,16 +108,16 @@ test_that("Testing UKF against prev computed values",{
                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
                    Q = diag(rep(1e-2, ncol(sims$res) + 1 - 4)),
                    control = list(kappa = 0.1, alpha = 1, beta = 0,
-                                  est_Q_0 = F, method = "UKF", eps = 1e-2,
-                                  save_data = F, save_risk_set = F),
+                                  est_Q_0 = FALSE, method = "UKF", eps = 1e-2,
+                                  save_data = FALSE, save_risk_set = FALSE),
                    id = sims$res$id,
-                   verbose = F,
+                   verbose = FALSE,
                    max_T = 10)
 
   res <- do.call(ddhazard, arg_list)
 
   # matplot(sims$betas, type = "l", lty = 1, ylim = range(sims$betas, res$state_vecs))
-  # matplot(res$state_vecs, add = T, type = "l", lty = 2)
+  # matplot(res$state_vecs, add = TRUE, type = "l", lty = 2)
   res <- res[c("state_vars", "state_vec", "Q")]
   # save_to_test(res, "UKF2")
 
@@ -133,9 +133,9 @@ test_that("Altering UKF alpha, beta and kappa change the results",{
                    Q_0 = diag(rep(1, ncol(sims$res) + 1 - 4)),
                    Q = diag(rep(1e-1, ncol(sims$res) + 1 - 4)),
                    control = list(kappa = 01, alpha = 1, beta = 0,
-                                  est_Q_0 = F, method = "UKF", eps = 1e-2),
+                                  est_Q_0 = FALSE, method = "UKF", eps = 1e-2),
                    id = sims$res$id,
-                   verbose = F,
+                   verbose = FALSE,
                    max_T = 10)
   suppressMessages(m1 <- do.call(ddhazard, arg_list))
 
@@ -175,14 +175,14 @@ test_that("UKF works on simulated data works with exponential model and gives pr
     Q = diag(1e-1, 11),
     control = ddhazard_control(
       eps = 10^-2, method = "UKF",
-      debug = F, beta = 0, save_data = F, save_risk_set = F),
+      debug = FALSE, beta = 0, save_data = FALSE, save_risk_set = FALSE),
     max_T = 10,
     id = sims$res$id, order = 1,
-    verbose = F,
+    verbose = FALSE,
     model = "exponential")
 
   # matplot(sims$betas, type = "l", lty = 1)
-  # matplot(result_exp$state_vecs, type = "l", lty = 2, add = T)
+  # matplot(result_exp$state_vecs, type = "l", lty = 2, add = TRUE)
   result_exp <- result_exp[c("state_vars", "state_vecs", "Q")]
   expect_known_value(result_exp, "UKF4.RDS", update = FALSE)
 })
@@ -195,10 +195,10 @@ test_that("UKF second order model works (that is, gives no errors...)", {
       data = head_neck_cancer,
       by = 1, Q_0 = diag(1, 4),
       Q = diag(1e-1, 2),
-      control = ddhazard_control(est_Q_0 = F, method = "UKF", beta = 0),
+      control = ddhazard_control(est_Q_0 = FALSE, method = "UKF", beta = 0),
       max_T = 30,
       id = head_neck_cancer$id, order = 2,
-      verbose = F,
+      verbose = FALSE,
       model = m
     ))
 
@@ -214,7 +214,7 @@ test_that("UKF second order model works (that is, gives no errors...)", {
              rep(.1, ncol(sims$res) + 1 - 4))),
            Q = diag(.01, ncol(sims$res) + 1 - 4),
            control = ddhazard_control(
-             est_Q_0 = F, method = "UKF",
+             est_Q_0 = FALSE, method = "UKF",
              eps = .1 # Just want see the a few iterations passes
            ),
            id = sims$res$id,

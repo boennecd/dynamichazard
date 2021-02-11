@@ -32,7 +32,7 @@
 plot.ddhazard = function(x, xlab = "Time",
                              ylab = "Hazard",
                              type = "cov", plot_type = "l", cov_index, ylim,
-                             col = "black", add = F, do_alter_mfcol = T,
+                             col = "black", add = FALSE, do_alter_mfcol = TRUE,
                              level = 0.95,
                              ddhazard_boot, ...){
   if(!x$model %in% c("logit", "cloglog", exp_model_names))
@@ -117,7 +117,7 @@ plot.ddhazard = function(x, xlab = "Time",
         if(nrow(boot_ests) > max_print){
           if(i == cov_index[1])
             message("Only plotting ", max_print, " of the boot sample estimates")
-          boot_ests <- boot_ests[sample.int(nrow(boot_ests), size = max_print, replace = F), ]
+          boot_ests <- boot_ests[sample.int(nrow(boot_ests), size = max_print, replace = FALSE), ]
         }
 
         new_col <- c(col2rgb(col = col))
@@ -156,7 +156,7 @@ plot.ddhazard_space_errors = function(x, mod, cov_index = NA, t_index = NA,
   bin_times = mod$times[-1]
 
   var_index = if(length(t_index) == 1 && is.na(cov_index)) seq_len(ncol(mod$state_vecs)) else cov_index
-  res_std = x$residuals[, var_index, drop = F]
+  res_std = x$residuals[, var_index, drop = FALSE]
   n_vars = length(var_index)
 
   # assume equal distance
