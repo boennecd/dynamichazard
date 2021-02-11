@@ -376,13 +376,13 @@ Rcpp::List linear_mapper_test(
 Rcpp::List check_state_fw(
   arma::vec parent, arma::vec parent1,
   arma::vec child, arma::vec child1,
-  arma::mat F, arma::mat Q){
+  arma::mat Fmat, arma::mat Q){
   covarmat cQ(Q);
-  state_fw obj(parent, F, cQ);
+  state_fw obj(parent, Fmat, cQ);
 
   return Rcpp::List::create(
     Rcpp::Named("log_dens_func") =
-      state_fw::log_dens_func(child, parent, F, cQ),
+      state_fw::log_dens_func(child, parent, Fmat, cQ),
 
     Rcpp::Named("is_mvn") = obj.is_mvn(),
     Rcpp::Named("is_grad_z_hes_const") = obj.is_grad_z_hes_const(),
@@ -405,13 +405,13 @@ Rcpp::List check_state_fw(
 Rcpp::List check_state_bw(
     arma::vec parent, arma::vec parent1,
     arma::vec child, arma::vec child1,
-    arma::mat F, arma::mat Q){
+    arma::mat Fmat, arma::mat Q){
   covarmat cQ(Q);
-  state_bw obj(child, F, cQ);
+  state_bw obj(child, Fmat, cQ);
 
   return Rcpp::List::create(
     Rcpp::Named("log_dens_func") =
-      state_bw::log_dens_func(parent, child, F, cQ),
+      state_bw::log_dens_func(parent, child, Fmat, cQ),
 
       Rcpp::Named("is_mvn") = obj.is_mvn(),
       Rcpp::Named("is_grad_z_hes_const") = obj.is_grad_z_hes_const(),
@@ -433,10 +433,10 @@ Rcpp::List check_state_bw(
 // [[Rcpp::export]]
 Rcpp::List check_artificial_prior(
     arma::vec state,
-    arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
+    arma::mat Fmat, arma::mat Q, arma::vec m_0, arma::mat Q_0,
     unsigned int t1, unsigned int t2, unsigned int t3){
   covarmat cQ(Q), cQ_0(Q_0);
-  artificial_prior_generator gen(F, cQ, m_0, cQ_0);
+  artificial_prior_generator gen(Fmat, cQ, m_0, cQ_0);
 
   auto func = [&](unsigned int i){
     auto prior = gen.get_artificial_prior(i);
@@ -490,14 +490,14 @@ Rcpp::List check_observational_cdist(
 
 // [[Rcpp::export]]
 Rcpp::List check_fw_bw_comb(
-    arma::mat F, arma::mat Q,
+    arma::mat Fmat, arma::mat Q,
     arma::vec parent, arma::vec parent1,
     arma::vec grand_child, arma::vec grand_child1,
     arma::vec x, int nu){
   covarmat cQ(Q);
 
-  state_fw fw(parent     , F, cQ);
-  state_bw bw(grand_child, F, cQ);
+  state_fw fw(parent     , Fmat, cQ);
+  state_bw bw(grand_child, Fmat, cQ);
 
   std::vector<PF_cdist*> objs = { &fw, &bw };
   cdist_comb_generator combi_gen(objs, parent, nu);
@@ -519,12 +519,12 @@ Rcpp::List check_fw_bw_comb(
 
 // [[Rcpp::export]]
 Rcpp::List check_prior_bw_comb(
-    arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
+    arma::mat Fmat, arma::mat Q, arma::vec m_0, arma::mat Q_0,
     arma::vec child, arma::vec child1, arma::vec parent,
     unsigned int t1, unsigned int t2){
   covarmat cQ(Q), cQ_0(Q_0);
-  state_bw bw(child, F, cQ);
-  artificial_prior_generator gen(F, cQ, m_0, cQ_0);
+  state_bw bw(child, Fmat, cQ);
+  artificial_prior_generator gen(Fmat, cQ, m_0, cQ_0);
 
   auto func = [&](unsigned int i){
     auto prior = gen.get_artificial_prior(i);
@@ -556,15 +556,15 @@ Rcpp::List check_prior_bw_state_comb(
     const arma::vec &offsets, const arma::vec &tstart,
     const arma::vec &tstop, const double bin_start, const double bin_stop,
     std::string fam,
-    arma::mat F, arma::mat Q, arma::vec m_0, arma::mat Q_0,
+    arma::mat Fmat, arma::mat Q, arma::vec m_0, arma::mat Q_0,
     arma::vec child, arma::vec child1, arma::vec parent,
     unsigned int t1, arma::mat Q_xtra, unsigned int nu = -1,
     const double covar_fac = -1, const double ftol_rel = 1e-8){
   const bool multithreaded = 1;
   covarmat cQ(Q), cQ_0(Q_0);
 
-  state_bw bw(child, F, cQ);
-  artificial_prior_generator gen(F, cQ, m_0, cQ_0);
+  state_bw bw(child, Fmat, cQ);
+  artificial_prior_generator gen(Fmat, cQ, m_0, cQ_0);
   std::shared_ptr<PF_cdist> dist =
     get_observational_cdist(
       fam, X, is_event, offsets, tstart, tstop, bin_start, bin_stop,

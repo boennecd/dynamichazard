@@ -106,7 +106,7 @@ Rcpp::List PF_smooth(
     const arma::vec &tstart, const arma::vec &tstop, const arma::colvec &a_0,
     const arma::mat &R, arma::mat &Q_0,
     arma::mat &Q, const arma::mat Q_tilde, const Rcpp::List &risk_obj,
-    const arma::mat &F, const int n_max, const int n_threads,
+    const arma::mat &Fmat, const int n_max, const int n_threads,
     const arma::vec &fixed_params, const int N_fw_n_bw, const int N_smooth,
     const int N_smooth_final, const double covar_fac, const double ftol_rel,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
@@ -119,7 +119,7 @@ Rcpp::List PF_smooth(
   std::unique_ptr<PF_data> data(new PF_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
-      risk_obj, F, n_max, n_threads, fixed_params, Q_tilde,
+      risk_obj, Fmat, n_max, n_threads, fixed_params, Q_tilde,
       N_fw_n_bw, N_smooth, N_smooth_final, forward_backward_ESS_threshold,
       debug, N_first, nu, covar_fac, ftol_rel));
 
@@ -213,7 +213,7 @@ Rcpp::List particle_filter(
     const arma::vec &tstart, const arma::vec &tstop, const arma::colvec &a_0,
     const arma::mat &R, arma::mat &Q_0,
     arma::mat &Q, const arma::mat Q_tilde, const Rcpp::List &risk_obj,
-    const arma::mat &F, const int n_threads,
+    const arma::mat &Fmat, const int n_threads,
     const arma::vec &fixed_params, const int N_fw_n_bw,
     Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold,
     const int debug, const int N_first, const int nu, std::string type,
@@ -226,7 +226,7 @@ Rcpp::List particle_filter(
   std::unique_ptr<PF_data> data(new PF_data(
       n_fixed_terms_in_state_vec,
       X, fixed_terms, tstart, tstop, is_event_in_bin, a_0, R, R.t(), Q_0, Q,
-      risk_obj, F, n_max, n_threads, fixed_params, Q_tilde,
+      risk_obj, Fmat, n_max, n_threads, fixed_params, Q_tilde,
       N_fw_n_bw, N_smooth, N_smooth_final, forward_backward_ESS_threshold,
       debug, N_first, nu, covar_fac, ftol_rel));
 
@@ -240,7 +240,7 @@ Rcpp::List particle_filter(
 Rcpp::List compute_PF_summary_stats(
     const Rcpp::List &rcpp_list, unsigned int n_threads,
     const arma::vec &a_0, const arma::mat &Q, const arma::mat &Q_0,
-    const arma::mat &R, const bool debug, const arma::mat F,
+    const arma::mat &R, const bool debug, const arma::mat &Fmat,
     const bool do_use_F = false, const bool do_compute_E_x = true){
 #ifdef _OPENMP
   omp_set_num_threads(n_threads);
@@ -251,7 +251,7 @@ Rcpp::List compute_PF_summary_stats(
     auto sm_output = get_clouds_from_rcpp_list(rcpp_list);
 
     stats = compute_PF_summary_stats(
-      sm_output, a_0, Q, Q_0, F, do_use_F, do_compute_E_x);
+      sm_output, a_0, Q, Q_0, Fmat, do_use_F, do_compute_E_x);
   }
 
   unsigned int n_periods = stats.E_xs.size();
@@ -298,7 +298,7 @@ Rcpp::List PF_est_params_dens(
 // [[Rcpp::export]]
 Rcpp::List PF_get_score_n_hess_cpp(
   const Rcpp::List fw_cloud, arma::mat &Q,
-  const arma::mat &F, Rcpp::List risk_obj,
+  const arma::mat &Fmat, Rcpp::List risk_obj,
   arma::mat &ran_vars, arma::mat &fixed_terms,
   const arma::vec &tstart, const arma::vec &tstop,
   const arma::vec &fixed_params, const std::string family,
@@ -322,7 +322,7 @@ Rcpp::List PF_get_score_n_hess_cpp(
   std::vector<std::unique_ptr<score_n_hess_base> > out_cpp;
   if(use_O_n_sq){
     out_cpp = PF_get_score_n_hess_O_N_sq
-    (Q, F, risk_sets, risk_obj, is_event_in, event_times, ran_vars,
+    (Q, Fmat, risk_sets, risk_obj, is_event_in, event_times, ran_vars,
      fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug,
      only_score, a_0, R, Q_0, Q_tilde, N_fw_n_bw, N_first, nu, covar_fac,
      ftol_rel, forward_backward_ESS_threshold, method);
@@ -330,7 +330,7 @@ Rcpp::List PF_get_score_n_hess_cpp(
   } else {
     clouds_cpp = get_cloud_from_rcpp_list<false, false>(fw_cloud);
     out_cpp = PF_get_score_n_hess
-      (clouds_cpp, Q, F, risk_sets, is_event_in, event_times, ran_vars,
+      (clouds_cpp, Q, Fmat, risk_sets, is_event_in, event_times, ran_vars,
        fixed_terms, tstart, tstop, fixed_params, family, max_threads, debug,
        only_score);
   }

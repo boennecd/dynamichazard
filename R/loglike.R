@@ -55,7 +55,7 @@ logLik.ddhazard = function(object, data = NULL, id, ...){
   }
 
   val <- logLike_cpp(
-    X = X$X, risk_obj = risk_obj, F = object$F_,
+    X = X$X, risk_obj = risk_obj, Fmat = object$F_,
     Q_0 = object$Q_0, Q = object$Q, a_t_d_s = t(object$state_vecs),
     tstart = X$Y[, 1], tstop = X$Y[, 2], order_ = object$order,
     model = object$model, fixed_effects_offsets = fixed_effects_offsets)

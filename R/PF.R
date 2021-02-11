@@ -740,7 +740,7 @@ PF_forward_filter.data.frame <- function(
     fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
     tstop = static_args$tstop, risk_obj = static_args$risk_obj,
     debug = static_args$debug, model = static_args$model, Q = Q, Q_0 = Q_0,
-    F = Fmat, R = R, is_forward = TRUE, a_0 = a_0, N_fw_n_bw = N_fw,
+    Fmat = Fmat, R = R, is_forward = TRUE, a_0 = a_0, N_fw_n_bw = N_fw,
     N_first = N_first, nu = if(is.null(control$nu)) 0L else control$nu,
     forward_backward_ESS_threshold = control$forward_backward_ESS_threshold,
     method = control$method, n_threads = control$n_threads, Q_tilde = Q_tilde,
@@ -780,14 +780,14 @@ get_Q_tilde <- function(x, n_vars)
     !is.null(G), !is.null(J), !is.null(K), !is.null(theta), !is.null(psi),
     !is.null(phi))
   if(is_restricted){
-    fit_call[["F"]]   <- F. <- .get_F(G, theta)
+    fit_call[["Fmat"]]   <- F. <- .get_F(G, theta)
     fit_call[["Q"]]   <- Q  <- .get_Q(J, K, psi, phi)$Q
     fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
     G_tilde <- .get_cum_mat(nrow(F.), ncol(F.)) %*% G
     J_qr <- qr(J)
 
   } else {
-    fit_call[["F"]]   <- eval(fit_call[["F."]] , parent.frame())
+    fit_call[["Fmat"]]   <- eval(fit_call[["F."]] , parent.frame())
     fit_call[["a_0"]] <- eval(fit_call[["a_0"]], parent.frame())
     fit_call[["Q"]]   <- eval(fit_call[["Q"]]  , parent.frame())
 
@@ -799,18 +799,18 @@ get_Q_tilde <- function(x, n_vars)
   # print Q and F structure
   if(trace > 0 && is_restricted){
     tmp <- list(
-      F = .get_F(G, seq_along(theta)), R = R,
+      Fmat = .get_F(G, seq_along(theta)), R = R,
       Q = .get_Q(J, K, seq_along(psi), seq_along(phi))$Q)
     tmp <- .set_PF_names(tmp, rng_names = row.names(X), fixed_names = NULL)
 
     # start with F
     if(all(rowSums(G) < 2, G %in% c(0, 1))){
-      tmp$F <- structure(
-        sapply(tmp$F, sprintf, fmt = "t%d"), dimnames = dimnames(tmp$F),
-        dim = dim(tmp$F))
-      tmp$F[tmp$F == "t0"] <- NA_character_
+      tmp$Fmat <- structure(
+        sapply(tmp$Fmat, sprintf, fmt = "t%d"), dimnames = dimnames(tmp$F),
+        dim = dim(tmp$Fmat))
+      tmp$Fmat[tmp$Fmat == "t0"] <- NA_character_
       cat(sQuote("F"), "matrix is of the following form\n")
-      print(tmp$F, quote = FALSE, na.print = "")
+      print(tmp$Fmat, quote = FALSE, na.print = "")
       cat("\n")
 
     }
@@ -880,7 +880,7 @@ get_Q_tilde <- function(x, n_vars)
       }
       if(type == "VAR"){
         cat("F is:\n")
-        print(fit_call$F)
+        print(fit_call$Fmat)
       }
 
       print_covmat(fit_call$Q, "Q")
@@ -924,13 +924,13 @@ get_Q_tilde <- function(x, n_vars)
       cat("Updating parameters in state model...\n")
     a_0_old <- fit_call$a_0
     Q_old <- fit_call$Q
-    F_old <- fit_call$F
+    F_old <- fit_call$Fmat
     fixed_params_old <- fixed_params
 
     if(type == "RW"){
       sum_stats <- compute_PF_summary_stats(
         clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-        debug = trace > 2, F = F.)
+        debug = trace > 2, Fmat = F.)
       if(est_a_0)
         a_0 <- drop(sum_stats[[1]]$E_xs)
       Q <- Reduce(
@@ -956,13 +956,13 @@ get_Q_tilde <- function(x, n_vars)
           G_tilde, kronecker(solve(Q), crossprod(QR_R)) %*% G_tilde)
         theta <- drop(solve(t2, t1))
         # TODO: need to change for higher order models
-        fit_call$F <- F. <- .get_F(G, theta)
+        fit_call$Fmat <- F. <- .get_F(G, theta)
 
         if(trace > 0)
           cat("Running second conditional maximization step\n")
         sum_stats <- compute_PF_summary_stats(
           clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-          debug = trace > 2, F = F., do_use_F = TRUE, do_compute_E_x = FALSE)
+          debug = trace > 2, Fmat = F., do_use_F = TRUE, do_compute_E_x = FALSE)
         Z <- Reduce(
           "+", lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"))
 
@@ -1036,7 +1036,7 @@ get_Q_tilde <- function(x, n_vars)
           clouds, n_threads, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
           debug = trace > 1, only_QR = FALSE)
         # TODO: need to change for higher order models
-        fit_call$F <- F. <- new_params$R_top_F
+        fit_call$Fmat <- F. <- new_params$R_top_F
         fit_call$Q <- Q <- new_params$Q
 
       }
@@ -1083,13 +1083,13 @@ get_Q_tilde <- function(x, n_vars)
         fit_call$fixed_params <- fixed_params <- colMeans(
           fixed_params_it[avg_idx, , drop = FALSE])
 
-      fit_call$F <- F. <- apply(F_it[, , avg_idx, drop = FALSE], 1:2, mean)
-      fit_call$Q <- Q  <- apply(Q_it[, , avg_idx, drop = FALSE], 1:2, mean)
+      fit_call$Fmat <- F. <- apply(F_it[, , avg_idx, drop = FALSE], 1:2, mean)
+      fit_call$Q    <- Q  <- apply(Q_it[, , avg_idx, drop = FALSE], 1:2, mean)
 
     }
 
     if(type == "VAR")
-      Q_0 <- fit_call$Q_0 <- get_Q_0(Qmat = fit_call$Q, Fmat = fit_call$F)
+      Q_0 <- fit_call$Q_0 <- get_Q_0(Qmat = fit_call$Q, Fmat = fit_call$Fmat)
 
     # compute norms
     Q_relative_norm <- norm(Q_old - Q) / (norm(Q_old) + 1e-8)
@@ -1136,7 +1136,7 @@ get_Q_tilde <- function(x, n_vars)
 
   out <- structure(list(
     call = cl, clouds = clouds, a_0 = a_0, fixed_effects = fixed_params, Q = Q,
-    F = fit_call$F, R = R, EM_ests = list(
+    F = fit_call$Fmat, R = R, EM_ests = list(
       a_0             = a_0_it         [1:i, , drop = FALSE],
       fixed_effects   = fixed_params_it[1:i, , drop = FALSE],
       F = F_it[, , 1:i, drop = FALSE],
@@ -1745,7 +1745,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
       fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
       tstop = static_args$tstop, risk_obj = static_args$risk_obj,
       debug = debug, model = static_args$model, Q = Q, Q_0 = Q_0,
-      F = Fmat, R = R, is_forward = TRUE, a_0 = a_0, N_fw_n_bw = N_fw,
+      Fmat = Fmat, R = R, is_forward = TRUE, a_0 = a_0, N_fw_n_bw = N_fw,
       N_first = N_first, nu = if(is.null(ctrl$nu)) 0L else ctrl$nu,
       forward_backward_ESS_threshold = ctrl$forward_backward_ESS_threshold,
       method = ctrl$method, n_threads = ctrl$n_threads, Q_tilde = Q_tilde,
@@ -1785,7 +1785,7 @@ PF_get_score_n_hess <- function(object, debug = FALSE, use_O_n_sq = FALSE){
     if(ctrl$fix_seed)
       assign(".Random.seed", seed, envir = .GlobalEnv)
     cpp_res <- PF_get_score_n_hess_cpp(
-      fw_cloud = fw_cloud, Q = Q, F = Fmat,
+      fw_cloud = fw_cloud, Q = Q, Fmat = Fmat,
       risk_obj = static_args$risk_obj, ran_vars = static_args$X,
       fixed_terms = static_args$fixed_terms, tstart = static_args$tstart,
       tstop = static_args$tstop, fixed_params = fixed_effects,

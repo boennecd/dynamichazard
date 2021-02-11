@@ -54,7 +54,7 @@ public:
 // [[Rcpp::export]]
 std::vector<double>
   logLike_cpp(const arma::mat &X, const Rcpp::List &risk_obj,
-              const arma::mat &F, const arma::mat &Q_0,
+              const arma::mat &Fmat, const arma::mat &Q_0,
               arma::mat Q, const arma::mat &a_t_d_s,
               const arma::vec &tstart, const arma::vec &tstop,
               const arma::vec &fixed_effects_offsets,
@@ -125,7 +125,7 @@ std::vector<double>
     if(any_dynamic){
       a_t = a_t_d_s.col(t);
       arma::vec delta =
-        a_t.head(n_parems) - F.head_rows(n_parems) * a_t_d_s.col(t - 1);
+        a_t.head(n_parems) - Fmat.head_rows(n_parems) * a_t_d_s.col(t - 1);
 
       logLike -=  1.0/ 2.0 * (log_det_Q + log(bin_stop - bin_Start))
         + n_parems / 2.0 * (log(2.0) + log(M_PI));

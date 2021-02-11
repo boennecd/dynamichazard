@@ -96,7 +96,7 @@ test_that("PF_smooth gives same results", {
     X = t(X_Y$X), fixed_terms = t(X_Y$fixed_terms),
     tstart = X_Y$Y[, 1], tstop = X_Y$Y[, 2], R = diag(1, ncol(Q)), Q_0 = Q_0,
     fixed_params = numeric(), Q = Q, a_0 = a_0, Q_tilde = diag(1e-2, n_vars + 1),
-    risk_obj = risk_set, F = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
+    risk_obj = risk_set, Fmat = diag(1, n_vars + 1), n_max = 10, n_threads = 1,
     N_fw_n_bw = 20, N_smooth = 100, N_first = 100, N_smooth_final = 100,
     forward_backward_ESS_threshold = NULL, debug = 0, ftol_rel = 1e-8,
     method = "bootstrap_filter", covar_fac = -1,
@@ -110,6 +110,7 @@ test_that("PF_smooth gives same results", {
     max_T = 10, trace = 0, id = sims$res$id)
   fw_args <- c(fw_args, args[
     intersect(names(args), names(formals(PF_forward_filter.formula)))])
+  fw_args$Fmat <- NULL
 
   test_func <- function(test_file_name, update = do_update_tests){
     get_func <- quote(
@@ -452,23 +453,23 @@ test_that("compute_PF_summary_stats gives previous results", {
           # Test that multithreaded version gives the same
           sum_stats <- compute_PF_summary_stats(
             cloud_example, 1, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-            debug = FALSE, F = F.)
+            debug = FALSE, Fmat = F.)
           s2 <- compute_PF_summary_stats(
             cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-            debug = FALSE, F = F.)
+            debug = FALSE, Fmat = F.)
 
           expect_equal(sum_stats, s2)
 
           # we should get the same when we use F
           s3 <- compute_PF_summary_stats(
             cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-            debug = FALSE, F = F., do_use_F = TRUE)
+            debug = FALSE, Fmat = F., do_use_F = TRUE)
           expect_equal(sum_stats, s3)
 
           # should only compute the latter sets of elements only
           s4 <- compute_PF_summary_stats(
             cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-            debug = FALSE, F = F., do_compute_E_x = FALSE)
+            debug = FALSE, Fmat = F., do_compute_E_x = FALSE)
           expect_equal(lapply(sum_stats, "[[", "E_x_less_x_less_one_outers"),
                        lapply(s4       , "[[", "E_x_less_x_less_one_outers"))
           expect_true(all(do.call(rbind, lapply(s4, "[[", "E_xs")) == 0))
@@ -480,10 +481,10 @@ test_that("compute_PF_summary_stats gives previous results", {
               F1 %*% cp$forward_clouds[[i]]$states
           s5 <- compute_PF_summary_stats(
             cloud_example, 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-            debug = FALSE, F = F1, do_use_F = TRUE)
+            debug = FALSE, Fmat = F1, do_use_F = TRUE)
           s6 <- compute_PF_summary_stats(
             cp           , 4, a_0 = a_0, Q = Q, Q_0 = Q_0, R = R,
-            debug = FALSE, F = F., do_use_F = FALSE)
+            debug = FALSE, Fmat = F., do_use_F = FALSE)
           expect_equal(s5, s6)
 
           #####
@@ -1141,7 +1142,7 @@ test_that("'state_fw' gives correct results", {
 
   cpp_out <- check_state_fw(
     parent = parent, parent1 = parent1, child = chi, child1 = chi1,
-    F = F., Q = Q)
+    Fmat = F., Q = Q)
 
   require(mvtnorm)
   expect_equal(dmvnorm(chi, F. %*% parent, Q, TRUE), cpp_out$log_dens_func)
@@ -1177,7 +1178,7 @@ test_that("'state_bw' gives correct results", {
 
   cpp_out <- check_state_bw(
     parent = parent, parent1 = parent1, child = chi, child1 = chi1,
-    F = F., Q = Q)
+    Fmat = F., Q = Q)
 
   require(mvtnorm)
   expect_equal(dmvnorm(chi, F. %*% parent, Q, TRUE), cpp_out$log_dens_func)
@@ -1214,7 +1215,7 @@ test_that("'artificial_prior' gives correct results", {
   ts <- c(t1, t2, t3)
 
   cpp_out <- check_artificial_prior(
-    state = state, F = F., Q = Q, m_0 = m_0, Q_0 = Q, t1 = t1, t2 = t2,
+    state = state, Fmat = F., Q = Q, m_0 = m_0, Q_0 = Q, t1 = t1, t2 = t2,
     t3 = t3)
 
   for(i in seq_along(cpp_out)){
@@ -1290,7 +1291,7 @@ test_that("combining forward and backwards works", {
 
   for(nu in c(-1L, 1L, 4L)){
     cpp_out <- check_fw_bw_comb(
-      F = F., Q = Q, parent = p1, parent1 = p2,
+      Fmat = F., Q = Q, parent = p1, parent1 = p2,
       grand_child = c1, grand_child1 = c2, x = x, nu = nu)
 
     #####
@@ -1341,7 +1342,7 @@ test_that("combining prior and backwards works", {
   prio <- prior(F. = F., Q = Q, Q_0 = Q_0, mu_0 = m_0)
 
   cpp_out <- check_prior_bw_comb(
-    F = F., Q = Q, m_0 = m_0, Q_0 = Q_0, child = c1, child1 = c2,
+    Fmat = F., Q = Q, m_0 = m_0, Q_0 = Q_0, child = c1, child1 = c2,
     parent = p, t1 = t1, t2 = t2)
 
   for(t. in c(t2, t1)){
@@ -1398,7 +1399,7 @@ test_that("mode approximations give expected result", {
     cpp_out <- with(o, check_prior_bw_state_comb(
       X = X, is_event = y_use, offsets = offset, tstart = tstart,
       tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
-      F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+      Fmat = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
       t1 = t1, Q_xtra = Q_xtra))
 
     expect_equal(drop(cpp_out$mean1), o1$mu)
@@ -1428,7 +1429,7 @@ test_that("mode approximations give expected result", {
   cpp_out <- with(o, check_prior_bw_state_comb(
     X = X, is_event = y_use, offsets = offset, tstart = tstart,
     tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
-    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+    Fmat = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
     t1 = t1, Q_xtra = Q_xtra))
 
   expect_equal(drop(cpp_out$mean1), o1$mu)
@@ -1447,7 +1448,7 @@ test_that("mode approximations give expected result", {
   cpp_out <- with(o, check_prior_bw_state_comb(
     X = X, is_event = y_use, offsets = offset, tstart = tstart,
     tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
-    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+    Fmat = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
     t1 = t1, Q_xtra = Q_xtra, nu = nu))
 
   expect_equal(drop(cpp_out$mean1), o1$mu)
@@ -1467,7 +1468,7 @@ test_that("mode approximations give expected result", {
   cpp_out <- with(o, check_prior_bw_state_comb(
     X = X, is_event = y_use, offsets = offset, tstart = tstart,
     tstop = tstop, bin_start = bin_start, bin_stop = bin_stop, fam = fam,
-    F = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
+    Fmat = F., Q = Q, Q_0 = Q_0, m_0 = m_0, child = c1, child1 = c2, parent = p,
     t1 = t1, Q_xtra = Q_xtra, nu = nu, covar_fac = covar_fac))
 
   expect_equal(drop(cpp_out$mean1), o1$mu)
