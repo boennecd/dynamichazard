@@ -46,7 +46,6 @@ knitr::knit_hooks$set(output = function(x, options) {
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, 
                       dpi = 100, cache = FALSE, dev = "png")
 knitr::opts_knit$set(warning = FALSE, message = FALSE)
-options(digits = 3)
 
 knit_print.data.frame <- function(
   x, ..., row.names = FALSE, digits = getOption("digits")){
@@ -104,6 +103,18 @@ knit_print.matrix <- function(x, ..., digits = getOption("digits"), row.names = 
 # Introduction
 
 This vignette will show examples of how the `residuals` and `hatvalues` functions can be used for an object returned by `ddhazard`. See `vignette("ddhazard", "dynamichazard")` for details of the computations. Firstly, we will present all the tools that turned out to be useful for data sets. This is in the section called "First round of checks". Then we return to the data sets using the other methods. The latter part is included to illustrate how the function in this package work. This is in the section called "Second round of checks".
+
+## Has to be done
+
+CRAN requires that the `par` options and `options`
+are reset somewhere. Thus, we get the old settings and reset them at the end.
+
+```{r get_par_old}
+old_par <- par(no.readonly = TRUE)
+
+# set digits
+old_options <- options(digits = 3)
+```
 
 # First round of checks
 ## Data set 1: Prisoner recidivism
@@ -843,6 +854,14 @@ The functions used in this vignette that are no included in the package are defi
 ```
 
 ```{r stack_res, eval = FALSE}
+```
+
+## Has to be done
+We reset `par` and `options` here as per CRAN policy.
+
+```{r reset_par}
+par(old_par)
+options(old_options)
 ```
 
 

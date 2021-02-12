@@ -15,6 +15,9 @@
 #' @details
 #' Creates a plot of state variables or adds state variables to a plot with indices \code{cov_index}. Pointwise 1.96 std. confidence intervals are provided with the smoothed co-variance matrices from the fit.
 #'
+#' @return
+#' Returns \code{NULL} using \code{\link{invisible}}.
+#'
 #' @importFrom graphics matplot matpoints
 #'
 #' @examples
@@ -55,8 +58,8 @@ plot.ddhazard = function(x, xlab = "Time",
 
     n_plots <- length(cov_index)
     if(!add && do_alter_mfcol && n_plots > 1){
-      org_mfcol <- par()$mfcol
-      on.exit(par(mfcol = org_mfcol))
+      par_old <- par(no.readonly = TRUE)
+      on.exit(par(par_old))
       par(mfcol =
             if(n_plots <= 2) c(2,1) else
               if(n_plots <= 4) c(2,2) else
@@ -145,6 +148,9 @@ plot.ddhazard = function(x, xlab = "Time",
 #' @param pch,ylab,xlab arguments to override defaults set in the function.
 #' @param x_tick_loc,x_tick_mark \code{at} and \code{labels} arguments passed to \code{axis}.
 #' @param ... arguments passed to \code{\link{plot.default}}.
+#'
+#' @return
+#' Returns \code{NULL} using \code{\link{invisible}}.
 #'
 #' @importFrom graphics abline axis par plot points
 #' @export

@@ -286,7 +286,7 @@ test_that("bigglm and my c++ version yields similar results with offsets", {
   skip_if_not_installed("biglm")
 
   set.seed(195834)
-  sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
+  sims$res <- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
   form <- formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
   for(model in c("logit", "exponential")){
@@ -315,7 +315,7 @@ test_that("bigglm and my c++ version yields similar with weights", {
   ws <- ws * (nrow(sims$res) / sum(ws))
   sims$res <- cbind(sims$res, ws = ws)
 
-  sims$res <<- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
+  sims$res <- cbind(sims$res, offs = rexp(nrow(sims$res), rate = 1))
   form = formula(event ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + offset(offs))
 
   for(model in c("logit", "exponential")){

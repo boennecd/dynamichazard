@@ -59,7 +59,7 @@ The function is still under development so the output and API may change.
 }
 
 \examples{
-\dontrun{
+\donttest{
 library(dynamichazard)
 .lung <- lung[!is.na(lung$ph.ecog), ]
 # standardize
@@ -76,7 +76,7 @@ pf_fit <- PF_EM(
   control = PF_control(
     N_fw_n_bw = 250, N_first = 2000, N_smooth = 500, covar_fac = 1.1,
     nu = 6, n_max = 1000L, eps = 1e-4, averaging_start = 200L,
-    n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+    n_threads = 2))
 
 # compute score and observed information matrix
 comp_obj <- PF_get_score_n_hess(pf_fit)

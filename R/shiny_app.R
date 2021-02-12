@@ -9,6 +9,9 @@
 #' @details
 #' Runs a shiny app where you try different model specifications on simulated data.
 #'
+#' @return
+#' Returns the object from \code{shiny::shinyApp}.
+#'
 #' @examples
 #'\dontrun{
 #' dynamichazard::ddhazard_app()

@@ -11,6 +11,9 @@
 #' @param id the individual identifiers as in \code{\link{ddhazard}}.
 #' @param ... unused.
 #'
+#' @return
+#' Returns an ojbect of class \code{logLik}. See \code{\link{logLik}}.
+#'
 #' @examples
 #'library(dynamichazard)
 #'fit <- ddhazard(

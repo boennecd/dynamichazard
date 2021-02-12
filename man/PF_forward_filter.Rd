@@ -159,7 +159,7 @@ The function is still under development so the output and API may change.
 }
 
 \examples{
-\dontrun{
+\donttest{
 # head-and-neck cancer study data. See Efron, B. (1988) doi:10.2307/2288857
 is_censored <- c(
   6, 27, 34, 36, 42, 46, 48:51, 51 + c(15, 30:28, 33, 35:37, 39, 40, 42:45))
@@ -180,7 +180,7 @@ set.seed(61364778)
 ctrl <- PF_control(
   N_fw_n_bw = 500, N_smooth = 2500, N_first = 2000,
   n_max = 1, # set to one as an example
-  n_threads = max(parallel::detectCores(logical = FALSE), 1),
+  n_threads = 2,
   eps = .001, Q_tilde = as.matrix(.3^2), est_a_0 = FALSE)
 pf_fit <- suppressWarnings(
   PF_EM(

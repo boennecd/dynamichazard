@@ -141,7 +141,6 @@
 <<setup, include=FALSE>>=
 knitr::knit_hooks$set(default_opts = function(before, options, envir) {
     if (before){
-      options(digist = 4)
       par(
         mar = c(5, 4, 1, 1),
         bty = "n",
@@ -154,7 +153,6 @@ knitr::knit_hooks$set(default_opts = function(before, options, envir) {
     }
 })
 
-options(digist = 4)
 knitr::opts_chunk$set(
   echo = TRUE, warning = FALSE, message = FALSE, dpi = 126, fig.height=3.5, fig.width = 6)
 knitr::opts_knit$set(warning = FALSE, message = FALSE,  default_opts = TRUE)
@@ -164,11 +162,13 @@ knitr::opts_knit$set(warning = FALSE, message = FALSE,  default_opts = TRUE)
 \section*{Introduction}\setcounter{section}{1}
 
 << echo=FALSE>>=
-tryCatch({
+try_val <- try({
   current_sha <- system("git rev-parse --short HEAD", intern = TRUE)
   if(grepl("^fatal: Not a git repository", current_sha))
     current_sha <- ""
-}, error = function(...){ current_sha <<- "" })
+}, silent = TRUE)
+if(inherits(try_val, "try-error"))
+  current_sha <- ""
 
 current_version <- paste0(
   "boennecd/dynamichazard", if(nchar(current_sha) > 0) "@" else "",
@@ -182,8 +182,6 @@ You can also get the latest version on CRAN by calling:
 << eval=FALSE>>=
 install.packages("dynamichazard")
 @
-
-
 
 \subsection{Why and when to use the ddhazard}
 The \code{ddhazard} function is intended for situation where you have a dynamic binary regression model or time-to-event model with time-varying coefficients. The advantage of the state spaces methods used here is that you can extrapolate to time periods beyond the data used in estimation. An example is forecasting firm failures given the firms present accounting data. The task is to use the present data to estimate a model and forecast the likelihood of default for the firms in the following year.
@@ -213,7 +211,17 @@ from the \code{boot} package. \emph{ddhazard Diagnostics} illustrates how the
 \code{residuals} and \code{hatvalues} functions can be used to check the model
 fit.
 
+\subsection{Has to be done}
 
+CRAN requires that the \code{par} options and \code{options}
+are reset somewhere. Thus, we get the old settings and reset them at the end.
+
+<<get_par_old>>=
+old_par <- par(no.readonly = TRUE)
+
+# set digits
+old_options <- options(digist = 4)
+@
 
 \subsection{Dynamic binary regression}
 We will introduce the setup and discrete model in the following paragraphs. We are observing individual $1,2,\dots$ who each has an \emph{event} at time $T_1,T_2,\dots$. We will also refer to an event as \emph{death} as is typical in survival analysis. In addition we see covariate vectors $\vec{x}_{i1},\vec{x}_{i2},\dots$ for each individual $i$. Each covariate vector $\vec{x}_{ij}$ is valid in a period $(t_{i,j-1},t_{ij}]$. Thus, a data frame may look as follows:
@@ -1484,5 +1492,13 @@ where $\mat{X}_d$ is the design matrix in the final interval. This is easy to co
 
 \bibliographystyle{plainnat}
 \bibliography{ddbib}
+
+\subsection{Has to be done}
+We reset \code{par} and \code{options} here as per CRAN policy.
+
+<<reset_par>>=
+par(old_par)
+options(old_options)
+@
 
 \end{document}

@@ -27,8 +27,8 @@ The particle filter and smoother methods can estimate more general models then t
 You can install dynamichazard from github with:
 
 ```R
-# install.packages("devtools")
-devtools::install_github("boennecd/dynamichazard")
+# install.packages("remotes")
+remotes::install_github("boennecd/dynamichazard")
 ```
 
 You can also download the package from CRAN by calling:

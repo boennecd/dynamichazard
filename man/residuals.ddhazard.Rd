@@ -20,6 +20,10 @@
 
 \item{...}{not used.}
 }
+\value{
+Returns a list as described in the  Pearson and raw residuals section and
+in the State space errors section.
+}
 \description{
 Residuals method for the result of a \code{\link{ddhazard}} call.
 }

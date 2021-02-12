@@ -605,7 +605,10 @@ server <- function(input, output) {
                        function(x)
                          rgb(x[1], x[2], x[3], alpha=.1))
 
+    old_par <- par(no.readonly = TRUE)
     par(mai = rep(1, 4))
+    on.exit(par(old_par))
+
     x <- seq_len(dim(sims$beta)[1]) - 1
     matplot(x, sims$beta, lty = 1, type = "l",
             ylim = range(sims$beta, fit$state_vecs, fit$fixed_effects),

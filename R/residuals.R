@@ -21,6 +21,10 @@
 #' \item{\code{Covariances}}{3D array with the smoothed co-variance matrix for each set of the state space errors.}
 #'}
 #'
+#' @return
+#' Returns a list as described in the  Pearson and raw residuals section and
+#' in the State space errors section.
+#'
 #' @examples
 #'library(dynamichazard)
 #'fit <- ddhazard(

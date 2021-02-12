@@ -1,6 +1,7 @@
 context("Testing cpp sampling functions")
 
 test_that("sample_indices give the same as R with same seed", {
+  skip_on_cran()
   probs <- 1:20 / sum(1:20)
 
   if(!exists(".Random.seed"))

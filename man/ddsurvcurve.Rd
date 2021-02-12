@@ -97,7 +97,7 @@ f1 <- ddhazard(
 
 # predict with default which is all covariates set to zero
 ddcurve <- ddsurvcurve(f1)
-par(mar = c(4.5, 4, .5, .5))
+par_old <- par(mar = c(4.5, 4, .5, .5))
 plot(ddcurve, col = "DarkBlue", lwd = 2)
 
 # compare with cox model
@@ -170,6 +170,7 @@ lines(survfit(Surv(stop, event) ~ 1, head_neck_cancer, subset = group == 1),
       col = "DarkBlue")
 lines(survfit(Surv(stop, event) ~ 1, head_neck_cancer, subset = group == 2),
       col = "DarkOrange")
+par(par_old) # As per CRAN policy, the settings are reset
 
 }
 \seealso{

@@ -76,7 +76,7 @@ PF_effective_sample_size <- function(object){
 #' The function is still under development so the output and API may change.
 #'
 #' @examples
-#'\dontrun{
+#' \donttest{
 #'#####
 #'# Fit model with lung data set from survival
 #'# Warning: long-ish computation time
@@ -94,9 +94,10 @@ PF_effective_sample_size <- function(object){
 #'  Q_0 = diag(1, 2), Q = diag(.5^2, 2),
 #'  max_T = 800,
 #'  control = PF_control(
-#'     N_fw_n_bw = 500, N_first = 2500, N_smooth = 5000,
+#'     # these number should be larger! Small for CRAN checks
+#'     N_fw_n_bw = 100L, N_first = 250L, N_smooth = 100L,
 #'     n_max = 50, eps = .001, Q_tilde = diag(.2^2, 2), est_a_0 = FALSE,
-#'     n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+#'     n_threads = 2))
 #'
 #'# Plot state vector estimates
 #'plot(pf_fit, cov_index = 1)
@@ -105,7 +106,7 @@ PF_effective_sample_size <- function(object){
 #'# Plot log-likelihood
 #'plot(pf_fit$log_likes)
 #'}
-#'\dontrun{
+#' \donttest{
 #'######
 #'# example with fixed intercept
 #'
@@ -144,11 +145,12 @@ PF_effective_sample_size <- function(object){
 #'   by = 100, id = pbc2$id,
 #'   model = "exponential", max_T = 3600,
 #'   control = PF_control(
-#'     N_fw_n_bw = 500, N_smooth = 2500, N_first = 1000, eps = 1e-3,
+#'     # these number should be larger! Small for CRAN checks
+#'     N_fw_n_bw = 100, N_smooth = 250, N_first = 100, eps = 1e-3,
 #'     method = "AUX_normal_approx_w_cloud_mean", est_a_0 = FALSE,
 #'     Q_tilde = as.matrix(.1^2),
 #'     n_max = 25, # just take a few iterations as an example
-#'     n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+#'     n_threads = 2))
 #'
 #'# compare results
 #'plot(ddfit)
@@ -157,7 +159,7 @@ PF_effective_sample_size <- function(object){
 #'sqrt(pf_fit$Q)
 #'rbind(ddfit$fixed_effects, pf_fit$fixed_effects)
 #'}
-#'\dontrun{
+#' \donttest{
 #' #####
 #' # simulation example with `random` and `fixed` argument and a restricted
 #' # model
@@ -264,35 +266,35 @@ PF_effective_sample_size <- function(object){
 #'     N_fw_n_bw = 100L, N_smooth = 100L, N_first = 500L,
 #'     method = "AUX_normal_approx_w_cloud_mean",
 #'     nu = 5L, # sample from multivariate t-distribution
-#'     n_max = 100L,  averaging_start = 50L,
+#'     n_max = 60L,  averaging_start = 50L,
 #'     smoother = "Fearnhead_O_N", eps = 1e-4, covar_fac = 1.2,
-#'     n_threads = 4L # depends on your cpu(s)
+#'     n_threads = 2L # depends on your cpu(s)
 #'   ),
 #'   trace = 1L)
 #' plot(fit$log_likes) # log-likelihood approximation at each iterations
 #'
-#' # take more iterations with more particles
-#' cl <- fit$call
-#' ctrl <- cl[["control"]]
-#' ctrl[c("N_fw_n_bw", "N_smooth", "N_first", "n_max",
-#'        "averaging_start")] <- list(500L, 2000L, 5000L, 200L, 30L)
-#' cl[["control"]] <- ctrl
-#' cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
-#' fit_extra <- eval(cl)
+#' # you can take more iterations by uncommenting the following
+#' # cl <- fit$call
+#' # ctrl <- cl[["control"]]
+#' # ctrl[c("N_fw_n_bw", "N_smooth", "N_first", "n_max",
+#' #        "averaging_start")] <- list(500L, 2000L, 5000L, 200L, 30L)
+#' # cl[["control"]] <- ctrl
+#' # cl[c("phi", "psi", "theta")] <- list(fit$phi, fit$psi, fit$theta)
+#' # fit_extra <- eval(cl)
 #'
-#' plot(fit_extra$log_likes) # log-likelihood approximation at each iteration
+#' plot(fit$log_likes) # log-likelihood approximation at each iteration
 #'
 #' # check estimates
-#' sqrt(diag(fit_extra$Q))
+#' sqrt(diag(fit$Q))
 #' sqrt(diag(Q))
-#' cov2cor(fit_extra$Q)
+#' cov2cor(fit$Q)
 #' cov2cor(Q)
-#' fit_extra$F
+#' fit$F
 #' F.
 #'
 #' # plot predicted state variables
 #' for(i in 1:p){
-#'   plot(fit_extra, cov_index = i)
+#'   plot(fit, cov_index = i)
 #'   abline(h = 0, lty = 2)
 #'   lines(1:nrow(alphas) - 1, alphas[, i] - beta[i], lty = 3)
 #' }
@@ -553,7 +555,7 @@ PF_EM <- function(
 #' The function is still under development so the output and API may change.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # head-and-neck cancer study data. See Efron, B. (1988) doi:10.2307/2288857
 #' is_censored <- c(
 #'   6, 27, 34, 36, 42, 46, 48:51, 51 + c(15, 30:28, 33, 35:37, 39, 40, 42:45))
@@ -574,7 +576,7 @@ PF_EM <- function(
 #' ctrl <- PF_control(
 #'   N_fw_n_bw = 500, N_smooth = 2500, N_first = 2000,
 #'   n_max = 1, # set to one as an example
-#'   n_threads = max(parallel::detectCores(logical = FALSE), 1),
+#'   n_threads = 2,
 #'   eps = .001, Q_tilde = as.matrix(.3^2), est_a_0 = FALSE)
 #' pf_fit <- suppressWarnings(
 #'   PF_EM(
@@ -726,12 +728,12 @@ PF_forward_filter.data.frame <- function(
     # set the seed
     old_seed <- .GlobalEnv$.Random.seed
     # to make sure the user has the same `rng.kind`
-    on.exit(.GlobalEnv$.Random.seed <- old_seed)
+    on.exit(assign(".Random.seed", old_seed, envir = .GlobalEnv))
 
     stopifnot(length(seed) > 1) # make sure user did not use seed as in
     # `set.seed`
     if(control$fix_seed)
-      .GlobalEnv$.Random.seed <- seed
+      assign(".Random.seed", seed, envir = .GlobalEnv)
   }
 
   out <- particle_filter(
@@ -1632,7 +1634,7 @@ get_cloud_quantiles.PF_clouds <- function(
 #' \code{FALSE}.}
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(dynamichazard)
 #' .lung <- lung[!is.na(lung$ph.ecog), ]
 #' # standardize
@@ -1649,7 +1651,7 @@ get_cloud_quantiles.PF_clouds <- function(
 #'   control = PF_control(
 #'     N_fw_n_bw = 250, N_first = 2000, N_smooth = 500, covar_fac = 1.1,
 #'     nu = 6, n_max = 1000L, eps = 1e-4, averaging_start = 200L,
-#'     n_threads = max(parallel::detectCores(logical = FALSE), 1)))
+#'     n_threads = 2))
 #'
 #' # compute score and observed information matrix
 #' comp_obj <- PF_get_score_n_hess(pf_fit)

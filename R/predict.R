@@ -46,6 +46,9 @@
 #' \item{\code{istop}}{numeric vector with stop time for each element in \code{fits}.}
 #'}
 #'
+#' @return
+#' Returns a list with elements as described in the Term and Response sections.
+#'
 #' @examples
 #' fit <- ddhazard(
 #'  Surv(time, status == 2) ~ log(bili), pbc, id = pbc$id, max_T = 3600,
@@ -375,7 +378,7 @@ predict_response <- function(
 #'
 #' # predict with default which is all covariates set to zero
 #' ddcurve <- ddsurvcurve(f1)
-#' par(mar = c(4.5, 4, .5, .5))
+#' par_old <- par(mar = c(4.5, 4, .5, .5))
 #' plot(ddcurve, col = "DarkBlue", lwd = 2)
 #'
 #' # compare with cox model
@@ -448,6 +451,7 @@ predict_response <- function(
 #'       col = "DarkBlue")
 #' lines(survfit(Surv(stop, event) ~ 1, head_neck_cancer, subset = group == 2),
 #'       col = "DarkOrange")
+#' par(par_old) # As per CRAN policy, the settings are reset
 #'
 #' @export
 #' @importFrom utils head

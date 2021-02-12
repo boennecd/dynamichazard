@@ -24,8 +24,8 @@ Installation
 You can install dynamichazard from github with:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("boennecd/dynamichazard")
+# install.packages("remotes")
+remotes::install_github("boennecd/dynamichazard")
 ```
 
 You can also download the package from CRAN by calling:

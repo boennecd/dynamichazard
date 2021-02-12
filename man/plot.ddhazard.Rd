@@ -41,6 +41,9 @@
 
 \item{...}{arguments passed to \code{\link{plot.default}} or \code{lines} depending on the value of \code{add}.}
 }
+\value{
+Returns \code{NULL} using \code{\link{invisible}}.
+}
 \description{
 Plot of estimated state space variables from a \code{\link{ddhazard}} fit.
 }

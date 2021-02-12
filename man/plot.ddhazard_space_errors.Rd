@@ -35,6 +35,9 @@
 
 \item{...}{arguments passed to \code{\link{plot.default}}.}
 }
+\value{
+Returns \code{NULL} using \code{\link{invisible}}.
+}
 \description{
 Plot function for state space errors from \code{\link{ddhazard}} fit.
 }

@@ -16,19 +16,23 @@ ddFixed_intercept(random_intercept = FALSE)
 should be included at as an additional term. Only relevant in stationary
 models. See the \code{type} argument in \code{\link{PF_EM}}.}
 }
+\value{
+Returns the passed object.
+}
 \description{
 Functions used in formula of \code{\link{ddhazard}} for time-invariant effects. \code{ddFixed_intercept} is only used for the intercept.
 }
 \examples{
 # we can get a time-invariant effect of `x1` by
-\dontrun{
-ddhazard(Surv(stop, event) ~ ddFixed(x1), data)
-}
+set.seed(1)
+dat <- data.frame(stop = 1:20, event = rep(c(TRUE, FALSE), 10L), x1 = rnorm(20))
+ddhazard(Surv(stop, event) ~ ddFixed(x1), dat,
+         Q_0 = diag(1), by = 1, Q = diag(1))
 
 # all of the calls below will yield the same result with a time-invariant
 # intercept:
-\dontrun{
-ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, data)
-ddhazard(Surv(stop, event) ~ -1 + ddFixed_intercept() + x1, data)
-}
+ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, dat,
+         Q_0 = diag(1), by = 1, Q = diag(1))
+ddhazard(Surv(stop, event) ~ -1 + ddFixed_intercept() + x1, dat,
+         Q_0 = diag(1), by = 1, Q = diag(1))
 }

@@ -15,6 +15,9 @@
 
 \item{...}{not used.}
 }
+\value{
+Returns \code{x} using \code{\link{invisible}}.
+}
 \description{
 Arguments have the same effects as for an object from a \code{\link{boot}} call. See \code{\link[=print.boot]{print}}.
 }

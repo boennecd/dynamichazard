@@ -187,18 +187,22 @@ get_design_matrix <- function(
 #'
 #' @param object expression that would be used in formula. E.g. \code{x} or \code{poly(x, degree = 3)}.
 #'
-#'@examples
-#'# we can get a time-invariant effect of `x1` by
-#'\dontrun{
-#' ddhazard(Surv(stop, event) ~ ddFixed(x1), data)
-#'}
+#' @return
+#' Returns the passed object.
 #'
-#'# all of the calls below will yield the same result with a time-invariant
-#'# intercept:
-#'\dontrun{
-#' ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, data)
-#' ddhazard(Surv(stop, event) ~ -1 + ddFixed_intercept() + x1, data)
-#'}
+#' @examples
+#' # we can get a time-invariant effect of `x1` by
+#' set.seed(1)
+#' dat <- data.frame(stop = 1:20, event = rep(c(TRUE, FALSE), 10L), x1 = rnorm(20))
+#' ddhazard(Surv(stop, event) ~ ddFixed(x1), dat,
+#'          Q_0 = diag(1), by = 1, Q = diag(1))
+#'
+#' # all of the calls below will yield the same result with a time-invariant
+#' # intercept:
+#' ddhazard(Surv(stop, event) ~ ddFixed_intercept() + x1, dat,
+#'          Q_0 = diag(1), by = 1, Q = diag(1))
+#' ddhazard(Surv(stop, event) ~ -1 + ddFixed_intercept() + x1, dat,
+#'          Q_0 = diag(1), by = 1, Q = diag(1))
 #' @export
 ddFixed <- function(object){
   if(all(object == 1)){

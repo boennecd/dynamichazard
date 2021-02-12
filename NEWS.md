@@ -1,6 +1,7 @@
 # dynamichazard 0.6.8
 * fix issue due to changes in speedglm.
 * add documentation and fix other issues raised by CRAN.
+* `getOption("ddhazard_max_threads")` defaults to one.
 
 # dynamichazard 0.6.7
 * solve issue because of changes in `all.equal`.

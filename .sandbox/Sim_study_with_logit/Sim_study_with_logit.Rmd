@@ -40,24 +40,11 @@ All method use the logistic link function. We will do three runs of experiments 
 
 where correct or incorrect binning intervals refers to whether or not we bin at the same time where the coefficient are simulated to change. For example, we bin correctly where we simulate the coefficients to change at time $1,2,\dots,d$ and we estimate the coefficient at time $1,2,\dots,d$. The models will be compared in terms of Brier score, median absolute residuals and standard deviation of the absolute residuals. All metrics will be reported on out-sample data or out-of-time data. All plots will have true coefficients as continuous lines while dashed lines are estimates.
 
-You can install the version of the library used to make this vignettes from github with the `devtools` library as follows:
-
-```{r echo=FALSE}
-current_sha <- httr::content(
-  httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
-  )$object$sha
-
-stopifnot(length(current_sha) > 0 && class(current_sha) == "character")
-
-current_version <- paste0("boennecd/dynamichazard@", current_sha)
-```
-
-```{r}
-current_version # The string to pass devtools::install_github
-```
+You can install the version of the library used to make this vignettes from github with the `remotes` library as follows:
 
 ```{r eval=FALSE}
-devtools::install_github(current_version)
+# install.packages("remotes")
+remotes::install_github("boennecd/dynamichazard")
 ```
 
 You can also get the latest version on CRAN by calling:

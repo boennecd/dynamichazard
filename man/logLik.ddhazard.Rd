@@ -15,6 +15,9 @@
 
 \item{...}{unused.}
 }
+\value{
+Returns an ojbect of class \code{logLik}. See \code{\link{logLik}}.
+}
 \description{
 Computes the log likelihood of (a potentially new) data set given the estimated:
 \deqn{E_{\theta}(\alpha_1 | y_{1:d}), E_{\theta}(\alpha_{2} | y_{1:d}), ..., E_{\theta}(\alpha_{d} | y_{1:d})}

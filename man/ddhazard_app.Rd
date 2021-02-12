@@ -11,6 +11,9 @@ ddhazard_app(quietly = FALSE, ...)
 
 \item{...}{starting values for the shiny app.}
 }
+\value{
+Returns the object from \code{shiny::shinyApp}.
+}
 \description{
 \code{ddhazard_app} runs a shiny app with demonstration of models.
 }

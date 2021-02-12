@@ -23,7 +23,7 @@ if(getRversion() >= "2.15.1")
 #'
 #'
 #' @examples
-#'\dontrun{
+#'\donttest{
 #'library(dynamichazard)
 #'set.seed(56219373)
 #'fit <- ddhazard(

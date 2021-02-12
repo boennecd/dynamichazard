@@ -35,8 +35,6 @@ knitr::knit_hooks$set(
         cex = .75)
     }})
 
-options(digits = 3, width = 80, warn = -1)
-
 knitr::opts_chunk$set(
   echo = TRUE, mySettings=TRUE, fig.height=3.5, fig.width = 6,
   warning = FALSE, message = FALSE, plot_2x1 = FALSE)
@@ -52,32 +50,29 @@ In this vignette, we compare the dynamic logistic model in `dynamichazard` with 
 
 The note is structured as follows: First, we cover the `pbc2` data set. Then we estimate two static (non-dynamic) logistic regression models using `glm`. This is followed by a fit using a Generalized Additive model with the `gam` function in the `mgcv` package. Next, we will estimate a cox-model with time varying parameters using the `timecox` function in the `timereg` package. Finally, we will end by illustrating the methods in this package for time varying parameters in a logistic regression.
 
-You can install the version of the library used to make this vignettes from github with the `devtools` library as follows:
-
-```{r echo=FALSE}
-tryCatch({
-  current_sha <- paste0("@", httr::content(
-    httr::GET("https://api.github.com/repos/boennecd/dynamichazard/git/refs/heads/master")
-    )$object$sha)
-}, error = function(...){ current_sha <<- "" })
-
-stopifnot(length(current_sha) > 0 && class(current_sha) == "character")
-
-current_version <- paste0("boennecd/dynamichazard@", current_sha)
-```
-
-```{r}
-current_version # The string you need to pass devtools::install_github
-```
+You can install the version of the library used to make this vignettes from github with the `remotes` library as follows:
 
 ```{r eval=FALSE}
-devtools::install_github(current_version)
+# install.packages("remotes")
+remotes::install_github("boennecd/dynamichazard")
 ```
 
 You can also get the latest version on CRAN by calling:
 
 ```{r eval=FALSE}
 install.packages("dynamichazard")
+```
+
+## Has to be done
+
+CRAN requires that the `par` options and `options`
+are reset somewhere. Thus, we get the old settings and reset them at the end.
+
+```{r get_par_old}
+old_par <- par(no.readonly = TRUE)
+
+# set options
+old_options <- options(digits = 3, width = 80)
 ```
 
 # The pbc data set
@@ -534,6 +529,12 @@ Question: Is this note too long now or should I also show how to compute residua
 # Summary
 We have estimated a model using Generalized additive models with the `mgcv` package and a time-varying Cox model with the `timereg` package. Further, we have illustrated how the `ddhazard` function in the `dynamichazard` package can be used. All the fits have been comparable with the Generalized Additive model.
 
+## Has to be done
+We reset `options` here as per CRAN policy.
+
+```{r reset_par}
+par(old_par)
+options(old_options)
+```
+
 # References
-
-
