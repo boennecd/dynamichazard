@@ -118,6 +118,8 @@ plot(fit)
 Fahrmeir, Ludwig. \emph{Dynamic modelling and penalized likelihood estimation for discrete time survival data}. Biometrika 81.2 (1994): 317-330.
 
 Durbin, James, and Siem Jan Koopman. \emph{Time series analysis by state space methods}. No. 38. Oxford University Press, 2012.
+
+Christoffersen, Benjamin. \emph{dynamichazard: Dynamic Hazard Models Using State Space Models}. Journal of Statistical Software 99.7 (2021): 1-38.
 }
 \seealso{
 \code{\link[=plot.ddhazard]{plot}}, \code{\link[=residuals.ddhazard]{residuals}}, \code{\link[=predict.ddhazard]{predict}}, \code{\link{static_glm}}, \code{\link{ddhazard_app}}, \code{\link{ddhazard_boot}}

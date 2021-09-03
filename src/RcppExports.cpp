@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // PF_smooth
 Rcpp::List PF_smooth(const int n_fixed_terms_in_state_vec, arma::mat& X, arma::mat& fixed_terms, const arma::vec& tstart, const arma::vec& tstop, const arma::colvec& a_0, const arma::mat& R, arma::mat& Q_0, arma::mat& Q, const arma::mat Q_tilde, const Rcpp::List& risk_obj, const arma::mat& Fmat, const int n_max, const int n_threads, const arma::vec& fixed_params, const int N_fw_n_bw, const int N_smooth, const int N_smooth_final, const double covar_fac, const double ftol_rel, Rcpp::Nullable<Rcpp::NumericVector> forward_backward_ESS_threshold, const int debug, const int N_first, std::string type, const int nu, /* non-common arguments */     const std::string method, const std::string smoother, const std::string model);
 RcppExport SEXP _dynamichazard_PF_smooth(SEXP n_fixed_terms_in_state_vecSEXP, SEXP XSEXP, SEXP fixed_termsSEXP, SEXP tstartSEXP, SEXP tstopSEXP, SEXP a_0SEXP, SEXP RSEXP, SEXP Q_0SEXP, SEXP QSEXP, SEXP Q_tildeSEXP, SEXP risk_objSEXP, SEXP FmatSEXP, SEXP n_maxSEXP, SEXP n_threadsSEXP, SEXP fixed_paramsSEXP, SEXP N_fw_n_bwSEXP, SEXP N_smoothSEXP, SEXP N_smooth_finalSEXP, SEXP covar_facSEXP, SEXP ftol_relSEXP, SEXP forward_backward_ESS_thresholdSEXP, SEXP debugSEXP, SEXP N_firstSEXP, SEXP typeSEXP, SEXP nuSEXP, SEXP methodSEXP, SEXP smootherSEXP, SEXP modelSEXP) {

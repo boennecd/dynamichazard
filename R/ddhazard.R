@@ -71,6 +71,8 @@ if(getRversion() >= "2.15.1")
 #'
 #' Durbin, James, and Siem Jan Koopman. \emph{Time series analysis by state space methods}. No. 38. Oxford University Press, 2012.
 #'
+#' Christoffersen, Benjamin. \emph{dynamichazard: Dynamic Hazard Models Using State Space Models}. Journal of Statistical Software 99.7 (2021): 1-38.
+#'
 #' @examples
 #'# example with first order model
 #'library(dynamichazard)

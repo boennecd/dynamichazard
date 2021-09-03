@@ -1,0 +1,14 @@
+bibentry(bibtype = "Article",
+  title        = "{dynamichazard}: Dynamic Hazard Models Using State Space Models",
+  author       = person(given = "Benjamin",
+                        family = "Christoffersen",
+                        email = "benjamin.christoffersen@ki.se"),
+  journal      = "Journal of Statistical Software",
+  year         = "2021",
+  volume       = "99",
+  number       = "7",
+  pages        = "1--38",
+  doi          = "10.18637/jss.v099.i07",
+  header       = "To cite dynamichazard in publications use:"
+)
+
