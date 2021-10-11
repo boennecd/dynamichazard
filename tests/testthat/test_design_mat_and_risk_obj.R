@@ -580,7 +580,7 @@ test_that("Permutating gives the data frame and risk set permutated", {
       expect_equal(nrow(suppressMessages(plyr::match_df(X_Y_org[[i]], X_Y[[i]]))),
         nrow(X_Y_org[[i]]))
   }
-  expect_true(sum(is.na(match(X_Y_org$Y, X_Y$Y))) == 0)
+  expect_true(sum(is.na(match(unclass(X_Y_org$Y), unclass(X_Y$Y)))) == 0)
 
   expect_true(setequal(w_org, w))
   expect_true(any(w_org != w))
@@ -641,7 +641,7 @@ test_that("Ordering gives the data frame and risk set orded", {
                    nrow(X_Y_org[[i]]))
     }
   }
-  expect_true(sum(is.na(match(X_Y_org$Y, X_Y$Y))) == 0)
+  expect_true(sum(is.na(match(unclass(X_Y_org$Y), unclass(X_Y$Y)))) == 0)
 
   expect_true(setequal(w_org, w))
   expect_true(any(w_org != w))

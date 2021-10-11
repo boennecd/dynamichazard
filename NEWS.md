@@ -1,3 +1,9 @@
+# dynamichazard 1.0.1
+* fix issues with `match` after changes in R devel.
+
+# dynamichazard 1.0.0
+* add citation information before JSS article is published.
+
 # dynamichazard 0.6.8
 * fix issue due to changes in speedglm.
 * add documentation and fix other issues raised by CRAN.
