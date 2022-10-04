@@ -1,3 +1,6 @@
+# dynamichazard 1.0.2
+* fix issues due to a new version of RcppArmadillo (0.11.4.0.1).
+
 # dynamichazard 1.0.1
 * fix issues with `match` after changes in R devel.
 

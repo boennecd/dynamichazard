@@ -63,7 +63,6 @@ Rcpp::List ddhazard_fit_cpp(
 
   // M-stp pointers for convenience
   arma::mat *B, *V_less, *V;
-  arma::vec a_less, a;
 
   const arma::ivec is_event_in_bin = Rcpp::as<arma::ivec>(risk_obj["is_event_in"]);
 
@@ -221,9 +220,9 @@ Rcpp::List ddhazard_fit_cpp(
 
         V_less = &p_data->V_t_t_s.slice(t - 1);
         V = &p_data->V_t_t_s.slice(t);
-        a_less = p_data->a_t_t_s.unsafe_col(t - 1);
-        a = p_data->a_t_t_s.unsafe_col(t);
-        arma::vec a_dt(a - p_data->state_trans->map(a_less).sv);
+        arma::vec a_dt
+            (p_data->a_t_t_s.col(t) -
+              p_data->state_trans->map(p_data->a_t_t_s.col(t - 1)).sv);
 
         if(M_step_formulation == "Fahrmier94"){
           B = &p_data->B_s.slice(t - 1);
