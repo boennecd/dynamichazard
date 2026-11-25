@@ -3,6 +3,7 @@ title: "ddhazard Diagnostics"
 output: 
   pdf_document: 
     fig_caption: yes
+    fig_crop: false
 date: "`r Sys.Date()`"
 author: "Benjamin Christoffersen"
 header-includes:

@@ -1,87 +1,42 @@
-dynamichazard
-=============
+# dynamichazard
 
-[![R-CMD-check](https://github.com/boennecd/dynamichazard/workflows/R-CMD-check/badge.svg)](https://github.com/boennecd/dynamichazard/actions)
-[![](https://www.r-pkg.org/badges/version/dynamichazard)](https://www.r-pkg.org/badges/version/dynamichazard)
-[![CRAN RStudio mirror
-downloads](http://cranlogs.r-pkg.org/badges/dynamichazard)](http://cran.rstudio.com/web/packages/dynamichazard/index.html)
+[![R-CMD-check](https://github.com/boennecd/dynamichazard/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/boennecd/dynamichazard/actions/workflows/R-CMD-check.yaml) [![CRAN version](https://www.r-pkg.org/badges/version/dynamichazard)](https://CRAN.R-project.org/package=dynamichazard) [![CRAN downloads](https://cranlogs.r-pkg.org/badges/last-month/dynamichazard)](https://cranlogs.r-pkg.org/)
 
-The goal of dynamichazard is to estimate time-varying effects in
-survival analysis. The time-varying effects are estimated with state
-space models where the coefficients follow a given order random walk.
-The advantageous of using state space models is that you can extrapolate
-beyond the last observed time period. For more details, see the ddhazard
-vignette at
-<a href="https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf" class="uri">https://cran.r-project.org/web/packages/dynamichazard/vignettes/ddhazard.pdf</a>.
+The `dynamichazard` package estimates time-varying effects in survival analysis. Its state space models use random walks for the coefficients and can extrapolate beyond the last observation period. The particle filter and smoother can fit more general state space models. See the [examples](examples/) directory for additional models.
 
-The particle filter and smoother methods can estimate more general
-models then the random walk model. See the [/examples](/examples)
-directory for some examples.
+## Installation
 
-Installation
-------------
-
-You can install dynamichazard from github with:
+Install `dynamichazard` from GitHub.
 
 ``` r
-# install.packages("remotes")
-remotes::install_github("boennecd/dynamichazard")
+# install.packages(pkgs = "remotes")
+remotes::install_github(repo = "boennecd/dynamichazard")
 ```
 
-You can also download the package from CRAN by calling:
+When a version is available on CRAN, you can install it with `install.packages(pkgs = "dynamichazard")`.
+
+After installation, use `browseVignettes(package = "dynamichazard")` to open the package vignettes.
+
+## Example - ddhazard
+
+Install `JM` to run the examples. The `aids` data set from `JM` records a randomized trial of two drugs for patients with HIV. The data record time to death or right censoring. This example keeps one row per patient and omits the longitudinal `CD4` measurements.
+
+- `AZT` indicates whether the patient entered the trial because of intolerance to zidovudine or because zidovudine had failed.
+- `prevOI` indicates whether the patient entered the trial with an AIDS diagnosis or two CD4 counts of 300 or fewer.
+- `drug` gives the assigned drug, `ddC` or `ddI`.
+- `gender` gives the recorded gender.
 
 ``` r
-install.packages("dynamichazard")
-```
-
-Example - ddhazard
-------------------
-
-I will use the `aids` data set from the `JMbayes` package. The data set
-is from a a randomized clinical trial between two drugs for HIV or aids
-patients. The event is when the patient die. Patient are right censored
-at the end of the study. The data set is longitudinal/panel format with
-rows for patient. Though, the only longitudinal variable is the `CD4`
-count (T-cells count) which is presumably affected by the drug. Thus, I
-will not use it in the model. The other the other columns of interest
-are:
-
--   `AZT` is one of the two enrollment criteria. It indicates whether
-    the patient was enrolled due to intolerance to the drug zidovudine
-    or whether the drug failed prior to the study start.
--   `prevOI` is the other enrollment criteria. Patients are enrolled
-    either due AIDS diagnosis or two CD4 counts of 300 or fewer. The
-    variable indicates which is the case.
--   `drug` is either `ddC` or `ddI` depending on which of the two drugs
-    the patient is randomly assigned to.
--   `gender`.
-
-The analysis is given below with comments:
-
-``` r
-library(dynamichazard)
+library(package = dynamichazard)
 #> Loading required package: survival
-library(JMbayes) # Contain the aids data set
-#> Loading required package: nlme
-#> Loading required package: doParallel
-#> Loading required package: foreach
-#> Loading required package: iterators
-#> Loading required package: parallel
-#> Loading required package: rstan
-#> Loading required package: StanHeaders
-#> Loading required package: ggplot2
-#> rstan (Version 2.21.2, GitRev: 2e1f913d3ca3)
-#> For execution on a local, multicore CPU with excess RAM we recommend calling
-#> options(mc.cores = parallel::detectCores()).
-#> To avoid recompilation of unchanged Stan programs, we recommend calling
-#> rstan_options(auto_write = TRUE)
+aids <- JM::aids
 
-# We remove the data we dont neeed
+# Keep the final row for each patient and remove unused columns.
 aids <- aids[aids$Time == aids$stop, ]
-aids <- aids[, !colnames(aids) %in% c("Time", "death", "obstime", "CD4")]
+aids <- aids[, !colnames(x = aids) %in% c("Time", "death", "obstime", "CD4")]
 
-# A look at head of data
-head(aids)
+# Inspect the first rows and the latest follow-up and event times.
+head(x = aids)
 #>    patient drug gender prevOI         AZT start  stop event
 #> 3        1  ddC   male   AIDS intolerance    12 16.97     0
 #> 7        2  ddI   male noAIDS intolerance    18 19.00     0
@@ -96,9 +51,9 @@ max(aids$stop[aids$event == 1]) # Last person with event
 
 # Fit model with extended Kalman filter
 fit <- ddhazard(
-  Surv(stop, event) ~ ddFixed_intercept() + ddFixed(AZT) + gender + 
+  formula = Surv(time = stop, event = event) ~ ddFixed_intercept() + ddFixed(AZT) + gender +
     ddFixed(drug) + ddFixed(prevOI),
-  aids,
+  data = aids,
   model = "exponential",          # piecewise constant exponentially distributed 
                                   # arrivals times
   by = .5,                        # Length of time intervals in state space 
@@ -115,101 +70,87 @@ fit <- ddhazard(
 #> a_0 not supplied. IWLS estimates of static glm model is used for random walk models. Otherwise the values are zero
 
 # Plot the estimates. Dashed lines are 95% confidence bounds
-plot(fit)
+plot(x = fit)
 ```
 
-![](README-ddhazard_fit-1.png)
+![](README-ddhazard_fit-1.png)<!-- -->
 
 ``` r
 
 # Bootstrap the estimates
-set.seed(87754771)
-boot_out <- ddhazard_boot(fit, R = 1000) # R is number of bootstrap samples
+set.seed(seed = 87754771)
+boot_out <- ddhazard_boot(ddhazard_fit = fit, R = 1000) # R is number of bootstrap samples
 
 # Plot bootstrap estimates. Dashed lines are 2.5% and 97.5% quantiles of the 
 # bootstrap estimates. Transparent lines are bootstrap estimates
-plot(fit, ddhazard_boot = boot_out)
+plot(x = fit, ddhazard_boot = boot_out)
 #> Only plotting 50 of the boot sample estimates
 ```
 
-![](README-ddhazard_fit-2.png)
+![](README-ddhazard_fit-2.png)<!-- -->
 
-Bootstrapping only slightly changes the confidence bounds. An example of
-a paper analyzing the CD4 count can be found in Guo & Carlin (2004).
-They also fit a static model (time-invariant coefficients) of the
-survival times with an exponential model. The estimates are comparable
-with those above as expected.
+Compare the dashed confidence bounds in the first plot with the bootstrap quantiles in the second plot. The bounds differ slightly in this example. Guo & Carlin (2004) analyze CD4 counts and fit an exponential survival model with time-invariant coefficients.
 
-Example - particle filter and smoother
---------------------------------------
+## Example - particle filter and smoother
 
-A particle filter and smoother is also included in the package. The
-computational complexity of these methods match those of the extended
-Kalman filter but with a much larger constant. Below, I fit a model for
-the `aids` data. We only use a time-varying effect for gender this time.
-
-<!-- 
-  knitr::opts_knit$set(output.dir = ".")
-  knitr::load_cache("pf_fit", path = "README_cache/markdown_github/") 
--->
+This example fits a particle filter and smoother to the same data. Gender has a time-varying effect in both examples. This fit uses 200 particles for the forward and backward filters. The final call uses more particles to estimate the log-likelihood.
 
 ``` r
-set.seed(20170907)
+set.seed(seed = 20170907)
 pf_fit <- PF_EM(
-  Surv(stop, event) ~ ddFixed_intercept() + ddFixed(AZT) + gender + 
+  formula = Surv(time = stop, event = event) ~ ddFixed_intercept() + ddFixed(AZT) + gender +
     ddFixed(drug) + ddFixed(prevOI),
-  aids, model = "exponential",
+  data = aids, model = "exponential",
   by = .5,  max_T = 19, Q = .5^2, Q_0 = 1,
   control = PF_control(
-    n_threads = 4, # I use a quad-core machine
-    # set number of particles
-    N_fw_n_bw = 1000, N_first = 1000,
-    N_smooth = 1, # Does not matter with Brier_O_N_square
-    smoother = "Brier_O_N_square", # Select smoother
-    eps = 1e-5, n_max = 1000, est_a_0 = FALSE, nu = 6L, 
-    covar_fac = 1.2, averaging_start = 150L)
-  #, trace = 1 # comment back to get feedback during estimation
-  )
+    n_threads = 2,
+    N_fw_n_bw = 200, N_first = 200, N_smooth = 1,
+    smoother = "Brier_O_N_square",
+    eps = 0.001, n_max = 150L, est_a_0 = FALSE, nu = 6L,
+    covar_fac = 1.2, averaging_start = 50L))
 #> a_0 not supplied. IWLS estimates of static glm model is used for random walk models. Otherwise the values are zero
 ```
 
 ``` r
-# Compare estimates of Q
-pf_fit$Q / .5
+# Compare the state innovation variances.
+pf_fit$Q
 #>            gendermale
-#> gendermale 0.04215704
+#> gendermale 0.02650917
 fit$Q
 #>            gendermale
 #> gendermale 0.01648568
-plot(pf_fit)
+plot(x = pf_fit)
 ```
 
-![](README-pf_plots-1.png)
+![](README-pf_plots-1.png)<!-- -->
 
 ``` r
-plot(pf_fit$log_likes) # log-likelihoods
+plot(x = pf_fit$log_likes, xlab = "Iteration", ylab = "Log-likelihood")
 ```
 
-![](README-pf_plots-2.png)
+![](README-pf_plots-2.png)<!-- -->
 
 ``` r
-logLik(pf_fit)
-#> 'log Lik.' -795.8261 (df=5)
+logLik(object = pf_fit)
+#> 'log Lik.' -796.1694 (df=5)
 ```
 
 ``` r
 # better estimate of final log-likelihood
-logLik(PF_forward_filter(pf_fit, N_fw = 10000, N_first = 10000))
-#> 'log Lik.' -795.9264 (df=NA)
+logLik(object = PF_forward_filter(x = pf_fit, N_fw = 10000, N_first = 10000))
+#> 'log Lik.' -795.9732 (df=NA)
 ```
 
-For more details, see the “Particle filters in the dynamichazard
-package” vignette at
-<a href="https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf" class="uri">https://cran.r-project.org/web/packages/dynamichazard/vignettes/Particle_filtering.pdf</a>
+The log-likelihood plot shows how the fit changes over the iterations. See the [particle filtering vignette](vignettes/Particle_filtering.pdf) for details.
 
-References
-==========
+# References
 
-Guo, X., & Carlin, B. P. (2004). Separate and joint modeling of
-longitudinal and event time data using standard computer packages. *The
-American Statistician*, *58*(1), 16–24.
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0" line-spacing="2">
+
+<div id="ref-guo2004" class="csl-entry">
+
+Guo, X., & Carlin, B. P. (2004). Separate and joint modeling of longitudinal and event time data using standard computer packages. *The American Statistician*, *58*(1), 16–24.
+
+</div>
+
+</div>

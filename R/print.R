@@ -7,7 +7,7 @@
 #' @param ... not used.
 #'
 #' @description
-#' Arguments have the same effects as for an object from a \code{\link{boot}} call. See \code{\link[=print.boot]{print}}.
+#' Arguments have the same effects as for an object from a \code{\link[boot]{boot}} call. See \code{\link[boot:print.boot]{print}}.
 #'
 #' @return
 #' Returns \code{x} using \code{\link{invisible}}.

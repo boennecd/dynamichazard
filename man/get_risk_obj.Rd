@@ -15,7 +15,7 @@ get_risk_obj(
 )
 }
 \arguments{
-\item{Y}{vector of outcome variable returned from \code{\link{Surv}}.}
+\item{Y}{vector of outcome variable returned from \code{\link[survival]{Surv}}.}
 
 \item{by}{length of each bin.}
 

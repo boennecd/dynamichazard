@@ -69,7 +69,7 @@ A list with class \code{ddhazard}. The list contains
 \item{F_}{matrix which map from one state vector to the next.}
 \item{method}{method used in the E-step.}
 \item{est_Q_0}{\code{TRUE} if \code{Q_0} was estimated in the EM-algorithm.}
-\item{family}{Rcpp \code{\link{Module}} with C++ functions used for estimation given the \code{model} argument.}
+\item{family}{Rcpp \code{\link[Rcpp]{Module}} with C++ functions used for estimation given the \code{model} argument.}
 \item{discrete_hazard_func}{the hazard function corresponding to the \code{model} argument.}
 \item{terms}{the \code{\link{terms}} object used.}
 \item{has_fixed_intercept}{\code{TRUE} if the model has a time-invariant intercept.}
