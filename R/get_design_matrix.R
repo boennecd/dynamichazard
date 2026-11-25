@@ -135,7 +135,8 @@ get_design_matrix <- function(
   stopifnot(inherits(fixed, "formula"), inherits(random, "formula"))
 
   . <- function(formula, data, ...){
-    tt <- terms(formula, data, specials = c("ddFixed", "ddFixed_intercept"))
+    tt <- terms(x = formula, specials = c("ddFixed", "ddFixed_intercept"),
+                data = data)
     if(any(sapply(attr(tt, "specials"), length) > 0))
       stop("Do not use ", sQuote("ddFixed"), " or ",
            sQuote("ddFixed_intercept"),

@@ -3,6 +3,7 @@
 * Replace the `captioner` dependency with a LaTeX figure reference in the `ddhazard` vignette.
 * Build the diagnostics vignette without optional image cropping.
 * Use the default C++ standard selected by R.
+* Fix `PF_EM()` formulas that use `.` with separate fixed and random effects.
 
 # dynamichazard 1.0.2
 * fix issues due to a new version of RcppArmadillo (0.11.4.0.1).
