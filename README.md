@@ -6,7 +6,7 @@ The `dynamichazard` package estimates time-varying effects in survival analysis.
 
 ## Installation
 
-Install `dynamichazard` from GitHub.
+`dynamichazard` requires R 4.0 or later. Install the package from GitHub.
 
 ``` r
 # install.packages(pkgs = "remotes")
@@ -15,7 +15,7 @@ remotes::install_github(repo = "boennecd/dynamichazard")
 
 When a version is available on CRAN, you can install it with `install.packages(pkgs = "dynamichazard")`.
 
-After installation, use `browseVignettes(package = "dynamichazard")` to open the package vignettes.
+After installing from CRAN, use `browseVignettes(package = "dynamichazard")` to open the package vignettes.
 
 ## Example - ddhazard
 
@@ -112,10 +112,10 @@ pf_fit <- PF_EM(
 ```
 
 ``` r
-# Compare the state innovation variances.
-pf_fit$Q
+# Compare the state innovation variances per month.
+pf_fit$Q / 0.5
 #>            gendermale
-#> gendermale 0.02650917
+#> gendermale 0.05301833
 fit$Q
 #>            gendermale
 #> gendermale 0.01648568

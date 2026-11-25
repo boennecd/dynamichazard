@@ -26,7 +26,7 @@ License: GPL-2
 LazyData: TRUE
 LinkingTo: Rcpp, RcppArmadillo
 Imports: parallel, Rcpp (>= 0.12.6), boot
-Depends: R (>= 3.5.0), stats, graphics, utils, survival
+Depends: R (>= 4.0.0), stats, graphics, utils, survival
 RoxygenNote: 7.1.1
 Suggests: testthat, knitr, rmarkdown, timereg, biglm, httr, mgcv, shiny, formatR, R.rsp, speedglm, dichromat, colorspace, plyr, gsl, mvtnorm, nloptr (>= 1.2.0)
 VignetteBuilder: knitr, R.rsp
