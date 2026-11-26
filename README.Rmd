@@ -90,7 +90,7 @@ plot(x = fit, ddhazard_boot = boot_out)
 Compare the dashed confidence bounds in the first plot with the bootstrap quantiles in the second plot. The bounds differ slightly in this example. @guo2004 analyze CD4 counts and fit an exponential survival model with time-invariant coefficients.
 
 ## Example - particle filter and smoother
-This example fits a particle filter and smoother to the same data. Gender has a time-varying effect in both examples. This fit uses 200 particles for the forward and backward filters. The final call uses more particles to estimate the log-likelihood.
+This example fits a particle filter and smoother to the same data. Gender has a time-varying effect in both examples. This fit uses 1,000 particles for the forward and backward filters. The final call uses more particles to estimate the log-likelihood.
 
 ```{r pf_fit, cache = 1}
 set.seed(seed = 20170907)
@@ -100,11 +100,11 @@ pf_fit <- PF_EM(
   data = aids, model = "exponential",
   by = .5,  max_T = 19, Q = .5^2, Q_0 = 1,
   control = PF_control(
-    n_threads = 2,
-    N_fw_n_bw = 200, N_first = 200, N_smooth = 1,
+    n_threads = 4,
+    N_fw_n_bw = 1000, N_first = 1000, N_smooth = 1,
     smoother = "Brier_O_N_square",
-    eps = 0.001, n_max = 150L, est_a_0 = FALSE, nu = 6L,
-    covar_fac = 1.2, averaging_start = 50L))
+    eps = 1e-5, n_max = 1000, est_a_0 = FALSE, nu = 6L,
+    covar_fac = 1.2, averaging_start = 150L))
 ```
 
 ```{r pf_plots}

@@ -93,7 +93,7 @@ Compare the dashed confidence bounds in the first plot with the bootstrap quanti
 
 ## Example - particle filter and smoother
 
-This example fits a particle filter and smoother to the same data. Gender has a time-varying effect in both examples. This fit uses 200 particles for the forward and backward filters. The final call uses more particles to estimate the log-likelihood.
+This example fits a particle filter and smoother to the same data. Gender has a time-varying effect in both examples. This fit uses 1,000 particles for the forward and backward filters. The final call uses more particles to estimate the log-likelihood.
 
 ``` r
 set.seed(seed = 20170907)
@@ -103,11 +103,11 @@ pf_fit <- PF_EM(
   data = aids, model = "exponential",
   by = .5,  max_T = 19, Q = .5^2, Q_0 = 1,
   control = PF_control(
-    n_threads = 2,
-    N_fw_n_bw = 200, N_first = 200, N_smooth = 1,
+    n_threads = 4,
+    N_fw_n_bw = 1000, N_first = 1000, N_smooth = 1,
     smoother = "Brier_O_N_square",
-    eps = 0.001, n_max = 150L, est_a_0 = FALSE, nu = 6L,
-    covar_fac = 1.2, averaging_start = 50L))
+    eps = 1e-5, n_max = 1000, est_a_0 = FALSE, nu = 6L,
+    covar_fac = 1.2, averaging_start = 150L))
 #> a_0 not supplied. IWLS estimates of static glm model is used for random walk models. Otherwise the values are zero
 ```
 
@@ -115,7 +115,7 @@ pf_fit <- PF_EM(
 # Compare the state innovation variances per month.
 pf_fit$Q / 0.5
 #>            gendermale
-#> gendermale 0.05301833
+#> gendermale 0.04215704
 fit$Q
 #>            gendermale
 #> gendermale 0.01648568
@@ -132,13 +132,13 @@ plot(x = pf_fit$log_likes, xlab = "Iteration", ylab = "Log-likelihood")
 
 ``` r
 logLik(object = pf_fit)
-#> 'log Lik.' -796.1694 (df=5)
+#> 'log Lik.' -795.8261 (df=5)
 ```
 
 ``` r
 # better estimate of final log-likelihood
 logLik(object = PF_forward_filter(x = pf_fit, N_fw = 10000, N_first = 10000))
-#> 'log Lik.' -795.9732 (df=NA)
+#> 'log Lik.' -795.9264 (df=NA)
 ```
 
 The log-likelihood plot shows how the fit changes over the iterations. See the [particle filtering vignette](vignettes/Particle_filtering.pdf) for details.
