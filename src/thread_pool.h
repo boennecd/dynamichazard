@@ -43,6 +43,7 @@
 #include <condition_variable>
 #include <queue>
 #include <type_traits>
+#include <utility>
 
 /*
  Listing 6.6 A thread-safe queue with fine-grained locking
@@ -209,10 +210,10 @@ class thread_pool
 
 public:
   template<typename FunctionType>
-  std::future<typename std::result_of<FunctionType()>::type>
+  std::future<decltype(std::declval<FunctionType>()())>
   submit(FunctionType f)
   {
-    typedef typename std::result_of<FunctionType()>::type result_type;
+    using result_type = decltype(std::declval<FunctionType>()());
 
     std::packaged_task<result_type()> task(std::move(f));
     std::future<result_type> res(task.get_future());

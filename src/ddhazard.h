@@ -1,7 +1,6 @@
 #ifndef DDHAZARD_H
 #define DDHAZARD_H
 
-// [[Rcpp::plugins(cpp11)]]
 #include "problem_data.h"
 #include "arma_n_rcpp.h"
 #include "family.h"

@@ -1707,3 +1707,28 @@ test_that("'fix_seed = FALSE' yields different results at each call", {
   expect_true(!isTRUE(all.equal(o$get_get_score_n_hess(),
                                 o$get_get_score_n_hess())))
 })
+
+test_that(desc = "PF_EM expands dot in the fixed-effects formula", code = {
+  lung_data <- survival::lung
+  lung_data <- lung_data[!is.na(x = lung_data$ph.ecog),
+                         c("time", "status", "age", "ph.ecog")]
+  lung_data$age <- scale(x = lung_data$age)
+
+  fit <- function(fixed) {
+    set.seed(seed = 43588155)
+    PF_EM(
+      fixed = fixed, random = ~ 1, model = "exponential", data = lung_data,
+      by = 50, Q_0 = as.matrix(x = 1), Q = as.matrix(x = .5^2), type = "VAR",
+      max_T = 800, Fmat = as.matrix(x = .5),
+      control = PF_control(N_fw_n_bw = 20, N_first = 20, N_smooth = 30,
+                           n_max = 1L, eps = 1e6, n_threads = 1L))
+  }
+
+  expect_warning(
+    object = result <- fit(fixed = Surv(time = time, event = status == 2) ~ .),
+    regexp = NA)
+  reference <- fit(fixed = Surv(time = time, event = status == 2) ~ age + ph.ecog)
+
+  expect_identical(object = result$fixed_effects, expected = reference$fixed_effects)
+  expect_identical(object = result$log_likes, expected = reference$log_likes)
+})

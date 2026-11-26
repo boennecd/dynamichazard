@@ -1,7 +1,7 @@
 #' @title Risk Set on an Equidistant Distant Grid
 #' @description Get the risk set at each bin over an equidistant distant grid.
 #'
-#' @param Y vector of outcome variable returned from \code{\link{Surv}}.
+#' @param Y vector of outcome variable returned from \code{\link[survival]{Surv}}.
 #' @param by length of each bin.
 #' @param max_T last observed time.
 #' @param id vector with ids where entries match with outcomes \code{Y}.
