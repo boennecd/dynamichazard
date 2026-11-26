@@ -3,7 +3,37 @@
 
 #include "../arma_n_rcpp.h"
 
-class particle;
+class cloud;
+
+class particle {
+  arma::vec state;
+  arma::uword cloud_idx; /* zero based */
+
+public:
+  const particle *parent;
+  const particle *child;
+
+  const arma::vec& get_state() const {
+    return state;
+  }
+
+  arma::uword get_cloud_idx() const {
+    return cloud_idx;
+  }
+
+  /* log-scale */
+  double log_importance_dens;
+  double log_weight;
+  double log_likelihood_term;
+  double log_resampling_weight;
+
+  particle(
+    const arma::vec state, const particle *parent,
+    const arma::uword cloud_idx, const particle *child = nullptr);
+  particle();
+
+  friend class cloud;
+};
 
 class cloud : private std::vector<particle> {
   using Base = std::vector<particle>;
@@ -37,36 +67,6 @@ public:
   using Base::operator[];
   using Base::reserve;
   using Base::size;
-};
-
-class particle {
-  arma::vec state;
-  arma::uword cloud_idx; /* zero based */
-
-public:
-  const particle *parent;
-  const particle *child;
-
-  const arma::vec& get_state() const {
-    return state;
-  }
-
-  arma::uword get_cloud_idx() const {
-    return cloud_idx;
-  }
-
-  /* log-scale */
-  double log_importance_dens;
-  double log_weight;
-  double log_likelihood_term;
-  double log_resampling_weight;
-
-  particle(
-    const arma::vec state, const particle *parent,
-    const arma::uword cloud_idx, const particle *child = nullptr);
-  particle();
-
-  friend void cloud::new_particle(particle&&);
 };
 
 #endif
